@@ -45,7 +45,7 @@ using namespace mgb;
 // timeout delta to be added with fastest known algorithm for new algos
 constexpr double TIMEOUT_TOLERANCE = 2;
 
-#define CACHE_KEY_VERSION "v4"
+#define CACHE_KEY_VERSION "v5"
 
 namespace {
 template <typename Opr>
@@ -278,6 +278,47 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
     return ret;
 }
 
+//! serialize a algo's desc to string. format is
+//! handle_type|algo_type|size_of_param|size_of_name|string_of_param|string_of_name
+static void serialize_write_pod(const Algorithm::Info::Desc& val,
+                                std::string& result) {
+    megdnn::Algorithm::serialize_write_pod(val.handle_type, result);
+    megdnn::Algorithm::serialize_write_pod(val.type, result);
+    uint32_t param_size = val.param.size();
+    uint32_t name_size = val.name.size();
+    megdnn::Algorithm::serialize_write_pod<uint32_t>(param_size, result);
+    megdnn::Algorithm::serialize_write_pod<uint32_t>(name_size, result);
+    result += val.param;
+    result += val.name;
+}
+
+static Algorithm::Info::Desc deserialize_read_pod(const std::string& data,
+                                                  size_t offset = 0) {
+    Algorithm::Info::Desc ret;
+#define cb(_val, _type)                                                \
+    _val = megdnn::Algorithm::deserialize_read_pod<_type>(data.data(), \
+                                                          offset);     \
+    offset += sizeof(_val)
+
+    cb(ret.handle_type, megdnn::Handle::HandleType);
+    cb(ret.type, uint32_t);
+
+    uint32_t param_size = 0;
+    uint32_t name_size = 0;
+    cb(param_size, uint32_t);
+    cb(name_size, uint32_t);
+
+    if (param_size > 0) {
+        ret.param = std::string(data.data() + offset, param_size);
+        offset += param_size;
+    }
+    if (name_size > 0) {
+        ret.name = std::string(data.data() + offset, name_size);
+        offset += name_size;
+    }
+    return ret;
+}
+
 }  // namespace
 
 namespace mgb {
@@ -360,6 +401,16 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_profile(
         }
     }
 
+    typename AlgoChooser<Opr>::ImplExecutionPolicy tmp_policy;
+    bool retrive_from_cache = true;
+    bool allow_log = false;
+    construct_execution_policy(selected_strategy, tmp_policy,
+                               retrive_from_cache, allow_log);
+    if (tmp_policy.algo.valid()) {
+        // return policy when contruct successed
+        return tmp_policy;
+    }
+
     if (enable_update) {
         CircularDepsChecker circular_deps_checker;
         auto&& search_items =
@@ -378,13 +429,13 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_profile(
     }
 
     typename AlgoChooser<Opr>::ImplExecutionPolicy policy;
-    construct_execution_policy(selected_strategy, true, policy);
+    construct_execution_policy(selected_strategy, policy);
     return policy;
     MIDOUT_E
 }
 
 template <typename Opr>
-typename AlgoChooser<Opr>::ImplAlgo
+typename AlgoChooser<Opr>::ImplAlgoDesc
 AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
         const ExecutionStrategy& selected_strategy) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_profile_result_from_cache")))
@@ -401,12 +452,6 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
     if (prof.empty())
         return {};
 
-    std::unordered_map<std::string, ImplAlgo> algo_map;
-    for (auto i : get_all_candidates()) {
-        auto ins = algo_map.emplace(i.desc.name.c_str(), i);
-        mgb_assert(ins.second, "duplicated algo name: %s", i.desc.name.c_str());
-    }
-
     auto target_attr = extract_algo_attribute(selected_strategy);
     bool skip_by_negative = false;
     for (auto&& i : prof) {
@@ -418,17 +463,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
                 static_cast<bool>(attr_of_algo & target_attr.second);
         if (contain_attr_all_positive) {
             if (!contain_attr_any_negative) {
-                auto iter = algo_map.find(i.algo);
-                mgb_assert(
-                        iter != algo_map.end(),
-                        "algorithm %s exists in profiling result but not in "
-                        "algo_map; please report this bug; opr: %s{%s}, "
-                        "layouts: %s ",
-                        i.algo.c_str(), m_base_mgb_opr->cname(),
-                        m_base_mgb_opr->dyn_typeinfo()->name,
-                        format_fixlayouts<Opr>(m_layouts, arity_in, arity_out)
-                                .c_str());
-                return iter->second;
+                Algorithm::Info::Desc algo_desc = deserialize_read_pod(i.algo);
+                return algo_desc;
             } else {
                 skip_by_negative = true;
             }
@@ -454,29 +490,35 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
 
 template <typename Opr>
 void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
-        const ExecutionStrategy& selected_strategy, bool retrive_from_cache,
-        typename AlgoChooser<Opr>::ImplExecutionPolicy& policy) const {
+        const ExecutionStrategy& selected_strategy,
+        typename AlgoChooser<Opr>::ImplExecutionPolicy& policy,
+        bool retrive_from_cache, bool allow_log) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("construct_execution_policy")))
     if (!policy.algo.valid()) {
         if (retrive_from_cache) {
-            policy.algo = get_profile_result_from_cache(selected_strategy).desc;
+            policy.algo = get_profile_result_from_cache(selected_strategy);
             if (!policy.algo.valid()) {
-                auto target_attr = extract_algo_attribute(selected_strategy);
-                std::string layouts_str =
-                        format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
-                std::string msg = ssprintf(
-                        "(mbg_opr : %s, layouts %s, with attribute(%s) and "
-                        "without attribute(%s)",
-                        m_base_mgb_opr->dyn_typeinfo()->name,
-                        layouts_str.c_str(),
-                        Algorithm::attribute_str(target_attr.first).c_str(),
-                        Algorithm::attribute_str(target_attr.second).c_str());
-                mgb_log_warn(
-                        "No algo get from cache for %s. This may caused by "
-                        "mismatch with model and cache file. ex. profiling "
-                        "with version1, but inferencing on version2 or "
-                        "profiling modelA but inferencing modelB",
-                        msg.c_str());
+                if (allow_log) {
+                    auto target_attr =
+                            extract_algo_attribute(selected_strategy);
+                    std::string layouts_str = format_fixlayouts<Opr>(
+                            m_layouts, arity_in, arity_out);
+                    std::string msg = ssprintf(
+                            "(mbg_opr : %s, layouts %s, with attribute(%s) and "
+                            "without attribute(%s)",
+                            m_base_mgb_opr->dyn_typeinfo()->name,
+                            layouts_str.c_str(),
+                            Algorithm::attribute_str(target_attr.first).c_str(),
+                            Algorithm::attribute_str(target_attr.second)
+                                    .c_str());
+                    mgb_log_warn(
+                            "No algo get from cache for %s. This may caused by "
+                            "mismatch with model and cache file or imcomplete "
+                            "cache file. ex. profiling with version1, but "
+                            "inferencing on version2 or profiling modelA but "
+                            "inferencing modelB",
+                            msg.c_str());
+                }
                 return;
             }
         } else {
@@ -513,8 +555,8 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
                 m_allow_weight_preprocess);
         policy.sub_policy.push_back({});
         sub_helper.construct_execution_policy(selected_strategy,
-                                              retrive_from_cache,
-                                              policy.sub_policy.back());
+                                              policy.sub_policy.back(),
+                                              retrive_from_cache, allow_log);
         if (!policy.sub_policy.back().algo.valid()) {
             // means sub_helper.construct_execution_policy fails. clean up
             // policy.algo and return
@@ -606,17 +648,22 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
     param.allow_weight_preprocess = m_allow_weight_preprocess;
 
     Algorithm* palgo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
-    mgb_assert(palgo, "Unknown algo description");
+    mgb_assert(palgo, "can not find algo when profile single algo");
+
     auto rst = TimedProfiler<Opr>::profile(param, timeout);
     // MIOpen conv profiles all available algos when a specfic shape is
     // provided for the first time, which probably adds to the result time.
     // Therefore, a second profile execution is needed.
-    if (strncmp(palgo->name(), "MIOpen", 6) == 0)
+    if (strncmp(palgo->name(), "MIOpen", 6) == 0) {
         rst = TimedProfiler<Opr>::profile(param, timeout);
+    }
     if (!rst.valid())
         return None;
+
+    std::string algo_desc;
+    serialize_write_pod(policy.algo, algo_desc);
     return AlgoChooserProfileCache::ResultEntry{
-            palgo->name(), static_cast<uint32_t>(palgo->attribute()),
+            algo_desc, static_cast<uint32_t>(palgo->attribute()),
             rst.val().time, param.workspace};
     MIDOUT_E
 }
@@ -655,7 +702,9 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         }
 
         //! check workspace limit
-        construct_execution_policy(selected_strategy, true, policy);
+        construct_execution_policy(selected_strategy, policy);
+        mgb_assert(policy.algo.valid(),
+                   "construct execution policy must success when profiling");
         if (get_workspace_size_bytes(policy) >= workspace_limit) {
             continue;
         }
@@ -779,15 +828,15 @@ AlgoChooser<Opr>::AlgoChooserHelper::extract_algo_attribute(
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::choose_by_profile(            \
             const ExecutionStrategy& select_strategy, bool enable_update)      \
             const;                                                             \
-    template typename AlgoChooser<megdnn::Opr>::ImplAlgo                       \
+    template typename AlgoChooser<megdnn::Opr>::ImplAlgoDesc                   \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::                              \
             get_profile_result_from_cache(                                     \
                     const ExecutionStrategy& select_strategy) const;           \
     template void                                                              \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::construct_execution_policy(   \
-            const ExecutionStrategy& select_strategy, bool retrive_from_cache, \
-            typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy& policy)    \
-            const;                                                             \
+            const ExecutionStrategy& select_strategy,                          \
+            typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy& policy,    \
+            bool retrive_from_cache, bool allow_log) const;                    \
     template size_t                                                            \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::get_workspace_size_bytes(     \
             const typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy&      \
@@ -856,7 +905,8 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
         policy = algo_choose_hook(mgb_opr);
         auto strategy =
                 ExecutionStrategy::HEURISTIC | ExecutionStrategy::REPRODUCIBLE;
-        helper.construct_execution_policy(strategy, false, policy);
+        bool retrive_from_cache = false;
+        helper.construct_execution_policy(strategy, policy, retrive_from_cache);
     }
     if (!policy.algo.valid()) {
         policy = get_policy(helper);

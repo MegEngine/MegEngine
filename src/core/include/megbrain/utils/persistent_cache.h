@@ -130,7 +130,7 @@ namespace mgb {
             };
 
             struct ResultEntry {
-                std::string algo;   //! identifier of the algorithm
+                std::string algo;   //! serialized algo desc
                 uint32_t attribute;  //! algo attribute, e.g. reproducible
                 double time;        //! execution time in seconds
                 size_t workspace;   //! workspace in bytes

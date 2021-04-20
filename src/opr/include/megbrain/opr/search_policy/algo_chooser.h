@@ -61,6 +61,7 @@ class AlgoChooser {
     static constexpr int arity = OprArityTrait<Opr>::arity;
 
     using ImplAlgo = typename Opr::AlgorithmInfo;
+    using ImplAlgoDesc = typename Opr::AlgorithmInfo::Desc;
     using ImplExecutionPolicy = megdnn::ExecutionPolicy;
     using MGBOpr = typename MegDNNOpr2MGBOpr<Opr>::MGBOpr;
 
@@ -120,7 +121,7 @@ public:
                 bool enable_update) const;
 
         //! get all profile algorithm from cache, return invalid if not exists
-        ImplAlgo get_profile_result_from_cache(
+        ImplAlgoDesc get_profile_result_from_cache(
                 const ExecutionStrategy& selected_strategy) const;
 
         /**
@@ -130,11 +131,13 @@ public:
          * \param[in,out] policy execution policy
          * \param retrive_from_cache retrive algo from cache if set True, get
          *     from heuristic otherwise.
-         * \return true if contruct success and false when fail
+         * \param allow_log no warning log print if set True, print warning info
+         * otherwise.
          */
         void construct_execution_policy(
                 const ExecutionStrategy& selected_strategy,
-                bool retrive_from_cache, ImplExecutionPolicy& policy) const;
+                ImplExecutionPolicy& policy, bool retrive_from_cache = true,
+                bool allow_log = true) const;
 
         //! get workspace size required for specific execution policy
         size_t get_workspace_size_bytes(
