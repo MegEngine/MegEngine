@@ -33,6 +33,7 @@ MGB_DEFINE_OPR_CLASS(ExternCOprRunner,
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
     void check_param();
+    bool is_loader_support_dynamic_param;
 
     static cg::OperatorNodeBase* make_from_desc_shared(
             std::string& name, const VarNodeArray& inputs,
@@ -98,6 +99,8 @@ public:
     }
 
     void set_param(const std::shared_ptr<ExternCOprParam>& param) {
+        mgb_assert(is_loader_support_dynamic_param,
+                   "set_param function need loader imp dynamic_param");
         m_param = param;
         m_desc->dynamic_param = m_param.get();
     }
