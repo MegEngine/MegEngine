@@ -38,9 +38,9 @@
 //#define CUB_NS_POSTFIX } }
 
 #ifndef CUB_NS_PREFIX
-#define CUB_NS_PREFIX
+#define CUB_NS_PREFIX namespace megdnn { namespace cuda {
 #endif
 
 #ifndef CUB_NS_POSTFIX
-#define CUB_NS_POSTFIX
+#define CUB_NS_POSTFIX } }
 #endif

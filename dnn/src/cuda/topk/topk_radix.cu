@@ -355,8 +355,8 @@ static __global__ void kern_reduce_block_cnt(const ctype* input_data,
 static MEGDNN_NOINLINE cudaError_t
 invoke_cub_scan(const uint64_t* input, uint64_t* output, void* workspace,
                 size_t& workspace_size, uint32_t size, cudaStream_t stream) {
-    return cub::DeviceScan::InclusiveSum(workspace, workspace_size, input,
-                                         output, size, stream);
+    return cub::DeviceScan::InclusiveSum(workspace, workspace_size,
+                                                 input, output, size, stream);
 }
 
 static __global__ void kern_init_zero(uint64_t* dst) {
