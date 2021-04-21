@@ -151,7 +151,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
                        "format should be NCHW4/NCHW4_NCHW/NCHW4_NCHW32");
             packed_size = 4;
         }
-        return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * 4 / group *
+        return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * packed_size / group *
                2;
     };
     auto eval_conv_computation_chwn4 = [&param, &src_shape, &filter_shape,
@@ -178,7 +178,8 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
         param.format == Param::Format::NCHW44 ||
         param.format == Param::Format::NCHW44_DOT ||
         param.format == Param::Format::NCHW32 ||
-        param.format == Param::Format::NCHW32_NCHW4) {
+        param.format == Param::Format::NCHW32_NCHW4 ||
+        param.format == Param::Format::NCHW64) {
         return eval_conv_computation_nchwx();
     }
     if (param.format == Param::Format::CHWN4) {
