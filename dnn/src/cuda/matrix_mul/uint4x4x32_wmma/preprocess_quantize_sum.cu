@@ -43,6 +43,8 @@
 
 namespace {
 
+using namespace megdnn::cuda;
+
 template <int block_size_log2, int max_nr_threads_per_row>
 __global__ void reduce_column_with_scale_u4(const uint8_t* src, int32_t scale,
                                             int rows, int cols_int32,

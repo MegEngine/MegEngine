@@ -16,6 +16,7 @@
 namespace {
 
 using namespace megdnn;
+using namespace cuda;
 
 template <typename T> __global__ void kernel(const T *a, const T *b,
         dt_float32 *c,
