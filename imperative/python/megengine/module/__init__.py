@@ -18,6 +18,7 @@ from .conv import (
     Conv3d,
     ConvRelu2d,
     ConvTranspose2d,
+    ConvTranspose3d,
     DeformableConv2d,
     LocalConv2d,
 )

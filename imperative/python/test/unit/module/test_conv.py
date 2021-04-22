@@ -11,7 +11,7 @@ import itertools
 import numpy as np
 
 from megengine import Parameter, tensor
-from megengine.module import ConvTranspose2d, LocalConv2d
+from megengine.module import ConvTranspose2d, ConvTranspose3d, LocalConv2d
 
 
 def test_conv_transpose2d():
@@ -120,3 +120,64 @@ def test_local_conv2d():
     test_func(10, 4, 4, 5, 5, 3, 1, 1, 1, 1)
     test_func(10, 32, 32, 8, 8, 3, 1, 1, 1, 2)
     test_func(10, 32, 32, 8, 8, 3, 1, 1, 1, 4)
+
+
+def test_conv_transpose3d():
+    def getsize(inp, kernel, stride, dilate):
+        return (inp - 1) * stride + kernel * dilate - dilate + 1
+
+    def test_func(
+        N,
+        IC,
+        ID,
+        IH,
+        IW,
+        OC,
+        KD,
+        KH,
+        KW,
+        SD,
+        SH,
+        SW,
+        PD,
+        PH,
+        PW,
+        DD,
+        DH,
+        DW,
+        bias=True,
+    ):
+        conv_transpose3d = ConvTranspose3d(
+            in_channels=IC,
+            out_channels=OC,
+            kernel_size=(KD, KH, KW),
+            stride=(SD, SH, SW),
+            padding=(PD, PH, PW),
+            dilation=(DD, DH, DW),
+            bias=bias,
+        )
+
+        OD = getsize(ID, KD, SD, DD)
+        OH = getsize(IH, KH, SH, DH)
+        OW = getsize(IW, KW, SW, DW)
+
+        inp = np.random.normal(size=(N, IC, ID, IH, IW))
+        weight = np.random.normal(size=(IC, OC, KD, KH, KW))
+        out_np = np.zeros((N, OC, OD, OH, OW), dtype=np.float32)
+
+        for n, ic, idepth, ih, iw in itertools.product(
+            *map(range, [N, IC, ID, IH, IW])
+        ):
+            od, oh, ow = idepth * SD, ih * SH, iw * SW
+            out_np[n, :, od : od + KD, oh : oh + KH, ow : ow + KW] += (
+                inp[n, ic, idepth, ih, iw] * weight[ic]
+            )
+        out_np = out_np[:, :, PD : OD - PD, PH : OH - PH, PW : OW - PW]
+
+        conv_transpose3d.weight = Parameter(weight)
+        out_meg = conv_transpose3d.forward(tensor(inp))
+
+        np.testing.assert_almost_equal(out_meg.numpy(), out_np, 1e-5)
+
+    test_func(4, 3, 8, 16, 16, 8, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+    test_func(4, 8, 16, 32, 32, 16, 1, 3, 1, 2, 1, 2, 0, 1, 0, 1, 1, 1)

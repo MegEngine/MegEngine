@@ -15,6 +15,7 @@ from ..functional import (
     conv2d,
     conv3d,
     conv_transpose2d,
+    conv_transpose3d,
     deformable_conv2d,
     local_conv2d,
     relu,
@@ -842,3 +843,75 @@ class DeformableConv2d(_ConvNd):
 
     def forward(self, inp, offset, mask):
         return self.calc_conv(inp, self.weight, offset, mask, self.bias)
+
+
+class ConvTranspose3d(_ConvNd):
+    r"""
+    Applies a 3D transposed convolution over an input tensor.
+
+    Only support the case that group = 1 and conv_mode = "cross_correlation".
+
+    :class:`ConvTranspose3d` can be seen as the gradient of :class:`Conv3d` operation
+    with respect to its input.
+
+    Convolution3D usually reduces the size of input, while transposed convolution3d
+    works the opposite way, transforming a smaller input to a larger output while
+    preserving the connectivity pattern.
+
+    :param in_channels: number of input channels.
+    :param out_channels: number of output channels.
+    :param kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
+        an :class:`int`, the actual kernel size would be
+        ``(kernel_size, kernel_size, kernel_size)``. Default: 1
+    :param stride: stride of the 3D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on all sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 3D convolution operation. Default: 1
+    :param bias: wether to add a bias onto the result of convolution. Default:
+        True
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int, int]],
+        stride: Union[int, Tuple[int, int, int]] = 1,
+        padding: Union[int, Tuple[int, int, int]] = 0,
+        dilation: Union[int, Tuple[int, int, int]] = 1,
+        bias: bool = True,
+    ):
+        kernel_size = _triple_nonzero(kernel_size)
+        stride = _triple_nonzero(stride)
+        padding = _triple(padding)
+        dilation = _triple_nonzero(dilation)
+        super().__init__(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            groups=1,
+            bias=bias,
+        )
+
+    def _get_fanin(self):
+        kt, kh, kw = self.kernel_size
+        ic = self.in_channels
+        return kt * kh * kw * ic
+
+    def _infer_weight_shape(self):
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kt, kh, kw = self.kernel_size
+        return (ochl, ichl, kt, kh, kw)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCTHW
+        return (1, self.out_channels, 1, 1, 1)
+
+    def forward(self, inp):
+        return conv_transpose3d(
+            inp, self.weight, self.bias, self.stride, self.padding, self.dilation,
+        )
