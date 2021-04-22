@@ -48,6 +48,7 @@ __all__ = [
     "conv2d",
     "conv3d",
     "conv_transpose2d",
+    "conv_transpose3d",
     "deformable_conv2d",
     "deformable_psroi_pooling",
     "dropout",
@@ -483,6 +484,54 @@ def local_conv2d(
     )
     inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
+    if bias is not None:
+        output += bias
+    return output
+
+
+def conv_transpose3d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: Union[int, Tuple[int, int, int]] = 1,
+    padding: Union[int, Tuple[int, int, int]] = 0,
+    dilation: Union[int, Tuple[int, int, int]] = 1,
+) -> Tensor:
+    """
+    3D transposed convolution operation. Only support the case that group = 1 
+    and conv_mode = "cross_correlation".
+
+    Refer to :class:`~.ConvTranspose3d` for more information.
+
+    :param inp: feature map of the convolution operation.
+    :param weight: convolution kernel.
+    :param bias: bias added to the result of convolution (if given).
+    :param stride: stride of the 3D convolution operation. Default: 1
+    :param padding: size of the paddings added to the input on all sides of its
+        spatial dimensions. Only zero-padding is supported. Default: 0
+    :param dilation: dilation of the 3D convolution operation. Default: 1
+    :return: output tensor.
+    """
+    D, H, W = 0, 1, 2
+
+    pad = _triple(padding)
+    stride = _triple_nonzero(stride)
+    dilate = _triple_nonzero(dilation)
+
+    op = builtin.Convolution3DBackwardData(
+        pad_d=pad[D],
+        pad_h=pad[H],
+        pad_w=pad[W],
+        stride_d=stride[D],
+        stride_h=stride[H],
+        stride_w=stride[W],
+        dilate_d=dilate[D],
+        dilate_h=dilate[H],
+        dilate_w=dilate[W],
+        strategy=get_execution_strategy(),
+    )
+    weight, inp = utils.convert_inputs(weight, inp)
+    (output,) = apply(op, weight, inp)
     if bias is not None:
         output += bias
     return output

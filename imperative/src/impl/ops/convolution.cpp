@@ -75,5 +75,20 @@ OP_TRAIT_REG(Convolution3D, Convolution3D, opr::Convolution3D)
     .fallback();
 }} // convolution3d
 
+namespace { namespace convolution3d_backward_data {
+auto apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& conv = static_cast<const Convolution3DBackwardData&>(def);
+    OperatorNodeConfig config{conv.make_name()};
+    mgb_assert(inputs.size() == 2);
+    return opr::Convolution3DBackwardData::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
+}
+
+OP_TRAIT_REG(Convolution3DBackwardData, Convolution3DBackwardData)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}} // convolution3d_backward_data
+
 }
 }
