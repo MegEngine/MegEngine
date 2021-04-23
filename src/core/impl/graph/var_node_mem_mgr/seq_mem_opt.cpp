@@ -178,8 +178,17 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
     ThinHashMap<MemAllocPlan::Chunk*, MemChunkLifeInterval> chk2interval;
 
     // get all memory chunks
+    if (StaticMemRecorder::Instance().valid()) {
+        StaticMemRecorder::Instance().clear_opr_seq();
+    }
+    
     for (size_t idx = 0; idx < m_cur_seq_full->size(); ++ idx) {
         OperatorNodeBase *opr = m_cur_seq_full->at(idx);
+
+        if (StaticMemRecorder::Instance().valid()) {
+            StaticMemRecorder::Instance().regist_opr_seq(
+                    {idx, 0, opr->name()});
+        }
 
         auto &&dep_map = opr->node_prop().dep_map();
 
@@ -348,6 +357,14 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
         for (auto&& chk : chunks) {
             chk.chunk->mem_alloc_status.set_static_offset(
                     allocator->get_start_addr(&chk));
+        }
+        auto& recorder = StaticMemRecorder::Instance();
+        if (recorder.valid()) {
+            for (size_t i = 0; i < chunks.size(); i++) {
+                recorder.regist_memory_chunk_owner_var_name(
+                        i, chunks.at(i).chunk->owner_var->name());
+            }
+            recorder.regist_peak_mem_size(size);
         }
     }
 

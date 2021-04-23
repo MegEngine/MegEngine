@@ -16,6 +16,7 @@
 #include "megbrain/comp_node_env.h"
 #include "megbrain/plugin/var_sanity_check.h"
 #include "megbrain/utils/arith_helper.h"
+#include "megbrain/plugin/static_mem_record.h"
 
 namespace mgb {
 namespace cg {
@@ -169,6 +170,9 @@ public:
     }
 
     std::unique_ptr<RecordedComputingSequence> as_recorded_seq();
+
+    void get_static_memory_alloc_info(
+            const std::string& svg_name = "static_mem_record.svg") override;
 };
 
 class ComputingGraphImpl::MegDNNDtorCheck : public NonCopyableObj {

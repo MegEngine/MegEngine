@@ -1,0 +1,154 @@
+<html>
+
+<title>Visualizer</title>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+</head>
+<script>
+    window.onload = () => {
+        var board = document.getElementById('board');
+        var fileInput = document.getElementById('fileInput');
+        var desc = document.getElementById('desc');
+        var hRange = document.getElementById('hRange');
+        var vRange = document.getElementById('vRange');
+        var lastColor = undefined;
+        var lastElem = undefined;
+        var scale = 1;
+        var svg = undefined;
+        var svgWidth = undefined;
+        var svgHeight = undefined;
+
+        var loadDesc = (svgElem) => {
+            var mgeType = svgElem.attributes['mge:type'];
+            if (mgeType === undefined) {
+                return;
+            }
+
+            var elemList = [];
+            for (attrName of svgElem.getAttributeNames()) {
+                var prefix = 'mge:';
+                if (!attrName.startsWith(prefix)) {
+                    continue;
+                }
+                var elem = '<p>' + attrName.substr(prefix.length) + ': ' + svgElem.attributes[attrName].value + '</p>'
+                elemList.push(elem);
+            }
+            desc.innerHTML = elemList.join('');
+        };
+
+        var selectElem = svgElem => {
+            loadDesc(svgElem);
+            lastColor = svgElem.attributes['fill'].value;
+            lastElem = svgElem;
+            svgElem.attributes['fill'].value = 'green';
+        };
+
+        var unselectLast = svgElem => {
+            if (lastElem) {
+                lastElem.attributes['fill'].value = lastColor;
+            }
+            lastElem = undefined;
+            lastColor = undefined;
+        };
+
+        function recLoadSVG(svgElem) {
+            if (svgElem.children === undefined) {
+                return;
+            }
+            svgElem.onmousedown = e => {
+                var mgeType = svgElem.attributes['mge:type'];
+                if (mgeType === undefined) {
+                    return;
+                }
+
+                unselectLast();
+                selectElem(svgElem);
+
+                e.stopPropagation();
+            };
+            for (child of svgElem.children) {
+                recLoadSVG(child);
+            }
+        }
+
+        function loadSVG() {
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.readAsText(file, "UTF-8");
+            reader.onload = e => {
+                board.innerHTML = '<p style="margin: 0;">' + e.target.result + '</p>';
+                svg = board.children[0].children[0];
+                svgWidth = svg.attributes['width'].value;
+                svgHeight = svg.attributes['height'].value;
+                for (child of board.children) {
+                    recLoadSVG(child);
+
+                    var svgInfo = child.attributes['svg:info'];
+                    if (svgInfo !== undefined) {
+                        var elemList = [];
+                        for (attrName of child.getAttributeNames()) {
+                            var prefix = 'svg:';
+                            if (!attrName.startsWith(prefix)) {
+                                continue;
+                            }
+                            var elem = '<p>' + attrName.substr(prefix.length) + ': ' + child.attributes[attrName].value + '</p>'
+                            elemList.push(elem);
+                        }
+                        info.innerHTML = elemList.join('');
+                    }
+                }
+            };
+        }
+        function scaleBoard(x, y) {
+            var transform = 'scale(' + x + ',' + y + ')';
+            svg.setAttribute('transform', transform);
+            board.style['width'] = svgWidth * x;
+            board.style['height'] = svgHeight * y;
+        }
+        function autoScaleBoard() {
+            var hRangeValue = Math.sqrt(Number(hRange.value) / 10);
+            var vRangeValue = Math.sqrt(Number(vRange.value) / 10);
+            scaleBoard(Number(hRangeValue), Number(vRangeValue));
+        }
+        fileInput.onchange = loadSVG;
+        var zoomBoard = dScale => {
+            scale *= dScale;
+            scaleBoard(scale, scale);
+        };
+        window.addEventListener('wheel', e => {
+            console.log(e);
+            if (e.ctrlKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                var factor = 1;
+                if (e.deltaY < 0) {
+                    factor = 1.1;
+                } else if (e.deltaY > 0) {
+                    factor = 1 / 1.1;
+                }
+                zoomBoard(factor);
+                var newPageX = e.pageX * factor;
+                var newPageY = e.pageY * factor;
+                x = newPageX - e.x;
+                y = newPageY - e.y;
+                window.scrollTo({
+                    top: y,
+                    left: x,
+                });
+                console.log('scroll', [x, y]);
+            }
+        }, { 'passive': false });
+    };
+</script>
+
+<body>
+    <p id="desc" style="position: fixed;bottom: 0; background-color: white;">desc</p>
+    <p id="info" style="position: fixed;top: 0; right: 0; background-color: white;">info</p>
+    <p id="board"
+        style="white-space: nowrap; display: flex; justify-content: center; align-content: center; align-items: center; margin: 0;opacity: 0.7;">
+    </p>
+    <input type='file' id='fileInput' style="position: fixed; top: 0; background-color: white;"></input>
+</body>
+
+</html>

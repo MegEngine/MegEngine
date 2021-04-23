@@ -120,6 +120,22 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
 
     check_result_and_calc_lower_bound();
 
+    if (StaticMemRecorder::Instance().valid()) {
+        StaticMemRecorder::Instance().clear_memory_chunk();
+        for (auto&& i : m_interval) {
+            size_t overwrite_dest_id = 0;
+            bool is_overwrite = !i->is_overwrite_root();
+            if (is_overwrite) {
+                overwrite_dest_id = i->overwrite_dest_root()->id;
+            }
+
+            StaticMemRecorder::Instance().regist_memory_chunk(
+                    {i->id, i->size_orig, i->time_begin, i->time_end,
+                     i->addr_begin, i->addr_end(), overwrite_dest_id,
+                     is_overwrite, ""});
+        }
+    }
+
     return *this;
 }
 
