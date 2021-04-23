@@ -82,7 +82,7 @@ class Adagrad(Optimizer):
             step += c1
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * _weight_decay
+                grad = grad + param * _weight_decay
 
             square_avg = states["square_avg"]
             square_avg += grad ** c2

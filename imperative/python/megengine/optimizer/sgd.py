@@ -72,7 +72,7 @@ class SGD(Optimizer):
 
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * _weight_decay
+                grad = grad + param * _weight_decay
 
             if inplace_mode:
                 if momentum:

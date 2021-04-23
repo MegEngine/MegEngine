@@ -85,7 +85,7 @@ class Adam(Optimizer):
 
             grad = param.grad
             if weight_decay != 0.0:
-                grad += param * _weight_decay
+                grad = grad + param * _weight_decay
 
             states = self._state[param]
 
