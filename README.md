@@ -71,7 +71,7 @@ Please refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md) for more 
 
 * MegEngine adopts [Contributor Covenant](https://contributor-covenant.org) as a guideline to run our community. Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
 * Every contributor of MegEngine must sign a [Contributor License Agreement (CLA)](CONTRIBUTOR_LICENSE_AGREEMENT.md) to clarify the intellectual property license granted with the contributions.
-* You can help improving MegEngine in many ways:
+* You can help to improve MegEngine in many ways:
     * Write code.
     * Improve [documentation](https://github.com/MegEngine/Docs).
     * Answer questions on [MegEngine Forum](https://discuss.megengine.org.cn), or Stack Overflow.
@@ -102,6 +102,6 @@ We strive to build an open and friendly community. We aim to power humanity with
 
 ## License
 
-MegEngine is Licensed under the Apache License, Version 2.0
+MegEngine is licensed under the Apache License, Version 2.0
 
 Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
