@@ -252,14 +252,6 @@ class BatchNorm2d(_BatchNorm):
     keep running estimates, batch statistics is used during
     evaluation time instead.
 
-    .. note::
-        This :attr:`momentum` argument is different from one used in optimizer
-        classes and the conventional notion of momentum. Mathematically, the
-        update rule for running statistics here is
-        :math:`\hat{x}_\text{new} = \text{momentum} \times \hat{x} + (1 - \text{momentum}) \times x_t`,
-        where :math:`\hat{x}` is the estimated statistic and :math:`x_t` is the
-        new observed value.
-
     Because the Batch Normalization is done over the `C` dimension, computing
     statistics on `(N, H, W)` slices, it's common terminology to call this
     Spatial Batch Normalization.
