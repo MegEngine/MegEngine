@@ -1043,7 +1043,7 @@ class Lighting(VisionTransform):
 
         dtype = image.dtype
         image = image.astype(np.float32)
-        alpha = np.random.normal(scale=self.scale, size=3)
+        alpha = np.random.normal(scale=self.scale * 255, size=3)
         image = image + self.eigvec.dot(alpha * self.eigval)
         return image.clip(0, 255).astype(dtype)
 
