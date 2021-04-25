@@ -41,7 +41,8 @@ DType OprLoadContextRawPOD::read_param() {
     if (m_check_param_tag) {
         uint32_t tag;
         read_raw(&tag, sizeof(tag));
-        mgb_assert(tag == megdnn::param::FakeSerializedDType::TAG);
+        mgb_throw_if(tag != megdnn::param::FakeSerializedDType::TAG,
+                     MegBrainError, "ERROR tag");
     }
     return serialization::deserialize_dtype(
             [this](void* data, size_t len) { read_raw(data, len); });

@@ -279,6 +279,7 @@ void VarSanityCheck::check_single_input(bool add_debug_log,
     }
 
     if (checksum != checksum_expect) {
+#if MGB_ENABLE_GETENV
         mgb_throw(Error,
                   "var sanity check failed: var: %s"
                   " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);"
@@ -288,6 +289,15 @@ void VarSanityCheck::check_single_input(bool add_debug_log,
                   str(checksum_expect).c_str(), str(checksum).c_str(),
                   recv_opr->cname(), recv_opr->dyn_typeinfo()->name,
                   recv_opr->id(), var->id(), !add_debug_log);
+#else
+        mgb_throw(Error,
+                  "var sanity check failed: var: %s"
+                  " (checksum: expect=%s got=%s); receiver: %s{%s}(%zu);",
+                  cg::dump_var_info({var}).c_str(),
+                  str(checksum_expect).c_str(), str(checksum).c_str(),
+                  recv_opr->cname(), recv_opr->dyn_typeinfo()->name,
+                  recv_opr->id());
+#endif
     }
 }
 

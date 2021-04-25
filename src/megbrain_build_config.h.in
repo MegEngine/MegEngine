@@ -127,7 +127,7 @@
 
 // whether to enbale configuing megbrain internals through env vars
 #ifndef MGB_ENABLE_GETENV
-#define MGB_ENABLE_GETENV       1
+#define MGB_ENABLE_GETENV       MGB_ASSERT_LOC
 #endif
 
 // whether to remove unnecessary features when used for serving

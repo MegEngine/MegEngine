@@ -880,7 +880,7 @@ std::string ComputingGraphImpl::get_mem_allocation_info() const {
 
     return objlist->to_string();
 #endif // MGB_ENABLE_JSON
-    mgb_log_warn("mgb is not configured with MGB_ENABLE_JSON on,"
+    mgb_log_warn("target is not configured with JSON BUILD on,"
                  "get_mem_allocation_info returns null string");
     return std::string();
 }

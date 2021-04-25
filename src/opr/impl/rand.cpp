@@ -59,10 +59,10 @@ cg::OperatorNodeBase::NodeProp* RNGOprBase::do_make_node_prop() const {
 }
 
 void RNGOprBase::ensure_megdnn_opr() {
-    if (!m_megdnn_opr || m_megdnn_opr.comp_node() != comp_node()) {
+    if (!m_dnn_opr || m_dnn_opr.comp_node() != comp_node()) {
         // activate comp_node for curandCreateGenerator in create_megdnn_opr
         comp_node().activate();
-        m_megdnn_opr = create_megdnn_opr();
+        m_dnn_opr = create_megdnn_opr();
     }
 }
 
@@ -76,7 +76,7 @@ void RNGOprBase::init_output_static_infer_desc() {
     auto infer_wk = [this](TensorShape &dest, const InpVal &inp) {
         ensure_megdnn_opr();
         dest.ndim = 1;
-        dest.shape[0] = m_megdnn_opr->get_workspace_in_bytes(
+        dest.shape[0] = m_dnn_opr->get_workspace_in_bytes(
                 {inp.val.at(0).shape(), output(0)->dtype()});
         return true;
     };
@@ -87,7 +87,7 @@ void RNGOprBase::init_output_static_infer_desc() {
 }
 
 void RNGOprBase::scn_do_execute() {
-    m_megdnn_opr->exec(
+    m_dnn_opr->exec(
             output(0)->dev_tensor().as_megdnn(),
             get_megdnn_workspace_from_var(output(1)));
 }

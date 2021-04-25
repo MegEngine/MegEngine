@@ -136,7 +136,7 @@ namespace mixin {
             virtual void create_megdnn_opr() = 0;
 
             megdnn::OperatorBase* megdnn_opr() const {
-                return m_megdnn_opr.get();
+                return m_dnn_opr.get();
             }
 
             void set_megdnn_opr(std::unique_ptr<megdnn::OperatorBase> opr);
@@ -146,7 +146,7 @@ namespace mixin {
                     cg::GraphExecutable::ExecDependencyArray& deps);
 
         private:
-            std::unique_ptr<megdnn::OperatorBase> m_megdnn_opr;
+            std::unique_ptr<megdnn::OperatorBase> m_dnn_opr;
     };
 
     class MegDNNOprHolderBwdStaticInfer: public MegDNNOprHolder {

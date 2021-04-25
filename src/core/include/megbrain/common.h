@@ -108,34 +108,33 @@ void __on_exception_throw__(const std::exception &exc)
     } while(0)
 
 // assert
+void __assert_fail__(const char* file, int line, const char* func,
+                     const char* expr, const char* msg_fmt = 0, ...)
+        __attribute__((format(printf, 5, 6), noreturn));
 #if MGB_ASSERT_LOC
 /*!
  * \brief extended assert
  * extra diagnostics message (in printf format) could be printed when assertion
  * fails; the asserted expression is guaranteed to be evaluated
  */
-#define mgb_assert(expr, msg...) \
-    do { \
-        if (mgb_unlikely(!(expr))) \
-            ::mgb::__assert_fail__(__FILE__, __LINE__, \
-                    __PRETTY_FUNCTION__, # expr, ##msg); \
-    } while(0)
-void __assert_fail__(
-        const char *file, int line, const char *func,
-        const char *expr, const char *msg_fmt = 0, ...)
-    __attribute__((format(printf, 5, 6), noreturn));
+#define mgb_assert(expr, msg...)                                            \
+    do {                                                                    \
+        if (mgb_unlikely(!(expr)))                                          \
+            ::mgb::__assert_fail__(__FILE__, __LINE__, __PRETTY_FUNCTION__, \
+                                   #expr, ##msg);                           \
+    } while (0)
 #else
-#define mgb_assert(expr, msg...) \
-    do { \
-        if (mgb_unlikely(!(expr))) \
-            ::mgb::__assert_fail__(); \
-    } while(0)
-void __assert_fail__() __attribute__((noreturn));
-#endif // MGB_ASSERT_LOC
+#define mgb_assert(expr, msg...)                                              \
+    do {                                                                      \
+        if (mgb_unlikely(!(expr)))                                            \
+            ::mgb::__assert_fail__(                                           \
+                    "about location info, please build with debug", __LINE__, \
+                    NULL, #expr, ##msg);                                      \
+    } while (0)
+#endif  // MGB_ASSERT_LOC
 
 /* ================ logging ================  */
-//! caused by need remve some words at opt release
-#if MGB_ENABLE_LOGGING
+#if MGB_ASSERT_LOC
 #define mgb_log_debug(fmt...) \
     _mgb_do_log(::mgb::LogLevel::DEBUG, __FILE__, __func__, __LINE__, fmt)
 #define mgb_log(fmt...) \
@@ -154,7 +153,6 @@ void __assert_fail__() __attribute__((noreturn));
     _mgb_do_log(::mgb::LogLevel::WARN, "", "", __LINE__, fmt)
 #define mgb_log_error(fmt...) \
     _mgb_do_log(::mgb::LogLevel::ERROR, LOC, "", __LINE__, fmt)
-#undef LOC
 #endif
 enum class LogLevel { DEBUG, INFO, WARN, ERROR, NO_LOG };
 

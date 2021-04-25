@@ -377,21 +377,21 @@ MegDNNOprHolder::~MegDNNOprHolder() noexcept = default;
 void MegDNNOprHolder::mixin_init_output_comp_node(OperatorNodeBase &self) {
     SingleCNOperatorNode::mixin_init_output_comp_node(self);
     create_megdnn_opr();
-    mgb_assert(m_megdnn_opr);
-    m_megdnn_opr->set_error_tracker(&self);
+    mgb_assert(m_dnn_opr);
+    m_dnn_opr->set_error_tracker(&self);
 }
 
 void MegDNNOprHolder::mixin_on_output_comp_node_stream_changed(
         OperatorNodeBase &self) {
     SingleCNOperatorNode::mixin_on_output_comp_node_stream_changed(self);
     create_megdnn_opr();
-    mgb_assert(m_megdnn_opr);
-    m_megdnn_opr->set_error_tracker(&self);
+    mgb_assert(m_dnn_opr);
+    m_dnn_opr->set_error_tracker(&self);
 }
 
 void MegDNNOprHolder::set_megdnn_opr(
         std::unique_ptr<megdnn::OperatorBase> self) {
-    m_megdnn_opr = std::move(self);
+    m_dnn_opr = std::move(self);
 }
 
 void MegDNNOprHolder::record_megdnn_opr(
@@ -402,7 +402,7 @@ void MegDNNOprHolder::record_megdnn_opr(
 
 void MegDNNOprHolder::record_megdnn_opr(
         cg::GraphExecutable::ExecDependencyArray& deps) {
-    record_megdnn_opr(std::move(m_megdnn_opr), deps);
+    record_megdnn_opr(std::move(m_dnn_opr), deps);
 }
 
 /* ================== MegDNNOprHolderBwdStaticInfer ================== */

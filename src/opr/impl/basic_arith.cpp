@@ -343,24 +343,24 @@ void Elemwise::mem_plan_fwd_in2out_writable() {
 }
 
 void Elemwise::scn_do_execute() {
-    auto &&inp = input();
-    megdnn::TensorNDArray megdnn_inp;
-    mgb_assert(megdnn_inp.capacity() >= inp.size(),
-            "heap allocation in elemwise exec");
-    megdnn_inp.resize(inp.size());
-    for (size_t i = 0; i < inp.size(); ++ i) {
+    auto&& inp = input();
+    megdnn::TensorNDArray dnn_inp;
+    mgb_assert(dnn_inp.capacity() >= inp.size(),
+               "heap allocation in elemwise exec");
+    dnn_inp.resize(inp.size());
+    for (size_t i = 0; i < inp.size(); ++i) {
         if (inp[i]->dev_tensor().empty()) {
             mgb_assert(output(0)->dev_tensor().empty());
             return;
         }
-        megdnn_inp[i] = (inp[i]->dev_tensor().as_megdnn());
+        dnn_inp[i] = (inp[i]->dev_tensor().as_megdnn());
     }
     mgb_assert(!output(0)->dev_tensor().empty());
 
     megdnn_opr()->param() = param();
-    call_megdnn_opr_exec(
-            comp_node(), megdnn_inp, output(0)->dev_tensor().as_megdnn(),
-            megdnn_opr(), this);
+    call_megdnn_opr_exec(comp_node(), dnn_inp,
+                         output(0)->dev_tensor().as_megdnn(), megdnn_opr(),
+                         this);
 }
 
 void Elemwise::init_output_static_infer_desc() {

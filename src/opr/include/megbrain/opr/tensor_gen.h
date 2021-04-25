@@ -72,7 +72,7 @@ MGB_DEFINE_OPR_CLASS(Linspace, cg::SingleCNOperatorNodeBase) // {
 
     private:
         const Param m_param;
-        intl::UniqPtrWithCN<megdnn::Linspace> m_megdnn_opr;
+        intl::UniqPtrWithCN<megdnn::Linspace> m_dnn_opr;
 
         void scn_do_execute() override;
         void init_output_static_infer_desc() override;
@@ -97,7 +97,7 @@ MGB_DEFINE_OPR_CLASS(Eye, cg::SingleCNOperatorNodeBase) // {
 
     private:
         const Param m_param;
-        intl::UniqPtrWithCN<megdnn::Eye> m_megdnn_opr;
+        intl::UniqPtrWithCN<megdnn::Eye> m_dnn_opr;
 
         void scn_do_execute() override;
         void init_output_static_infer_desc() override;

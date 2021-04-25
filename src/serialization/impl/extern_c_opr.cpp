@@ -292,7 +292,7 @@ ExternCOprRunner::ExternCOprRunner(std::string& name,
     auto size_diff = sizeof(MGBOprDesc) - m_desc->size;
     is_loader_support_dynamic_param = (0 == size_diff) ? true : false;
     mgb_assert(0 == size_diff || sizeof(ExternCOprParam*) == size_diff,
-               "invalid MGBOprDesc size: expect=%zu got=%u, may caused by "
+               "invalid OprDesc size: expect=%zu got=%u, may caused by "
                "extern_c_opr.h mismatch, please confirm that the "
                "extern_c_opr.h used when compiling the loader is consistent "
                "with the runtime caller build used",
@@ -531,8 +531,8 @@ cg::OperatorNodeBase* ExternCOprRunner::shallow_copy(
 }
 
 MGBTensorShape ExternCOprRunner::tensor_shape_to_c(const TensorShape& shape) {
-    mgb_assert(shape.ndim <= MGB_TENSOR_MAX_NDIM, "shape ndim too large: %zu",
-               shape.ndim);
+    mgb_throw_if(shape.ndim > MGB_TENSOR_MAX_NDIM, MegBrainError,
+                 "shape ndim too large: %zu", shape.ndim);
     MGBTensorShape ret;
     ret.ndim = shape.ndim;
     for (size_t i = 0; i < shape.ndim; ++i) {
