@@ -18,7 +18,7 @@ class DTR:
     It is basically an online algorithm for checkpointing driven by certain eviction policies.
 
     .. code-block::
-    
+
         from megengine.utils.dtr import DTR
 
         ds = DTR(memory_budget=5*1024**3)
@@ -29,8 +29,8 @@ class DTR:
 
     def __init__(self, memory_budget=0, tensor_lowerbound=1048576):
         r"""
-        :param memory_budget: int. The threshold of memory usage. When memory
-        usage exceeds this value, auto evict will be triggered.
+        :param memory_budget: int. The threshold of memory usage, measured in bytes.
+        When memory usage exceeds this value, auto evict will be triggered.
         :param tensor_lowerbound: int. The minimum memory limit of the tensor
         that can be evicted. Default: 1MB.
         """
