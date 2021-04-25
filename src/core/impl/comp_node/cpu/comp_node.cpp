@@ -759,7 +759,7 @@ public:
 #else
                 mgb_throw(MegBrainError,
                           "Atlas comp_node used but "
-                          "MGB_ATLAS not enabled");
+                          "ATLAS BUILD not enabled");
 #endif
             } else if (dest_impl->env().property().type ==
                        DeviceType::CAMBRICON) {
@@ -769,7 +769,7 @@ public:
 #else
                 mgb_throw(MegBrainError,
                           "Cambricon comp_node used but "
-                          "MGB_CAMBRICON not enabled");
+                          "CAMBRICON BUILD not enabled");
 #endif
             }
             else {
@@ -1035,7 +1035,7 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
         return m_comp_node_impl->sync();
 #else
         mgb_throw(MegBrainError,
-                  "Atlas comp_node used but MGB_ATLAS not enabled");
+                  "Atlas comp_node used but ATLAS BUILD not enabled");
 #endif
     } else if (cn_impl->env().property().type ==
                CompNode::DeviceType::CAMBRICON) {

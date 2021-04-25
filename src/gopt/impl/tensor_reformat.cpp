@@ -1465,7 +1465,8 @@ std::unique_ptr<EnableNCHW4Pass> EnableNCHW4Pass::make_nchw4_converter() {
                 return {weight_to_nchw4_mode_dense, src_to_nchw4_mode};
             }
         } else {
-            mgb_assert(conv_mode == megdnn::param::Convolution::Sparse::GROUP);
+            mgb_throw_if(conv_mode != megdnn::param::Convolution::Sparse::GROUP,
+                         MegBrainError, "mode error");
             mgb_assert(filter->shape().ndim == 5,
                        "The origin filter if not NCHW mode");
             size_t IC = filter->shape()[2];
@@ -2018,7 +2019,8 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
                 ret.second = hybrid_nchw_nchwxx;
             }
         } else {
-            mgb_assert(conv_mode == megdnn::param::Convolution::Sparse::GROUP);
+            mgb_throw_if(conv_mode != megdnn::param::Convolution::Sparse::GROUP,
+                         MegBrainError, "mode error");
             size_t group = filter->shape()[0];
             size_t ocpg = filter->shape()[1];
             size_t icpg = filter->shape()[2];
@@ -2038,9 +2040,11 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
                                           const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_opr = opr->cast_final_safe<opr::ConvolutionForward>();
-        mgb_assert(conv_opr.param().format ==
-                           megdnn::param::Convolution::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHWXX");
+        mgb_throw_if(
+                conv_opr.param().format !=
+                        megdnn::param::Convolution::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NCHWXX");
         bool valid_nchw_nchw44 =
                 nchw_nchwxx_valid(conv_opr, new_inp, pack_c_size);
         auto is_trans = test_trans_nchwxx(
@@ -2118,9 +2122,11 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         mgb_assert(opr->input().size() <= 3,
                    "nchwxx does not support conv_bias fuse Z right now");
         auto& conv_bias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
-        mgb_assert(conv_bias_opr.param().format ==
-                           megdnn::param::ConvBias::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHWXX");
+        mgb_throw_if(
+                conv_bias_opr.param().format !=
+                        megdnn::param::ConvBias::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NCHWXX");
         bool valid_nchw_nchw44 =
                 nchw_nchwxx_valid(conv_bias_opr, new_inp, pack_c_size,
                                   conv_bias_opr.param().nonlineMode);
@@ -2244,9 +2250,11 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
                                    const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& pooling_opr = opr->cast_final_safe<opr::PoolingForward>();
-        mgb_assert(pooling_opr.param().format ==
-                           megdnn::param::Pooling::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHWxx");
+        mgb_throw_if(
+                pooling_opr.param().format !=
+                        megdnn::param::Pooling::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NCHWxx");
         VarNode* inp = new_inp[0];
         //! if input is nchwxx
         if (inp->shape().ndim == 5) {
@@ -2433,7 +2441,8 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                 }
             }
         } else {
-            mgb_assert(conv_mode == megdnn::param::Convolution::Sparse::GROUP);
+            mgb_throw_if(conv_mode != megdnn::param::Convolution::Sparse::GROUP,
+                         MegBrainError, "mode error");
             size_t group = filter->shape()[0];
             size_t ocpg = filter->shape()[1];
             size_t icpg = filter->shape()[2];
@@ -2462,10 +2471,11 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
                                     const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_opr = opr->cast_final_safe<opr::ConvolutionForward>();
-        mgb_assert(conv_opr.param().format ==
-                           megdnn::param::Convolution::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to "
-                   "NCHW44_DOT");
+        mgb_throw_if(conv_opr.param().format !=
+                             megdnn::param::Convolution::Format::NCHW,
+                     MegBrainError,
+                     "ConvertFormat Pass only support converting NCHW to "
+                     "NCHW44_DOT");
         bool valid_nchw_nchw44 = nchw_nchwxx_valid(
                 conv_opr, new_inp, pack_c_size,
                 megdnn::param::ConvBias::NonlineMode::IDENTITY, true);
@@ -2543,9 +2553,11 @@ EnableNchw44DotPass::make_nchw44_dot_converter() {
         mgb_assert(opr->input().size() <= 3,
                    "nchwxx-dot does not support conv_bias fuse Z right now");
         auto& conv_bias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
-        mgb_assert(conv_bias_opr.param().format ==
-                           megdnn::param::ConvBias::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NCHWXX");
+        mgb_throw_if(
+                conv_bias_opr.param().format !=
+                        megdnn::param::ConvBias::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NCHWXX");
         bool valid_nchw_nchw44 =
                 nchw_nchwxx_valid(conv_bias_opr, new_inp, pack_c_size,
                                   conv_bias_opr.param().nonlineMode, true);

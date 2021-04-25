@@ -619,7 +619,7 @@ void ComputingGraphImpl::MegDNNDtorCheck::enable() {
     mgb_assert(!m_enabled);
     m_enabled = true;
     auto cb_dnn = [](megdnn::OperatorBase* opr) {
-        mgb_log_error("unexpected destruction of megdnn opr %p", opr);
+        mgb_log_error("unexpected destruction of dnn opr %p", opr);
         mgb_trap();
     };
     auto cb_mem = [](size_t alloc_size, bool, void* ptr) {

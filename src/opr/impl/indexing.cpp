@@ -187,12 +187,12 @@ template<class Opr>
 Opr& mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::megdnn_opr(
         cg::SingleCNOperatorNodeBase& self) {
     auto comp_node = self.comp_node();
-    if (!m_megdnn_opr || m_megdnn_opr.comp_node() != comp_node) {
-        m_megdnn_opr = intl::create_megdnn_opr<Opr>(comp_node);
-        m_megdnn_opr->set_error_tracker(
+    if (!m_dnn_opr || m_dnn_opr.comp_node() != comp_node) {
+        m_dnn_opr = intl::create_megdnn_opr<Opr>(comp_node);
+        m_dnn_opr->set_error_tracker(
                 static_cast<cg::OperatorNodeBase*>(&self));
     }
-    return *m_megdnn_opr;
+    return *m_dnn_opr;
 }
 
 template<class Opr>
@@ -228,7 +228,7 @@ template <class Opr>
 void mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::record_megdnn_opr(
         mgb::cg::GraphExecutable::ExecDependencyArray& deps) {
     deps.emplace_back(
-            std::make_unique<intl::MegDNNGraphDep>(std::move(m_megdnn_opr)));
+            std::make_unique<intl::MegDNNGraphDep>(std::move(m_dnn_opr)));
 }
 
 /* ==================== MultiAxisVecFancyIndexingHelper ==================== */
@@ -258,14 +258,24 @@ intl::MultiAxisVecFancyIndexingHelper::make_megdnn_index_desc(
             }
         }
         if (all_scalar) {
-            mgb_log_warn("%s{%s}: no vector indexer; consider using Subtensor "
+#if MGB_ENABLE_GETENV
+            mgb_log_warn(
+                    "%s{%s}: no vector indexer; consider using Subtensor "
                     "family for better performance; you can set "
                     "MGB_THROW_ON_SCALAR_IDX to throw an exception to help "
                     "tracking the related operator",
                     cname(), dyn_typeinfo()->name);
-            mgb_throw_if(MGB_GETENV("MGB_THROW_ON_SCALAR_IDX"),
-                    MegBrainError, "vector-indexing operator used with all "
-                    "scalar indices");
+#else
+            mgb_log_warn(
+                    "%s{%s}: no vector indexer; consider using Subtensor "
+                    "family for better performance",
+                    cname(), dyn_typeinfo()->name);
+#endif
+#if MGB_ENABLE_GETENV
+            mgb_throw_if(MGB_GETENV("MGB_THROW_ON_SCALAR_IDX"), MegBrainError,
+                         "vector-indexing operator used with all "
+                         "scalar indices");
+#endif
         }
 
         // always set m_scalar_idx_warn_printed to be true, so we do not print

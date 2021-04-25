@@ -88,7 +88,7 @@ namespace mixin {
 
     template<class Opr>
     class IndexingMultiAxisVecMegDNNOprHolder {
-        intl::UniqPtrWithCN<Opr> m_megdnn_opr;
+        intl::UniqPtrWithCN<Opr> m_dnn_opr;
 
         protected:
             Opr& megdnn_opr(cg::SingleCNOperatorNodeBase& self);

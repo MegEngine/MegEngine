@@ -69,7 +69,7 @@ public:
     using FixedTensorLayouts = std::array<TensorLayout, arity>;
     class AlgoChooserHelper {
         FixedTensorLayouts m_layouts;
-        Opr* m_megdnn_opr;
+        Opr* m_dnn_opr;
         std::string m_param;
         const cg::OperatorNodeBase* m_base_mgb_opr;
         CompNode m_cn;
@@ -84,7 +84,7 @@ public:
                 const megdnn::param::ExecutionPolicy& execution_policy,
                 bool allow_weight_preprocess);
 
-        Opr* megdnn_opr() const { return m_megdnn_opr; }
+        Opr* megdnn_opr() const { return m_dnn_opr; }
 
         const cg::OperatorNodeBase* mgb_opr() const { return m_base_mgb_opr; }
 
@@ -106,7 +106,7 @@ public:
 
         megdnn::Algorithm* get_algorithm_from_desc(
                 const megdnn::Algorithm::Info::Desc& desc) const {
-            return m_megdnn_opr->get_algorithm_from_desc(desc);
+            return m_dnn_opr->get_algorithm_from_desc(desc);
         }
 
         const FixedTensorLayouts& layouts() const { return m_layouts; }

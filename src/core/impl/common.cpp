@@ -23,6 +23,7 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
+#include <sys/system_properties.h>
 #endif
 
 using namespace mgb;
@@ -32,10 +33,18 @@ LogLevel config_default_log_level() {
     auto default_level = LogLevel::ERROR;
     //! env to config LogLevel
     //!  DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, NO_LOG = 4
-    //! for example , export MGE_OVERRIDE_LOG_LEVEL=0, means set LogLevel to
+    //! for example , export RUNTIME_OVERRIDE_LOG_LEVEL=0, means set LogLevel to
     //! DEBUG
-    if (auto env = MGB_GETENV("MGE_OVERRIDE_LOG_LEVEL"))
+    if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
         default_level = static_cast<LogLevel>(std::stoi(env));
+
+#ifdef __ANDROID__
+    //! special for Android prop, attention: getprop may need permission
+    char buf[PROP_VALUE_MAX];
+    if (__system_property_get("RUNTIME_OVERRIDE_LOG_LEVEL", buf) > 0) {
+        default_level = static_cast<LogLevel>(atoi(buf));
+    }
+#endif
 
     return default_level;
 }
@@ -155,7 +164,7 @@ void default_log_handler(LogLevel level,
         default:
             android_level = ANDROID_LOG_ERROR;
     }
-    __android_log_vprint(android_level, "megbrain", fmt, ap);
+    __android_log_vprint(android_level, "runtime", fmt, ap);
 #endif
 
 #undef HDR_FMT
@@ -185,7 +194,7 @@ class MegDNNLogHandler {
             return;
         }
 
-        std::string new_fmt{"[megdnn] "};
+        std::string new_fmt{"[dnn] "};
         new_fmt.append(fmt);
         log_handler(mgb_level, file, func, line, new_fmt.c_str(), ap);
     }
@@ -238,8 +247,16 @@ namespace {
 #endif // MGB_ENABLE_LOGGING
 
 LogLevel mgb::set_log_level(LogLevel level) {
-    if (auto env = MGB_GETENV("MGE_OVERRIDE_LOG_LEVEL"))
+    if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
         level = static_cast<LogLevel>(std::stoi(env));
+
+#ifdef __ANDROID__
+    //! special for Android prop, attention: getprop may need permission
+    char buf[PROP_VALUE_MAX];
+    if (__system_property_get("RUNTIME_OVERRIDE_LOG_LEVEL", buf) > 0) {
+        level = static_cast<LogLevel>(atoi(buf));
+    }
+#endif
 
     auto ret = min_log_level;
     min_log_level = level;
@@ -256,7 +273,6 @@ LogHandler mgb::set_log_handler(LogHandler handler) {
     return ret;
 }
 
-#if MGB_ASSERT_LOC
 void mgb::__assert_fail__(
         const char *file, int line, const char *func,
         const char *expr, const char *msg_fmt, ...) {
@@ -273,11 +289,6 @@ void mgb::__assert_fail__(
     }
     mgb_throw_raw(AssertionError{msg});
 }
-#else
-void mgb::__assert_fail__() {
-    mgb_throw(AssertionError, "assertion failed");
-}
-#endif
 
 #if MGB_ENABLE_LOGGING && !MGB_ENABLE_EXCEPTION
 void mgb::__on_exception_throw__(const std::exception &exc) {

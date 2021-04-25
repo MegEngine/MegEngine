@@ -332,7 +332,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
         const megdnn::param::ExecutionPolicy& execution_policy,
         bool allow_weight_preprocess)
         : m_layouts{layouts},
-          m_megdnn_opr{megdnn_opr},
+          m_dnn_opr{megdnn_opr},
           m_param{param_str},
           m_base_mgb_opr{mgb_opr},
           m_cn{cn},
@@ -356,15 +356,15 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_heuristic(
             owner_graph(), m_cn, m_execution_policy.workspace_limit);
     auto attr = extract_algo_attribute(selected_strategy);
     policy.algo =
-            APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
+            APPLY(m_dnn_opr->get_algorithm_info_heuristic(
                           args..., workspace_limit, attr.first, attr.second),
                   m_layouts)
                     .desc;
 
-    Algorithm* algo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
+    Algorithm* algo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(algo, "Unknown algo description");
     std::vector<Algorithm::SearchItem>&& sub_items = algo->get_subopr_list(
-            to_layout_array<Opr>(m_layouts), m_megdnn_opr);
+            to_layout_array<Opr>(m_layouts), m_dnn_opr);
 
     FOREACH_OPR_TYPE_DISPATCH(sub_items, {
         auto&& megdnn_opr = intl::create_megdnn_opr<_Opr>(m_cn);
@@ -389,7 +389,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_profile(
         const ExecutionStrategy& selected_strategy, bool enable_update) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("choose_by_profile")))
     if (owner_graph()->options().no_profiling_on_shape_change) {
-        auto policy = m_megdnn_opr->execution_policy();
+        auto policy = m_dnn_opr->execution_policy();
         if (policy.algo.valid()) {
             return policy;
         }
@@ -439,9 +439,9 @@ typename AlgoChooser<Opr>::ImplAlgoDesc
 AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
         const ExecutionStrategy& selected_strategy) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_profile_result_from_cache")))
-    AlgoChooserProfileCache cache(m_cn, profile_name(m_megdnn_opr).c_str());
+    AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
 
-    typename Opr::Param origin_param = m_megdnn_opr->param();
+    typename Opr::Param origin_param = m_dnn_opr->param();
     AlgoChooserProfileCache::Key cache_key{m_layouts.data(), m_layouts.size(),
                                            &origin_param, sizeof(origin_param)};
     auto&& rst = cache.get(cache_key);
@@ -504,7 +504,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
                     std::string layouts_str = format_fixlayouts<Opr>(
                             m_layouts, arity_in, arity_out);
                     std::string msg = ssprintf(
-                            "(mbg_opr : %s, layouts %s, with attribute(%s) and "
+                            "(opr : %s, layouts %s, with attribute(%s) and "
                             "without attribute(%s)",
                             m_base_mgb_opr->dyn_typeinfo()->name,
                             layouts_str.c_str(),
@@ -526,7 +526,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
                     owner_graph(), m_cn, m_execution_policy.workspace_limit);
 
             auto attr = extract_algo_attribute(selected_strategy);
-            policy.algo = APPLY(m_megdnn_opr->get_algorithm_info_heuristic(
+            policy.algo = APPLY(m_dnn_opr->get_algorithm_info_heuristic(
                                         args..., workspace_limit, attr.first,
                                         attr.second),
                                 m_layouts)
@@ -539,10 +539,10 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
         }
     }
 
-    Algorithm* algo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
+    Algorithm* algo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(algo, "Unknown algo description");
     std::vector<Algorithm::SearchItem>&& sub_items = algo->get_subopr_list(
-            to_layout_array<Opr>(m_layouts), m_megdnn_opr);
+            to_layout_array<Opr>(m_layouts), m_dnn_opr);
 
     FOREACH_OPR_TYPE_DISPATCH(sub_items, {
         auto&& megdnn_opr = intl::create_megdnn_opr<_Opr>(m_cn);
@@ -571,11 +571,11 @@ template <typename Opr>
 size_t AlgoChooser<Opr>::AlgoChooserHelper::get_workspace_size_bytes(
         const ImplExecutionPolicy& policy) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_workspace_size_bytes")))
-    m_megdnn_opr->execution_policy() = policy;
+    m_dnn_opr->execution_policy() = policy;
     size_t result;
     if_constexpr<opr_supports_preprocess<Opr>()>(
             [&](auto _) {
-                auto&& opr = _(m_megdnn_opr);
+                auto&& opr = _(m_dnn_opr);
                 auto prep = this->construct_fake_preprocess_filter();
                 PreprocessFilter<Opr>* prep_ptr =
                         prep.valid() ? &prep.val() : nullptr;
@@ -587,7 +587,7 @@ size_t AlgoChooser<Opr>::AlgoChooserHelper::get_workspace_size_bytes(
             },
             /* else */
             [&](auto _) {
-                result = APPLY(_(m_megdnn_opr)->get_workspace_in_bytes(args...),
+                result = APPLY(_(m_dnn_opr)->get_workspace_in_bytes(args...),
                                m_layouts);
             });
     return result;
@@ -600,7 +600,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_all_candidates() const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_all_candidates")))
     auto heu = choose_by_heuristic(m_execution_policy.strategy);
     auto&& ret =
-            APPLY(m_megdnn_opr->get_all_algorithms_info(args...), m_layouts);
+            APPLY(m_dnn_opr->get_all_algorithms_info(args...), m_layouts);
     bool found = false;
     for (size_t i = 0; i < ret.size(); ++i) {
         if (ret[i].desc == heu.algo) {
@@ -610,7 +610,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_all_candidates() const {
         }
     }
 
-    Algorithm* palgo = m_megdnn_opr->get_algorithm_from_desc(heu.algo);
+    Algorithm* palgo = m_dnn_opr->get_algorithm_from_desc(heu.algo);
     mgb_assert(palgo, "Unknown algo description");
     mgb_assert(found,
                "algo %s got by heuristic not found in "
@@ -644,10 +644,10 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
     mgb_assert(param.shapes.size() == m_layouts.size());
     for (size_t i = 0; i < param.shapes.size(); ++i)
         param.shapes[i] = m_layouts[i];
-    param.opr_param = m_megdnn_opr->param();
+    param.opr_param = m_dnn_opr->param();
     param.allow_weight_preprocess = m_allow_weight_preprocess;
 
-    Algorithm* palgo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
+    Algorithm* palgo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "can not find algo when profile single algo");
 
     auto rst = TimedProfiler<Opr>::profile(param, timeout);
@@ -691,7 +691,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         policy.algo = algo.desc;
 
         //! check negative attribute : skip negative attribute
-        auto palgo = m_megdnn_opr->get_algorithm_from_desc(policy.algo);
+        auto palgo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
         if (palgo->contain_attribute_any(target_attr.second)) {
             mgb_log_debug(
                     "skip algo %s, which matches the profile strategy required "
@@ -748,12 +748,12 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
     mgb_assert(!prof_rst.empty(), "%s", msg.c_str());
 
     FixedTensorLayouts origin_layouts = m_layouts;
-    typename Opr::Param origin_param = m_megdnn_opr->param();
+    typename Opr::Param origin_param = m_dnn_opr->param();
     AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
                                            origin_layouts.size(), &origin_param,
                                            sizeof(origin_param)};
 
-    AlgoChooserProfileCache cache(m_cn, profile_name(m_megdnn_opr).c_str());
+    AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
     cache.put(cache_key, prof_rst);
     MIDOUT_E
 }
@@ -766,7 +766,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::construct_fake_preprocess_filter() const {
     if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
         if (!m_allow_weight_preprocess)
             return;
-        auto opr = _(m_megdnn_opr);
+        auto opr = _(m_dnn_opr);
         auto layouts = APPLY(opr->deduce_preprocessed_filter_layout(args...),
                              m_layouts);
         //! No preprocess layout means no need weight preprocess

@@ -126,10 +126,11 @@ namespace serialization {
             MGB_MARK_USED_VAR(graph);
             SymbolVar target_shape;
             if (inputs.size() == 1) {
-                mgb_assert(param.axis >=
-                                   -megdnn::param::OptionalAxisV1::MAX_NDIM &&
-                           param.axis <
-                                   megdnn::param::OptionalAxisV1::MAX_NDIM);
+                mgb_throw_if(
+                        param.axis < -megdnn::param::OptionalAxisV1::MAX_NDIM ||
+                                param.axis >=
+                                        megdnn::param::OptionalAxisV1::MAX_NDIM,
+                        MegBrainError, "DIM error");
             } else {
                 mgb_assert(inputs.size() == 2);
                 target_shape = inputs[1];

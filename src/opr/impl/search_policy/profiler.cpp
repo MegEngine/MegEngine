@@ -312,10 +312,15 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     double next_report_time = 0.5;
     while (!ev_end->finished()) {
         if (timer.get_secs() >= next_report_time) {
+#if MGB_ENABLE_GETENV
             mgb_log_warn(
                     "profiling conv algo %s already took %.3f/%.3f secs"
                     " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
                     algo->name(), timer.get_secs(), param.actual_timeout);
+#else
+            mgb_log_warn("profiling conv algo %s already took %.3f/%.3f secs",
+                         algo->name(), timer.get_secs(), param.actual_timeout);
+#endif
             next_report_time = timer.get_secs() + 1;
         }
         using namespace std::literals;

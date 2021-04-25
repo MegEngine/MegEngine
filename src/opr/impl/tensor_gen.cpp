@@ -111,7 +111,7 @@ void Linspace::scn_do_execute() {
             stop.dtype(), stop.raw_ptr()).get_cast<double>();
 
     auto cn = comp_node();
-    auto &&opr = m_megdnn_opr;
+    auto &&opr = m_dnn_opr;
     if (!opr || opr.comp_node() != cn)
         opr = intl::create_megdnn_opr<megdnn::Linspace>(cn);
     opr->param() = {startv, stopv, m_param.endpoint};
@@ -122,7 +122,7 @@ void Linspace::scn_do_execute() {
 
 void Linspace::record_execute_deps(ExecDependencyArray& deps) {
     deps.emplace_back(
-            std::make_unique<intl::MegDNNGraphDep>(std::move(m_megdnn_opr)));
+            std::make_unique<intl::MegDNNGraphDep>(std::move(m_dnn_opr)));
 }
 
 #if MGB_ENABLE_GRAD
@@ -184,7 +184,7 @@ cg::OperatorNodeBase::NodeProp* Eye::do_make_node_prop() const {
 
 void Eye::scn_do_execute() {
     auto cn = comp_node();
-    auto &&opr = m_megdnn_opr;
+    auto &&opr = m_dnn_opr;
     if (!opr || opr.comp_node() != cn) {
         opr = intl::create_megdnn_opr<megdnn::Eye>(cn);
         opr->param() = m_param;
@@ -196,7 +196,7 @@ void Eye::scn_do_execute() {
 
 void Eye::record_execute_deps(ExecDependencyArray& deps) {
     deps.emplace_back(
-            std::make_unique<intl::MegDNNGraphDep>(std::move(m_megdnn_opr)));
+            std::make_unique<intl::MegDNNGraphDep>(std::move(m_dnn_opr)));
 }
 
 #if MGB_ENABLE_GRAD

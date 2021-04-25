@@ -23,7 +23,7 @@ namespace opr {
 namespace intl {
 
 MGB_DEFINE_CLS_WITH_SUPER(RNGOprBase, cg::SingleCNOperatorNodeBase) // {
-    UniqPtrWithCN<megdnn::RNGBase> m_megdnn_opr;
+    UniqPtrWithCN<megdnn::RNGBase> m_dnn_opr;
 
     void ensure_megdnn_opr();
     void init_output_static_infer_desc() override;

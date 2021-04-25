@@ -470,9 +470,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(SVD);
 SVD::SVD(VarNode* src, const Param& param, const OperatorNodeConfig& config) :
         Super(OperatorNodeBaseCtorParam{src->owner_graph(),
                                         config, "svd", {src}}) {
-    mgb_assert(src->dtype() == megdnn::dtype::Float32(),
-               "Singular Value Decomposition on non-float32 tensors is "
-               "not supoorted.");
+    mgb_throw_if(src->dtype() != megdnn::dtype::Float32(), MegDNNError,
+                 "Singular Value Decomposition on non-float32 tensors is not "
+                 "supoorted.");
     init_megdnn_opr(*this, param);
     add_input({src});
 

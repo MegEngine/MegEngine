@@ -1045,7 +1045,8 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                         INTER_WEIGHT_DENSEI_DOT;
             return megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_DENSEI;
         } else {
-            mgb_assert(conv_mode == megdnn::param::Convolution::Sparse::GROUP);
+            mgb_throw_if(conv_mode != megdnn::param::Convolution::Sparse::GROUP,
+                         MegBrainError, "mode error");
             if (filter->shape()[1] == 1 && filter->shape()[2] == 1) {
                 return megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_CHANI;
             } else {
@@ -1081,9 +1082,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                                const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_opr = opr->cast_final_safe<opr::ConvolutionForward>();
-        mgb_assert(conv_opr.param().format ==
-                           megdnn::param::Convolution::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                conv_opr.param().format !=
+                        megdnn::param::Convolution::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode *conv_src = nullptr, *conv_weights = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
             // new input src is NCHW
@@ -1094,8 +1097,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 icpg = new_inp[1]->shape()[1];
                 ocpg = new_inp[1]->shape()[0];
             } else {
-                mgb_assert(conv_opr.param().sparse ==
-                           megdnn::param::Convolution::Sparse::GROUP);
+                mgb_throw_if(conv_opr.param().sparse !=
+                                     megdnn::param::Convolution::Sparse::GROUP,
+                             MegBrainError, "ERROR mode");
                 group = new_inp[1]->shape()[0];
                 icpg = new_inp[1]->shape()[2];
                 ocpg = new_inp[1]->shape()[1];
@@ -1117,8 +1121,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 megdnn::param::Convolution::Sparse::DENSE) {
                 ocpg = new_inp[1]->shape()[0];
             } else {
-                mgb_assert(conv_opr.param().sparse ==
-                           megdnn::param::Convolution::Sparse::GROUP);
+                mgb_throw_if(conv_opr.param().sparse !=
+                                     megdnn::param::Convolution::Sparse::GROUP,
+                             MegBrainError, "ERROR mode");
                 size_t icpg = new_inp[1]->shape()[2];
                 ocpg = new_inp[1]->shape()[1];
                 if (icpg == 1 && ocpg == 1) {
@@ -1176,9 +1181,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                                const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& conv_bias_opr = opr->cast_final_safe<opr::ConvBiasForward>();
-        mgb_assert(conv_bias_opr.param().format ==
-                           megdnn::param::ConvBias::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                conv_bias_opr.param().format !=
+                        megdnn::param::ConvBias::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode *conv_bias_src = nullptr, *conv_bias_weights = nullptr,
                 *conv_bias_bias = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
@@ -1190,8 +1197,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 icpg = new_inp[1]->shape()[1];
                 ocpg = new_inp[1]->shape()[0];
             } else {
-                mgb_assert(conv_bias_opr.param().sparse ==
-                           megdnn::param::ConvBias::Sparse::GROUP);
+                mgb_throw_if(conv_bias_opr.param().sparse !=
+                                     megdnn::param::ConvBias::Sparse::GROUP,
+                             MegBrainError, "mode error");
                 group = new_inp[1]->shape()[0];
                 icpg = new_inp[1]->shape()[2];
                 ocpg = new_inp[1]->shape()[1];
@@ -1213,8 +1221,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 megdnn::param::ConvBias::Sparse::DENSE) {
                 ocpg = new_inp[1]->shape()[0];
             } else {
-                mgb_assert(conv_bias_opr.param().sparse ==
-                           megdnn::param::ConvBias::Sparse::GROUP);
+                mgb_throw_if(conv_bias_opr.param().sparse !=
+                                     megdnn::param::ConvBias::Sparse::GROUP,
+                             MegBrainError, "ERROR mode");
                 size_t icpg = new_inp[1]->shape()[2];
                 ocpg = new_inp[1]->shape()[1];
                 if (icpg == 1 && ocpg == 1) {
@@ -1293,9 +1302,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                                const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
         auto& deconv_opr = opr->cast_final_safe<opr::ConvolutionBackwardData>();
-        mgb_assert(deconv_opr.param().format ==
-                           megdnn::param::Convolution::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                deconv_opr.param().format !=
+                        megdnn::param::Convolution::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode *deconv_src = nullptr, *deconv_weights = nullptr;
         if (new_inp[1]->shape().ndim == 4) {
             // new input src is NCHW
@@ -1306,8 +1317,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 icpg = new_inp[0]->shape()[0];
                 ocpg = new_inp[0]->shape()[1];
             } else {
-                mgb_assert(deconv_opr.param().sparse ==
-                           megdnn::param::Convolution::Sparse::GROUP);
+                mgb_throw_if(deconv_opr.param().sparse !=
+                                     megdnn::param::Convolution::Sparse::GROUP,
+                             MegBrainError, "mode error");
                 group = new_inp[0]->shape()[0];
                 icpg = new_inp[0]->shape()[1];
                 ocpg = new_inp[0]->shape()[2];
@@ -1329,8 +1341,9 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
                 megdnn::param::Convolution::Sparse::DENSE) {
                 ocpg = new_inp[0]->shape()[1];
             } else {
-                mgb_assert(deconv_opr.param().sparse ==
-                           megdnn::param::Convolution::Sparse::GROUP);
+                mgb_throw_if(deconv_opr.param().sparse !=
+                                     megdnn::param::Convolution::Sparse::GROUP,
+                             MegBrainError, "mode error");
 
                 ocpg = new_inp[0]->shape()[2];
             }
@@ -1393,9 +1406,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
             return opr_shallow_copy;
         }
         auto& resize_opr = opr->cast_final_safe<opr::ResizeForward>();
-        mgb_assert(resize_opr.param().format ==
-                           megdnn::param::Resize::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                resize_opr.param().format !=
+                        megdnn::param::Resize::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode* inp = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
             auto param = megdnn::param::RelayoutFormat();
@@ -1425,9 +1440,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
             return opr_shallow_copy;
         }
         auto& warp_opr = opr->cast_final_safe<opr::WarpPerspectiveForward>();
-        mgb_assert(warp_opr.param().format ==
-                           megdnn::param::WarpPerspective::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                warp_opr.param().format !=
+                        megdnn::param::WarpPerspective::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode* inp = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
             // new input src is NCHW
@@ -1466,9 +1483,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
             return opr_shallow_copy;
         }
         auto& warp_opr = opr->cast_final_safe<opr::WarpAffineForward>();
-        mgb_assert(warp_opr.param().format ==
-                           megdnn::param::WarpAffine::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                warp_opr.param().format !=
+                        megdnn::param::WarpAffine::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode* inp = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
             // new input src is NCHW
@@ -1499,9 +1518,11 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
             return opr_shallow_copy;
         }
         auto& pooling_opr = opr->cast_final_safe<opr::PoolingForward>();
-        mgb_assert(pooling_opr.param().format ==
-                           megdnn::param::Pooling::Format::NCHW,
-                   "ConvertFormat Pass only support converting NCHW to NHWCD4");
+        mgb_throw_if(
+                pooling_opr.param().format !=
+                        megdnn::param::Pooling::Format::NCHW,
+                MegBrainError,
+                "ConvertFormat Pass only support converting NCHW to NHWCD4");
         VarNode* inp = nullptr;
         if (new_inp[0]->shape().ndim == 4) {
             // new input src is NCHW

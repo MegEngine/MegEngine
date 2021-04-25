@@ -51,14 +51,13 @@ MegDNNHandle& MegDNNHandle::get(const CompNodeEnv& env) {
 
 MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
     auto megdnn_version = megdnn::get_version();
-    mgb_throw_if(
-            megdnn_version.major != MEGDNN_MAJOR ||
-                    megdnn_version.minor < MEGDNN_MINOR,
-            SystemError,
-            "incompatible megdnn version: compiled with %d.%d, get %d.%d.%d "
-            "at runtime",
-            MEGDNN_MAJOR, MEGDNN_MINOR, megdnn_version.major,
-            megdnn_version.minor, megdnn_version.patch);
+    mgb_throw_if(megdnn_version.major != MEGDNN_MAJOR ||
+                         megdnn_version.minor < MEGDNN_MINOR,
+                 SystemError,
+                 "incompatible dnn version: compiled with %d.%d, get %d.%d.%d "
+                 "at runtime",
+                 MEGDNN_MAJOR, MEGDNN_MINOR, megdnn_version.major,
+                 megdnn_version.minor, megdnn_version.patch);
     bool init = false;
 #if MGB_CUDA
     if (env.property().type == CompNode::DeviceType::CUDA) {
