@@ -17,7 +17,7 @@ from typing import Any
 
 import numpy as np
 
-from ..core._imperative_rt import GraphProfiler, SerializationMetadata
+from ..core._imperative_rt import GraphProfiler, GraphProfiler2, SerializationMetadata
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
     TensorWeakRef,
@@ -39,6 +39,7 @@ from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
 from ..utils.naming import AutoNaming
+from ..utils.profiler import is_profiling
 from .dtr_config import DTRConfig
 from .graph_opt_config import GraphOptimizationConfig
 from .sublinear_memory_config import SublinearMemoryConfig
@@ -160,6 +161,7 @@ class trace:
         self._dtr_config = dtr_config
         self._profiling = profiling
         self._profiler = None
+        self._profiler2 = None
         self._graph_opt_level = opt_level
         self._graph_opt_config = graph_opt_config
         self._symbolic_shape = symbolic_shape
@@ -382,7 +384,8 @@ class trace:
         lazy_eval_graph.options.graph_opt_level = self._graph_opt_level
         lazy_eval_graph._set_priority_to_id([*lazy_eval_links, *readers])
         lazy_eval_graph.compile(*lazy_eval_links, *readers)
-        lazy_eval_graph()
+        self._execute_graph(lazy_eval_graph)
+        lazy_eval_graph.wait()
         for r, x in zip(readers, lazy_eval_tensors):
             # get values from lazy_eval_graph and assign to lazy_eval tensor
             x._handle = RawTensor(r.op.get_value())._handle
@@ -401,7 +404,7 @@ class trace:
             else:
                 if self._graph is None:
                     self._compile()
-                self._graph.execute()
+                self._execute_graph(self._graph)
 
         def do_finalize():
             escaped_tensors = self._take_escaped_tensors()
@@ -532,8 +535,16 @@ class trace:
         # profile
         if self._profiling:
             self._profiler = GraphProfiler(graph)
+        self._profiler2 = None
         if int(os.getenv("MEGENGINE_INPLACE_UPDATE", "0")):
             graph.options.var_sanity_check_first_run = False
+
+    def _execute_graph(self, graph: G.Graph, *args):
+        if is_profiling() and (self._profiler2 is None):
+            self._profiler2 = GraphProfiler2(graph)
+        elif not is_profiling() and (self._profiler2 is not None):
+            self._profiler2 = None
+        graph.execute(*args)
 
     def _compile(self):
         graph = self._graph = G.Graph()
