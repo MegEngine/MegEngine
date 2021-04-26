@@ -192,6 +192,87 @@ class ReduceForward: public OperatorBase {
 };
 using Reduce = ReduceForward;
 
+class CorrelationBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(CorrelationBase, OperatorBase);
+    DEF_OPR_PARAM(Correlation);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& data1, const TensorLayout& data2,
+                            TensorLayout& dst);
+    void check_layout_fwd(const TensorLayout& data1, const TensorLayout& data2,
+                            const TensorLayout& dst);
+};
+
+class CorrelationForward : public CorrelationBase {
+    DEF_OPR_IMPL(CorrelationForward, CorrelationBase, 2, 1);
+
+public:
+    /**
+     * \param[in] data1 (n, c, ih, iw) 
+     * \param[in] data2 (n, c, ih, iw)
+     * \param[out] dst (n, q, oh, ow), q is the number of neighborhood
+     * */ 
+    virtual void exec(_megdnn_tensor_in data1, _megdnn_tensor_in data2,
+                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& data1, const TensorLayout& data2,
+                       TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& data1,
+                                          const TensorLayout& data2,
+                                          const TensorLayout& dst) = 0;
+protected:
+    void check_exec(const TensorLayout& data1, const TensorLayout& data2,
+                    const TensorLayout& dst, size_t workspace_in_bytes);
+};
+using Correlation = CorrelationForward;
+
+class CorrelationBackwardData1 : public CorrelationBase {
+    DEF_OPR_IMPL(CorrelationBackwardData1, CorrelationBase, 3, 1);
+
+public:
+    /**
+     * \param[in] diff the backpropagated gradient wrt. dst
+     * \param[in] data1 the `data1' parameter in CorrelationForward::exec
+     * \param[in] data2 the `data2' parameter in CorrelationForward::exec
+     * \param[out] grad1 the backpropagated gradient wrt. data1
+     */
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+                      _megdnn_tensor_out grad1, _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& diff1, const TensorLayout& data1,
+                        const TensorLayout& data2, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& data1,
+                                          const TensorLayout& data2,
+                                          const TensorLayout& grad1) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& data1, const TensorLayout& data2,
+                    const TensorLayout& grad1, size_t workspace_in_bytes);
+};
+
+class CorrelationBackwardData2 : public CorrelationBase {
+    DEF_OPR_IMPL(CorrelationBackwardData2, CorrelationBase, 3, 1);
+
+public:
+    /**
+     * \param[in] diff the backpropagated gradient wrt. dst
+     * \param[in] data1 the `data1' parameter in CorrelationForward::exec
+     * \param[in] data2 the `data2' parameter in CorrelationForward::exec
+     * \param[out] grad2 the backpropagated gradient wrt. data2
+     */
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+                      _megdnn_tensor_out grad2, _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& diff1, const TensorLayout& data1,
+                        const TensorLayout& data2, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& data1,
+                                          const TensorLayout& data2,
+                                          const TensorLayout& grad2) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& data1, const TensorLayout& data2,
+                    const TensorLayout& grad2, size_t workspace_in_bytes);
+};
+
 class CumsumForward: public OperatorBase {
     DEF_OPR_PARAM(Cumsum);
     DEF_OPR_IMPL(CumsumForward, OperatorBase, 1, 1);

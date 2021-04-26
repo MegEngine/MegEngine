@@ -194,6 +194,9 @@ private:
     cb(LocalShareBackwardFilter) \
     cb(ROIAlignForward) \
     cb(ROIAlignBackward) \
+    cb(CorrelationForward) \
+    cb(CorrelationBackwardData1) \
+    cb(CorrelationBackwardData2) \
     cb(BatchConvBiasForward) \
     cb(Remap) \
     cb(RemapBackwardData) \

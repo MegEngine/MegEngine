@@ -24,6 +24,7 @@
 #include "src/cuda/convolution/opr_impl.h"
 #include "src/cuda/convolution3d/opr_impl.h"
 #include "src/cuda/convpooling/opr_impl.h"
+#include "src/cuda/correlation/opr_impl.h"
 #include "src/cuda/cumsum/opr_impl.h"
 #include "src/cuda/cvt_color/opr_impl.h"
 #include "src/cuda/dct/opr_impl.h"
