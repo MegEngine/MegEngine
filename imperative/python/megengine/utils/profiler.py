@@ -81,6 +81,7 @@ class Profiler(ContextDecorator):
         for opt, optval in Profiler.valid_options.items():
             self._options[opt] = int(kwargs.pop(opt, optval))
         self._pid = "<PID>"
+        self._dump_callback = None
 
     @property
     def path(self):
