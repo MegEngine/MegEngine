@@ -290,7 +290,7 @@ Tensor::Tensor(const DeviceTensorND &dv, const HostTensorND& hv) {
 }
 
 Tensor::Tensor(const TensorLayout& layout, const CompNode& cn)
-    : m_layout{layout}, m_blob{Blob::make(cn, layout.dtype.size(layout.total_nr_elems()))},
+    : m_layout{layout}, m_blob{Blob::make(cn, layout.span().dist_byte())},
     m_offset{0} {}
 
 Tensor::Tensor(const BlobPtr blob, const size_t offset, const TensorLayout& layout)

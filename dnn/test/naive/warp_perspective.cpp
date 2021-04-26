@@ -545,12 +545,12 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
     using Param = WarpPerspective::Param;
 
     auto convert_true_format = [](const TensorLayout& layout) {
-        if (layout.ndim == 4)
-            return layout
-                    .reshape({layout[0], layout[1] / 64, layout[2], layout[3],
-                              64})
-                    .dimshuffle({0, 1, 4, 2, 3});
-        else
+        if (layout.ndim == 4) {
+            TensorLayout ret{
+                    {layout[0], layout[1] / 64, layout[2], layout[3], 64},
+                    layout.dtype};
+            return ret.dimshuffle({0, 1, 4, 2, 3});
+        } else
             return layout;
     };
 
@@ -563,15 +563,16 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
 
         TensorNDArray nchw_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
+            TensorLayout ly;
             auto layout = tensors[i].layout;
-            if (layout.dtype.enumv() == DTypeEnum::QuantizedS4)
-                layout.dtype = dtype::QuantizedS4();
-            if (layout.ndim == 5) {
-                layout = layout.reshape({layout[0], layout[1] * layout[4],
-                                         layout[2], layout[3]});
+            if (tensors[i].layout.ndim == 5) {
+                ly = TensorLayout{{layout[0], layout[1] * layout[4], layout[2],
+                                   layout[3]},
+                                  layout.dtype};
+            } else {
+                ly = layout;
             }
-            nchw_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                      layout);
+            nchw_tensors.emplace_back(malloc(ly.span().dist_byte()), ly);
         }
         TensorNDArray nchw64_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
@@ -617,13 +618,11 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
         checker.set_param(param);
         checker.execs({{2, 1, 10, 10, 64}, {2, 3, 3}, {2, 1, 10, 12, 64}});
         checker.execs(
-                {{20, 30, 10, 12, 64}, {20, 3, 3}, {20, 30, 11, 12, 64}});
-        checker.execs(
-                {{220, 3, 10, 10, 64}, {220, 3, 3}, {220, 3, 10, 12, 64}});
-        checker.execs({{1, 25, 25, 24, 64}, {1, 3, 3}, {1, 25, 25, 510, 64}});
-        checker.execs({{1, 25, 25, 510, 64}, {1, 3, 3}, {1, 25, 25, 24, 64}});
-        checker.execs({{1, 25, 25, 24, 64}, {1, 3, 3}, {1, 25, 51, 50, 64}});
-        checker.execs({{1, 25, 51, 50, 64}, {1, 3, 3}, {1, 25, 25, 24, 64}});
+                {{20, 3, 10, 12, 64}, {20, 3, 3}, {20, 3, 11, 12, 64}});
+        checker.execs({{1, 3, 25, 24, 64}, {1, 3, 3}, {1, 3, 25, 51, 64}});
+        checker.execs({{1, 3, 25, 51, 64}, {1, 3, 3}, {1, 3, 25, 24, 64}});
+        checker.execs({{1, 3, 25, 24, 64}, {1, 3, 3}, {1, 3, 51, 50, 64}});
+        checker.execs({{1, 3, 51, 50, 64}, {1, 3, 3}, {1, 3, 25, 24, 64}});
     }
 }
 // vim: syntax=cpp.doxygen

@@ -406,8 +406,7 @@ size_t PoolingForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
 }
 namespace {
 
-void post_process(const TensorND& dst, TensorND& comp_dst, Handle* handle,
-                  WorkspaceBundle& workspace_bundle) {
+void post_process(const TensorND& dst, TensorND& comp_dst) {
     if (dst.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
         int8_to_int4(comp_dst, dst);
     } else if (dst.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
@@ -427,8 +426,8 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
         float scale = src.layout.dtype.param<dtype::QuantizedS4>().scale;
         comp_src.layout.dtype = dtype::QuantizedS8(scale);
-        comp_src.layout.init_contiguous_stride();
         comp_src.layout.format = TensorLayout::Format(comp_src.layout.dtype);
+        comp_src.layout.init_contiguous_stride();
         comp_src.raw_ptr = wsb.get(0);
         comp_dst.layout.dtype = dtype::QuantizedS8(scale);
         comp_dst.layout.format = TensorLayout::Format(comp_dst.layout.dtype);
@@ -571,7 +570,7 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
             default:                                                 \
                 megdnn_assert(0, "not support mode");                \
         }                                                            \
-        post_process(dst, comp_dst, handle(), wsb);                  \
+        post_process(dst, comp_dst);                                 \
         return;                                                      \
     }
 

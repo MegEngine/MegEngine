@@ -12,6 +12,7 @@
 
 #include "./algo.h"
 #include "src/cuda/utils.h"
+#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -27,8 +28,7 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS4::is_available(
     bool available = true;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    if (!conv_bias::check_bias_share_in_channel(*(args.bias_layout),
-                                                param.format))
+    if (!check_bias_share_in_channel(*(args.bias_layout), param.format))
         return false;
     if (param.format != Format::NCHW)
         return false;
@@ -128,7 +128,7 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS4::exec(
     conv_op->param() = args.opr->param();
     using Format = param::ConvBias::Format;
     conv_op->param().format = Format::NCHW64;
-    ExecArgs args_{dynamic_cast<ConvBiasForwardImpl*>(conv_op.get()),
+    ExecArgs args_{reinterpret_cast<ConvBiasForwardImpl*>(conv_op.get()),
                    src_,
                    filter_,
                    bias_,
@@ -190,7 +190,7 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS4::get_workspace_bundle(
     conv_op->param() = args.opr->param();
     using Format = param::ConvBias::Format;
     conv_op->param().format = Format::NCHW64;
-    SizeArgs args_{dynamic_cast<ConvBiasForwardImpl*>(conv_op.get()),
+    SizeArgs args_{reinterpret_cast<ConvBiasForwardImpl*>(conv_op.get()),
                    layouts[0],
                    layouts[1],
                    layouts[2],

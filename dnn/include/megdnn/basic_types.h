@@ -281,6 +281,13 @@ struct TensorLayout : public TensorShape {
         add_axis_inplace(axis, 1, stride[axis] * shape[axis]);
     }
 
+    /*!
+     * \brief modify data type of the layout inplace
+     *
+     * By the way this API will modify the format according to the data type
+     */
+    void modify_dtype_inplace(DType dtype);
+
     /* =================== generate new layout =================== */
 
     /**

@@ -282,6 +282,11 @@ void TensorLayout::add_axis_inplace(size_t axis, size_t shape,
     this->stride[axis] = stride;
 }
 
+void TensorLayout::modify_dtype_inplace(DType dtype_) {
+    dtype = dtype_;
+    format = Format(dtype);
+}
+
 bool TensorLayout::is_contiguous() const {
     return format.impl()->is_contiguous_spec(*this);
 }

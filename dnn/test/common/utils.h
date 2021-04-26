@@ -343,6 +343,14 @@ static inline bool good_float(dt_qint32) {
     return true;
 }
 
+static inline bool good_float(dt_qint4) {
+    return true;
+}
+
+static inline bool good_float(dt_quint4) {
+    return true;
+}
+
 // A hack for the (x+0) promote to int trick on dt_quint8.
 static inline int operator+(dt_quint8 lhs, int rhs) {
     megdnn_assert(rhs == 0, "unexpected rhs");

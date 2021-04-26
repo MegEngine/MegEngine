@@ -359,19 +359,6 @@ struct LowbitMemcpy<bits, true> {
     }
 };
 
-template<typename DT>
-struct QuantizedLowbitTrait;
-
-template<>
-struct QuantizedLowbitTrait<dtype::Quantized4Asymm> {
-    static constexpr int8_t SHIFT = 0;
-};
-
-template<>
-struct QuantizedLowbitTrait<dtype::QuantizedS4> {
-    static constexpr int8_t SHIFT = 8;
-};
-
 template <typename DT, bool div_byte = (DTypeTrait<DT>::category ==
                                         DTypeCategory::QUANTIZED) &&
                                        (8 % DTypeTrait<DT>::low_bit == 0)>
@@ -450,6 +437,46 @@ void mgb::lowbit_memcpy_compact2byte(
     MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
     mgb_throw(MegBrainError, "bad dtype for lowbit: %s", dtype.name());
+}
+
+void mgb::lowbit_memcpy_byte2aligned(void* dest, const void* src,
+                                     const ::megdnn::TensorLayout& layout) {
+    size_t low_bit = layout.dtype.low_bit();
+    size_t dim = layout.shape[layout.ndim - 1];
+    if ((dim * low_bit) % 8) {  // padding
+        size_t n = layout.total_nr_elems();
+        size_t stride = divup<size_t>(dim * low_bit, 8);
+        dt_byte* dest_ptr = reinterpret_cast<dt_byte*>(dest);
+        const dt_byte* src_ptr = reinterpret_cast<const dt_byte*>(src);
+        for (size_t i = 0; i < n / dim; ++i) {
+            lowbit_memcpy_byte2compact(layout.dtype, dest_ptr, src_ptr, dim);
+            dest_ptr += stride;
+            src_ptr += dim;
+        }
+    } else {
+        lowbit_memcpy_byte2compact(layout.dtype, dest, src,
+                                   layout.total_nr_elems());
+    }
+}
+
+void mgb::lowbit_memcpy_aligned2byte(void* dest, const void* src,
+                                     const ::megdnn::TensorLayout& layout) {
+    size_t low_bit = layout.dtype.low_bit();
+    size_t dim = layout.shape[layout.ndim - 1];
+    if ((dim * low_bit) % 8) {  // padding
+        size_t n = layout.total_nr_elems();
+        size_t stride = divup<size_t>(dim * low_bit, 8);
+        dt_byte* dest_ptr = reinterpret_cast<dt_byte*>(dest);
+        const dt_byte* src_ptr = reinterpret_cast<const dt_byte*>(src);
+        for (size_t i = 0; i < n / dim; ++i) {
+            lowbit_memcpy_compact2byte(layout.dtype, dest_ptr, src_ptr, dim);
+            dest_ptr += dim;
+            src_ptr += stride;
+        }
+    } else {
+        lowbit_memcpy_compact2byte(layout.dtype, dest, src,
+                                   layout.total_nr_elems());
+    }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

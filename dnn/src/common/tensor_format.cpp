@@ -46,14 +46,15 @@ TensorFormat TensorFormat::deserialize(const std::string& bin,
 TensorFormat::Format() : m_impl{DefaultTensorFormat::make().m_impl} {}
 
 TensorFormat::Format(DType dtype) {
-    megdnn_assert(dtype.valid());
-    if (dtype.is_low_bit()) {
+    if (dtype.valid() &&
+        dtype.is_quantized_lowbit()) {  // quantized lowbit, by default
+                                        // aligned to bytes
         size_t size_nbits = dtype.low_bit();
         megdnn_assert(size_nbits == 1 || size_nbits == 2 || size_nbits == 4,
                       "unsupported lowbits data type(%s, size in bits: %zu)",
                       dtype.name(), size_nbits);
         m_impl = LowbitsAlignedToBytesTensorFormat::make(size_nbits).m_impl;
-    } else {
+    } else {  // non parameterized lowbit, default format
         m_impl = DefaultTensorFormat::make().m_impl;
     }
 }
@@ -89,8 +90,8 @@ bool TensorFormat::is_lowbit_aligned() const {
 /* ===================== DefaultFormat ===================== */
 void DefaultTensorFormat::assert_valid(const TensorLayout& layout) const {
     megdnn_assert(
-            !layout.dtype.valid() || !layout.dtype.is_low_bit(),
-            "DefaultTensorFormat does not support low-bits tensor(dtype:%s)",
+            !layout.dtype.valid() || !layout.dtype.is_quantized_lowbit(),
+            "DefaultTensorFormat does not support quantized lowbit tensor(dtype:%s)",
             layout.dtype.name());
 }
 
@@ -271,7 +272,8 @@ void Image2DPackedTensorFormatBase<PIXEL_SIZE>::assert_valid(
     auto m_align_axis = align_axis();
     megdnn_assert(!(layout.shape[layout.ndim - 1] % PIXEL_SIZE),
                   "bad shape: %zu", layout.shape[layout.ndim - 1]);
-    megdnn_assert(layout.dtype.valid() && layout.ndim > m_align_axis);
+    megdnn_assert(layout.dtype.valid() && !layout.dtype.is_quantized_lowbit() &&
+                  layout.ndim > m_align_axis);
     ptrdiff_t first_non_zero_stride = 0;
     for (int i = layout.ndim - 1; i >= 0; --i) {
         megdnn_assert(layout.shape[i] && layout.stride[i] >= 0);
@@ -478,6 +480,7 @@ void LowbitsAlignedTensorFormatBase::assert_valid(
     megdnn_assert(layout.dtype.valid() && layout.dtype.is_low_bit() &&
                   layout.dtype.low_bit() == m_size_nbits);
     bool has_dim_unity_stride = false;
+    bool has_dim_aligned_stride = false;
     for (int i = layout.ndim - 1; i >= 0; --i) {
         if (!has_dim_unity_stride && layout.stride[i] == 1)
             has_dim_unity_stride = true;
@@ -485,15 +488,16 @@ void LowbitsAlignedTensorFormatBase::assert_valid(
                 layout.stride[i] >= 0 &&
                         (layout.stride[i] % m_align_size_in_elements == 0 ||
                          layout.stride[i] == 1),
-                "bad stride:%s, %zu", layout.to_string().c_str(),
-                layout.stride[i]);
+                "bad stride:%s, %ld", layout.to_string().c_str(),
+                static_cast<long>(layout.stride[i]));
+        if (!has_dim_aligned_stride &&
+            static_cast<size_t>(layout.stride[i]) == m_align_size_in_elements)
+            has_dim_aligned_stride = true;
     }
-    if (!has_dim_unity_stride &&
-        (int)layout.stride[layout.ndim - 1] ==
-                round_up(1, (int)m_align_size_in_elements))
-        has_dim_unity_stride = true;
-    megdnn_assert(layout.ndim == 0 || has_dim_unity_stride,
-                  "innermost dim not contiguous");
+
+    megdnn_assert(
+            layout.ndim == 0 || has_dim_unity_stride || has_dim_aligned_stride,
+            "innermost dim not contiguous");
 }
 
 void LowbitsAlignedTensorFormatBase::serialize_append(
@@ -542,6 +546,7 @@ size_t LowbitsAlignedTensorFormatBase::init_contiguous_stride(
             multiplier = round_up(multiplier, m_align_size_in_elements);
         accum = mul(accum, multiplier);
     }
+    assert_valid(layout);
     return accum;
 }
 

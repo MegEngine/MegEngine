@@ -1340,15 +1340,19 @@ void VarNodeMemManager::make_dev_tensor_from_mem_plan_single(
 void VarNodeMemManager::var_alloc_with_shape(VarNode* var,
                                              const TensorShape& shape,
                                              size_t size_req) {
-    mgb_assert(var->format().is_default(),
+    bool cond_default = var->format().is_default();
+    bool cond_lowbit = var->dtype().is_quantized_lowbit() &&
+                       var->format().is_lowbit_aligned();
+    mgb_assert(cond_default || cond_lowbit,
                "dynamic shape is currently only supported for var with "
                "default format; got %s",
                var->format().to_string().c_str());
     var->shape(shape);
+    TensorLayout ly{shape, var->dtype()};
     if (size_req != 0) {
-        mgb_assert(var->dtype().size(shape.total_nr_elems()) <= size_req);
+        mgb_assert(ly.span().dist_byte() <= size_req);
     } else {
-        size_req = var->dtype().size(shape.total_nr_elems());
+        size_req = ly.span().dist_byte();
     }
 
     auto&& mplan = var->m_mem_plan;

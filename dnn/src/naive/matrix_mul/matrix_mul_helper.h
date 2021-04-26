@@ -151,9 +151,9 @@ void exec_matrix_mul_quint4x4x32_helper(
     MEGDNN_MARK_USED_VAR(format);
     MEGDNN_MARK_USED_VAR(compute_mode);
     auto convert_layout = [](const TensorLayout& layout) {
-        auto ret = layout;
         auto param = layout.dtype.param<dtype::Quantized4Asymm>();
-        ret.dtype = dtype::Quantized8Asymm(param.scale, param.zero_point);
+        TensorLayout ret(layout,
+                         dtype::Quantized8Asymm(param.scale, param.zero_point));
         return ret;
     };
     TensorLayout A_layout, B_layout;
@@ -205,9 +205,8 @@ void exec_matrix_mul_qint4x4x16_helper(
     MEGDNN_MARK_USED_VAR(format);
     MEGDNN_MARK_USED_VAR(compute_mode);
     auto convert_layout = [](const TensorLayout& layout) {
-        auto ret = layout;
         auto param = layout.dtype.param<dtype::QuantizedS4>();
-        ret.dtype = dtype::QuantizedS8(param.scale);
+        TensorLayout ret(layout, dtype::QuantizedS8(param.scale));
         return ret;
     };
     TensorLayout A_layout, B_layout;

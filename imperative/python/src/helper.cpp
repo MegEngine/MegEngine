@@ -18,6 +18,7 @@
 #include "megbrain/graph/cg.h"
 #include "megbrain/tensor.h"
 #include "megbrain/utils/mempool.h"
+
 #include "./numpy_dtypes.h"
 
 namespace py = pybind11;
@@ -390,16 +391,24 @@ HostTensorND lowbit_ndarray_to_host_tensor(
     } else {
         mgb_assert(layout.ndim && layout.ndim <= TensorShape::MAX_NDIM,
                 "unsupported ndim %zu", layout.ndim);
-        for (size_t i = 0; i < layout.ndim; ++ i) {
-            layout.shape[i] = PyArray_SHAPE(input)[i];
-            layout.stride[i] = PyArray_STRIDE(input, i);
+        TensorLayout ly;
+        ly.ndim = layout.ndim;
+        for (size_t i = 0; i < layout.ndim; ++i) {
+            ly.shape[i] = layout.shape[i] = PyArray_SHAPE(input)[i];
+            ly.stride[i] = PyArray_STRIDE(input, i);
             mgb_assert(layout.shape[i], "zero shape not supported");
         }
-        mgb_assert(layout.is_contiguous());
+        mgb_assert(ly.is_physical_contiguous());
+        layout.init_contiguous_stride();
     }
     HostTensorND ret{comp_node, layout};
-    lowbit_memcpy_byte2compact(layout.dtype, ret.raw_ptr(), src_ptr,
-            layout.total_nr_elems());
+    if (layout.format.is_lowbit_aligned()) {
+        mgb_assert(layout.is_contiguous());
+        lowbit_memcpy_byte2aligned(ret.raw_ptr(), src_ptr, layout);
+    } else {
+        lowbit_memcpy_byte2compact(layout.dtype, ret.raw_ptr(), src_ptr,
+                                   layout.total_nr_elems());
+    }
     return ret;
 }
 
@@ -423,10 +432,8 @@ std::pair<HostTensorND, bool> np2tensor_try_borrow(
     }
 
     // make result from PyArrayObject; its reference may be stolen
-    auto make_from_arr = [&](PyArrayObject *input, bool allow_borrow) {
-
-        TensorLayout layout;
-        layout.dtype = dtype_np2mgb_descr(PyArray_DESCR(input));
+    auto make_from_arr = [&](PyArrayObject* input, bool allow_borrow) {
+        TensorLayout layout{{}, dtype_np2mgb_descr(PyArray_DESCR(input))};
         if (dtype.valid())
             mgb_assert(dtype == layout.dtype);
         layout.ndim = PyArray_NDIM(input);
@@ -605,8 +612,15 @@ PyObject* ndarray_from_tensor(
     if (val.dtype().is_low_bit()) {
         mgb_assert(share_type != ShareType::MUST_SHARE,
                 "can not share memory for lowbit dtype");
-        lowbit_memcpy_compact2byte(val.dtype(), alloc_new_ret(), val.raw_ptr(),
-                val.layout().total_nr_elems());
+        const auto& layout = val.layout();
+        if (layout.format.is_lowbit_aligned()) {
+            lowbit_memcpy_aligned2byte(alloc_new_ret(), val.raw_ptr(),
+                                       val.layout());
+        } else {
+            lowbit_memcpy_compact2byte(val.dtype(), alloc_new_ret(),
+                                       val.raw_ptr(),
+                                       val.layout().total_nr_elems());
+        }
     } else if (share_type == ShareType::MUST_UNSHARE) {
         memcpy(alloc_new_ret(), val.raw_ptr(), val.layout().span().dist_byte());
     } else {

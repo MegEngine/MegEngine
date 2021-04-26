@@ -132,7 +132,6 @@ public:
                                                          : dtype::Float32());
             if (m_fmt.find(i) == m_fmt.end()) {
                 layouts[i] = TensorLayout(shapes[i], dt);
-                layouts[i].init_contiguous_stride();
             } else
                 layouts[i] = TensorLayout(shapes[i], dt, m_fmt[i]);
         }

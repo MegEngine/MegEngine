@@ -202,6 +202,17 @@ void lowbit_memcpy_byte2compact(
 void lowbit_memcpy_compact2byte(
         DType dtype, void *dest, const void *src, size_t n);
 
+/*!
+ * \brief copy from byte representation to an aligend tensor for lowbit types
+ */
+void lowbit_memcpy_byte2aligned(void* dest, const void* src,
+                                const ::megdnn::TensorLayout& ly);
+
+/*!
+ * \brief copy from an aligend tensor to byte representation for lowbit types
+ */
+void lowbit_memcpy_aligned2byte(void* dest, const void* src,
+                                const ::megdnn::TensorLayout& ly);
 
 } // namespace mgb
 

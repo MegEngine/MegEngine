@@ -513,6 +513,15 @@ class DType {
 
         bool is_low_bit() const { return low_bit() != 0; }
 
+        bool is_quantized_lowbit() const {
+            return low_bit() != 0 &&
+#if MEGDNN_CC_HOST
+                   category() == DTypeCategory::QUANTIZED;
+#else
+                   category().ev == DTypeCategory::Ev::QUANTIZED;
+#endif
+        }
+
         /*!
          * \brief size of this data type, in bytes
          */

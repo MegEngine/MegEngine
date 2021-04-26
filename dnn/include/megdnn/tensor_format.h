@@ -226,7 +226,7 @@ public:
     std::string to_string() const override;
 
     //! raise exception if given layout is illegal
-    void assert_valid(const TensorLayout& layout) const;
+    void assert_valid(const TensorLayout& layout) const override;
 
     void serialize_append(std::string& result) const override;
 

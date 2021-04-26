@@ -952,7 +952,12 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
         megdnn_assert(src[4] == 4);
         dst[4] = 4;
     }
-    dst.format = src.format;
+    if (!src.format.is_default() &&
+        !src.format.is_lowbit_aligned()) {  // propagate
+        dst.format = src.format;
+    } else {  // determined by dtype
+        dst.format = TensorFormat(dst.dtype);
+    } 
     dst.init_contiguous_stride();
     return cflt;
 }

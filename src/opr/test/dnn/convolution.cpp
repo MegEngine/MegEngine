@@ -2604,174 +2604,6 @@ TEST_F(TestNoWeightPreprocess, NoPreprocess) {
 #endif
 
 namespace {
-TEST(TestOprDNN, ConvBiasInt4NCHW) {
-    REQUIRE_GPU(1);
-    auto cn = CompNode::load("gpu0");
-    cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver != 75) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 75);
-        return;
-    }
-
-    auto run = [&cn](size_t N, size_t C, size_t H, size_t W, size_t F, size_t S,
-                     size_t P) {
-        auto graph = ComputingGraph::make();
-
-        HostTensorGenerator<dtype::Int8> gen;
-        auto mkvar = [&gen](const char* name, const TensorShape& shp,
-                            const DType& dtype,
-                            std::shared_ptr<ComputingGraph> graph,
-                            const CompNode& cn) {
-            return opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(*graph, gen(shp, cn))
-                            .rename(name),
-                    dtype);
-        };
-        auto mkcvar = [&gen](const char* name, const TensorShape& shp,
-                             const DType& dtype,
-                             std::shared_ptr<ComputingGraph> graph,
-                             const CompNode& cn) {
-            return opr::TypeCvt::make(
-                    opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                            .rename(name),
-                    dtype);
-        };
-
-        using Policy = opr::ConvBias::ExecutionPolicy;
-        using Strategy = Policy::Strategy;
-        auto x = mkvar("x", {N, C * 4, H, W}, dtype::QuantizedS4(1.19960327f),
-                       graph, cn),
-             w = mkcvar("w1", {C, C * 4, F, F}, dtype::QuantizedS4(1.19970327f),
-                        graph, cn),
-             b = mkcvar("b1", {1, C, 1, 1},
-                        dtype::QuantizedS32(1.19960327f * 1.19970327f), graph,
-                        cn);
-        opr::ConvBias::Param param;
-        param.format = opr::ConvBias::Param::Format::NCHW;
-        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
-        param.stride_h = param.stride_w = S;
-        param.pad_h = param.pad_w = P;
-        Policy policy;
-        policy.strategy = Strategy::PROFILE;
-
-        auto y = opr::ConvBias::make(
-                x, w, b, param, policy,
-                OperatorNodeConfig{dtype::QuantizedS4(11.9960501f)});
-        y = opr::TypeCvt::make(y, dtype::Float32());
-        auto x_f32 = opr::TypeCvt::make(x, dtype::Float32()),
-             w_f32 = opr::TypeCvt::make(w, dtype::Float32()),
-             b_f32 = opr::TypeCvt::make(b, dtype::Float32());
-        auto y_f32 = opr::ConvBias::make(x_f32, w_f32, b_f32, param, policy);
-        auto y_q4 = opr::TypeCvt::make(y_f32, dtype::QuantizedS4{11.9960501f});
-        y_q4 = opr::TypeCvt::make(y_q4, dtype::Float32());
-        HostTensorND host_y, host_y_q4;
-        auto func = graph->compile({make_callback_copy(y, host_y),
-                                    make_callback_copy(y_q4, host_y_q4)});
-        func->execute();
-        MGB_ASSERT_TENSOR_NEAR(host_y, host_y_q4, 1e-3);
-    };
-    run(2, 64, 14, 14, 3, 2, 1);
-    run(2, 64, 7, 7, 3, 1, 1);
-    run(2, 64, 14, 14, 1, 2, 0);
-    run(2, 64, 7, 7, 1, 1, 0);
-}
-
-TEST(TestOprDNN, ConvBiasInt4NCHW64) {
-    REQUIRE_GPU(1);
-    auto cn = CompNode::load("gpu0");
-    cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver != 75) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 75);
-        return;
-    }
-
-    auto nchw2nchw64 = [](SymbolVar x) {
-        auto y = opr::RelayoutFormat::make(
-                x, opr::RelayoutFormat::Param::Mode::NCHW_NCHW64);
-        return y;
-    };
-
-    auto nchw642nchw = [](SymbolVar x) {
-        auto y = opr::RelayoutFormat::make(
-                x, opr::RelayoutFormat::Param::Mode::NCHW64_NCHW);
-        return y;
-    };
-
-    auto run = [&](size_t N, size_t C, size_t H, size_t W, size_t F, size_t S,
-                   size_t P) {
-        auto graph = ComputingGraph::make();
-
-        HostTensorGenerator<dtype::Int8> gen;
-        auto mkvar = [&gen](const char* name, const TensorShape& shp,
-                            const DType& dtype,
-                            std::shared_ptr<ComputingGraph> graph,
-                            const CompNode& cn) {
-            return opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(*graph, gen(shp, cn))
-                            .rename(name),
-                    dtype);
-        };
-        auto mkcvar = [&gen](const char* name, const TensorShape& shp,
-                             const DType& dtype,
-                             std::shared_ptr<ComputingGraph> graph,
-                             const CompNode& cn) {
-            return opr::TypeCvt::make(
-                    opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                            .rename(name),
-                    dtype);
-        };
-
-        using Policy = opr::ConvBias::ExecutionPolicy;
-        using Strategy = Policy::Strategy;
-        auto x = mkvar("x", {N, C / 16, H, W, 64},
-                       dtype::QuantizedS4(1.19960327f), graph, cn),
-             w = mkcvar("w1", {C, C / 16, F, F, 64},
-                        dtype::QuantizedS4(1.19970327f), graph, cn),
-             b = mkcvar("b1", {1, C / 64, 1, 1, 64},
-                        dtype::QuantizedS32(1.19960327f * 1.19970327f), graph,
-                        cn);
-        opr::ConvBias::Param param;
-        param.format = opr::ConvBias::Param::Format::NCHW64;
-        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
-        param.stride_h = param.stride_w = S;
-        param.pad_h = param.pad_w = P;
-        Policy policy;
-        policy.strategy = Strategy::PROFILE;
-
-        auto y = opr::ConvBias::make(
-                x, w, b, param, policy,
-                OperatorNodeConfig{dtype::QuantizedS4(11.9960501f)});
-        y = opr::TypeCvt::make(y, dtype::Float32());
-        x = nchw642nchw(x);
-        w = nchw642nchw(w);
-        b = nchw642nchw(b);
-        auto x_f32 = opr::TypeCvt::make(x, dtype::Float32()),
-             w_f32 = opr::TypeCvt::make(w, dtype::Float32()),
-             b_f32 = opr::TypeCvt::make(b, dtype::Float32());
-        param.format = opr::ConvBias::Param::Format::NCHW;        
-        auto y_f32 = opr::ConvBias::make(x_f32, w_f32, b_f32, param, policy);
-        auto y_q4 = opr::TypeCvt::make(y_f32, dtype::QuantizedS4{11.9960501f});
-        y_q4 = opr::TypeCvt::make(y_q4, dtype::Float32());
-        y_q4 = nchw2nchw64(y_q4);
-        HostTensorND host_y, host_y_q4;
-        auto func = graph->compile({make_callback_copy(y, host_y),
-                                    make_callback_copy(y_q4, host_y_q4)});
-        func->execute();
-        MGB_ASSERT_TENSOR_NEAR(host_y, host_y_q4, 1e-3);
-    };
-    run(2, 64, 14, 14, 3, 2, 1);
-    run(2, 64, 7, 7, 3, 1, 1);
-    run(2, 64, 14, 14, 1, 2, 0);
-    run(2, 64, 7, 7, 1, 1, 0);
-}
 
 TEST(TestOprDNN, ConvBiasInt4Serialize) {
     using namespace serialization;
@@ -2783,7 +2615,7 @@ TEST(TestOprDNN, ConvBiasInt4Serialize) {
 
     HostTensorGenerator<dtype::Int8> gen;
     std::shared_ptr<HostTensorND> xv;
-    auto mkvar = [&gen](const char* name, const DType& dtype,
+    auto mkvar = [](const char* name, const DType& dtype,
                         std::shared_ptr<ComputingGraph> graph,
                         std::shared_ptr<HostTensorND> val) {
         return opr::TypeCvt::make(
@@ -2856,9 +2688,9 @@ TEST(TestOprDNN, ConvBiasInt4SerializeWithParamFuse) {
 
     HostTensorGenerator<dtype::Int8> gen;
     std::shared_ptr<HostTensorND> xv;
-    auto mkvar = [&gen](const char* name, const DType& dtype,
-                        std::shared_ptr<ComputingGraph> graph,
-                        std::shared_ptr<HostTensorND> val) {
+    auto mkvar = [](const char* name, const DType& dtype,
+                    std::shared_ptr<ComputingGraph> graph,
+                    std::shared_ptr<HostTensorND> val) {
         return opr::TypeCvt::make(
                 opr::Host2DeviceCopy::make(*graph, val).rename(name), dtype);
     };

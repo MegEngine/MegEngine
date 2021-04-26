@@ -62,7 +62,12 @@ bool contains_any_in_set(const SmallVector<T>& list,
 
 void check_tensor_value_valid(const std::string& name,
                               const HostTensorND& tensor) {
-    mgb_assert(tensor.layout().is_physical_contiguous(),
+    bool cond_normal = tensor.layout().format.is_default() &&
+                       tensor.layout().is_physical_contiguous();
+    bool cond_lowbit = tensor.layout().dtype.is_quantized_lowbit() &&
+                       tensor.layout().format.is_lowbit_aligned() &&
+                       tensor.layout().is_contiguous();
+    mgb_assert(cond_normal || cond_lowbit,
                "non-contiguous tensor: name=%s layout=%s", name.c_str(),
                tensor.layout().to_string().c_str());
     if (tensor.dtype() == dtype::Float32()) {
@@ -585,11 +590,12 @@ TensorLayout load_tensor_layout(const fbs::Tensor* tensor) {
         layout.ndim = tensor->shape()->size();
         std::copy(tensor->shape()->begin(), tensor->shape()->end(),
                   layout.shape);
-        layout.init_contiguous_stride();
     }
     if (tensor->dtype()) {
-        layout.dtype = fbs::intl::load_dtype(tensor->dtype());
+        // modify data type inplace for TensorLayout
+        layout.modify_dtype_inplace(fbs::intl::load_dtype(tensor->dtype()));
     }
+    layout.init_contiguous_stride();
     return layout;
 }
 

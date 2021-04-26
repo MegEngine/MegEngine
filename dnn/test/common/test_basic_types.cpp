@@ -325,13 +325,8 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS) {
 
     layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
     layout = layout.broadcast({16, 32, 7, 7});
-    EXPECT_EQ(make_layout({16, 32, 49}, {0, 1, 0}, dtype::QuantizedS4{1.2}),
+    EXPECT_EQ(make_layout({16, 32, 49}, {0, 2, 0}, dtype::QuantizedS4{1.2}),
               layout.collapse_contiguous());
-
-    layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
-    layout.init_contiguous_stride();
-    layout = layout.broadcast({16, 32, 7, 7});
-    ASSERT_THROW(layout.span(), MegDNNError);
 }
 
 TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
@@ -342,7 +337,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
                               LowbitsAlignedToBytesTensorFormat::make(4_z)),
                  MegDNNError);
     ASSERT_THROW(TensorLayout({16, 32, 7, 7}, dtype::IntB2{},
-                              LowbitsAlignedToBytesTensorFormat::make(2_z)),
+                              LowbitsAlignedToBytesTensorFormat::make(4_z)),
                  MegDNNError);
 }
 
