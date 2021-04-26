@@ -11,6 +11,7 @@ import multiprocessing as mp
 import os
 import queue
 
+from .. import _exit
 from ..core._imperative_rt.core2 import sync
 from ..logger import get_logger
 from .group import group_barrier, init_process_group
@@ -53,6 +54,7 @@ def _run_wrapped(
     sync()
     if is_multimachine:
         group_barrier()
+    _exit(0)
 
 
 class launcher:

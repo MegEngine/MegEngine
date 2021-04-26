@@ -95,6 +95,27 @@ atexit.register(_close)
 
 del _set_fork_exec_path_for_timed_func
 
+_exit_handlers = []
+
+
+def _run_exit_handlers():
+    for handler in _exit_handlers:
+        handler()
+    _exit_handlers.clear()
+
+
+atexit.register(_run_exit_handlers)
+
+
+def _exit(code):
+    _run_exit_handlers()
+    sys.exit(code)
+
+
+def _atexit(handler):
+    _exit_handlers.append(handler)
+
+
 # subpackages
 import megengine.autodiff
 import megengine.data
