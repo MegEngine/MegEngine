@@ -161,12 +161,10 @@ public:
             event_list->add(event.to_json());
         }
         (*result)["traceEvents"] = event_list;
-        //(*result)["localTime"] = json::String::make(std::to_string((double)m_local_time/1e3));
         return result;
     }
 private:
     std::vector<ChromeTraceEvent> m_content;
-    uint64_t m_local_time;
 };
 
 
@@ -408,9 +406,7 @@ void dump_chrome_timeline(std::string filename, Profiler::options_t options, Pro
     });
 
     HANDLE_EVENT(TensorWaitPropEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id];
         NEW_HOST("TensorWaitProp", 'B');
-                //.args(TENSOR_PROPS);
         if (event.prop == TensorProp::HostValue) {
             INC_COUNTER(wait_value_count, 1);
         } else if (event.prop == TensorProp::Shape) {
@@ -433,7 +429,6 @@ void dump_chrome_timeline(std::string filename, Profiler::options_t options, Pro
     });
 
     HANDLE_EVENT(TensorNotifyPropEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id];
         NEW_HOST(ssprintf("%d", pid), 's')
                 .id(event.tensor_id)
                 .cat("TensorProp")
@@ -471,9 +466,7 @@ void dump_chrome_timeline(std::string filename, Profiler::options_t options, Pro
     });
 
     HANDLE_EVENT(TensorCommandEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id];
         NEW_HOST(ssprintf("%s %zu", TENSOR_COMMAND_KIND, event.tensor_id), 'B');
-            //.args(TENSOR_PROPS);
     });
 
     HANDLE_EVENT(TensorCommandFinishEvent, {

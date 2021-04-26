@@ -18,6 +18,8 @@
         var svg = undefined;
         var svgWidth = undefined;
         var svgHeight = undefined;
+        var resetBtn = document.getElementById('resetBtn');
+        var relocBtn = document.getElementById('relocBtn');
 
         var loadDesc = (svgElem) => {
             var mgeType = svgElem.attributes['tag:type'];
@@ -52,7 +54,7 @@
             lastColor = undefined;
         };
 
-        function recLoadSVG(svgElem) {
+        var recLoadSVG = svgElem => {
             if (svgElem.children === undefined) {
                 return;
             }
@@ -71,8 +73,37 @@
                 recLoadSVG(child);
             }
         }
+        var scaleBoard = (x, y) => {
+            var transform = 'scale(' + x + ',' + y + ')';
+            svg.setAttribute('transform', transform);
+            board.style['width'] = svgWidth * x;
+            board.style['height'] = svgHeight * y;
+        }
+        var autoScaleBoard = () => {
+            var hRangeValue = Math.sqrt(Number(hRange.value) / 10);
+            var vRangeValue = Math.sqrt(Number(vRange.value) / 10);
+            scaleBoard(Number(hRangeValue), Number(vRangeValue));
+        }
+        var zoomBoard = dScale => {
+            scale *= dScale;
+            scaleBoard(scale, scale);
+        };
 
-        function loadSVG() {
+        var reset = () => {
+            if (!svgHeight || !svgWidth) {
+                return;
+            }
+            var vScale = window.screen.availHeight / svgHeight;
+            var hScale = window.screen.availWidth / svgWidth;
+            var minScale = Math.min(hScale, vScale);
+            zoomBoard(minScale / scale);
+            window.scrollTo({
+                top: 0,
+                left: 0,
+            });
+        };
+
+        var loadSVG = () => {
             var file = fileInput.files[0];
             var reader = new FileReader();
             reader.readAsText(file, "UTF-8");
@@ -98,26 +129,10 @@
                         info.innerHTML = elemList.join('');
                     }
                 }
+                setTimeout(reset, 1);
             };
         }
-        function scaleBoard(x, y) {
-            var transform = 'scale(' + x + ',' + y + ')';
-            svg.setAttribute('transform', transform);
-            board.style['width'] = svgWidth * x;
-            board.style['height'] = svgHeight * y;
-        }
-        function autoScaleBoard() {
-            var hRangeValue = Math.sqrt(Number(hRange.value) / 10);
-            var vRangeValue = Math.sqrt(Number(vRange.value) / 10);
-            scaleBoard(Number(hRangeValue), Number(vRangeValue));
-        }
-        fileInput.onchange = loadSVG;
-        var zoomBoard = dScale => {
-            scale *= dScale;
-            scaleBoard(scale, scale);
-        };
         window.addEventListener('wheel', e => {
-            console.log(e);
             if (e.ctrlKey) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -136,19 +151,39 @@
                     top: y,
                     left: x,
                 });
-                console.log('scroll', [x, y]);
+            } else if (e.altKey) {
+
             }
         }, { 'passive': false });
+        fileInput.onchange = loadSVG;
+        resetBtn.onclick = reset;
+        relocBtn.onclick = () => {
+            if (!lastElem) {
+                return;
+            }
+            y = scale * lastElem.attributes['y'].value;
+            x = scale * lastElem.attributes['x'].value;
+            window.scrollTo({
+                top: y - window.screen.availHeight/2,
+                left: x - window.screen.availWidth/2,
+                behavior: 'smooth',
+            });
+        };
     };
 </script>
 
 <body>
-    <p id="desc" style="position: fixed;bottom: 0; background-color: white;">desc</p>
-    <p id="info" style="position: fixed;top: 0; right: 0; background-color: white;">info</p>
     <p id="board"
-        style="white-space: nowrap; display: flex; justify-content: center; align-content: center; align-items: center; margin: 0;opacity: 0.7;">
+        style="white-space: nowrap; display: flex; justify-content: center; align-content: center; align-items: center; margin: 0; left: 0;">
     </p>
-    <input type='file' id='fileInput' style="position: fixed; top: 0; background-color: white;"></input>
+    <div style="display: flex; position: fixed; top: 0; left: 0; right: 0; background-color: white; flex-grow: 2;">
+        <input type='file' id='fileInput'></input>
+        <div style="flex-grow: 1;"></div>
+        <button id='resetBtn'>reset</button>
+        <button id='relocBtn'>reloc</button>
+    </div>
+    <p id="desc" style="position: fixed; bottom: 0; background-color: white;">desc</p>
+    <p id="info" style="position: fixed;top: 0; right: 0; background-color: white;">info</p>
 </body>
 
 </html>
