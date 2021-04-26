@@ -73,6 +73,8 @@ void Profiler::dump_profile(std::string basename, std::string format, results_t 
     auto thread_dict = get_thread_dict();
     if (format == "chrome_timeline.json") {
         profiler::dump_chrome_timeline(basename, options, thread_dict, results);
+    } else if (format == "memory_flow.svg") {
+        profiler::dump_memory_flow(basename, options, thread_dict, results);
     } else {
         mgb_log_error("unsupported profiling format %s", format.c_str());
     }

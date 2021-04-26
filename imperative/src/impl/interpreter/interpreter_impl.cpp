@@ -48,7 +48,11 @@ namespace mgb {
     using namespace profiler;
 }
 
-#ifdef __GNUG__
+#if defined(_WIN32) || defined(_WIN64)
+#define SYMBOL_EXPORT __declspec(dllexport)
+#else
+#define SYMBOL_EXPORT __attribute__((visibility("default")))
+#endif
 
 namespace mgb {
 
@@ -62,25 +66,23 @@ namespace mgb {
  *     mgb::imperative_log_profile("MY MESSAGE");
  *
  **/
-__attribute__((visibility("default")))
+SYMBOL_EXPORT
 void imperative_log_profile_begin(const char* message) {
     RECORD_EVENT(CustomEvent, std::string{message});
 }
 
-__attribute__((visibility("default")))
+SYMBOL_EXPORT
 void imperative_log_profile_end(const char* message) {
     RECORD_EVENT(CustomFinishEvent, std::string{message});
 }
 
-__attribute__((visibility("default")))
+SYMBOL_EXPORT
 void imperative_log_profile(const char* message){
     imperative_log_profile_begin(message);
     imperative_log_profile_end(message);
 }
 
 }
-
-#endif
 
 std::thread::id ChannelImpl::get_worker_tid() {
     return m_worker_state.tid;
