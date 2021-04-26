@@ -1053,6 +1053,16 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
             'sample_width', '2')
  )
 
+(pdef('Correlation').
+ add_enum_alias('Format', 'ConvolutionV0').
+ add_fields('uint32', 'kernel_size', '1').
+ add_fields('uint32', 'max_displacement', '1').
+ add_fields('uint32', 'stride1', '1').
+ add_fields('uint32', 'stride2', '1').
+ add_fields('uint32', 'pad_size', '0').
+ add_fields('bool', 'is_multiply', 'true')
+ )
+
 (pdef('DeformablePSROIPooling').
  add_fields('bool', 'no_trans', 'true').
  add_fields('float32', 'spatial_scale', 1,
