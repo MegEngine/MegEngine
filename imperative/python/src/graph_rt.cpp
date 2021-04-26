@@ -23,7 +23,7 @@
 #include "./common.h"
 #include "./ops.h"
 #include "megbrain/gopt/inference.h"
-
+#include "megbrain/imperative/profiler_plugin.h"
 
 namespace py = pybind11;
 
@@ -238,6 +238,10 @@ void init_graph_rt(py::module m) {
                 return std::make_shared<_CompGraphProfilerImpl>(graph);
                 }))
         .def("get", [](_CompGraphProfilerImpl& profiler) { return profiler._get_result(); });
+
+    using interpreter::intl::ProfilerPlugin;
+    py::class_<ProfilerPlugin, std::shared_ptr<ProfilerPlugin>>(m, "GraphProfiler2")
+        .def(py::init<cg::ComputingGraph*>());
 
     auto GraphOptimizeOptions = py::class_<_OptimizeForInferenceOptions>(m, "GraphOptimizeOptions")
         .def(py::init())
