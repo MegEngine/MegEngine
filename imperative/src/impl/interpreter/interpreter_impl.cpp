@@ -60,7 +60,7 @@ namespace mgb {
  * USAGE
  *
  *   header:
- *     namespace mgb { bool imperative_log_profile(const char* message); }
+ *     namespace mgb { void imperative_log_profile(const char* message); }
  *
  *   code:
  *     mgb::imperative_log_profile("MY MESSAGE");
