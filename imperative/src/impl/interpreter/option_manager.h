@@ -25,6 +25,7 @@ public:
 #define DEF_OPTION(name, env_key, default_value, desc) \
     size_t name = (m_option_map[#name]=&name, get_option_from_env(env_key, default_value));
 
+    // Environ value would be read only when interpreter initializing.
     DEF_OPTION(async_level,             "MEGENGINE_INTERP_ASYNC_LEVEL",     2,
         "config whether raise error exactly when invoking op.\n"
         "level 2: both device and user side errors are async;\n"
