@@ -236,7 +236,13 @@ public:
                                  TensorLayout& grad_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
     AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
+        auto ret = AlgoAttribute::DEFAULT;
+#define cb(attr)                               \
+    if (m_impl->contain_attribute_all(attr)) { \
+        ret |= attr;                           \
+    }
+        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
+#undef cb
         if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
             ret |= AlgoAttribute::REPRODUCIBLE;
         }

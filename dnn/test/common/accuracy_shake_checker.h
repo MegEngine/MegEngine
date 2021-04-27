@@ -168,7 +168,8 @@ public:
              AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info(
                      opr, layouts)) {
             if (!(algo_info.attribute &
-                 AlgoAttribute::ACCURACY_DEPEND_ON_BATCH) &&
+                  AlgoAttribute::ACCURACY_DEPEND_ON_BATCH) &&
+                (algo_info.attribute & AlgoAttribute::REPRODUCIBLE) &&
                 std::regex_match(
                         algo_info.desc.name,
                         std::regex("(.*)(" + m_policy_name.name + ")(.*)"))) {
