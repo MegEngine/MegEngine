@@ -9,6 +9,7 @@
 import argparse
 import logging
 import re
+from collections import namedtuple
 
 import numpy as np
 
@@ -16,12 +17,17 @@ from megengine.core.tensor.dtype import is_quantize
 from megengine.logger import _imperative_rt_logger, get_logger, set_mgb_log_level
 from megengine.utils.module_stats import (
     enable_receptive_field,
+    get_activation_stats,
     get_op_stats,
     get_param_stats,
+    print_activations_stats,
     print_op_stats,
     print_param_stats,
     print_summary,
     sizeof_fmt,
+    sum_activations_stats,
+    sum_op_stats,
+    sum_param_stats,
 )
 from megengine.utils.network import Network
 
@@ -34,6 +40,7 @@ def visualize(
     bar_length_max: int = 20,
     log_params: bool = True,
     log_flops: bool = True,
+    log_activations: bool = True,
 ):
     r"""
     Load megengine dumped model and visualize graph structure with tensorboard log files.
@@ -44,6 +51,7 @@ def visualize(
     :param bar_length_max: size of bar indicating max flops or parameter size in net stats.
     :param log_params: whether print and record params size.
     :param log_flops: whether print and record op flops.
+    :param log_activations: whether print and record op activations.
     """
     if log_path:
         try:
@@ -83,6 +91,10 @@ def visualize(
     node_list = []
     flops_list = []
     params_list = []
+    activations_list = []
+    total_stats = namedtuple("total_stats", ["param_size", "flops", "act_size"])
+    stats_details = namedtuple("module_stats", ["params", "flops", "activations"])
+
     for node in graph.all_oprs:
         if hasattr(node, "output_idx"):
             node_oup = node.outputs[node.output_idx]
@@ -124,6 +136,11 @@ def visualize(
             flops_stats["class_name"] = node.type
             flops_list.append(flops_stats)
 
+            acts = get_activation_stats(node_oup.numpy())
+            acts["name"] = node.name
+            acts["class_name"] = node.type
+            activations_list.append(acts)
+
         if node.type == "ImmutableTensor":
             param_stats = get_param_stats(node.numpy())
             # add tensor size attr
@@ -149,20 +166,36 @@ def visualize(
         "#params": len(params_list),
     }
 
-    total_flops, total_param_dims, total_param_size = 0, 0, 0
+    (
+        total_flops,
+        total_param_dims,
+        total_param_size,
+        total_act_dims,
+        total_param_size,
+    ) = (0, 0, 0, 0, 0)
+
+    total_param_dims, total_param_size, params = sum_param_stats(
+        params_list, bar_length_max
+    )
+    extra_info["total_param_dims"] = sizeof_fmt(total_param_dims, suffix="")
+    extra_info["total_param_size"] = sizeof_fmt(total_param_size)
     if log_params:
-        total_param_dims, total_param_size = print_param_stats(
-            params_list, bar_length_max
-        )
-        extra_info["total_param_dims"] = sizeof_fmt(total_param_dims)
-        extra_info["total_param_size"] = sizeof_fmt(total_param_size)
+        print_param_stats(params)
+
+    total_flops, flops = sum_op_stats(flops_list, bar_length_max)
+    extra_info["total_flops"] = sizeof_fmt(total_flops, suffix="OPs")
     if log_flops:
-        total_flops = print_op_stats(flops_list, bar_length_max)
-        extra_info["total_flops"] = sizeof_fmt(total_flops, suffix="OPs")
-    if log_params and log_flops:
-        extra_info["flops/param_size"] = "{:3.3f}".format(
-            total_flops / total_param_size
-        )
+        print_op_stats(flops)
+
+    total_act_dims, total_act_size, activations = sum_activations_stats(
+        activations_list, bar_length_max
+    )
+    extra_info["total_act_dims"] = sizeof_fmt(total_act_dims, suffix="")
+    extra_info["total_act_size"] = sizeof_fmt(total_act_size)
+    if log_activations:
+        print_activations_stats(activations)
+
+    extra_info["flops/param_size"] = "{:3.3f}".format(total_flops / total_param_size)
 
     if log_path:
         graph_def = GraphDef(node=node_list, versions=VersionDef(producer=22))
@@ -179,7 +212,12 @@ def visualize(
     # FIXME: remove this after resolving "span dist too large" warning
     _imperative_rt_logger.set_log_level(old_level)
 
-    return total_param_size, total_flops
+    return (
+        total_stats(
+            param_size=total_param_size, flops=total_flops, act_size=total_act_size,
+        ),
+        stats_details(params=params, flops=flops, activations=activations),
+    )
 
 
 def main():
