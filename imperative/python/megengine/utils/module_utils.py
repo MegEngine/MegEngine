@@ -5,6 +5,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import contextlib
 from collections import Iterable
 
 from ..module import Sequential
@@ -41,3 +42,28 @@ def set_expand_structure(obj: Module, key: str, value):
             parent[key] = value
 
     _access_structure(obj, key, callback=f)
+
+
+@contextlib.contextmanager
+def set_module_mode_safe(
+    module: Module, training: bool = False,
+):
+    """Adjust module to training/eval mode temporarily.
+
+    :param module: used module.
+    :param training: training (bool): training mode. True for train mode, False fro eval mode.
+    """
+    backup_stats = {}
+
+    def recursive_backup_stats(module, mode):
+        for m in module.modules():
+            backup_stats[m] = m.training
+            m.train(mode, recursive=False)
+
+    def recursive_recover_stats(module):
+        for m in module.modules():
+            m.training = backup_stats.pop(m)
+
+    recursive_backup_stats(module, mode=training)
+    yield module
+    recursive_recover_stats(module)
