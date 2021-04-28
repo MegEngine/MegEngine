@@ -70,6 +70,7 @@ public:
         CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW32_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_SASS_NCHW64_IMMA_INT4_INT4,
         CUDA_IMPLICIT_GEMM_SASS_NCHW64_IMMA_UINT4_INT4,
+        CUDA_FALLBACK_NCHW_INT4
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
