@@ -544,7 +544,7 @@ MGB_DEFINE_OPR_CLASS(Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
  */
 MGB_DEFINE_OPR_CLASS(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
     //! input pointer buffer
-    std::shared_ptr<void*> m_inp_ptr;
+    SmallVector<void*> m_inp_ptr;
     std::vector<dt_int32> m_offsets;
     intl::UniqPtrWithCN<megdnn::ParamPackConcat> m_opr;
 
