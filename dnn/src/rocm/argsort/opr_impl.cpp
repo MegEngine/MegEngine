@@ -37,7 +37,7 @@ void ArgsortForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         ARGSORT_FOREACH_CTYPE(cb);
 #undef cb
         default:
-            megdnn_throw(ssprintf("unsupported argsort dtype on cuda: %s",
+            megdnn_throw(ssprintf("unsupported argsort dtype on rocm: %s",
                                   src.layout.dtype.name()));
     }
 }
@@ -71,7 +71,7 @@ void ArgsortBackwardImpl::exec(_megdnn_tensor_in diff,
         ARGSORT_FOREACH_CTYPE(cb);
 #undef cb
         default:
-            megdnn_throw(ssprintf("unsupported argsort dtype on cuda: %s",
+            megdnn_throw(ssprintf("unsupported argsort dtype on rocm: %s",
                                   diff.layout.dtype.name()));
     }
 }

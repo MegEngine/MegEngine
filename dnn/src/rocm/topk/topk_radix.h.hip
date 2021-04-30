@@ -59,29 +59,6 @@ struct RadixConverter<int32_t> {
     }
 };
 
-// #if !MEGDNN_DISABLE_FLOAT16
-// template <>
-// struct RadixConverter<dt_float16> {
-//     union FIunion {
-//         FIunion() {}
-//         dt_float16 fv;
-//         uint16_t iv;
-//     };
-//     static __forceinline__ __device__ __host__ uint16_t to_radix(dt_float16 val) {
-//         FIunion fi;
-//         fi.fv = val;
-//         return fi.iv ^ (((!(fi.iv >> 15u)) - 1u) | 0x8000u);
-//     }
-//     static __forceinline__ __device__ __host__ dt_float16 from_radix(uint16_t val) {
-//         FIunion fi;
-//         // do not write as to_radix() to work around a compiler bug in cuda-9.0
-//         uint16_t m = 0x8000u;
-//         fi.iv = val ^ (m | (m - !(val >> 15u)));
-//         return fi.fv;
-//     }
-// };
-// #endif
-
 }  // namespace internal
 
 /*!

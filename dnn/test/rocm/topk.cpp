@@ -29,10 +29,5 @@ TEST_F(ROCM, TOP_K) {
 TEST_F(ROCM, TOP_K_I32) {
     run_topk_test<dtype::Int32>(handle_rocm());
 }
-// #if !MEGDNN_DISABLE_FLOAT16
-// TEST_F(ROCM, TOP_K_F16) {
-//     run_topk_test<dtype::Float16>(handle_rocm());
-// }
-// #endif
 
 // vim: syntax=cpp.doxygen

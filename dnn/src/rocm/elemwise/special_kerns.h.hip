@@ -1,5 +1,5 @@
 /**
- * \file src/rocm/elemwise/special_kerns.h.hip
+ * \file dnn/src/rocm/elemwise/special_kerns.h.hip
  *
  * This file is part of MegDNN, a deep neural network run-time library
  * developed by Megvii.
