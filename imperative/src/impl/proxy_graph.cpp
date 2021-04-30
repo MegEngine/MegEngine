@@ -378,6 +378,7 @@ public:
         if (is_finalized()) return;
         for (auto&& i : m_used_comp_node) {
             if (i.device_type() == CompNode::DeviceType::CUDA) continue;
+            if (i.device_type() == CompNode::DeviceType::ROCM) continue;
             i.sync();
         }
     }

@@ -136,6 +136,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
 
 #if !MEGDNN_DISABLE_FLOAT16
 #define MEGDNN_FOREACH_COMPUTING_DTYPE_WITH_DTYPE_SRC(dtype_src, cb) \
+    cb(dtype_src, dt_bool) \
     cb(dtype_src, dt_int8) \
     cb(dtype_src, dt_int32) \
     cb(dtype_src, dt_int16) \
@@ -147,6 +148,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
 #else
 
 #define MEGDNN_FOREACH_COMPUTING_DTYPE_WITH_DTYPE_SRC(dtype_src, cb) \
+    cb(dtype_src, dt_bool) \
     cb(dtype_src, dt_int8) \
     cb(dtype_src, dt_int32) \
     cb(dtype_src, dt_int16) \
@@ -171,6 +173,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
 
 #if !MEGDNN_DISABLE_FLOAT16
 #define MEGDNN_FOREACH_COMPUTING_CTYPE(cb) \
+    cb(dt_bool) \
     cb(dt_int8) \
     cb(dt_int32) \
     cb(dt_int16) \
@@ -181,6 +184,7 @@ void typecvt_kern_n2n(const TensorND& dest, const TensorND& src,
 
 #else
 #define MEGDNN_FOREACH_COMPUTING_CTYPE(cb) \
+    cb(dt_bool) \
     cb(dt_int8) \
     cb(dt_int32) \
     cb(dt_int16) \

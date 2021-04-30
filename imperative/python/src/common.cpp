@@ -176,6 +176,7 @@ void init_common(py::module m) {
     py::enum_<CompNode::DeviceType>(m, "DeviceType")
             .value("UNSPEC", CompNode::DeviceType::UNSPEC)
             .value("CUDA", CompNode::DeviceType::CUDA)
+            .value("ROCM", CompNode::DeviceType::ROCM)
             .value("CPU", CompNode::DeviceType::CPU)
             .value("CAMBRICON", CompNode::DeviceType::CAMBRICON)
             .value("ATLAS", CompNode::DeviceType::ATLAS)
