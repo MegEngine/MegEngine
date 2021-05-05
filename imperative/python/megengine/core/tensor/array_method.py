@@ -165,7 +165,7 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
         return list(map(int, axis))
 
     axis = get_axes()
-    axis = sorted(i + inp.ndim if i < 0 else i for i in axis)
+    axis = utils._normalize_axis(inp.ndim, axis)
     axis = [a - i for i, a in enumerate(axis)]
 
     op = builtin.RemoveAxis(axis=axis)
@@ -190,8 +190,7 @@ def _reduce(mode):
             op = builtin.Reduce(mode=mode, axis=0)
             (result,) = apply(op, data)
         elif isinstance(axis, collections.abc.Iterable):
-            axis = list(axis)
-            axis.sort(reverse=True)
+            axis = utils._normalize_axis(self.ndim, axis, reverse=True)
             for ai in axis:
                 op = builtin.Reduce(mode=mode, axis=ai)
                 (data,) = apply(op, data)
@@ -199,6 +198,7 @@ def _reduce(mode):
                     data = _remove_axis(data, ai)
             result = data
         else:
+            # builtin.Reduce already accept negtive axis
             op = builtin.Reduce(mode=mode, axis=axis)
             (result,) = apply(op, data)
 

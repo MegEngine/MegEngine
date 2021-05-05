@@ -178,3 +178,28 @@ def make_shape_tuple(shape):
     s = []
     _expand_int(s, shape)
     return tuple(s)
+
+
+def _normalize_axis(
+    ndim: int, axis: Union[int, Iterable], reverse=False
+) -> Union[int, list]:
+    def convert(x):
+        x_org = x
+        if x < 0:
+            x = ndim + x
+        assert (
+            x >= 0 and x < ndim
+        ), "axis {} is out of bounds for tensor of dimension {}".format(x_org, ndim)
+        return x
+
+    if isinstance(axis, int):
+        return convert(axis)
+    elif isinstance(axis, Iterable):
+        axis_org = axis
+        axis = list(sorted(map(convert, axis), reverse=reverse))
+        for i in range(len(axis) - 1):
+            assert axis[i] != axis[i + 1], "axis {} contains duplicated indices".format(
+                axis_org
+            )
+        return axis
+    raise

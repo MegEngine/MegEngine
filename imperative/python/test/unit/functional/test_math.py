@@ -9,6 +9,7 @@
 from functools import partial
 
 import numpy as np
+import pytest
 from utils import opr_test
 
 import megengine.functional as F
@@ -42,6 +43,14 @@ def common_test_reduce(opr, ref_opr):
         opr_test(cases, opr, ref_fn=lambda x: ref_opr(x).astype(np.int32))
         # test all axises in range of input shape
         for axis in range(0, 3):
+            opr_test(
+                cases,
+                opr,
+                ref_fn=lambda x: ref_opr(x, axis=axis).astype(np.int32),
+                axis=axis,
+            )
+            # test negative axis
+            axis = axis - len(data1_shape)
             opr_test(
                 cases,
                 opr,
@@ -137,3 +146,14 @@ def test_normalize():
     cases[0]["input"][0, 0, 0, :] = 0
     cases[1]["input"][0, 0, 0, :] = 0
     opr_test(cases, partial(F.normalize, axis=3), ref_fn=partial(np_normalize, axis=3))
+
+
+def test_sum_neg_axis():
+    shape = (2, 3)
+    data = np.random.random(shape).astype(np.float32)
+    for axis in (-1, -2, (-2, 1), (-1, 0)):
+        get = F.sum(tensor(data), axis=axis)
+        ref = np.sum(data, axis=axis)
+        np.testing.assert_allclose(get.numpy(), ref, rtol=1e-6)
+    with pytest.raises(AssertionError):
+        F.sum(tensor(data), axis=(-1, 1))

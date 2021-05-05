@@ -811,3 +811,19 @@ def test_assert_not_equal():
     y = F.zeros(shape, dtype=np.float32) + 1.1
     with pytest.raises(RuntimeError):
         z = F.utils._assert_equal(x, y)
+
+
+def test_neg_axis():
+    x = tensor(np.random.normal(0, 1, (32, 5)))
+
+    y = F.argmax(x, axis=-1)
+    yy = F.argmax(x, axis=1)
+    np.testing.assert_equal(y.numpy(), yy.numpy())
+
+    y = F.argmax(x, axis=(-1, -2))
+    yy = F.argmax(x, axis=(0, 1))
+    np.testing.assert_equal(y.numpy(), yy.numpy())
+
+    y = F.argmin(x, axis=(-1, -2))
+    yy = F.argmin(x, axis=(0, 1))
+    np.testing.assert_equal(y.numpy(), yy.numpy())
