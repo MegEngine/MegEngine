@@ -466,9 +466,13 @@ def argmin(
         0
 
     """
+    if axis is None:
+        assert not keepdims, "can not set axis=None and keepdims=True"
+        inp = inp.flatten()
+        axis = 0
+
+    axis = utils._normalize_axis(inp.ndim, axis, reverse=True)
     if isinstance(axis, collections.abc.Iterable):
-        axis = list(axis)
-        axis.sort(reverse=True)
 
         for ai in axis:
             op = builtin.Argmin(axis=ai)
@@ -478,11 +482,6 @@ def argmin(
                 inp = squeeze(inp, ai)
 
         return inp
-
-    if axis is None:
-        assert not keepdims, "can not set axis=None and keepdims=True"
-        inp = inp.flatten()
-        axis = 0
 
     op = builtin.Argmin(axis=axis)
     (result,) = apply(op, inp)
@@ -525,9 +524,13 @@ def argmax(
         5
 
     """
+    if axis is None:
+        assert not keepdims, "can not set axis=None and keepdims=True"
+        inp = inp.flatten()
+        axis = 0
+    axis = utils._normalize_axis(inp.ndim, axis, reverse=True)
+
     if isinstance(axis, collections.abc.Iterable):
-        axis = list(axis)
-        axis.sort(reverse=True)
 
         for ai in axis:
             op = builtin.Argmax(axis=ai)
@@ -537,11 +540,6 @@ def argmax(
                 inp = squeeze(inp, ai)
 
         return inp
-
-    if axis is None:
-        assert not keepdims, "can not set axis=None and keepdims=True"
-        inp = inp.flatten()
-        axis = 0
 
     op = builtin.Argmax(axis=axis)
     (result,) = apply(op, inp)
