@@ -140,7 +140,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
     else:
         if ndim != 0 and ndim != 1:
             raise ValueError("ndim != 1 or 0, get : %d" % ndim)
-        if not isinstance(x, Tensor):
+        if not isinstance(x, (Tensor, SymbolVar)):
             (x,) = Const(x, dtype=dtype, device=device)(*reference)
         return x
 

@@ -19,7 +19,7 @@ from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
-from megengine.utils.network import Network
+from megengine.utils.network import Network, set_symbolic_shape
 from megengine.utils.network_node import VarNode
 
 
@@ -63,6 +63,22 @@ def test_concat(is_varnode):
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
+def test_condtake(is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    x = np.array([[1, 2, 3], [4, 5, 6]]).astype("float32")
+    y = np.array([[True, False, True], [False, True, True]])
+    xx = make_tensor(x, network)
+    yy = make_tensor(y, network)
+    val, idx = F.cond_take(yy, xx)
+    np.testing.assert_equal(val.numpy(), x[y])
+    np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
+
+
+@pytest.mark.parametrize("is_varnode", [True, False])
 def test_concat_device(is_varnode):
     if is_varnode:
         network = Network()
@@ -102,6 +118,7 @@ def test_stack(is_varnode):
 def test_split(is_varnode):
     if is_varnode:
         network = Network()
+        saved_symbolic_shape = set_symbolic_shape(False)
     else:
         network = None
 
@@ -134,6 +151,9 @@ def test_split(is_varnode):
     except ValueError as e:
         assert str(e) == "Invalid nsplits_or_secions: [3, 3, 5]"
 
+    if is_varnode:
+        set_symbolic_shape(saved_symbolic_shape)
+
 
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_reshape(is_varnode):
@@ -161,6 +181,7 @@ def test_reshape(is_varnode):
 def test_reshape_shape_inference(is_varnode):
     if is_varnode:
         network = Network()
+        saved_symbolic_shape = set_symbolic_shape(False)
     else:
         network = None
 
@@ -192,12 +213,15 @@ def test_reshape_shape_inference(is_varnode):
         {"input": [x_shape_unknown, tshp_known_unspec], "output": [(2, 2),]},
     ]
     opr_test(cases, func, compare_fn=check_shape, test_trace=True, network=network)
+    if is_varnode:
+        set_symbolic_shape(saved_symbolic_shape)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_squeeze(is_varnode):
     if is_varnode:
         network = Network()
+        saved_symbolic_shape = set_symbolic_shape(False)
     else:
         network = None
 
@@ -208,6 +232,9 @@ def test_squeeze(is_varnode):
         y = np.squeeze(x, axis)
         yy = F.squeeze(xx, axis)
         np.testing.assert_equal(y, yy.numpy())
+
+    if is_varnode:
+        set_symbolic_shape(saved_symbolic_shape)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
@@ -358,7 +385,7 @@ def test_flatten(is_varnode):
     data1 = np.random.random(data1_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.shape[0] == y
+        assert x._tuple_shape[0] == y
 
     output0 = (2 * 3 * 4 * 5,)
     output1 = (4 * 5 * 6 * 7,)
@@ -420,7 +447,7 @@ def test_broadcast(is_varnode):
     data3 = np.random.random(input3_shape).astype(np.float32)
 
     def compare_fn(x, y):
-        assert x.shape[0] == y
+        assert x._tuple_shape[0] == y
 
     cases = [
         {"input": [data1, output1_shape], "output": output1_shape},

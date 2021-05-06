@@ -17,6 +17,7 @@ import numpy as np
 
 from ..core._imperative_rt import ComputingGraph
 from ..core._imperative_rt.core2 import SymbolVar
+from ..core._trace_option import set_symbolic_shape as _set_symbolic_shape
 from ..core.tensor import megbrain_graph as G
 from ..logger import get_logger
 from .comp_graph_tools import get_dep_vars, get_opr_type, get_oprs_seq
@@ -182,8 +183,13 @@ class Network:
 
         """
 
+        def _set_var_name(var):
+            graph_var = G.VarNode(var.var)
+            graph_var.name = var.name
+            return graph_var
+
         self._compile()
-        out = [G.VarNode(var.var) for var in self.output_vars]
+        out = list(map(_set_var_name, self.output_vars))
 
         if kwargs.pop("arg_names", False):
             logger.warning(
@@ -231,15 +237,20 @@ class Network:
         if not all([var.owner for var in vars]):
             self.add_dep_oprs(*vars)
         for var in vars:
-            if var not in self.output_vars:
+            # use method 'is' instead of 'in' to avoid
+            # compare VarNode use elemwise equal
+            if not any(var is _ for _ in self.output_vars):
                 self.output_vars.append(var)
 
     def remove_output(self, *vars: VarNode):
         """Removes vars from the network output node list.
         """
         for var in vars:
-            if var in self.output_vars:
-                self.output_vars.remove(var)
+            # use list pop instead of remove to avoid
+            # compare VarNode use elemwise equal
+            for idx, out_var in enumerate(self.output_vars):
+                if var is out_var:
+                    self.output_vars.pop(idx)
 
     def add_dep_oprs(self, *vars):
         if len(vars) == 0:
@@ -434,6 +445,15 @@ class Network:
                 opnode.add_out_var(self._get_var(var))
             return opnode
         else:
+            # overwrite the opnode 'new' output VarNode with
+            # original one when output number larger than 1,
+            # or will cause dependence issue in _compiler step.
+            if len(opr.outputs) > 1:
+                opnode = self.all_oprs_map[opr.id]
+                for idx, output in enumerate(opnode.outputs):
+                    if output.var.id in self.all_vars_map:
+                        opnode.outputs[idx] = self.all_vars_map[output.var.id]
+
             return None
 
     def _get_opr(self, x):
@@ -447,6 +467,15 @@ class Network:
         if x.id not in self.all_vars_map or self.all_vars_map[x.id].var != x:
             self.all_vars_map[x.id] = VarNode.load(x, self._get_opr(x.owner))
         return self.all_vars_map[x.id]
+
+
+def set_symbolic_shape(option: bool):
+    """
+    Set the VarNode use symbolic shape or not, return the last status.
+    Please set to True and must recover after dump if want to change the input batch size.
+    :param option: True for enable symbolic shape.
+    """
+    return _set_symbolic_shape(option)
 
 
 def as_varnode(obj):

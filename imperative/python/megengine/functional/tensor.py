@@ -334,7 +334,7 @@ def split(inp, nsplits_or_sections, axis=0):
         x = tensor(np.random.random((10, 20)), dtype=np.float32)
         y = F.split(x, 3)
         z = F.split(x, [6, 17], axis=1)
-        
+
         print([i.numpy().shape for i in y])
         print([i.numpy().shape for i in z])
 
@@ -686,9 +686,9 @@ def cond_take(mask: Tensor, x: Tensor) -> Tensor:
         [1. 4.] [0 3]
 
     """
-    if not isinstance(x, Tensor):
+    if not isinstance(x, (Tensor, SymbolVar)):
         raise TypeError("input must be a tensor")
-    if not isinstance(mask, Tensor):
+    if not isinstance(mask, (Tensor, SymbolVar)):
         raise TypeError("mask must be a tensor")
     if mask.dtype != np.bool_:
         raise ValueError("mask must be bool")

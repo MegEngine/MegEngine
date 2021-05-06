@@ -14,7 +14,8 @@ from typing import Callable, Sequence
 import numpy as np
 
 from ..core import _imperative_rt as rt
-from ..core._imperative_rt.core2 import SymbolVar
+from ..core._imperative_rt.core2 import SymbolVar, apply
+from ..core._trace_option import use_symbolic_shape
 from ..core._wrap import Device
 from ..core.ops import builtin
 from ..core.tensor.array_method import ArrayMethodMixin
@@ -53,15 +54,41 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
         obj.owner = owner_opr
         return obj
 
+    def _get_var_shape(self, axis=None):
+        opdef = (
+            builtin.GetVarShape() if axis is None else builtin.GetVarShape(axis=axis)
+        )
+        return apply(opdef, self)[0]
+
+    @property
+    def partial_shape(self):
+        """Return the tuple type inferred shape of VarNode
+        """
+        return tuple(self._get_var_shape().numpy())
+
+    def shapeof(self, axis):
+        """Return the symbolic shape of axis
+        """
+        return self._get_var_shape(axis=axis) if self.var else None
+
+    @property
+    def _tuple_shape(self):
+        return self.partial_shape
+
     @property
     def shape(self):
+        """Return the symbolic shape if using set_symbolic_shape(True)
+           else inferred shape
+        """
         rst = None
         if self.var:
             try:
                 rst = self.var.shape
             except:
                 rst = None
-        return rst
+        if not use_symbolic_shape():
+            return rst
+        return self._get_var_shape() if self.var else None
 
     @property
     def dtype(self):
@@ -77,10 +104,6 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
 
     def __hash__(self):
         return id(self)
-
-    @property
-    def _tuple_shape(self):
-        return self.var.shape
 
     def numpy(self):
         o = OutputNode(self.var)
