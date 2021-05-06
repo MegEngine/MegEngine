@@ -10,7 +10,7 @@ from megengine.jit.tracing import trace
 from megengine.tensor import Tensor
 from megengine.utils.comp_graph_tools import GraphInference
 from megengine.utils.network import Network as Net
-from megengine.utils.network import as_oprnode
+from megengine.utils.network import as_oprnode, set_symbolic_shape
 from megengine.utils.network_node import Host2DeviceCopy, VarNode
 
 
@@ -181,19 +181,22 @@ def test_add_input():
     np.testing.assert_equal(out["o1"], ((a + b) * 2 + a).numpy())
 
 
-def test_add_output():
+def test_add_remove_output():
 
     a = Tensor([1.0, 2.0])
     b = Tensor([3.0, 4.0])
 
     @trace(symbolic=True, capture_as_const=True)
     def fwd(a, b):
-        return (a + b) * 2
+        return (a + b) * 2, (a - b)
 
     fwd(a, b)
     orig_model = io.BytesIO()
     fwd.dump(
-        orig_model, arg_names=["a", "b"], output_names="o", optimize_for_inference=False
+        orig_model,
+        arg_names=["a", "b"],
+        output_names=["o1", "o2"],
+        optimize_for_inference=False,
     )
     orig_model.seek(0)
 
@@ -201,11 +204,13 @@ def test_add_output():
     var_a = net.var_filter.name("a").as_unique()
     var_b = net.var_filter.name("b").as_unique()
 
-    y = F.add(var_a, var_b)
-    y = F.sigmoid(y)
+    y1 = (var_a + var_b) * 3
+    y2 = F.sigmoid(var_a + var_b)
 
-    y.name = "o1"
-    net.add_output(y)
+    net.remove_output(*net.output_vars)
+    y1.name = "new_o1"
+    y2.name = "new_o2"
+    net.add_output(y1, y2)
 
     modified_model = io.BytesIO()
     net.dump(modified_model)
@@ -214,8 +219,8 @@ def test_add_output():
     g = GraphInference(modified_model)
     out = g.run(a.numpy(), b.numpy())
 
-    np.testing.assert_equal(out["o"], ((a + b) * 2).numpy())
-    np.testing.assert_equal(out["o1"], (F.sigmoid((a + b))).numpy())
+    np.testing.assert_equal(out["new_o1"], ((a + b) * 3).numpy())
+    np.testing.assert_equal(out["new_o2"], (F.sigmoid((a + b))).numpy())
 
 
 def test_query():
@@ -343,3 +348,68 @@ def test_modify_opr_name():
 
     net1 = Net.load(modified_model)
     assert net1.data_providers_filter.as_unique().name == "net1.net.a"
+
+
+def test_dump_cond_take():
+
+    a = Tensor([1.0, 2.0])
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(a):
+        return F.cond_take(a > 1, a)
+
+    fwd(a)
+    orig_model = io.BytesIO()
+    fwd.dump(
+        orig_model,
+        arg_names=["a"],
+        output_names=["o1", "o2"],
+        optimize_for_inference=False,
+    )
+    orig_model.seek(0)
+
+    net = Net.load(orig_model)
+    var_a = net.input_vars[0]
+
+    val, idx = F.cond_take(var_a > 1, var_a)
+
+    net.remove_output(*net.output_vars)
+    val.name = "value"
+    idx.name = "index"
+    net.add_output(val, idx)
+
+    modified_model = io.BytesIO()
+    net.dump(modified_model)
+    modified_model.seek(0)
+
+    g = GraphInference(modified_model)
+    out = g.run(a.numpy())
+
+    data = a.numpy()
+    mask = a.numpy() > 1
+    np.testing.assert_equal(out["index"], np.where(mask.reshape(-1))[0])
+    np.testing.assert_equal(out["value"], data[mask])
+
+
+def test_set_symbolic_shape():
+
+    a = Tensor([1.0, 2.0])
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(a):
+        return F.relu(a * 2)
+
+    fwd(a)
+    orig_model = io.BytesIO()
+    fwd.dump(
+        orig_model, arg_names=["a"], output_names=["o"], optimize_for_inference=False,
+    )
+    orig_model.seek(0)
+    net = Net.load(orig_model)
+    var_a = net.input_vars[0]
+
+    saved_symbolic_shape = set_symbolic_shape(True)
+    assert isinstance(var_a.shape, VarNode)
+    set_symbolic_shape(False)
+    assert var_a.shape == var_a.partial_shape
+    set_symbolic_shape(saved_symbolic_shape)
