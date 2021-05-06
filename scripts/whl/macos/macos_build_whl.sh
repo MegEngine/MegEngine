@@ -2,6 +2,7 @@
 
 READLINK=readlink
 OS=$(uname -s)
+USER=$(whoami)
 
 if [ $OS = "Darwin" ];then
     READLINK=greadlink

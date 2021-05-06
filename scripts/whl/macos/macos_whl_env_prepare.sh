@@ -46,21 +46,19 @@ SRC_DIR=$($READLINK -f "`dirname $0`/../../../")
 
 echo ${SRC_DIR}
 ALL_PYTHON="3.5.9 3.6.10 3.7.7 3.8.3"
-
+USER=$(whoami)
 
 function install_python_package() {
     for pak in ${ALL_PYTHON}
     do
         echo "###### do command: env PYTHON_CONFIGURE_OPTS=\"--enable-shared\" pyenv install ${pak}"
-        if [ -e /Users/$USER/.pyenv/versions/${pak} ];then
-            echo "FOUND install /Users/$USER/.pyenv/versions/${pak} strip it..."
+        if [ -e /Users/${USER}/.pyenv/versions/${pak} ];then
+            echo "FOUND install /Users/${USER}/.pyenv/versions/${pak} strip it..."
         else
             env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
         fi
-        echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install numpy wheel requests tqdm tabulate"
-        /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install numpy wheel
-        echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/python_module/requires-test.txt"
-        /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/python_module/requires-test.txt
+        echo "###### do command: /Users/$USER/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/imperative/python/requires.txt"
+        /Users/$USER/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/imperative/python/requires.txt
     done
 }
 
