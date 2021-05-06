@@ -489,7 +489,7 @@ def apply_backward_varnode(op: BackwardGraph, *args: VarNode):
         graph._make_const_for_backward,
         args,
     )
-    return _unwrap(outputs)
+    return outputs
 
 
 set_cpp_apply_backward_varnode(apply_backward_varnode)
