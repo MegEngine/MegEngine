@@ -247,6 +247,34 @@ def test_dump_volatile():
     )
 
 
+def test_dump_backward_graph():
+    x0 = tensor(np.random.randn(3, 4))
+    x1 = tensor(np.random.randn(3, 4))
+
+    gm = GradManager().attach(x0)
+
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x0, x1):
+        with gm:
+            y = x0 * x1
+            gm.backward(y, F.ones_like(y))
+            dx0 = x0.grad
+        return y, dx0
+
+    y, dx0 = f(x0, x1)
+    np.testing.assert_equal(dx0.numpy(), x1)
+
+    file = io.BytesIO()
+    f.dump(file, optimize_for_inference=False)
+    file.seek(0)
+
+    infer_cg = cgtools.GraphInference(file)
+    results = list((infer_cg.run(x0, x1)).values())
+
+    np.testing.assert_equal(results[0], y)
+    np.testing.assert_equal(results[1], dx0)
+
+
 @pytest.mark.parametrize("trace_mode", [False, True])
 def test_trace_profiler(trace_mode):
     @trace(symbolic=trace_mode, profiling=True)

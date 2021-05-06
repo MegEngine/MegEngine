@@ -830,7 +830,10 @@ class trace:
                         name=info.name,
                     )
                 ivars.append(h2v[h])
-            ovars = G.apply_normal_varnode(op, *ivars)
+            if isinstance(op, BackwardGraph):
+                ovars = G.apply_backward_varnode(op, *ivars)
+            else:
+                ovars = G.apply_normal_varnode(op, *ivars)
 
             AutoNaming.record_opnode(ovars[0].op)
 
