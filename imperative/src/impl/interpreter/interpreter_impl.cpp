@@ -422,7 +422,7 @@ void ChannelImpl::do_drop(TensorInfo* ptr, bool user=false) {
 }
 
 void ChannelImpl::free(TensorInfo* ptr) {
-    if (m_worker_state.options.enable_auto_drop) {
+    if (m_worker_state.options.enable_dtr_auto_drop) {
         // Evicting a tensor, rather than freeing it, can avoid pinning
         // potentially exploding amounts of memory and allow us to save
         // more memory.
@@ -459,7 +459,7 @@ void ChannelImpl::real_free(TensorInfo* ptr) {
     if (m_channel_state.profiler->is_profiling()) {
         m_channel_state.profiler->record_host<TensorEraseEvent>(ptr->id);
     }
-    if (ptr->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+    if (ptr->size_exceeds_thd(m_worker_state.options.dtr_evictee_minimum_size)) {
         m_dtr.erase_candidate(ptr);
     }
     detach_users(ptr);
@@ -487,7 +487,7 @@ void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice=tr
     dest->memory = ptr->blob()->size();
     dest->ptr = std::move(ptr);
     dest->evict_type = EvictType::NONE;
-    if (notice && dest->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+    if (notice && dest->size_exceeds_thd(m_worker_state.options.dtr_evictee_minimum_size)) {
         m_dtr.insert_candidate(dest);
     }
     if (notice && m_waitee == dest) {
@@ -519,7 +519,7 @@ void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
         inputs.push_back(i->ptr);
         m_dtr.update_used_time(i);
     }
-    if (m_worker_state.options.enable_auto_drop && m_worker_state.options.memory_budget > 0) {
+    if (m_worker_state.options.enable_dtr_auto_drop && m_worker_state.options.dtr_eviction_threshold > 0) {
         auto_evict();
     }
     auto outputs = OpDef::apply_on_physical_tensor(*path->op, inputs);
@@ -531,7 +531,7 @@ void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
             o->recompute_times ++;
             if (!o->ptr) {
                 produce_tensor(o, std::move(outputs[i]), false);
-                if (m_worker_state.options.enable_auto_drop) {
+                if (m_worker_state.options.enable_dtr_auto_drop) {
                     m_dtr.update_dsu_after_recompute(o);
                 }
             }
@@ -544,7 +544,7 @@ void ChannelImpl::auto_evict() {
         return;
     }
     size_t current_memory = m_dtr.comp_node.get_used_memory();
-    while (current_memory > m_worker_state.options.memory_budget) {
+    while (current_memory > m_worker_state.options.dtr_eviction_threshold) {
         auto best = m_dtr.find_best_tensor();
         if (!best) {
             if (!m_dtr.warn_printed) {
@@ -642,7 +642,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 uint64_t apply_id = ++m_last_id;
                 SmallVector<TensorPtr> tensor_inputs;
                 SmallVector<CompNode> devices;
-                if (m_worker_state.options.enable_auto_drop) {
+                if (m_worker_state.options.enable_dtr_auto_drop) {
                     m_dtr.pin(cmd.inputs);
                 }
                 for (auto i : cmd.inputs) {
@@ -696,7 +696,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         m_worker_state.profiler->record_device<DeviceOpExecuteEvent>(device, event_data);
                     }
                 }
-                if (m_worker_state.options.enable_auto_drop && m_worker_state.options.memory_budget > 0) {
+                if (m_worker_state.options.enable_dtr_auto_drop && m_worker_state.options.dtr_eviction_threshold > 0) {
                     auto_evict();
                 }
                 // Apply op
@@ -712,7 +712,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 }
                 // End profiling operator
                 double estimate_compute_time = 0;
-                if (m_worker_state.options.enable_auto_drop) {
+                if (m_worker_state.options.enable_dtr_auto_drop) {
                     for (auto i : cmd.inputs) {
                         estimate_compute_time += i->memory;
                     }
@@ -735,7 +735,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         continue;
                     }
                     produce_tensor(cmd.outputs[i], std::move(tensor_outputs[i]));
-                    if (m_worker_state.options.enable_auto_drop) {
+                    if (m_worker_state.options.enable_dtr_auto_drop) {
                         cmd.outputs[i]->dsu_ptr = std::make_shared<DsuNode>(estimate_compute_time);
                     }
                 }
@@ -774,7 +774,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         TensorInfo::ComputePath::make(cmd.op, cmd.inputs, cmd.outputs);
                         size_t detach_cnt = 0;
                         for (auto output : cmd.outputs) {
-                            if (!output->size_exceeds_thd(m_worker_state.options.tensor_lowerbound)) {
+                            if (!output->size_exceeds_thd(m_worker_state.options.dtr_evictee_minimum_size)) {
                                 output->detach_producer();
                                 detach_cnt ++;
                             }
