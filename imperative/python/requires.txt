@@ -6,3 +6,4 @@ tabulate
 tqdm
 redispy
 deprecated
+mprop

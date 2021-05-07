@@ -39,10 +39,10 @@ public:
         "set command buffer length.");
     DEF_OPTION(enable_host_compute,     "MEGENGINE_HOST_COMPUTE",           1,
         "enable host compute, thus computation may be done in host event if it's device is gpu.");
-    DEF_OPTION(enable_auto_drop,        "MEGENGINE_AUTO_DROP",              0, "");
-    DEF_OPTION(memory_budget,           "MEGENGINE_MEMORY_BUDGET",          0,
+    DEF_OPTION(enable_dtr_auto_drop,    "MEGENGINE_DTR_AUTO_DROP",          0, "");
+    DEF_OPTION(dtr_eviction_threshold,  "MEGENGINE_DTR_EVICTION_THRESHOLD", 0,
         "auto drop will start whenever gpu memory usage exceeds this value.");
-    DEF_OPTION(tensor_lowerbound,       "MEGENGINE_TENSOR_LOWERBOUND",      1048576,
+    DEF_OPTION(dtr_evictee_minimum_size, "MEGENGINE_DTR_EVICTEE_MINIMUM_SIZE", 1048576,
         "the minimum memory value of a tensor added to the candidate set");
     DEF_OPTION(record_computing_path,   "MEGENGINE_RECORD_COMPUTING_PATH",  0, "");
 
