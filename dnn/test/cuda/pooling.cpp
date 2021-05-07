@@ -254,6 +254,13 @@ TEST_F(CUDA, POOLING_FORWARD_NCHW_Q4) {
     checker.set_param(param).exec({{20, 96, 22, 33}, {}});
     param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
     checker.set_param(param).exec({{20, 24, 22, 33}, {}});
+    checker.set_dtype(0, dtype::Quantized4Asymm(3.1415926f, 3));
+    param.format = Param::Format::NCHW;
+    checker.set_param(param).exec({{20, 64, 22, 33}, {}});
+    param.mode = Param::Mode::AVERAGE;
+    checker.set_param(param).exec({{20, 96, 22, 33}, {}});
+    param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
+    checker.set_param(param).exec({{20, 24, 22, 33}, {}});
 }
 
 TEST_F(CUDA, POOLING_FORWARD_NCHW4) {
@@ -291,20 +298,36 @@ TEST_F(CUDA, POOLING_FORWARD_NCHW32) {
 }
 #endif
 
-TEST_F(CUDA, POOLING_FORWARD_NCHW64) {
+TEST_F(CUDA, POOLING_FORWARD_NCHW64_Q4) {
     require_compute_capability(7, 5);
     using Param = param::Pooling;
     Checker<Pooling> checker(handle_cuda());
-    Param param{Param::Mode::MAX, 0, 0, 2, 2, 2, 2};
+    Param param{Param::Mode::MAX, 1, 1, 2, 2, 2, 2};
     UniformIntRNG int_rng{-8, 7};
     checker.set_dtype(0, dtype::QuantizedS4(1.f));
     param.format = Param::Format::NCHW64;
     checker.set_epsilon(1e-3).set_rng(0, &int_rng);
-    checker.set_param(param).exec({{64, 8, 28, 28, 64}, {}});
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
     param.mode = Param::Mode::AVERAGE;
-    checker.set_param(param).exec({{64, 8, 28, 28, 64}, {}});
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
     param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
-    checker.set_param(param).exec({{64, 8, 28, 28, 64}, {}});
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
+}
+
+TEST_F(CUDA, POOLING_FORWARD_NCHW64_U4) {
+    require_compute_capability(7, 5);
+    using Param = param::Pooling;
+    Checker<Pooling> checker(handle_cuda());
+    Param param{Param::Mode::MAX, 1, 1, 2, 2, 2, 2};
+    UniformIntRNG int_rng{0, 15};
+    checker.set_dtype(0, dtype::Quantized4Asymm(1.f, 3));
+    param.format = Param::Format::NCHW64;
+    checker.set_epsilon(1e-3).set_rng(0, &int_rng);
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
+    param.mode = Param::Mode::AVERAGE;
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
+    param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
+    checker.set_param(param).exec({{4, 8, 28, 28, 64}, {}});
 }
 
 TEST_F(CUDA, POOLING_FORWARD_CHWN4) {

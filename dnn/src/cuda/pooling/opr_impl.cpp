@@ -40,8 +40,7 @@ void get_inner_layout(const TensorLayout& src, const TensorLayout& dst,
                       Handle* handle,
                       PoolingForwardImpl::Param::Format format) {
     bool is_nchw = format == PoolingForwardImpl::Param::Format::NCHW;
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS4 &&
-        dst.dtype.enumv() == DTypeEnum::QuantizedS4 && is_nchw) {
+    if (is_nchw) {
         auto relayout_opr = handle->create_operator<RelayoutFormat>();
         deduce_reformat_layout(relayout_opr, src, inner_src,
                                RelayoutFormat::Param::Mode::NCHW_NCHW64, 0, 1);
@@ -66,8 +65,11 @@ WorkspaceBundle PoolingForwardImpl::get_workspace_bundle(
     TensorLayout fsrc = src;
     TensorLayout fdst = dst;
     bool is_nchw = param().format == Param::Format::NCHW;
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS4 &&
-        dst.dtype.enumv() == DTypeEnum::QuantizedS4 && is_nchw) {
+    if ((src.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+         src.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
+        (dst.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+         dst.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
+        is_nchw) {
         get_inner_layout(src, dst, fsrc, fdst, handle(), param().format);
         sizes.push_back(fsrc.span().dist_byte());
         sizes.push_back(fdst.span().dist_byte());
@@ -97,8 +99,11 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_out sdst,
     bool is_nchw = param().format == Param::Format::NCHW;
     if (ssrc.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
         ctypecvt.src_to_comp_type(ssrc, src).src_to_comp_type(sdst, dst);
-    } else if (ssrc.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
-               sdst.layout.dtype.enumv() == DTypeEnum::QuantizedS4 && is_nchw) {
+    } else if ((ssrc.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                ssrc.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
+               (sdst.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                sdst.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
+               is_nchw) {
         auto handle_ptr = handle();
         get_inner_layout(ssrc.layout, sdst.layout, src.layout, dst.layout,
                          handle_ptr, param().format);
@@ -166,8 +171,6 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_out sdst,
                     kern_param, stream, static_cast<uint32_t>(param().mode));
         } else if (param().format == Format::NCHW64 ||
                    inner_format == Format::NCHW64) {
-            megdnn_assert(src.layout.dtype.enumv() == DTypeEnum::QuantizedS4,
-                          "but %s", src.layout.dtype.name());
             pooling2d::Param kern_param;
             size_t n = src.layout[0], hi = src.layout[2], wi = src.layout[3],
                    c = src.layout[1], ho = dst.layout[2], wo = dst.layout[3];
@@ -180,16 +183,24 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_out sdst,
             kern_param.ph = ph, kern_param.pw = pw,
             kern_param.window_h = window_h, kern_param.window_w = window_w,
             kern_param.sh = sh, kern_param.sw = sw;
+            bool uint_case = false;
+            int zero_point = 0;
+            if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+                uint_case = true;
+                zero_point = src.layout.dtype.param<dtype::Quantized4Asymm>()
+                                     .zero_point;
+            }
             auto&& stream = cuda_stream(handle());
             pooling2d::do_pooling2d_int4_ncdiv64hw64(
                     (int8_t*)src.raw_ptr, (int8_t*)dst.raw_ptr, kern_param,
-                    stream, static_cast<uint32_t>(param().mode));
-             if (sdst.layout.ndim == 4) {
-                 auto relayout_opr = handle()->create_operator<RelayoutFormat>();
-                 RelayoutFormat::Param trans_param;
-                 trans_param.mode = RelayoutFormat::Param::Mode::NCHW64_NCHW;
-                 relayout_opr->param() = trans_param;
-                 relayout_opr->exec(dst, sdst,{});
+                    stream, static_cast<uint32_t>(param().mode), uint_case,
+                    zero_point);
+            if (sdst.layout.ndim == 4) {
+                auto relayout_opr = handle()->create_operator<RelayoutFormat>();
+                RelayoutFormat::Param trans_param;
+                trans_param.mode = RelayoutFormat::Param::Mode::NCHW64_NCHW;
+                relayout_opr->param() = trans_param;
+                relayout_opr->exec(dst, sdst, {});
              }
              return;
         }

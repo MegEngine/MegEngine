@@ -84,12 +84,12 @@ TEST_F(NAIVE, POOLING_QUANTIZED_Q4) {
     }
 
     {
-        auto u4_dt = dtype::Quantized4Asymm(1.f, 0);
+        auto u4_dt = dtype::Quantized4Asymm(0.1f, 3);
         std::vector<int> u8_src_vec{1, 2, 3, 
                                     4, 5, 6, 
                                     7, 8, 9};
         std::vector<int> u8_max_dst_vec{1, 3, 7, 9};
-        std::vector<int> u8_avg_dst_vec{0, 1, 3, 7};
+        std::vector<int> u8_avg_dst_vec{3, 3, 4, 7};
         std::vector<int> u8_avg_exclu_dst_vec{1, 3, 6, 7};
         Pooling::Param param{Mode::MAX, 1, 1, 2, 2, 2, 2};
         Testcase input{TensorValueLowbit4({1, 1, 3, 3}, u4_dt, u8_src_vec), {}};
