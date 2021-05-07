@@ -689,7 +689,7 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
 }
 
 
-TEST_F(CUDA, CUTLASS_WEIGHT_PREPROCESS) {
+TEST_F(CUDA, CUTLASS_INT8_WEIGHT_PREPROCESS) {
     require_compute_capability(6, 1);
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle_cuda());

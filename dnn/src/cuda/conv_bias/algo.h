@@ -61,6 +61,7 @@ public:
         CUDA_IMPLICIT_GEMM_REORDER_FILTER_CHWN4_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_UNROLL_WIDTH_CHWN4_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_IMMA_NCHW32_INT8,
+        CUDA_IMPLICIT_GEMM_IMMA_NCHW64_INT4_INT4,
         CUDA_BFLOAT16,
         CUDA_IMPLICIT_GEMM_SASS_NCHW4_DOTPROD_INT8,
         CUDA_IMPLICIT_GEMM_1X1_SASS_NCHW4_DOTPROD_INT8,
@@ -762,6 +763,53 @@ private:
     AlgoParam m_algo_param;
     std::string m_name;
 };
+
+class ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm final
+        : public AlgoBase {
+public:
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+    };
+    AlgoInt4Int4NCHW64IMMAImplicitGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param} {
+        m_name = ConvBias::algo_name<ConvBias::DirectParam>(
+                ssprintf("INT4_INT4_NCHW64_IMMA_IMPLICIT_GEMM_%s",
+                         to_string(m_algo_param).c_str()),
+                ConvBias::DirectParam{});
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    static std::string to_string(AlgoParam algo_param);
+    size_t get_preprocess_workspace_in_bytes(
+            const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_IMMA_NCHW64_INT4_INT4)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
+
+private:
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
+                                         const SizeArgs& args) const;
+
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
 #endif
 
 class ConvBiasForwardImpl::AlgoBFloat16 final : public AlgoBase {
@@ -819,6 +867,7 @@ public:
 #endif
 #if CUDA_VERSION >= 10020
     std::vector<AlgoInt8NCHW32IMMAImplicitGemm> int8_nchw32_imma;
+    std::vector<AlgoInt4Int4NCHW64IMMAImplicitGemm> int4_int4_nchw64_imma;
 #endif
     std::vector<std::unique_ptr<AlgoGroupConvGeneral>> gconv_refhold;
     AlgoBFloat16 bfloat16;
