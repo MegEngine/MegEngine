@@ -710,6 +710,9 @@ void run_test_st(Args &env) {
         }
     } else if (env.use_fast_run) {
         strategy = S::PROFILE | S::OPTIMIZED;
+        if (env.reproducible){
+            strategy = strategy | S::REPRODUCIBLE;
+        }
     } else if (env.reproducible) {
         strategy = S::HEURISTIC | S::REPRODUCIBLE;
     }
