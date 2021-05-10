@@ -300,6 +300,19 @@ if(NOT MGE_WITH_CUDA)
 endif()
 
 find_package(PythonInterp 3 REQUIRED)
+# NOTICE: just use for target, which do not depend on python api
+# PURPOSE: reuse target obj when switch python3 version
+# will fallback to PYTHON_EXECUTABLE if can not find in PATH env
+set(PYTHON3_IN_ENV "python3")
+find_program(PYTHON3_EXECUTABLE_WITHOUT_VERSION ${PYTHON3_IN_ENV})
+if (PYTHON3_EXECUTABLE_WITHOUT_VERSION)
+    message(STATUS "use ${PYTHON3_IN_ENV} as PYTHON3_EXECUTABLE_WITHOUT_VERSION")
+    set(PYTHON3_EXECUTABLE_WITHOUT_VERSION ${PYTHON3_IN_ENV})
+else()
+    message(STATUS "fallback ${PYTHON_EXECUTABLE} as PYTHON3_EXECUTABLE_WITHOUT_VERSION,\
+    target which depend on PYTHON3_EXECUTABLE_WITHOUT_VERSION will be rebuild when switch python3")
+    set(PYTHON3_EXECUTABLE_WITHOUT_VERSION ${PYTHON_EXECUTABLE})
+endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
@@ -854,10 +867,8 @@ set(MGB_OPR_PARAM_DEFS_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/dnn/scripts/gen_param_
 set(MGB_OPR_PARAM_DEFS_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/src/opr/include/)
 file(MAKE_DIRECTORY ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr)
 add_custom_command(
-    OUTPUT
-        ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr/param_defs.h
-    COMMAND ${PYTHON_EXECUTABLE} ${MGB_OPR_PARAM_DEFS_SCRIPT} ${MGB_OPR_PARAM_DEFS_SRCS}
-        ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr/param_defs.h
+    OUTPUT ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr/param_defs.h
+    COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${MGB_OPR_PARAM_DEFS_SCRIPT} ${MGB_OPR_PARAM_DEFS_SRCS} ${MGB_OPR_PARAM_DEFS_OUT_DIR}/megbrain/opr/param_defs.h
     DEPENDS ${MGB_OPR_PARAM_DEFS_SRCS} ${MGB_OPR_PARAM_DEFS_SCRIPT}
     VERBATIM
 )
@@ -890,9 +901,10 @@ if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
     file(READ ${PROJECT_SOURCE_DIR}/tools/param_defs/mgb_opr_param_defs.py CONTENTS)
     file(APPEND ${OPR_PARAM_DEFS_SRCS} ${CONTENTS})
     file(MAKE_DIRECTORY ${MGE_GEN_IR_DIR})
-    add_custom_target(param_defs_tblgen
-        COMMAND ${PYTHON_EXECUTABLE} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_OUT}
-        DEPENDS ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_SCRIPT}
+    add_custom_command(
+        OUTPUT ${OPR_PARAM_DEFS_OUT}
+        COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_OUT}
+        DEPENDS ${PROJECT_SOURCE_DIR}/dnn/scripts/opr_param_defs.py ${PROJECT_SOURCE_DIR}/tools/param_defs/mgb_opr_param_defs.py ${OPR_PARAM_DEFS_SCRIPT}
         VERBATIM
     )
     # mlir tblgen sources
@@ -900,6 +912,7 @@ if(MGE_WITH_JIT_MLIR OR MGE_BUILD_IMPERATIVE_RT)
     set(MGE_IR_INCLUDE_DIRS ${MLIR_LLVM_INCLUDE_DIR} ${MGE_IR_DIR} ${MGE_GEN_IR_DIR})
     list(TRANSFORM MGE_IR_INCLUDE_DIRS PREPEND "-I")
     file(GLOB_RECURSE MGE_IR_TDS ${MGE_IR_DIR}/*.td)
+    add_custom_target(param_defs_tblgen DEPENDS ${OPR_PARAM_DEFS_OUT})
 endif()
 
 if(MGE_WITH_DISTRIBUTED)
