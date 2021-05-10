@@ -23,6 +23,8 @@ function append_path_env_and_check() {
 append_path_env_and_check
 
 SRC_DIR=$(READLINK -f "`dirname $0`/../../../")
+source ${SRC_DIR}/scripts/whl/utils/utils.sh
+
 ALL_PYTHON=${ALL_PYTHON}
 FULL_PYTHON_VER="3.5.4 3.6.8 3.7.7 3.8.3"
 if [[ -z ${ALL_PYTHON} ]]
@@ -43,12 +45,12 @@ mkdir -p ${WINDOWS_WHL_HOME}
 function config_python_env() {
     PYTHON_DIR=/c/Users/${USER}/mge_whl_python_env/$1
     PYTHON_BIN=${PYTHON_DIR}
-    if [ ! -f "$PYTHON_BIN/python3.exe" ]; then
+    if [ ! -f "${PYTHON_BIN}/python3.exe" ]; then
         echo "ERR: can not find $PYTHON_BIN , Invalid python package"
         echo "now support list: ${FULL_PYTHON_VER}"
         err_env
     else
-        echo "put python3 to env..."
+        echo "put ${PYTHON_BIN}/python3.exe to env..."
         export PATH=${PYTHON_BIN}:$PATH
         which python3
     fi
@@ -104,11 +106,24 @@ function copy_more_dll() {
     fi
 }
 
+BUILD_DIR=${SRC_DIR}/build_dir/host/build/
+
+# here we just treat cu file should not in the increment build file list
+INCREMENT_KEY_WORDS=".cu.obj is dirty"
+IS_IN_FIRST_LOOP=TRUE
 
 function do_build() {
     for ver in ${ALL_PYTHON}
     do
-        #config
+        # we want run a full clean build at the first loop
+        if [ ${IS_IN_FIRST_LOOP} = "TRUE" ]; then
+            # TODO: may all cmake issue can be resolved after rm CMakeCache?
+            # if YES, remove this to use old cache and speed up CI
+            echo "warning: remove old build_dir for the first loop"
+            rm -rf ${BUILD_DIR}
+        fi
+
+        #config python3
         config_python_env ${ver}
 
         #check env
@@ -122,35 +137,44 @@ function do_build() {
         fi
         echo "PYTHON_LIBRARY: ${PYTHON_LIBRARY}"
         echo "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}"
-        #append cmake args for config python
-        #FIXME: ninja handle err with cmake 3.17 when assgin PYTHON_LIBRARY
-        #But after put python3.exe to HEAD of PATH by config_python_env, cmake can also handle the
-        #right PYTHON_LIBRARY and PYTHON_INCLUDE_DIR, at the same time, clang-cl need swig target
-        #force LINK a real PYTHON_LIBRARY file, after test we do not find the symbols conflict with python
-        #export EXTRA_CMAKE_ARGS="-DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} "
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
         export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
 
         #call build and install
-        #FIXME: cmake do not triger update python config, after
-        #change PYTHON_LIBRARY and PYTHON_INCLUDE_DIR, so add
-        #-r to remove build cache after a new ver build, which
-        #will be more slow build than without -r
-        BUILD_ARGS=" -t -r"
+        HOST_BUILD_ARGS=" -t -s"
 
         if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
             echo "build windows whl with cuda"
-            BUILD_ARGS="${BUILD_ARGS} -c "
+            HOST_BUILD_ARGS="${HOST_BUILD_ARGS} -c "
         else
             echo "build windows whl with cpu only"
         fi
 
-        echo "host_build.sh BUILD_ARGS: ${BUILD_ARGS}"
-        ${SRC_DIR}/scripts/cmake-build/host_build.sh ${BUILD_ARGS}
+        if [ -d "${BUILD_DIR}" ]; then
+            # insure rm have args
+            touch ${BUILD_DIR}/empty.pyd
+            touch ${BUILD_DIR}/CMakeCache.txt
+            /usr/bin/find ${BUILD_DIR} -name "*.pyd" | xargs rm
+            # ninja/cmake on windows will handle error if just export
+            # PYTHON_LIBRARY/PYTHON_INCLUDE_DIR/PYTHON_EXECUTABLE
+            # But after put python3.exe to HEAD of PATH by config_python_env
+            # and force remove CMakeCache.txt, ninja/cmake will auto update
+            # PYTHON_LIBRARY/PYTHON_INCLUDE_DIR/PYTHON_EXECUTABLE
+            /usr/bin/find ${BUILD_DIR} -name CMakeCache.txt | xargs rm
+        fi
+        echo "host_build.sh HOST_BUILD_ARGS: ${HOST_BUILD_ARGS}"
 
-        BUILD_DIR=${SRC_DIR}/build_dir/host/build/
+        # call ninja dry run and check increment is invalid or not
+        if [ ${IS_IN_FIRST_LOOP} = "FALSE" ]; then
+            ninja_dry_run_and_check_increment "${SRC_DIR}/scripts/cmake-build/host_build.sh" "${HOST_BUILD_ARGS}" "${INCREMENT_KEY_WORDS}"
+        fi
+
+        #call real build
+        ${SRC_DIR}/scripts/cmake-build/host_build.sh ${HOST_BUILD_ARGS}
+
+        # check python api call setup.py
         cd ${BUILD_DIR}
-
+        check_build_ninja_python_api ${ver}
         rm -rf staging
         mkdir -p staging
         cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
@@ -178,6 +202,7 @@ function do_build() {
         echo "windows whl package location: ${WINDOWS_WHL_HOME}"
         ls ${WINDOWS_WHL_HOME}
         echo "##############################################################################################"
+        IS_IN_FIRST_LOOP=FALSE
     done
 }
 

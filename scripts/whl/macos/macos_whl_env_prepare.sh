@@ -20,7 +20,7 @@ function try_install_brew() {
 }
 
 function install_brew_package() {
-    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm git-lfs"
+    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm git-lfs ninja"
     for pak in ${BREW_PACKAGE}
     do
         echo "###### do command: brew install ${pak}"
