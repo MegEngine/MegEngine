@@ -8,8 +8,11 @@ MGE_ARMV8_2_FEATURE_FP16=OFF
 MGE_DISABLE_FLOAT16=OFF
 ARCH=arm64-v8a
 REMOVE_OLD_BUILD=false
+NINJA_VERBOSE=OFF
+NINJA_DRY_RUN=OFF
 CMAKE_C_FLAGS="-Wno-psabi"
 CMAKE_CXX_FLAGS="-Wno-psabi"
+
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
 function usage() {
@@ -21,13 +24,15 @@ function usage() {
     echo "-k : open MGE_DISABLE_FLOAT16 for NEON "
     echo "-a : config build arch available: ${ARCHS[@]}"
     echo "-r : remove old build dir before make, default off"
+    echo "-v : ninja with verbose and explain, default off"
+    echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
     exit -1
 }
 
-while getopts "rkhdcfa:" arg
+while getopts "nvrkhdcfa:" arg
 do
     case $arg in
         d)
@@ -70,6 +75,14 @@ do
             echo "config REMOVE_OLD_BUILD=true"
             REMOVE_OLD_BUILD=true
             ;;
+        v)
+            echo "config NINJA_VERBOSE=ON"
+            NINJA_VERBOSE=ON
+            ;;
+        n)
+            echo "config NINJA_DRY_RUN=ON"
+            NINJA_DRY_RUN=ON
+            ;;
         ?)
             echo "unkonw argument"
             usage
@@ -86,14 +99,12 @@ echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
 
 READLINK=readlink
-MAKEFILE_TYPE="Unix"
 OS=$(uname -s)
 
 if [ $OS = "Darwin" ];then
     READLINK=greadlink
 elif [[ $OS =~ "NT" ]]; then
     echo "BUILD in NT ..."
-    MAKEFILE_TYPE="Unix"
 fi
 
 if [ ! $OS = "Linux" ] && [ $MGE_WITH_CUDA = "ON" ];then
@@ -125,14 +136,13 @@ function cmake_build() {
     echo "build type: $BUILD_TYPE"
     echo "build toolchain: $TOOLCHAIN"
     echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
-    echo "BUILD MAKEFILE_TYPE: $MAKEFILE_TYPE"
     try_remove_old_build $REMOVE_OLD_BUILD $BUILD_DIR $INSTALL_DIR
 
     echo "create build dir"
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
     cd_real_build_dir $BUILD_DIR
-    cmake -G "$MAKEFILE_TYPE Makefiles" \
+    bash -c "cmake -G Ninja \
         -DCMAKE_C_FLAGS=$CMAKE_C_FLAGS \
         -DCMAKE_CXX_FLAGS=$CMAKE_CXX_FLAGS \
         -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
@@ -143,10 +153,10 @@ function cmake_build() {
         -DMGE_DISABLE_FLOAT16=$MGE_DISABLE_FLOAT16 \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
         ${EXTRA_CMAKE_ARGS} \
-        $SRC_DIR
+        $SRC_DIR "
 
-    make -j$(nproc)
-    make install/strip
+    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "install/strip" ${NINJA_DRY_RUN}
+    bash -c "${NINJA_CMD}"
 }
 
 build_flatc $SRC_DIR $REMOVE_OLD_BUILD

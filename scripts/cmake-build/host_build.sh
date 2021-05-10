@@ -9,6 +9,9 @@ function usage() {
     echo "-t : Build with training mode, default inference only"
     echo "-m : Build with m32 mode(only for windows build), default m64"
     echo "-r : remove old build dir before make, default off"
+    echo "-v : ninja with verbose and explain, default off"
+    echo "-s : Do not build develop even build with training mode, default on when build with training, always for wheel"
+    echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
@@ -22,9 +25,13 @@ MGE_WINDOWS_BUILD_ARCH=x64
 MGE_WINDOWS_BUILD_MARCH=m64
 MGE_ARCH=x86_64
 REMOVE_OLD_BUILD=false
+NINJA_VERBOSE=OFF
+BUILD_DEVELOP=ON
+NINJA_DRY_RUN=OFF
+
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "rhdctm" arg
+while getopts "nsrhdctmv" arg
 do
     case $arg in
         d)
@@ -46,6 +53,18 @@ do
         r)
             echo "config REMOVE_OLD_BUILD=true"
             REMOVE_OLD_BUILD=true
+            ;;
+        s)
+            echo "config  BUILD_DEVELOP=OFF"
+            BUILD_DEVELOP=OFF
+            ;;
+        v)
+            echo "config NINJA_VERBOSE=ON"
+            NINJA_VERBOSE=ON
+            ;;
+        n)
+            echo "config NINJA_DRY_RUN=ON"
+            NINJA_DRY_RUN=ON
             ;;
         m)
             echo "build for m32(only valid use for windows)"
@@ -81,6 +100,11 @@ fi
 SRC_DIR=$($READLINK -f "`dirname $0`/../../")
 source $SRC_DIR/scripts/cmake-build/utils/utils.sh
 
+if [ ${MGE_INFERENCE_ONLY} = "ON" ]; then
+    echo "config BUILD_DEVELOP=OFF when MGE_INFERENCE_ONLY=ON"
+    BUILD_DEVELOP=OFF
+fi
+
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/host/MGE_WITH_CUDA_$1/MGE_INFERENCE_ONLY_$2/$3/build
     INSTALL_DIR=$BUILD_DIR/../install
@@ -98,16 +122,17 @@ function cmake_build() {
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
     cd_real_build_dir $BUILD_DIR
-    cmake \
+    # fork a new bash to handle EXTRA_CMAKE_ARGS env with space
+    bash -c "cmake -G Ninja \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
         ${EXTRA_CMAKE_ARGS} \
-        $SRC_DIR
+        ${SRC_DIR} "
 
-    make -j$(nproc)
-    make install/strip
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "install/strip" ${NINJA_DRY_RUN}
+    bash -c "${NINJA_CMD}"
 }
 
 function windows_env_err() {
@@ -199,18 +224,6 @@ function prepare_env_for_windows_build() {
     export PATH=/c/Users/${USER}/swigwin-4.0.2::$PATH
 }
 
-WINDOWS_BUILD_TARGET="Ninja all"
-if [[ -z ${MAKE_DEVELOP} ]]
-then
-    MAKE_DEVELOP="false"
-fi
-function config_windows_build_target() {
-    if [ ${MAKE_DEVELOP} = "true" ]; then
-        echo "build all and develop for pytest test"
-        WINDOWS_BUILD_TARGET="Ninja all && Ninja develop"
-    fi
-}
-
 function cmake_build_windows() {
     # windows do not support long path, so we cache the BUILD_DIR ASAP
     prepare_env_for_windows_build
@@ -243,9 +256,10 @@ function cmake_build_windows() {
         -DCMAKE_C_COMPILER=clang-cl.exe \
         -DCMAKE_CXX_COMPILER=clang-cl.exe \
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
-        ${EXTRA_CMAKE_ARGS} \
-        ../../.. && \
-        ${WINDOWS_BUILD_TARGET}"
+        ${EXTRA_CMAKE_ARGS} ../../.. "
+
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "" ${NINJA_DRY_RUN}
+    cmd.exe /c " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && ${NINJA_CMD} "
 }
 
 if [[ $OS =~ "NT" ]]; then
@@ -254,7 +268,6 @@ if [[ $OS =~ "NT" ]]; then
         echo "pls remove -t or remove -m"
         exit -1
     fi
-    config_windows_build_target
     cmake_build_windows $MGE_WITH_CUDA $MGE_INFERENCE_ONLY $BUILD_TYPE
 else
     cmake_build $MGE_WITH_CUDA $MGE_INFERENCE_ONLY $BUILD_TYPE

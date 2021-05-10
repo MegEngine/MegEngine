@@ -7,6 +7,9 @@ MGE_ARMV8_2_FEATURE_FP16=OFF
 MGE_DISABLE_FLOAT16=OFF
 ARCH=arm64
 REMOVE_OLD_BUILD=false
+NINJA_VERBOSE=OFF
+NINJA_DRY_RUN=OFF
+
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
 function usage() {
@@ -17,13 +20,15 @@ function usage() {
     echo "-k : open MGE_DISABLE_FLOAT16 for NEON "
     echo "-a : config build arch available: ${ARCHS[@]}"
     echo "-r : remove old build dir before make, default off"
+    echo "-v : ninja with verbose and explain, default off"
+    echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
     exit -1
 }
 
-while getopts "rkhdfa:" arg
+while getopts "nvrkhdfa:" arg
 do
     case $arg in
         d)
@@ -61,6 +66,14 @@ do
         r)
             echo "config REMOVE_OLD_BUILD=true"
             REMOVE_OLD_BUILD=true
+            ;;
+        v)
+            echo "config NINJA_VERBOSE=ON"
+            NINJA_VERBOSE=ON
+            ;;
+        n)
+            echo "config NINJA_DRY_RUN=ON"
+            NINJA_DRY_RUN=ON
             ;;
         ?)
             echo "unkonw argument"
@@ -109,7 +122,8 @@ function cmake_build() {
     mkdir -p $BUILD_DIR
     mkdir -p $INSTALL_DIR
     cd_real_build_dir $BUILD_DIR
-    cmake -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
+    bash -c "cmake -G Ninja \
+        -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DIOS_TOOLCHAIN_ROOT=$TOOLCHAIN \
         -DOS_PLATFORM=$OS_PLATFORM \
@@ -121,11 +135,12 @@ function cmake_build() {
         -DMGE_ARMV8_2_FEATURE_FP16= $MGE_ARMV8_2_FEATURE_FP16 \
         -DMGE_DISABLE_FLOAT16=$MGE_DISABLE_FLOAT16 \
         -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+        -DCMAKE_MAKE_PROGRAM=ninja \
         ${EXTRA_CMAKE_ARGS} \
-        $SRC_DIR
+        $SRC_DIR "
 
-    make -j$(nproc)
-    make install
+    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "install" ${NINJA_DRY_RUN}
+    bash -c "${NINJA_CMD}"
 }
 
 build_flatc $SRC_DIR $REMOVE_OLD_BUILD

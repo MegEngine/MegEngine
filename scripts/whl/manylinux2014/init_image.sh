@@ -7,8 +7,11 @@ LLVM_URL='https://github.com/llvm-mirror/llvm/archive/release_60.tar.gz'
 CLANG_URL='https://github.com/llvm-mirror/clang/archive/release_60.tar.gz'
 
 
-yum install -y pcre-devel devtoolset-9-libatomic-devel.x86_64
+yum install -y pcre-devel devtoolset-9-libatomic-devel.x86_64 ninja-build
 yum install -y devtoolset-8 devtoolset-8-libatomic-devel.x86_64
+# install a default python3 for cmake PYTHON3_EXECUTABLE_WITHOUT_VERSION
+yum install -y python3
+python3 -m pip install numpy
 
 for ver in 35m 36m 37m 38 
 do

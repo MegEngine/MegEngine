@@ -50,12 +50,13 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
-        -gencode arch=compute_61,code=sm_61 \
-        arch=compute_70,code=sm_70 \
-        arch=compute_75,code=sm_75 \
-        arch=compute_80,code=sm_80 \
-        arch=compute_86,code=sm_86 \
-        arch=compute_86,code=compute_86" 
+        -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
+        -gencode arch=compute_70,code=sm_70 \
+        -gencode arch=compute_75,code=sm_75 \
+        -gencode arch=compute_80,code=sm_80 \
+        -gencode arch=compute_86,code=sm_86 \
+        -gencode arch=compute_86,code=compute_86\" "
+
     REQUIR_CUDA_VERSION="11010" 
     REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 
@@ -73,12 +74,13 @@ elif [ $SDK_NAME == "cu112" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
-        -gencode arch=compute_61,code=sm_61 \
-        arch=compute_70,code=sm_70 \
-        arch=compute_75,code=sm_75 \
-        arch=compute_80,code=sm_80 \
-        arch=compute_86,code=sm_86 \
-        arch=compute_86,code=compute_86"  
+        -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
+        -gencode arch=compute_70,code=sm_70 \
+        -gencode arch=compute_75,code=sm_75 \
+        -gencode arch=compute_80,code=sm_80 \
+        -gencode arch=compute_86,code=sm_86 \
+        -gencode arch=compute_86,code=compute_86\" "
+
     REQUIR_CUDA_VERSION="11020" 
     REQUIR_CUDNN_VERSION="8.0.4" 
     REQUIR_TENSORRT_VERSION="7.2.2.3" 

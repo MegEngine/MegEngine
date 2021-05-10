@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.15.2)
+message(STATUS "CMAKE_GENERATOR: ${CMAKE_GENERATOR}" )
+if (NOT ${CMAKE_GENERATOR} STREQUAL "Ninja")
+    message(WARNING "CMAKE_GENERATOR NOT EQUAL Ninja, which we do not recommend")
+endif()
 
 include (cmake/FetchMegBrainVersion.cmake)
 project(MegEngine LANGUAGES C CXX VERSION ${MGB_VER_STRING})

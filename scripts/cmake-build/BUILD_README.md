@@ -19,7 +19,7 @@
 * commands:
 ```
 1: installl Visual Studio (need support LLVM/clang-cl), eg 2019. Please install LLVM-10, VS LLVM linker have issue, please replace lld-link.exe, which can be download from https://releases.llvm.org/download.html#10.0.0
-2: install extension of VS: Python/Cmake/LLVM
+2: install extension of VS: Python/Cmake/LLVM/Ninja
 3: now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows, as Windows can only use DLL in fact with cudnn/TensorRT, so please install the same version;
     3a: install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
     3b: install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
@@ -33,9 +33,9 @@
 ### Linux host build
 * commands:
 ```
-1: install Cmake, which version >= 3.15.2
+1: install Cmake, which version >= 3.15.2, ninja-build
 2: install gcc/g++, which version >= 6, (gcc/g++ >= 7, if need build training mode)
-3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool librdmacm-dev rdmacm-utils python3-dev swig python3-numpy texinfo
+3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool librdmacm-dev rdmacm-utils python3-dev python3-numpy texinfo
 4: CUDA env(if enable CUDA), version detail refer to README.md
 ```
 
@@ -44,7 +44,7 @@
 ```
 1: install Cmake, which version >= 3.15.2
 2: install brew: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-3: brew install python python3 swig coreutils
+3: brew install python python3 coreutils ninja
 4: install at least xcode command line tool: https://developer.apple.com/xcode/
 5: about cuda: we do not support CUDA on MacOS
 6: python3 -m pip install numpy (if you want to build with training mode)
