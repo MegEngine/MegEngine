@@ -25,7 +25,7 @@
  *
  **************************************************************************************************/
 /**
- * \file dnn/src/cuda/conv_bias/reduce_with_scale_filter.cu
+ * \file dnn/src/cuda/conv_bias/reduce_filter.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -36,9 +36,11 @@
  * implied.
  */
 
-#include "./reduce_with_scale_filter.cuh"
-#include "src/cuda/reduce_helper.cuh"
+#include "./reduce_filter.cuh"
+#include "src/cuda/utils.cuh"
+
 #include "src/cuda/integer_subbyte_utils.cuh"
+#include "src/cuda/reduce_helper.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -76,6 +78,38 @@ struct ReduceWithScaleInt4Op {
 #endif
 };
 
+template <bool signedness>
+struct ReduceUpdateBiasInt4Op {
+    typedef int32_t wtype;
+    const uint8_t* filter;
+    const int32_t* src_bias;
+    int32_t* dst_bias;
+    int32_t zero_point;
+    static const wtype INIT = 0;
+
+#if MEGDNN_CC_CUDA
+    __host__ __device__ void write(uint32_t idx, wtype val) {
+        dst_bias[idx] = src_bias[idx] - val * zero_point;
+    }
+
+    __host__ __device__ static wtype apply(wtype a, wtype b) { return a + b; }
+
+    __device__ wtype read(uint32_t idx) {
+        constexpr uint32_t subbytes_per_pixel = 8;
+        const uint32_t* fptr =
+                (const uint32_t*)(filter + subbytes_per_pixel * idx / 2);
+        uint32_t val = *fptr;
+        int32_t ret = 0;
+#pragma unroll
+        for (int j = 0; j < 8; j++) {
+            ret += integer_subbyte::unpack_integer_4bits<signedness>(val,
+                                                                     (j << 2));
+        }
+        return ret;
+    }
+#endif
+};
+
 }  // namespace
 
 template <bool signedness>
@@ -102,6 +136,31 @@ void megdnn::cuda::do_dispatch_reduce_with_scale_filter_4bit(
     megdnn::cuda::do_dispatch_reduce_with_scale_filter_4bit<signedness>(     \
             const uint8_t* src, int32_t scale, uint32_t rows, uint32_t cols, \
             int32_t* dst, cudaStream_t stream)
+INST(false);
+INST(true);
+#undef INST
+
+template <bool signedness>
+void megdnn::cuda::do_dispatch_reduce_filter_and_update_bias_4bit(
+        const uint8_t* filter, const int32_t* src_bias, uint32_t rows,
+        uint32_t cols, int32_t* dst_bias, int32_t* workspace,
+        int32_t zero_point, cudaStream_t stream) {
+    ReduceUpdateBiasInt4Op<signedness> op;
+    op.filter = filter;
+    op.src_bias = src_bias;
+    op.dst_bias = dst_bias;
+    op.zero_point = zero_point;
+    run_reduce<ReduceUpdateBiasInt4Op<signedness>, false>(workspace, rows, cols,
+                                                          1, stream, op);
+}
+
+#define INST(signedness)                                                      \
+    template void                                                             \
+    megdnn::cuda::do_dispatch_reduce_filter_and_update_bias_4bit<signedness>( \
+            const uint8_t* filter, const int32_t* src_bias, uint32_t rows,    \
+            uint32_t cols, int32_t* dst_bias, int32_t* workspace,             \
+            int32_t zero_point, cudaStream_t stream)
+
 INST(false);
 INST(true);
 #undef INST

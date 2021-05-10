@@ -25,7 +25,7 @@
  *
  **************************************************************************************************/
 /**
- * \file dnn/src/cuda/conv_bias/reduce_with_scale_filter.cuh
+ * \file dnn/src/cuda/conv_bias/reduce_filter.cuh
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -36,16 +36,28 @@
  * implied.
  */
 
-#include "src/cuda/utils.cuh"
+#include <stddef.h>
+#include <stdint.h>
+
+#include <cuda_runtime.h>
 
 namespace megdnn {
 namespace cuda {
+
 template <bool signedness>
 void do_dispatch_reduce_with_scale_filter_4bit(const uint8_t* src,
                                                int32_t scale, uint32_t rows,
                                                uint32_t cols, int32_t* dst,
                                                cudaStream_t stream);
+
+template <bool signedness>
+void do_dispatch_reduce_filter_and_update_bias_4bit(
+        const uint8_t* filter, const int32_t* src_bias, uint32_t rows,
+        uint32_t cols, int32_t* dst_bias, int32_t* workspace, int zero_point,
+        cudaStream_t stream);
+
 size_t do_dispatch_reduce_workspace_in_bytes(size_t A, size_t B, size_t C);
+
 }  // namespace cuda
 }  // namespace megdnn
 

@@ -15,7 +15,7 @@
 
 #include "./quint4x4x32_wmma/activation_u4.cuh"
 #include "./quint4x4x32_wmma/reduce_with_scale_data.cuh"
-#include "./reduce_with_scale_filter.cuh"
+#include "./reduce_filter.cuh"
 #include "./quint4x4x32_wmma/wmma_conv_integer_u4.cuh"
 
 using namespace megdnn;
