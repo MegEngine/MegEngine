@@ -7,9 +7,9 @@ add_custom_command(
     OUTPUT
         ${OPR_PARAM_DEFS_OUT_DIR}/megdnn/opr_param_defs.h
         ${OPR_PARAM_DEFS_OUT_DIR}/megdnn/opr_param_json.h
-    COMMAND ${PYTHON_EXECUTABLE} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS}
+        COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS}
         ${OPR_PARAM_DEFS_OUT_DIR}/megdnn/opr_param_defs.h
-    COMMAND ${PYTHON_EXECUTABLE} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS}
+        COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${OPR_PARAM_DEFS_SCRIPT} ${OPR_PARAM_DEFS_SRCS}
        tmp_unuse.log --write-cppjson ${OPR_PARAM_DEFS_OUT_DIR}/megdnn/opr_param_json.h
     DEPENDS ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_SCRIPT}
     VERBATIM
@@ -26,7 +26,7 @@ file(MAKE_DIRECTORY ${OPR_PARAM_DEFS_OUT_DIR}/src/common)
 add_custom_command(
     OUTPUT
         ${OPR_PARAM_DEFS_OUT_DIR}/src/common/opr_param_defs_enumv.cuh
-    COMMAND ${PYTHON_EXECUTABLE} ${OPR_PARAM_DEFS_SCRIPT}
+        COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${OPR_PARAM_DEFS_SCRIPT}
         --enumv ${OPR_PARAM_DEFS_SRCS}
         ${OPR_PARAM_DEFS_OUT_DIR}/src/common/opr_param_defs_enumv.cuh
     DEPENDS ${OPR_PARAM_DEFS_SRCS} ${OPR_PARAM_DEFS_SCRIPT}
