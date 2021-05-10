@@ -70,6 +70,7 @@ __all__ = [
     "remap",
     "resize",
     "sigmoid",
+    "sliding_window",
     "softmax",
     "softplus",
     "sync_batch_norm",
@@ -1351,6 +1352,44 @@ def indexing_one_hot(
     if not keepdims:
         result = squeeze(result, axis)
     return result
+
+
+def sliding_window(
+    inp: Tensor,
+    kernel_size: Union[int, Tuple[int, int]],
+    padding: Union[int, Tuple[int, int]] = 0,
+    stride: Union[int, Tuple[int, int]] = 1,
+    dilation: Union[int, Tuple[int, int]] = 1,
+) -> Tensor:
+    """
+    Extracts sliding local blocks from a batched input tensor.
+
+    Refer to :class:`~.SlidingWindow` for more information.
+
+    :param inp: input tensor.
+    :param kernel_size: size of the window.
+    :param padding: implicit zero padding added on both sides of input. Default: 0
+    :param stride: stride of the window. Default: 1
+    :param dilation: dilation of the window. Default: 1
+    :return: output tensor.
+    """
+    padding_h, padding_w = _pair(padding)
+    stride_h, stride_w = _pair_nonzero(stride)
+    dilation_h, dilation_w = _pair_nonzero(dilation)
+    window_h, window_w = _pair_nonzero(kernel_size)
+
+    op = builtin.Images2Neibs(
+        pad_h=padding_h,
+        pad_w=padding_w,
+        stride_h=stride_h,
+        stride_w=stride_w,
+        dilate_h=dilation_h,
+        dilate_w=dilation_w,
+        window_h=window_h,
+        window_w=window_w,
+    )
+    (output,) = apply(op, inp)
+    return output
 
 
 interpolate = deprecated_func("1.3", "megengine.functional.vision", "interpolate", True)

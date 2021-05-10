@@ -33,20 +33,25 @@ void Images2NeibsForwardImpl::exec_internal(_megdnn_tensor_in src,
     int pad_w = static_cast<int>(param().pad_w);
     int stride_h = static_cast<int>(param().stride_h);
     int stride_w = static_cast<int>(param().stride_w);
+    int dilate_h = static_cast<int>(param().dilate_h);
+    int dilate_w = static_cast<int>(param().dilate_w);
+    int equ_window_h = dilate_h * (window_h-1) + 1;
+    int equ_window_w = dilate_w * (window_w-1) + 1;
     for (int n = 0; n < N; ++n)
     for (int c = 0; c < C; ++c)
     {
         int ih = -pad_h;
-        for (; ih+window_h <= IH+pad_h; ih += stride_h) {
+        for (; ih+equ_window_h <= IH+pad_h; ih += stride_h) {
             int iw = -pad_w;
-            for (; iw+window_w <= IW+pad_w; iw += stride_w) {
+            for (; iw+equ_window_w <= IW+pad_w; iw += stride_w) {
                 for (int kh = 0; kh < window_h; ++kh)
                 for (int kw = 0; kw < window_w; ++kw)
                 {
+                    int ih2 = ih+dilate_h*kh, iw2 = iw+dilate_w*kw;
                     dptr[idx*window_h*window_w + kh*window_w + kw] =
-                        (ih+kh) >= 0 && (ih+kh) < IH &&
-                        (iw+kw) >= 0 && (iw+kw) < IW ?
-                        sptr[n*C*IH*IW + c*IH*IW + (ih+kh)*IW + (iw+kw)] : 0.0f;
+                        ih2 >= 0 && ih2 < IH &&
+                        iw2 >= 0 && iw2 < IW ?
+                        sptr[n*C*IH*IW + c*IH*IW + ih2*IW + iw2] : 0.0f;
                 }
                 ++idx;
             }
@@ -86,18 +91,22 @@ void Images2NeibsBackwardImpl::exec_internal(_megdnn_tensor_in diff,
     int pad_w = static_cast<int>(param().pad_w);
     int stride_h = static_cast<int>(param().stride_h);
     int stride_w = static_cast<int>(param().stride_w);
+    int dilate_h = static_cast<int>(param().dilate_h);
+    int dilate_w = static_cast<int>(param().dilate_w);
+    int equ_window_h = dilate_h * (window_h-1) + 1;
+    int equ_window_w = dilate_w * (window_w-1) + 1;
     memset(sptr, 0, sizeof(T) * N*C*IH*IW);
     for (int n = 0; n < N; ++n)
     for (int c = 0; c < C; ++c)
     {
         int ih = -pad_h;
-        for (; ih+window_h <= IH+pad_h; ih += stride_h) {
+        for (; ih+equ_window_h <= IH+pad_h; ih += stride_h) {
             int iw = -pad_w;
-            for (; iw+window_w <= IW+pad_w; iw += stride_w) {
+            for (; iw+equ_window_w <= IW+pad_w; iw += stride_w) {
                 for (int kh = 0; kh < window_h; ++kh)
                 for (int kw = 0; kw < window_w; ++kw)
                 {
-                    int ih2 = ih+kh, iw2 = iw+kw;
+                    int ih2 = ih+dilate_h*kh, iw2 = iw+dilate_w*kw;
                     if (ih2 >= 0 && ih2 < IH && iw2 >= 0 && iw2 < IW) {
                         sptr[n*C*IH*IW + c*IH*IW + ih2*IW + iw2] +=
                             dptr[idx*window_h*window_w + kh*window_w + kw];

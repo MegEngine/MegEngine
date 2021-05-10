@@ -32,6 +32,7 @@
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
+#include "megbrain/opr/dnn/images2neibs.h"
 
 #include "../op_trait.h"
 
@@ -651,5 +652,18 @@ OP_TRAIT_REG(SVD, SVD)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 }} // svd
+
+namespace { namespace images2neibs {
+auto apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Images2Neibs&>(def);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Images2Neibs::make(inputs[0], op.param(), config);
+}
+OP_TRAIT_REG(Images2Neibs, Images2Neibs)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}} // images2neibs
 
 } // namespace mgb::imperative

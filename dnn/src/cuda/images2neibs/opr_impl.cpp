@@ -27,13 +27,14 @@ void Images2NeibsForwardImpl::exec(_megdnn_tensor_in src,
     int OH = dst.layout[2], OW = dst.layout[3];
     int ph = param().pad_h, pw = param().pad_w;
     int sh = param().stride_h, sw = param().stride_w;
+    int dh = param().dilate_h, dw = param().dilate_w;
     int wh = param().window_h, ww = param().window_w;
 #define cb(DType) \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
         using T = DTypeTrait<DType>::ctype; \
         images2neibs::forward(src.ptr<T>(), dst.ptr<T>(), \
                 N, C, IH, IW, OH, OW, \
-                ph, pw, sh, sw, wh, ww, \
+                ph, pw, sh, sw, dh, dw, wh, ww, \
                 stream); \
         return; \
     }
@@ -53,13 +54,14 @@ void Images2NeibsBackwardImpl::exec(_megdnn_tensor_in diff,
     int OH = diff.layout[2], OW = diff.layout[3];
     int ph = param().pad_h, pw = param().pad_w;
     int sh = param().stride_h, sw = param().stride_w;
+    int dh = param().dilate_h, dw = param().dilate_w;
     int wh = param().window_h, ww = param().window_w;
 #define cb(DType) \
     if (diff.layout.dtype == DType()) { \
         using T = DTypeTrait<DType>::ctype; \
         images2neibs::backward(diff.ptr<T>(), grad.ptr<T>(), \
                 N, C, IH, IW, OH, OW, \
-                ph, pw, sh, sw, wh, ww, \
+                ph, pw, sh, sw, dh, dw, wh, ww, \
                 stream); \
         return; \
     }

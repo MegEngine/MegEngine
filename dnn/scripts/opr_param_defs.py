@@ -220,7 +220,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
 
 (pdef('Images2Neibs').
  add_fields('uint32', 'pad_h', 0, 'pad_w', 0, 'stride_h', 1, 'stride_w', 1,
-            'window_h', 3, 'window_w', 3))
+            'dilate_h', 1, 'dilate_w', 1, 'window_h', 3, 'window_w', 3))
 
 (pdef('Pooling', version=0, is_legacy=True).
  add_enum(
