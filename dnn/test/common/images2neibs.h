@@ -31,17 +31,19 @@ inline std::vector<TestArg> get_args() {
     for (uint32_t pw : {0, 1})
     for (uint32_t sh : {1, 2})
     for (uint32_t sw : {1, 2})
+    for (uint32_t dh : {1, 2, 3})
+    for (uint32_t dw : {1, 2, 3})
     for (uint32_t wh : {3, 4})
     for (uint32_t ww : {3, 4}) {
-        args.emplace_back(param::Images2Neibs{ph, pw, sh, sw, wh, ww},
-                          TensorShape{2, 3, 5, 6});
+        args.emplace_back(param::Images2Neibs{ph, pw, sh, sw, dh, dw, wh, ww},
+                          TensorShape{2, 3, 19, 20});
     }
     // clang-format on
     // large window case
-    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 32, 64},
+    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 1, 1, 32, 64},
                       TensorShape{2, 3, 96, 128});
     // large size
-    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 1, 1},
+    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 1, 1, 1, 1},
                       TensorShape{128, 128, 28, 24});
 
     return args;
@@ -54,17 +56,19 @@ inline std::vector<TestArg> get_benchmark_args() {
     for (uint32_t pw : {0, 1})
     for (uint32_t sh : {1, 2})
     for (uint32_t sw : {1, 2})
+    for (uint32_t dh : {1, 2})
+    for (uint32_t dw : {1, 2})
     for (uint32_t wh : {3, 4})
     for (uint32_t ww : {3, 4})
     for (uint32_t b : {1, 64})
     for (uint32_t c : {64, 128})
     for (uint32_t hw : {64, 128}) {
-        args.emplace_back(param::Images2Neibs{ph, pw, sh, sw, wh, ww},
+        args.emplace_back(param::Images2Neibs{ph, pw, sh, sw, dh, dw, wh, ww},
                           TensorShape{b, c, hw, hw});
     }
     // clang-format on
     // large size
-    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 1, 1},
+    args.emplace_back(param::Images2Neibs{0, 0, 1, 1, 1, 1, 1, 1},
                       TensorShape{1024, 128, 28, 24});
 
     return args;

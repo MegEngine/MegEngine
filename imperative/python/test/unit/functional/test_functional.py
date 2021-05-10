@@ -927,3 +927,28 @@ def test_neg_axis():
     y = F.argmin(x, axis=(-1, -2))
     yy = F.argmin(x, axis=(0, 1))
     np.testing.assert_equal(y.numpy(), yy.numpy())
+
+
+def test_sliding_window():
+    N, C, H, W = 2, 3, 7, 8
+    inp = np.random.normal(size=(N, C, H, W))
+    ph, pw = 1, 2
+    sh, sw = 2, 1
+    wh, ww = 3, 2
+    dh, dw = 1, 3
+    s = lambda i, p, s, d, w: (i + p * 2 - (w - 1) * d - 1) // s + 1
+    inp_pad = np.zeros((N, C, H + ph * 2, W + pw * 2))
+    inp_pad[:, :, ph : H + ph, pw : W + pw] = inp
+    gt_out = np.empty(
+        (N, C, s(H, ph, sh, dh, wh), s(W, pw, sw, dw, ww), wh, ww), dtype=np.float32
+    )
+    for n, c, oh, ow in itertools.product(*map(range, gt_out.shape[:4])):
+        ih, iw = oh * sh, ow * sw
+        gt_out[n, c, oh, ow, :] = inp_pad[
+            n, c, ih : ih + (wh - 1) * dh + 1 : dh, iw : iw + (ww - 1) * dw + 1 : dw
+        ]
+
+    out = F.sliding_window(
+        tensor(inp), (wh, ww), padding=(ph, pw), stride=(sh, sw), dilation=(dh, dw)
+    )
+    np.testing.assert_equal(gt_out, out.numpy())

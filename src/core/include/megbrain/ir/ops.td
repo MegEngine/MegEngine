@@ -79,6 +79,8 @@ def BatchConvBias : MgbHashableOp<"BatchConvBias", [BatchConvBiasParam, Executio
   );
 }
 
+def Images2Neibs : MgbHashableOp<"Images2Neibs", [Images2NeibsParam]>;
+
 def BatchNorm : MgbHashableOp<"BatchNorm", [BNParam]>;
 
 def ROIAlign: MgbHashableOp<"ROIAlign", [ROIAlignParam]>;

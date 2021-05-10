@@ -23,6 +23,8 @@ void Images2NeibsBase::deduce_layout_fwd(const TensorLayout &src,
                "pad_w=" + std::to_string(param().pad_w) + ", " +
                "stride_h=" + std::to_string(param().stride_h) + ", " +
                "stride_w=" + std::to_string(param().stride_w) + ", " +
+               "dilate_h=" + std::to_string(param().dilate_h) + ", " +
+               "dilate_w=" + std::to_string(param().dilate_w) + ", " +
                "window_h=" + std::to_string(param().window_h) + ", " +
                "window_w=" + std::to_string(param().window_w);
     };
@@ -34,11 +36,13 @@ void Images2NeibsBase::deduce_layout_fwd(const TensorLayout &src,
     size_t pw = this->param().pad_w;
     size_t sh = this->param().stride_h;
     size_t sw = this->param().stride_w;
+    size_t dh = this->param().dilate_h;
+    size_t dw = this->param().dilate_w;
     size_t wh = this->param().window_h;
     size_t ww = this->param().window_w;
     size_t oh, ow;
 
-    infer_conv_shape2d(ih, iw, wh, ww, sh, sw, ph, pw, oh, ow);
+    infer_conv_shape2d(ih, iw, wh+(wh-1)*(dh-1), ww+(ww-1)*(dw-1), sh, sw, ph, pw, oh, ow);
     dst = TensorLayout(TensorShape({n, ic, oh, ow, wh, ww}), src.dtype);
 }
 
