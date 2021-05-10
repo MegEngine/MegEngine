@@ -485,7 +485,7 @@ CudnnAlgoPack::conv_bwd_data_algos() {
                                     CudnnAlgoPack::Attr>
             algos =
     { DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, false, false),
-      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true, false),
+      DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, true, true),
       DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT, true, true),
       DEF_ALGO(CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING, true, true),
 #if CUDNN_MAJOR >= 5
