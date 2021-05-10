@@ -701,25 +701,19 @@ void run_test_st(Args &env) {
     mgb::gopt::set_opr_algo_workspace_limit_inplace(vars, env.workspace_limit);
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::HEURISTIC;
+    if (env.reproducible) {
+        strategy = S::REPRODUCIBLE;
+    }
 #if MGB_ENABLE_FASTRUN
     if (env.use_full_run) {
-        if (env.reproducible) {
-            strategy = S::PROFILE | S::REPRODUCIBLE;
-        } else {
-            strategy = S::PROFILE;
-        }
+        strategy = S::PROFILE | strategy;
     } else if (env.use_fast_run) {
-        strategy = S::PROFILE | S::OPTIMIZED;
-        if (env.reproducible){
-            strategy = strategy | S::REPRODUCIBLE;
-        }
-    } else if (env.reproducible) {
-        strategy = S::HEURISTIC | S::REPRODUCIBLE;
+        strategy = S::PROFILE | S::OPTIMIZED | strategy;
+    } else {
+        strategy = S::HEURISTIC | strategy;
     }
 #else
-    if (env.reproducible) {
-        strategy = S::HEURISTIC | S::REPRODUCIBLE;
-    }
+    strategy = S::HEURISTIC | strategy;
 #endif
     mgb::gopt::modify_opr_algo_strategy_inplace(vars, strategy);
     if (!env.fast_run_cache_path.empty()) {
