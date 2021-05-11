@@ -9,14 +9,12 @@
 import collections
 import fnmatch
 import itertools
+import pickle
 import re
 from collections import OrderedDict
-from typing import Dict, List, Sequence
+from typing import Any, Dict, List, Sequence
 
-import numpy as np
-
-from ..core._imperative_rt import ComputingGraph
-from ..core._imperative_rt.core2 import SymbolVar
+from ..core._imperative_rt import ComputingGraph, SerializationMetadata
 from ..core._trace_option import set_symbolic_shape as _set_symbolic_shape
 from ..core.tensor import megbrain_graph as G
 from ..logger import get_logger
@@ -42,6 +40,30 @@ class Network:
         self.all_oprs_map = OrderedDict()
         self.all_vars_map = OrderedDict()
         self.graph = ComputingGraph()
+        self._metadata = None
+
+    @property
+    def metadata(self):
+        r"""
+        Load metadata as a dict.
+        """
+        if not self._metadata.is_valid:
+            logger.info("metadata is not valid!")
+            return None
+        ret = dict()
+        try:
+            user_info = pickle.loads(self._metadata.user_info)
+        except:  # pylint: disable=bare-except
+            logger.warning(
+                "can't parse user info by pickle, so return the original bytes object!"
+            )
+            user_info = self._metadata.user_info
+        ret["user_info"] = user_info
+        ret["graph_modified"] = self._metadata.graph_modified
+        ret["optimized_for_inference"] = self._metadata.optimized_for_inference
+        if ret["optimized_for_inference"]:
+            ret.update(G.deserialize_infer_option(self._metadata.optimize_options))
+        return ret
 
     @classmethod
     def load(cls, model_path: str, outspec: List[str] = None):
@@ -51,7 +73,8 @@ class Network:
         :param outspec: only load the subgraph with outspec as its endpoints.
         """
         self = cls()
-        _, _, outputs = G.load_graph(model_path)
+        ret = G.load_graph(model_path)
+        outputs, self._metadata = ret.output_vars_list, ret.metadata
         if outspec is not None:
             output_spec = outspec.copy()
             all_vars = get_dep_vars(outputs) + outputs
@@ -125,6 +148,9 @@ class Network:
                 * enable_chwn4 --
                     whether to use CHWN4 data layout, currently
                     used in nvidia backend with tensorcore.
+                * enable_nchw64 --
+                    whether to use NCHW64 data layout, used for fast int4
+                    support on Nvidia GPU.
 
                 * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
                     into one opr.
@@ -152,6 +178,8 @@ class Network:
         append_json=False,
         optimize_for_inference=True,
         append=False,
+        user_info: Any = None,
+        enable_metadata=True,
         **kwargs
     ):
         """
@@ -176,6 +204,8 @@ class Network:
             if set false, will rewrite strip_info_file
         :param optimize_for_inference: enbale optmizations,
             will skip all optimize options if this is False. Default: True
+        :param user_info: any type object, which will be pickled to bytes.
+        :param enable_metadata: whether to save metadata into output file.
 
         :Keyword Arguments:
 
@@ -201,7 +231,15 @@ class Network:
             )
 
         if optimize_for_inference:
-            out = G.optimize_for_inference(out, **kwargs)
+            out, optimize_options = G.optimize_for_inference(out, **kwargs)
+
+        metadata = SerializationMetadata()
+        if enable_metadata:
+            metadata.is_valid = True
+            metadata.graph_modified = True
+            metadata.user_info = pickle.dumps(user_info)
+            if optimize_for_inference:
+                metadata.optimize_options = optimize_options
 
         dump_content, _ = G.dump_graph(
             out,
@@ -211,6 +249,7 @@ class Network:
             keep_opr_priority=keep_opr_priority,
             strip_info_file=strip_info_file,
             append_json=append_json,
+            metadata=metadata,
         )
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"

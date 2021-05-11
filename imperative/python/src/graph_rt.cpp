@@ -34,6 +34,7 @@ namespace ser = mgb::serialization;
 using _OptimizeForInferenceOptions = mgb::gopt::OptimizeForInferenceOptions;
 using _LayoutTransform = _OptimizeForInferenceOptions::LayoutTransform;
 using _AlgoStrategy = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
+using _SerializationMetadata = mgb::serialization::Metadata;
 
 namespace {
 class _CompGraphProfilerImpl {
@@ -240,6 +241,8 @@ void init_graph_rt(py::module m) {
 
     auto GraphOptimizeOptions = py::class_<_OptimizeForInferenceOptions>(m, "GraphOptimizeOptions")
         .def(py::init())
+        .def("serialize", &_OptimizeForInferenceOptions::serialize)
+        .def_static("deserialize", &_OptimizeForInferenceOptions::deserialize)
         .def_readwrite("f16_io_f32_comp", &_OptimizeForInferenceOptions::f16_io_f32_comp)
         .def_readwrite("f16_io_comp", &_OptimizeForInferenceOptions::f16_io_comp)
         .def_readwrite("fuse_conv_bias_nonlinearity", &_OptimizeForInferenceOptions::fuse_conv_bias_nonlinearity)
@@ -256,6 +259,7 @@ void init_graph_rt(py::module m) {
         .value("NCHW44_DOT", _LayoutTransform::NCHW44_DOT)
         .value("NCHW32", _LayoutTransform::NCHW32)
         .value("CHWN4", _LayoutTransform::CHWN4)
+        .value("NCHW64", _LayoutTransform::NCHW64)
         .export_values()
         ;
 
@@ -307,12 +311,24 @@ void init_graph_rt(py::module m) {
         })->to_string();
     });
 
+    py::class_<_SerializationMetadata>(m, "SerializationMetadata")
+        .def(py::init())
+        .def_property("user_info", [](const _SerializationMetadata& meta){return py::bytes(meta.get_user_info()); },
+            &_SerializationMetadata::set_user_info)
+        .def_readonly("optimized_for_inference", &_SerializationMetadata::optimized_for_inference)
+        .def_property("optimize_options", &_SerializationMetadata::get_optimize_options,
+            &_SerializationMetadata::set_optimize_options)
+        .def_readwrite("graph_modified", &_SerializationMetadata::graph_modified)
+        .def_readwrite("is_valid", &_SerializationMetadata::is_valid)
+        ;
+
     m.def("dump_graph", [](
         const std::vector<VarNode*>& dest_vars,
         int keep_var_name,
         bool keep_opr_name,
         bool keep_param_name,
         bool keep_opr_priority,
+        std::optional<_SerializationMetadata> metadata,
         py::list& stat,
         py::list& inputs,
         py::list& outputs,
@@ -325,7 +341,12 @@ void init_graph_rt(py::module m) {
         ser::GraphDumper::DumpConfig config{keep_var_name, keep_param_name,
                                        keep_opr_priority, keep_opr_name};
 
-        auto rst = dumper->dump(symvars, config);
+        ser::GraphDumper::DumpResult rst;
+        if (metadata)
+            rst = dumper->dump(symvars, config, *metadata);
+        else
+            rst = dumper->dump(symvars, config);
+
         for (auto i : rst.inputs) {
             inputs.append(py::cast(i));
         }
@@ -377,8 +398,10 @@ void init_graph_rt(py::module m) {
         for (const auto& var : rst.output_var_list) {
             iter.add(var);
         }
-        return rst.graph;
-
+        auto ret = py::tuple(2);
+        ret[0] = py::cast(rst.graph);
+        ret[1] = py::cast(rst.metadata);
+        return ret;
     });
 
 #define CURRENT_CLASS cg::ComputingGraph::Options

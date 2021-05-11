@@ -14,6 +14,50 @@ from megengine.utils.network import as_oprnode, set_symbolic_shape
 from megengine.utils.network_node import Host2DeviceCopy, VarNode
 
 
+def test_metadata():
+    x = Tensor(0)
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(x):
+        return x * 2
+
+    fwd(x)
+
+    orig_model = io.BytesIO()
+    fwd.dump(orig_model, user_info="test", optimize_for_inference=False)
+    orig_model.seek(0)
+    graph = Net.load(orig_model)
+    assert graph.metadata == {
+        "user_info": "test",
+        "graph_modified": False,  # False: tracing.dump
+        "optimized_for_inference": False,
+    }
+
+    orig_model.seek(0)
+    graph.dump(
+        orig_model,
+        user_info={"str": "x", "tensor": x, "module": M.Module, "none": None},
+        optimize_for_inference=True,
+        enable_nchw4=True,
+        enable_ioc16=True,
+    )
+    orig_model.seek(0)
+    graph = Net.load(orig_model)
+    assert graph.metadata == {
+        "user_info": {"str": "x", "tensor": x, "module": M.Module, "none": None},
+        "graph_modified": True,  # True: Network.dump
+        "optimized_for_inference": True,
+        "enable_nchw4": True,
+        "enable_ioc16": True,
+    }
+
+    orig_model.seek(0)
+    fwd.dump(orig_model, enable_metadata=False)
+    orig_model.seek(0)
+    graph = Net.load(orig_model)
+    assert graph.metadata is None
+
+
 def test_replace_var():
 
     a = Tensor([1, 2])

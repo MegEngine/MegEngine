@@ -12,10 +12,12 @@ import functools
 import itertools
 import json
 import os
+import pickle
+from typing import Any
 
 import numpy as np
 
-from ..core._imperative_rt import GraphProfiler
+from ..core._imperative_rt import GraphProfiler, SerializationMetadata
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
     TensorWeakRef,
@@ -670,6 +672,8 @@ class trace:
         strip_info_file=None,
         append_json=False,
         optimize_for_inference=True,
+        user_info: Any = None,
+        enable_metadata: bool = True,
         **kwargs
     ):
         r"""
@@ -697,6 +701,8 @@ class trace:
             if set false, will rewrite strip_info_file
         :param optimize_for_inference: enbale optmizations,
             will skip all optimize options if this is False. Default: True
+        :param user_info: any type object, which will be pickled to bytes.
+        :param enable_metadata: whether to save metadata into output file.
 
         :Keyword Arguments:
 
@@ -729,6 +735,9 @@ class trace:
             * enable_chwn4 --
                 whether to use CHWN4 data layout, currently
                 used in nvidia backend with tensorcore.
+            * enable_nchw64 --
+                whether to use NCHW64 data layout, used for fast int4
+                support on Nvidia GPU.
 
             * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
                 into one opr.
@@ -851,7 +860,15 @@ class trace:
             dest_vars.append(v)
 
         if optimize_for_inference:
-            dest_vars = G.optimize_for_inference(dest_vars, **kwargs)
+            dest_vars, optimize_options = G.optimize_for_inference(dest_vars, **kwargs)
+
+        metadata = SerializationMetadata()
+        if enable_metadata:
+            metadata.user_info = pickle.dumps(user_info)
+            metadata.is_valid = True
+            metadata.graph_modified = False
+            if optimize_for_inference:
+                metadata.optimize_options = optimize_options
 
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
@@ -864,6 +881,7 @@ class trace:
             keep_opr_priority=keep_opr_priority,
             strip_info_file=strip_info_file,
             append_json=append_json,
+            metadata=metadata,
         )
         file.write(dump_content)
         return dump_info

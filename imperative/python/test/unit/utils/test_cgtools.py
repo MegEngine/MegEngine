@@ -88,7 +88,7 @@ def test_graph_traversal():
     file = io.BytesIO()
     fun.dump(file, optimize_for_inference=False)
     file.seek(0)
-    cg, _, outputs = mgb_graph.load_graph(file)
+    outputs = mgb_graph.load_graph(file).output_vars_list
 
     _, map_vars, var2oprs, *_ = cgtools.graph_traversal(outputs)
     input_var = map_vars[1]
@@ -101,7 +101,9 @@ def test_load_refcnt():
     graph = mgb_graph.Graph()
     varnode = graph.make_const(0)
     buf, _ = mgb_graph.dump_graph([varnode])
-    graph, _, (varnode,) = mgb_graph.load_graph(io.BytesIO(buf))
+    ret = mgb_graph.load_graph(io.BytesIO(buf))
+    graph, (varnode,) = ret.graph, ret.output_vars_list
+    del ret
     del graph
     varnode.owner
 
@@ -132,7 +134,7 @@ def test_get_opr_seq():
     file = io.BytesIO()
     func.dump(file, optimize_for_inference=False)
     file.seek(0)
-    *_, outputs = mgb_graph.load_graph(file)
+    outputs = mgb_graph.load_graph(file).output_vars_list
 
     seq_1 = cgtools.get_oprs_seq(outputs, True)
     assert len(seq_1) == 5

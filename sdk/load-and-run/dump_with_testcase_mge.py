@@ -170,7 +170,8 @@ def gen_one_testcase(args, inputs, spec):
 
 
 def make_feeds(args):
-    cg_rt, _, outputs = G.load_graph(args.input)
+    ret = G.load_graph(args.input)
+    cg_rt, outputs = ret.graph, ret.output_vars_list
     inputs = cgtools.get_dep_vars(outputs, "Host2DeviceCopy")
 
     inputs = {i.name: i for i in inputs}

@@ -92,6 +92,43 @@ TEST(TestSerializer2, MultiGraphDumpLoad) {
     load();
 }
 
+TEST(TestSerializer2, Metadata) {
+    auto fname = GET_OUTPUT_FILE();
+    TensorShape shape{2, 3};
+
+    auto dump = [&]() {
+        auto cn = CompNode::load("xpu0");
+        auto host_x = std::make_shared<HostTensorND>(cn, shape),
+             host_y = std::make_shared<HostTensorND>(cn, shape);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, {"x"}),
+             y = opr::Host2DeviceCopy::make(*graph, host_y, {"y"});
+        using Mode = opr::Elemwise::Mode;
+        auto z = opr::Elemwise::make({x, y}, Mode::ADD, {"add(x, y)"});
+
+        Metadata metadata;
+        metadata.user_info = "TEST_METADATA";
+        metadata.has_user_info = true;
+
+        auto dumper = GraphDumper::make(OutputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = dumper->dump({z.rename("z")}, {}, metadata);
+    };
+
+    auto load = [&]() {
+        HostTensorGenerator<> gen;
+        auto loader = GraphLoader::make(InputFile::make_fs(fname.c_str()),
+                                        GraphDumpFormat::FLATBUFFERS);
+        auto rst = loader->load();
+        auto metadata = rst.metadata;
+        int cmp = strcmp(metadata.user_info.c_str(), "TEST_METADATA");
+        EXPECT_EQ(cmp, 0);
+    };
+
+    dump();
+    load();
+}
+
 TEST(TestSerializer2, APlusB) {
     auto fname = GET_OUTPUT_FILE();
     TensorShape shape{2, 3};
