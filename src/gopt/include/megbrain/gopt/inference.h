@@ -322,7 +322,31 @@ namespace gopt {
         static std::unique_ptr<EnableNchw44DotPass> make_nchw44_dot_converter();
     };
 
-    struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {};
+    struct OptimizeForInferenceOptions : cg::GraphCommonOptimizeOptions {
+        uint64_t serialize() {
+            uint64_t ret = 0;
+            ret |= (uint64_t)layout_transform << 32;
+            if (f16_io_f32_comp) ret |= 1u;
+            if (f16_io_comp) ret |= 1u << 1;
+            if (fuse_conv_bias_nonlinearity) ret |= 1u << 2;
+            if (fuse_conv_bias_with_z) ret |= 1u << 3;
+            if (weight_preprocess) ret |= 1u << 4;
+            if (fuse_preprocess) ret |= 1u << 5;
+            return ret;
+        }
+
+        static OptimizeForInferenceOptions deserialize(uint64_t buf) {
+            OptimizeForInferenceOptions ret;
+            ret.f16_io_f32_comp = buf & 1u;
+            ret.f16_io_comp = buf & 1u << 1;
+            ret.fuse_conv_bias_nonlinearity = buf & 1u << 2;
+            ret.fuse_conv_bias_with_z = buf & 1u << 3;
+            ret.weight_preprocess = buf & 1u << 4;
+            ret.fuse_preprocess = buf & 1u << 5;
+            ret.layout_transform = (LayoutTransform)(buf >> 32);
+            return ret;
+        }
+    };
 
     /*!
      * \brief optimize a computing graph for inference

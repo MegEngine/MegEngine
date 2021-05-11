@@ -239,8 +239,7 @@ def test_dump_volatile():
     file = io.BytesIO()
     f.dump(file, optimize_for_inference=False)
     file.seek(0)
-    cg, _, outputs = G.load_graph(file)
-    (out,) = outputs
+    (out,) = G.load_graph(file).output_vars_list
     assert (
         cgtools.get_owner_opr_type(cgtools.get_owner_opr_inputs(out)[1])
         == "ImmutableTensor"
@@ -337,12 +336,12 @@ def test_goptions_log_exp():
     f(tensor(1.0))
     _, out = mkstemp()
     f.dump(out, optimize_for_inference=False)
-    *_, outputs = G.load_graph(out)
+    outputs = G.load_graph(out).output_vars_list
     oprs_1 = cgtools.get_oprs_seq(outputs)
 
     g(tensor(1.0))
     g.dump(out, optimize_for_inference=False)
-    *_, outputs = G.load_graph(out)
+    outputs = G.load_graph(out).output_vars_list
     oprs_2 = cgtools.get_oprs_seq(outputs)
 
     assert len(oprs_1) - len(oprs_2) == 2

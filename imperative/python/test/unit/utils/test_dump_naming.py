@@ -35,7 +35,7 @@ def _dump_and_load(func, symbolic, keep_opr_name=True):
         keep_var_name=2,
     )
     file.seek(0)
-    *_, outputs = G.load_graph(file)
+    outputs = G.load_graph(file).output_vars_list
     ops = cgtools.get_oprs_seq(outputs)
     return ops
 
@@ -223,7 +223,7 @@ def test_catch_input_name(tensor_name, var_name):
     file = io.BytesIO()
     func.dump(file, optimize_for_inference=False, keep_opr_name=True, keep_var_name=2)
     file.seek(0)
-    *_, outputs = G.load_graph(file)
+    outputs = G.load_graph(file).output_vars_list
     op = cgtools.get_oprs_seq(outputs)[-1]
     assert op.inputs[0].name == var_name
 
