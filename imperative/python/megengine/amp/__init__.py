@@ -5,13 +5,10 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from functools import partial
 
-from .. import functional as F
-from ..autodiff import Function
-from .fake_quant import _FakeQuantize
-from .observer import MinMaxObserver
-from .qconfig import QConfig
-from .utils import QParams
+import mprop
 
+from ..core.tensor.amp import *
+from .autocast import autocast
 
+mprop.init()

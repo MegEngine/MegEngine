@@ -13,9 +13,10 @@ import numpy as np
 
 from .._imperative_rt import make_const
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion, get_device
-from .._wrap import device as as_device
+from .._wrap import as_device
 from ..ops import builtin
 from ..ops.special import Const
+from .amp import _high_prec_dtype, _low_prec_dtype
 from .dtype import is_dtype_equal, is_quantize
 
 _enable_convert_inputs = True
@@ -96,6 +97,14 @@ def convert_inputs(*args, device=None):
         return convert_single_value(value, dtype=dtype, device=device.to_c())
 
     return tuple(map(convert, args))
+
+
+def cast_tensors(*args, promote=False):
+    if promote:
+        dtype = _high_prec_dtype
+    else:
+        dtype = _low_prec_dtype
+    return tuple(arg.astype(dtype) if arg is not None else None for arg in args)
 
 
 def result_type(*args):

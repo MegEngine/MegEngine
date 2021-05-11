@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 from utils import opr_test
 
+import megengine.amp as amp
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
@@ -767,6 +768,27 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
+def test_conv2d_io16c32():
+    amp.enabled = True
+    inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
+    weight = tensor(np.random.randn(64, 3, 7, 7), dtype=np.float32)
+    out = F.conv2d(inp, weight, None, (2, 2), (3, 3), (1, 1), 1)
+    amp.enabled = False
+    expected = F.conv2d(
+        inp.astype("float16"),
+        weight.astype("float16"),
+        None,
+        (2, 2),
+        (3, 3),
+        (1, 1),
+        1,
+        compute_mode="float32",
+    )
+    assert out.dtype == np.float16
+    assert expected.dtype == np.float16
+    np.testing.assert_allclose(out.numpy(), expected.numpy())
+
+
 def test_conv2d_zero_stride_numpy_array():
     inp = np.random.randn(3, 224, 224).astype(np.float32)
     inp = inp[np.newaxis, :]
@@ -787,8 +809,8 @@ def test_conv3d_zero_stride_numpy_array():
 
 
 def test_conv1d():
-    inp = tensor(np.ones((16,), dtype=np.float32).reshape(2, 2, 4))
-    weight = tensor(np.ones((12,), dtype=np.float32).reshape(3, 2, 2))
+    inp = tensor(np.ones((2, 2, 4), dtype=np.float32))
+    weight = tensor(np.ones((3, 2, 2), dtype=np.float32))
     out = F.conv1d(inp, weight, None, 2, 0, 1, 1)
     np.testing.assert_equal(
         out.numpy(),
@@ -798,9 +820,31 @@ def test_conv1d():
     )
 
 
+def test_batchnorm2d_io16c32():
+    amp.enabled = True
+    inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
+    weight = tensor(np.ones((1, 3, 1, 1)), dtype=np.float32)
+    bias = tensor(np.zeros((1, 3, 1, 1)), dtype=np.float32)
+
+    out = F.batch_norm(inp, weight=weight, bias=bias, training=True, inplace=False)
+
+    amp.enabled = False
+    expected = F.batch_norm(
+        inp.astype("float16"),
+        weight=weight,
+        bias=bias,
+        training=True,
+        inplace=False,
+        compute_mode="float32",
+    )
+    assert out.dtype == np.float16
+    assert expected.dtype == np.float16
+    np.testing.assert_allclose(out.numpy(), expected.numpy())
+
+
 def test_conv3d():
-    inp = tensor(np.ones((256,), dtype=np.float32).reshape(2, 2, 4, 4, 4))
-    weight = tensor(np.ones((48,), dtype=np.float32).reshape(3, 2, 2, 2, 2))
+    inp = tensor(np.ones((2, 2, 4, 4, 4), dtype=np.float32))
+    weight = tensor(np.ones((3, 2, 2, 2, 2), dtype=np.float32))
     out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
     print(out.numpy().shape)
     np.testing.assert_equal(

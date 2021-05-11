@@ -14,7 +14,7 @@ from .core._imperative_rt import CompNode
 from .core._imperative_rt.core2 import Tensor as _Tensor
 from .core._imperative_rt.core2 import apply
 from .core._trace_option import use_symbolic_shape
-from .core._wrap import device as as_device
+from .core._wrap import as_device
 from .core.ops.builtin import Copy, GetVarShape
 from .core.tensor.array_method import ArrayMethodMixin
 from .device import _valid_device, get_default_device

@@ -12,10 +12,8 @@ import numpy as np
 from ..core._imperative_rt.core2 import SymbolVar, apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
-from ..core.tensor import utils
-from ..core.tensor.array_method import _elwise_apply
-from ..core.tensor.utils import astype
-from ..device import get_default_device
+from ..core.tensor.array_method import _elwise
+from ..core.tensor.utils import astype, convert_inputs
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 
@@ -69,46 +67,9 @@ __all__ = [
 ]
 
 
-def _elwise(*args, mode):
-    tensor_args = list(filter(lambda x: isinstance(x, (Tensor, SymbolVar)), args))
-    if len(tensor_args) == 0:
-        dtype = utils.dtype_promotion(args)
-        first_arg = Tensor(args[0], dtype=dtype, device=get_default_device())
-        args = utils.convert_inputs(first_arg, *args[1:])
-    else:
-        args = utils.convert_inputs(*args)
-    if mode in (
-        Elemwise.Mode.TRUE_DIV,
-        Elemwise.Mode.EXP,
-        Elemwise.Mode.POW,
-        Elemwise.Mode.LOG,
-        Elemwise.Mode.EXPM1,
-        Elemwise.Mode.LOG1P,
-        Elemwise.Mode.TANH,
-        Elemwise.Mode.ACOS,
-        Elemwise.Mode.ASIN,
-        Elemwise.Mode.ATAN2,
-        Elemwise.Mode.CEIL,
-        Elemwise.Mode.COS,
-        Elemwise.Mode.FLOOR,
-        Elemwise.Mode.H_SWISH,
-        Elemwise.Mode.ROUND,
-        Elemwise.Mode.SIGMOID,
-        Elemwise.Mode.SIN,
-    ):
-        if mode in (
-            Elemwise.Mode.CEIL,
-            Elemwise.Mode.FLOOR,
-            Elemwise.Mode.ROUND,
-        ) and np.issubdtype(args[0].dtype, np.integer):
-            return args[0]
-        args = tuple(map(lambda x: astype(x, "float32"), args))
-    return _elwise_apply(args, mode)
-
-
 def _elemwise_multi_type(*args, mode, **kwargs):
     op = builtin.ElemwiseMultiType(mode=mode, **kwargs)
-    args = utils.convert_inputs(*args)
+    args = convert_inputs(*args)
     (result,) = apply(op, *args)
     return result
 

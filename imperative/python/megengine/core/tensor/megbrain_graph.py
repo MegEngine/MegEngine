@@ -18,7 +18,7 @@ import numpy as np
 from .. import _imperative_rt
 from .._imperative_rt import GraphOptimizeOptions
 from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
-from .._wrap import device as as_device
+from .._wrap import as_device
 from ..ops.builtin import OpDef
 from .core import TensorBase
 

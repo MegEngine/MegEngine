@@ -15,15 +15,20 @@ import numpy as np
 from .._imperative_rt.common import CompNode
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply
 from ..ops import builtin
-from ..ops.builtin import Elemwise, GetVarShape
-from . import utils
-from .indexing import getitem as _getitem
-from .indexing import setitem as _setitem
-from .utils import isscalar
-from .utils import make_shape_tuple as _make_shape_tuple
-from .utils import setscalar
+from . import amp
+from .indexing import getitem, setitem
+from .utils import (
+    _normalize_axis,
+    astensor1d,
+    astype,
+    cast_tensors,
+    convert_inputs,
+    isscalar,
+    make_shape_tuple,
+    setscalar,
+)
 
-_ElwMod = Elemwise.Mode
+_ElwMod = builtin.Elemwise.Mode
 
 
 def _elwise_apply(args, mode):
@@ -40,47 +45,59 @@ def _elwise_apply(args, mode):
 
 
 def _elwise(*args, mode):
+    args = convert_inputs(*args)
     if mode in (
         _ElwMod.TRUE_DIV,
+        _ElwMod.EXP,
         _ElwMod.POW,
-        _ElwMod.CEIL,
-        _ElwMod.FLOOR,
-        _ElwMod.ROUND,
+        _ElwMod.LOG,
+        _ElwMod.EXPM1,
+        _ElwMod.LOG1P,
+        _ElwMod.TANH,
+        _ElwMod.ACOS,
+        _ElwMod.ASIN,
+        _ElwMod.ATAN2,
+        _ElwMod.COS,
+        _ElwMod.H_SWISH,
+        _ElwMod.SIGMOID,
+        _ElwMod.SIN,
+    ) and (
+        amp._enabled or np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
     ):
-        if mode in (_ElwMod.CEIL, _ElwMod.FLOOR, _ElwMod.ROUND) and np.issubdtype(
-            args[0].dtype, np.integer
-        ):
-            return args[0]
-        args = tuple(
-            map(
-                lambda x: x.astype("float32")
-                if hasattr(x, "dtype") and x.dtype != np.float32
-                else x,
-                args,
-            )
-        )
-    args = utils.convert_inputs(*args)
+        # autocast to FP32 to maintain precision
+        # or to avoid op's not supporting all int args
+        args = cast_tensors(*args, promote=True)
+
+    if mode in (_ElwMod.CEIL, _ElwMod.FLOOR, _ElwMod.ROUND,) and np.issubdtype(
+        args[0].dtype, np.integer
+    ):
+        return args[0]
     return _elwise_apply(args, mode)
 
 
 def _matmul(inp1, inp2):
+    if amp._enabled:
+        compute_mode = "float32"
+        inp1, inp2 = cast_tensors(inp1, inp2)
+    else:
+        compute_mode = "default"
+        inp1, inp2 = convert_inputs(inp1, inp2)
     op = builtin.MatrixMul(
-        transposeA=False, transposeB=False, compute_mode="default", format="default"
+        transposeA=False, transposeB=False, compute_mode=compute_mode, format="default"
     )
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
     (result,) = apply(op, inp1, inp2)
     return result
 
 
 def _transpose(data, axes):
     op = builtin.Dimshuffle(axes)
-    (data,) = utils.convert_inputs(data)
+    (data,) = convert_inputs(data)
     (result,) = apply(op, data)
     return result
 
 
 def _broadcast(inp, shape):
-    shape = utils.astensor1d(shape, inp, dtype="int32", device=inp.device)
+    shape = astensor1d(shape, inp, dtype="int32", device=inp.device)
     (result,) = apply(builtin.Broadcast(), inp, shape)
     return result
 
@@ -88,7 +105,7 @@ def _broadcast(inp, shape):
 def _reshape(x, shape):
     unspec_axis = None
     try:
-        shape_tuple = _make_shape_tuple(shape)
+        shape_tuple = make_shape_tuple(shape)
     except ValueError:
         pass
     else:
@@ -102,7 +119,7 @@ def _reshape(x, shape):
                         "multiple -1 in shape: {} & {}".format(unspec_axis, i)
                     )
                 unspec_axis = i
-    shape = utils.astensor1d(shape, x, dtype="int32", device=x.device)
+    shape = astensor1d(shape, x, dtype="int32", device=x.device)
     if unspec_axis is None:
         op = builtin.Reshape()
     else:
@@ -171,7 +188,7 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
         return list(map(int, axis))
 
     axis = get_axes()
-    axis = utils._normalize_axis(inp.ndim, axis)
+    axis = _normalize_axis(inp.ndim, axis)
     axis = [a - i for i, a in enumerate(axis)]
 
     op = builtin.RemoveAxis(axis=axis)
@@ -184,7 +201,7 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
 def _reduce(mode):
     def f(self, axis=None, keepdims: bool = False):
         data = self
-        (data,) = utils.convert_inputs(data)
+        (data,) = convert_inputs(data)
         if mode == "mean":
             data = data.astype("float32")
         elif self.dtype == np.bool_:
@@ -196,7 +213,7 @@ def _reduce(mode):
             op = builtin.Reduce(mode=mode, axis=0)
             (result,) = apply(op, data)
         elif isinstance(axis, collections.abc.Iterable):
-            axis = utils._normalize_axis(self.ndim, axis, reverse=True)
+            axis = _normalize_axis(self.ndim, axis, reverse=True)
             for ai in axis:
                 op = builtin.Reduce(mode=mode, axis=ai)
                 (data,) = apply(op, data)
@@ -359,11 +376,11 @@ class ArrayMethodMixin(abc.ABC):
             yield self[i]
 
     def __getitem__(self, index):
-        return _getitem(self, index)
+        return getitem(self, index)
 
     def __setitem__(self, index, value):
         if index is not Ellipsis:
-            value = _setitem(self, index, value)
+            value = setitem(self, index, value)
         self._reset(value)
 
     __contains__ = _todo
@@ -422,7 +439,7 @@ class ArrayMethodMixin(abc.ABC):
         Returns a :class:`Tensor` with the same data and number of elements
         with the specified :attr:`~.Tensor.dtype`.
         """
-        return utils.astype(self, dtype)
+        return astype(self, dtype)
 
     def reshape(self, *args):
         r"""

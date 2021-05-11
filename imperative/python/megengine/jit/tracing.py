@@ -33,7 +33,7 @@ from ..core._imperative_rt.ops import (
     RemoteSend,
 )
 from ..core._trace_option import set_symbolic_shape
-from ..core._wrap import device as as_device
+from ..core._wrap import as_device
 from ..core.ops.builtin import BatchNorm, OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G

@@ -26,6 +26,7 @@ class _BatchNorm(Module):
         affine=True,
         track_running_stats=True,
         freeze=False,
+        compute_mode="default",
         **kwargs
     ):
         super(_BatchNorm, self).__init__(**kwargs)
@@ -36,6 +37,7 @@ class _BatchNorm(Module):
         self.track_running_stats = track_running_stats
         self._track_running_stats_saved = track_running_stats
         self.freeze = freeze
+        self.compute_mode = compute_mode
         if self.freeze:
             assert (
                 self._track_running_stats_saved
@@ -123,6 +125,7 @@ class _BatchNorm(Module):
             or ((self.running_mean is None) and (self.running_var is None)),
             momentum=exponential_average_factor,
             eps=self.eps,
+            compute_mode=self.compute_mode,
         )
 
         if _ndims != 4:

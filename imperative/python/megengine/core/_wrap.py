@@ -49,7 +49,7 @@ class Device:
         return self._cn == rhs._cn
 
 
-def device(obj):
+def as_device(obj):
     if isinstance(obj, Device):
         return obj
     return Device(obj)

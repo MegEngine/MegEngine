@@ -473,39 +473,6 @@ def test_pickle_module():
     np.testing.assert_allclose(pred0.numpy(), pred2.numpy(), atol=5e-6)
 
 
-def test_load_quantized():
-    from megengine.core.tensor import dtype
-
-    data_shape = (2, 28)
-    data = tensor(np.random.random(data_shape), dtype="float32")
-    data = data.astype(dtype.qint8(0.1))
-    mlp = MLP()
-    quantize_qat(mlp)
-    quantize(mlp)
-    mlp.dense0.weight = Parameter(mlp.dense0.weight.astype(dtype.qint8(0.001)).numpy())
-    mlp.dense1.weight = Parameter(mlp.dense1.weight.astype(dtype.qint8(0.0002)).numpy())
-    mlp.eval()
-    pred0 = mlp(data)
-
-    with BytesIO() as fout:
-        mge.save(mlp.state_dict(), fout)
-        fout.seek(0)
-        checkpoint = mge.load(fout)
-        # change mlp weight.
-        mlp.dense0.weight = Parameter(
-            mlp.dense0.weight.astype(dtype.qint8(0.00001)).numpy()
-        )
-        mlp.dense1.weight = Parameter(
-            mlp.dense1.weight.astype(dtype.qint8(0.2)).numpy()
-        )
-        mlp.load_state_dict(checkpoint)
-        pred1 = mlp(data)
-
-    np.testing.assert_allclose(
-        pred0.astype("float32").numpy(), pred1.astype("float32").numpy(), atol=5e-6
-    )
-
-
 def test_repr_basic():
     # test whether __repr__ can output correct information
     class ConvModel(Module):

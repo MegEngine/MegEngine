@@ -15,9 +15,16 @@ from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm, Elemwise
 from ..core.ops.special import Const
-from ..core.tensor import megbrain_graph, utils
+from ..core.tensor import amp, megbrain_graph
 from ..core.tensor.array_method import _elwise_apply
-from ..core.tensor.utils import astensor1d, astype, setscalar
+from ..core.tensor.utils import (
+    astensor1d,
+    astype,
+    cast_tensors,
+    convert_inputs,
+    convert_single_value,
+    setscalar,
+)
 from ..device import get_default_device
 from ..distributed import WORLD, is_distributed
 from ..random import uniform
@@ -91,7 +98,9 @@ def expand_hw(x):
     return int(h), int(w)
 
 
-def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
+def linear(
+    inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None, compute_mode="default",
+) -> Tensor:
     """
     Applies a linear transformation to the input tensor.
 
@@ -102,8 +111,10 @@ def linear(inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor
     :param bias: bias with shape `(out_features,)`.
         Default: None
     """
-    ret = matmul(inp, weight, transpose_b=True)
+    ret = matmul(inp, weight, transpose_b=True, compute_mode=compute_mode)
     if bias is not None:
+        if amp._enabled:
+            bias = bias.astype("float16")
         ret += bias
     return ret
 
@@ -153,6 +164,11 @@ def conv1d(
     assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
     assert inp.ndim == 3, "the input dimension of conv1d should be 3"
     assert weight.ndim == 3, "the weight dimension of conv1d should be 3"
+    if amp._enabled:
+        compute_mode = "float32"
+        inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        inp, weight = convert_inputs(inp, weight)
 
     inp = expand_dims(inp, 3)
     weight = expand_dims(weight, 3)
@@ -177,7 +193,6 @@ def conv1d(
         compute_mode=compute_mode,
         sparse=sparse_type,
     )
-    inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
     if bias is not None:
         output += bias
@@ -228,7 +243,11 @@ def conv2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
+    if amp._enabled:
+        compute_mode = "float32"
+        inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        inp, weight = convert_inputs(inp, weight)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -247,7 +266,6 @@ def conv2d(
         compute_mode=compute_mode,
         sparse=sparse_type,
     )
-    inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
     if bias is not None:
         output += bias
@@ -286,6 +304,7 @@ def conv3d(
     :return: output tensor.
     """
     assert conv_mode.lower() == "cross_correlation"
+    inp, weight = convert_inputs(inp, weight)
 
     D, H, W = 0, 1, 2
 
@@ -308,7 +327,6 @@ def conv3d(
         mode=conv_mode,
         sparse=sparse_type,
     )
-    inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
     if bias is not None:
         output += bias
@@ -358,7 +376,11 @@ def conv_transpose2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
+    if amp._enabled:
+        compute_mode = "float32"
+        inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        inp, weight = convert_inputs(inp, weight)
 
     if groups != 1:
         raise NotImplementedError("group transposed conv2d is not supported yet.")
@@ -375,8 +397,8 @@ def conv_transpose2d(
         dilate_h=dilate_h,
         dilate_w=dilate_w,
         strategy=get_execution_strategy(),
+        compute_mode=compute_mode,
     )
-    weight, inp = utils.convert_inputs(weight, inp)
     (output,) = apply(op, weight, inp)
     if bias is not None:
         output += bias
@@ -428,7 +450,11 @@ def deformable_conv2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
+    if amp._enabled:
+        compute_mode = "float32"
+        inp, weight, offset, mask, bias = cast_tensors(inp, weight, offset, mask, bias)
+    else:
+        inp, weight, offset, mask = convert_inputs(inp, weight, offset, mask)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -447,7 +473,6 @@ def deformable_conv2d(
         compute_mode=compute_mode,
         sparse=sparse_type,
     )
-    inp, weight, offset, mask = utils.convert_inputs(inp, weight, offset, mask)
     (output,) = apply(op, inp, weight, offset, mask)
     if bias is not None:
         output += bias
@@ -468,6 +493,7 @@ def local_conv2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
+    inp, weight = convert_inputs(inp, weight)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -481,10 +507,8 @@ def local_conv2d(
         dilate_h=dilate_h,
         dilate_w=dilate_w,
         mode=conv_mode,
-        compute_mode="default",
         sparse="dense",
     )
-    inp, weight = utils.convert_inputs(inp, weight)
     (output,) = apply(op, inp, weight)
     if bias is not None:
         output += bias
@@ -515,8 +539,9 @@ def conv_transpose3d(
     :param dilation: dilation of the 3D convolution operation. Default: 1
     :return: output tensor.
     """
-    D, H, W = 0, 1, 2
+    inp, weight = convert_inputs(inp, weight)
 
+    D, H, W = 0, 1, 2
     pad = _triple(padding)
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
@@ -533,7 +558,6 @@ def conv_transpose3d(
         dilate_w=dilate[W],
         strategy=get_execution_strategy(),
     )
-    weight, inp = utils.convert_inputs(weight, inp)
     (output,) = apply(op, weight, inp)
     if bias is not None:
         output += bias
@@ -994,7 +1018,8 @@ def batch_norm(
     training: bool = False,
     momentum: float = 0.9,
     eps: float = 1e-5,
-    inplace: bool = True
+    inplace: bool = True,
+    compute_mode="default",
 ):
     r"""
     Applies batch normalization to the input.
@@ -1027,15 +1052,11 @@ def batch_norm(
     def make_full_if_none(x, value):
         if x is None:
             (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
-            shape = utils.astensor1d(
-                (1, C, 1, 1), inp, dtype="int32", device=inp.device
-            )
+            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
         elif x.ndim == 1:
-            shape = utils.astensor1d(
-                (1, C, 1, 1), inp, dtype="int32", device=inp.device
-            )
+            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Reshape(), x, shape)
             return result
         return x
@@ -1052,10 +1073,15 @@ def batch_norm(
     if has_var and running_var.ndim != 4:
         raise ValueError
 
-    inp, weight, bias, running_mean, running_var = utils.convert_inputs(
-        inp, weight, bias, running_mean, running_var
-    )
-
+    if amp._enabled:
+        inp = inp.astype("float16")
+        weight, bias, running_mean, running_var = cast_tensors(
+            weight, bias, running_mean, running_var, promote=True
+        )
+    elif compute_mode != "float32":
+        inp, weight, bias, running_mean, running_var = convert_inputs(
+            inp, weight, bias, running_mean, running_var
+        )
     weight = make_full_if_none(weight, 1)
     bias = make_full_if_none(bias, 0)
 
@@ -1352,7 +1378,7 @@ def indexing_one_hot(
     """
     assert isinstance(src, Tensor), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
-    index = utils.convert_single_value(index, dtype="int32", device=src.device)
+    index = convert_single_value(index, dtype="int32", device=src.device)
     (result,) = apply(op, src, index)
     if not keepdims:
         result = squeeze(result, axis)

@@ -14,7 +14,8 @@ from ..core._imperative_rt.core2 import apply
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.special import Const
-from ..core.tensor import utils
+from ..core.tensor import amp
+from ..core.tensor.utils import _normalize_axis, cast_tensors, convert_inputs, setscalar
 from ..tensor import Tensor
 from .debug_param import get_execution_strategy
 from .elemwise import clip, exp, log, log1p
@@ -471,7 +472,7 @@ def argmin(
         inp = inp.flatten()
         axis = 0
 
-    axis = utils._normalize_axis(inp.ndim, axis, reverse=True)
+    axis = _normalize_axis(inp.ndim, axis, reverse=True)
     if isinstance(axis, collections.abc.Iterable):
 
         for ai in axis:
@@ -528,7 +529,7 @@ def argmax(
         assert not keepdims, "can not set axis=None and keepdims=True"
         inp = inp.flatten()
         axis = 0
-    axis = utils._normalize_axis(inp.ndim, axis, reverse=True)
+    axis = _normalize_axis(inp.ndim, axis, reverse=True)
 
     if isinstance(axis, collections.abc.Iterable):
 
@@ -807,8 +808,13 @@ def matmul(
          [28. 40.]]
 
     """
+    if amp._enabled:
+        compute_mode = "float32"
+        inp1, inp2 = cast_tensors(inp1, inp2)
+    else:
+        inp1, inp2 = convert_inputs(inp1, inp2)
+
     remove_row, remove_col = False, False
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
 
     dim1, dim2 = inp1.ndim, inp2.ndim
     # handle dim=1 cases, dot and matrix-vector multiplication
@@ -921,12 +927,12 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
     """
     op = builtin.Dot()
-    inp1, inp2 = utils.convert_inputs(inp1, inp2)
+    inp1, inp2 = convert_inputs(inp1, inp2)
     assert (
         inp1.ndim <= 1 and inp2.ndim <= 1
     ), "Input tensors for dot must be 1-dimensional or scalar"
     (result,) = apply(op, inp1, inp2)
-    utils.setscalar(result)
+    setscalar(result)
     return result
 
 

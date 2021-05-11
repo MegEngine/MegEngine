@@ -117,6 +117,7 @@ def _atexit(handler):
 
 
 # subpackages
+import megengine.amp
 import megengine.autodiff
 import megengine.data
 import megengine.distributed

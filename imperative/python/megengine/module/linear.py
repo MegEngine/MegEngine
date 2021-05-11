@@ -51,7 +51,12 @@ class Linear(Module):
     """
 
     def __init__(
-        self, in_features: int, out_features: int, bias: bool = True, **kwargs
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        compute_mode: str = "default",
+        **kwargs
     ):
         super().__init__(**kwargs)
         self.out_features = out_features
@@ -62,6 +67,7 @@ class Linear(Module):
         if bias:
             b_shape = (out_features,)
             self.bias = Parameter(np.zeros(b_shape, dtype=np.float32))
+        self.compute_mode = compute_mode
         self.reset_parameters()
 
     def _get_fanin(self):
@@ -75,7 +81,7 @@ class Linear(Module):
             init.zeros_(self.bias)
 
     def _calc_linear(self, x, weight, bias):
-        return linear(x, weight, bias)
+        return linear(x, weight, bias, compute_mode=self.compute_mode)
 
     def forward(self, x):
         return self._calc_linear(x, self.weight, self.bias)
