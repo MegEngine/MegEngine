@@ -9,8 +9,6 @@ import copy
 import math
 from functools import partial
 
-import numpy as np
-
 from .. import functional as F
 from ..autodiff import Function
 from .fake_quant import _FakeQuantize
