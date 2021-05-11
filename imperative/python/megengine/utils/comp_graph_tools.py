@@ -391,7 +391,8 @@ class GraphInference:
         optimize_for_inference: bool = False,
         **kwargs
     ):
-        self._graph, _, output_nodes = G.load_graph(file)
+        ret = G.load_graph(file)
+        self._graph, output_nodes = ret.graph, ret.output_vars_list
         if outputs is not None:
             output_nodes = find_vars_by_name(output_nodes, outputs)
         self._origin_outputs = output_nodes

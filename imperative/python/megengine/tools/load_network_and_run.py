@@ -411,7 +411,8 @@ def main():
         args.embed_input = True
 
     logger.info("loading model ...")
-    graph, _, output_vars = G.load_graph(args.net)
+    ret = G.load_graph(args.net)
+    graph, output_vars = ret.graph, ret.output_vars_list
     input_vars = tools.get_dep_vars(output_vars, "Host2DeviceCopy")
 
     if args.output_name is not None:

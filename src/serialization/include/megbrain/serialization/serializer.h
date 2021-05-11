@@ -15,6 +15,7 @@
 #include "megbrain/serialization/dump_format.h"
 #include "megbrain/serialization/file.h"
 #include "megbrain/serialization/load_dump_config.h"
+#include "megbrain/serialization/metadata.h"
 
 namespace mgb {
 namespace serialization {
@@ -31,6 +32,9 @@ namespace serialization {
             struct LoadResult {
                 //! expliit dtor decl to reduce binary size
                 ~LoadResult() noexcept;
+
+                //! metadata
+                Metadata metadata;
 
                 using TensorMap = std::unordered_map<
                     std::string, std::shared_ptr<HostTensorND>>;
@@ -178,7 +182,8 @@ namespace serialization {
 
             virtual DumpResult dump(
                     const SymbolVarArray &output_vars,
-                    const DumpConfig &config = {}) = 0;
+                    const DumpConfig &config = {},
+                    const Metadata &metadata = {}) = 0;
             
             virtual GraphDumpFormat format() const = 0;
     };
