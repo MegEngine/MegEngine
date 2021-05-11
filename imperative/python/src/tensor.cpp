@@ -764,7 +764,7 @@ CompNode _get_device(PyObject*const* args, size_t nargs) {
         }
     }
     if (!valid) {
-        mgb_assert(0, "expect at least 1 device");
+        return CompNode::load(get_default_device());
     }
     Py_XDECREF(tuple);
     return cn;
