@@ -1009,6 +1009,7 @@ void Split::init_output_static_infer_desc() {
 
 bool Split::infer_shape(
         size_t out_idx, TensorShape& dest, const cg::static_infer::InpVal& inp) {
+    mgb_assert(inp.run_id > 0, "run id should be a positive number");
     if (inp.run_id != m_output_shape_version) {
         std::vector<size_t> partition;
         auto ishp = inp.val.at(0).shape();

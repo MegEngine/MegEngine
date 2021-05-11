@@ -23,6 +23,7 @@ thread_local std::unique_ptr<ProxyGraphTypeI> ProxyGraphTypeI::sm_instance = {};
 }  // namespace mgb::imperative::proxy_graph
 
 namespace mgb::imperative::proxy_graph_detail {
+
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     auto ret = proxy_graph::ProxyGraphTypeI::inst().infer_output_attrs_fallible(
@@ -39,6 +40,13 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         if (!a[i].layout.eq_shape(b[i].layout)) mgb_trap();
     }
 #endif
+    return ret;
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, SmallVector<TensorPtr> inputs) {
+    auto ret =
+            proxy_graph::ProxyGraphTypeI::inst().apply_on_physical_tensor(def, inputs);
     return ret;
 }
 

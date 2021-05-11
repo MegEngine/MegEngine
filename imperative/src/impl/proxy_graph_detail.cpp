@@ -17,6 +17,9 @@ namespace mgb {
 namespace imperative {
 namespace proxy_graph_detail {
 
+// those functions are reimplemented with opr cache
+// in ./proxy_graph/mini_graph.h
+#if 0
 namespace {
 SmallVector<Tensor*> to_raw_ptr_array(
         const SmallVector<TensorPtr>& inputs, bool ensure_storage = true) {
@@ -83,12 +86,13 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return outputs;
 }
 
-// std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const
-// OpDef& def,
-//         const SmallVector<LogicalTensorDesc>& inputs) {
-//     auto&& graph = ProxyGraph::get_default_graph();
-//     return graph->infer_output_attrs_fallible(def, inputs);
-// }
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
+        const SmallVector<LogicalTensorDesc>& inputs) {
+    auto&& graph = ProxyGraph::get_default_graph();
+    return graph->infer_output_attrs_fallible(def, inputs);
+}
+#endif
 
 EncodedSubgraph make_backward_graph(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,

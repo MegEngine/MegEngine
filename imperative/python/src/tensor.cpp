@@ -535,8 +535,9 @@ CompNode _get_device(PyObject* const* args, size_t nargs) {
                                                ->m_node->comp_node();
                 if (cn1 != cn) {
                     throw py::value_error(ssprintf(
-                            "ambiguous device: %s vs %s", cn.to_string().c_str(),
-                            cn1.to_string().c_str()));
+                            "ambiguous device: %s (from %s) vs %s (from %s)",
+                            cn.to_string().c_str(), cn.to_string_logical().c_str(),
+                            cn1.to_string().c_str(), cn1.to_string_logical().c_str()));
                 }
             }
         }
