@@ -705,7 +705,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
         construct_execution_policy(selected_strategy, policy);
         mgb_assert(policy.algo.valid(),
                    "construct execution policy must success when profiling");
-        if (get_workspace_size_bytes(policy) >= workspace_limit) {
+        if (get_workspace_size_bytes(policy) > workspace_limit) {
             continue;
         }
 
