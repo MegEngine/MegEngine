@@ -16,7 +16,6 @@ from ..core.tensor import utils
 from ..core.tensor.array_method import _elwise_apply
 from ..core.tensor.utils import astype
 from ..device import get_default_device
-from ..jit.tracing import is_tracing
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 
@@ -560,8 +559,8 @@ def clip(x: Tensor, lower=None, upper=None) -> Tensor:
     ), "At least one of 'lower' or 'upper' must not be None"
     if lower is not None:
         if upper is not None:
-            if not is_tracing():
-                assert lower <= upper, "clip lower bound is bigger that upper bound"
+            # FIXME: following assertion won't work during trace if upper and lower are Tensors
+            # assert lower <= upper, "clip lower bound is bigger that upper bound"
             return minimum(maximum(x, lower), upper)
         else:
             return maximum(x, lower)
