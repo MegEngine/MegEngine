@@ -6,10 +6,9 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import abc
 import json
 import sys
-from typing import Callable, Sequence
+from typing import Sequence
 
 import numpy as np
 
@@ -19,10 +18,7 @@ from ..core._trace_option import use_symbolic_shape
 from ..core._wrap import Device
 from ..core.ops import builtin
 from ..core.tensor.array_method import ArrayMethodMixin
-from ..core.tensor.indexing import getitem as _getitem
-from ..core.tensor.indexing import setitem as _setitem
-from ..core.tensor.megbrain_graph import InputNode, OutputNode
-from ..tensor import Tensor
+from ..core.tensor.megbrain_graph import OutputNode
 from .comp_graph_tools import replace_vars
 from .module_stats import (
     preprocess_receptive_field,
@@ -110,18 +106,18 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
         self.graph.compile(o.outputs).execute()
         return o.get_value().numpy()
 
-    def __getitem__(self, index):
-        return _getitem(self, index)
-
-    def __setitem__(self, index, value):
-        if index is not Ellipsis:
-            value = _setitem(self, index, value)
+    def _reset(self, other):
+        if not isinstance(other, VarNode):
+            assert self.graph, "VarNode _reset must have graph"
+            node = ImmutableTensor(other, graph=self.graph)
+            node.compile(self.graph)
+            other = node.outputs[0]
         if self.owner is not None:
             idx = self.owner.outputs.index(self)
             self.owner.outputs[idx] = VarNode(
                 self.var, owner_opr=self.owner, name=self.var.name
             )
-        self.var = value.var
+        self.var = other.var
         self.owner = None
 
     def set_owner_opr(self, owner_opr):
