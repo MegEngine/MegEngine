@@ -91,7 +91,7 @@ class Module(metaclass=ABCMeta):
     def __init__(self, name=None):
         """
         :param name: module's name, can be initialized by the ``kwargs`` parameter
-        of child class.
+            of child class.
         """
         self._modules = []
 
@@ -122,7 +122,7 @@ class Module(metaclass=ABCMeta):
         Registers a hook to handle forward inputs. `hook` should be a function.
 
         :param hook: a function that receive `module` and `inputs`, then return
-        a modified `inputs` or `None`.
+            a modified `inputs` or `None`.
         :return: a handler with :meth:`~.HookHandler.remove` interface to delete the hook.
         """
         return HookHandler(self._forward_pre_hooks, hook)

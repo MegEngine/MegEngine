@@ -409,7 +409,7 @@ class Conv3d(_ConvNd):
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, T, H, W)`,
     this layer generates an output of the size
-    :math:`(N, C_{\text{out}}, T_{\text{out}}}, H_{\text{out}}}, W_{\text{out}}})` through the
+    :math:`(N, C_{\text{out}}, T_{\text{out}}, H_{\text{out}}, W_{\text{out}})` through the
     process described as below:
 
     .. math::
