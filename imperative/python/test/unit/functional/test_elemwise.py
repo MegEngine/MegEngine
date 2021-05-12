@@ -12,7 +12,7 @@ import megengine.functional as F
 import megengine.functional.elemwise as elemwise
 from megengine import tensor
 from megengine.core.tensor import dtype
-from megengine.functional.elemwise import _elwise
+from megengine.functional.elemwise import Elemwise, _elwise
 
 
 def test_abs():
@@ -25,14 +25,10 @@ def test_abs():
 
 
 def test_elemwise_mode_string():
-    np.testing.assert_allclose(
-        _elwise(tensor([-3.0, -4.0, -5.0]), mode="ABS").numpy(),
-        np.abs(np.array([-3.0, -4.0, -5.0], dtype=np.float32)),
-    )
-
-    np.testing.assert_allclose(
-        _elwise(-3.0, mode="ABS").numpy(), np.abs(np.float32(-3.0))
-    )
+    for key, mode in vars(Elemwise.Mode).items():
+        if isinstance(mode, Elemwise.Mode):
+            assert key == mode
+            assert Elemwise(mode=key) == Elemwise(mode=mode)
 
 
 def test_multiply():
