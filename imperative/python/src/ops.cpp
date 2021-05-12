@@ -191,10 +191,13 @@ struct EnumWrapper {
                 .release().ptr();
     }
     static PyObject* tp_richcompare(PyObject *self, PyObject *other, int op) {
-        T lhs = reinterpret_cast<EnumWrapper*>(self)->value,
-          rhs = reinterpret_cast<EnumWrapper*>(other)->value;
         if (op == Py_EQ || op == Py_NE) {
-            RETURN_RICHCOMPARE(lhs, rhs, op);
+            T lhs, rhs;
+            if (load(other, rhs) && load(self, lhs)) {
+                RETURN_RICHCOMPARE(lhs, rhs, op);
+            } else {
+                RETURN_RICHCOMPARE(0, 1, op);
+            }
         }
         Py_RETURN_NOTIMPLEMENTED;
     }
@@ -296,10 +299,13 @@ struct BitCombinedEnumWrapper {
         return cast(lhs & rhs);
     }
     static PyObject* tp_richcompare(PyObject* self, PyObject* other, int op) {
-        T lhs = reinterpret_cast<BitCombinedEnumWrapper*>(self)->value,
-          rhs = reinterpret_cast<BitCombinedEnumWrapper*>(other)->value;
         if (op == Py_EQ || op == Py_NE) {
-            RETURN_RICHCOMPARE(lhs, rhs, op);
+            T lhs, rhs;
+            if (load(other, rhs) && load(self, lhs)) {
+                RETURN_RICHCOMPARE(lhs, rhs, op);
+            } else {
+                RETURN_RICHCOMPARE(0, 1, op);
+            }
         }
         Py_RETURN_NOTIMPLEMENTED;
     }
