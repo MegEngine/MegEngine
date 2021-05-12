@@ -174,7 +174,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     def set_value(self, value):
         self._reset(value)
 
-    @deprecated(version="1.0", reason="use *= 0 instead")
+    @deprecated(version="1.0", reason="use ``*= 0`` instead")
     def reset_zero(self):
         self *= 0
 

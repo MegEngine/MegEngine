@@ -40,7 +40,7 @@ class Collator:
 
     def apply(self, inputs):
         """
-        :param input: sequence_N(tuple(CHW, C, CK)).
+        :param inputs: sequence_N(tuple(CHW, C, CK)).
         :return: tuple(NCHW, NC, NCK).
         """
         elem = inputs[0]

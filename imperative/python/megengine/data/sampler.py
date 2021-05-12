@@ -30,22 +30,15 @@ class MapSampler(Sampler):
     r"""
     Sampler for map dataset.
 
-    :type dataset: `dataset`
     :param dataset: dataset to sample from.
-    :type batch_size: positive integer
     :param batch_size: batch size for batch method.
-    :type drop_last: bool
     :param drop_last: set ``True`` to drop the last incomplete batch,
         if the dataset size is not divisible by the batch size. If ``False`` and 
         the size of dataset is not divisible by the batch_size, then the last batch will
         be smaller. Default: False
-    :type num_samples: positive integer
     :param num_samples: number of samples assigned to one rank.
-    :type world_size: positive integer
     :param world_size: number of ranks.
-    :type rank: non-negative integer within 0 and world_size
     :param rank: rank id, non-negative interger within 0 and ``world_size``.
-    :type seed: non-negative integer
     :param seed: seed for random operators.
     """
 
@@ -166,7 +159,7 @@ class StreamSampler(Sampler):
         different data. But this class cannot do it yet, please build your own
         dataset and sampler to achieve this goal.
 
-    Usually, meth::`~.StreamDataset.__iter__` can return different iterator by
+    Usually, :meth:`~.StreamDataset.__iter__` can return different iterator by
     ``rank = dist.get_rank()``. So that they will get different data.
 
     """
@@ -184,6 +177,16 @@ class StreamSampler(Sampler):
 class SequentialSampler(MapSampler):
     r"""
     Sample elements sequentially.
+
+    :param dataset: dataset to sample from.
+    :param batch_size: batch size for batch method.
+    :param drop_last: set ``True`` to drop the last incomplete batch,
+        if the dataset size is not divisible by the batch size. If ``False`` and 
+        the size of dataset is not divisible by the batch_size, then the last batch will
+        be smaller. Default: False
+    :param indices: indice of samples.
+    :param world_size: number of ranks.
+    :param rank: rank id, non-negative interger within 0 and ``world_size``.
     """
 
     def __init__(
@@ -216,6 +219,17 @@ class SequentialSampler(MapSampler):
 class RandomSampler(MapSampler):
     r"""
     Sample elements randomly without replacement.
+
+    :param dataset: dataset to sample from.
+    :param batch_size: batch size for batch method.
+    :param drop_last: set ``True`` to drop the last incomplete batch,
+        if the dataset size is not divisible by the batch size. If ``False`` and 
+        the size of dataset is not divisible by the batch_size, then the last batch will
+        be smaller. Default: False
+    :param indices: indice of samples.
+    :param world_size: number of ranks.
+    :param rank: rank id, non-negative interger within 0 and ``world_size``.
+    :param seed: seed for random operators.
     """
 
     def __init__(
@@ -247,8 +261,17 @@ class ReplacementSampler(MapSampler):
     r"""
     Sample elements randomly with replacement.
 
-    :type weights: List
+    :param dataset: dataset to sample from.
+    :param batch_size: batch size for batch method.
+    :param drop_last: set ``True`` to drop the last incomplete batch,
+        if the dataset size is not divisible by the batch size. If ``False`` and 
+        the size of dataset is not divisible by the batch_size, then the last batch will
+        be smaller. Default: False
+    :param num_samples: number of samples assigned to one rank.
     :param weights: weights for sampling indices, it could be unnormalized weights.
+    :param world_size: number of ranks.
+    :param rank: rank id, non-negative interger within 0 and ``world_size``.
+    :param seed: seed for random operators.
     """
 
     def __init__(

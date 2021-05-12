@@ -27,7 +27,8 @@ from .core import TensorBase
 def set_priority_to_id(dest_vars):
     """
     For all oprs in the subgraph constructed by dest_vars,
-       sets its priority to id if its original priority is zero.
+    sets its priority to id if its original priority is zero.
+    
     :param dest_vars: target vars representing the graph.
     """
     dest_vec = []

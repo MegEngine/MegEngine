@@ -224,7 +224,7 @@ def nms(
     :param scores: tensor of shape `(N,)`, the score of boxes.
     :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
         otherwise it required to be specified; if it is not specified, all boxes are kept.
-    :return: indices of the elements that have been kept by NMS.
+    :return: indices of the elements that have been kept by NMS, sorted by scores.
 
     Examples:
 
