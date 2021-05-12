@@ -12,7 +12,6 @@ from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.utils import astensor1d
-from ..jit.tracing import is_tracing
 from ..tensor import Tensor
 from .elemwise import floor
 from .math import argsort
@@ -226,6 +225,10 @@ def nms(
         otherwise it required to be specified; if it is not specified, all boxes are kept.
     :return: indices of the elements that have been kept by NMS, sorted by scores.
 
+    .. note::
+
+        max_output should be specified and should have valid positive value under tracing
+
     Examples:
 
     .. testcode::
@@ -262,11 +265,6 @@ def nms(
     scores = scores.detach()
     sorted_idx = argsort(scores, descending=True)
     boxes = boxes[sorted_idx]
-
-    if is_tracing():
-        assert (
-            max_output is not None and max_output > 0
-        ), "max_output should be specified under tracing"
 
     if max_output is None:
         max_output = boxes.shape[0]
