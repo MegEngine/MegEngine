@@ -1,12 +1,12 @@
 import weakref
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Callable
+from typing import Callable, Iterable
 
 from ..core._imperative_rt.core2 import pop_scope, push_scope
 from ..core.autodiff.grad import Grad
 from ..logger import get_logger
-from ..tensor import Tensor
+from ..tensor import Tensor, Parameter
 from ..utils.future import Future
 
 logger = get_logger(__name__)
@@ -184,6 +184,9 @@ class GradManager:
         if isinstance(tensors, Tensor):
             tensors = [tensors]
 
+        return self._attach(tensors, callbacks)
+    
+    def _attach(self, tensors, callbacks=None):
         def make_spec(tensor):
             selfref = weakref.ref(self)
             key = id(tensor)
@@ -199,14 +202,19 @@ class GradManager:
             return spec
 
         for x in tensors:
-            spec = self._attach_specs.get(id(x))
-            new_attach = spec is None
-            if spec is None:
-                spec = make_spec(x)
-                self._attach_specs[id(x)] = spec
-            spec.callbacks.extend(callbacks)
-            if new_attach and self._recording:
-                self._do_record(spec)
+            #check
+            if isinstance(x, Iterable) and not isinstance(x, Tensor) and not isinstance(x, Parameter):
+                self._attach(x, callbacks)
+            else:
+                #do attach
+                spec = self._attach_specs.get(id(x))
+                new_attach = spec is None
+                if spec is None:
+                    spec = make_spec(x)
+                    self._attach_specs[id(x)] = spec
+                spec.callbacks.extend(callbacks)
+                if new_attach and self._recording:
+                    self._do_record(spec)
         return self
 
     def _register_after_backward_callback(self, callback):
