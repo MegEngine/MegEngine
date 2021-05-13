@@ -11,6 +11,7 @@
 
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/adaptive_pooling.h"
@@ -572,6 +573,10 @@ using DeformableConvBackwardFilterV1 = DeformableConvBackwardFilter;
 MGB_SEREG_OPR(DeformableConvForwardV1, 0);
 MGB_SEREG_OPR(DeformableConvBackwardDataV1, 0);
 MGB_SEREG_OPR(DeformableConvBackwardFilterV1, 0);
+
+MGB_SEREG_OPR(CorrelationForward, 2);
+MGB_SEREG_OPR(CorrelationBackwardData1, 3);
+MGB_SEREG_OPR(CorrelationBackwardData2, 3);
 
 MGB_SEREG_OPR(DeformablePSROIPoolingForward, 3);
 MGB_SEREG_OPR(DeformablePSROIPoolingBackward, 5);

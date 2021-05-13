@@ -228,6 +228,106 @@ def test_roi_align():
     assert make_shape_tuple(inp_feat.grad.shape) == make_shape_tuple(inp_feat.shape)
 
 
+def _gen_correlation(random=True, constant=1, image_shape=(2, 1, 160, 160)):
+    if random:
+        inp_feat1 = np.random.randn(
+            image_shape[0], image_shape[1], image_shape[2], image_shape[3]
+        )
+        inp_feat2 = np.random.randn(
+            image_shape[0], image_shape[1], image_shape[2], image_shape[3]
+        )
+    else:
+        inp_feat1 = np.ones(image_shape) * constant
+        inp_feat2 = np.ones(image_shape) * constant
+
+    return tensor(inp_feat1), tensor(inp_feat2)
+
+
+def test_correlation():
+    ##test case 0 check the grad shape
+    data1, data2 = _gen_correlation()
+    grad = Grad().wrt(data1, callback=_save_to(data1))
+
+    out_feat = F.vision.correlation(
+        data1,
+        data2,
+        kernel_size=5,
+        max_displacement=4,
+        stride1=2,
+        stride2=2,
+        pad_size=2,
+        is_multiply=True,
+    )
+
+    grad(out_feat, tensor(F.ones_like(out_feat)))
+    assert make_shape_tuple(data1.grad.shape) == make_shape_tuple(data1.shape)
+
+    ##test case 1 from https://github.com/NVIDIA/flownet2-pytorch/issues/194
+    data1, data2 = _gen_correlation(random=False, image_shape=(1, 1, 3, 3))
+
+    out_feat = F.vision.correlation(
+        data1,
+        data2,
+        kernel_size=3,
+        max_displacement=0,
+        stride1=1,
+        stride2=1,
+        pad_size=0,
+        is_multiply=True,
+    )
+    assert abs(out_feat.sum() - 1) < 1e-9
+
+    ##test case 2 check same image subduction
+    data1, data2 = _gen_correlation(random=False, image_shape=(1, 1, 3, 3))
+
+    out_feat = F.vision.correlation(
+        data1,
+        data2,
+        kernel_size=3,
+        max_displacement=0,
+        stride1=1,
+        stride2=1,
+        pad_size=0,
+        is_multiply=False,
+    )
+    assert out_feat.sum() < 1e-9
+
+    ##test case 3 check same image subduction
+    data1, data2 = _gen_correlation(random=False, image_shape=(1, 1, 3, 3))
+
+    out_feat = F.vision.correlation(
+        data1,
+        data2,
+        kernel_size=3,
+        max_displacement=0,
+        stride1=1,
+        stride2=1,
+        pad_size=0,
+        is_multiply=False,
+    )
+    assert out_feat.sum() < 1e-9
+
+    ##test case 4 check correlation
+    data1, _ = _gen_correlation(
+        random=False, image_shape=(1, 1, 220, 220), constant=2.0
+    )
+    _, data2 = _gen_correlation(
+        random=False, image_shape=(1, 1, 220, 220), constant=1.0
+    )
+
+    out_feat = F.vision.correlation(
+        data1,
+        data2,
+        kernel_size=3,
+        max_displacement=2,
+        stride1=1,
+        stride2=2,
+        pad_size=0,
+        is_multiply=False,
+    )
+    assert abs(out_feat.mean() - 1) < 1e-9
+
+
 def test_roi_pooling():
     inp_feat, rois = _gen_roi_inp()
     grad = Grad().wrt(inp_feat, callback=_save_to(inp_feat))

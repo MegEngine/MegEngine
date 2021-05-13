@@ -106,6 +106,43 @@ def roi_pooling(
     return result
 
 
+def correlation(
+    data1: Tensor,
+    data2: Tensor,
+    kernel_size: int = 1,
+    max_displacement: int = 1,
+    stride1: int = 1,
+    stride2: int = 1,
+    pad_size: int = 0,
+    is_multiply: bool = True,
+) -> Tensor:
+    """ Applies correlation to inputs.
+
+    :param data1:  Input data1 to the correlation. format must be nchw
+    :param data2:  Input data2 to the correlation. format must be nchw
+    :param kernel_size: (int (non-negative), optional, default=1) – kernel size for Correlation must be an odd number
+    :param max_displacement: (int (non-negative), optional, default=1) – Max displacement of Correlation
+    :param stride1: (int (non-negative), optional, default=1) – stride1 quantize data1 globally
+    :param stride2: (int (non-negative), optional, default=1) – stride2 quantize data2 within the neighborhood centered around data1
+    :param pad_size: (int (non-negative), optional, default=0) – pad for Correlation
+    :param is_multiply: (boolean, optional, default=True) – operation type is either multiplication or absolute difference 
+
+    """
+
+    op = builtin.Correlation(
+        format="NCHW",
+        kernel_size=kernel_size,
+        max_displacement=max_displacement,
+        stride1=stride1,
+        stride2=stride2,
+        pad_size=pad_size,
+        is_multiply=is_multiply,
+    )
+
+    result, *_ = apply(op, data1, data2)
+    return result
+
+
 def roi_align(
     inp: Tensor,
     rois: Tensor,

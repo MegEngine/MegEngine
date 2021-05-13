@@ -106,6 +106,7 @@ union OperatorParam {
     param.DctChannelSelect = 72,
     param.FakeQuant = 73,
     param.TQT = 74,
+    param.Correlation = 75,
 }
 
 table Operator {
