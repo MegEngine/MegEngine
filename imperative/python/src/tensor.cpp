@@ -50,29 +50,20 @@ REGISTE_APPLY_FUNC(cpp_apply_backward_varnode)
 
 #undef REGISTE_APPLY_FUNC
 
-bool is_tracing = false;
+Tensor::flags_t ApplyContext::global_disable = 0;
+Tensor::flags_t ApplyContext::global_enable = 0;
 
-#define SET_UNSET_PROP(mode)    \
-    void set_##mode() {         \
-        is_##mode = true;       \
-    }                           \
-    void unset_##mode() {       \
-        is_##mode = false;      \
-    }                           \
-
-SET_UNSET_PROP(tracing)
-
-#undef SET_UNSET_PROP
+void set_tracing() { ApplyContext::global_enable |= Tensor::Flags::TRACE; }
+void unset_tracing() { ApplyContext::global_enable &= ~Tensor::Flags::TRACE; }
 
 bool skip_tracing = false;
-
-Tensor::flags_t ApplyContext::global_disable = 0;
 
 apply_result_t apply(ApplyContext& ctx) {
     // emulating scalar should be put to specific op's apply, e.g.,
     // elementwise, reduce, typecvt. Currently it's still handled at python
     // side. It could be move to C++ side if it has an impact on performance
     auto flags = ctx.flags & ~ApplyContext::global_disable;
+    flags = flags | ApplyContext::global_enable;
 
     if (flags & Tensor::Flags::SCALAR) {
         // TODO: emulate scalar
@@ -190,10 +181,6 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
             }
         }
 
-        if (is_tracing) {
-            ctx.flags |= Tensor::Flags::TRACE;
-        }
-
         auto outputs = apply(ctx);
         size_t nout = outputs.size();
         auto ret = py::tuple(nout);
@@ -255,7 +242,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
             if (tup[nargs - 1].ptr() != Py_None) name = tup[nargs - 1].cast<std::string>();
 
             // const op
-            if (is_const && is_tracing) {
+            if (is_const && (ApplyContext::global_enable == Tensor::Flags::TRACE)) {
                 auto py_ret = PyObject_Call(cpp_apply_const_with_tracing, tup.ptr(), nullptr);
                 if (!py_ret) throw py::error_already_set();
                 auto py_list = py::reinterpret_steal<py::list>(py_ret);

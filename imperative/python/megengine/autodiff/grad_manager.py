@@ -1,6 +1,4 @@
 import weakref
-from collections import defaultdict
-from contextlib import contextmanager
 from typing import Callable, Iterable
 
 from ..core._imperative_rt.core2 import pop_scope, push_scope, set_option
