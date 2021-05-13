@@ -122,7 +122,7 @@ def conv1d(
     Refer to :class:`~.Conv1d` for more information.
 
     :param inp: The feature map of the convolution operation
-    :param weight: The convolution kernel
+    :param weight: The convolution kernel.
     :param bias: The bias added to the result of convolution (if given)
     :param stride: Stride of the 1D convolution operation. Default: 1
     :param padding: Size of the paddings added to the input on both sides of its
@@ -132,7 +132,7 @@ def conv1d(
         so as to perform a "grouped convolution". When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, height, width)``.
+        in_channels // groups, kernel_size)``. Default: 1
     :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
     :param conv_mode: Supports 'cross_correlation'. Default:
         'cross_correlation'.
@@ -209,8 +209,8 @@ def conv2d(
     :param groups: number of groups into which the input and output channels are divided, 
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be `(groups, out_channel // groups,
-        in_channels // groups, height, width)`.
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, height, width)``. Default: 1
     :type conv_mode: string or :class:`Convolution.Mode`
     :param conv_mode: supports "cross_correlation". Default:
         "cross_correlation"
@@ -277,8 +277,8 @@ def conv3d(
     :param groups: number of groups into which the input and output channels are divided,
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be `(groups, out_channel // groups,
-        in_channels // groups, t, height, width)`.
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, depth, height, width)``. Default: 1
     :param conv_mode: supports "cross_correlation". Default:
         "cross_correlation"
     :return: output tensor.
@@ -339,8 +339,8 @@ def conv_transpose2d(
     :param groups: number of groups into which the input and output channels are divided, 
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by groups,
-        and the shape of weight should be `(groups, out_channel // groups,
-        in_channels // groups, height, width)`. Default: 1
+        and the shape of weight should be ``(groups, in_channels // groups,
+        out_channels // groups, height, width)``. Default: 1
     :type conv_mode: string or :class:`Convolution.Mode`
     :param conv_mode: supports "cross_correlation". Default:
         "cross_correlation"
@@ -409,8 +409,8 @@ def deformable_conv2d(
     :param groups: number of groups into which the input and output channels are divided, 
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by groups,
-        and the shape of weight should be `(groups, out_channel // groups,
-        in_channels // groups, height, width)`. Default: 1
+        and the shape of weight should be ``(groups, out_channel // groups,
+        in_channels // groups, height, width)``. Default: 1
     :type conv_mode: string or :class:`Convolution.Mode`
     :param conv_mode: supports "cross_correlation". Default:
         "cross_correlation"
@@ -498,13 +498,14 @@ def conv_transpose3d(
     dilation: Union[int, Tuple[int, int, int]] = 1,
 ) -> Tensor:
     """
-    3D transposed convolution operation. Only support the case that group = 1 
+    3D transposed convolution operation. Only support the case that groups = 1 
     and conv_mode = "cross_correlation".
 
     Refer to :class:`~.ConvTranspose3d` for more information.
 
     :param inp: feature map of the convolution operation.
     :param weight: convolution kernel.
+        weight usually has shape ``(in_channels, out_channels, depth, height, width)``.
     :param bias: bias added to the result of convolution (if given).
     :param stride: stride of the 3D convolution operation. Default: 1
     :param padding: size of the paddings added to the input on all sides of its

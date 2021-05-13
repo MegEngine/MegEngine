@@ -80,18 +80,7 @@ def test_local_conv2d():
         ).astype(np.float32)
         output_height = (input_height + padding * 2 - kernel_size) // stride + 1
         output_width = (input_width + padding * 2 - kernel_size) // stride + 1
-        weights = np.random.normal(
-            size=(
-                groups,
-                output_height,
-                output_width,
-                in_channels // groups,
-                kernel_size,
-                kernel_size,
-                out_channels // groups,
-            )
-        ).astype(np.float32)
-        local_conv2d.weight = Parameter(weights)
+        weights = local_conv2d.weight.numpy()
         outputs = local_conv2d(tensor(inputs))
         # naive calculation use numpy
         # only test output_height == input_height, output_width == input_width
