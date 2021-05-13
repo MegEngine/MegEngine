@@ -193,8 +193,9 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
 
 struct ApplyContext {
     static Tensor::flags_t global_disable;
+    static Tensor::flags_t global_enable;
 
-    Tensor::flags_t flags;
+    Tensor::flags_t flags = 0;
     std::shared_ptr<OpDef> op;
     Tensor*const* args;
     size_t nargs;
@@ -236,14 +237,11 @@ decltype(auto) resolve_arrow(T&& p) {
 template <typename... Args>
 constexpr bool is_all_tensor_ptr = (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
 
-extern bool is_tracing; // FIXME: should use ApplyContext::global_enable
-
 template <typename... Args, std::enable_if_t<is_all_tensor_ptr<Args...>, int> = 0>
 apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
     ApplyContext ctx;
     Tensor* arg_arr[] = {resolve_arrow(args)...};
     ctx.flags = (0 | ... | args->m_flags);
-    ctx.flags |= is_tracing ? Tensor::Flags::TRACE : 0;
     ctx.args = arg_arr;
     ctx.nargs = sizeof...(args);
     ctx.op = std::move(op);
@@ -256,7 +254,6 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
                             apply_result_t> {
     ApplyContext ctx;
     ctx.op = std::move(op);
-    ctx.flags = is_tracing ? Tensor::Flags::TRACE : 0;
     ctx.nargs = tensors.size();
     Tensor* args[ctx.nargs];
     ctx.args = args;
@@ -270,7 +267,6 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
 inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
     ApplyContext ctx;
     ctx.op = std::move(op);
-    ctx.flags = is_tracing ? Tensor::Flags::TRACE : 0;
     ctx.nargs = nargs;
     ctx.args = args;
     for (size_t i = 0; i < nargs; ++i) {

@@ -1125,10 +1125,6 @@ def apply_compiled_mode(op: OpDef, *args: RawTensor):
 
 def apply_const_compiled_mode(value, dtype, device, is_const, no_cache, name):
     if skip_tracing:
-        args = [
-            RawTensor(x._dev_tensor()) if x.__class__ is CompiledTensorProxy else x
-            for x in args
-        ]
         unset_tracing()
         ret = RawTensor(value, dtype, device, False, name)
         set_tracing()

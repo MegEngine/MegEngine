@@ -28,12 +28,12 @@ apply_result_t apply_trace(ApplyContext& ctx) {
         for (size_t i = 0; i < ctx.nargs; i++) {
             args[i + 1] = py::cast(ctx.args[i]->m_var);
         }
-        py::object ret = py::reinterpret_steal<py::object>(
+        py::object pyout = py::reinterpret_steal<py::object>(
                 PyObject_Call(cpp_apply_backward_varnode, args.ptr(), nullptr));
-        if (!ret) throw py::error_already_set();
+        if (!pyout) throw py::error_already_set();
 
         // assumption: python function always returns PyList
-        auto tup = py::reinterpret_borrow<py::list>(ret);
+        auto tup = py::reinterpret_borrow<py::list>(pyout);
         for (size_t i = 0; i < tup.size(); i++) {
             auto pitem = tup[i].cast<cg::VarNode*>();
             outputs.emplace_back(std::make_shared<Tensor>(pitem));
@@ -48,6 +48,7 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     }
     auto pyout = PyObject_Call(cpp_apply_with_tracing, args.ptr(), nullptr);
     if (!pyout) throw py::error_already_set();
+
     // assumption: python function always returns PyList
     auto tup = py::reinterpret_steal<py::list>(pyout);
     for (size_t i = 0; i < tup.size(); i++) {
