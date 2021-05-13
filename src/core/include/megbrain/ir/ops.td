@@ -82,6 +82,7 @@ def BatchConvBias : MgbHashableOp<"BatchConvBias", [BatchConvBiasParam, Executio
 def BatchNorm : MgbHashableOp<"BatchNorm", [BNParam]>;
 
 def ROIAlign: MgbHashableOp<"ROIAlign", [ROIAlignParam]>;
+def Correlation: MgbHashableOp<"Correlation", [CorrelationParam]>;
 
 def WarpPerspective: MgbHashableOp<"WarpPerspective", [WarpPerspectiveParam]>;
 

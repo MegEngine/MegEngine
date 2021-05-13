@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/roi_align/roi_align.cu
+ * \file dnn/src/cuda/correlation/correlation_cuda.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.

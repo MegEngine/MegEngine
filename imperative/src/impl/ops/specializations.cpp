@@ -19,6 +19,7 @@
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/roi_align.h"
+#include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
@@ -444,6 +445,21 @@ OP_TRAIT_REG(ROIAlign, ROIAlign)
     .apply_on_var_node(apply_on_var_node)
     .fallback();
 }} // roi_align
+
+namespace { namespace correlation {
+auto apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Correlation&>(def);
+    mgb_assert(inputs.size() == 2);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Correlation::make(
+        inputs[0], inputs[1], op.param(), config);
+}
+OP_TRAIT_REG(Correlation, Correlation)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}} // correlation
 
 #if MGB_CUDA
 namespace { namespace nvof {

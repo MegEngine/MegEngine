@@ -45,19 +45,6 @@ inline static std::vector<TestArg> get_args() {
                             TensorShape{batch_size, channel, height, width},
                             TensorShape{batch_size, channel, height, width});
 
-                    // cur_param.is_multiply = false;
-                    // cur_param.kernel_size = 1;
-                    // cur_param.max_displacement = 2;
-                    // cur_param.pad_size = 1;
-                    // cur_param.stride1 = 1;
-                    // cur_param.stride2 = 1;
-                    // cur_param.format =
-                    // megdnn::param::Correlation::Format::NCHW;
-
-                    // args.emplace_back(
-                    //         cur_param,
-                    //         TensorShape{batch_size, channel, height, width},
-                    //         TensorShape{batch_size, channel, height, width});
                 }
             }
         }

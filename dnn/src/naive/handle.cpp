@@ -28,9 +28,9 @@
 #include "src/naive/convolution/opr_impl.h"
 #include "src/naive/convolution3d/opr_impl.h"
 #include "src/naive/convpooling/opr_impl.h"
+#include "src/naive/correlation/opr_impl.h"
 #include "src/naive/cumsum/opr_impl.h"
 #include "src/naive/cvt_color/opr_impl.h"
-#include "src/naive/correlation/opr_impl.h"
 #include "src/naive/dct/opr_impl.h"
 #include "src/naive/deformable_conv/opr_impl.h"
 #include "src/naive/deformable_ps_roi_pooling/opr_impl.h"
@@ -38,6 +38,7 @@
 #include "src/naive/elemwise/opr_impl.h"
 #include "src/naive/elemwise_multi_type/opr_impl.h"
 #include "src/naive/eye/opr_impl.h"
+#include "src/naive/fake_quant/opr_impl.h"
 #include "src/naive/flip/opr_impl.h"
 #include "src/naive/gaussian_blur/opr_impl.h"
 #include "src/naive/group_local/opr_impl.h"
@@ -75,13 +76,11 @@
 #include "src/naive/tensor_remap/opr_impl.h"
 #include "src/naive/tile/opr_impl.h"
 #include "src/naive/topk/opr_impl.h"
+#include "src/naive/tqt/opr_impl.h"
 #include "src/naive/transpose/opr_impl.h"
 #include "src/naive/type_cvt/opr_impl.h"
 #include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_perspective/opr_impl.h"
-#include "src/naive/remap/opr_impl.h"
-#include "src/naive/fake_quant/opr_impl.h"
-#include "src/naive/tqt/opr_impl.h"
 
 static size_t g_image2d_pitch_alignment = 1;
 
