@@ -12,20 +12,16 @@ import functools
 import itertools
 import json
 import os
-import typing
-import weakref
 
 import numpy as np
 
-from ..core._imperative_rt import GraphProfiler, common
+from ..core._imperative_rt import GraphProfiler
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
     TensorWeakRef,
     apply,
-    set_compiled,
     set_tracing,
     skip_tracing,
-    unset_compiled,
     unset_tracing,
 )
 from ..core._imperative_rt.ops import (
@@ -394,7 +390,6 @@ class trace:
             if self._untraced:
                 self._init_trace(self._symbolic)
             else:
-                set_compiled()
                 if self._graph is None:
                     self._compile()
                 self._graph.execute()
@@ -442,7 +437,6 @@ class trace:
             self._tensor_remaps = None
             self._set_active(False)
             set_symbolic_shape(self._save_symbolic_shape)
-            unset_compiled()
             unset_tracing()
 
         def do_exit():
@@ -989,11 +983,6 @@ class trace:
             raise RuntimeError("trace is not set with profiling=True")
         return json.loads(self._profiler.get())
 
-    def __del__(self):
-        for x in self._tinfo:
-            if getattr(x, "bound_data", None):
-                x.bound_data = None
-
     def trace(self, *args, **kwargs):
         raise NotImplementedError(
             "trace is deemed unbeneficial with the new "
@@ -1148,6 +1137,9 @@ def apply_const_compiled_mode(value, dtype, device, is_const, no_cache, name):
 
 
 def apply_with_tracing(op: OpDef, *args: RawTensor):
+    if active_trace._graph:
+        # if member _graph exits, then is_compiled
+        return apply_compiled_mode(op, *args)
     if hasattr(op, "scope"):
         op.scope = AutoNaming.get_scope()
     if active_trace._symbolic:
@@ -1162,11 +1154,16 @@ def apply_with_tracing(op: OpDef, *args: RawTensor):
 
 
 def apply_const_with_tracing(value, dtype, device, is_const, no_cache, name):
+    if active_trace._graph:
+        return apply_const_compiled_mode(value, dtype, device, is_const, no_cache, name)
     if active_trace._symbolic:
         outputs = apply_const_symbolic_mode(value, dtype, device, name)
     else:
         unset_tracing()
-        outputs = (RawTensor(value, dtype, device, False, name),)
+        outputs = RawTensor(value, dtype, device, False, name)
+        if np.array(value).ndim == 0:
+            setscalar(outputs)
+        outputs = (outputs,)
         set_tracing()
     active_trace._record_const(outputs)
     return list(outputs)

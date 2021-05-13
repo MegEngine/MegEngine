@@ -237,7 +237,6 @@ template <typename... Args>
 constexpr bool is_all_tensor_ptr = (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
 
 extern bool is_tracing; // FIXME: should use ApplyContext::global_enable
-extern bool is_compiled;
 
 template <typename... Args, std::enable_if_t<is_all_tensor_ptr<Args...>, int> = 0>
 apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
@@ -282,7 +281,7 @@ inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
 
 void init_tensor(pybind11::module);
 
-extern PyObject *cpp_apply_with_tracing, *cpp_apply_compiled_mode;
+extern PyObject *cpp_apply_with_tracing;
 extern PyObject *cpp_apply_backward_varnode;
 
 } // namespace mgb::imperative::python

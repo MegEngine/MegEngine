@@ -23,7 +23,6 @@
 #include "./common.h"
 #include "./ops.h"
 #include "megbrain/gopt/inference.h"
-#include "megbrain/imperative/ops/utility.h"
 
 
 namespace py = pybind11;

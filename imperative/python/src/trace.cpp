@@ -22,7 +22,6 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     apply_result_t outputs;
 
     if (ctx.backward) {
-        // reach here when compiled=True
         // call megbrain_graph.py apply(BackwardGraph, *args)
         auto args = py::tuple(ctx.nargs + 1);
         args[0] = py::cast(ctx.op);
@@ -42,27 +41,16 @@ apply_result_t apply_trace(ApplyContext& ctx) {
         return outputs;
     }
 
-    PyObject* pyf;
-    if (is_compiled) {
-        // run apply in compiled mode, step 2, 3, etc
-        pyf = cpp_apply_compiled_mode;
-    } else {
-        // run first step, both symbolic and non symbolic
-        pyf = cpp_apply_with_tracing;
-    }
-
     auto args = py::tuple(ctx.nargs + 1);
     args[0] = py::cast(ctx.op);
     for (size_t i = 0; i < ctx.nargs; i++) {
         args[i + 1] = TensorWrapper::make(ctx.args[i]->shared_from_this());
     }
-    auto pyout = PyObject_Call(pyf, args.ptr(), nullptr);
+    auto pyout = PyObject_Call(cpp_apply_with_tracing, args.ptr(), nullptr);
     if (!pyout) throw py::error_already_set();
-    auto ret = py::reinterpret_steal<py::object>(pyout);
-
     // assumption: python function always returns PyList
-    auto tup = py::reinterpret_borrow<py::list>(ret);
-    for (auto i = 0; i < tup.size(); i++) {
+    auto tup = py::reinterpret_steal<py::list>(pyout);
+    for (size_t i = 0; i < tup.size(); i++) {
         auto tw = TensorWrapper::try_cast(tup[i].ptr());
         outputs.emplace_back(tw->m_tensor);
     }

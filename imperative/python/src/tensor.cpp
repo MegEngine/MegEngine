@@ -36,27 +36,21 @@ namespace mgb::imperative::python {
 
 interpreter::Interpreter::Channel* interpreter_for_py;
 
-PyObject *cpp_apply_with_tracing, *cpp_apply_const_with_tracing,
-           *cpp_apply_compiled_mode, *cpp_apply_const_compiled_mode;
-
+PyObject *cpp_apply_with_tracing, *cpp_apply_const_with_tracing;
 PyObject *cpp_apply_backward_varnode;
 
-
-#define REGISTE_APPLY_FUNC(mode)                                    \
-        void set_##mode(py::object pyf) {                           \
-            mode = pyf.ptr();                                       \
+#define REGISTE_APPLY_FUNC(mode)            \
+        void set_##mode(py::object pyf) {   \
+            mode = pyf.ptr();               \
         }
 
 REGISTE_APPLY_FUNC(cpp_apply_with_tracing)
 REGISTE_APPLY_FUNC(cpp_apply_const_with_tracing)
-REGISTE_APPLY_FUNC(cpp_apply_compiled_mode)
-REGISTE_APPLY_FUNC(cpp_apply_const_compiled_mode)
 REGISTE_APPLY_FUNC(cpp_apply_backward_varnode)
 
 #undef REGISTE_APPLY_FUNC
 
 bool is_tracing = false;
-bool is_compiled = false;
 
 #define SET_UNSET_PROP(mode)    \
     void set_##mode() {         \
@@ -67,7 +61,6 @@ bool is_compiled = false;
     }                           \
 
 SET_UNSET_PROP(tracing)
-SET_UNSET_PROP(compiled)
 
 #undef SET_UNSET_PROP
 
@@ -263,14 +256,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
 
             // const op
             if (is_const && is_tracing) {
-                PyObject *pyf;
-                if (is_compiled) {
-                    pyf = cpp_apply_const_compiled_mode;
-                } else {
-                    pyf = cpp_apply_const_with_tracing;
-                }
-
-                auto py_ret = PyObject_Call(pyf, tup.ptr(), nullptr);
+                auto py_ret = PyObject_Call(cpp_apply_const_with_tracing, tup.ptr(), nullptr);
                 if (!py_ret) throw py::error_already_set();
                 auto py_list = py::reinterpret_steal<py::list>(py_ret);
                 if (auto* t = try_cast(py_list[0].ptr())) {
@@ -961,8 +947,6 @@ void init_tensor(py::module m) {
 
     m.def("set_cpp_apply_with_tracing", &set_cpp_apply_with_tracing);
     m.def("set_cpp_apply_const_with_tracing", &set_cpp_apply_const_with_tracing);
-    m.def("set_cpp_apply_compiled_mode", &set_cpp_apply_compiled_mode);
-    m.def("set_cpp_apply_const_compiled_mode", &set_cpp_apply_const_compiled_mode);
     m.def("set_cpp_apply_backward_varnode", &set_cpp_apply_backward_varnode);
 
     m.attr("skip_tracing") = &skip_tracing;
@@ -979,8 +963,6 @@ void init_tensor(py::module m) {
 
     m.def("set_tracing", &set_tracing);
     m.def("unset_tracing", &unset_tracing);
-    m.def("set_compiled", &set_compiled);
-    m.def("unset_compiled", &unset_compiled);
 }
 
 #undef MGE_PY_INTERFACE
