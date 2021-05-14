@@ -90,7 +90,6 @@ private:
 
     void regenerate(TensorInfo* dest);
     void recompute(TensorInfo::ComputePath* path);
-    
 
     void dispatch_default_cpu(
         std::shared_ptr<OpDef> op,
@@ -104,6 +103,10 @@ private:
         SmallVector<Handle>* outputs);
 
     bool check_available();
+
+    void assert_in_channel();
+    void assert_in_worker();
+    std::thread::id get_worker_tid();
 
     void sync_device_scope(CompNode device);
 
@@ -319,6 +322,11 @@ private:
 
     //! automatically evict an optimal tensor
     void auto_evict();
+
+    // assert thread id when call get_xxx_state to avoid misuse
+    ChannelState& get_channel_state();
+    WorkerState& get_worker_state();
+
 };
 
 } // namespace mgb::imperative::interpreter::intl
