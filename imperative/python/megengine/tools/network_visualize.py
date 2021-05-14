@@ -74,8 +74,6 @@ def visualize(
                 exc_info=True,
             )
             return
-    # FIXME: remove this after resolving "span dist too large" warning
-    old_level = set_mgb_log_level(logging.ERROR)
 
     enable_receptive_field()
 
@@ -136,13 +134,13 @@ def visualize(
             flops_stats["class_name"] = node.type
             flops_list.append(flops_stats)
 
-            acts = get_activation_stats(node_oup.numpy())
+            acts = get_activation_stats(node_oup)
             acts["name"] = node.name
             acts["class_name"] = node.type
             activations_list.append(acts)
 
         if node.type == "ImmutableTensor":
-            param_stats = get_param_stats(node.numpy())
+            param_stats = get_param_stats(node_oup)
             # add tensor size attr
             if log_path:
                 attr["size"] = AttrValue(
@@ -208,9 +206,6 @@ def visualize(
         writer._get_file_writer().add_graph((graph_def, stepstats))
 
     print_summary(**extra_info)
-
-    # FIXME: remove this after resolving "span dist too large" warning
-    _imperative_rt_logger.set_log_level(old_level)
 
     return (
         total_stats(

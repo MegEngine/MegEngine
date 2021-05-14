@@ -15,6 +15,8 @@ import megengine as mge
 import megengine.module as m
 import megengine.module.qat as qatm
 import megengine.module.quantized as qm
+from megengine import Tensor
+from megengine import functional as F
 from megengine.core.tensor.dtype import get_dtype_bit
 from megengine.functional.tensor import zeros
 
@@ -152,6 +154,16 @@ hook_modules = (
 )
 
 
+def _mean(inp):
+    inp = mge.tensor(inp)
+    return F.mean(inp).numpy()
+
+
+def _std(inp):
+    inp = mge.tensor(inp)
+    return F.std(inp).numpy()
+
+
 def dict2table(list_of_dict, header):
     table_data = [header]
     for d in list_of_dict:
@@ -266,16 +278,16 @@ def print_op_stats(flops):
     logger.info("flops stats: \n" + tabulate.tabulate(dict2table(flops, header=header)))
 
 
-def get_param_stats(param: np.ndarray):
-    nbits = get_dtype_bit(param.dtype.name)
+def get_param_stats(param: Tensor):
+    nbits = get_dtype_bit(np.dtype(param.dtype).name)
     shape = param.shape
     param_dim = np.prod(param.shape)
     param_size = param_dim * nbits // 8
     return {
-        "dtype": param.dtype,
+        "dtype": np.dtype(param.dtype),
         "shape": shape,
-        "mean": "{:.3g}".format(param.mean()),
-        "std": "{:.3g}".format(param.std()),
+        "mean": "{:.3g}".format(_mean(param)),
+        "std": "{:.3g}".format(_std(param)),
         "param_dim": param_dim,
         "nbits": nbits,
         "size": param_size,
@@ -323,9 +335,9 @@ def print_param_stats(params):
     )
 
 
-def get_activation_stats(output: np.ndarray):
+def get_activation_stats(output: Tensor):
     out_shape = output.shape
-    activations_dtype = output.dtype
+    activations_dtype = np.dtype(output.dtype)
     nbits = get_dtype_bit(activations_dtype.name)
     act_dim = np.prod(out_shape)
     act_size = act_dim * nbits // 8
@@ -333,8 +345,8 @@ def get_activation_stats(output: np.ndarray):
         "dtype": activations_dtype,
         "shape": out_shape,
         "act_dim": act_dim,
-        "mean": "{:.3g}".format(output.mean()),
-        "std": "{:.3g}".format(output.std()),
+        "mean": "{:.3g}".format(_mean(output)),
+        "std": "{:.3g}".format(_std(output)),
         "nbits": nbits,
         "size": act_size,
     }
@@ -418,20 +430,20 @@ def module_stats(
 
         if hasattr(module, "weight") and module.weight is not None:
             w = module.weight
-            param_stats = get_param_stats(w.numpy())
+            param_stats = get_param_stats(w)
             param_stats["name"] = name + "-w"
             params.append(param_stats)
 
         if hasattr(module, "bias") and module.bias is not None:
             b = module.bias
-            param_stats = get_param_stats(b.numpy())
+            param_stats = get_param_stats(b)
             param_stats["name"] = name + "-b"
             params.append(param_stats)
 
         if not isinstance(outputs, tuple) or not isinstance(outputs, list):
-            output = outputs.numpy()
+            output = outputs
         else:
-            output = outputs[0].numpy()
+            output = outputs[0]
         activation_stats = get_activation_stats(output)
         activation_stats["name"] = name
         activation_stats["class_name"] = class_name
