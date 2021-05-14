@@ -137,7 +137,7 @@ SymbolVarArray BatchNormForward::make(SymbolVar x,
 cg::OperatorNodeBase::NodeProp*
 BatchNormForward::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    if (need_stats()) {
+    if (need_stats() && m_force_inplace) {
         ret->add_flag(NodeProp::Flag::FORCE_UPDATE_INPUT_VAR);
     }
     return ret;
