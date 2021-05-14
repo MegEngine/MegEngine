@@ -30,12 +30,12 @@ def test_group_norm():
 
 
 def test_layer_norm():
-    input_shape = (2, 100, 128, 128)
-    channels = input_shape[1]
-    x = tensor(np.random.rand(*input_shape))
-    ln = norm.LayerNorm(channels)
-    out = ln(x)
-    assert shape_to_tuple(out.shape) == input_shape
+    input_shape_list = [(2, 3, 10, 10), (2, 2, 3, 10, 10)]
+    ln = norm.LayerNorm((10, 10))
+    for input_shape in input_shape_list:
+        x = tensor(np.random.rand(*input_shape))
+        out = ln(x)
+        assert shape_to_tuple(out.shape) == input_shape
 
 
 def test_instance_norm():
