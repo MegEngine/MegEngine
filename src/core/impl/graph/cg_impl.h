@@ -15,6 +15,7 @@
 #include "./grad_manager.h"
 #include "./graph_opt.h"
 #include "./seq_comp_node_opt_impl.h"
+#include "./seq_dtr.h"
 #include "./seq_sublinear_memory.h"
 #include "./static_infer_impl.h"
 #include "./swap/memory_swap.h"
@@ -79,6 +80,9 @@ class ComputingGraphImpl final : public ComputingGraph {
         GraphOptimizer graph_optimizer;
 #if MGB_ENABLE_SUBLINEAR
         SeqModifierForSublinearMemory seq_modifier_for_sublinear_memory;
+#endif
+#if MGB_ENABLE_DTR
+        SeqModifierForDTR seq_modifier_for_dtr;
 #endif
 #if MGB_ENABLE_MEMORY_SWAP
         swap::MemorySwap memory_swap_support;
@@ -218,6 +222,9 @@ public:
     SeqModifierForSublinearMemory& seq_modifier_for_sublinear_memory();
 #endif
 
+#if MGB_ENABLE_DTR
+    SeqModifierForDTR& seq_modifier_for_dtr();
+#endif
     void share_device_memory_with(ComputingGraph& other) override;
 
     void set_device_memory_allocator(

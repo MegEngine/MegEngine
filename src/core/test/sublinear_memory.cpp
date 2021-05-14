@@ -174,6 +174,15 @@ TEST(TestSublinearMemory, FullConv) {
 
     for (size_t i = 0; i < grad_params_get.size(); ++i)
         MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
+
+    graph->options().enable_sublinear_memory_opt = false;
+    graph->options().enable_dtr_memory_opt = true;
+    graph->options().dtr_config.eviction_threshold = 1ULL << 30;
+    auto func = graph->compile(out_spec);
+    func->execute();
+    
+    for (size_t i = 0; i < grad_params_get.size(); ++i)
+        MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
 }
 
 TEST(TestSublinearMemory, ConcatSplit) {
@@ -240,6 +249,15 @@ TEST(TestSublinearMemory, ConcatSplit) {
 
     for (size_t i = 0; i < grad_params_get.size(); ++i)
         MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
+
+    graph->options().enable_sublinear_memory_opt = false;
+    graph->options().enable_dtr_memory_opt = true;
+    graph->options().dtr_config.eviction_threshold = 1ULL << 30;
+    auto func = graph->compile(out_spec);
+    func->execute();
+    
+    for (size_t i = 0; i < grad_params_get.size(); ++i)
+        MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
 }
 
 TEST(TestSublinearMemory, MultiOutputOpr) {
@@ -304,6 +322,15 @@ TEST(TestSublinearMemory, MultiOutputOpr) {
 
     for (size_t i = 0; i < grad_params_get.size(); ++i)
         MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
+
+    graph->options().enable_sublinear_memory_opt = false;
+    graph->options().enable_dtr_memory_opt = true;
+    graph->options().dtr_config.eviction_threshold = 1ULL << 30;
+    auto func = graph->compile(out_spec);
+    func->execute();
+    
+    for (size_t i = 0; i < grad_params_get.size(); ++i)
+        MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-3);
 }
 
 TEST(TestSublinearMemory, LongChain) {
@@ -365,6 +392,15 @@ TEST(TestSublinearMemory, LongChain) {
         }
     }
 
+    for (size_t i = 0; i < grad_params_get.size(); ++i)
+        MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-4);
+
+    graph->options().enable_sublinear_memory_opt = false;
+    graph->options().enable_dtr_memory_opt = true;
+    graph->options().dtr_config.eviction_threshold = 1ULL << 30;
+    auto func = graph->compile(out_spec);
+    func->execute();
+    
     for (size_t i = 0; i < grad_params_get.size(); ++i)
         MGB_ASSERT_TENSOR_NEAR(grad_params_get[i], grad_params_expect[i], 1e-4);
 }

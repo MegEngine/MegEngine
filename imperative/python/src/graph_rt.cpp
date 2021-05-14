@@ -395,6 +395,7 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(allocate_static_mem_after_graph_compile)
         DEF_READWRITE(fake_next_exec)
         DEF_READWRITE(enable_sublinear_memory_opt)
+        DEF_READWRITE(enable_dtr_memory_opt)
         DEF_READWRITE(no_profiling_on_shape_change)
         DEF_READWRITE(enable_var_mem_defragment)
         DEF_READWRITE(enable_grad_var_static_reshape)
@@ -402,6 +403,7 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(comp_node_seq_record_level)
         DEF_READWRITE(no_force_inplace)
         DEF_READWRITE(sublinear_mem_config)
+        DEF_READWRITE(dtr_config)
         // DEF_READWRITE(eager_evaluation)
         // DEF_READWRITE(imperative_proxy_graph)
         // DEF_READWRITE(extra_vardeps)
@@ -433,6 +435,14 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(genetic_pool_size)
         DEF_READWRITE(lb_memory)
         DEF_READWRITE(num_worker);
+
+#undef CURRENT_CLASS
+
+#define CURRENT_CLASS cg::ComputingGraph::Options::DTRConfig
+
+    py::class_<cg::ComputingGraph::Options::DTRConfig>(PyComputingGraphOptions, "DTRConfig")
+        DEF_READWRITE(eviction_threshold)
+        DEF_READWRITE(evictee_minimum_size);
 
 #undef CURRENT_CLASS
     auto common = rel_import("common", m, 1);

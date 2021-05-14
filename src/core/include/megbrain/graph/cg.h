@@ -433,6 +433,15 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 int num_worker = sys::get_cpu_count() / 2;
             } sublinear_mem_config;
 
+            //! whether to enable DTR memory optimization
+            bool enable_dtr_memory_opt = false;
+
+            //! Control parameter for DTR memory optimization
+            struct DTRConfig {
+                size_t eviction_threshold = 0;
+                size_t evictee_minimum_size = 1ULL << 20;
+            } dtr_config;
+
             //! do not re-profile to select best impl algo when input shape
             //! changes (use previous algo)
             bool no_profiling_on_shape_change = false;

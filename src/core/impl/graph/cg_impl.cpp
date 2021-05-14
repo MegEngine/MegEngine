@@ -250,6 +250,10 @@ ComputingGraphImpl::Components::Components(ComputingGraphImpl* owner)
           seq_modifier_for_sublinear_memory{owner,
               &(owner->options().sublinear_mem_config)},
 #endif
+#if MGB_ENABLE_DTR
+          seq_modifier_for_dtr{owner,
+              &(owner->options().dtr_config)},
+#endif
 #if MGB_ENABLE_MEMORY_SWAP
           memory_swap_support{owner},
 #endif
@@ -473,6 +477,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 
 #if MGB_ENABLE_SUBLINEAR
     if (options().enable_sublinear_memory_opt) {
+        mgb_assert(!options().enable_dtr_memory_opt);
         if (!sopr_stat.has_virtual_grad) {
             mgb_log_debug(
                     "no virtual grad var; sublinear memory may produce "
@@ -484,6 +489,15 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 #else
     mgb_assert(!options().enable_sublinear_memory_opt);
 #endif  //  MGB_ENABLE_SUBLINEAR
+
+#if MGB_ENABLE_DTR
+    if (options().enable_dtr_memory_opt) {
+        mgb_assert(!options().enable_sublinear_memory_opt);
+        seq_modifier_for_dtr().set_priority_before_opt(dest_vars);
+    }
+#else
+    mgb_assert(!options().enable_dtr_memory_opt);
+#endif //   MGB_ENABLE_DTR
 
 #if !MGB_BUILD_SLIM_SERVING
     mgb_assert(!options().eager_evaluation,
@@ -558,7 +572,10 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     CompSeqExtraInfo extra_info;
     cmpnt.seq_comp_node_opt.optimize_comp_nodes(dest_vars);
 
+    bool init_flag = false;
     auto init_opr_seq = [&]() {
+        mgb_assert(!init_flag);
+        init_flag = true;
         ThinHashMap<VarNode*, size_t> var2idx;
         std::unordered_map<CallbackCallerKey, CallbackCallerVal,
                            CallbackCallerKey::Hash>
@@ -629,6 +646,15 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     mgb_assert(!options().enable_memory_swap);
 #endif
 
+#if MGB_ENABLE_DTR
+    if (options().enable_dtr_memory_opt) {
+        MGB_TRY {
+            seq_modifier_for_dtr().modify_endpoint_vars(dest_vars);
+            init_opr_seq();
+        }
+        MGB_FINALLY(seq_modifier_for_dtr().restore_graph_option());
+    }
+#endif
 #if MGB_ENABLE_SUBLINEAR
     if (options().enable_sublinear_memory_opt) {
         MGB_TRY {
@@ -650,12 +676,11 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
                  */
                 seq_modifier_for_sublinear_memory().restore_graph_option());
         seq_modifier_for_sublinear_memory().sanity_check(*opr_seq);
-    } else {
+    }
+#endif  //  MGB_ENABLE_SUBLINEAR
+    if (!init_flag) {
         init_opr_seq();
     }
-#else
-    init_opr_seq();
-#endif  //  MGB_ENABLE_SUBLINEAR
 
     return {std::move(extra_info), opr_seq, std::move(dest_vars)};
 }
@@ -748,6 +773,13 @@ VarNode* ComputingGraphImpl::find_var_by_id(size_t id) const {
 SeqModifierForSublinearMemory&
 ComputingGraphImpl::seq_modifier_for_sublinear_memory() {
     return components().seq_modifier_for_sublinear_memory;
+}
+#endif
+
+#if MGB_ENABLE_DTR
+SeqModifierForDTR&
+ComputingGraphImpl::seq_modifier_for_dtr() {
+    return components().seq_modifier_for_dtr;
 }
 #endif
 

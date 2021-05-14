@@ -10,6 +10,7 @@ from ..core._imperative_rt.core2 import (
     set_cpp_apply_const_with_tracing,
     set_cpp_apply_with_tracing,
 )
+from .dtr_config import DTRConfig
 from .sublinear_memory_config import SublinearMemoryConfig
 from .tracing import (
     apply_const_with_tracing,

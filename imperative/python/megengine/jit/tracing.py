@@ -37,6 +37,7 @@ from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
 from ..utils.naming import AutoNaming
+from .dtr_config import DTRConfig
 from .sublinear_memory_config import SublinearMemoryConfig
 
 
@@ -142,6 +143,7 @@ class trace:
         symbolic=False,
         capture_as_const=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
+        dtr_config: DTRConfig = None,
         profiling: bool = False,
         opt_level: int = 2,
         symbolic_shape: bool = True,
@@ -150,6 +152,7 @@ class trace:
         self._symbolic = symbolic
         self._capture_as_const = capture_as_const
         self._sublinear_memory_config = sublinear_memory_config
+        self._dtr_config = dtr_config
         self._profiling = profiling
         self._profiler = None
         self._graph_opt_level = opt_level
@@ -491,6 +494,15 @@ class trace:
         graph.options.no_force_inplace = True
         graph.options.seq_opt.enable_seq_comp_node_opt = False
         graph.options.graph_opt_level = self._graph_opt_level
+        if self._dtr_config is not None:
+            graph.options.enable_dtr_memory_opt = True
+            graph.options.dtr_config.eviction_threshold = (
+                self._dtr_config.eviction_threshold
+            )
+            graph.options.dtr_config.evictee_minimum_size = (
+                self._dtr_config.evictee_minimum_size
+            )
+
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True

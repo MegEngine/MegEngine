@@ -11,12 +11,12 @@
 
 #include "./seq_modifier_base.h"
 
-#if MGB_ENABLE_SUBLINEAR
+#if MGB_ENABLE_SUBLINEAR || MGB_ENABLE_DTR
 
 using namespace mgb;
 using namespace cg;
 
-void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_seq) {
+void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_seq, bool remove_unused_output) {
     m_orig_opr_seq = &opr_seq;
 
     m_var_storage.clear();
@@ -76,15 +76,16 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
         mgb_assert(!opr->output.empty());
     }
 
-    // remove unused output
-    for (auto&& i : m_seq) {
-        auto&& oarr = i->output;
-        for (size_t j = 0; j < oarr.size();) {
-            if (oarr[j]->access_rec.size() == 1) {
-                std::swap(oarr[j], oarr.back());
-                oarr.pop_back();
-            } else
-                ++j;
+    if (remove_unused_output) {
+        for (auto&& i : m_seq) {
+            auto&& oarr = i->output;
+            for (size_t j = 0; j < oarr.size();) {
+                if (oarr[j]->access_rec.size() == 1) {
+                    std::swap(oarr[j], oarr.back());
+                    oarr.pop_back();
+                } else
+                    ++j;
+            }
         }
     }
 }
@@ -105,17 +106,14 @@ bool SeqModifierBase::replace_vars(const VarNodeArray& inputs) {
 OperatorNodeBase* SeqModifierBase::copy_opr_from_new_inputs(
         OperatorNodeBase* opr, bool recomp, size_t recomp_cnt) {
     auto config = opr->config();
-    // update operator instance id to bybass the shallow copy's cache if
-    // it's a dup-opr-copying due to discarding.
-    // Don't update instance id by `this` pointer if it's a recomp-opr-copying
-    // because:
-    // 0) recomp-opr would be copied iff its input vars is changed
-    // 1) some pair of recomp-opr and dup-opr have the same inputs, params
-    //    and config, we use instance id to differentiate them.
+    // update operator instance id to bybass the shallow copy's cache because
+    // some pair of recomp-opr and dup-opr have the same inputs, params and
+    // config, we use instance id to differentiate them. To be safe, we update
+    // instance id whatever reason is `recomp` or `dup`
     config.name(opr->name() + (recomp ? ":recomp" : ":dup") + std::to_string(recomp_cnt));
     config.update_instance_id(reinterpret_cast<void*>(
                                 reinterpret_cast<size_t>(this) + 
-                                ((static_cast<size_t>(recomp) + 1) << 10) * recomp_cnt));
+                                (recomp_cnt << 1 | (recomp & 1))));
 
     // Note: if all outputs of op were placed on the same comp_node, since its
     // stream maybe changed during seq_comp_node_opt, output's comp_node has
@@ -156,6 +154,6 @@ OperatorNodeBase* SeqModifierBase::copy_opr_from_new_inputs(
     return opr_new;
 }
 
-#endif  //  MGB_ENABLE_SUBLINEAR
+#endif  //  MGB_ENABLE_SUBLINEAR || MGB_ENABLE_DTR
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

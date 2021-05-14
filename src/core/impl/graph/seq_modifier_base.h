@@ -17,12 +17,11 @@
 #include "megbrain/plugin/opr_footprint.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
 #include "megbrain/system.h"
-#include "megbrain/utils/async_worker.h"
 #include "megbrain/utils/arith_helper.h"
 #include "megbrain/utils/mempool.h"
 #include "megbrain/utils/timer.h"
 
-#if MGB_ENABLE_SUBLINEAR
+#if MGB_ENABLE_SUBLINEAR || MGB_ENABLE_DTR
 namespace mgb {
 namespace cg {
 
@@ -57,11 +56,11 @@ public:
         static constexpr size_t DUPOPR_TIME =
                 std::numeric_limits<size_t>::max() - 1;
 
-        const SeqModifierBase* const par_modifier() {
+        auto& par_modifier() {
             return m_par_modifier;
         }
 
-        const OprNodeArray* const orig_opr_seq() {
+        auto& orig_opr_seq() {
             return m_orig_opr_seq;
         }
 
@@ -94,7 +93,7 @@ public:
         }
 
         //! init m_orig_opr_seq from opr_seq, should be called first.
-        void init_seq(const OprNodeArray& opr_seq);
+        void init_seq(const OprNodeArray& opr_seq, bool remove_unused_output=true);
     };
 
     SeqModifierBase(ComputingGraphImpl* owner) : m_mem_opt(owner), m_owner_graph(owner) {}
@@ -103,7 +102,7 @@ public:
         return m_mem_opt;
     }
 
-    ComputingGraphImpl* const owner_graph() {
+    auto& owner_graph() {
         return m_owner_graph;
     }
 
@@ -232,6 +231,6 @@ struct SeqModifierBase::Var {
 }   // namespace cg
 }   // namespace mgb
 
-#endif  //  MGB_ENABLE_SUBLINEAR
+#endif  //  MGB_ENABLE_SUBLINEAR || MGB_ENABLE_DTR
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
