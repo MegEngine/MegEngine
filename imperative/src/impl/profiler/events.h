@@ -180,6 +180,13 @@ DEF_DUR_EVENT(TensorCommand, {
     Kind kind;
 });
 
+DEF_DUR_EVENT(AutoEvict, {});
+
+DEF_DUR_EVENT(Custom, {
+    std::string title;
+    std::string content;
+});
+
 #undef DEF_EVENT
 #undef DEF_DUR_EVENT
 
