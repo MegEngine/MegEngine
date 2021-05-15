@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 import json
 import os
+import tempfile
 
 import pytest
 
@@ -28,15 +29,18 @@ class Simple(Module):
 
 
 def test_profiler():
-    profile_prefix = "pytest_profile"
+    tempdir = tempfile.NamedTemporaryFile()
+    profile_prefix = tempdir.name
     profile_format = "chrome_timeline.json"
-    profile_path = "{}.{}".format(profile_prefix, profile_format)
-    with Profiler(profile_prefix, format=profile_format):
-        with scope("my_scope"):
-            oup = Simple()(tensor([1.23], dtype="float32"))
+    profile_path = os.path.join(
+        profile_prefix, "{}.{}".format(os.getpid(), profile_format)
+    )
+    with option("enable_host_compute", 0):
+        with Profiler(profile_prefix, format=profile_format):
+            with scope("my_scope"):
+                oup = Simple()(tensor([1.23], dtype="float32"))
     with open(profile_path, "r") as f:
         events = json.load(f)
-    os.remove(profile_path)
     prev_ts = {}
     scope_count = 0
     for event in events:
