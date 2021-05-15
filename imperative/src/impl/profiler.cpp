@@ -22,47 +22,58 @@
 #include "./event_pool.h"
 #include "./op_trait.h"
 
+#include "./profiler/formats.h"
+
 namespace mgb {
 namespace imperative {
 
-namespace {
+uint64_t Timer::get_nsecs() {
+    using namespace std::chrono;
+    auto finish = steady_clock::now();
+    auto duration = duration_cast<nanoseconds>(finish - m_start);
+    return duration.count();
+}
 
-DeviceTimer::SharedEvent alloc_recorded_event(CompNode device) {
+uint64_t Timer::get_started_at() {
+    return m_started_at;
+}
+
+void Timer::reset() {
+    using namespace std::chrono;
+    m_start = steady_clock::now();
+    auto now_ns = duration_cast<nanoseconds>(std::chrono::system_clock::now().time_since_epoch());
+    m_started_at = now_ns.count();
+}
+
+std::shared_ptr<CompNode::Event> Timer::record_event(CompNode device) {
     auto event = EventPool::with_timer().alloc_shared(device);
     event->record();
     return event;
 }
 
-}  // namespace
+Profiler::options_t Profiler::sm_profile_options;
+std::mutex Profiler::sm_mutex;
+std::unordered_map<std::thread::id, Profiler*> Profiler::sm_profilers;
+Timer Profiler::sm_timer;
+std::atomic_uint64_t Profiler::sm_last_id = 0;
+bool Profiler::sm_profiling = false;
+thread_local std::unique_ptr<Profiler> Profiler::tm_profiler = std::make_unique<Profiler>();
+std::atomic_size_t Profiler::sm_preferred_capacity;
 
-DeviceTimer::SharedEvent DeviceTimer::get_device_time(CompNode device) {
-    return alloc_recorded_event(device);
-}
-
-SmallVector<DeviceTimer::SharedEvent> DeviceTimer::get_all(SmallVector<CompNode> device_list) {
-    SmallVector<DeviceTimer::SharedEvent> results;
-    for (auto&& device: device_list) {
-        results.push_back(alloc_recorded_event(device));
+auto Profiler::get_thread_dict() -> thread_dict_t {
+    MGB_LOCK_GUARD(sm_mutex);
+    thread_dict_t thread_dict;
+    for (auto&& [tid, profiler]: sm_profilers) {
+        thread_dict[tid] = profiler->m_thread_name;
     }
-    return results;
+    return thread_dict;
 }
 
-double HostTimer::get_msecs() {
-    using namespace std::chrono;
-    auto finish = steady_clock::now();
-    auto duration = duration_cast<microseconds>(finish - m_start);
-    return (double)duration.count() / 1e3;
-}
-
-double HostTimer::get_started_at() {
-    return m_started_at;
-}
-
-void HostTimer::reset() {
-    using namespace std::chrono;
-    m_start = steady_clock::now();
-    auto now_us = duration_cast<microseconds>(std::chrono::system_clock::now().time_since_epoch());
-    m_started_at = (double)(now_us.count()) / 1e3;
+void Profiler::dump_profile(std::string basename, std::string format, results_t results, options_t options) {
+    auto thread_dict = get_thread_dict();
+    {
+        mgb_log_error("unsupported profiling format %s", format.c_str());
+    }
 }
 
 }  // namespace imperative

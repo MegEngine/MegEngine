@@ -17,6 +17,9 @@
 #include <fstream>
 #include <chrono>
 #include <bitset>
+#include <deque>
+#include <any>
+#include <typeindex>
 
 #include "megbrain/comp_node.h"
 #include "megbrain/graph/event.h"
@@ -29,165 +32,188 @@
 namespace mgb {
 namespace imperative {
 
-class DeviceTimer {
-public:
-    using SharedEvent = std::shared_ptr<CompNode::Event>;
-    DeviceTimer() = default;
-    SharedEvent get_device_time(CompNode device);
-    SmallVector<SharedEvent> get_all(SmallVector<CompNode> device_list);
-};
-
-class HostTimer {
+class Timer {
 public:
     void reset();
-    double get_msecs();
-    double get_started_at();
+    uint64_t get_nsecs();
+    uint64_t get_started_at();
+    static std::shared_ptr<CompNode::Event> record_event(CompNode device);
 private:
     decltype(std::chrono::steady_clock::now()) m_start;
-    double m_started_at;
+    uint64_t m_started_at;
 };
 
 
-class ProfilerBase {
+class Profiler {
 public:
-    using Host = std::thread::id;
-    using Device = CompNode;
-
-    struct HostInstant {
-        Host tid;
-        double time;
-
-        void wait() const {}
+    struct Record {
+        uint64_t id;
+        uint64_t time; //in ns
+        std::any data;
     };
-
-    struct DeviceInstant {
-        double before;
-        std::shared_ptr<CompNode::Event> event;
-        double after;
-
-        void wait() const {
-            event->host_wait();
-        }
+    enum Status: uint8_t {
+        Running = 0,
+        Recording = 1,
+        Collecting = 2,
     };
+    using ProfileCollector = std::function<void(std::thread::id, Record)>;
+    using option_t = uint64_t;
+    using options_t = std::unordered_map<std::string, option_t>;
+    using result_t = std::pair<std::thread::id, Record>;
+    using results_t = std::vector<result_t>;
+    using thread_dict_t = std::unordered_map<std::thread::id, std::string>;
+private:
+    std::thread::id m_thread_id;
+    std::vector<Record> m_records;
+    std::atomic<Status> m_status = Running;
+    uint64_t m_last_time = 0;
+    std::string m_thread_name;
 
-    using Instant = std::variant<HostInstant, DeviceInstant>;
-
-    template <typename TEvent>
-    struct EventRecord {
-        Instant instant;
-        TEvent data;
-
-        const HostInstant& host() const {
-            return std::get<HostInstant>(instant);
+    static options_t sm_profile_options;
+    static std::mutex sm_mutex;
+    static std::unordered_map<std::thread::id, Profiler*> sm_profilers;
+    static Timer sm_timer;
+    static std::atomic_uint64_t sm_last_id;
+    static std::atomic_size_t sm_preferred_capacity;
+    static bool sm_profiling;
+    static constexpr bool sm_debug = false;
+    thread_local static std::unique_ptr<Profiler> tm_profiler;
+public:
+    Profiler() {
+        m_thread_id = std::this_thread::get_id();
+        MGB_LOCK_GUARD(sm_mutex);
+        if (sm_profilers.size() == 0) {
+            reset();
         }
-
-        const DeviceInstant& device() const {
-            return std::get<DeviceInstant>(instant);
-        }
-
-        void wait() const {
-            std::visit([&](const auto& instant){ instant.wait(); }, instant);
-        }
-    };
-protected:
-    HostInstant record_host() {
-        return {std::this_thread::get_id(), m_host_timer.get_msecs()};
+        mgb_assert(sm_profilers.count(m_thread_id) == 0);
+        sm_profilers[m_thread_id] = this;
     }
-    DeviceInstant record_device(Device device) {
-        auto before = m_host_timer.get_msecs();
-        auto event = m_device_timer.get_device_time(device);
-        auto after = m_host_timer.get_msecs();
-        return {before, event, after};
+    ~Profiler() {
+        MGB_LOCK_GUARD(sm_mutex);
+        mgb_assert(sm_profilers.count(m_thread_id) == 1);
+        sm_profilers.erase(m_thread_id);
     }
-protected:
-    std::atomic_int64_t m_last_id = 0;
-    HostTimer m_host_timer;
-    DeviceTimer m_device_timer;
-    Spinlock m_lock;
+public:
+    static Profiler& get_instance() {
+        return *tm_profiler;
+    }
+
+    static void reset() {
+        mgb_assert(sm_profilers.size() == 0, "profiler already running");
+        sm_timer.reset();
+    }
+
+    static uint64_t next_id() {
+        return sm_last_id++;
+    }
+
+    template <typename T, typename... TArgs>
+    static uint64_t record(TArgs&&... args) {
+        auto& profiler = get_instance();
+        auto last_time = profiler.m_last_time;
+        if constexpr (sm_debug) {
+            Status expected = Running;
+            mgb_assert(profiler.m_status.compare_exchange_strong(expected, Recording));
+        }
+        uint64_t id = next_id();
+        uint64_t time = sm_timer.get_nsecs();
+        time = std::max(time, last_time + 2000);
+        profiler.m_last_time = time;
+        profiler.m_records.push_back({id, time, T{std::forward<TArgs>(args)...}});
+        if constexpr (sm_debug) {
+            Status expected = Recording;
+            mgb_assert(profiler.m_status.compare_exchange_strong(expected, Running));
+        }
+        return id;
+    }
+
+    static results_t collect() {
+        MGB_LOCK_GUARD(sm_mutex);
+        if constexpr (sm_debug) {
+            for (auto&& [tid, profiler]: sm_profilers) {
+                Status expected = Running;
+                mgb_assert(profiler->m_status.compare_exchange_strong(expected, Collecting));
+            }
+        }
+        std::vector<std::pair<std::thread::id, Record>> profile_data;
+        for (auto&& [tid, profiler]: sm_profilers) {
+            sm_preferred_capacity = std::max(sm_preferred_capacity.load(), profiler->m_records.size());
+            for (auto& record: profiler->m_records) {
+                profile_data.push_back({tid, std::move(record)});
+            }
+            profiler->m_records.clear();
+            profiler->m_records.reserve(sm_preferred_capacity);
+        }
+        std::sort(profile_data.begin(), profile_data.end(), [](auto& lhs, auto& rhs){
+            return lhs.second.id < rhs.second.id;
+        });
+        if constexpr (sm_debug) {
+            for (auto&& [tid, profiler]: sm_profilers) {
+                Status expected = Collecting;
+                mgb_assert(profiler->m_status.compare_exchange_strong(expected, Running));
+            }
+        }
+        return profile_data;
+    }
+
+    static option_t get_option(std::string key, option_t default_val) {
+        if (!sm_profile_options.count(key)) {
+            return default_val;
+        }
+        return sm_profile_options.at(key);
+    }
+
+    static void load_options(options_t options) {
+        sm_profile_options = std::move(options);
+    }
+
+    static options_t get_options() {
+        return sm_profile_options;
+    }
+
+    static bool is_profiling() {
+        return sm_profiling;
+    }
+
+    static void start_profile() {
+        mgb_assert(!sm_profiling);
+        sm_profiling = true;
+    }
+
+    static void stop_profile() {
+        mgb_assert(sm_profiling);
+        sm_profiling = false;
+    }
+
+    static thread_dict_t get_thread_dict();
+
+    static void dump_profile(std::string basename, std::string format, results_t results, options_t options);
 };
 
 
-template <typename... TEvents>
-class Profiler: public ProfilerBase {
+class ProfileDataCollector {
 public:
-    using Record = std::variant<EventRecord<TEvents>...>;
-    using Mask = std::bitset<sizeof...(TEvents)>;
-
-    struct Data {
-        std::vector<Record> records;
-        double started_at;
-    };
-
-    template <typename TEvent, size_t index = 0>
-    static constexpr size_t index_of() {
-        if constexpr (index == std::variant_size_v<Record>) {
-            return index;
-        } else if constexpr (std::is_same_v<EventRecord<TEvent>, std::variant_alternative_t<index, Record>>) {
-            return index;
-        } else {
-            return index_of<TEvent, index+1>();
-        }
-    };
-
-    template <typename... TEvents2>
-    static Mask mask_of() {
-        return Mask{} | (Mask{}.set(index_of<TEvents2>()) |...);
+    template <typename T>
+    using SubCollector = std::function<void(uint64_t, std::thread::id, uint64_t, T)>;
+private:
+    std::unordered_map<std::type_index, SubCollector<std::any>> m_collectors;
+public:
+    template <typename T>
+    ProfileDataCollector& handle(SubCollector<T> collector) {
+        auto erased = [collector](uint64_t id, std::thread::id tid, uint64_t time, std::any data){
+            collector(id, tid, time, std::any_cast<T>(std::move(data)));
+        };
+        m_collectors[typeid(T)] = erased;
+        return *this;
     }
-
-    enum Status {
-        NotStarted, Profiling, Stopped
-    };
-public:
-    template <typename TEvent, typename... TArgs>
-    void record_host(TArgs&&... args) {
-        MGB_LOCK_GUARD(m_lock);
-        if (!m_event_mask.test(index_of<TEvent>())) {
+    void operator()(uint64_t id, std::thread::id tid, uint64_t time, std::any event) {
+        std::type_index type = event.type();
+        if (m_collectors.count(type) == 0) {
             return;
         }
-        mgb_assert(m_status != Stopped, "record after stop");
-        auto instant = HostInstant{std::this_thread::get_id(), m_host_timer.get_msecs()};
-        m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
+        auto& handler = m_collectors.at(type);
+        handler(id, tid, time, std::move(event));
     }
-    template <typename TEvent, typename... TArgs>
-    void record_device(Device device, TArgs&&... args) {
-        MGB_LOCK_GUARD(m_lock);
-        if (!m_event_mask.test(index_of<TEvent>())) {
-            return;
-        }
-        mgb_assert(m_status != Stopped, "record after stop");
-        auto before = m_host_timer.get_msecs();
-        auto event = m_device_timer.get_device_time(device);
-        auto after = m_host_timer.get_msecs();
-        auto instant = DeviceInstant{before, event, after};
-        m_record_list.emplace_back(EventRecord<TEvent>{std::move(instant), {std::forward<TArgs>(args)...}});
-    }
-    // unsafe
-    bool is_profiling() {
-        return m_status == Profiling;
-    }
-    void start(Mask mask) {
-        MGB_LOCK_GUARD(m_lock);
-        mgb_assert(m_status == NotStarted, "profiler already started");
-        m_status = Profiling;
-        m_event_mask = mask;
-        m_host_timer.reset();
-    }
-    Data stop() {
-        MGB_LOCK_GUARD(m_lock);
-        mgb_assert(m_status == Profiling, "profiler not active");
-        m_status = Stopped;
-        for (auto&& record: m_record_list) {
-            std::visit([&](const auto& record){
-                record.wait();
-            }, record);
-        }
-        auto records = std::move(m_record_list);
-        return { records, m_host_timer.get_started_at() };
-    }
-protected:
-    std::vector<Record> m_record_list;
-    Mask m_event_mask;
-    std::atomic<Status> m_status = NotStarted;
 };
 
 }  // namespace imperative

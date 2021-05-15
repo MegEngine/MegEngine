@@ -24,10 +24,10 @@
 #include "megbrain/imperative/profiler.h"
 
 #include "./commands.h"
-#include "./events.h"
 #include "./tensor_info.h"
 #include "./option_manager.h"
-#include "./profiler.h"
+
+#include "../profiler/events.h"
 
 namespace mgb::imperative::interpreter::intl {
 
@@ -36,7 +36,6 @@ using Handle = Interpreter::Handle;
 struct InterpreterImpl : Interpreter {
     std::unique_ptr<Channel> create_channel() override;
 };
-
 
 struct ChannelImpl : Interpreter::Channel {
     ChannelImpl();
@@ -67,18 +66,26 @@ struct ChannelImpl : Interpreter::Channel {
     size_t get_option(std::string name) override;
     void set_option(std::string name, size_t value) override;
 
-    void start_profile(std::unordered_map<std::string, int> option) override;
-    void stop_profile(std::string basename, std::string format) override;
+    void start_profile() override;
+    void stop_profile() override;
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;
 private:
+    struct WorkQueue;
+    struct State;
+
     TensorInfo* alloc();
+    void init(TensorInfo*, LogicalTensorDesc desc);
     void free(TensorInfo*);
     void real_free(TensorInfo*);
     void recursive_free(TensorInfo*);
     void do_drop(TensorInfo*, bool);
     void detach_users(TensorInfo*);
+
+    TensorInfo* put_impl(const HostTensorND& value, bool no_cache);
+    TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
+    void notify_tensor_unsafe(TensorInfo* info);
 
     void process_one_task(IdentifiedCommand&);
 
@@ -105,24 +112,31 @@ private:
 
     bool check_available();
 
+    void push_scope(std::string, State&);
+    void pop_scope(std::string, State&);
+
     void assert_in_channel();
     void assert_in_worker();
     std::thread::id get_worker_tid();
-
-    void sync_device_scope(CompNode device);
 
     template <typename TCommand>
     void enqueue_command(TCommand&& cmd) {
         m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
     }
 
+    void sample_on_device(CompNode device, bool force);
+
+    // valid => status != Deleted
+    std::unordered_set<TensorInfo*> collect_valid_tensors();
+
     std::mutex m_mutex;
     std::condition_variable m_cv;
     MemPool<TensorInfo> m_pool;
     std::unordered_set<Handle> m_valid_handle;
     TensorInfo* m_waitee = nullptr;
+    uint64_t m_waitee_id = 0;
     std::exception_ptr m_worker_exc;
-    std::atomic_uint64_t m_last_id = 0;
+    std::function<void(std::string, std::string)> m_profile_dump_callback;
 
     bool m_closed = false;
 
@@ -191,26 +205,97 @@ private:
     //! level 0: both sync.
     int m_async_level = 2;
 
-    struct State {
-        OptionManager options;
-        std::vector<std::string> scopes;
-        std::unique_ptr<InterpreterProfiler> profiler;
+    struct Scope {
+        std::string name;
+        std::unordered_map<std::string, std::unique_ptr<Scope>> children;
+        size_t version = 0;
+        size_t parent_version = 0;
+        size_t tensor_count = 0;
+        Scope* active_child = nullptr;
+        Scope* parent = nullptr;
 
-        State() {
-            profiler = std::make_unique<InterpreterProfiler>();
+        Scope* enter(std::string name) {
+            auto& child = children[name];
+            if (!child) {
+                child = std::make_unique<Scope>();
+                child->name = name;
+                child->parent = this;
+            }
+            if (version != child->parent_version) {
+                child->version = 0;
+                child->parent_version = version;
+            } else {
+                child->version++;
+            }
+            child->tensor_count = 0;
+            return active_child = child.get();
+        }
+
+        Scope* exit(std::string name) {
+            mgb_assert(this->name == name, "scope name mismatch");
+            parent->active_child = nullptr;
+            return parent;
         }
     };
 
-    struct ChannelState: State {};
-
-    struct WorkerState: State {
-        std::thread::id tid;
-        CompNode::UnorderedMap<std::vector<std::string>> device_scope_map;
+    class ScopeManager {
+    private:
+        Scope m_root;
+        Scope* m_current_scope = &m_root;
+    public:
+        class ScopeGuard{
+        private:
+            ScopeManager* m_manager;
+            std::string m_name;
+        public:
+            ScopeGuard(ScopeManager* manager, std::string name): m_manager{manager}, m_name{name} {
+                m_manager->push(m_name);
+            }
+            ~ScopeGuard() {
+                m_manager->pop(m_name);
+            }
+        };
+        void push(std::string name) {
+            m_current_scope = m_current_scope->enter(name);
+        }
+        void pop(std::string name) {
+            m_current_scope = m_current_scope->exit(name);
+        }
+        std::string next_tensor_name() {
+            std::string builder;
+            Scope* scope = &m_root;
+            while (true) {
+                builder.append(scope->name);
+                if (scope->version != 0) {
+                    builder.append(ssprintf("(%ld)", scope->version));
+                }
+                if (scope != &m_root) {
+                    builder.append(".");
+                }
+                if (scope->active_child == nullptr) {
+                    builder.append(ssprintf(":%%%ld", scope->tensor_count++));
+                    break;
+                } else {
+                    scope = scope->active_child;
+                }
+            }
+            return builder;
+        }
     };
+
+    struct State {
+        std::thread::id tid;
+        OptionManager options;
+    };
+
+    struct ChannelState: State {
+        ScopeManager scopes;
+    };
+
+    struct WorkerState: State {};
 
     ChannelState m_channel_state;
     WorkerState m_worker_state;
-
 
     /*!
      * \brief A framework of dynamic sublienar memory optimization
@@ -327,7 +412,6 @@ private:
     // assert thread id when call get_xxx_state to avoid misuse
     ChannelState& get_channel_state();
     WorkerState& get_worker_state();
-
 };
 
 } // namespace mgb::imperative::interpreter::intl
