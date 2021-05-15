@@ -75,18 +75,19 @@ struct TensorInfo {
     std::shared_ptr<DsuNode> dsu_ptr;
 
     struct ComputePath {
+        uint64_t id;
         std::shared_ptr<OpDef> op;
         SmallVector<TensorInfo*> inputs;
         SmallVector<TensorInfo*> unique_inputs;
         SmallVector<TensorInfo*> outputs;
-        double compute_time = 0;
 
         size_t ref_cnt() {
             return outputs.size() - std::count(outputs.begin(), outputs.end(), nullptr);
         }
 
-        static ComputePath* make(std::shared_ptr<OpDef> op, SmallVector<TensorInfo*> inputs, SmallVector<TensorInfo*> outputs) {
+        static ComputePath* make(uint64_t id, std::shared_ptr<OpDef> op, SmallVector<TensorInfo*> inputs, SmallVector<TensorInfo*> outputs) {
             auto* path = new TensorInfo::ComputePath();
+            path->id = id;
             path->op = op;
             path->inputs = inputs;
             path->outputs = outputs;
