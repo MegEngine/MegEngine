@@ -21,15 +21,13 @@ namespace mgb::imperative::interpreter::intl {
 
 class InterpreterProfiler: public Profiler<
         CommandEnqueueEvent, CommandExecuteEvent, CommandFinishEvent,
-        HostOpExecuteEvent, HostOpFinishEvent,
-        DeviceOpExecuteEvent, DeviceOpFinishEvent,
+        OpExecuteEvent, OpExecuteFinishEvent,
+        KernelExecuteEvent, KernelExecuteFinishEvent,
         TensorDeclareEvent, TensorProduceEvent, TensorEraseEvent,
         TensorGetPropEvent, TensorWaitPropEvent, TensorNotifyPropEvent, TensorWaitPropFinishEvent,
-        SyncStartEvent, SyncFinishEvent,
-        ChannelBeginScope, ChannelEndScope,
-        WorkerBeginScope, WorkerEndScope,
-        DeviceBeginScope, DeviceEndScope> {
-    /*22 events now. Enum code may be a better solution*/
+        SyncEvent, SyncFinishEvent,
+        ScopeEvent, ScopeFinishEvent,
+        DeviceScopeEvent, DeviceScopeFinishEvent> {
 
 public:
     enum Topic {
@@ -71,8 +69,8 @@ public:
             result |= mask_of<CommandEnqueueEvent, CommandExecuteEvent, CommandFinishEvent>();
         }
         if (topic & Operator) {
-            result |= mask_of<HostOpExecuteEvent, HostOpFinishEvent>();
-            result |= mask_of<DeviceOpExecuteEvent, DeviceOpFinishEvent>();
+            result |= mask_of<OpExecuteEvent, OpExecuteFinishEvent>();
+            result |= mask_of<KernelExecuteEvent, KernelExecuteFinishEvent>();
         }
         if (topic & TensorLifetime) {
             result |= mask_of<TensorDeclareEvent, TensorProduceEvent, TensorEraseEvent>();
@@ -81,11 +79,11 @@ public:
             result |= mask_of<TensorGetPropEvent, TensorWaitPropEvent, TensorNotifyPropEvent, TensorWaitPropFinishEvent>();
         }
         if (topic & Sync) {
-            result |= mask_of<SyncStartEvent, SyncFinishEvent>();
+            result |= mask_of<SyncEvent, SyncFinishEvent>();
         }
         if (topic & Scope) {
-            result |= mask_of<ChannelBeginScope, ChannelEndScope, WorkerBeginScope, WorkerEndScope>();
-            result |= mask_of<DeviceBeginScope, DeviceEndScope>();
+            result |= mask_of<ScopeEvent, ScopeFinishEvent>();
+            result |= mask_of<DeviceScopeEvent, DeviceScopeFinishEvent>();
         }
         return result;
     }
