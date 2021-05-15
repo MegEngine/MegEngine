@@ -17,4 +17,6 @@
 
 namespace mgb::imperative::profiler {
 
+void dump_chrome_timeline(std::string filename, Profiler::options_t options, Profiler::thread_dict_t thread_dict, Profiler::results_t results);
+
 }

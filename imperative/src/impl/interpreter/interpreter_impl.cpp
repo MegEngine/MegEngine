@@ -48,6 +48,40 @@ namespace mgb {
     using namespace profiler;
 }
 
+#ifdef __GNUG__
+
+namespace mgb {
+
+/**
+ * USAGE
+ *
+ *   header:
+ *     namespace mgb { bool imperative_log_profile(const char* message); }
+ *
+ *   code:
+ *     mgb::imperative_log_profile("MY MESSAGE");
+ *
+ **/
+__attribute__((visibility("default")))
+void imperative_log_profile_begin(const char* message) {
+    RECORD_EVENT(CustomEvent, std::string{message});
+}
+
+__attribute__((visibility("default")))
+void imperative_log_profile_end(const char* message) {
+    RECORD_EVENT(CustomFinishEvent, std::string{message});
+}
+
+__attribute__((visibility("default")))
+void imperative_log_profile(const char* message){
+    imperative_log_profile_begin(message);
+    imperative_log_profile_end(message);
+}
+
+}
+
+#endif
+
 std::thread::id ChannelImpl::get_worker_tid() {
     return m_worker_state.tid;
 }
@@ -674,6 +708,7 @@ void ChannelImpl::auto_evict() {
     }
     size_t current_memory = m_dtr.comp_node.get_used_memory();
     while (current_memory > state.options.dtr_eviction_threshold) {
+        RECORD_EVENT(AutoEvictEvent);
         sample_on_device(m_dtr.comp_node, false);
         auto best = m_dtr.find_best_tensor();
         if (!best) {
@@ -695,6 +730,7 @@ void ChannelImpl::auto_evict() {
             m_dtr.update_dsu_after_evict(best);
         }
         sample_on_device(m_dtr.comp_node, false);
+        RECORD_EVENT(AutoEvictFinishEvent);
     }
 }
 
@@ -847,6 +883,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 RECORD_EVENT(TensorCommandFinishEvent, tensor_id, TensorCommandFinishEvent::Del);
                 sample_on_device(device, false);
             } else if constexpr (std::is_same_v<T, GetValue>) {
+                imperative_log_profile_begin("GetValue");
                 if (!cmd.dest->ptr && cmd.dest->evict_type != EvictType::NONE) {
                     regenerate(cmd.dest);
                 }
@@ -854,6 +891,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 cmd.dest->ptr->fetch_value();
                 MGB_LOCK_GUARD(m_mutex);
                 notify_tensor_unsafe(cmd.dest);
+                imperative_log_profile_end("GetValue");
             } else if constexpr (std::is_same_v<T, SwapIn>) {
                 RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::SwapIn);
                 produce_tensor(cmd.dest, Tensor::make(cmd.dest->h_value));
