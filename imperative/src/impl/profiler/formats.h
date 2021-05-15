@@ -1,5 +1,5 @@
 /**
- * \file imperative/src/impl/interpreter/profiler.cpp
+ * \file imperative/src/impl/interpreter/profiler.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
@@ -9,22 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./profiler.h"
+#pragma once
 
-#include <sstream>
-#include <cinttypes>
+#include <unordered_set>
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-#include <unistd.h>
-#elif defined(_WIN32)
-#include <process.h>
-#else
-#error Unsupported platform
-#endif
+#include "megbrain/imperative/profiler.h"
 
-#include "../op_trait.h"
-
-namespace mgb::imperative::interpreter::intl {
-
+namespace mgb::imperative::profiler {
 
 }

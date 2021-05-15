@@ -6,6 +6,8 @@
 
 #include "megbrain/tensor.h"
 
+#include "./events.h"
+
 namespace mgb::imperative::profiler {
 
 struct ProfileDeviceState {
@@ -53,6 +55,7 @@ struct ProfileStaticsState {
 struct ProfileOperatorState {
     uint64_t id;
     std::string name;
+    OpParams params;
     SmallVector<uint64_t> inputs;
     SmallVector<uint64_t> outputs;
     CompNode device;

@@ -20,19 +20,17 @@
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/utils/to_string.h"
 
+#include "../event_pool.h"
+#include "../op_trait.h"
+
 using namespace mgb;
 using namespace imperative;
 using namespace interpreter;
 using namespace interpreter::intl;
 
 #define RECORD_EVENT(type, ...) \
-    if (state.profiler->is_profiling()) { \
-        state.profiler->record_host<type>(type{__VA_ARGS__}); \
-    } \
-
-#define RECORD_DEVICE_EVENT(type, device, ...) \
-    if (state.profiler->is_profiling()) { \
-        state.profiler->record_device<type>((device), type{__VA_ARGS__}); \
+    if (Profiler::is_profiling()) { \
+        Profiler::record<type>(type{__VA_ARGS__}); \
     } \
 
 
@@ -44,6 +42,10 @@ namespace {
         }
         return tid;
     };
+}
+
+namespace mgb {
+    using namespace profiler;
 }
 
 std::thread::id ChannelImpl::get_worker_tid() {
@@ -60,6 +62,7 @@ ChannelImpl::WorkerState& ChannelImpl::get_worker_state() {
     return m_worker_state;
 }
 
+// Do not use m_xxx_state directly
 #define m_channel_state
 #define m_worker_state
 
@@ -74,10 +77,16 @@ Interpreter& Interpreter::inst() {
 
 Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     mgb_assert(check_available(), "Channel already closed");
+    auto& state = get_channel_state();
+    state.scopes.push("Put");
+    auto info = put_impl(value, no_cache);
+    state.scopes.pop("Put");
+    return info;
+}
+
+TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
     auto info = alloc();
-    info->desc.layout = value.layout();
-    info->desc.comp_node = value.comp_node();
-    info->desc.value = value.proxy_to_default_cpu();
+    init(info, {value.layout(), value.comp_node(), value.proxy_to_default_cpu()});
     info->h_value = value;
     m_buffer.enqueue(Put{info, value, no_cache});
     if (m_async_level == 0) {
@@ -90,11 +99,15 @@ Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
 Handle ChannelImpl::put(const DeviceTensorND& data) {
     auto& state = get_channel_state();
     mgb_assert(check_available(), "Channel already closed");
+    state.scopes.push("Put");
     auto info = alloc();
-    info->desc.layout = data.layout();
-    info->desc.comp_node = data.comp_node();
+    RECORD_EVENT(TensorCommandEvent, info->id, TensorCommandEvent::Put);
+    init(info, {data.layout(), data.comp_node()});
     info->ptr = Tensor::make(data);
-    RECORD_EVENT(TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node);
+    RECORD_EVENT(TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node, data.raw_ptr());
+    info->status = TensorInfo::Produced;
+    RECORD_EVENT(TensorCommandFinishEvent, info->id, TensorCommandFinishEvent::Put);
+    state.scopes.pop("Put");
     return info;
 }
 
@@ -148,7 +161,7 @@ void ChannelImpl::dispatch_default_cpu(
         SmallVector<Handle>* outputs) {
     auto& state = get_channel_state();
     auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
-    MGB_MARK_USED_VAR(validated);
+    RECORD_EVENT(ShapeInferEvent, validated);
 
     SmallVector<DeviceTensorND> input_tensornds;
     input_tensornds.reserve(input_descs.size());
@@ -166,6 +179,7 @@ void ChannelImpl::dispatch_default_cpu(
             if (info->ptr && info->ptr->try_get_value()) {
                 input_tensornds.emplace_back(info->ptr->get_value().proxy_to_default_cpu());
             } else {
+                // It's OK for SwapOut. We assign h_value before drop ptr
                 mgb_assert(!info->h_value.empty(), "inp->h_value is empty!");
                 input_tensornds.emplace_back(info->h_value.proxy_to_default_cpu());
             }
@@ -182,8 +196,7 @@ void ChannelImpl::dispatch_default_cpu(
         output_tensornds.emplace_back(HostTensorND(output_cn, desc.layout).proxy_to_default_cpu());
     }
 
-    auto apply_id = ++m_last_id;
-    RECORD_EVENT(OpExecuteEvent, apply_id, op, tinfo_to_tid(input_infos), {});
+    uint64_t op_id = Profiler::next_id();
 
     OpDef::apply_on_device_tensornd(*op, input_tensornds, &output_tensornds);
 
@@ -193,14 +206,20 @@ void ChannelImpl::dispatch_default_cpu(
         HostTensorND host_tensornd = HostTensorND::make_proxy(tensornd)
             .proxy_to_comp_node(output_cn);
         // use `put` for consistency
-        auto info = reinterpret_cast<TensorInfo*>(put(host_tensornd, false));
+        auto info = reinterpret_cast<TensorInfo*>(put_impl(host_tensornd, false));
         mgb_assert(info->desc.layout.ndim != 0);
         output_infos.push_back(info);
         outputs->push_back(info);
     }
-
-    RECORD_EVENT(OpExecuteFinishEvent, apply_id, op, 
-            tinfo_to_tid(input_infos), tinfo_to_tid(output_infos));
+    auto op_info_getter = [op]{
+        std::unordered_map<std::string, std::string> op_info;
+        auto props = OpDef::props(*op);
+        for (auto&& [key, value]: props) {
+            op_info[key] = value;
+        }
+        return op_info;
+    };
+    RECORD_EVENT(OpDispatchEvent, op_id, op->trait()->name, op_info_getter, tinfo_to_tid(input_infos), tinfo_to_tid(output_infos));
 }
 
 void ChannelImpl::dispatch_kernel(
@@ -209,15 +228,22 @@ void ChannelImpl::dispatch_kernel(
         const SmallVector<LogicalTensorDesc>& input_descs,
         SmallVector<Handle>* outputs) {
     auto& state = get_channel_state();
-    auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
+    auto& options = state.options;
 
-    ApplyOp cmd{++m_last_id, std::move(op)};
+    auto name = op->trait()->make_name(*op);
+    state.scopes.push(name);
+
+    auto [output_descs, validated] = OpDef::infer_output_attrs_fallible(*op, input_descs);
+    RECORD_EVENT(ShapeInferEvent, validated);
+
+    ApplyOp cmd{Profiler::next_id(), std::move(op)};
     cmd.inputs = std::move(input_infos);
     cmd.outputs.reserve(output_descs.size());
     outputs->reserve(output_descs.size());
-    for (auto&& desc : output_descs) {
+    for (int i = 0; i < output_descs.size(); ++i) {
+        auto&& desc = output_descs[i];
         auto info = alloc();
-        info->desc = desc;
+        init(info, desc);
         // make sure desc's value is consistent with h_value
         if (!info->desc.value.empty()) {
             info->h_value = HostTensorND::make_proxy(desc.value)
@@ -226,10 +252,19 @@ void ChannelImpl::dispatch_kernel(
         cmd.outputs.push_back(info);
         outputs->push_back(info);
     }
+    auto op_info_getter = [op=cmd.op]{
+        std::unordered_map<std::string, std::string> op_info;
+        auto props = OpDef::props(*op);
+        for (auto&& [key, value]: props) {
+            op_info[key] = value;
+        }
+        return op_info;
+    };
+    RECORD_EVENT(OpDispatchEvent, cmd.id, cmd.op->trait()->name, op_info_getter, tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs));
     m_buffer.enqueue(std::move(cmd));
-    if (!validated && state.options.async_level == 1) {
+    if (!validated && options.async_level == 1) {
         sync();
-    } else if (state.options.async_level == 0) {
+    } else if (options.async_level == 0) {
         sync();
         // check device error
         for (auto&& oup : *outputs) {
@@ -237,6 +272,7 @@ void ChannelImpl::dispatch_kernel(
             info->ptr->comp_node().sync();
         }
     }
+    state.scopes.pop(name);
 }
 
 SmallVector<Handle> ChannelImpl::apply_op(
@@ -282,31 +318,12 @@ SmallVector<Handle> ChannelImpl::apply_op(
 HostTensorND ChannelImpl::get_value(Handle handle) {
     mgb_assert(check_available(), "Channel already closed");
     auto& state = get_channel_state();
-    // TODO: maybe get_value should be done on host. i.e. delete GetValue
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
-    mgb_assert(!m_waitee);
     // donnot use info->value_fetched, it's unsafe
     mgb_assert(!info->invalid, "Invalid tensor, unable to get_value!");
-    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
-    TensorPtr tensor_ptr = info->ptr;
-    auto value_fetched = [&]() {
-        return tensor_ptr && tensor_ptr->value_fetched();
-    };
-    if (!value_fetched()) {
-        m_waitee = info;
-        m_buffer.enqueue(GetValue{info});
-        RECORD_EVENT(TensorWaitPropEvent, info->id, TensorInfo::HostValue);
-        m_cv.wait(lock, [&]() {
-            check_worker_exc_unsafe();
-            tensor_ptr = info->ptr;
-            return value_fetched();
-        });
-        RECORD_EVENT(TensorWaitPropFinishEvent, info->id, TensorInfo::HostValue);
-        m_waitee = nullptr;
-    }
-    return tensor_ptr->get_value();
+    return wait_tensor(info, TensorProp::HostValue)->get_value();
 }
 
 TensorShape ChannelImpl::get_shape(Handle handle) {
@@ -318,18 +335,7 @@ TensorShape ChannelImpl::get_shape(Handle handle) {
     if (info->desc.layout.ndim != 0) {
         return info->desc.layout;
     }
-    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
-    mgb_assert(!m_waitee);
-    m_waitee = info;
-    m_buffer.flush();
-    RECORD_EVENT(TensorWaitPropEvent, info->id, TensorInfo::Shape);
-    m_cv.wait(lock, [&]() {
-        check_worker_exc_unsafe();
-        return static_cast<bool>(info->ptr);
-    });
-    RECORD_EVENT(TensorWaitPropFinishEvent, info->id, TensorInfo::Shape);
-    m_waitee = nullptr;
-    TensorShape ret = info->ptr->layout();
+    TensorShape ret = wait_tensor(info, TensorProp::Shape)->layout();
     mgb_assert(ret.ndim != 0);
     return ret;
 }
@@ -340,7 +346,7 @@ DType ChannelImpl::get_dtype(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
-    RECORD_EVENT(TensorGetPropEvent, info->id, TensorInfo::DType);
+    RECORD_EVENT(TensorGetPropEvent, info->id, TensorProp::DType);
     auto ret = info->desc.layout.dtype;
     mgb_assert(ret.valid());
     return ret;
@@ -352,7 +358,7 @@ CompNode ChannelImpl::get_device(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
-    RECORD_EVENT(TensorGetPropEvent, info->id, TensorInfo::Device);
+    RECORD_EVENT(TensorGetPropEvent, info->id, TensorProp::Device);
     auto ret = info->desc.comp_node;
     mgb_assert(ret.valid());
     return ret;
@@ -364,28 +370,14 @@ DeviceTensorND ChannelImpl::get_dev_tensor(Handle handle) {
     mgb_assert(m_valid_handle.find(handle) != m_valid_handle.end(),
                "invalid handle: %p", handle);
     auto info = reinterpret_cast<TensorInfo*>(handle);
-    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
-    mgb_assert(!m_waitee);
-    m_waitee = info;
-    m_buffer.flush();
-    RECORD_EVENT(TensorWaitPropEvent, info->id, TensorInfo::DevValue);
-    m_cv.wait(lock, [&]() {
-        check_worker_exc_unsafe();
-        return static_cast<bool>(info->ptr);
-    });
-    RECORD_EVENT(TensorWaitPropFinishEvent, info->id, TensorInfo::DevValue);
-    m_waitee = nullptr;
-    return info->ptr->dev_tensor();
+    return wait_tensor(info, TensorProp::DevValue)->dev_tensor();
 }
 
 void ChannelImpl::sync() {
     mgb_assert(check_available(), "Channel already closed");
     auto& state = get_channel_state();
     m_buffer.flush();
-    RECORD_EVENT(SyncEvent);
     m_worker.wait_all_task_finish();
-    CompNode::sync_all();
-    RECORD_EVENT(SyncFinishEvent);
     MGB_LOCK_GUARD(m_mutex);
     check_worker_exc_unsafe();
 }
@@ -419,12 +411,22 @@ void ChannelImpl::set_option(std::string name, size_t value) {
 
 TensorInfo* ChannelImpl::alloc() {
     auto& state = get_channel_state();
-    MGB_LOCK_GUARD(m_mutex);
-    auto info = m_pool.alloc();
-    m_valid_handle.insert(info);
-    info->id = m_last_id++;
-    RECORD_EVENT(TensorDeclareEvent, info->id);
+    auto info = [this]{
+        MGB_LOCK_GUARD(m_mutex);
+        return m_pool.alloc();
+    }();
+    info->id = Profiler::next_id();
+    if (Profiler::is_profiling()) {
+        info->name = state.scopes.next_tensor_name();
+    }
     return info;
+}
+
+void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc desc) {
+    m_valid_handle.insert(info);
+    RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
+    info->status = TensorInfo::Allocated;
+    info->desc = std::move(desc);
 }
 
 
@@ -439,6 +441,7 @@ void ChannelImpl::do_drop(TensorInfo* ptr, bool user=false) {
         return;
     }
     ptr->evict_type = EvictType::DROP;
+    ptr->status = TensorInfo::Dropped;
     release_tensor(ptr);
 }
 
@@ -460,7 +463,8 @@ void ChannelImpl::free(TensorInfo* ptr) {
 }
 
 void ChannelImpl::recursive_free(TensorInfo* ptr) {
-    SmallVector<TensorInfo*> inps(0);
+    RECORD_EVENT(TensorCommandEvent, ptr->id, TensorCommandEvent::RecFree);
+    SmallVector<TensorInfo*> inps;
     if (ptr->producer) {
         for (auto i : ptr->producer->inputs) {
             if (i && --i->ref_cnt == 0) {
@@ -474,17 +478,23 @@ void ChannelImpl::recursive_free(TensorInfo* ptr) {
             recursive_free(i);
         }
     }
+    RECORD_EVENT(TensorCommandFinishEvent, ptr->id, TensorCommandFinishEvent::RecFree);
 }
 
 void ChannelImpl::real_free(TensorInfo* ptr) {
     auto& state = get_worker_state();
     MGB_LOCK_GUARD(m_mutex);
-    RECORD_EVENT(TensorEraseEvent, ptr->id);
     if (ptr->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
         m_dtr.erase_candidate(ptr);
     }
     detach_users(ptr);
     ptr->detach_producer();
+    bool has_value = ptr->ptr != nullptr;
+    if (has_value) {
+        RECORD_EVENT(TensorReleaseEvent, ptr->id);
+    }
+    RECORD_EVENT(TensorEraseEvent, ptr->id, ptr->ptr_use_count);
+    ptr->status = TensorInfo::Deleted;
     m_pool.free(ptr);
 }
 
@@ -496,46 +506,48 @@ ChannelImpl::~ChannelImpl() {
 
 void ChannelImpl::produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice=true) {
     auto& state = get_worker_state();
-    auto lock = std::unique_lock<std::mutex>(m_mutex, std::defer_lock);
+    std::unique_lock<std::mutex> lock{m_mutex, std::defer_lock};
     if (notice) {
         lock.lock();
     }
     m_dtr.update_used_time(dest);
-    if (notice) {
-        RECORD_EVENT(TensorProduceEvent, dest->id, ptr->layout(), ptr->comp_node());
-    }
-    dest->value_fetched = ptr->value_fetched();
+    RECORD_EVENT(TensorProduceEvent, dest->id, ptr->layout(), ptr->comp_node(), ptr->dev_tensor().raw_ptr());
     // update tensor desc for static infer
     dest->desc.layout = ptr->layout();
     dest->desc.comp_node = ptr->comp_node();
     dest->memory = ptr->blob()->size();
     dest->ptr = std::move(ptr);
     dest->evict_type = EvictType::NONE;
+    dest->status = TensorInfo::Produced;
     if (notice && dest->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
         m_dtr.insert_candidate(dest);
     }
-    if (notice && m_waitee == dest) {
-        m_cv.notify_all();
+    if (notice) {
+        notify_tensor_unsafe(dest);
     }
 }
 
 void ChannelImpl::release_tensor(TensorInfo* dest) {
+    RECORD_EVENT(TensorReleaseEvent, dest->id);
     MGB_LOCK_GUARD(m_mutex);
     dest->ptr.reset();
 }
 
 void ChannelImpl::regenerate(TensorInfo* dest) {
+    RECORD_EVENT(TensorCommandEvent, dest->id, TensorCommandEvent::ReGen);
     if (dest->evict_type == EvictType::DROP) {
         recompute(dest->producer);
     } else if (dest->evict_type == EvictType::SWAP) {
         produce_tensor(dest, Tensor::make(dest->h_value));
     }
+    RECORD_EVENT(TensorCommandFinishEvent, dest->id, TensorCommandFinishEvent::ReGen);
 }
 
 void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     using namespace ranges;
     using namespace ranges::views;
     auto& state = get_worker_state();
+    bool profiling_device = Profiler::is_profiling() && Profiler::get_option("profile_device", 0);
     uint64_t apply_id = cmd.id;
     SmallVector<TensorPtr> tensor_inputs;
     if (state.options.enable_dtr_auto_drop) {
@@ -545,33 +557,50 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         if (!i->ptr && i->evict_type != EvictType::NONE) {
             regenerate(i);
         }
-        // inputs.push_back(i->ptr);
         m_dtr.update_used_time(i);
     }
     tensor_inputs.reserve(cmd.inputs.size());
     // refcnt == 1, owners: [TensorInfo::ptr]
     for (auto i : cmd.inputs) {
         mgb_assert(i->ptr, "Invalid input tensor ptr!");
+        // refcnt ++, owners: [i->ptr, tensor_inputs]
         tensor_inputs.push_back(i->ptr);
     }
+    RECORD_EVENT(OpExecuteEvent, apply_id);
     // Begin profiling operator
-    SmallVector<CompNode> devices;
-    if (state.profiler->is_profiling()) {
+    SmallVector<std::pair<CompNode, uint64_t>> kernels;
+    if (profiling_device) {
+        // Collecting devices
+        SmallVector<CompNode> devices;
         for (auto&& i : concat(cmd.inputs, cmd.outputs)) {
             if (i != nullptr && count(devices, i->desc.comp_node) == 0) {
                 devices.push_back(i->desc.comp_node);
+                kernels.push_back({i->desc.comp_node, Profiler::next_id()});
             }
         }
     }
-    for (auto* del : cmd.dels) {
-        free(del);
+    for (auto* input: cmd.inputs) {
+        auto input_id = input->id;
+        RECORD_EVENT(OpInputEvent, input_id);
+        RECORD_EVENT(TensorUsageEvent, input_id);
+        RECORD_EVENT(OpInputFinishEvent, input_id);
     }
-    RECORD_EVENT(OpExecuteEvent, apply_id, cmd.op,
-            tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs));
-    for (auto&& device: devices) {
-        sync_device_scope(device);
-        RECORD_DEVICE_EVENT(KernelExecuteEvent, device, apply_id, cmd.op,
-                tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs));
+    // Fused by command buffer. @see: CommandBuffer::fuse_del
+    // Now if dest is inplacable, it's refcnt would be decreased to 1 and owned by tensor_inputs after Del.
+    // Note for exprs like 'y = x op x', inplace is unsupported yet but Del would be also fused.
+    for (auto* del : cmd.dels) {
+        // refcnt --, owners: [tensor_inputs]
+        // if it's decreased to 1, would be detected at @see: proxy_graph_detail::apply_on_physical_tensor
+        uint64_t del_id = del->id;
+        RECORD_EVENT(OpDelEvent, del_id);
+        free(del);
+        RECORD_EVENT(OpDelFinishEvent, del_id);
+    }
+    // Before wait
+    //TODO: split operator wait and execute so that OpWait could be corrected recorded.
+    // Before execute
+    for (auto&& [device, kernel_id]: kernels) {
+        RECORD_EVENT(KernelExecuteEvent, apply_id, kernel_id, Timer::record_event(device));
     }
     if (state.options.enable_dtr_auto_drop && state.options.dtr_eviction_threshold > 0) {
         auto_evict();
@@ -579,20 +608,26 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     // Apply op
     // Here std::move is REQUIRED for removing duplicated references.
     auto tensor_outputs = OpDef::apply_on_physical_tensor(
-        *cmd.op, tensor_inputs);
+        *cmd.op, std::move(tensor_inputs));
     // After execute
-    for (auto&& device : devices) {
-        RECORD_DEVICE_EVENT(KernelExecuteFinishEvent, device, apply_id, cmd.op,
-                tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs));
+    for (auto&& [device, kernel_id]: kernels) {
+        RECORD_EVENT(KernelExecuteFinishEvent, apply_id, kernel_id, Timer::record_event(device));
     }
-    RECORD_EVENT(OpExecuteFinishEvent, apply_id, cmd.op,
-            tinfo_to_tid(cmd.inputs), tinfo_to_tid(cmd.outputs));
     // End profiling operator
     mgb_assert(tensor_outputs.size() == cmd.outputs.size());
     for (size_t i = 0; i < tensor_outputs.size(); ++i) {
         auto output = cmd.outputs[i];
-        if (output != nullptr && output->ptr == nullptr) {
+        if (output == nullptr) {
+            RECORD_EVENT(OpOutputEvent, 0);
+            RECORD_EVENT(OpOutputFinishEvent, 0);
+        } else if (output->ptr != nullptr) {
+            RECORD_EVENT(OpOutputEvent, output->id);
+            RECORD_EVENT(OpOutputFinishEvent, output->id);
+        } else {
+            RECORD_EVENT(OpOutputEvent, output->id);
             produce_tensor(output, tensor_outputs[i]);
+            RECORD_EVENT(OpOutputFinishEvent, output->id);
+            sample_on_device(output->desc.comp_node, false);
         }
     }
 
@@ -612,6 +647,8 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         }
         m_dtr.unpin(cmd.inputs);
     }
+    RECORD_EVENT(OpExecuteFinishEvent, apply_id);
+    // End profiling operator
 }
 
 void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
@@ -637,6 +674,7 @@ void ChannelImpl::auto_evict() {
     }
     size_t current_memory = m_dtr.comp_node.get_used_memory();
     while (current_memory > state.options.dtr_eviction_threshold) {
+        sample_on_device(m_dtr.comp_node, false);
         auto best = m_dtr.find_best_tensor();
         if (!best) {
             if (!m_dtr.warn_printed) {
@@ -656,6 +694,7 @@ void ChannelImpl::auto_evict() {
         if (best->evict_type == EvictType::DROP) {
             m_dtr.update_dsu_after_evict(best);
         }
+        sample_on_device(m_dtr.comp_node, false);
     }
 }
 
@@ -665,6 +704,10 @@ void ChannelImpl::detach_users(TensorInfo* dest) {
         SmallVector<TensorInfo*> outputs = user->outputs;
         SmallVector<TensorInfo*> inputs = user->inputs;
         for (auto* output: outputs) {
+        // When a `ComputePath` is detach from it's input,
+        // there is no need to reserve it,
+        // so we detach all output of this path
+        // to decrease it's `ref_cnt` to zero.
             if (output == nullptr) {
                 continue;
             }
@@ -674,63 +717,79 @@ void ChannelImpl::detach_users(TensorInfo* dest) {
                 input->ref_cnt --;
             }
         }
+        // now user is dead
     }
-    mgb_assert(dest->users.size() == 0);
-    //dest->users.clear();
+    mgb_assert(dest->users.empty(), "ComputePath leaking");
 }
 
 bool ChannelImpl::check_available() {
     return !m_closed;
 }
 
-void ChannelImpl::sync_device_scope(CompNode device) {
-    auto& state = get_worker_state();
-    auto& prev = state.device_scope_map[device];
-    auto& current = state.scopes;
-    auto push_scope = [&](std::string name) {
-        RECORD_DEVICE_EVENT(DeviceScopeEvent, device, name);
-    };
-    auto pop_scope = [&](std::string name) {
-        RECORD_DEVICE_EVENT(DeviceScopeFinishEvent, device, name);
-    };
-    size_t similarity = 0;
-    for (size_t i = 0; i < prev.size() && i < current.size(); i++) {
-        if (prev[i] == current[i]) {
-            similarity++;
+TensorPtr ChannelImpl::wait_tensor(TensorInfo* info, TensorProp prop) {
+    m_buffer.flush();
+    std::unique_lock<decltype(m_mutex)> lock(m_mutex);
+    mgb_assert(!m_waitee, "duplicate waitee");
+    m_waitee = info;
+    m_waitee_id = Profiler::next_id();
+    RECORD_EVENT(TensorWaitPropEvent, info->id, m_waitee_id, prop);
+    bool require_host = prop == TensorProp::HostValue;
+    bool value_fetching = false;
+    m_cv.wait(lock, [&]() {
+        check_worker_exc_unsafe();
+        if (require_host) {
+            if (info->ptr && info->ptr->value_fetched()) {
+                return true;
+            }
+            if (!value_fetching) {
+                m_buffer.enqueue(GetValue{info});
+                value_fetching = true;
+            }
+            return false;
         } else {
-            break;
+            return static_cast<bool>(info->ptr);
         }
+    });
+    RECORD_EVENT(TensorWaitPropFinishEvent, info->id, m_waitee_id, prop, m_waitee == nullptr);
+    if (m_waitee != nullptr) {
+        mgb_assert(m_waitee == info, "waitee mismatch");
+        m_waitee = nullptr;
     }
-    while (prev.size() > similarity) {
-        pop_scope(prev.back());
-        prev.pop_back();
+    return info->ptr;
+}
+
+void ChannelImpl::notify_tensor_unsafe(TensorInfo* info) {
+    if (info == m_waitee) {
+        m_waitee = nullptr;
+        RECORD_EVENT(TensorNotifyPropEvent, info->id);
+        m_cv.notify_all();
     }
-    while (prev.size() < current.size()) {
-        prev.push_back(current[prev.size()]);
-        push_scope(prev.back());
+}
+
+std::unordered_set<TensorInfo*> ChannelImpl::collect_valid_tensors() {
+    std::unordered_set<TensorInfo*> valid_tensors;
+    for (auto* handle: m_valid_handle) {
+        auto* info = reinterpret_cast<TensorInfo*>(handle);
+        valid_tensors.insert(info);
+    //TODO: valid_tensors.insert({info, info->status});
     }
+    return valid_tensors;
 }
 
 void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
     using namespace ranges;
     using namespace ranges::views;
-
     auto& state = get_worker_state();
-    RECORD_EVENT(CommandExecuteEvent, icmd);
-    bool finished = false;
-    auto do_finish_command = [&]{
-        if (finished) {
-            return;
-        }
-        RECORD_EVENT(CommandFinishEvent, icmd);
-        finished = true;
-    };
+    auto& options = state.options;
     //TODO: remove std::visit for support osx 10.12
     auto cmd_visitor = [&](const auto& cmd) {
             using T = std::decay_t<decltype(cmd)>;
             if constexpr (std::is_same_v<T, Put>) {
+                RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::Put);
                 auto value = cmd.no_cache ? std::make_shared<Tensor>(cmd.value) : Tensor::make(cmd.value);
                 produce_tensor(cmd.dest, std::move(value));
+                RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandFinishEvent::Put);
+                sample_on_device(cmd.dest->desc.comp_node, false);
             } else if constexpr (std::is_same_v<T, ApplyOp>) {
                 do_apply_op(cmd);
                 for (size_t i = 0; i < cmd.outputs.size(); ++i) {
@@ -739,7 +798,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         continue;
                     }
                     if (state.options.enable_dtr_auto_drop) {
-                        cmd.outputs[i]->dsu_ptr = std::make_shared<DsuNode>(output->compute_time);
+                        output->dsu_ptr = std::make_shared<DsuNode>(output->compute_time);
                     }
                 }
                 if (state.options.enable_drop && state.options.record_computing_path) {
@@ -765,6 +824,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
 
                     bool cross_cn = any_of(concat(cmd.inputs, cmd.outputs), is_cross_cn);
                     bool inplace = any_of(cartesian_product(cmd.inputs, cmd.outputs), is_inplace);
+
                     if (!inplace && !cross_cn && !m_dtr.is_bad_op(get_name(*cmd.op))) {
                         TensorInfo::ComputePath::make(cmd.id, cmd.op, cmd.inputs, cmd.outputs);
                         size_t detach_cnt = 0;
@@ -780,7 +840,12 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                     }
                 }
             } else if constexpr (std::is_same_v<T, Del>) {
+                RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::Del);
+                CompNode device = cmd.dest->desc.comp_node;
+                uint64_t tensor_id = cmd.dest->id;
                 free(cmd.dest);
+                RECORD_EVENT(TensorCommandFinishEvent, tensor_id, TensorCommandFinishEvent::Del);
+                sample_on_device(device, false);
             } else if constexpr (std::is_same_v<T, GetValue>) {
                 if (!cmd.dest->ptr && cmd.dest->evict_type != EvictType::NONE) {
                     regenerate(cmd.dest);
@@ -788,50 +853,62 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 mgb_assert(cmd.dest->ptr, "Invalid tensor ptr!");
                 cmd.dest->ptr->fetch_value();
                 MGB_LOCK_GUARD(m_mutex);
-                cmd.dest->value_fetched = true;
-                if (m_waitee == cmd.dest) {
-                    m_cv.notify_all();
-                }
+                notify_tensor_unsafe(cmd.dest);
             } else if constexpr (std::is_same_v<T, SwapIn>) {
+                RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::SwapIn);
                 produce_tensor(cmd.dest, Tensor::make(cmd.dest->h_value));
+                RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandFinishEvent::SwapIn);
+                sample_on_device(cmd.dest->desc.comp_node, false);
             } else if constexpr (std::is_same_v<T, SwapOut>) {
+                RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::SwapOut);
                 cmd.dest->h_value = cmd.dest->ptr->get_value();
                 if (cmd.dest->evict_type == EvictType::NONE) {
-                    release_tensor(cmd.dest);
                     cmd.dest->evict_type = EvictType::SWAP;
+                    cmd.dest->status = TensorInfo::Swapped;
+                    release_tensor(cmd.dest);
                 }
+                RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandFinishEvent::SwapOut);
+                sample_on_device(cmd.dest->desc.comp_node, false);
             } else if constexpr (std::is_same_v<T, Drop>) {
+                RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandEvent::Drop);
                 do_drop(cmd.dest, true);
+                RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandFinishEvent::Drop);
             } else if constexpr (std::is_same_v<T, SetOption>) {
-                state.options.set_option(cmd.key, cmd.value);
+                options.set_option(cmd.key, cmd.value);
             } else if constexpr (std::is_same_v<T, StartProfile>) {
+                RECORD_EVENT(StartProfileEvent);
                 CompNode::sync_all();
-                state.profiler.reset(cmd.profiler);
-            } else if constexpr (std::is_same_v<T, StopProfile>) {
-                for (auto&& [device, scopes]: state.device_scope_map) {
-                    MGB_MARK_USED_VAR(scopes);
-                    sync_device_scope(device);
-                }
-                do_finish_command();
-                auto profiler = std::make_unique<InterpreterProfiler>();
-                std::swap(profiler, state.profiler);
-                auto records = profiler->stop();
-                auto worker_tid = get_worker_tid();
-                auto host_map = [worker_tid](std::thread::id tid) {
-                    if (tid == worker_tid) {
-                        return "worker";
-                    } else {
-                        return "unknown";
+                for (auto* info: cmd.capture_tensors) {
+                    RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
+                    if (info->status == TensorInfo::Produced) {
+                        // TODO: handle swap/drop
+                        RECORD_EVENT(TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node, info->ptr->dev_tensor().raw_ptr());
                     }
-                };
+                }
+                CompNode::foreach([&](CompNode device){
+                    if (Profiler::get_option("sample_rate", 0)) {
+                        sample_on_device(device, true);
+                    }
+                });
+                RECORD_EVENT(StartProfileFinishEvent);
+            } else if constexpr (std::is_same_v<T, StopProfile>) {
+                RECORD_EVENT(StopProfileEvent);
+                for (auto* info: cmd.escape_tensors) {
+                    bool has_value = info->status == TensorInfo::Produced;
+                    if (has_value) {
+                        RECORD_EVENT(TensorReleaseEvent, info->id);
+                    }
+                    RECORD_EVENT(TensorEraseEvent, info->id);
+                }
+                CompNode::foreach([&](CompNode device){
+                    if (Profiler::get_option("sample_rate", 0)) {
+                        sample_on_device(device, true);
+                    }
+                });
+                RECORD_EVENT(StopProfileFinishEvent);
             } else if constexpr (std::is_same_v<T, PushScope>) {
-                state.scopes.push_back(cmd.scope_name);
-                do_finish_command();
                 RECORD_EVENT(ScopeEvent, cmd.scope_name);
             } else if constexpr (std::is_same_v<T, PopScope>) {
-                mgb_assert(state.scopes.back() == cmd.scope_name, "scope name mismatch");
-                state.scopes.pop_back();
-                do_finish_command();
                 RECORD_EVENT(ScopeFinishEvent, cmd.scope_name);
             } else {
                 static_assert(!std::is_same_v<T, T>);
@@ -839,7 +916,7 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
     };
     std::visit([&](const auto& cmd){
         using T = std::decay_t<decltype(cmd)>;
-        if (!state.options.catch_worker_execption) {
+        if (!options.catch_worker_execption) {
             cmd_visitor(cmd);
             return;
         }
@@ -855,10 +932,12 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 cmd.dest->invalid = true;
             }
             m_worker_exc = std::current_exception();
-            m_cv.notify_all();
+            RECORD_EVENT(WorkerExceptionEvent);
+            if (m_waitee) {
+                notify_tensor_unsafe(m_waitee);
+            }
         }
     }, icmd.second);
-    do_finish_command();
 }
 
 void ChannelImpl::check_worker_exc_unsafe() {
@@ -888,17 +967,17 @@ void ChannelImpl::CommandBuffer::flush() {
 void ChannelImpl::CommandBuffer::flush(Handle pos) {
     auto& state = m_owner->get_channel_state();
     for (auto iter = m_commands.begin(); iter != pos; ++iter) {
-        // mgb_log_debug("%s Flushed", to_string(*iter).c_str());
-        IdentifiedCommand icmd{++m_owner->m_last_id, std::move(*iter)};
-        RECORD_EVENT(CommandEnqueueEvent, icmd);
-        m_owner->m_worker.add_task(std::move(icmd));
+        if (Profiler::is_profiling()) {
+            mgb_log_debug("%s Flushed", to_string(*iter).c_str());
+        }
+        m_owner->m_worker.add_task(IdentifiedCommand{Profiler::next_id(), std::move(*iter)});
     }
     m_commands.erase(m_commands.begin(), pos);
 }
 
 auto ChannelImpl::CommandBuffer::flush_pos_for(const Command& cmd) -> Handle {
     auto& state = m_owner->get_channel_state();
-    return std::visit([&, this](const auto& cmd) {
+    return std::visit([this, &state](const auto& cmd) {
         using T = std::decay_t<decltype(cmd)>;
         if constexpr (std::is_same_v<T, ApplyOp>) {
             auto* op_type = cmd.op->dyn_typeinfo();
@@ -986,46 +1065,37 @@ auto ChannelImpl::CommandBuffer::find_produce(TensorInfo* dest, Range range)
     });
 }
 
-void ChannelImpl::start_profile(std::unordered_map<std::string, int> option) {
+void ChannelImpl::start_profile() {
     mgb_assert(check_available(), "Channel already closed");
-    auto& state = get_channel_state();
-    auto profiler_option = InterpreterProfiler::Option::from_dict(option);
-    auto profiler = std::make_unique<InterpreterProfiler>();
-    profiler->set_option(profiler_option);
-    profiler->start(InterpreterProfiler::topic_to_mask(profiler_option.topic));
-    std::swap(profiler, state.profiler);
-    m_buffer.enqueue(StartProfile{state.profiler.get()});
+    auto capture_tensors = collect_valid_tensors();
+    if (capture_tensors.size() > 0) {
+        m_buffer.enqueue(StartProfile{std::move(capture_tensors)});
+    }
 }
 
-void ChannelImpl::stop_profile(std::string basename, std::string format) {
+void ChannelImpl::stop_profile() {
     mgb_assert(check_available(), "Channel already closed");
-    auto& state = get_channel_state();
     m_buffer.flush();
-    auto profiler = std::make_unique<InterpreterProfiler>();
-    std::swap(profiler, state.profiler);
-    profiler.release();
-    m_buffer.enqueue(StopProfile{basename, format});
+    auto escape_tensors = collect_valid_tensors();
+    if (escape_tensors.size() > 0) {
+        m_buffer.enqueue(StopProfile{std::move(escape_tensors)});
+    }
 }
 
 void ChannelImpl::push_scope(std::string name) {
     mgb_assert(check_available(), "Channel already closed");
     auto& state = get_channel_state();
+    state.scopes.push(name);
     RECORD_EVENT(ScopeEvent, name);
-    if (state.profiler->is_profiling()) {
-        state.scopes.push_back(name);
-        m_buffer.enqueue(PushScope{name});
-    }
+    m_buffer.enqueue(PushScope{name});
 }
 
 void ChannelImpl::pop_scope(std::string name) {
     mgb_assert(check_available(), "Channel already closed");
     auto& state = get_channel_state();
+    state.scopes.pop(name);
     RECORD_EVENT(ScopeFinishEvent, name);
-    if (state.profiler->is_profiling()) {
-        mgb_assert((!state.scopes.empty()) && state.scopes.back() == name, "scope name mismatch");
-        state.scopes.pop_back();
-        m_buffer.enqueue(PopScope{name});
-    }
+    m_buffer.enqueue(PopScope{name});
 }
 
 void ChannelImpl::assert_in_channel() {
@@ -1034,6 +1104,19 @@ void ChannelImpl::assert_in_channel() {
 
 void ChannelImpl::assert_in_worker() {
     mgb_assert(get_worker_tid() == std::this_thread::get_id(), "this method can only be called in worker thread");
+}
+
+void ChannelImpl::sample_on_device(CompNode device, bool force) {
+    if (!force) {
+        thread_local int last_sample_id = 0;
+        int sample_rate = Profiler::is_profiling() ? Profiler::get_option("sample_rate", 0) : 0;
+        if (!sample_rate || ((++last_sample_id) % sample_rate != 0)) {
+            return;
+        }
+    }
+    RECORD_EVENT(SampleDeviceEvent, device);
+    auto [total, free] = device.get_mem_status_bytes();
+    RECORD_EVENT(SampleDeviceFinishEvent, device, total, free);
 }
 
 void ChannelImpl::DynamicSublinear::pin(const SmallVector<TensorInfo*>& vec) {

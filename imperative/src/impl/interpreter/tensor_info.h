@@ -27,19 +27,19 @@ enum EvictType {
 
 /*!
  * \brief an identifier to specify a component of evicted tensors
- * 
+ *
  * Each component tracks the sum of the compute costs of its elements, with the
  * union of two components having the sum of each constituent cost.
  */
 struct DsuNode {
     DsuNode(double _t): t(_t) {}
-    
+
     std::shared_ptr<DsuNode> parent;
 
     bool is_root() {
         return !bool(parent);
     }
-    
+
     double t;
 };
 
@@ -47,25 +47,33 @@ struct TensorInfo;
 using TensorInfoPtr = std::shared_ptr<TensorInfo>;
 
 struct TensorInfo {
-    enum Prop {
-        Device, Shape, DType, DevValue, HostValue
+    enum Status {
+        InvalidStatus, Allocated, Produced, Swapped, Dropped, Deleted,
     };
 
-    uint64_t id;
+    uint64_t id = -1;
+    std::string name;
+    // Most attrs of TensorInfo, except `ptr` and `h_value`,
+    // were visited read and written in main thread.
+    // Lock interpreter when visiting `ptr`.
     TensorPtr ptr;
     LogicalTensorDesc desc;
 
     double compute_time;
     size_t memory;
     double last_used_time;
-    
-    // FIXME: broken by drop
-    bool value_fetched = false;
+
     bool invalid = false;
     bool allow_delete = false;
 
     EvictType evict_type = NONE;
 
+    // Status should be only modified in worker thread
+    Status status = InvalidStatus;
+
+    // Used by HostCompute and Memory Swap.
+    // HostCompute and Swap does not happen in one thread.
+    // Maybe a barrier is needed.
     HostTensorND h_value;
 
     // reserved for auto drop
@@ -74,6 +82,10 @@ struct TensorInfo {
     size_t ref_cnt = 0;
     std::shared_ptr<DsuNode> dsu_ptr;
 
+    // Not reference count, inc when used as input
+    size_t ptr_use_count = 0;
+
+    // Used by `Drop` action
     struct ComputePath {
         uint64_t id;
         std::shared_ptr<OpDef> op;
@@ -111,7 +123,7 @@ struct TensorInfo {
             return path;
         }
     }* producer = nullptr;
-  
+
     double eval_func(double cost, double free_mem, double cur_time,
                      double param_cost, double param_mem, double param_time, double param_recompute_times) {
         return pow(cost + 1e-3, param_cost) * pow(param_recompute_times, (double)recompute_times)
@@ -126,20 +138,24 @@ struct TensorInfo {
         --pinned;
     }
 
-    void detach_producer() {
+    // returns true if producer is deleted
+    bool detach_producer() {
         if (!producer) {
-            return;
+            return false;
         }
         auto output = std::find(producer->outputs.begin(), producer->outputs.end(), this);
         mgb_assert(output != producer->outputs.end());
         *output = nullptr;
+        bool deleted = false;
         if (producer->ref_cnt() == 0) {
             for (auto* input: producer->unique_inputs) {
                 input->users.erase(std::find(input->users.begin(), input->users.end(), producer));
             }
             delete producer;
+            deleted = true;
         }
         producer = nullptr;
+        return deleted;
     }
 
     bool size_exceeds_thd(size_t thd) {
@@ -149,27 +165,5 @@ struct TensorInfo {
     SmallVector<ComputePath*> users;
 };
 }
-
-template <>
-struct ToStringTrait<interpreter::intl::TensorInfo::Prop>{
-    using TensorInfo = interpreter::intl::TensorInfo;
-
-    std::string operator()(TensorInfo::Prop prop) const {
-        switch(prop) {
-        case TensorInfo::DType:
-            return "dtype";
-        case TensorInfo::DevValue:
-            return "dev_value";
-        case TensorInfo::Device:
-            return "device";
-        case TensorInfo::HostValue:
-            return "host_value";
-        case TensorInfo::Shape:
-            return "shape";
-        default:
-            return "unknown";
-        }
-    }
-};
 
 }

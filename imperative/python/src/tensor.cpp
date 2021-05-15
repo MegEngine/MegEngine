@@ -13,6 +13,7 @@
 #include "megbrain/common.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/ops/backward_graph.h"
+#include "megbrain/imperative/profiler.h"
 #include "megbrain/opr/io.h"
 
 #include "./tensor.h"
@@ -927,9 +928,23 @@ void init_tensor(py::module m) {
     m.def("pop_scope",
           [](std::string name) { interpreter_for_py->pop_scope(name); });
     m.def("start_profile",
-          [](std::unordered_map<std::string, int> option) { return interpreter_for_py->start_profile(option); });
+          [](imperative::Profiler::options_t options) {
+              interpreter_for_py->sync();
+              imperative::Profiler::load_options(std::move(options));
+              imperative::Profiler::start_profile();
+              interpreter_for_py->start_profile();
+          });
     m.def("stop_profile",
-          [](std::string basename, std::string format) { interpreter_for_py->stop_profile(basename, format); });
+          []() -> std::function<void(std::string, std::string)> {
+              interpreter_for_py->stop_profile();
+              interpreter_for_py->sync();
+              imperative::Profiler::stop_profile();
+              auto results = imperative::Profiler::collect();
+              auto options = imperative::Profiler::get_options();
+              return [results=std::move(results), options=std::move(options)](std::string basename, std::string format){
+                  imperative::Profiler::dump_profile(basename, format, results, options);
+              };
+          });
     m.def("sync",
           []() {
               interpreter_for_py->sync();
