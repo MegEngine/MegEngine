@@ -61,8 +61,6 @@ public:
         m_option = option;
     }
 
-    static void dump_data(std::string basename, std::string format, InterpreterProfiler::Data profile_data, const Option& option, std::function<std::string(std::thread::id)> host_map);
-
     static Mask topic_to_mask(Topic topic) {
         Mask result;
         if (topic & Command) {

@@ -847,7 +847,6 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                         return "unknown";
                     }
                 };
-                InterpreterProfiler::dump_data(cmd.basename, cmd.format, records, profiler->get_option(), host_map);
             } else if constexpr (std::is_same_v<T, PushScope>) {
                 state.scopes.push_back(cmd.scope_name);
                 do_finish_command();
