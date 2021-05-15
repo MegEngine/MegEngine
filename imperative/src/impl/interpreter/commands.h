@@ -43,6 +43,7 @@ struct Put {
 };
 
 struct ApplyOp {
+    uint64_t id;
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;

@@ -23,9 +23,9 @@ DEF_EVENT(Command, {
     IdentifiedCommand icmd;
 });
 
-DEF_EVENT(CommandEnqueue, :CommandEvent);
-DEF_EVENT(CommandExecute, :CommandEvent);
-DEF_EVENT(CommandFinish, :CommandEvent);
+DEF_EVENT(CommandEnqueue, :CommandEvent {});
+DEF_EVENT(CommandExecute, :CommandEvent {});
+DEF_EVENT(CommandFinish, :CommandEvent {});
 DEF_DUR_EVENT(OpExecute, {
     uint64_t id;
     std::shared_ptr<OpDef> op;
