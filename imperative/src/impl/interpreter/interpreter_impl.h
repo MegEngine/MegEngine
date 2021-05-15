@@ -90,6 +90,7 @@ private:
 
     void regenerate(TensorInfo* dest);
     void recompute(TensorInfo::ComputePath* path);
+    void do_apply_op(const ApplyOp& cmd);
 
     void dispatch_default_cpu(
         std::shared_ptr<OpDef> op,
