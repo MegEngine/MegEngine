@@ -31,6 +31,6 @@ template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolu
         int* workspace, 
         typename Convolution::ConvolutionParameter const& conv_param, 
         typename Convolution::EpilogueOutputOp::Params const& epilogue, 
-        cudaStream_t stream);
+        cudaStream_t stream, typename Convolution::ExtraParam extra_param);
 #pragma GCC diagnostic pop
 #endif

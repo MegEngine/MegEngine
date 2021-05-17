@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/conv_bias/implicit_gemm_int4_nchw64_imma.cpp
+ * \file dnn/src/cuda/conv_bias/implicit_gemm_int4_int4_nchw64_imma.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -77,7 +77,6 @@ ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm::get_workspace_in_bytes(
 
 void ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm::exec(
         const ExecArgs& args) const {
-    using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
     size_t n = args.src_layout->operator[](0),

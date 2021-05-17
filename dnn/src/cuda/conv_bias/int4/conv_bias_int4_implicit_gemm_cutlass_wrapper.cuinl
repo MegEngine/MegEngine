@@ -1,1 +1,65 @@
-../int8/conv_bias_int8_implicit_gemm_cutlass_wrapper.cuinl
+/**
+ * \file
+ * dnn/src/cuda/conv_bias/int4/conv_bias_int4_implicit_gemm_cutlass_wrapper.cuinl
+ * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ */
+#include "cutlass/convolution/device/convolution.h"
+#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
+
+using namespace megdnn;
+using namespace cuda;
+using namespace cutlass_wrapper;
+
+template <typename Convolution>
+void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper(
+        const typename Convolution::ElementSrc* d_src,
+        const typename Convolution::ElementFilter* d_filter,
+        const typename Convolution::ElementBias* d_bias,
+        const typename Convolution::ElementDst* d_z,
+        typename Convolution::ElementDst* d_dst, int* workspace,
+        typename Convolution::ConvolutionParameter const& conv_param,
+        typename Convolution::EpilogueOutputOp::Params const& epilogue,
+        cudaStream_t stream, typename Convolution::ExtraParam extra_param) {
+    typename Convolution::TensorRefSrc tensor_src{
+            const_cast<typename Convolution::ElementSrc*>(d_src),
+            Convolution::LayoutSrc::packed(
+                    {conv_param.N, conv_param.H, conv_param.W, conv_param.C})};
+    typename Convolution::TensorRefFilter tensor_filter{
+            const_cast<typename Convolution::ElementFilter*>(d_filter),
+            Convolution::LayoutFilter::packed(
+                    {conv_param.K, conv_param.R, conv_param.S, conv_param.C})};
+    typename Convolution::TensorRefBias tensor_bias{
+            const_cast<typename Convolution::ElementBias*>(d_bias),
+            Convolution::LayoutBias::packed({1, 1, 1, conv_param.K})};
+    typename Convolution::TensorRefDst tensor_z{
+            const_cast<typename Convolution::ElementDst*>(d_z),
+            Convolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.P, conv_param.Q, conv_param.K})};
+    typename Convolution::TensorRefDst tensor_dst{
+            d_dst,
+            Convolution::LayoutDst::packed(
+                    {conv_param.N, conv_param.P, conv_param.Q, conv_param.K})};
+    typename Convolution::Arguments arguments{conv_param,
+                                              tensor_src.non_const_ref(),
+                                              tensor_filter.non_const_ref(),
+                                              tensor_bias.non_const_ref(),
+                                              tensor_z.non_const_ref(),
+                                              tensor_dst.non_const_ref(),
+                                              epilogue,
+                                              {},
+                                              {},
+                                              extra_param};
+    Convolution conv_op;
+    cutlass_check(conv_op.initialize(arguments, workspace));
+    cutlass_check(conv_op(stream));
+    after_kernel_launch();
+}
+
+// vim: syntax=cuda.doxygen

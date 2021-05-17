@@ -26,7 +26,7 @@ void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper(
         typename Convolution::ElementDst* d_dst, int* workspace,
         typename Convolution::ConvolutionParameter const& conv_param,
         typename Convolution::EpilogueOutputOp::Params const& epilogue,
-        cudaStream_t stream) {
+        cudaStream_t stream, typename Convolution::ExtraParam extra_param) {
     typename Convolution::TensorRefSrc tensor_src{
             const_cast<typename Convolution::ElementSrc*>(d_src),
             Convolution::LayoutSrc::packed(
@@ -52,7 +52,10 @@ void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper(
                                               tensor_bias.non_const_ref(),
                                               tensor_z.non_const_ref(),
                                               tensor_dst.non_const_ref(),
-                                              epilogue};
+                                              epilogue,
+                                              {},
+                                              {},
+                                              extra_param};
     Convolution conv_op;
     cutlass_check(conv_op.initialize(arguments, workspace));
     cutlass_check(conv_op(stream));

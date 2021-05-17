@@ -65,6 +65,7 @@ public:
     class AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth;
     class AlgoInt8NCHW32IMMAImplicitGemm;
     class AlgoInt4Int4NCHW64IMMAImplicitGemm;
+    class AlgoUInt4Int4NCHW64IMMAImplicitGemm;
     class AlgoBFloat16;
 
     class AlgoPack;

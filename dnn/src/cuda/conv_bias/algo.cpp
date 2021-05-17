@@ -87,6 +87,9 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : int4_int4_nchw64_imma) {
         all_algos.push_back(&algo);
     }
+    for (auto&& algo : uint4_int4_nchw64_imma) {
+        all_algos.push_back(&algo);
+    }
 #endif
 #endif
     fill_dp4a_algos();
@@ -231,8 +234,17 @@ void ConvBiasForwardImpl::AlgoPack::fill_imma_algos() {
 
     {
         using AlgoParam = AlgoInt4Int4NCHW64IMMAImplicitGemm::AlgoParam;
-        int4_int4_nchw64_imma.emplace_back(AlgoParam{128, 128, 128, 64, 64, 128});
-        int4_int4_nchw64_imma.emplace_back(AlgoParam{256, 128, 128, 64, 64, 128});
+        int4_int4_nchw64_imma.emplace_back(
+                AlgoParam{128, 128, 128, 64, 64, 128});
+        int4_int4_nchw64_imma.emplace_back(
+                AlgoParam{256, 128, 128, 64, 64, 128});
+    }
+    {
+        using AlgoParam = AlgoUInt4Int4NCHW64IMMAImplicitGemm::AlgoParam;
+        uint4_int4_nchw64_imma.emplace_back(
+                AlgoParam{128, 128, 128, 64, 64, 128});
+        uint4_int4_nchw64_imma.emplace_back(
+                AlgoParam{256, 128, 128, 64, 64, 128});
     }
 #endif
 }
