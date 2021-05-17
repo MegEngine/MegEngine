@@ -492,6 +492,9 @@ std::vector<CompNode> load_multiple_xpus(size_t num);
 //! check whether given number of GPUs is available
 bool check_gpu_available(size_t num);
 
+//! check whether given number of XPUs is available
+bool check_xpu_available(size_t num);
+
 //! check whether given number of AMD GPUs is available
 bool check_amd_gpu_available(size_t num);
 
@@ -518,6 +521,12 @@ public:
     PersistentCacheHook(GetHook on_get);
     ~PersistentCacheHook();
 };
+//! skip a testcase if xpu not available
+#define REQUIRE_XPU(n) do { \
+    if (!check_xpu_available(n)) \
+        return; \
+} while(0)
+
 
 //! skip a testcase if gpu not available
 #define REQUIRE_GPU(n) do { \

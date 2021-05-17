@@ -1150,12 +1150,18 @@ def copy(inp, device=None):
     .. testcode::
 
         import numpy as np
+        import platform
         from megengine import tensor
+        from megengine.distributed.helper import get_device_count_by_fork
         import megengine.functional as F
 
         x = tensor([1, 2, 3], np.int32)
-        y = F.copy(x, "xpu1")
-        print(y.numpy())
+        if 1 == get_device_count_by_fork("gpu"):
+            y = F.copy(x, "cpu1")
+            print(y.numpy())
+        else:
+            y = F.copy(x, "xpu1")
+            print(y.numpy())
 
     Outputs:
 

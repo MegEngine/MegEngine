@@ -43,10 +43,12 @@ void check_rng_basic(Args&& ...args) {
 }
 
 TEST(TestImperative, UniformRNGBasic) {
+    REQUIRE_XPU(2);
     check_rng_basic<UniformRNG>(123);
 }
 
 TEST(TestImperative, GaussianRNGBasic) {
+    REQUIRE_XPU(2);
     check_rng_basic<GaussianRNG>(123, 2.f, 3.f);
 }
 

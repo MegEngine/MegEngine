@@ -77,11 +77,12 @@ TEST(TestImperative, BatchNorm) {
 }
 
 TEST(TestImperative, Concat) {
-     OprAttr::Param param;
-     param.write_pod(megdnn::param::Axis(0));
-     OperatorNodeConfig config{CompNode::load("xpu1")};
-     OprChecker(OprAttr::make("Concat", param, config))
-          .run({TensorShape{200, 300}, TensorShape{300, 300}});
+    REQUIRE_XPU(2);
+    OprAttr::Param param;
+    param.write_pod(megdnn::param::Axis(0));
+    OperatorNodeConfig config{CompNode::load("xpu1")};
+    OprChecker(OprAttr::make("Concat", param, config))
+            .run({TensorShape{200, 300}, TensorShape{300, 300}});
 }
 
 TEST(TestImperative, Split) {
@@ -147,36 +148,36 @@ void run_graph(size_t mem_reserved, bool enable_defrag) {
 }
 
 TEST(TestImperative, Defragment) {
-     REQUIRE_GPU(1);
-     CompNode::load("gpux").activate();
-     size_t reserve;
-     {
-          size_t free, tot;
-          MGB_CUDA_CHECK(cudaMemGetInfo(&free, &tot));
-          reserve = free * 0.92;
-     }
-     auto reserve_setting = ssprintf("b:%zu", reserve);
+#if WIN32
+    //! FIXME, finalize on CUDA windows will be strip as windows CUDA101 DLL
+    //! issue
+    return;
+#endif
+    REQUIRE_GPU(1);
+    CompNode::load("gpux").activate();
+    size_t reserve;
+    {
+        size_t free, tot;
+        MGB_CUDA_CHECK(cudaMemGetInfo(&free, &tot));
+        reserve = free * 0.92;
+    }
+    auto reserve_setting = ssprintf("b:%zu", reserve);
 
-     auto do_run = [reserve]() {
-          ASSERT_THROW(run_graph(reserve, false), MemAllocError);
-          run_graph(reserve, true);
-     };
+    auto do_run = [reserve]() {
+        ASSERT_THROW(run_graph(reserve, false), MemAllocError);
+        run_graph(reserve, true);
+    };
 
-     // reserve memory explicitly to avoid uncontrollable factors
-     constexpr const char* KEY = "MGB_CUDA_RESERVE_MEMORY";
-     auto old_value = getenv(KEY);
-     setenv(KEY, reserve_setting.c_str(), 1);
-     MGB_TRY {
-          do_run();
-     } MGB_FINALLY(
-             if (old_value) {
-                 setenv(KEY, old_value, 1);
-             } else {
-                 unsetenv(KEY);
-             }
-             CompNode::try_coalesce_all_free_memory();
-             CompNode::finalize();
-     );
+    // reserve memory explicitly to avoid uncontrollable factors
+    constexpr const char* KEY = "MGB_CUDA_RESERVE_MEMORY";
+    auto old_value = getenv(KEY);
+    setenv(KEY, reserve_setting.c_str(), 1);
+    MGB_TRY { do_run(); }
+    MGB_FINALLY(
+            if (old_value) { setenv(KEY, old_value, 1); } else {
+                unsetenv(KEY);
+            } CompNode::try_coalesce_all_free_memory();
+            CompNode::finalize(););
 }
 #endif // MGB_CUDA && MGB_ENABLE_EXCEPTION
 

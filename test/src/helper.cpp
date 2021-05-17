@@ -337,6 +337,14 @@ std::vector<CompNode> mgb::load_multiple_xpus(size_t num) {
     return ret;
 }
 
+bool mgb::check_xpu_available(size_t num) {
+    if (CompNode::get_device_count(CompNode::DeviceType::UNSPEC) < num) {
+        mgb_log_warn("skip test case that requires %zu XPU(s)", num);
+        return false;
+    }
+    return true;
+}
+
 bool mgb::check_gpu_available(size_t num) {
     if (CompNode::get_device_count(CompNode::DeviceType::CUDA) < num) {
         mgb_log_warn("skip test case that requires %zu GPU(s)", num);

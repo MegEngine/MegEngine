@@ -89,6 +89,7 @@ TEST(TestOprUtility, NopCallback) {
 }
 
 TEST(TestOprUtility, NopCallbackMixedInput) {
+    REQUIRE_XPU(2);
     auto graph = ComputingGraph::make();
     auto x0 = opr::Host2DeviceCopy::make(*graph, HostTensorGenerator<dtype::Int32>()({2, 3}), OperatorNodeConfig(CompNode::load("xpu0")));
     auto x1 = opr::Host2DeviceCopy::make(*graph, HostTensorGenerator<dtype::Float32>()({2, 3}), OperatorNodeConfig(CompNode::load("xpu1")));

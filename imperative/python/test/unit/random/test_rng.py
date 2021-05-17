@@ -7,9 +7,10 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
+import pytest
 
 import megengine
-from megengine import tensor
+from megengine import is_cuda_available, tensor
 from megengine.core._imperative_rt import CompNode
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._imperative_rt.ops import (
@@ -18,10 +19,14 @@ from megengine.core._imperative_rt.ops import (
     new_rng_handle,
 )
 from megengine.core.ops.builtin import GaussianRNG, UniformRNG
+from megengine.distributed.helper import get_device_count_by_fork
 from megengine.random import RNG
 from megengine.random.rng import _normal, _uniform
 
 
+@pytest.mark.skipif(
+    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+)
 def test_gaussian_op():
     shape = (
         8,
@@ -47,6 +52,9 @@ def test_gaussian_op():
     assert str(output.device) == str(cn)
 
 
+@pytest.mark.skipif(
+    get_device_count_by_fork("xpu") <= 2, reason="xpu counts need > 2",
+)
 def test_uniform_op():
     shape = (
         8,
@@ -70,6 +78,9 @@ def test_uniform_op():
     assert str(output.device) == str(cn)
 
 
+@pytest.mark.skipif(
+    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+)
 def test_UniformRNG():
     m1 = RNG(seed=111, device="xpu0")
     m2 = RNG(seed=111, device="xpu1")
@@ -95,6 +106,9 @@ def test_UniformRNG():
     assert np.abs(out.mean().numpy() - ((low + high) / 2)) / (high - low) < 0.1
 
 
+@pytest.mark.skipif(
+    get_device_count_by_fork("xpu") <= 1, reason="xpu counts need > 1",
+)
 def test_NormalRNG():
     m1 = RNG(seed=111, device="xpu0")
     m2 = RNG(seed=111, device="xpu1")

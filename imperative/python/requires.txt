@@ -7,3 +7,4 @@ tqdm
 redispy
 deprecated
 mprop
+wheel
