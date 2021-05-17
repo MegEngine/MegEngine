@@ -249,6 +249,7 @@ void WarpPerspectiveForwardImpl::kern_naive_nhwcd4(
     MIDOUT_END();
 }
 
+
 template <typename ctype, typename mtype>
 void WarpPerspectiveForwardImpl::kern_naive_int4(
         const KernParam<ctype, mtype>& kern_param, size_t task_id) {
@@ -257,6 +258,7 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
         UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(kern_param);
         MEGDNN_MARK_USED_VAR(N_MAT);
         uint8_t c_shift, c_mask, iw_shift = 0, ow_shift = 0;
+        constexpr bool signedness = std::is_same<ctype, dt_qint4>::value;
         switch (param().format) {
             case Format::NCHW:
                 c_shift = 0;
@@ -282,8 +284,13 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
                             << c_shift) +
                            (c & c_mask);
             uint8_t result =
-                    (sptr[index / 2].as_int8() >> (4 * (index % 2))) & 0xF;
-            return result & uint8_t(1 << 3) ? result | ~mask : result;
+                    (sptr[index / 2].as_storage() >> (4 * (index % 2))) & 0xF;
+            if (signedness) {
+                return result & uint8_t(1 << 3) ? result | ~mask : result;
+            } else {
+                megdnn_assert((std::is_same<ctype, dt_quint4>::value));
+                return result;
+            }
         };
         auto visit_src_bd = [&sptr, sstrd, border_val, c_shift, c_mask](
                                     size_t c, int h, int w) -> float {
@@ -292,8 +299,14 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
                                 << c_shift) +
                                (c & c_mask);
                 uint8_t result =
-                        (sptr[index / 2].as_int8() >> (4 * (index % 2))) & 0xF;
-                return result & uint8_t(1 << 3) ? result | ~mask : result;
+                        (sptr[index / 2].as_storage() >> (4 * (index % 2))) &
+                        0xF;
+                if (signedness) {
+                    return result & uint8_t(1 << 3) ? result | ~mask : result;
+                } else {
+                    megdnn_assert((std::is_same<ctype, dt_quint4>::value));
+                    return result;;
+                }
             } else
                 return border_val;
         };
@@ -302,9 +315,9 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
             size_t index = ((dstrd[0] * (c >> c_shift) + dstrd[1] * h + w)
                             << c_shift) +
                            (c & c_mask);
-            dptr[index / 2] =
-                    (dptr[index / 2].as_int8() & (0xF0 >> (4 * (index % 2)))) |
-                    (v.as_int8() << (4 * (index % 2)));
+            dptr[index / 2] = (dptr[index / 2].as_storage() &
+                               (0xF0 >> (4 * (index % 2)))) |
+                              (v.as_storage() << (4 * (index % 2)));
         };
 
         rounding::RoundingConverter<ctype> output_converter;
@@ -334,21 +347,20 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
             int iw1 = get_real_coord(std::floor(alphaw) + 1, IW);
             int ih0 = get_real_coord(std::floor(alphah) + 0, IH);
             int ih1 = get_real_coord(std::floor(alphah) + 1, IH);
-
             alphaw -= floor(alphaw);
             alphah -= floor(alphah);
             if (bmode != BorderMode::CONSTANT) {
                 rep(c, C) {
-                    set_visit_dst(
-                            c, oh, ow,
-                            output_converter(
-                                    visit_src(c, ih0, iw0) * (1.0f - alphaw) *
+                    auto val = visit_src(c, ih0, iw0) * (1.0f - alphaw) *
                                             (1.0f - alphah) +
                                     visit_src(c, ih0, iw1) * alphaw *
                                             (1.0f - alphah) +
                                     visit_src(c, ih1, iw0) * (1.0f - alphaw) *
                                             alphah +
-                                    visit_src(c, ih1, iw1) * alphaw * alphah));
+                                    visit_src(c, ih1, iw1) * alphaw * alphah;
+                    set_visit_dst(
+                            c, oh, ow,
+                            output_converter(val));
                 }
             } else {
                 rep(c, C) {
@@ -609,6 +621,13 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in src,
 
     if (src.layout.dtype.enumv() == DTypeTrait<dtype::QuantizedS4>::enumv) {
         DISPATCH_ST(dtype::QuantizedS4, dt_qint4, float, KERN_INT4);
+        megdnn_throw(ssprintf("Unsupported input DType in "
+                              "WarpPerspective: %s",
+                              src.layout.dtype.name())
+                             .c_str());
+    } else if (src.layout.dtype.enumv() ==
+               DTypeTrait<dtype::Quantized4Asymm>::enumv) {
+        DISPATCH_ST(dtype::Quantized4Asymm, dt_quint4, float, KERN_INT4);
         megdnn_throw(ssprintf("Unsupported input DType in "
                               "WarpPerspective: %s",
                               src.layout.dtype.name())

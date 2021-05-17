@@ -73,9 +73,10 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
                             src.dtype.enumv() == DTypeEnum::Uint8 ||
                             (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
                              src.dtype.enumv() == DTypeEnum::Quantized8Asymm) ||
-                            src.dtype.enumv() == DTypeEnum::QuantizedS4,
+                            src.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                            src.dtype.enumv() == DTypeEnum::Quantized4Asymm,
                     "WarpPerspective NCHW input dtype should be "
-                    "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
+                    "Float32/Int8/Uint8/QInt8/QUint8/QInt4/QUInt4" DNN_FLOAT16_SELECT(
                             "/Float16/BFloat16", "") ".");
             megdnn_assert(
                     (src.dtype.category() == DTypeCategory::FLOAT &&
@@ -118,8 +119,9 @@ void WarpPerspectiveBase::check_layout_fwd(const TensorLayout& src,
             megdnn_assert(param().bmode !=
                           param::WarpPerspective::BorderMode::ISOLATED);
         } else if (param().format == param::WarpPerspective::Format::NCHW64) {
-            megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS4,
-                          "src expected QuantizedS4, but got %s",
+            megdnn_assert((src.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                           src.dtype.enumv() == DTypeEnum::Quantized4Asymm),
+                          "src expected QuantizedS4/Quantized4Asymm, but got %s",
                           src.dtype.name());
             megdnn_assert(mat.dtype == dtype::Float32(),
                           "matrix dtype expected float, got %s",

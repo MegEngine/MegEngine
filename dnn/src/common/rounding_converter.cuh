@@ -86,6 +86,16 @@ struct RoundingConverter<dt_qint4> {
     }
 };
 
+template <>
+struct RoundingConverter<dt_quint4> {
+    __host__ __device__ __forceinline__ dt_quint4 operator()(float x) const {
+#if MEGDNN_CC_HOST
+        using std::round;
+#endif
+        return static_cast<dt_quint4>(round(x));
+    }
+};
+
 }  // namespace rounding
 }  // namespace megdnn
 

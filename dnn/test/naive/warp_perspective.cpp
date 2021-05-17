@@ -196,8 +196,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QINT4) {
     param.imode = WarpPerspective::Param::InterpolationMode::LINEAR;
     param.format = WarpPerspective::Param::Format::NCHW;
 
-    std::vector<int> input_values = {1, 3, 2, 2, 0, 0, 0, 0, 2},
-                     output_values = {1, 2, 2, 2};
+    std::vector<int> input_values = {-1, -3, -2, -2, 0, 0, 0, 0, -2},
+                     output_values = {-1, -2, -2, -2};
 
     checker.set_param(param).exect(
             Testcase{TensorValueLowbit4({1, 1, 3, 3}, dtype::QuantizedS4(0.1),
@@ -209,6 +209,31 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QINT4) {
             Testcase{{},
                      {},
                      TensorValueLowbit4({1, 1, 2, 2}, dtype::QuantizedS4(0.1),
+                                        output_values)});
+}
+
+TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QUINT4) {
+    Checker<WarpPerspective> checker(handle(), false);
+    WarpPerspective::Param param;
+    param.bmode = WarpPerspective::Param::BorderMode::BORDER_REFLECT;
+    param.imode = WarpPerspective::Param::InterpolationMode::LINEAR;
+    param.format = WarpPerspective::Param::Format::NCHW;
+
+    std::vector<int> input_values = {4, 13, 0, 0, 0, 0, 0, 0, 0},
+                     output_values = {6, 8, 8, 9};
+
+    checker.set_param(param).exect(
+            Testcase{TensorValueLowbit4({1, 1, 3, 3},
+                                        dtype::Quantized4Asymm(0.1, 3),
+                                        input_values),
+                     TensorValue({1, 3, 3}, dtype::Float32{},
+                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
+                                  1.5f, 3.0f}),
+                     {}},
+            Testcase{{},
+                     {},
+                     TensorValueLowbit4({1, 1, 2, 2},
+                                        dtype::Quantized4Asymm(0.1, 3),
                                         output_values)});
 }
 

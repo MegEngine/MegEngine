@@ -107,7 +107,8 @@ protected:
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();
             } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                       src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
+                       src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                       src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
                 ret.sptr = src.compatible_ptr<ctype>();
                 ret.mptr = mat.ptr<mtype>();
                 ret.dptr = dst.compatible_ptr<ctype>();

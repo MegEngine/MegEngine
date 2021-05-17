@@ -44,8 +44,9 @@ void get_inner_layout(const TensorLayout& src, const TensorLayout& dst,
                       TensorLayout& inner_src, TensorLayout& inner_dst,
                       Handle* handle,
                       WarpPerspectiveForwardImpl::Param::Format format) {
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS4 &&
-        dst.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+    if ((src.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+         src.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
+        dst.dtype.enumv() == src.dtype.enumv() &&
         format == param::WarpPerspective::Format::NCHW) {
         auto relayout_opr = handle->create_operator<RelayoutFormat>();
         deduce_reformat_layout(relayout_opr, src, inner_src,
@@ -130,7 +131,8 @@ WorkspaceBundle WarpPerspectiveForwardImpl::get_workspace_bundle(
     TensorLayout fsrc = src;
     TensorLayout fmat = mat;
     TensorLayout fdst = dst;
-    if (src.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+    if ((src.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+         src.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
         param().format == param::WarpPerspective::Format::NCHW) {
         get_inner_layout(src, dst, fsrc, fdst, handle(), param().format);
         sizes.push_back(fsrc.span().dist_byte());
@@ -177,7 +179,8 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
         ctypecvt.src_to_comp_type(ssrc, src)
                 .src_to_comp_type(smat, mat)
                 .src_to_comp_type(sdst, dst);
-    } else if (ssrc.layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+    } else if ((ssrc.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                ssrc.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
                param().format == Param::Format::NCHW) {
         auto handle_ptr = handle();
         get_inner_layout(ssrc.layout, sdst.layout, src.layout, dst.layout,
@@ -330,7 +333,7 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                             param().format == Param::Format::NCHW64 ||
                                     param().format == Param::Format::NCHW,
                             "WarpPerspective on CUDA supports NCHW64 or NCHW+ "
-                            "QuantizedS4 only");
+                            "QuantizedS4");
                     bval = roundf(bval);
                     bval = fmin(fmax(-8.f, bval), 7.f);
                     warp_perspective::forward_proxy_nchw64<dt_qint4>(
@@ -349,6 +352,34 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                         trans_param.mode =
                                 RelayoutFormat::Param::Mode::NCHW64_NCHW;
                         trans_param.oc = sdst.layout[1]; 
+                        relayout_opr->param() = trans_param;
+                        relayout_opr->exec(dst, sdst, {});
+                    }
+                } else if (src.layout.dtype.enumv() ==
+                           DTypeEnum::Quantized4Asymm) {
+                    megdnn_assert(
+                            param().format == Param::Format::NCHW64 ||
+                                    param().format == Param::Format::NCHW,
+                            "WarpPerspective on CUDA supports NCHW64 or NCHW+ "
+                            "Quantized4Asymm");
+                    bval = roundf(bval);
+                    bval = fmin(fmax(0, bval), 15);
+                    warp_perspective::forward_proxy_nchw64<dt_quint4>(
+                            src.compatible_ptr<dt_quint4>(),
+                            mat.ptr<dt_float32>(),
+                            mat_idx.raw_ptr ? mat_idx.ptr<int>() : nullptr,
+                            dst.compatible_ptr<dt_quint4>(), src.layout[0],
+                            mat.layout[0], C, IH, IW, OH, OW,
+                            static_cast<dt_quint4>(bval), bmode,
+                            async_error_info(handle()), m_error_tracker,
+                            stream);
+                    if (param().format == Param::Format::NCHW) {
+                        auto relayout_opr =
+                                handle()->create_operator<RelayoutFormat>();
+                        RelayoutFormat::Param trans_param;
+                        trans_param.mode =
+                                RelayoutFormat::Param::Mode::NCHW64_NCHW;
+                        trans_param.oc = sdst.layout[1];
                         relayout_opr->param() = trans_param;
                         relayout_opr->exec(dst, sdst, {});
                     }
