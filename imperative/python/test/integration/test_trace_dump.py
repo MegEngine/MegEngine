@@ -11,6 +11,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 
 import megengine as mge
 import megengine.functional as F
@@ -140,3 +141,15 @@ def test_xornet_trace_dump():
 
     with mkstemp() as out:
         pred_fun.dump(out, arg_names=["data"], output_names=["label"])
+
+
+def test_dump_bn_train_mode():
+    @trace(symbolic=True, capture_as_const=True)
+    def bn_train(data):
+        pred = M.BatchNorm2d(10)(data).sum()
+        return pred
+
+    data = mge.tensor(np.random.random((10, 10, 10, 10)))
+    bn_train(data)
+    with pytest.raises(AssertionError):
+        bn_train.dump("test.mge")
