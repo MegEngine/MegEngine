@@ -763,7 +763,14 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                             break;
                         }
                     }
-                    if (!is_inplace && !cross_cn) {
+                    // FIXME: do not use opname as identifier
+                    auto get_name = [](const OpDef& opdef) {
+                        if (auto attr = opdef.try_cast_final<OprAttr>()) {
+                            return attr->type.c_str();
+                        }
+                        return opdef.dyn_typeinfo()->name;
+                    };
+                    if (!is_inplace && !cross_cn && !m_dtr.is_bad_op(get_name(*cmd.op))) {
                         TensorInfo::ComputePath::make(cmd.op, cmd.inputs, cmd.outputs);
                         size_t detach_cnt = 0;
                         for (auto output : cmd.outputs) {

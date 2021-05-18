@@ -308,6 +308,13 @@ private:
 
         //! whether the warning message has been printed
         bool warn_printed = false;
+
+        bool is_bad_op(std::string op_name) {
+            return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) != op_blacklist.end();
+        }
+
+        std::vector<std::string> op_blacklist = {"CollectiveComm", "InplaceAdd",
+                                "ParamPackSplit", "ParamPackConcat", "GaussianRNG"};
     } m_dtr;
 
     //! automatically evict an optimal tensor
