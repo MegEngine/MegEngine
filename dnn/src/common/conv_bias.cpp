@@ -65,7 +65,8 @@ void do_check_exec_common(
                           bias.to_string().c_str(), dst.to_string().c_str());
             megdnn_assert(bias.shape[2] == 1);
             megdnn_assert(bias.shape[3] == 1);
-        } else if (opr->param().format == param::ConvBias::Format::NHWC) {
+        } else if (param().format == param::ConvBias::Format::NHWC ||
+                   param().format == param::ConvBias::Format::NCHW4_NHWC) {
             megdnn_assert(bias.shape[0] == 1);
             megdnn_assert(bias.shape[1] == 1);
             megdnn_assert(bias.shape[2] == 1);

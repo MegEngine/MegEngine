@@ -37,15 +37,16 @@ all: ${PARAM_DEFS} ${ELEMWISE_IMPL} ${CUDA_CONV_IMPL} $(CUDA_MATMUL_IMPL)
 ../src/cuda/elemwise_multi_type/kimpl: gen_elemwise_multi_type_kern_impls.py
 	./$^ --type cuda $@
 
-../src/cuda/conv_bias/int8/kimpl: gen_cuda_conv_bias_kern_impls.py gen_cutlass_conv_bias_kern_impls.py
+../src/cuda/conv_bias/int8/kimpl: gen_cuda_conv_bias_kern_impls.py gen_cutlass_conv_bias_kern_impls.py cutlass_generator/generator.py
 	./gen_cuda_conv_bias_kern_impls.py --type dp4a $@
 	./gen_cutlass_conv_bias_kern_impls.py --type dp4a $@
+	python3 ./cutlass_generator/generator.py --operations all --type simt $@
 
 ../src/cuda/conv_bias/int8_imma/kimpl: gen_cuda_conv_bias_kern_impls.py gen_cutlass_conv_bias_kern_impls.py
 	./gen_cuda_conv_bias_kern_impls.py --type imma $@
 	./gen_cutlass_conv_bias_kern_impls.py --type imma $@
 
-../src/cuda/batch_conv_bias/int8/kimpl: gen_cuda_batch_conv_bias_kern_impls.py
+../src/cuda/batch_conv_bias/int8/kimpl: gen_cuda_batch_conv_bias_kern_impls.py 
 	./$^ --type dp4a $@
 
 ../src/cuda/matrix_mul/fp32_simt/kimpl: gen_cutlass_matmul_kern_impls.py

@@ -94,6 +94,15 @@ void do_conv_bias_uint4_int4_implicit_gemm_imma_ncdiv64hw64(
         float scale, uint8_t src_zero_point, const GemmCoord& threadblock_shape,
         const GemmCoord& warp_shape, cudaStream_t stream);
 
+template <bool signedness>
+void do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc(
+        const int8_t* d_src, const int8_t* d_filter, const int32_t* d_bias,
+        const int8_t* d_z, int8_t* d_dst, int* workspace,
+        const convolution::ConvParam& param, uint32_t nonlinear_mode,
+        float alpha, float beta, float gamma, float delta, float theta,
+        float scale, const GemmCoord& threadblock_shape,
+        const GemmCoord& warp_shape, int stages, cudaStream_t stream);
+
 }  // namespace cutlass_wrapper
 }  // namespace cuda
 }  // namespace megdnn

@@ -35,6 +35,9 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
          args.src_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
         args.filter_layout->dtype.enumv() == DTypeEnum::QuantizedS4)
         return false;
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
+        args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm)
+        return false;
     if (args.src_layout->dtype == args.filter_layout->dtype &&
         args.src_layout->dtype == dtype::BFloat16()) {
         return false;

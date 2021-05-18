@@ -911,4 +911,140 @@ void megdnn::cuda::cutlass_wrapper::
 INST(true);
 #undef INST
 
+/* ===== cutlass kernel wrapper for nchw4 layout and nhwc output ===== */
+#if MEGDNN_TEGRA_X1
+template <bool signedness>
+void megdnn::cuda::cutlass_wrapper::
+        do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc(
+                const int8_t* /* d_src */, const int8_t* /* d_filter */,
+                const int32_t* /* d_bias */, const int8_t* /* d_z */,
+                int8_t* /* d_dst */, int* /* workspace */,
+                const convolution::ConvParam& /* param */,
+                uint32_t /* nonlinear_mode */, float /* alpha */,
+                float /* beta */, float /* gamma */, float /* delta */,
+                float /* theta */, float /* scale */,
+                const GemmCoord& /* threadblock_shape */,
+                const GemmCoord& /* warp_shape */, int /* stages */,
+                cudaStream_t /* stream */) {}
+#else
+template <bool signedness>
+void megdnn::cuda::cutlass_wrapper::
+        do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc(
+                const int8_t* d_src, const int8_t* d_filter,
+                const int32_t* d_bias, const int8_t* d_z, int8_t* d_dst,
+                int* workspace, const convolution::ConvParam& param,
+                uint32_t nonlinear_mode, float alpha, float beta, float gamma,
+                float delta, float theta, float scale,
+                const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
+                int stages, cudaStream_t stream) {
+#define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
+                                        threadblock_k_, warp_m_, warp_n_,      \
+                                        warp_k_, stages_, aligned_)            \
+    if (threadblock_shape.m() == threadblock_m_ &&                             \
+        threadblock_shape.n() == threadblock_n_ &&                             \
+        threadblock_shape.k() == threadblock_k_ &&                             \
+        warp_shape.m() == warp_m_ && warp_shape.n() == warp_n_ &&              \
+        warp_shape.k() == warp_k_ && stages == stages_) {                      \
+        using ThreadBlockShape =                                               \
+                cutlass::gemm::GemmShape<threadblock_m_, threadblock_n_,       \
+                                         threadblock_k_>;                      \
+        using WarpShape = cutlass::gemm::GemmShape<warp_m_, warp_n_, warp_k_>; \
+        using InstructionShape = cutlass::gemm::GemmShape<1, 1, 4>;            \
+        using Convolution = cutlass::conv::device::Convolution<                \
+                int8_t, cutlass::layout::TensorNCxHWx<4>, int8_t,              \
+                cutlass::layout::TensorCxRSKx<4>, ElementOutput,               \
+                cutlass::layout::TensorNHWC, int32_t,                          \
+                cutlass::layout::TensorNHWC, int32_t,                          \
+                cutlass::conv::ConvType::kConvolution,                         \
+                cutlass::arch::OpClassSimt, cutlass::arch::Sm75,               \
+                ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
+                cutlass::conv::threadblock::                                   \
+                        ConvolutionFpropNCxHWxThreadblockSwizzle,              \
+                stages_, 4, aligned_, NeedLoadFromConstMem,                    \
+                cutlass::arch::OpMultiplyAddSaturate>;                         \
+        typename Convolution::ConvolutionParameter conv_param(                 \
+                param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
+                param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \
+                param.sw, 1, 1, cutlass::conv::Mode::kCrossCorrelation);       \
+        return cutlass_convolution_wrapper<Convolution>(                       \
+                d_src, d_filter, d_bias,                                       \
+                reinterpret_cast<const ElementOutput*>(d_z),                   \
+                reinterpret_cast<ElementOutput*>(d_dst), workspace,            \
+                conv_param, epilogue, stream);                                 \
+    }
+#define DISPATCH_KERNEL                                                      \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 128, 32, 64, 32, 32, 2, 16);        \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 64, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 128, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(128, 32, 32, 64, 32, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 128, 32, 32, 64, 32, 2, 16);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 64, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 64, 32, 32, 64, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(64, 32, 32, 64, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(32, 32, 32, 32, 32, 32, 2, 16);          \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 128, 16, 16, 128, 16, 1, 8);         \
+    DISPATCH_KERNEL_WITH_TILE_SHAPE(16, 64, 8, 16, 64, 8, 2, 4);             \
+    megdnn_assert(false,                                                     \
+                  "unsupported threadblock shape (%dx%dx%d) and warp shape " \
+                  "(%dx%dx%d)",                                              \
+                  threadblock_shape.m(), threadblock_shape.n(),              \
+                  threadblock_shape.k(), warp_shape.m(), warp_shape.n(),     \
+                  warp_shape.k());
+    using ElementOutput = cutlass::integer_subbyte<4, signedness>;
+    using ElementAccumulator = int32_t;
+    using ElementBias = int32_t;
+    using ElementCompute = float;
+    using NonlineMode = megdnn::param_enumv::ConvBias::NonlineMode;
+    switch (nonlinear_mode) {
+        case NonlineMode::IDENTITY: {
+            using EpilogueOp =
+                    cutlass::epilogue::thread::BiasAddLinearCombinationClamp<
+                            ElementOutput, 8, ElementAccumulator, ElementBias,
+                            ElementCompute>;
+            typename EpilogueOp::Params epilogue{alpha, beta, gamma,
+                                                 delta + theta};
+            DISPATCH_KERNEL;
+        }
+        case NonlineMode::RELU: {
+            using EpilogueOp = cutlass::epilogue::thread::
+                    BiasAddLinearCombinationReluClamp<
+                            ElementOutput, 8, ElementAccumulator, ElementBias,
+                            ElementCompute>;
+            typename EpilogueOp::Params epilogue{alpha, beta,  gamma,
+                                                 0,     delta, theta};
+            DISPATCH_KERNEL;
+        }
+        case NonlineMode::H_SWISH: {
+            using EpilogueOp = cutlass::epilogue::thread::
+                    BiasAddLinearCombinationHSwishClamp<
+                            ElementOutput, 8, ElementAccumulator, ElementBias,
+                            ElementCompute>;
+            typename EpilogueOp::Params epilogue{alpha, beta,  gamma,
+                                                 scale, detla, theta};
+            DISPATCH_KERNEL;
+        }
+        default:
+            megdnn_assert(false,
+                          "unsupported nonlinear mode for conv bias operator");
+    }
+#undef DISPATCH_KERNEL_WITH_TILE_SHAPE
+#undef DISPATCH_KERNEL
+}
+#endif
+
+#define INST(signedness)                                                     \
+    template void megdnn::cuda::cutlass_wrapper::                            \
+            do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc<signedness>( \
+                    const int8_t* d_src, const int8_t* d_filter,             \
+                    const int32_t* d_bias, const int8_t* d_z, int8_t* d_dst, \
+                    int* workspace, const convolution::ConvParam& param,     \
+                    uint32_t nonlinear_mode, float alpha, float beta,        \
+                    float gamma, float delta, float theta, float scale,      \
+                    const GemmCoord& threadblock_shape,                      \
+                    const GemmCoord& warp_shape, int stages,                 \
+                    cudaStream_t stream);
+INST(true);
+INST(false);
+#undef INST
+
 // vim: syntax=cuda.doxygen
