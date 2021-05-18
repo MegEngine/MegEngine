@@ -91,7 +91,7 @@ private:
 
     void check_worker_exc_unsafe();
 
-    void produce_tensor(TensorInfo* dest, TensorPtr ptr, bool notice);
+    void produce_tensor(TensorInfo* dest, TensorPtr ptr);
 
     void release_tensor(TensorInfo* dest);
 
