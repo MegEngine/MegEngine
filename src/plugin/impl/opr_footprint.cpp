@@ -147,9 +147,11 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
             packed_size = 32;
         } else {
             mgb_assert(param.format == Param::Format::NCHW4 ||
+                               param.format == Param::Format::NCHW4_NHWC ||
                                param.format == Param::Format::NCHW4_NCHW ||
                                param.format == Param::Format::NCHW4_NCHW32,
-                       "format should be NCHW4/NCHW4_NCHW/NCHW4_NCHW32");
+                       "format should be "
+                       "NCHW4/NCHW4_NCHW/NCHW4_NHWC/NCHW4_NCHW32");
             packed_size = 4;
         }
         return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * packed_size / group *
@@ -174,6 +176,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
     };
     if (param.format == Param::Format::NCHW4 ||
         param.format == Param::Format::NCHW4_NCHW ||
+        param.format == Param::Format::NCHW4_NHWC || 
         param.format == Param::Format::NCHW4_NCHW32 ||
         param.format == Param::Format::NCHW88 ||
         param.format == Param::Format::NCHW44 ||

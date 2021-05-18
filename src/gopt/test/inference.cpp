@@ -4400,6 +4400,93 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
     func->execute();
     MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
 }
+
+TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NHWC) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {32, 4, 23, 40}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {64, 4, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 64, 1, 1}, dtype::QuantizedS32(6.25f)),
+         w1 = mkcvar("w1", {64, 64, 3, 3}, dtype::QuantizedS4(1.234f)),
+         b1 = mkcvar("b1", {1, 64, 1, 1}, dtype::QuantizedS32(12.34567f*1.234f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(
+            x, w, b, param, {},
+            OperatorNodeConfig{dtype::QuantizedS8(12.34567f)});
+    y = opr::TypeCvt::make(y, dtype::QuantizedS4(12.34567f));
+    y = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::QuantizedS4(56.71234f)});
+    y = opr::TypeCvt::make(y, dtype::Float32());
+    SymbolVar y_fuse, y_non_fuse;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw64();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_fuse);
+    }
+    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
+    S strategy = S::PROFILE;
+    gopt::modify_opr_algo_strategy_inplace({y_fuse}, strategy);
+    HostTensorND host_y_fuse;
+    auto func1 = graph->compile({make_callback_copy(y_fuse, host_y_fuse)});
+    func1->execute();
+    graph->compile({{y_fuse, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.FoldingConvDimshuffleNCHW4NHWC.json"));
+    size_t nr_dimshuffle = find_opr_num<opr::TypeCvt>(y_fuse);
+    printf("%zu \n", nr_dimshuffle);
+    ASSERT_EQ(3u, find_opr_num<opr::Dimshuffle>(y_fuse));
+    bool found = false;
+    cg::DepOprIter{[&found](cg::OperatorNodeBase* opr) {
+        if (!found && opr->same_type<opr::ConvBias>()) {
+            opr::ConvBias* cb = &opr->cast_final_safe<opr::ConvBias>();
+            if (cb->param().format == opr::ConvBias::Param::Format::NCHW4_NHWC)
+                found = true;
+        }
+    }}
+            .add(y_fuse.node()->owner_opr());
+    EXPECT_TRUE(found);
+    unpack_vector(gopt::GraphOptimizer{}.apply({{y}}).endpoint_vars(),
+                  y_non_fuse);
+    gopt::modify_opr_algo_strategy_inplace({y_non_fuse}, strategy);
+    HostTensorND host_y_non_fuse;
+    auto func2 =
+            graph->compile({make_callback_copy(y_non_fuse, host_y_non_fuse)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
+}
 #endif
 
 TEST(TestGoptInference, PaddingChannels) {

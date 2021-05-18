@@ -864,7 +864,13 @@ void ConvBiasForward::init_output_static_infer_desc() {
 
 void ConvBiasForward::init_output_format() {
     mgb_assert(output().size() == 2);
-    output(0)->format(input(0)->format());
+    auto format = input(0)->format();
+    if (!format.is_default() && !format.is_lowbit_aligned()) { // propagate
+        output(0)->format(input(0)->format());
+    } else {
+        mgb_assert(output(0)->dtype().valid());
+        output(0)->format(TensorFormat(output(0)->dtype()));
+    }
 }
 
 void ConvBiasForward::check_winograd_param_valid(
