@@ -131,6 +131,7 @@ public:
         MGB_LOCK_GUARD(sm_mutex);
         if constexpr (sm_debug) {
             for (auto&& [tid, profiler]: sm_profilers) {
+                MGB_MARK_USED_VAR(tid);
                 Status expected = Running;
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Collecting));
             }
@@ -149,6 +150,7 @@ public:
         });
         if constexpr (sm_debug) {
             for (auto&& [tid, profiler]: sm_profilers) {
+                MGB_MARK_USED_VAR(tid);
                 Status expected = Collecting;
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Running));
             }

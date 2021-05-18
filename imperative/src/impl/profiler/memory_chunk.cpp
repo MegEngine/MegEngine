@@ -103,6 +103,7 @@ struct MemoryFlow {
         auto addr_begin = std::numeric_limits<uintptr_t>::max();
         auto addr_end = std::numeric_limits<uintptr_t>::min();
         for(auto&& [id, chunk]: chunks) {
+            MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
             addr_begin = std::min(addr_begin, chunk.address[0]);
             addr_end = std::max(addr_end, chunk.address[1]);
@@ -114,6 +115,7 @@ struct MemoryFlow {
         auto time_begin = std::numeric_limits<uint64_t>::max();
         auto time_end = std::numeric_limits<uint64_t>::min();
         for(auto&& [id, chunk]: chunks) {
+            MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
             time_begin = std::min(time_begin, chunk.time[0]);
             time_end = std::max(time_end, chunk.time[1]);
@@ -124,6 +126,7 @@ struct MemoryFlow {
     std::shared_ptr<json::Array> to_json() const {
         auto results = json::Array::make();
         for(auto&& [id, chunk]: chunks) {
+            MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
             auto address = json::Array::make();
             auto time = json::Array::make();
@@ -213,6 +216,7 @@ struct MemoryFlow {
             return builder;
         };
         for (auto&& [id, chunk]: chunks) {
+            MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
             double left = (chunk.time[0]-time_begin)/time_scale;
             double right = (chunk.time[1]-time_begin)/time_scale;
