@@ -22,8 +22,6 @@ void handle_bias_and_nonlinear(Handle* handle, param::ConvBias args,
                                const TensorND* dst_tensor,
                                const TensorND* bias_tensor);
 
-bool check_bias_share_in_channel(const TensorLayout& bias,
-                                 const param::ConvBias::Format format);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

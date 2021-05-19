@@ -502,7 +502,28 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
 
             //! contains any user data associated with this graph
             UserDataContainer user_data;
-        }; // Options
+
+            //! Control parameter for fast run
+            struct FastRunConfig {
+                /*!
+                 * the batch size used by fastrun
+                 *
+                 * Non-zero value means that fastrun use this batch size
+                 * regardless of the batch size of the model
+                 *
+                 * Zero means fastrun use batch size of the model
+                 */
+                uint32_t shared_batch_size = 0;
+
+                /*!
+                 * \brief if the content of each input batch is binary equal,
+                 * whether the content of each output batch is promised to be
+                 * equal
+                 */
+                bool binary_equal_between_batch = false;
+            } fast_run_config;
+
+        };  // Options
 
         Options& options() {
             return m_options;

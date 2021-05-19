@@ -158,6 +158,11 @@ R"__usage__(
 R"__usage__(
   --fast-run-algo-policy <path>
     It will read the cache file before profile, and save new fastrun in cache file.
+  --fast-run-shared-batch-size
+    Set the batch size used during fastrun, Note that it may not be the same as the actual running batch size
+  --binary-equal-between-batch
+    Each batch of output is promised binary equal if each batch of input is binary equal.
+    Note that if this option is turned on, `--reproducible` will also be turned on.
   --reproducible
     Enable choose algo which is reproducible. It mainly used for cudnn algos.
     See https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html#reproducibility
@@ -1356,6 +1361,20 @@ Args Args::from_argv(int argc, char **argv) {
             ret.fast_run_cache_path = argv[i];
             continue;
         }
+        if (!strcmp(argv[i], "--fast-run-shared-batch-size")) {
+            ++i;
+            mgb_assert(i < argc,
+                       "value not given for --fast-run-shared-batch-size");
+            int32_t batch_size = std::stoi(argv[i]);
+            mgb_assert(batch_size >= 0);
+            graph_opt.fast_run_config.shared_batch_size = batch_size;
+            continue;
+        }
+        if (!strcmp(argv[i], "--binary-equal-between-batch")) {
+            graph_opt.fast_run_config.binary_equal_between_batch = true;
+            ret.reproducible = true;
+            continue;
+        }
         if (!strcmp(argv[i], "--reproducible")) {
             ret.reproducible = true;
             continue;
@@ -1452,6 +1471,14 @@ Args Args::from_argv(int argc, char **argv) {
         return ret;
     }
 
+#if MGB_ENABLE_FASTRUN
+    if (graph_opt.fast_run_config.shared_batch_size) {
+        mgb_assert(ret.use_fast_run || ret.use_full_run ||
+                           !ret.fast_run_cache_path.empty(),
+                   "--fast-run-shared-batch-size should be used with "
+                   "--fast-run/--full-run/--fast-run-algo-policy");
+    }
+#endif
     return ret;
 }
 

@@ -54,11 +54,11 @@ constexpr bool opr_contain_bias() {
     return std::is_same<Opr, megdnn::ConvBias>::value;
 }
 
-//! matmul and batchedMatrixMul may not be usable once shape changed
+//! matmul and batchedMatrixMul
 template <typename Opr>
-constexpr bool algo_usable_on_shape_change() {
-    return !(std::is_same<Opr, megdnn::MatrixMul>::value ||
-             std::is_same<Opr, megdnn::BatchedMatrixMul>::value);
+constexpr bool is_matmul() {
+    return std::is_same<Opr, megdnn::MatrixMul>::value ||
+             std::is_same<Opr, megdnn::BatchedMatrixMul>::value;
 }
 
 template <typename Opr, bool has_prep>

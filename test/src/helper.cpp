@@ -460,12 +460,13 @@ mgb::make_callback_copy(SymbolVar dev, HostTensorND &host, bool sync) {
 
 /* ========================== PersistentCacheHook ========================== */
 class PersistentCacheHook::HookedImpl final : public PersistentCache {
-    GetHook m_on_get;
+    Hook m_on_get, m_on_set;
 
 public:
     std::shared_ptr<PersistentCache> orig_impl;
 
-    HookedImpl(GetHook on_get) : m_on_get{std::move(on_get)} {}
+    HookedImpl(Hook on_get, Hook on_set)
+            : m_on_get{std::move(on_get)}, m_on_set{std::move(on_set)} {}
 
     Maybe<Blob> get(const std::string& category, const Blob& key) override {
         auto ret = orig_impl->get(category, key);
@@ -476,12 +477,18 @@ public:
 
     void put(const std::string& category, const Blob& key,
              const Blob& value) override {
+        m_on_set(category, key.ptr, key.size, value.ptr,
+                 value.size);
         orig_impl->put(category, key, value);
     }
 };
 
-PersistentCacheHook::PersistentCacheHook(GetHook on_get)
-        : m_impl{std::make_shared<HookedImpl>(std::move(on_get))} {
+PersistentCacheHook::Hook PersistentCacheHook::default_set_hook =
+        [](const std::string&, const void*, size_t, const void*, size_t) {};
+
+PersistentCacheHook::PersistentCacheHook(Hook on_get, Hook on_set)
+        : m_impl{std::make_shared<HookedImpl>(std::move(on_get),
+                                              std::move(on_set))} {
     m_impl->orig_impl = PersistentCache::set_impl(m_impl);
 }
 

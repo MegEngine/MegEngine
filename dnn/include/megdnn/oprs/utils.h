@@ -91,6 +91,11 @@ class MaxTensorDiff : public OperatorBase {
         void check_exec(const TensorLayout& layout1,
                         const TensorLayout& layout2, size_t workspace_in_bytes);
 };
+
+
+bool check_bias_share_in_channel(const TensorLayout& bias,
+                                 const param::ConvBias::Format format);
+
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"

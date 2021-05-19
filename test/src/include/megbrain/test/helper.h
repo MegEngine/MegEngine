@@ -512,17 +512,17 @@ bool check_device_type_avaiable(CompNode::DeviceType device_type);
 
 //! hook persistent cache get calls during the lifetime
 class PersistentCacheHook {
-    class HookedImpl;
-
-    std::shared_ptr<HookedImpl> m_impl;
-
 public:
-    //! if value is not available, \p val and \p val_size would be zero
-    using GetHook = thin_function<void(const std::string& category,
-                                       const void* key, size_t key_size,
-                                       const void* val, size_t val_size)>;
-    PersistentCacheHook(GetHook on_get);
+    using Hook = thin_function<void(const std::string& category,
+                                    const void* key, size_t key_size,
+                                    const void* val, size_t val_size)>;
+    PersistentCacheHook(Hook on_get, Hook on_set = default_set_hook);
+
     ~PersistentCacheHook();
+private:
+    static Hook default_set_hook;
+    class HookedImpl;
+    std::shared_ptr<HookedImpl> m_impl;
 };
 //! skip a testcase if xpu not available
 #define REQUIRE_XPU(n) do { \

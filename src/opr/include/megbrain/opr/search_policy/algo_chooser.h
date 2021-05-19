@@ -68,7 +68,10 @@ class AlgoChooser {
 public:
     using FixedTensorLayouts = std::array<TensorLayout, arity>;
     class AlgoChooserHelper {
-        FixedTensorLayouts m_layouts;
+        //! fastrun layouts
+        FixedTensorLayouts m_fastrun_layouts;
+        //! layouts used when get and set cache item
+        FixedTensorLayouts m_incache_layouts;
         Opr* m_dnn_opr;
         std::string m_param;
         const cg::OperatorNodeBase* m_base_mgb_opr;
@@ -89,7 +92,7 @@ public:
         const cg::OperatorNodeBase* mgb_opr() const { return m_base_mgb_opr; }
 
         const TensorLayout& inp_layout(size_t idx) const {
-            return m_layouts[idx];
+            return m_fastrun_layouts[idx];
         }
         cg::ComputingGraph* owner_graph() const {
             return m_base_mgb_opr->owner_graph();
@@ -109,7 +112,13 @@ public:
             return m_dnn_opr->get_algorithm_from_desc(desc);
         }
 
-        const FixedTensorLayouts& layouts() const { return m_layouts; }
+        const FixedTensorLayouts& fastrun_layouts() const {
+            return m_fastrun_layouts;
+        }
+
+        const FixedTensorLayouts& incache_layouts() const {
+            return m_incache_layouts;
+        }
 
         //! construct algo chain by heuristic
         ImplExecutionPolicy choose_by_heuristic(
@@ -141,7 +150,8 @@ public:
 
         //! get workspace size required for specific execution policy
         size_t get_workspace_size_bytes(
-                const ImplExecutionPolicy& policy) const;
+                const ImplExecutionPolicy& policy,
+                const FixedTensorLayouts& layouts = {}) const;
 
         //! get all candidate algos, and the one choose_by_heuristic() is
         //! put first
@@ -173,7 +183,8 @@ public:
                 const ExecutionStrategy& strategy) const;
 
     private:
-        Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter() const;
+        Maybe<PreprocessFilter<Opr>> construct_fake_preprocess_filter(
+                const FixedTensorLayouts& layouts = {}) const;
     };
 
     template <typename U>

@@ -60,21 +60,31 @@ std::string profile_name(Opr* opr) {
 template <typename Opr>
 std::string format_fixlayouts(
         const typename opr::AlgoChooser<Opr>::FixedTensorLayouts& layouts,
-        size_t arity_in, size_t arity_out) {
+        size_t arity_in, size_t arity_out,
+        const std::string& delimiter = " -> ") {
     std::string ret;
-    ret.append(": tensor layouts(");
-    for (size_t i = 0; i < arity_in; ++i) {
-        if (i) {
-            ret.append(", ");
+    if (arity_in) {
+        ret.append("(");
+        for (size_t i = 0; i < arity_in; ++i) {
+            if (i) {
+                ret.append(", ");
+            }
+            ret.append(layouts[i].to_string() + " ");
         }
-        ret.append(layouts[i].to_string() + " ");
+        ret.append(")");
     }
-    ret.append(") -> (");
-    for (size_t i = 0; i < arity_out; ++i) {
-        if (i) {
-            ret.append(", ");
+    if (arity_in && arity_out) {
+        ret.append(delimiter);
+    }
+    if (arity_out) {
+        ret.append("(");
+        for (size_t i = 0; i < arity_out; ++i) {
+            if (i) {
+                ret.append(", ");
+            }
+            ret.append(layouts[i + arity_in].to_string() + " ");
         }
-        ret.append(layouts[i + arity_in].to_string() + " ");
+        ret.append(")");
     }
     return ret;
 }
@@ -247,7 +257,7 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
         CircularDepsChecker& checker) {
     auto&& search_item = megdnn::Algorithm::SearchItem{
             OprTypeFromOprTrait<Opr>::opr_type, helper.param(),
-            to_layout_array<Opr>(helper.layouts())};
+            to_layout_array<Opr>(helper.fastrun_layouts())};
     checker.put(search_item);
     std::vector<megdnn::Algorithm::SearchItem> ret;
     for (auto algo_info : helper.get_all_candidates()) {
@@ -255,8 +265,9 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
                 helper.get_algorithm_from_desc(algo_info.desc);
         mgb_assert(algo, "Unknown algo description");
         std::vector<megdnn::Algorithm::SearchItem>&& sub_items =
-                algo->get_subopr_list(to_layout_array<Opr>(helper.layouts()),
-                                      helper.megdnn_opr());
+                algo->get_subopr_list(
+                        to_layout_array<Opr>(helper.fastrun_layouts()),
+                        helper.megdnn_opr());
 
         FOREACH_OPR_TYPE_DISPATCH(sub_items, {
             auto&& megdnn_opr =
@@ -323,6 +334,166 @@ static Algorithm::Info::Desc deserialize_read_pod(const std::string& data,
 
 namespace mgb {
 namespace opr {
+template <class Opr>
+class LayoutsModifier {
+    using FixedTensorLayouts = typename AlgoChooser<Opr>::FixedTensorLayouts;
+
+public:
+    static void on(FixedTensorLayouts&, const typename Opr::Param&, size_t) {}
+
+private:
+    //! index of batch in tensor, 3 for CHWN4 e.g.
+    static size_t index_of_batch(const typename Opr::Param&) { return 0; }
+
+    //! indices contain batch in inputs and outputs, src(0) dst(2) for conv e.g.
+    static std::vector<size_t> sm_indices_contain_batch;
+};
+template <class Opr>
+std::vector<size_t> LayoutsModifier<Opr>::sm_indices_contain_batch = {};
+
+#define DEFAULT_OPR_WITHOUT_INPUT_BROADCAST(opr, idxs)                       \
+    template <>                                                              \
+    class LayoutsModifier<opr> {                                             \
+    public:                                                                  \
+        using FixedTensorLayouts =                                           \
+                typename AlgoChooser<opr>::FixedTensorLayouts;               \
+        static void on(FixedTensorLayouts& layouts, const opr::Param& param, \
+                       size_t new_batch_size) {                              \
+            size_t batch_index = index_of_batch(param);                      \
+            for (size_t index : sm_indices_contain_batch) {                  \
+                layouts.at(index)[batch_index] = new_batch_size;             \
+            }                                                                \
+        }                                                                    \
+                                                                             \
+    private:                                                                 \
+        static size_t index_of_batch(const opr::Param&) { return 0; }        \
+        static std::vector<size_t> sm_indices_contain_batch;                 \
+    };                                                                       \
+    std::vector<size_t> LayoutsModifier<opr>::sm_indices_contain_batch = idxs;
+
+DEFAULT_OPR_WITHOUT_INPUT_BROADCAST(megdnn::Convolution3DForward,
+                                    (std::initializer_list<size_t>{0, 2}))
+DEFAULT_OPR_WITHOUT_INPUT_BROADCAST(megdnn::Convolution3DBackwardData,
+                                    (std::initializer_list<size_t>{1, 2}))
+DEFAULT_OPR_WITHOUT_INPUT_BROADCAST(megdnn::Convolution3DBackwardFilter,
+                                    (std::initializer_list<size_t>{0, 1}))
+DEFAULT_OPR_WITHOUT_INPUT_BROADCAST(megdnn::BatchedMatrixMul,
+                                    (std::initializer_list<size_t>{0, 1, 2}))
+#undef DEFAULT_OPR_WITHOUT_INPUT_BROADCAST
+
+#define CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(opr, idxs)                     \
+    template <>                                                              \
+    class LayoutsModifier<opr> {                                             \
+    public:                                                                  \
+        using FixedTensorLayouts =                                           \
+                typename AlgoChooser<opr>::FixedTensorLayouts;               \
+        static void on(FixedTensorLayouts& layouts, const opr::Param& param, \
+                       size_t new_batch_size) {                              \
+            size_t batch_index = index_of_batch(param);                      \
+            for (size_t index : sm_indices_contain_batch) {                  \
+                layouts.at(index)[batch_index] = new_batch_size;             \
+            }                                                                \
+        }                                                                    \
+                                                                             \
+    private:                                                                 \
+        static size_t index_of_batch(const opr::Param& param) {              \
+            if (param.format == opr::Param::Format::CHWN4) {                 \
+                return 3;                                                    \
+            }                                                                \
+            return 0;                                                        \
+        }                                                                    \
+        static std::vector<size_t> sm_indices_contain_batch;                 \
+    };                                                                       \
+    std::vector<size_t> LayoutsModifier<opr>::sm_indices_contain_batch = idxs;
+
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::ConvolutionForward,
+                                      (std::initializer_list<size_t>{0, 2}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::ConvolutionBackwardData,
+                                      (std::initializer_list<size_t>{1, 2}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::ConvolutionBackwardFilter,
+                                      (std::initializer_list<size_t>{0, 1}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::LocalShareForward,
+                                      (std::initializer_list<size_t>{0, 2}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::LocalShareBackwardData,
+                                      (std::initializer_list<size_t>{1, 2}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::LocalShareBackwardFilter,
+                                      (std::initializer_list<size_t>{0, 1}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::DeformableConvForward,
+                                      (std::initializer_list<size_t>{0, 2, 3,
+                                                                     4}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::DeformableConvBackwardData,
+                                      (std::initializer_list<size_t>{0, 2, 3, 4,
+                                                                     5, 6, 7}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::DeformableConvBackwardFilter,
+                                      (std::initializer_list<size_t>{0, 1, 2,
+                                                                     3}))
+CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST(megdnn::BatchConvBiasForward,
+                                      (std::initializer_list<size_t>{0, 1, 2, 3,
+                                                                     4}))
+#undef CONV_LIKE_OPR_WITHOUT_INPUT_BROADCAST
+
+template <>
+class LayoutsModifier<megdnn::ConvBiasForward> {
+public:
+    using FixedTensorLayouts =
+            typename AlgoChooser<megdnn::ConvBiasForward>::FixedTensorLayouts;
+    static void on(FixedTensorLayouts& layouts,
+                   const megdnn::ConvBiasForward::Param& param,
+                   size_t new_batch_size) {
+        size_t batch_index = index_of_batch(param);
+        for (size_t index : sm_indices_contain_batch) {
+            layouts.at(index)[batch_index] = new_batch_size;
+        }
+        for (size_t index : sm_indices_contain_batch_broadcast) {
+            if (!check_bias_share_in_channel(layouts.at(index), param.format)) {
+                layouts.at(index)[batch_index] = new_batch_size;
+            }
+        }
+    }
+
+private:
+    static std::vector<size_t> sm_indices_contain_batch;
+    static std::vector<size_t> sm_indices_contain_batch_broadcast;
+    static size_t index_of_batch(const megdnn::ConvBiasForward::Param& param) {
+        if (param.format == megdnn::ConvBiasForward::Param::Format::CHWN4) {
+            return 3;
+        }
+        return 0;
+    }
+};
+std::vector<size_t>
+        LayoutsModifier<megdnn::ConvBiasForward>::sm_indices_contain_batch = {
+                0, 3, 4};
+std::vector<size_t> LayoutsModifier<
+        megdnn::ConvBiasForward>::sm_indices_contain_batch_broadcast = {2};
+
+template <>
+class LayoutsModifier<megdnn::MatrixMul> {
+public:
+    using FixedTensorLayouts=
+            typename AlgoChooser<megdnn::MatrixMul>::FixedTensorLayouts;
+    static void on(FixedTensorLayouts& layouts,
+                   const megdnn::MatrixMul::Param& param,
+                   size_t new_batch_size) {
+        //! Because we do not know whether the batch size is in the dimension m
+        //! or the dimension n, we just ignore both m and n here.
+        // FIXME Find a way to make mgb obtain batch size information from R or
+        // automatically
+        layouts.at(2)[0] = new_batch_size;
+        layouts.at(2)[1] = new_batch_size;
+        if (param.transposeA) {
+            layouts.at(0)[1] = new_batch_size;
+        } else {
+            layouts.at(0)[0] = new_batch_size;
+        }
+        if (param.transposeB) {
+            layouts.at(1)[0] = new_batch_size;
+        } else {
+            layouts.at(1)[1] = new_batch_size;
+        }
+    }
+};
+
 ///////////////////////////// AlgoChooserHelper //////////////////////////
 template <typename Opr>
 AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
@@ -331,14 +502,25 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
         const CompNode& cn,
         const megdnn::param::ExecutionPolicy& execution_policy,
         bool allow_weight_preprocess)
-        : m_layouts{layouts},
+        : m_fastrun_layouts{layouts},
+          m_incache_layouts{layouts},
           m_dnn_opr{megdnn_opr},
           m_param{param_str},
           m_base_mgb_opr{mgb_opr},
           m_cn{cn},
           m_execution_policy{execution_policy},
           m_allow_weight_preprocess{allow_weight_preprocess} {
-    mgb_assert(m_layouts.size() == layouts.size());
+    auto fastrun_batch_size =
+            owner_graph()->options().fast_run_config.shared_batch_size;
+
+    if (fastrun_batch_size) {
+        LayoutsModifier<Opr>::on(m_incache_layouts, m_dnn_opr->param(), 0);
+        LayoutsModifier<Opr>::on(m_fastrun_layouts, m_dnn_opr->param(),
+                                 fastrun_batch_size);
+    }
+
+    mgb_assert(m_fastrun_layouts.size() == layouts.size());
+
     static_assert(std::tuple_size<FixedTensorLayouts>::value == 3 ||
                           std::tuple_size<FixedTensorLayouts>::value == 5 ||
                           std::tuple_size<FixedTensorLayouts>::value == 8,
@@ -358,13 +540,13 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_heuristic(
     policy.algo =
             APPLY(m_dnn_opr->get_algorithm_info_heuristic(
                           args..., workspace_limit, attr.first, attr.second),
-                  m_layouts)
+                  m_fastrun_layouts)
                     .desc;
 
     Algorithm* algo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(algo, "Unknown algo description");
     std::vector<Algorithm::SearchItem>&& sub_items = algo->get_subopr_list(
-            to_layout_array<Opr>(m_layouts), m_dnn_opr);
+            to_layout_array<Opr>(m_fastrun_layouts), m_dnn_opr);
 
     FOREACH_OPR_TYPE_DISPATCH(sub_items, {
         auto&& megdnn_opr = intl::create_megdnn_opr<_Opr>(m_cn);
@@ -393,7 +575,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::choose_by_profile(
         if (policy.algo.valid()) {
             return policy;
         }
-        if (!algo_usable_on_shape_change<Opr>()) {
+        if (is_matmul<Opr>()) {
             mgb_log_warn(
                     "choose algo by heuristic, which may cause performance "
                     "regression.");
@@ -442,7 +624,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
     AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
 
     typename Opr::Param origin_param = m_dnn_opr->param();
-    AlgoChooserProfileCache::Key cache_key{m_layouts.data(), m_layouts.size(),
+    AlgoChooserProfileCache::Key cache_key{m_incache_layouts.data(),
+                                           m_incache_layouts.size(),
                                            &origin_param, sizeof(origin_param)};
     auto&& rst = cache.get(cache_key);
     if (!rst.valid())
@@ -472,21 +655,21 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
     }
 
     std::string layouts_str =
-            format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
+            format_fixlayouts<Opr>(m_fastrun_layouts, arity_in, arity_out);
     if (skip_by_negative) {
         mgb_log_error(
-                "opr: %s, layouts: %s, No usable algo. There are available algos match "
+                "opr: %s, layouts: %s, No usable algo. There are available "
+                "algos match "
                 "positive strategy(%s), but filtered by negative stategy(%s).",
-                m_base_mgb_opr->dyn_typeinfo()->name,
-                layouts_str.c_str(),
+                m_base_mgb_opr->dyn_typeinfo()->name, layouts_str.c_str(),
                 Algorithm::attribute_str(target_attr.first).c_str(),
                 Algorithm::attribute_str(target_attr.second).c_str());
     } else {
         mgb_log_error(
-                "opr: %s, layouts: %s, No usable algo. algos read from cache could not "
+                "opr: %s, layouts: %s, No usable algo. algos read from cache "
+                "could not "
                 "satisfy positive strategy(%s)",
-                m_base_mgb_opr->dyn_typeinfo()->name,
-                layouts_str.c_str(),
+                m_base_mgb_opr->dyn_typeinfo()->name, layouts_str.c_str(),
                 Algorithm::attribute_str(target_attr.first).c_str());
     }
 
@@ -508,7 +691,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
                     auto target_attr =
                             extract_algo_attribute(selected_strategy);
                     std::string layouts_str = format_fixlayouts<Opr>(
-                            m_layouts, arity_in, arity_out);
+                            m_fastrun_layouts, arity_in, arity_out);
                     std::string msg = ssprintf(
                             "(opr : %s, layouts %s, with attribute(%s) and "
                             "without attribute(%s)",
@@ -535,7 +718,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
             policy.algo = APPLY(m_dnn_opr->get_algorithm_info_heuristic(
                                         args..., workspace_limit, attr.first,
                                         attr.second),
-                                m_layouts)
+                                m_fastrun_layouts)
                                   .desc;
             mgb_assert(policy.algo.valid(),
                        "No algo found from heuristic with strategy %u and "
@@ -548,7 +731,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
     Algorithm* algo = m_dnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(algo, "Unknown algo description");
     std::vector<Algorithm::SearchItem>&& sub_items = algo->get_subopr_list(
-            to_layout_array<Opr>(m_layouts), m_dnn_opr);
+            to_layout_array<Opr>(m_fastrun_layouts), m_dnn_opr);
 
     FOREACH_OPR_TYPE_DISPATCH(sub_items, {
         auto&& megdnn_opr = intl::create_megdnn_opr<_Opr>(m_cn);
@@ -575,26 +758,32 @@ void AlgoChooser<Opr>::AlgoChooserHelper::construct_execution_policy(
 
 template <typename Opr>
 size_t AlgoChooser<Opr>::AlgoChooserHelper::get_workspace_size_bytes(
-        const ImplExecutionPolicy& policy) const {
+        const ImplExecutionPolicy& policy,
+        const FixedTensorLayouts& layouts) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_workspace_size_bytes")))
     m_dnn_opr->execution_policy() = policy;
     size_t result;
+    const FixedTensorLayouts* layouts_ptr = &m_fastrun_layouts;
+    if (layouts.at(0).ndim) {
+        layouts_ptr = &layouts;
+    }
     if_constexpr<opr_supports_preprocess<Opr>()>(
             [&](auto _) {
                 auto&& opr = _(m_dnn_opr);
-                auto prep = this->construct_fake_preprocess_filter();
+                auto prep =
+                        this->construct_fake_preprocess_filter(*layouts_ptr);
                 PreprocessFilter<Opr>* prep_ptr =
                         prep.valid() ? &prep.val() : nullptr;
                 result = std::max(
                         APPLY(opr->get_preprocess_workspace_in_bytes(args...),
-                              m_layouts),
+                              *layouts_ptr),
                         APPLY(opr->get_workspace_in_bytes(args..., prep_ptr),
-                              m_layouts));
+                              *layouts_ptr));
             },
             /* else */
             [&](auto _) {
                 result = APPLY(_(m_dnn_opr)->get_workspace_in_bytes(args...),
-                               m_layouts);
+                               *layouts_ptr);
             });
     return result;
     MIDOUT_E
@@ -605,8 +794,8 @@ std::vector<typename AlgoChooser<Opr>::ImplAlgo>
 AlgoChooser<Opr>::AlgoChooserHelper::get_all_candidates() const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_all_candidates")))
     auto heu = choose_by_heuristic(m_execution_policy.strategy);
-    auto&& ret =
-            APPLY(m_dnn_opr->get_all_algorithms_info(args...), m_layouts);
+    auto&& ret = APPLY(m_dnn_opr->get_all_algorithms_info(args...),
+                       m_fastrun_layouts);
     bool found = false;
     for (size_t i = 0; i < ret.size(); ++i) {
         if (ret[i].desc == heu.algo) {
@@ -637,7 +826,7 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
             TimedProfiler<Opr>::Param::ExecutionPolicyBlob::serialize(policy);
     param.workspace = get_workspace_size_bytes(policy);
     for (int i = 0; i < arity; ++i) {
-        auto&& src = m_layouts[i];
+        auto&& src = m_fastrun_layouts[i];
         bool cond_normal = src.format.is_default() &&
                            (src.dtype.category() == DTypeCategory::FLOAT ||
                             src.dtype.category() == DTypeCategory::INT ||
@@ -655,9 +844,9 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
         param.dtypes[i] = src.dtype.enumv();
     }
     param.comp_node_loc = m_cn.locator();
-    mgb_assert(param.shapes.size() == m_layouts.size());
+    mgb_assert(param.shapes.size() == m_fastrun_layouts.size());
     for (size_t i = 0; i < param.shapes.size(); ++i)
-        param.shapes[i] = m_layouts[i];
+        param.shapes[i] = m_fastrun_layouts[i];
     param.opr_param = m_dnn_opr->param();
     param.allow_weight_preprocess = m_allow_weight_preprocess;
 
@@ -692,7 +881,7 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
 
     auto target_attr = extract_algo_attribute(selected_strategy);
     std::string layouts_str =
-            format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
+            format_fixlayouts<Opr>(m_fastrun_layouts, arity_in, arity_out);
     double cur_timeout = 0;
 
     auto workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
@@ -761,10 +950,10 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
             workspace_limit);
     mgb_assert(!prof_rst.empty(), "%s", msg.c_str());
 
-    FixedTensorLayouts origin_layouts = m_layouts;
+    FixedTensorLayouts incache_layouts = m_incache_layouts;
     typename Opr::Param origin_param = m_dnn_opr->param();
-    AlgoChooserProfileCache::Key cache_key{origin_layouts.data(),
-                                           origin_layouts.size(), &origin_param,
+    AlgoChooserProfileCache::Key cache_key{incache_layouts.data(),
+                                           incache_layouts.size(), &origin_param,
                                            sizeof(origin_param)};
 
     AlgoChooserProfileCache cache(m_cn, profile_name(m_dnn_opr).c_str());
@@ -774,15 +963,20 @@ void AlgoChooser<Opr>::AlgoChooserHelper::profile(
 
 template <typename Opr>
 Maybe<PreprocessFilter<Opr>>
-AlgoChooser<Opr>::AlgoChooserHelper::construct_fake_preprocess_filter() const {
+AlgoChooser<Opr>::AlgoChooserHelper::construct_fake_preprocess_filter(
+        const FixedTensorLayouts& layouts) const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("construct_fake_preprocess_filter")))
     Maybe<PreprocessFilter<Opr>> result = None;
+    const FixedTensorLayouts* layouts_ptr = &m_fastrun_layouts;
+    if (layouts.at(0).ndim) {
+        layouts_ptr = &layouts;
+    }
     if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
         if (!m_allow_weight_preprocess)
             return;
         auto opr = _(m_dnn_opr);
         auto layouts = APPLY(opr->deduce_preprocessed_filter_layout(args...),
-                             m_layouts);
+                             *layouts_ptr);
         //! No preprocess layout means no need weight preprocess
         if (layouts.empty()) {
             return;
@@ -825,6 +1019,16 @@ AlgoChooser<Opr>::AlgoChooserHelper::extract_algo_attribute(
         ret.second |= AlgoAttribute::NAIVE;
     }
 
+    //! from graph option
+    if (owner_graph()->options().fast_run_config.shared_batch_size) {
+        ret.second |= AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+    }
+
+    if (owner_graph()->options().fast_run_config.binary_equal_between_batch) {
+        ret.first |= AlgoAttribute::REPRODUCIBLE;
+        ret.second |= AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+    }
+
     return ret;
 }
 
@@ -854,7 +1058,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::extract_algo_attribute(
     template size_t                                                            \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::get_workspace_size_bytes(     \
             const typename AlgoChooser<megdnn::Opr>::ImplExecutionPolicy&      \
-                    policy) const;                                             \
+                    policy,                                                    \
+            const FixedTensorLayouts& layouts) const;                          \
     template std::vector<typename AlgoChooser<megdnn::Opr>::ImplAlgo>          \
     AlgoChooser<megdnn::Opr>::AlgoChooserHelper::get_all_candidates() const;   \
     template Maybe<AlgoChooserProfileCache::ResultEntry>                       \
@@ -942,10 +1147,11 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     if (!policy.algo.valid()) {
         policy = get_policy(helper);
     }
-    size_t workspace = helper.get_workspace_size_bytes(policy);
+    size_t workspace = helper.get_workspace_size_bytes(policy, layouts);
 
     std::string ret;
     ret.append(mgb_opr->dyn_typeinfo()->name);
+    ret.append(": tensor layouts");
     ret += format_fixlayouts<Opr>(layouts, arity_in, arity_out);
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "Unknown algo description");

@@ -10,6 +10,7 @@
  */
 
 #include "src/common/utils.h"
+#include "megdnn/oprs/utils.h"
 #include "megdnn/handle.h"
 
 #include <cstdarg>
@@ -342,6 +343,35 @@ size_t& CpuNDRange::operator[](size_t idx) {
     megdnn_assert(idx < m_dimension, "invalid index: %zu expected < %zu", idx,
                   m_dimension);
     return m_dim[idx];
+}
+
+bool megdnn::check_bias_share_in_channel(const TensorLayout& bias,
+                                 const param::ConvBias::Format format) {
+    bool share_in_channel = false;
+    if (format == param::ConvBias::Format::NCHW ||
+        format == param::ConvBias::Format::NCHW4_NCHW) {
+        share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[2] == 1 &&
+                            bias[3] == 1);
+    } else if (format == param::ConvBias::Format::NHWC) {
+        share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[1] == 1 &&
+                            bias[2] == 1);
+    } else if (format == param::ConvBias::Format::NCHW4 ||
+               format == param::ConvBias::Format::NCHW8 ||
+               format == param::ConvBias::Format::NCHW32 ||
+               format == param::ConvBias::Format::NCHW64 ||
+               format == param::ConvBias::Format::NCHW4_NCHW32 ||
+               format == param::ConvBias::Format::NCHW32_NCHW4) {
+        share_in_channel = (bias.ndim == 5 && bias[0] == 1 && bias[2] == 1 &&
+                            bias[3] == 1);
+    } else if (format == param::ConvBias::Format::NHWCD4) {
+        share_in_channel = (bias.ndim == 5 && bias[0] == 1 && bias[1] == 1 &&
+                            bias[3] == 1);
+    } else {
+        megdnn_assert(format == param::ConvBias::Format::CHWN4);
+        share_in_channel = (bias.ndim == 5 && bias[1] == 1 && bias[2] == 1 &&
+                            bias[3] == 1);
+    }
+    return share_in_channel;
 }
 
 // vim: syntax=cpp.doxygen
