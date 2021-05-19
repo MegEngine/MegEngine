@@ -18,11 +18,15 @@ from megengine.utils.module_stats import module_stats
 def test_module_stats():
     net = ResNet(BasicBlock, [2, 2, 2, 2])
     input_shape = (1, 3, 224, 224)
-    total_stats, stats_details = module_stats(net, input_shape)
+    total_stats, stats_details = module_stats(net, input_shapes=input_shape)
+    x1 = np.random.random((1, 3, 224, 224)).astype("float32")
+    gt_flops, gt_acts = net.get_stats(mge.tensor(x1))
+    assert (total_stats.flops, stats_details.activations[-1]["act_dim"]) == (
+        gt_flops,
+        gt_acts,
+    )
 
-    x1 = mge.tensor(np.zeros((1, 3, 224, 224)))
-    gt_flops, gt_acts = net.get_stats(x1)
-
+    total_stats, stats_details = module_stats(net, inputs=x1)
     assert (total_stats.flops, stats_details.activations[-1]["act_dim"]) == (
         gt_flops,
         gt_acts,
