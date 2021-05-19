@@ -97,8 +97,9 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
             auto conv_bias_algo = cb(algo_perf[i].algo);
             if (conv_bias_algo->is_available_attribute(
                         args, positive_attr, negative_attr,
-                        workspace_limit_in_bytes))
+                        workspace_limit_in_bytes)) {
                 return conv_bias_algo;
+            }
         }
 #else
         cudnnConvolutionFwdAlgo_t algo;
