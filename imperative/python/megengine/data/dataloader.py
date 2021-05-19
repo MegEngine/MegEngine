@@ -7,6 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
+import gc
 import math
 import multiprocessing
 import platform
@@ -246,6 +247,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
             ),
             daemon=True,
         )
+        gc.collect()
         self.task_feeding_worker.start()
 
         self.workers = []
@@ -262,6 +264,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
                 ),
                 daemon=True,
             )
+            gc.collect()
             worker.start()
             self.workers.append(worker)
 
@@ -293,6 +296,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
                 ),
                 daemon=True,
             )
+        gc.collect()
         self.data_collecting_worker.start()
 
         self.__initialized = True
@@ -465,6 +469,7 @@ class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter):
         self.recieve_worker = multiprocessing.Process(
             target=self._worker_to_raw_data_queues, daemon=True
         )
+        gc.collect()
         self.recieve_worker.start()
 
         self.transform_workers = []
@@ -472,12 +477,14 @@ class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter):
             worker = multiprocessing.Process(
                 target=self._worker_to_trans_data_queues, args=(worker_id,), daemon=True
             )
+            gc.collect()
             worker.start()
             self.transform_workers.append(worker)
 
         self.collect_worker = multiprocessing.Process(
             target=self._worker_to_batch_queue, daemon=True
         )
+        gc.collect()
         self.collect_worker.start()
 
         self.__initialized = True
