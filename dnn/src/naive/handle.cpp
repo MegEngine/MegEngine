@@ -110,6 +110,9 @@ DefaultLocalShareBackwardFilterAlgorithm
 DefaultMatrixMulAlgorithm HandleImpl::m_default_matmul_fwd_algo;
 DefaultBatchedMatrixMulAlgorithm HandleImpl::m_default_batched_matmul_fwd_algo;
 
+DefaultPoolingForwardAlgorithm HandleImpl::m_default_pooling_fwd_algo;
+DefaultPoolingBackwardAlgorithm HandleImpl::m_default_pooling_bwd_algo;
+
 HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle,
                        HandleType type)
         : HandleImplHelper(computing_handle, type),

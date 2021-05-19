@@ -175,6 +175,8 @@ cb(DEFORMABLE_CONV_BACKWARD_DATA, DeformableConvBackwardData);
 cb(DEFORMABLE_CONV_BACKWARD_FILTER, DeformableConvBackwardFilter);
 cb(BATCH_CONV_FORWARD, BatchConvBiasForward);
 cb(CONVBIAS_FORWARD, ConvBiasForward);
+cb(POOLING_FORWARD, PoolingForward);
+cb(POOLING_BACKWARD, PoolingBackward);
 
 #undef cb
 
@@ -195,7 +197,9 @@ cb(CONVBIAS_FORWARD, ConvBiasForward);
     cb(DEFORMABLE_CONV_BACKWARD_DATA, stmt)   \
     cb(DEFORMABLE_CONV_BACKWARD_FILTER, stmt) \
     cb(BATCH_CONV_FORWARD, stmt)              \
-    cb(CONVBIAS_FORWARD, stmt)
+    cb(CONVBIAS_FORWARD, stmt)                \
+    cb(POOLING_FORWARD, stmt)                 \
+    cb(POOLING_BACKWARD, stmt)
 // clang-format on
 
 #define _OPR_TYPE_CASE(_opr_type, _stmt)             \
@@ -521,11 +525,14 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
 
     mgb_assert(m_fastrun_layouts.size() == layouts.size());
 
-    static_assert(std::tuple_size<FixedTensorLayouts>::value == 3 ||
-                          std::tuple_size<FixedTensorLayouts>::value == 5 ||
-                          std::tuple_size<FixedTensorLayouts>::value == 8,
-                  "Convolution AlgoChooser assumes arity = 3 , 5 or 8 (for "
-                  "deformable conv)");
+    static_assert(
+            std::tuple_size<FixedTensorLayouts>::value == 2 ||
+                    std::tuple_size<FixedTensorLayouts>::value == 3 ||
+                    std::tuple_size<FixedTensorLayouts>::value == 4 ||
+                    std::tuple_size<FixedTensorLayouts>::value == 5 ||
+                    std::tuple_size<FixedTensorLayouts>::value == 8,
+            "Pooling assumes arity = 2 or 4,Convolution AlgoChooser assumes "
+            "arity = 3 , 5 or 8 (for deformable conv)");
 }
 
 template <typename Opr>

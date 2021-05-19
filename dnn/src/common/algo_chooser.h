@@ -69,7 +69,7 @@ std::vector<typename Opr::Algorithm*> get_all_algorithms(
             ret.push_back(i);
         }
     }
-    megdnn_assert(!ret.empty(), "no conv algorithm for %s",
+    megdnn_assert(!ret.empty(), "no algorithm for %s",
                   args.to_string().c_str());
     return ret;
 }

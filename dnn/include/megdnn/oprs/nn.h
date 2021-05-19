@@ -713,7 +713,8 @@ protected:
     void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);
 };
 
-class PoolingForward : public PoolingBase {
+class PoolingForward : public PoolingBase,
+                       public detail::MultiAlgoOpr<PoolingForward, 2> {
     DEF_OPR_IMPL(PoolingForward, PoolingBase, 1, 1);
 
 public:
@@ -734,7 +735,8 @@ protected:
 
 using Pooling = PoolingForward;
 
-class PoolingBackward : public PoolingBase {
+class PoolingBackward : public PoolingBase,
+                        public detail::MultiAlgoOpr<PoolingBackward, 4> {
     DEF_OPR_IMPL(PoolingBackward, PoolingBase, 3, 1);
 
 public:

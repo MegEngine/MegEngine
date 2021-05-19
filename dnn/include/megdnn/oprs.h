@@ -48,6 +48,8 @@ INST_ARITY(megdnn::ConvBias, 4, 1);
 INST_ARITY(megdnn::DeformableConvBackwardData, 5, 3);
 INST_ARITY(megdnn::MatrixMul, 2, 1);
 INST_ARITY(megdnn::BatchedMatrixMul, 2, 1);
+INST_ARITY(megdnn::PoolingForward, 1, 1);
+INST_ARITY(megdnn::PoolingBackward, 3, 1);
 
 #undef INST_ARITY
 

@@ -54,14 +54,6 @@ class ConvDesc {
         cudnnConvolutionDescriptor_t desc;
 };
 
-class PoolingDesc {
-    public:
-        PoolingDesc();
-        void set(const param::Pooling &param);
-        ~PoolingDesc();
-        cudnnPoolingDescriptor_t desc;
-};
-
 class LRNDesc {
     public:
         LRNDesc();

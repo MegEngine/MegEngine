@@ -40,7 +40,9 @@ namespace opr {
     cb(DeformableConvBackwardData)   \
     cb(BatchConvBiasForward)         \
     cb(MatrixMul)                    \
-    cb(BatchedMatrixMul)
+    cb(BatchedMatrixMul)             \
+    cb(PoolingForward)               \
+    cb(PoolingBackward)
 // clang-format on
 
 template <typename Opr>

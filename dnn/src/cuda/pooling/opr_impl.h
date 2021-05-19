@@ -23,16 +23,45 @@ public:
     void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
               _megdnn_workspace workspace) override;
     size_t get_workspace_in_bytes(const TensorLayout& src,
-                                  const TensorLayout& dst) override {
-        return get_workspace_bundle(nullptr, src, dst).total_size_in_bytes();
+                                  const TensorLayout& dst) override;
+
+    const char* get_algorithm_set_name() const override;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
+
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
+        return get_algorithm_heuristic(src, dst, workspace_limit_in_bytes,
+                                       positive_attr, negative_attr)
+                ->info();
     }
 
+    class AlgoBase;
+    class AlgoCUDNN;
+#if CUDNN_VERSION >= 6000
+    class AlgoCUDNNMAXDETERMINISTIC;
+#endif
+    class AlgoCHWN4;
+    class AlgoNCHW4;
+    class AlgoNCHW32;
+    class AlgoNHWC;
+    class AlgoNCHW64;
+
+    class AlgoPack;
+
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+
+protected:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& dst) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
+
 private:
-    TensorDesc src_desc, dst_desc;
-    PoolingDesc pooling_desc;
-    void setup_descs(const TensorLayout& src, const TensorLayout& dst);
-    WorkspaceBundle get_workspace_bundle(void* ptr, const TensorLayout& src,
-                                         const TensorLayout& dst) const;
+    static AlgoPack sm_algo_pack;
 };
 
 class PoolingBackwardImpl final : public PoolingBackward {
@@ -44,23 +73,43 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& dst,
                                   const TensorLayout& diff,
-                                  const TensorLayout& grad) override {
-        return get_workspace_bundle(nullptr, src, dst, diff, grad)
-                .total_size_in_bytes();
+                                  const TensorLayout& grad) override;
+
+    const char* get_algorithm_set_name() const override;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc& desc) override;
+
+    AlgorithmInfo get_algorithm_info_heuristic(
+            const TensorLayout& src, const TensorLayout& dst,
+            const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) {
+        return get_algorithm_heuristic(src, dst, diff, grad,
+                                       workspace_limit_in_bytes, positive_attr,
+                                       negative_attr)
+                ->info();
     }
 
+    class AlgoBase;
+    class AlgoCUDNN;
+    class AlgoPack;
+
+    static const AlgoPack& algo_pack() { return sm_algo_pack; }
+
+protected:
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& dst,
+            const TensorLayout& diff, const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& dst,
+            const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
+
 private:
-    TensorDesc src_desc, dst_desc, diff_desc, grad_desc;
-    PoolingDesc pooling_desc;
-    void setup_descs(const TensorLayout& src, const TensorLayout& dst,
-                     const TensorLayout& diff, const TensorLayout& grad);
-    WorkspaceBundle get_workspace_bundle(void* ptr, const TensorLayout& src,
-                                         const TensorLayout& dst,
-                                         const TensorLayout& diff,
-                                         const TensorLayout& grad) const;
+    static AlgoPack sm_algo_pack;
 };
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

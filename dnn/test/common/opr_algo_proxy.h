@@ -46,6 +46,12 @@ struct AlgoProxy;
         }                                                                     \
     }
 
+#define LAYOUTS layouts[0], layouts[1]
+#define TENSORS tensors[0], tensors[1]
+DEF_ALGO_PROXY(2);
+#undef LAYOUTS
+#undef TENSORS
+
 #define LAYOUTS layouts[0], layouts[1], layouts[2]
 #define TENSORS tensors[0], tensors[1], tensors[2]
 DEF_ALGO_PROXY(3);

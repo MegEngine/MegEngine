@@ -51,6 +51,9 @@ class HandleImpl : public HandleImplHelper {
     static DefaultMatrixMulAlgorithm m_default_matmul_fwd_algo;
     static DefaultBatchedMatrixMulAlgorithm m_default_batched_matmul_fwd_algo;
 
+    static DefaultPoolingForwardAlgorithm m_default_pooling_fwd_algo;
+    static DefaultPoolingBackwardAlgorithm m_default_pooling_bwd_algo;
+
     //! move KernFunc to alloc_kern()->func, destruct func, and call dispatch
     template <typename T>
     void move_kern_func_to_new_kern_and_dispatch(T& func) {
@@ -120,6 +123,14 @@ public:
 
     BatchedMatrixMulForward::Algorithm* default_batched_matmul_fwd_algo() {
         return &m_default_batched_matmul_fwd_algo;
+    }
+
+    PoolingForward::Algorithm* default_pooling_fwd_algo() {
+        return &m_default_pooling_fwd_algo;
+    }
+
+    PoolingBackward::Algorithm* default_pooling_bwd_algo() {
+        return &m_default_pooling_bwd_algo;
     }
 
     Relayout* relayout_opr() override {

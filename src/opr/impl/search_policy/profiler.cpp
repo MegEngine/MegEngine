@@ -284,7 +284,7 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
                                                         mdn_workspace),
                               std::forward_as_tuple(layouts[0],
                                                     inp_val[1].as_megdnn()),
-                              array_skip<2>(layouts));
+                              array_skip<arity_in>(layouts));
                     });
         }
     });

@@ -18,6 +18,7 @@
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megbrain/opr/search_policy/profiler.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/blas.h"
 #include "megdnn/oprs/base.h"
 

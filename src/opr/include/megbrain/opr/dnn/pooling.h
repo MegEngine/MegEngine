@@ -12,34 +12,50 @@
 #pragma once
 
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+#include "megbrain/opr/search_policy/algo_chooser_helper.h"
 #include "megdnn/oprs.h"
 
 namespace mgb {
 namespace opr {
 
 MGB_DEFINE_OPR_CLASS(PoolingForward,
-        intl::MegDNNOprWrapperFwd<megdnn::PoolingForward>) // {
+                     intl::MegDNNOprWrapperFwd<megdnn::PoolingForward>,
+                     public mixin::AlgoChooserHelper) //{
+public:
+    PoolingForward(VarNode * src, const Param& param,
+                   const ExecutionPolicy& policy,
+                   const OperatorNodeConfig& config);
+    static SymbolVar make(SymbolVar src, const Param& param,
+                          const OperatorNodeConfig& config = {},
+                          const ExecutionPolicy& policy = {});
 
-    public:
-        PoolingForward(VarNode *src, const Param &param,
-                const OperatorNodeConfig &config);
-        static SymbolVar make(SymbolVar src, const Param &param,
-                const OperatorNodeConfig &config = {});
+    void init_output_static_infer_desc() override;
+
+    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
+                                    const TensorShapeArray& output_shapes)
+            const override;
 };
 using Pooling = PoolingForward;
 
 MGB_DEFINE_OPR_CLASS(PoolingBackward,
-        intl::MegDNNOprWrapperBwd<megdnn::PoolingBackward>) // {
+                     intl::MegDNNOprWrapperBwd<megdnn::PoolingBackward>,
+                     public mixin::AlgoChooserHelper) //{
+public:
+    PoolingBackward(VarNode * src, VarNode * dst, VarNode * diff,
+                    const Param& param, const ExecutionPolicy& policy,
+                    const OperatorNodeConfig& config);
+    
+    static SymbolVar make(SymbolVar src, SymbolVar dst, SymbolVar diff,
+                          const Param& param,
+                          const OperatorNodeConfig& config = {},
+                          const ExecutionPolicy& policy = {});
 
-    public:
-        PoolingBackward(VarNode *src, VarNode *dst, VarNode *diff,
-                const Param &param, const OperatorNodeConfig &config);
-        static SymbolVar make(SymbolVar src, SymbolVar dst, SymbolVar diff,
-                const Param &param,
-                const OperatorNodeConfig &config = {});
+    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
+                                    const TensorShapeArray& output_shapes)
+            const override final;
 };
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

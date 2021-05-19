@@ -582,6 +582,52 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     megdnn_assert_internal(0);
 }
 
+PoolingForward::Algorithm* PoolingForwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
+std::vector<Algorithm*> PoolingForwardImpl::get_all_algorithms(
+        const TensorLayout&, const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo()};
+}
+
+Algorithm* PoolingForwardImpl::get_algorithm_heuristic(
+        const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
+        size_t /*workspace_limit_in_bytes*/, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo();
+    algo->check_attribute(positive_attr, negative_attr);
+    return algo;
+}
+
+Algorithm* PoolingBackwardImpl::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
+std::vector<Algorithm*> PoolingBackwardImpl::get_all_algorithms(
+        const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
+        const TensorLayout& /*diff*/, const TensorLayout& /*grad*/) {
+    return {static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo()};
+}
+
+Algorithm* PoolingBackwardImpl::get_algorithm_heuristic(
+        const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
+        const TensorLayout& /*diff*/, const TensorLayout& /*grad*/,
+        size_t /*workspace_limit_in_bytes*/, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo();
+    algo->check_attribute(positive_attr, negative_attr);
+    return algo;
+}
+
 WorkspaceBundle PoolingBackwardImpl::get_workspace_bundle(
         void* ptr, const TensorLayout& src, const TensorLayout& dst,
         const TensorLayout& diff, const TensorLayout& grad) const {

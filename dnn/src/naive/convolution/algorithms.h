@@ -57,6 +57,24 @@ class DefaultBatchConvBiasForwardAlgorithm final
     const char* name() const override { return "DEFAULT"; }
 };
 
+class DefaultPoolingForwardAlgorithm final
+        : public megdnn::PoolingForward::Algorithm {
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
+};
+
+class DefaultPoolingBackwardAlgorithm final
+        : public megdnn::PoolingBackward::Algorithm {
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
+};
+
 }  // namespace naive
 }  // namespace megdnn
 

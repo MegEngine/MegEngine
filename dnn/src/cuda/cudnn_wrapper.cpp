@@ -294,32 +294,6 @@ void ConvDesc::set(DType data_type, const param::Convolution& param,
 #endif
 }
 
-PoolingDesc::PoolingDesc() {
-    cudnn_check(cudnnCreatePoolingDescriptor(&desc));
-}
-
-PoolingDesc::~PoolingDesc() {
-    cudnn_check(cudnnDestroyPoolingDescriptor(desc));
-}
-
-void PoolingDesc::set(const param::Pooling& param) {
-    cudnnPoolingMode_t mode;
-    switch (param.mode) {
-        case param::Pooling::Mode::MAX:
-            mode = CUDNN_POOLING_MAX;
-            break;
-        case param::Pooling::Mode::AVERAGE:
-            mode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
-            break;
-        case param::Pooling::Mode::AVERAGE_COUNT_EXCLUDE_PADDING:
-            mode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-            break;
-    }
-    cudnn_check(cudnnSetPooling2dDescriptor(
-            desc, mode, CUDNN_NOT_PROPAGATE_NAN, param.window_h, param.window_w,
-            param.pad_h, param.pad_w, param.stride_h, param.stride_w));
-}
-
 LRNDesc::LRNDesc() {
     cudnn_check(cudnnCreateLRNDescriptor(&desc));
 }

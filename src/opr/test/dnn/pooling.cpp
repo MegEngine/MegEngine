@@ -11,6 +11,9 @@
 
 #include "./legacy_checker.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/utils/persistent_cache.h"
+#include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/basic_arith_wrapper.h"
 
 using namespace std;
 using namespace mgb;
@@ -102,6 +105,58 @@ TEST(TestOprDNN, PoolingBackward)
                 {{2, 3, ix, iy}}, param, 1e-2, 1e-2, false);
         backward_checker.run();
     }
+}
+
+TEST(TestOprDNN, PoolingExePolicy) {
+    using Param = opr::Pooling::Param;
+    Param param;
+    using Policy = opr::Pooling::ExecutionPolicy;
+    using S = Policy::Strategy;
+
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+
+    auto orig_impl = PersistentCache::set_impl(
+            std::make_shared<InMemoryPersistentCache>());
+
+    HostTensorND host_y, host_y_copy;
+    S strategy = S::HEURISTIC | S::REPRODUCIBLE;
+
+    auto graph = ComputingGraph::make();
+
+    HostTensorGenerator<> gen;
+    TensorShape shape = {1, 20, 24, 24};
+    auto input = opr::Host2DeviceCopy::make(*graph, gen(shape, cn));
+
+    param.mode = Param::Mode::MAX;
+    param.window_h = param.window_w = 2;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 0;
+    param.format = Param::Format::NCHW;
+
+    Policy policy;
+    policy.strategy = strategy;
+
+    auto pooling = opr::PoolingForward::make(input, param, {}, policy);
+
+    auto loss0 = opr::reduce_sum_sqr(pooling, pooling.make_scalar(1));
+    auto grad = cg::grad(loss0, input, true, false);
+
+    opr::PoolingBackward* found = nullptr;
+    auto cb = [&found](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::PoolingBackward>()) {
+            found = &opr->cast_final_safe<opr::PoolingBackward>();
+        }
+    };
+    cg::DepOprIter{cb}.add(grad.node()->owner_opr());
+    found->set_execution_policy(strategy);
+
+    auto func = graph->compile({make_callback_copy(grad, host_y)});
+    func->execute().wait();
+
+    mgb_assert(found->megdnn_opr()->execution_policy().algo.name.find(
+                       "cudnnReproducible") != std::string::npos);
 }
 
 } // anonymous namespace
