@@ -106,6 +106,7 @@ setup_kwargs = dict(
         'ci': requires_test,
     },
     cmdclass={'build_ext': build_ext},
+    scripts = ['./megengine/tools/mge'],
 )
 
 
