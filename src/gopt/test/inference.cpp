@@ -3815,7 +3815,7 @@ TEST(TestGoptInference, PreProcessCase1) {
 
     HostTensorND host_y_opt, host_y;
     auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_opt, host_y_opt)});
+                                make_callback_copy(y_opt, host_y_opt)});    
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 
@@ -3880,6 +3880,68 @@ TEST(TestGoptInference, WarpAndPreProcessCase0) {
                                 make_callback_copy(y_opt, host_y_opt)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+}
+
+TEST(TestGoptInference, PreProcessCaseAutopadNCHW64) {
+    REQUIRE_GPU(1);
+    HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen(0, 255);
+    auto cn = CompNode::load("gpu0");
+    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+    auto sm_ver = prop.major * 10 + prop.minor;
+    if (sm_ver < 75) {
+        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
+               "expected: %d)\n",
+               sm_ver, 75);
+        return;
+    }
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+    size_t n = 2;
+    size_t c = 3;
+    size_t h = 32;
+    size_t w = 32;
+    auto host_x1 = gen({n, c, h, w}, cn);
+
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x1);
+    auto x_u8_fp32 = opr::TypeCvt::make(x, dtype::Float32(), cn);
+    auto x_s8_fp32 = x_u8_fp32 - 128;
+    auto x_s8 = opr::TypeCvt::make(x_s8_fp32, dtype::QuantizedS8(2.5f), cn);
+    auto weight = mkcvar("weight", {16, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         bias = mkcvar("bias", {1, 16, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 1;
+    auto result =
+            opr::ConvBias::make(x_s8, weight, bias, param, {},
+                                OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+
+    auto y = result;
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nchw64();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    graph->compile({{y_opt, {}}})
+            ->to_json()
+            ->writeto_fpath(output_file(
+                    "TestGoptInference.PreProcessCaseAutopadNCHW64.json"));
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+    ASSERT_TRUE(find_opr<opr::RelayoutFormat>(y_opt).param().mode ==
+                opr::RelayoutFormat::Param::Mode::NCHW_NCHW4);
 }
 
 TEST(TestGoptInference, WarpAndPreProcessCase1) {
