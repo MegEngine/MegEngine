@@ -575,7 +575,10 @@ public:
         return AlgoAttribute::REPRODUCIBLE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8)
-
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+ 
 private:
     void make_inner_layout(const SizeArgs& args, TensorLayout& inner_src_layout,
                            TensorLayout& inner_weight_layout,
