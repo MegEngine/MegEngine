@@ -13,7 +13,7 @@ import pytest
 from utils import make_tensor
 
 from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
-from megengine.tensor import Tensor
+from megengine.tensor import Parameter, Tensor
 from megengine.utils.network import Network
 
 
@@ -198,3 +198,11 @@ def test_name():
     assert x.name == "x"
     x = Tensor(0, name="x")
     assert x.name == "x"
+
+
+def test_tensor_type():
+    x1 = Parameter(1)
+    x2 = Tensor(2)
+    y1 = x1 + x2
+    y2 = x2 + x1
+    assert type(y1) == type(y2)

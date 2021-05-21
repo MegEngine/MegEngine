@@ -140,6 +140,12 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         auto* op = args[0];
 
         PyTypeObject* pytype = args[1]->ob_type;
+
+        // check if pytype is Parameter(and all other python Tensor's derived class),
+        // if yes, using it's tp_base(python Tensor)
+        if (TensorWrapper::wrap_t::type().same_pytype(pytype->tp_base->tp_base)) {
+            pytype = pytype->tp_base;
+        }
         ++args;
         --nargs;
 

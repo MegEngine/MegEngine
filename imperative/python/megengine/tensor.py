@@ -246,4 +246,11 @@ tensor = Tensor
 class Parameter(Tensor):
     r"""
     A kind of Tensor that is to be considered a module parameter.
+
+    .. note::
+
+        Operations happened on Parameter usually return a Tensor instead of Parameter.
+        For example, with a Parameter ``x``, ``x.reshape/to/sum/...`` will result into a Tensor.
+        Any operations between Parameter and Tensor will have Tensor as outputs.
+
     """

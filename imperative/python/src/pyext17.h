@@ -397,6 +397,10 @@ public:
             return Py_TYPE(op) == &m_type;
         }
 
+        bool same_pytype(PyTypeObject *pt) {
+            return pt == &m_type;
+        }
+
         PyObject* finalize() {
             if (!m_finalized) {
                 m_finalized = true;
