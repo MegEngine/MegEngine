@@ -471,16 +471,22 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
         }
     }
 
+    std::string layouts_str =
+            format_fixlayouts<Opr>(m_layouts, arity_in, arity_out);
     if (skip_by_negative) {
         mgb_log_error(
-                "No usable algo. There are available algos match positive "
-                "strategy(%s), but filtered by negative stategy(%s).",
+                "opr: %s, layouts: %s, No usable algo. There are available algos match "
+                "positive strategy(%s), but filtered by negative stategy(%s).",
+                m_base_mgb_opr->dyn_typeinfo()->name,
+                layouts_str.c_str(),
                 Algorithm::attribute_str(target_attr.first).c_str(),
                 Algorithm::attribute_str(target_attr.second).c_str());
     } else {
         mgb_log_error(
-                "No usable algo. algos read from cache could not satisfy "
-                "positive strategy(%s)",
+                "opr: %s, layouts: %s, No usable algo. algos read from cache could not "
+                "satisfy positive strategy(%s)",
+                m_base_mgb_opr->dyn_typeinfo()->name,
+                layouts_str.c_str(),
                 Algorithm::attribute_str(target_attr.first).c_str());
     }
 
