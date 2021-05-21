@@ -138,6 +138,8 @@ R"__usage__(
     level 2 the computing graph can be destructed to reduce memory usage. Read
     the doc of `ComputingGraph::Options::comp_node_seq_record_level` for more
     details.
+  --get-static-mem-info <svgname>
+    Record the static graph's static memory info.
 )__usage__"
 #if MGB_ENABLE_FASTRUN
 R"__usage__(
@@ -522,6 +524,7 @@ struct Args {
 #endif
     bool reproducible = false;
     std::string fast_run_cache_path;
+    std::string static_mem_svg_path;
     bool copy_to_host = false;
     int nr_run = 10;
     int nr_warmup = 1;
@@ -746,6 +749,9 @@ void run_test_st(Args &env) {
     }
 
     auto func = env.load_ret.graph_compile(out_spec);
+    if (!env.static_mem_svg_path.empty()) {
+        func->get_static_memory_alloc_info(env.static_mem_svg_path);
+    }
     auto warmup = [&]() {
         printf("=== prepare: %.3fms; going to warmup\n",
                timer.get_msecs_reset());
@@ -1317,6 +1323,16 @@ Args Args::from_argv(int argc, char **argv) {
         }
         if (!strcmp(argv[i], "--record-comp-seq2")) {
             graph_opt.comp_node_seq_record_level = 2;
+            continue;
+        }
+        if (!strcmp(argv[i], "--get-static-mem-info")) {
+            ++i;
+            mgb_assert(i < argc, "value not given for --get-static-mem-info");
+            ret.static_mem_svg_path = argv[i];
+            mgb_assert(
+                    ret.static_mem_svg_path.find(".svg") != std::string::npos,
+                    "the filename should be end with .svg, but got %s",
+                    ret.static_mem_svg_path.c_str());
             continue;
         }
 #if MGB_ENABLE_FASTRUN
