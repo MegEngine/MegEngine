@@ -64,6 +64,7 @@ public:
     class AlgoInt8CHWN4IMMAImplicitGemmReorderFilter;
     class AlgoInt8CHWN4IMMAImplicitGemmUnrollWidth;
     class AlgoInt8NCHW32IMMAImplicitGemm;
+    class AlgoInt4NCHW64IMMAImplicitGemmBase;
     class AlgoInt4Int4NCHW64IMMAImplicitGemm;
     class AlgoUInt4Int4NCHW64IMMAImplicitGemm;
     class AlgoBFloat16;
