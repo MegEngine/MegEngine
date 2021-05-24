@@ -4159,14 +4159,7 @@ TEST(TestGoptInference, FoldingConvDimshuffle) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver < 61) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 61);
-        return;
-    }
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(6, 1);
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -4240,14 +4233,7 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver < 61) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 61);
-        return;
-    }
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(6, 1);
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -4326,14 +4312,7 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver < 75) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 75);
-        return;
-    }
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(7, 5);
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -4405,14 +4384,7 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NHWC) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
-    auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-    auto sm_ver = prop.major * 10 + prop.minor;
-    if (sm_ver < 75) {
-        printf("This testcast ignored due to insufficient cuda cap(got: %d, "
-               "expected: %d)\n",
-               sm_ver, 75);
-        return;
-    }
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(7, 5);
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -4466,7 +4438,6 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NHWC) {
             ->writeto_fpath(output_file(
                     "TestGoptInference.FoldingConvDimshuffleNCHW4NHWC.json"));
     size_t nr_dimshuffle = find_opr_num<opr::TypeCvt>(y_fuse);
-    printf("%zu \n", nr_dimshuffle);
     ASSERT_EQ(3u, find_opr_num<opr::Dimshuffle>(y_fuse));
     bool found = false;
     cg::DepOprIter{[&found](cg::OperatorNodeBase* opr) {

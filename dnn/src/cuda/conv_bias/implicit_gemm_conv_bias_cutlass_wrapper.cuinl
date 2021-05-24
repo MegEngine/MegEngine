@@ -1,6 +1,6 @@
 /**
  * \file
- * dnn/src/cuda/conv_bias/int8/conv_bias_int8_implicit_gemm_cutlass_wrapper.cuinl
+ * dnn/src/cuda/conv_bias/int8/implicit_gemm_conv_bias_cutlass_wrapper.cuinl
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.

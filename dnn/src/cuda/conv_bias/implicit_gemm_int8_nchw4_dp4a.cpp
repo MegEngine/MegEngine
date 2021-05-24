@@ -181,6 +181,12 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     float alpha = src_scale * filter_scale;
     float beta = 1.f;
     float dst_scale = 1.f;
+    float gamma = 0.f;
+    float theta = 0.f;
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        theta = args.dst_layout->dtype.param<dtype::Quantized4Asymm>()
+                        .zero_point;
+    }
     if (args.bias_layout->dtype.enumv() == DTypeEnum::QuantizedS32) {
         megdnn_assert(args.dst_layout->dtype.category() ==
                       DTypeCategory::QUANTIZED);
@@ -189,7 +195,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         dst_scale = get_scale(args.dst_layout->dtype);
         alpha /= dst_scale, beta = bias_scale / dst_scale;
     }
-    float gamma = 0.f;
+    float delta = 0.f;
     if (args.z_layout->ndim > 0) {
         gamma = 1.f;
         if (args.z_layout->dtype.category() == DTypeCategory::QUANTIZED) {
@@ -197,6 +203,12 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                           DTypeCategory::QUANTIZED);
             float z_scale = get_scale(args.z_layout->dtype);
             gamma = z_scale / dst_scale;
+        }
+        if (args.z_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+            uint8_t z_zero =
+                    args.z_layout->dtype.param<dtype::Quantized4Asymm>()
+                            .zero_point;
+            delta = -z_zero * gamma;
         }
     }
     uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
@@ -244,14 +256,15 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         DISPATCH(false);
 #undef cb
     } else if (param.format == Format::NCHW4_NHWC) {
-#define cb(_nonunity_kernel)                                              \
+#define cb(_signedness)                                                   \
     cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc< \
-            _nonunity_kernel>(                                            \
+            _signedness>(                                                 \
             args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,        \
             args.bias_tensor->compatible_ptr<int32_t>(),                  \
             reinterpret_cast<int8_t*>(args.z_tensor->raw_ptr),            \
             reinterpret_cast<int8_t*>(args.dst_tensor->raw_ptr), nullptr, \
-            kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,    \
+            kern_param, nonlinear_mode, alpha, beta, gamma, delta, theta, \
+            dst_scale,                                                    \
             cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,        \
                                        m_algo_param.threadblock_n,        \
                                        m_algo_param.threadblock_k},       \
@@ -259,7 +272,13 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                                        m_algo_param.warp_n,               \
                                        m_algo_param.warp_k},              \
             m_algo_param.stage, stream);
-        cb(true);
+        if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
+            cb(true);
+        } else {
+            megdnn_assert(args.dst_layout->dtype.enumv() ==
+                          DTypeEnum::Quantized4Asymm);
+            cb(false);
+        }
 #undef cb
     } else {
         megdnn_assert(param.format == Format::NCHW4_NCHW32);

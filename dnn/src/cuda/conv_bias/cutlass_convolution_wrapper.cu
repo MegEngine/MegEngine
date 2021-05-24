@@ -960,7 +960,7 @@ void megdnn::cuda::cutlass_wrapper::
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
                 cutlass::conv::threadblock::                                   \
                         ConvolutionFpropNCxHWxThreadblockSwizzle,              \
-                stages_, 4, aligned_, NeedLoadFromConstMem,                    \
+                stages_, 4, aligned_, true,                                    \
                 cutlass::arch::OpMultiplyAddSaturate>;                         \
         typename Convolution::ConvolutionParameter conv_param(                 \
                 param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
@@ -1020,7 +1020,7 @@ void megdnn::cuda::cutlass_wrapper::
                             ElementOutput, 8, ElementAccumulator, ElementBias,
                             ElementCompute>;
             typename EpilogueOp::Params epilogue{alpha, beta,  gamma,
-                                                 scale, detla, theta};
+                                                 scale, delta, theta};
             DISPATCH_KERNEL;
         }
         default:

@@ -3801,7 +3801,6 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             return false;
         auto in_dtype = typecvt->input(0)->dtype(),
              out_dtype = typecvt->output(0)->dtype();
-        printf("%s, %s\n", in_dtype.name(), out_dtype.name());
         bool is_s82s4 = in_dtype.enumv() == DTypeEnum::QuantizedS8 &&
                         (out_dtype.enumv() == DTypeEnum::QuantizedS4 ||
                          out_dtype.enumv() == DTypeEnum::Quantized4Asymm);
