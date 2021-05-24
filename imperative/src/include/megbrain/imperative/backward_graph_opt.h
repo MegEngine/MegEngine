@@ -14,10 +14,10 @@
 namespace mgb::imperative {
 
 struct OptimizedBackwardGraphResult {
-    std::shared_ptr<OpDef> precomp;
-    std::shared_ptr<OpDef> backward;
-    std::vector<bool> save_for_backward;
-    std::vector<bool> input_has_grad;
+    Subgraph precomp;
+    Subgraph backward;
+    SmallVector<bool> save_for_backward;
+    SmallVector<bool> input_has_grad;
 
     OptimizedBackwardGraphResult(const BackwardGraphResult& bgraph);
 };

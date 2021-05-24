@@ -18,24 +18,22 @@ using namespace imperative;
 
 OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const BackwardGraphResult& src)
         : input_has_grad(src.input_has_grad) {
-    if (!src.backward->same_type<BackwardGraph>()) {
+    if (src.backward.exprs.size() <= 1) {
         // backward graph only contains a single op
         backward = src.backward;
         save_for_backward = src.save_for_backward;
         return;
     }
     save_for_backward.resize(src.save_for_backward.size(), false);
-    precomp.reset(new BackwardGraph);
-    backward.reset(new BackwardGraph);
 
-    auto&& graph = src.backward->cast_final_safe<BackwardGraph>().graph();
+    auto&& graph = src.backward;
     auto&& mask = src.save_for_backward;
     size_t input_size = src.input_has_grad.size();
     size_t output_size = (mask.size() - input_size) / 2;
     mgb_assert(input_size + output_size * 2 == mask.size());
 
-    auto& fgraph = precomp->cast_final<BackwardGraph>().graph();
-    auto& bgraph = backward->cast_final<BackwardGraph>().graph();
+    auto& fgraph = precomp;
+    auto& bgraph = backward;
 
     // optimization: move ops (e.g. GetVarShape) to forward to
     // reduce memory footprint
@@ -113,6 +111,6 @@ OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const BackwardGraphRe
     }
 
     if (!fgraph.outputs.size()) {
-        precomp.reset();
+        precomp = {};
     }
 }

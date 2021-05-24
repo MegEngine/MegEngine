@@ -32,7 +32,7 @@ from ..core._imperative_rt.ops import (
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import device as as_device
-from ..core.ops.builtin import BackwardGraph, BatchNorm, OpDef
+from ..core.ops.builtin import BatchNorm, OpDef
 from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
@@ -587,10 +587,7 @@ class trace:
 
                 ivars.append(info.varnode)
 
-            if isinstance(op, BackwardGraph):
-                ovars = G.apply_backward_varnode(op, *ivars)
-            else:
-                ovars = G.apply_normal_varnode(op, *ivars)
+            ovars = G.apply_normal_varnode(op, *ivars)
 
             if require_links and len(ovars) > 0:
                 io_links = (ovars[0],)
@@ -805,14 +802,11 @@ class trace:
                         name=info.name,
                     )
                 ivars.append(h2v[h])
-            if isinstance(op, BackwardGraph):
-                ovars = G.apply_backward_varnode(op, *ivars)
-            else:
-                if isinstance(op, BatchNorm):
-                    assert (
-                        op.fwd_mode == BatchNorm.FwdMode.INFERENCE
-                    ), "can not dump BatchNorm in training mode, maybe you forget to do model.eval()?"
-                ovars = G.apply_normal_varnode(op, *ivars)
+            if isinstance(op, BatchNorm):
+                assert (
+                    op.fwd_mode == BatchNorm.FwdMode.INFERENCE
+                ), "can not dump BatchNorm in training mode, maybe you forget to do model.eval()?"
+            ovars = G.apply_normal_varnode(op, *ivars)
 
             AutoNaming.record_opnode(ovars[0].op)
 
@@ -1088,10 +1082,7 @@ def apply_symbolic_mode(op: OpDef, *args: RawTensor):
         ivars[0] = opnode.outputs[0]
         active_trace._lazy_eval_links = (ivars[0],)
 
-    if isinstance(op, BackwardGraph):
-        ovars = G.apply_backward_varnode(op, *ivars)
-    else:
-        ovars = G.apply_normal_varnode(op, *ivars)
+    ovars = G.apply_normal_varnode(op, *ivars)
     outputs = [RawTensor(o) for o in ovars]
 
     if require_links:

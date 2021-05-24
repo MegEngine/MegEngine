@@ -248,22 +248,6 @@ apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
     return apply(ctx);
 }
 
-template <typename T>
-auto apply(std::shared_ptr<OpDef> op, T&& tensors)
-        -> std::enable_if_t<std::is_same_v<decltype(resolve_arrow(tensors[0])), Tensor*>,
-                            apply_result_t> {
-    ApplyContext ctx;
-    ctx.op = std::move(op);
-    ctx.nargs = tensors.size();
-    Tensor* args[ctx.nargs];
-    ctx.args = args;
-    for (size_t i = 0; i < ctx.nargs; ++i) {
-        args[i] = resolve_arrow(tensors[i]);
-        ctx.flags |= args[i]->m_flags;
-    }
-    return apply(ctx);
-}
-
 inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
     ApplyContext ctx;
     ctx.op = std::move(op);
@@ -273,6 +257,44 @@ inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
         ctx.flags |= args[i]->m_flags;
     }
     return apply(ctx);
+}
+
+template <typename T>
+auto apply(std::shared_ptr<OpDef> op, T&& tensors)
+        -> std::enable_if_t<std::is_same_v<decltype(resolve_arrow(tensors[0])), Tensor*>,
+                            apply_result_t> {
+    size_t nargs = tensors.size();
+    Tensor* args[nargs];
+    for (size_t i = 0; i < nargs; ++i) {
+        args[i] = resolve_arrow(tensors[i]);
+    }
+    return apply(op, args, nargs);
+}
+
+inline auto apply(Subgraph graph, Tensor*const* args, size_t nargs) {
+    SmallVector<std::shared_ptr<Tensor>> inputs;
+    for (size_t i = 0; i < nargs; ++i) {
+        inputs.push_back(args[i]->shared_from_this());
+    }
+    auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<std::shared_ptr<Tensor>> inputs) {
+        return apply(op, inputs);
+    };
+    auto const_functor = [](imperative::TensorPtr value) {
+        return std::make_shared<Tensor>(interpreter_for_py->put(value->dev_tensor()));
+    };
+    return graph.apply(inputs, apply_functor, const_functor);
+}
+
+template <typename T>
+auto apply(Subgraph graph, T&& tensors)
+        -> std::enable_if_t<std::is_same_v<decltype(tensors[0]), Tensor*>,
+                            apply_result_t> {
+    size_t nargs = tensors.size();
+    Tensor* args[nargs];
+    for (size_t i = 0; i < nargs; ++i) {
+        args[i] = resolve_arrow(tensors[i]);
+    }
+    return apply(graph, args, nargs);
 }
 
 void init_tensor(pybind11::module);

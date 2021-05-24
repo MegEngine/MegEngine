@@ -18,7 +18,6 @@ import numpy as np
 from .. import _imperative_rt
 from .._imperative_rt import GraphOptimizeOptions
 from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
-from .._imperative_rt.ops import BackwardGraph
 from .._wrap import device as as_device
 from ..ops.builtin import OpDef
 from .core import TensorBase
@@ -479,21 +478,6 @@ def apply_normal_varnode(op: OpDef, *args: VarNode):
         op = op.op
     outputs = _imperative_rt.invoke_op(op, _unwrap(args))
     return _wrap(outputs)
-
-
-def apply_backward_varnode(op: BackwardGraph, *args: VarNode):
-    assert args
-    graph = args[0].graph
-    outputs = op.interpret(
-        op,
-        lambda op, args: apply_normal_varnode(op, *args),
-        graph._make_const_for_backward,
-        args,
-    )
-    return outputs
-
-
-set_cpp_apply_backward_varnode(apply_backward_varnode)
 
 
 def input_callback(callback, *args, device=None, dtype=None, shape=None, graph=None):

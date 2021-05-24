@@ -911,8 +911,7 @@ auto ChannelImpl::CommandBuffer::flush_pos_for(const Command& cmd) -> Handle {
                 op_type == RemoteSend::typeinfo() ||
                 op_type == CollectiveComm::typeinfo() ||
                 op_type == opr::InputCallback::typeinfo() ||
-                op_type == opr::OutputCallback::typeinfo() ||
-                op_type == BackwardGraph::typeinfo()) {
+                op_type == opr::OutputCallback::typeinfo()) {
                 return m_commands.end();
             }
         } else if constexpr (std::is_same_v<T, GetValue>) {

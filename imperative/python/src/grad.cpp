@@ -75,9 +75,9 @@ std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
         input_requires_grad[i] = python::input_requires_grad(ctx, i);
     }
     std::shared_ptr<OptimizedBackwardGraphResult> ret;
-    auto bg = proxy_graph_detail::make_backward_graph(
+    auto bg = OpDef::make_backward_graph(
             *ctx.op, inputs, input_requires_grad, output_has_grad);
-    if (bg.backward) {
+    if (!bg.backward.empty()) {
         ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
     }
     backward_graph_cache.emplace(key, ret);
@@ -112,7 +112,7 @@ struct BackwardGraphWithClosure {
         size_t count = std::count_if(save_for_backward.begin(),
                                      save_for_backward.end(),
                                      ranges::identity{});
-        if (backward_graph->precomp) {
+        if (!backward_graph->precomp.empty()) {
             auto&& irng = ranges::span(ctx.args, ctx.nargs);
             auto&& orng = views::transform(outputs, [](auto&& i){return i.get();});
             auto precomp = apply(backward_graph->precomp, views::concat(irng, orng));

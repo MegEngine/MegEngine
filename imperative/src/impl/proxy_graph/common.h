@@ -15,7 +15,7 @@ namespace mgb::imperative::proxy_graph {
 // e.g. friend class mgb::imperative::proxy_graph::ProxyGraph
 struct ProxyGraph {
     struct InputPlaceholder;
-    struct MiniGraph;
+    class MiniGraph;
 };
 
 } // namespace mgb::imperative::proxy_graph

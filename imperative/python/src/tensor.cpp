@@ -156,9 +156,6 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         ctx.args = &tensors[0];
         ctx.nargs = nargs;
         ctx.pytype = pytype;
-        if (ctx.op->same_type<BackwardGraph>()) {
-            ctx.backward = true;
-        }
 
         if (py::isinstance<PySymbolVar>(py::handle(args[0]))){
             SmallVector<cg::VarNode*> vinputs(nargs);

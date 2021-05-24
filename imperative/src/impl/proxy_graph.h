@@ -65,7 +65,7 @@ private:
     class InputPlaceholder;
     struct ProxyGraphInst;
     struct GradGraph;
-    struct CurOprGuard;
+    class CurOprGuard;
 
     void reset();
 

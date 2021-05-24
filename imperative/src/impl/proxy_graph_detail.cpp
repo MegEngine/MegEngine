@@ -75,30 +75,7 @@ apply_on_physical_tensor(const OpDef& def,
     auto output_descs = infer_output_attrs(def, inputs);
     SmallVector<TensorPtr> outputs(output_descs.size(), {});
     for (size_t i = 0; i < outputs.size(); i++) {
-        auto& output = outputs[i];
-        auto& output_desc = output_descs[i];
-        if (def.same_type<Elemwise>()) {
-            for (size_t j = 0; j < inputs.size(); j++) {
-                // TODO: reindex inputs to support inplace exprs like 'y = x op x'.
-                auto& input = inputs[j];
-                // Because we pass inputs by value, if input and input->blob() are all unique,
-                // their ownerships are on the stack, thus we can reuse them safely.
-                // @see: interpreter::intl::ChannelImpl::process_one_task
-                if (input.unique() && input->blob().unique() && input->blob()->storage().unique() &&
-                    input->layout().dtype == output_desc.layout.dtype &&
-                    input->layout().eq_layout(output_desc.layout) &&
-                    input->comp_node() == output_desc.comp_node) {
-                    static std::atomic_llong inplace_count = 0;
-                    mgb_log_debug("do inplace for elemwise, layout: %s, count: %lld",
-                            output_desc.layout.to_string().c_str(), ++inplace_count);
-                    output = Tensor::make(input->blob(), input->layout(), input->offset());
-                    break;
-                }
-            }
-        }
-        if (!output) {
-            output = Tensor::make(output_desc.layout, output_desc.comp_node);
-        }
+        outputs[i] = Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
     }
     exec(def, inputs, outputs);
     auto async_error = ProxyGraph::get_async_error();

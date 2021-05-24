@@ -30,26 +30,14 @@ using namespace imperative;
 using namespace interpreter;
 
 
-namespace {
-
-std::optional<std::tuple<std::shared_ptr<OpDef>, std::vector<bool>, std::vector<bool>>>
-make_backward_graph(
-    const OpDef& opdef, std::vector<LogicalTensorDesc> inputs,
-    std::vector<bool> input_requires_grad,
-    std::vector<bool> output_has_grad) {
-    auto res = OpDef::make_backward_graph(opdef,
-        SmallVector<LogicalTensorDesc>(inputs.begin(), inputs.end()),
-        SmallVector<bool>(input_requires_grad.begin(), input_requires_grad.end()),
-        SmallVector<bool>(output_has_grad.begin(), output_has_grad.end()));
-    if (res.backward) {
-        return std::optional<std::tuple<std::shared_ptr<OpDef>, std::vector<bool>, std::vector<bool>>>{
-                std::in_place, res.backward, res.save_for_backward, res.input_has_grad};
-    } else {
-        return {};
-    }
-}
-} // namespace
-
 void init_imperative_rt(py::module m) {
-    m.def("make_backward_graph", &make_backward_graph);
+    auto make_backward_graph = [](
+            const OpDef& def,
+            const SmallVector<LogicalTensorDesc>& inputs,
+            const SmallVector<bool>& input_requires_grad,
+            const SmallVector<bool>& output_has_grad){
+        auto result = OpDef::make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
+        return std::make_tuple("backward_graph", result.save_for_backward, result.input_has_grad);
+    };
+    m.def("make_backward_graph", make_backward_graph);
 }

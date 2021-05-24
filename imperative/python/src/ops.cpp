@@ -367,42 +367,6 @@ void _init_py_op_def(py::module m) {
 }
 
 /*********** begin of hand-write opdefs **************/
-
-PyOpDefBegin(BackwardGraph) // {{
-// };
-PyOpDefEnd(BackwardGraph)
-
-void _init_py_backward_graph(py::module m) {
-    using py_op = PyOp(BackwardGraph);
-    auto& py_type = PyOpType(BackwardGraph);
-    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
-    py_type.tp_name = "megengine.core._imperative_rt.ops.BackwardGraph";
-    py_type.tp_basicsize = sizeof(PyOp(BackwardGraph));
-    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
-    py_type.tp_doc = "BackwardGraph";
-    py_type.tp_base = &PyOpType(OpDef);
-    py_type.tp_dealloc = py_dealloc_generic<py_op>;
-    py_type.tp_new = py_new_generic<py_op>;
-    mgb_assert(PyType_Ready(&py_type) >= 0);
-    // FIXME: rewrite interpret function in cpython instead wrap directly by pybind11::cppfunction
-    auto interpret = py::cpp_function(
-        [](OpDef& self, py::object pyf, py::object pyc,
-                const mgb::SmallVector<py::object>& inputs) {
-            auto f = [pyf](OpDef& op, const mgb::SmallVector<py::object>& inputs) {
-                return py::cast<mgb::SmallVector<py::object>>(pyf(op.shared_from_this(), inputs));
-            };
-            auto c = [pyc](const TensorPtr& tensor) {
-                return pyc(tensor->dev_tensor());
-            };
-            return self.cast_final_safe<BackwardGraph>().graph().interpret<py::object>(f, c, inputs);
-        });
-    mgb_assert(PyDict_SetItemString(
-        py_type.tp_dict, "interpret", interpret.release().ptr()) >= 0);
-    PyType_Modified(&py_type);
-    m.add_object("BackwardGraph", reinterpret_cast<PyObject*>(&py_type));
-    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(BackwardGraph::typeinfo(), &py_type).second);
-}
-
 struct PyOpBase : PyOpDef {
     static PyTypeObject py_type;
 
@@ -496,7 +460,6 @@ FOR_EACH_BIT_COMBINED_ENUM_PARAM(BIT_COMBINED_ENUM_CASTER_IMPL)
 
 void init_ops(py::module m) {
     _init_py_op_def(m);
-    _init_py_backward_graph(m);
     _init_py_op_base(m);
     INIT_ALL_OP(m)
 

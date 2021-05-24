@@ -29,7 +29,7 @@ struct GenericPyOp final : OpDefImplBase<GenericPyOp> {
     }
 
     bool is_same_st(const Hashable& rhs) const override {
-        return obj.equal(static_cast<const GenericPyOp&>(rhs).obj);
+        return obj.equal(rhs.cast_final<GenericPyOp>().obj);
     }
 
     MGB_DYN_TYPE_OBJ_FINAL_DECL;

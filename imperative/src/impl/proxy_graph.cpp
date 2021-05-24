@@ -669,8 +669,7 @@ ProxyGraph::make_backward_graph(
     auto* gfunc = cg::lookup_grad_func(fwd->dyn_typeinfo());
 
     BackwardGraphResult result;
-    auto&& backward = BackwardGraph::make();
-    auto&& igraph = backward->cast_final_safe<BackwardGraph>().graph();
+    auto&& igraph = result.backward;
 
     size_t nr_backward_graph_inputs = 0;
     auto gen_expr = [this, &var2idx, &igraph, &push, &fwd,
@@ -682,7 +681,7 @@ ProxyGraph::make_backward_graph(
             ++ nr_backward_graph_inputs;
             push(op->output(0));
         } else {
-            std::vector<size_t> inputs, outputs;
+            SmallVector<size_t> inputs, outputs;
             for (auto &&i : op->input()) {
                 if (i->owner_opr() == fwd) {
                     if (var2idx.find(i) == var2idx.end()) {
@@ -695,7 +694,7 @@ ProxyGraph::make_backward_graph(
             for (auto &&i : op->usable_output()) {
                 outputs.push_back(push(i));
             }
-            igraph.exprs.emplace_back(OpDef::make_from_op_node(op), inputs, outputs);
+            igraph.exprs.push_back({OpDef::make_from_op_node(op), inputs, outputs});
         }
     };
 
@@ -770,36 +769,6 @@ ProxyGraph::make_backward_graph(
     write_inputs(outputs);
     write_inputs(output_grads);
     mgb_assert(igraph.inputs.size() == nr_backward_graph_inputs);
-
-    auto treat_as_single = [](auto&& igraph) {
-        if (igraph.exprs.size() != 1)
-            return false;
-        auto&& expr = igraph.exprs[0];
-        auto&& expr_inputs = std::get<1>(expr);
-        if (expr_inputs.size() != igraph.inputs.size()) {
-            return false;
-        }
-        for (size_t i = 0; i < expr_inputs.size(); ++ i) {
-            if (igraph.inputs[i] != expr_inputs[i]) {
-                return false;
-            }
-        }
-        auto&& expr_outputs = std::get<2>(expr);
-        if (expr_outputs.size() != igraph.outputs.size()) {
-            return false;
-        }
-        for (size_t i = 0; i < expr_outputs.size(); ++ i) {
-            if (igraph.outputs[i] != expr_outputs[i]) {
-                return false;
-            }
-        }
-        return true;
-    };
-    if (treat_as_single(igraph)) {
-        result.backward = std::get<0>(igraph.exprs[0]);
-    } else {
-        result.backward = backward;
-    }
     return result;
 }
 
