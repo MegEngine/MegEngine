@@ -528,6 +528,7 @@ std::shared_ptr<json::Value> VarNode::to_json() const {
         CHK(PERSISTENT_DEVICE_VALUE);
         CHK(DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC);
         CHK(DISALLOW_VAR_SANITY_CHECK);
+        CHK(MEMORY_NO_NEED);
 #undef CHK
 
         mgb_assert(flag_checked == static_cast<size_t>(m_flag));
