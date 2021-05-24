@@ -63,6 +63,14 @@ class WrapGetter {
         }
 };
 
+class ConstGetter {
+    public:
+        __device__ int operator()(int i, int n)
+        {
+            return i;
+        }
+};
+
 } // namespace warp_perspective
 } // namespace cuda
 } // namespace megdnn

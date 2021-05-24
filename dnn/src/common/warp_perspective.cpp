@@ -226,7 +226,7 @@ std::string WarpPerspectiveBase::param_msg() const {
             res.append("LANCZOS4");
             break;
     }
-    res.append("bmode=");
+    res.append(", bmode=");
     switch (param().bmode) {
         case BorderMode::WRAP:
             res.append("WRAP");

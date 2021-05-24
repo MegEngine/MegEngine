@@ -176,10 +176,12 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD) {
     Checker<WarpPerspectiveForward> checker(handle_cuda());
     WarpPerspectiveMatRNG rng;
     checker.set_rng(1, &rng);
-    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+    for (auto bmode : {
+                       WarpPerspective::BorderMode::WRAP,
                        WarpPerspective::BorderMode::REFLECT,
                        WarpPerspective::BorderMode::REPLICATE,
-                       WarpPerspective::BorderMode::CONSTANT}) {
+                       WarpPerspective::BorderMode::CONSTANT
+                       }) {
         WarpPerspective::Param param;
         param.border_val = 0.3f;
         param.bmode = bmode;
@@ -214,6 +216,84 @@ TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD) {
         checker.exec({{1000, 2, 10, 11}, {1000, 3, 3}, {1000, 2, 12, 13}});
     }
 }
+
+TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_NHWC) {
+    using Param = WarpPerspective::Param;
+    Checker<WarpPerspectiveForward> checker(handle_cuda());
+    WarpPerspectiveMatRNG_V2 rng;
+    checker.set_dtype(0, dtype::QuantizedS4(0.1f));
+    checker.set_dtype(2, dtype::QuantizedS4(0.1f));
+    checker.set_rng(1, &rng);
+    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                       WarpPerspective::BorderMode::REFLECT,
+                       WarpPerspective::BorderMode::REPLICATE,
+                       WarpPerspective::BorderMode::CONSTANT}) {
+        WarpPerspective::Param param;
+        param.border_val = 1.2f;
+        param.bmode = bmode;
+        param.imode = Param::InterpolationMode::LINEAR;
+
+        param.format = Param::Format::NHWC;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        rng.set_hw(10, 11);
+        checker.execs({{23, 10, 11, 16}, {23, 3, 3}, {23, 11, 12, 16}});
+        checker.execs({{20, 10, 11, 32}, {20, 3, 3}, {20, 11, 12, 32}});
+        checker.execs({{20, 10, 11, 32}, {20, 3, 3}, {20, 11, 12, 32}});
+        rng.set_hw(55, 66);
+        checker.execs({{20, 55, 66, 32}, {20, 3, 3}, {20, 44, 34, 32}});
+    }
+    {
+        checker.set_dtype(0, dtype::Quantized4Asymm(0.1f, 3));
+        checker.set_dtype(2, dtype::Quantized4Asymm(0.1f, 3));
+        checker.set_rng(1, &rng);
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
+            WarpPerspective::Param param;
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            checker.set_epsilon(1 + 1e-3);
+            rng.set_hw(10, 11);
+            checker.execs({{23, 10, 11, 16}, {23, 3, 3}, {23, 11, 12, 16}});
+            checker.execs({{20, 10, 11, 32}, {20, 3, 3}, {20, 11, 12, 32}});
+            checker.execs({{20, 10, 11, 32}, {20, 3, 3}, {20, 11, 12, 32}});
+            rng.set_hw(55, 66);
+            checker.execs({{20, 55, 66, 32}, {20, 3, 3}, {20, 44, 34, 32}});
+        }
+    }
+    {
+        Checker<WarpPerspective, WarpPerspectiveMatIdxProxy> checker(
+                handle_cuda());
+        constexpr int N_SRC = 5;
+        UniformIntRNG mat_idx_rng{0, N_SRC - 1};
+        checker.set_dtype(0, dtype::QuantizedS4(0.1f));
+        checker.set_rng(1, &rng);
+        checker.set_dtype(2, dtype::Int32());
+        checker.set_rng(2, &mat_idx_rng);
+        checker.set_dtype(3, dtype::QuantizedS4(0.1f));
+        WarpPerspective::Param param;
+        param.border_val = 0.3f;
+        param.format = Param::Format::NHWC;
+        param.bmode = WarpPerspective::Param::BorderMode::REFLECT;
+        param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
+        checker.set_param(param);
+        checker.set_epsilon(1 + 1e-3);
+        rng.set_hw(10, 11);
+        checker.set_rng(1, &rng);
+        checker.execs({{N_SRC, 10, 11, 48}, {2, 3, 3}, {2}, {2, 11, 12, 48}});
+        rng.set_hw(17, 13);
+        checker.set_rng(1, &rng);
+        checker.execs(
+                {{N_SRC, 17, 13, 64}, {123, 3, 3}, {123}, {123, 16, 15, 64}});
+    }
+}
+
 
 TEST_F(CUDA, WARP_PERSPECTIVE_FORWARD_INTMAX) {
     require_compute_capability(6, 0);
@@ -895,6 +975,14 @@ TEST_F(CUDA, BENCHMARK_WARP_PERSPECTIVE_NCHW4) {
     run({TensorShape{1, 25, 256, 5120, 4}, {1, 3, 3}, {1, 25, 256, 256, 4}});
     run({TensorShape{1, 25, 256, 256, 4}, {1, 3, 3}, {1, 25, 512, 512, 4}});
     run({TensorShape{1, 25, 512, 512, 4}, {1, 3, 3}, {1, 25, 256, 256, 4}});
+
+    param.format = Param::Format::NHWC;
+    benchmarker.set_dtype(0, dtype::QuantizedS4(1.f));
+    benchmarker.set_dtype(2, dtype::QuantizedS4(1.f));
+    run({TensorShape{1, 256, 256, 4 * 24}, {1, 3, 3}, {1, 256, 5120, 4 * 24}});
+    run({TensorShape{1, 256, 5120, 4 * 24}, {1, 3, 3}, {1, 256, 256, 4 * 24}});
+    run({TensorShape{1, 256, 256, 4 * 24}, {1, 3, 3}, {1, 512, 512, 4 * 24}});
+    run({TensorShape{1, 512, 512, 4 * 24}, {1, 3, 3}, {1, 256, 256, 4 * 24}});
 }
 
 #endif

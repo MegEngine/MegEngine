@@ -328,12 +328,10 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                             mat.layout[0], C, IH, IW, OH, OW, bval, bmode,
                             async_error_info(handle()), m_error_tracker,
                             stream);
-                } else if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
-                    megdnn_assert(
-                            param().format == Param::Format::NCHW64 ||
-                                    param().format == Param::Format::NCHW,
-                            "WarpPerspective on CUDA supports NCHW64 or NCHW+ "
-                            "QuantizedS4");
+                } else if ((src.layout.dtype.enumv() ==
+                            DTypeEnum::QuantizedS4) &&
+                           (param().format == Param::Format::NCHW64 ||
+                            param().format == Param::Format::NCHW)) {
                     bval = roundf(bval);
                     bval = fmin(fmax(-8.f, bval), 7.f);
                     warp_perspective::forward_proxy_nchw64<dt_qint4>(
@@ -355,13 +353,10 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                         relayout_opr->param() = trans_param;
                         relayout_opr->exec(dst, sdst, {});
                     }
-                } else if (src.layout.dtype.enumv() ==
-                           DTypeEnum::Quantized4Asymm) {
-                    megdnn_assert(
-                            param().format == Param::Format::NCHW64 ||
-                                    param().format == Param::Format::NCHW,
-                            "WarpPerspective on CUDA supports NCHW64 or NCHW+ "
-                            "Quantized4Asymm");
+                } else if ((src.layout.dtype.enumv() ==
+                            DTypeEnum::Quantized4Asymm) &&
+                           (param().format == Param::Format::NCHW64 ||
+                            param().format == Param::Format::NCHW)) {
                     bval = roundf(bval);
                     bval = fmin(fmax(0, bval), 15);
                     warp_perspective::forward_proxy_nchw64<dt_quint4>(
@@ -382,6 +377,65 @@ void WarpPerspectiveForwardImpl::exec(_megdnn_tensor_in ssrc,
                         trans_param.oc = sdst.layout[1];
                         relayout_opr->param() = trans_param;
                         relayout_opr->exec(dst, sdst, {});
+                    }
+                } else if ((src.layout.dtype.enumv() ==
+                                    DTypeEnum::QuantizedS4 ||
+                            src.layout.dtype.enumv() ==
+                                    DTypeEnum::Quantized4Asymm) &&
+                           (param().format == Param::Format::NHWC)) {
+                    constexpr int pack_c = 8;
+                    megdnn_assert(C % pack_c == 0);
+                    bval = roundf(bval);
+                    if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4) {
+                        bval = fmin(fmax(-8.f, bval), 7.f);
+                        if (C % 16 == 0) {
+                            warp_perspective::forward_proxy_nhwc_bit4<dt_qint4,
+                                                                      16>(
+                                    src.ptr<dt_qint4>(), mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.ptr<dt_qint4>(), src.layout[0],
+                                    mat.layout[0], C, IH, IW, OH, OW,
+                                    static_cast<dt_qint4>(bval), bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                        } else {
+                            warp_perspective::forward_proxy_nhwc_bit4<dt_qint4,
+                                                                      pack_c>(
+                                    src.ptr<dt_qint4>(), mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.ptr<dt_qint4>(), src.layout[0],
+                                    mat.layout[0], C, IH, IW, OH, OW,
+                                    static_cast<dt_qint4>(bval), bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                        }
+                    } else {
+                        bval = fmin(fmax(0.f, bval), 15.f);
+                        if (C % 16 == 0) {
+                            warp_perspective::forward_proxy_nhwc_bit4<dt_quint4,
+                                                                      16>(
+                                    src.ptr<dt_quint4>(), mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.ptr<dt_quint4>(), src.layout[0],
+                                    mat.layout[0], C, IH, IW, OH, OW,
+                                    static_cast<dt_quint4>(bval), bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                        } else {
+                            warp_perspective::forward_proxy_nhwc_bit4<dt_quint4,
+                                                                      pack_c>(
+                                    src.ptr<dt_quint4>(), mat.ptr<dt_float32>(),
+                                    mat_idx.raw_ptr ? mat_idx.ptr<int>()
+                                                    : nullptr,
+                                    dst.ptr<dt_quint4>(), src.layout[0],
+                                    mat.layout[0], C, IH, IW, OH, OW,
+                                    static_cast<dt_quint4>(bval), bmode,
+                                    async_error_info(handle()), m_error_tracker,
+                                    stream);
+                        }
                     }
                 }
             } else if ((src.layout.dtype.enumv() ==

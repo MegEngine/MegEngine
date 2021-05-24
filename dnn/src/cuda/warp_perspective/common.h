@@ -28,6 +28,14 @@ void forward_proxy(bool is_nhwc, const ctype* src, const float* mat,
                    megcore::AsyncErrorInfo* error_info, void* error_tracker,
                    cudaStream_t stream);
 
+template <typename ctype, int pack_c>
+void forward_proxy_nhwc_bit4(const ctype* src, const float* mat,
+                             const int* mat_idx, ctype* dst, int N_SRC,
+                             int N_MAT, int C, int IH, int IW, int OH, int OW,
+                             ctype bval, BorderMode bmode,
+                             megcore::AsyncErrorInfo* error_info,
+                             void* error_tracker, cudaStream_t stream);
+
 template <typename ctype>
 void forward_proxy_nchw4(const ctype* src, const float* mat, const int* mat_idx,
                          ctype* dst, int N_SRC, int N_MAT, int C, int IH,

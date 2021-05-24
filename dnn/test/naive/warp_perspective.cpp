@@ -642,12 +642,114 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
         param.format = Param::Format::NCHW64;
         checker.set_param(param);
         checker.execs({{2, 1, 10, 10, 64}, {2, 3, 3}, {2, 1, 10, 12, 64}});
-        checker.execs(
-                {{20, 3, 10, 12, 64}, {20, 3, 3}, {20, 3, 11, 12, 64}});
+        checker.execs({{20, 3, 10, 12, 64}, {20, 3, 3}, {20, 3, 11, 12, 64}});
         checker.execs({{1, 3, 25, 24, 64}, {1, 3, 3}, {1, 3, 25, 51, 64}});
         checker.execs({{1, 3, 25, 51, 64}, {1, 3, 3}, {1, 3, 25, 24, 64}});
         checker.execs({{1, 3, 25, 24, 64}, {1, 3, 3}, {1, 3, 51, 50, 64}});
         checker.execs({{1, 3, 51, 50, 64}, {1, 3, 3}, {1, 3, 25, 24, 64}});
+    }
+}
+
+TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
+    using Param = WarpPerspective::Param;
+
+    auto convert_true_format = [](const TensorLayout& layout) {
+        if (layout.ndim == 4) {
+            TensorLayout ret{{layout[0], layout[2], layout[3], layout[1]},
+                             layout.dtype};
+            return ret.dimshuffle({0, 3, 1, 2});
+        } else
+            return layout;
+    };
+
+    WarpPerspective::Param param;
+    auto extra_impl = [&param, this,
+                       convert_true_format](const TensorNDArray& tensors) {
+        auto warp_perspective = handle()->create_operator<WarpPerspective>();
+        warp_perspective->param() = param;
+        warp_perspective->param().format = Param::Format::NCHW;
+
+        TensorNDArray nchw_tensors;
+        for (size_t i = 0; i < tensors.size(); ++i) {
+            TensorLayout ly;
+            auto layout = tensors[i].layout;
+            if (layout.ndim == 4) {
+                ly = TensorLayout{{layout[0], layout[3], layout[1], layout[2]},
+                                  layout.dtype};
+            } else {
+                ly = layout;
+            }
+            nchw_tensors.emplace_back(malloc(ly.span().dist_byte()), ly);
+        }
+        TensorNDArray nhwc_tensors;
+        for (size_t i = 0; i < tensors.size(); ++i) {
+            auto layout = convert_true_format(nchw_tensors[i].layout);
+            nhwc_tensors.emplace_back(tensors[i].raw_ptr, std::move(layout));
+        }
+
+        auto workspace_size = warp_perspective->get_workspace_in_bytes(
+                tensors[0].layout, tensors[1].layout, tensors[2].layout);
+        dt_byte* workspace_ptr = static_cast<dt_byte*>(malloc(workspace_size));
+        Workspace workspace{workspace_ptr, workspace_size};
+
+        auto relayout = handle()->create_operator<RelayoutForward>();
+        relayout->exec(nhwc_tensors[0], nchw_tensors[0]);
+        relayout->exec(nhwc_tensors[1], nchw_tensors[1]);
+
+        warp_perspective->exec(nchw_tensors[0], nchw_tensors[1],
+                               nchw_tensors[2], workspace);
+
+        relayout->exec(nchw_tensors[2], nhwc_tensors[2]);
+        free(workspace_ptr);
+        for (auto&& tensor : nchw_tensors) {
+            free(tensor.raw_ptr);
+        }
+    };
+
+    {
+        Checker<WarpPerspectiveForward> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_dtype(0, dtype::QuantizedS4(0.1f));
+        checker.set_dtype(2, dtype::QuantizedS4(0.1f));
+        checker.set_extra_opr_impl(extra_impl);
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1, 2, 2, 4}});
+            checker.execs({{2, 10, 10, 4}, {2, 3, 3}, {2, 10, 12, 4}});
+            checker.execs({{3, 25, 24, 8}, {3, 3, 3}, {3, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {4, 3, 3}, {4, 9, 12, 16}});
+        }
+    }
+    {
+        Checker<WarpPerspectiveForward> checker(handle());
+        WarpPerspectiveMatRNG rng;
+        checker.set_rng(1, &rng);
+        checker.set_dtype(0, dtype::Quantized4Asymm(0.1f, 3));
+        checker.set_dtype(2, dtype::Quantized4Asymm(0.1f, 3));
+        checker.set_extra_opr_impl(extra_impl);
+        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
+                           WarpPerspective::BorderMode::REFLECT,
+                           WarpPerspective::BorderMode::REPLICATE,
+                           WarpPerspective::BorderMode::CONSTANT}) {
+            param.border_val = 0.3f;
+            param.bmode = bmode;
+            param.imode = Param::InterpolationMode::LINEAR;
+            param.format = Param::Format::NHWC;
+            checker.set_param(param);
+            checker.execs({{1, 2, 2, 4}, {1, 3, 3}, {1, 2, 2, 4}});
+            checker.execs({{2, 10, 10, 4}, {2, 3, 3}, {2, 10, 12, 4}});
+            checker.execs({{3, 25, 24, 8}, {3, 3, 3}, {3, 12, 10, 8}});
+            checker.execs({{4, 33, 22, 16}, {4, 3, 3}, {4, 9, 12, 16}});
+        }
     }
 }
 // vim: syntax=cpp.doxygen

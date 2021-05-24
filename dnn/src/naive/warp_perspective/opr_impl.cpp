@@ -257,7 +257,7 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
     MIDOUT_BEGIN(megdnn_naive_warpperspective, ctype, mtype, midout_iv(0)) {
         UNPACK_WARP_PERSPECTIVE_FWD_KERN_PARAM(kern_param);
         MEGDNN_MARK_USED_VAR(N_MAT);
-        uint8_t c_shift, c_mask, iw_shift = 0, ow_shift = 0;
+        uint32_t c_shift, c_mask, iw_shift = 0, ow_shift = 0;
         constexpr bool signedness = std::is_same<ctype, dt_qint4>::value;
         switch (param().format) {
             case Format::NCHW:
@@ -270,19 +270,29 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
                 c_shift = 6;
                 c_mask = 0x3F;
                 break;
+            case Format::NHWC:
+                megdnn_assert(C % 2 == 0);
+                c_shift = 0;
+                c_mask = 0;
+                break;
             default:
                 megdnn_throw("bad format");
                 break;
         }
         //! strides of C, H, W on src and dst
-        size_t sstrd[2] = {IH * (IW + iw_shift), IW + iw_shift},
-               dstrd[2] = {OH * (OW + ow_shift), OW + ow_shift};
+        std::vector<size_t> sstrd = {IH * ((IW + iw_shift) << c_shift),
+                                     (IW + iw_shift) << c_shift, 1};
+        std::vector<size_t> dstrd = {OH * ((OW + ow_shift) << c_shift),
+                                     (OW + ow_shift) << c_shift, 1};
+        if (param().format == Format::NHWC) {
+            sstrd = {1, IW * C, C};
+            dstrd = {1, OW * C, C};
+        }
         static constexpr uint8_t mask = (uint8_t)((1 << 4) - 1);
         auto visit_src = [&sptr, sstrd, c_shift, c_mask](size_t c, int h,
                                                          int w) -> float {
-            size_t index = ((sstrd[0] * (c >> c_shift) + sstrd[1] * h + w)
-                            << c_shift) +
-                           (c & c_mask);
+            size_t index = (c >> c_shift) * sstrd[0] + h * sstrd[1] +
+                           (w << c_shift) * sstrd[2] + (c & c_mask);
             uint8_t result =
                     (sptr[index / 2].as_storage() >> (4 * (index % 2))) & 0xF;
             if (signedness) {
@@ -295,9 +305,8 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
         auto visit_src_bd = [&sptr, sstrd, border_val, c_shift, c_mask](
                                     size_t c, int h, int w) -> float {
             if (h != -1 && w != -1) {
-                size_t index = ((sstrd[0] * (c >> c_shift) + sstrd[1] * h + w)
-                                << c_shift) +
-                               (c & c_mask);
+                size_t index = (c >> c_shift) * sstrd[0] + h * sstrd[1] +
+                               (w << c_shift) * sstrd[2] + (c & c_mask);
                 uint8_t result =
                         (sptr[index / 2].as_storage() >> (4 * (index % 2))) &
                         0xF;
@@ -312,9 +321,8 @@ void WarpPerspectiveForwardImpl::kern_naive_int4(
         };
         auto set_visit_dst = [&dptr, dstrd, c_shift, c_mask](size_t c, int h,
                                                              int w, ctype v) {
-            size_t index = ((dstrd[0] * (c >> c_shift) + dstrd[1] * h + w)
-                            << c_shift) +
-                           (c & c_mask);
+            size_t index = (c >> c_shift) * dstrd[0] + h * dstrd[1] +
+                           (w << c_shift) * dstrd[2] + (c & c_mask);
             dptr[index / 2] = (dptr[index / 2].as_storage() &
                                (0xF0 >> (4 * (index % 2)))) |
                               (v.as_storage() << (4 * (index % 2)));
