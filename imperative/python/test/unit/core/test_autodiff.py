@@ -108,21 +108,24 @@ def test_grad_2():
     np.testing.assert_almost_equal(x.grad.numpy(), 4 * x_np ** 3, decimal=6)
 
 
-@pytest.mark.skip(reason="high order gradient was not implemented yet")
 def test_2nd_grad():
     x_np = np.random.rand(10).astype("float32")
     x = as_tensor(x_np)
     ones = as_tensor(np.ones_like(x_np))
 
     grad = Grad().wrt(x, callback=save_to(x))
+    grad._priority = -1
     grad2 = Grad().wrt(x, callback=save_to(x))
+    grad2._priority = 0
 
     y = cos(x)
 
     grad(y, ones)
+    z = x.grad
     np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
 
-    grad2(x.grad, ones)
+    x.grad = None
+    grad2(z, ones)
     np.testing.assert_almost_equal(x.grad.numpy(), -np.cos(x_np))
 
 

@@ -48,6 +48,14 @@ class Grad:
         _grad_manager_dict[self._name] = self
 
     @property
+    def _priority(self):
+        return self._impl.priority
+
+    @_priority.setter
+    def _priority(self, priority):
+        self._impl.priority = priority
+
+    @property
     def _name(self):
         return self._impl.name
 

@@ -182,7 +182,7 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
         if (py::isinstance<PySymbolVar>(py::handle(args[0]))){
             SmallVector<cg::VarNode*> vinputs(nargs);
             for (size_t i = 0; i < nargs; ++i) {
-                    vinputs[i] = py::handle(args[i]).cast<PySymbolVar*>()->m_node;   
+                vinputs[i] = py::handle(args[i]).cast<PySymbolVar*>()->m_node;
             }
             auto op = ctx.op.get();
             auto rst = OpDef::apply_on_var_node(*op, vinputs);

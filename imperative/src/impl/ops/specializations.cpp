@@ -398,20 +398,6 @@ OP_TRAIT_REG(Copy, Copy)
     .fallback();
 }} // copy
 
-namespace { namespace identity {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
-    auto&& op = def.cast_final_safe<Identity>();
-    mgb_assert(inputs.size() == 1);
-    OperatorNodeConfig config{op.make_name()};
-    return opr::Identity::make(inputs[0], config);
-}
-OP_TRAIT_REG(Identity, Identity)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // identity
-
 namespace { namespace assert_equal {
 auto apply_on_var_node(
         const OpDef& def,

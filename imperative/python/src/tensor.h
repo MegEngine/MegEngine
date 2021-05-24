@@ -17,6 +17,7 @@
 #include "megbrain/imperative/interpreter.h"
 #include "pybind11/pybind11.h"
 #include <string>
+#include <unordered_map>
 
 #include "./pyext17.h"
 
@@ -35,6 +36,8 @@ struct ObjectPtr : B {
 #include "./trace_info.h" // for struct TraceInfo
 
 namespace mgb::imperative::python {
+
+struct GradKey;
 
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 
@@ -58,6 +61,34 @@ public:
 };
 
 
+// impl in grad.cpp
+class GradInfoCollection {
+private:
+    SmallVector<GradInfo> m_storage;
+protected:
+    void _shrink();
+public:
+    bool contains(GradKey* key);
+    GradInfo& operator[](GradKey* key);
+    GradInfo& at(GradKey* key);
+    bool empty() {
+        _shrink();
+        return m_storage.empty();
+    }
+    auto begin() {
+        _shrink();
+        return m_storage.begin();
+    }
+    auto end() {
+        _shrink();
+        return m_storage.end();
+    }
+    size_t count(GradKey* key) {
+        return contains(key) ? 1 : 0;
+    }
+};
+
+
 struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     using flags_t = uint64_t;
 
@@ -69,7 +100,7 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
 
     flags_t m_flags = 0;
 
-    GradInfo m_grad_info;
+    GradInfoCollection m_grad_info_dict;
     TraceInfo m_trace_info;
     SharedHandle m_handle;
     std::string user_custom_name;
@@ -88,7 +119,7 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     inline std::shared_ptr<Tensor> copy() {
         auto ret = std::make_shared<Tensor>(m_handle);
         ret->m_flags = m_flags;
-        ret->m_grad_info = m_grad_info;
+        ret->m_grad_info_dict = m_grad_info_dict;
         ret->m_trace_info = m_trace_info;
         ret->m_var = m_var;
         return ret;

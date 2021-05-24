@@ -20,6 +20,9 @@ class AttachSpec:
     __slots__ = "tensor", "callbacks"
 
 
+_global_priority = 0
+
+
 class GradManager:
     r"""
     GradManager computes gradients or more generally, vector-Jacobian product, by reverse mode
@@ -118,6 +121,7 @@ class GradManager:
         self._grad = None
         self._after_backward_callback = []
         self._gradients = {}
+        self._priority = None
 
     def attach(self, tensors: Iterable[Tensor], callbacks=None):
         r"""
@@ -293,6 +297,7 @@ class GradManager:
 
         After this call, you will be able to call :meth:`backward`.
         """
+        global _global_priority
         if self._recording:
             raise RuntimeError("already recording")
         grad = Grad()
@@ -300,6 +305,9 @@ class GradManager:
         self._grad = grad
         for spec in self._attach_specs.values():
             self._do_record(spec)
+        if self._priority is None:
+            grad._priority = _global_priority
+            _global_priority -= 1
         grad.__enter__()
 
     def _do_record(self, spec):
@@ -321,11 +329,14 @@ class GradManager:
 
         After this call, you will not be able to call :meth:`backward`.
         """
+        global _global_priority
         if self._grad is not None:
             self._grad.__exit__(None, None, None)
             self._grad = None
         self._recording = False
         self._gradients = dict()
+        if self._priority is None:
+            _global_priority += 1
 
     def __enter__(self):
         self.record()
@@ -333,3 +344,41 @@ class GradManager:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
+
+    def __and__(self, other):
+        if isinstance(other, GradManager):
+            return GradManagerGroup([self, other])
+        return NotImplemented
+
+    __rand__ = __and__
+
+
+class GradManagerGroup:
+    def __init__(self, gms) -> None:
+        self._gms = list(gms)
+
+    def merge_with(self, other):
+        if isinstance(other, GradManager):
+            other = GradManagerGroup([other])
+        elif not isinstance(other, GradManagerGroup):
+            return NotImplemented
+        return GradManagerGroup([*self._gms, *other._gms])
+
+    __and__ = merge_with
+    __rand__ = merge_with
+    __or__ = merge_with
+    __ror__ = merge_with
+
+    def __enter__(self):
+        global _global_priority
+        _global_priority += 1
+        for gm in self._gms:
+            gm._priority = _global_priority
+            gm.record()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global _global_priority
+        _global_priority -= 1
+        for gm in self._gms:
+            gm.release()
+            gm._priority = None

@@ -15,6 +15,7 @@
 
 namespace mgb::imperative::python {
 
+struct GradKey;
 struct GradFn;
 struct GradSlot;
 
@@ -32,6 +33,10 @@ struct GradInfo : GradSlotPtr, intrusive_list::Node<GradInfo, intrusive_list::be
     GradInfo(GradInfo&&) = default;
     GradInfo& operator=(GradInfo&) = default;
     GradInfo& operator=(GradInfo&&) = default;
+    GradInfo(const GradInfo& rhs): GradInfo(const_cast<GradInfo&>(rhs)){}
+    GradInfo& operator=(const GradInfo& rhs) {
+        return *this = const_cast<GradInfo&>(rhs);
+    }
 };
 
 } // namespace mgb::imperative::python
