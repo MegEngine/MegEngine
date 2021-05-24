@@ -1125,6 +1125,10 @@ def sync_batch_norm(
         Default: 0.9
     :param eps: a value added to the denominator for numerical stability.
         Default: 1e-5
+    :param eps_mode: mode of calculation for eps, "max" or "additive".
+        Default: "additive"
+    :param group: communication group, caculate mean and variance between this group.
+        Default: :obj:`~megengine.distributed.WORLD`
     :return: output tensor.
     """
     assert eps_mode.lower() in {"max", "additive"}, "unknown eps_mode: {}".format(
