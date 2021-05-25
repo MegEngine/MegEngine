@@ -636,3 +636,33 @@ def test_tile(shape, reps, is_varnode):
     cases = [{"input": np.random.randn(*shape).astype("float32")}]
 
     opr_test(cases, tile_func, ref_fn=lambda inp: np.tile(inp, reps), network=network)
+
+
+@pytest.mark.parametrize(
+    "shape, shifts, axis",
+    [
+        ((2, 3), 0, None),
+        ((2, 3), 1, 0),
+        ((2, 3, 4, 5), (-1, 1), (0, 1)),
+        ((2, 3, 4, 5), (-2, 1, 2), (1, 2, 3)),
+    ],
+)
+@pytest.mark.parametrize("is_varnode", [True, False])
+def test_roll(shape, shifts, axis, is_varnode):
+    if is_varnode:
+        network = Network()
+    else:
+        network = None
+
+    inp = np.random.randn(*shape).astype("float32")
+
+    def func(inp):
+        return F.roll(inp, shifts, axis)
+
+    cases = [
+        {"input": inp},
+    ]
+
+    opr_test(
+        cases, func, ref_fn=lambda inp: np.roll(inp, shifts, axis), network=network
+    )
