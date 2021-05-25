@@ -203,6 +203,35 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_out sdst,
                 relayout_opr->exec(dst, sdst, {});
              }
              return;
+        } else if (param().format == Format::NHWC &&
+                   (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm ||
+                    src.layout.dtype.enumv() == DTypeEnum::QuantizedS4)) {
+            megdnn_assert(src.layout.dtype.enumv() == dst.layout.dtype.enumv(),
+                          "src and dst dtype must equal");
+            pooling2d::Param kern_param;
+            size_t n = src.layout[0], hi = src.layout[1], wi = src.layout[2],
+                   c = src.layout[3], ho = dst.layout[1], wo = dst.layout[2];
+            size_t ph = param().pad_h, pw = param().pad_w;
+            size_t window_h = param().window_h, window_w = param().window_w;
+            size_t sh = param().stride_h, sw = param().stride_w;
+            kern_param.n = n, kern_param.c = c, kern_param.hi = hi,
+            kern_param.wi = wi, kern_param.ho = ho, kern_param.wo = wo,
+            kern_param.ph = ph, kern_param.pw = pw,
+            kern_param.window_h = window_h, kern_param.window_w = window_w,
+            kern_param.sh = sh, kern_param.sw = sw;
+            bool uint_case = false;
+            int zero_point = 0;
+            if (src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+                uint_case = true;
+                zero_point = src.layout.dtype.param<dtype::Quantized4Asymm>()
+                                     .zero_point;
+            }
+            auto&& stream = cuda_stream(handle());
+            pooling2d::do_pooling2d_int4_nhwc(
+                    (int8_t*)src.raw_ptr, (int8_t*)dst.raw_ptr, kern_param,
+                    stream, static_cast<uint32_t>(param().mode), uint_case,
+                    zero_point);
+            return;
         }
         auto handle = cudnn_handle(this->handle());
         setup_descs(src.layout, dst.layout);
