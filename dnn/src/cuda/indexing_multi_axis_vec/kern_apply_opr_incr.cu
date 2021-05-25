@@ -11,11 +11,11 @@
 
 
 #include "megdnn/dtype.h"
+#include "src/cuda/utils.cuh"
 
 #if !MEGDNN_DISABLE_FLOAT16
-__device__ void atomicAdd(megdnn::dt_float16 *, megdnn::dt_float16) {
-    __trap();
-    ((int*)0)[0] = 1;
+__device__ void atomicAdd(megdnn::dt_float16 * address, megdnn::dt_float16 val) {
+    ::megdnn::cuda::atomic_add(address, val);
 }
 
 __device__ void atomicAdd(megdnn::dt_bfloat16 *, megdnn::dt_bfloat16) {
