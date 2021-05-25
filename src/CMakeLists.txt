@@ -59,6 +59,16 @@ add_library(megbrain OBJECT ${SOURCES})
 target_link_libraries(megbrain PUBLIC mgb_opr_param_defs)
 if(MGE_WITH_CUDA)
     target_include_directories(megbrain PUBLIC ${TRT_INCLUDE_DIR})
+    target_include_directories(megbrain PRIVATE ${CUDNN_INCLUDE_DIR})
+    find_path(NVTX3_INCLUDE
+        NAMES nvToolsExtCudaRt.h
+        HINTS $ENV{CUDA_ROOT_DIR} $ENV{CUDA_PATH} $ENV{CUDA_BIN_PATH}
+        PATH_SUFFIXES include/nvtx3
+        DOC "NVTX3_INCLUDE" )
+    if(NVTX3_INCLUDE STREQUAL "NVTX3_INCLUDE-NOTFOUND")
+        message(FATAL_ERROR "Can not find NVTX3 INCLUDE, please export cuda sdk path to CUDA_ROOT_DIR or CUDA_PATH or CUDA_BIN_PATH")
+    endif()
+    target_include_directories(megbrain PRIVATE ${NVTX3_INCLUDE})
 endif()
 target_include_directories(megbrain
     PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>

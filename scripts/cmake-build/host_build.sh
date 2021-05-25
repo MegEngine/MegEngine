@@ -203,6 +203,8 @@ function prepare_env_for_windows_build() {
     export CPATH=$CPATH:$NIVIDA_INSTALL_PRE/${TRT_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/include/nvtx3:$PC_CUDNN_INCLUDE_DIRS
     export LIBRARY_PATH=$LIBRARY_PATH:$LD_LIBRARY_PATH
     export INCLUDE=$INCLUDE:$CPATH
+    export CUDNN_ROOT_DIR=${NIVIDA_INSTALL_PRE}/${CUDNN_V}/cuda
+    export TRT_ROOT_DIR=${NIVIDA_INSTALL_PRE}/${TRT_V}
 
     # python version will be config by whl build script or ci script, we need
     # a DFT version for build success when we just call host_build.sh

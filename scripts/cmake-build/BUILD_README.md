@@ -18,7 +18,7 @@
 ### Windows host build
 * commands:
 ```
-1: installl Visual Studio (need support LLVM/clang-cl), eg 2019. Please install LLVM-10, VS LLVM linker have issue, please replace lld-link.exe, which can be download from https://releases.llvm.org/download.html#10.0.0
+1: installl Visual Studio (need support LLVM/clang-cl), eg 2019. Please install LLVM-10/11, VS LLVM linker have issue, please replace lld-link.exe, which can be download from https://releases.llvm.org/download.html#10.0.0, what`s more,  Visual Studio cl.exe version >=14.28.29910 do not compat with cuda 10.1, please do not use this issue version!
 2: install extension of VS: Python/Cmake/LLVM/Ninja
 3: now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows, as Windows can only use DLL in fact with cudnn/TensorRT, so please install the same version;
     3a: install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
