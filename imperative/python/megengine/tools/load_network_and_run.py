@@ -156,6 +156,9 @@ def run_model(args, graph, inputs, outputs, data):
 
     func = graph.compile(outputs)
 
+    if args.get_static_mem_info:
+        func.get_static_memory_alloc_info(args.get_static_mem_info)
+
     def run():
         if not args.embed_input:
             for key in inp_dict:
@@ -388,6 +391,11 @@ def main():
         action="store_true",
         help="embed input data as SharedDeviceTensor in model, "
         "to remove memory copy for inputs",
+    )
+    parser.add_argument(
+        "--get-static-mem-info",
+        type=str,
+        help="Record the static graph's static memory info.",
     )
     args = parser.parse_args()
 

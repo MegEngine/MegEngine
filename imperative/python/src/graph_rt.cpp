@@ -215,7 +215,10 @@ void init_graph_rt(py::module m) {
                 }
             }
             return ret;
-        });
+        })
+        .def("get_static_memory_alloc_info",
+             &cg::AsyncExecutable::get_static_memory_alloc_info,
+             py::call_guard<py::gil_scoped_release>());
 
     auto PyComputingGraph = py::class_<cg::ComputingGraph, std::shared_ptr<cg::ComputingGraph>>(m, "ComputingGraph")
         .def(py::init(py::overload_cast<>(&cg::ComputingGraph::make)))
