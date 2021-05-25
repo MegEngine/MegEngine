@@ -868,6 +868,23 @@ template <typename Opr>
 typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::get_policy(
         const AlgoChooserHelper& helper) {
     auto opr_strategy = helper.execution_policy().strategy;
+    auto strategy2str = [](auto strategy) {
+        std::string ret;
+        if (strategy & ExecutionStrategy::HEURISTIC) {
+            ret += "HEURISTIC ";
+        }
+        if (strategy & ExecutionStrategy::PROFILE) {
+            ret += "PROFILE ";
+        }
+        if (strategy & ExecutionStrategy::REPRODUCIBLE) {
+            ret += "REPRODUCIBLE ";
+        }
+        if (strategy & ExecutionStrategy::OPTIMIZED) {
+            ret += "OPTIMIZED ";
+        }
+        return ret;
+    };
+    mgb_log_debug("Use Stragegy :%s", strategy2str(opr_strategy).c_str());
     if (opr_strategy & ExecutionStrategy::HEURISTIC) {
         if (opr_strategy & ExecutionStrategy::PROFILE) {
             //! this strategy will choose from cache first, then choost by

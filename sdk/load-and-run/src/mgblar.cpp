@@ -703,7 +703,7 @@ void run_test_st(Args &env) {
 
     mgb::gopt::set_opr_algo_workspace_limit_inplace(vars, env.workspace_limit);
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
-    S strategy = S::HEURISTIC;
+    S strategy = static_cast<S>(0);
     if (env.reproducible) {
         strategy = S::REPRODUCIBLE;
     }
