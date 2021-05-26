@@ -41,14 +41,14 @@ std::string PersistentCache::make_category_from_comp_node(CompNode comp_node) {
     switch (env.property().type) {
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA: {
-            int drv = -1, cuda_rt = -1;
-            MGB_CUDA_CHECK(cudaDriverGetVersion(&drv));
+            int cuda_rt = -1;
             MGB_CUDA_CHECK(cudaRuntimeGetVersion(&cuda_rt));
+            int cuda_rt_major = cuda_rt / 1000;
             auto&& prop = env.cuda_env().device_prop;
             // note: we do not contain library versions such as cudnn here. They
             // are handled by opr impls in MegDNN
-            return ssprintf("plat=cuda;dev=%s;cap=%d.%d,drv=%d;runtime=%d",
-                            prop.name, prop.major, prop.minor, drv, cuda_rt);
+            return ssprintf("plat=cuda;dev=%s;cap=%d.%d;runtime=%d",
+                            prop.name, prop.major, prop.minor, cuda_rt_major);
             break;
         }
 #endif
