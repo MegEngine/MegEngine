@@ -196,6 +196,13 @@ def broadcast(
     return out
 
 
+def _bcast_param(
+    inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
+) -> Tensor:
+    mode = CollectiveComm.Mode.BROADCAST
+    return collective_comm(inp, mode, group, device)
+
+
 def all_gather(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = ""
 ) -> Tensor:
