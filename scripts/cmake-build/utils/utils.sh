@@ -15,6 +15,7 @@ if [ $OS = "Darwin" ];then
     READLINK=greadlink
 fi
 
+PROJECT_DIR=$(dirname "${BASH_SOURCE[0]}")/../../../
 function cd_real_build_dir() {
     REAL_DIR=$($READLINK -f $1)
     echo "may alias dir: $1"
@@ -46,7 +47,7 @@ function build_flatc() {
         -DFLATBUFFERS_BUILD_FLATHASH=OFF \
         -DFLATBUFFERS_BUILD_FLATLIB=OFF \
         -DFLATBUFFERS_LIBCXX_WITH_CLANG=OFF \
-        $SRC_DIR/third_party/flatbuffers
+        ${PROJECT_DIR}/third_party/flatbuffers
 
     ${NINJA_BASE} all
     ${NINJA_BASE} install/strip

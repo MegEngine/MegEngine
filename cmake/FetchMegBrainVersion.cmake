@@ -7,7 +7,7 @@
 # MGB_VER_STRING: Version string
 option(MGB_FORCE_DEV_VERSION "Force -dev tag in version stamp" OFF)
 
-file (READ "${CMAKE_SOURCE_DIR}/src/core/include/megbrain/version.h" content)
+file (READ "${CMAKE_CURRENT_SOURCE_DIR}/src/core/include/megbrain/version.h" content)
 
 string (REGEX MATCH "MGB_MAJOR +([0-9]+)" _ ${content})
 set (MGB_VER_MAJOR ${CMAKE_MATCH_1})
