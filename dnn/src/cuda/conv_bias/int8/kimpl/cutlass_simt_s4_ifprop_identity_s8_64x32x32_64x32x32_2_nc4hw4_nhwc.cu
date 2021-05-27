@@ -37,7 +37,7 @@ using Convolution =
     4, 
     16, 
     true, 
-    cutlass::arch::OpMultiplyAddSaturate>;
+    cutlass::arch::OpMultiplyAdd>;
 
 
 template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolution>(

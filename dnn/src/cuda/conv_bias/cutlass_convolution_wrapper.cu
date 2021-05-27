@@ -807,9 +807,9 @@ void megdnn::cuda::cutlass_wrapper::
                 const int32_t* d_bias, const uint8_t* d_z, uint8_t* d_dst,
                 int* workspace, const convolution::ConvParam& param,
                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
-                float delta, float theta, float scale, uint8_t src_zero_point,
-                const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
-                cudaStream_t stream) {
+                float delta, float theta, float /* scale */,
+                uint8_t src_zero_point, const GemmCoord& threadblock_shape,
+                const GemmCoord& warp_shape, cudaStream_t stream) {
 #define DISPATCH_KERNEL_WITH_TILE_SHAPE(threadblock_m_, threadblock_n_,        \
                                         threadblock_k_, warp_m_, warp_n_,      \
                                         warp_k_)                               \
@@ -876,15 +876,6 @@ void megdnn::cuda::cutlass_wrapper::
                             ElementCompute>;
             typename EpilogueOp::Params epilogue{alpha, beta,  gamma,
                                                  0,     delta, theta};
-            DISPATCH_KERNEL;
-        }
-        case NonlineMode::H_SWISH: {
-            using EpilogueOp = cutlass::epilogue::thread::
-                    BiasAddLinearCombinationHSwishClamp<
-                            ElementOutput, 16, ElementAccumulator, ElementBias,
-                            ElementCompute>;
-            typename EpilogueOp::Params epilogue{alpha, beta,  gamma,
-                                                 scale, delta, theta};
             DISPATCH_KERNEL;
         }
         default:
@@ -960,8 +951,7 @@ void megdnn::cuda::cutlass_wrapper::
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
                 cutlass::conv::threadblock::                                   \
                         ConvolutionFpropNCxHWxThreadblockSwizzle,              \
-                stages_, 4, aligned_, true,                                    \
-                cutlass::arch::OpMultiplyAddSaturate>;                         \
+                stages_, 4, aligned_, true, cutlass::arch::OpMultiplyAdd>;     \
         typename Convolution::ConvolutionParameter conv_param(                 \
                 param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
                 param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \

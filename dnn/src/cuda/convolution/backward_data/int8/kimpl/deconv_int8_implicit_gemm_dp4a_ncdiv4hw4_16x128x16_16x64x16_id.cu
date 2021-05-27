@@ -21,7 +21,7 @@ using Deconvolution = cutlass::conv::device::Deconvolution<
     ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp, 
     cutlass::conv::threadblock::ConvolutionDgradNCxHWxThreadblockSwizzle, 
     2, 4, 4, true, 
-    cutlass::arch::OpMultiplyAddSaturate>;
+    cutlass::arch::OpMultiplyAdd>;
 template void megdnn::cuda::cutlass_wrapper::cutlass_deconvolution_wrapper<Deconvolution>(
         const typename Deconvolution::ElementSrc* d_src, 
         const typename Deconvolution::ElementFilter* d_filter, 
