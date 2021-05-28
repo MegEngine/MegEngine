@@ -33,7 +33,8 @@ void forward(const dtype* sptr, dtype* dptr, int* iptr, void* workspace,
              const int* iptr_src = NULL);
 
 //! iterate over all supported data types
-#define ARGSORT_FOREACH_CTYPE(cb) cb(float) cb(int32_t)
+#define ARGSORT_FOREACH_CTYPE(cb) \
+    cb(float) cb(int32_t) DNN_INC_FLOAT16(cb(dt_float16))
 
 }  // namespace argsort
 }  // namespace cuda

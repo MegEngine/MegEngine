@@ -27,6 +27,10 @@ TEST_F(CUDA, TOP_K) {
 TEST_F(CUDA, TOP_K_I32) {
     run_topk_test<dtype::Int32>(handle_cuda());
 }
-
+#if !MEGDNN_DISABLE_FLOAT16
+TEST_F(CUDA, TOP_K_F16) {
+    run_topk_test<dtype::Float16>(handle_cuda());
+}
+#endif
 
 // vim: syntax=cpp.doxygen
