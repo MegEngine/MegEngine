@@ -1146,7 +1146,7 @@ template <> struct NumericTraits<double> :              BaseTraits<FLOATING_POIN
 #if (__CUDACC_VER_MAJOR__ >= 9)
     template <> struct NumericTraits<__half> :          BaseTraits<FLOATING_POINT, true, false, unsigned short, __half> {};
 #endif
-
+template <> struct NumericTraits<half_float::half> :    BaseTraits<FLOATING_POINT, true, false, unsigned short, half_float::half> {};
 template <> struct NumericTraits<bool> :                BaseTraits<UNSIGNED_INTEGER, true, false, typename UnitWord<bool>::VolatileWord, bool> {};
 
 
