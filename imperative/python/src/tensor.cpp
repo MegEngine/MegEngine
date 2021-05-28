@@ -390,6 +390,7 @@ PyObject* TensorWrapper::shape() {
         }
         shape = *tshp;
     } else {
+        py::gil_scoped_release _;
         shape = m_tensor->shape();
     }
 
@@ -899,7 +900,6 @@ void init_tensor(py::module m) {
     }
 
     static constexpr auto sync_py_task_q = []{
-        py::gil_scoped_release _;
         py_task_q.wait_all_task_finish();
     };
 
@@ -933,7 +933,7 @@ void init_tensor(py::module m) {
               imperative::Profiler::load_options(std::move(options));
               imperative::Profiler::start_profile();
               interpreter_for_py->start_profile();
-          });
+          }, py::call_guard<py::gil_scoped_release>());
     m.def("stop_profile",
           []() -> std::function<void(std::string, std::string)> {
               interpreter_for_py->stop_profile();
@@ -944,23 +944,23 @@ void init_tensor(py::module m) {
               return [results=std::move(results), options=std::move(options)](std::string basename, std::string format){
                   imperative::Profiler::dump_profile(basename, format, results, options);
               };
-          });
+          }, py::call_guard<py::gil_scoped_release>());
     m.def("sync",
           []() {
               interpreter_for_py->sync();
               sync_py_task_q();
-          });
+          }, py::call_guard<py::gil_scoped_release>());
     m.def("full_sync",
           []() {
               interpreter_for_py->sync();
               CompNode::sync_all();
               sync_py_task_q();
-          });
+          }, py::call_guard<py::gil_scoped_release>());
     m.def("close",
           []() {
               interpreter_for_py->close();
               sync_py_task_q();
-          });
+          }, py::call_guard<py::gil_scoped_release>());
 
     py::handle grad_key_type = GradKeyWrapper::wrap_t::type()
         .def<&GradKeyWrapper::attach>("attach")

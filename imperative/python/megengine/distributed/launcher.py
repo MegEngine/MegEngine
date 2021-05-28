@@ -12,7 +12,7 @@ import os
 import queue
 
 from .. import _exit
-from ..core._imperative_rt.core2 import sync
+from ..core._imperative_rt.core2 import full_sync
 from ..logger import get_logger
 from .group import group_barrier, init_process_group
 from .helper import get_device_count_by_fork
@@ -51,7 +51,7 @@ def _run_wrapped(
         group_barrier()
     ret = func(*args, **kwargs)
     queue.put((dev, ret))
-    sync()
+    full_sync()
     if is_multimachine:
         group_barrier()
     _exit(0)
