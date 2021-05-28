@@ -84,6 +84,8 @@ private:
     void detach_users(TensorInfo*);
 
     TensorInfo* put_impl(const HostTensorND& value, bool no_cache);
+    void del_impl(Handle);
+    void sync_impl();
     TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
     void notify_tensor_unsafe(TensorInfo* info);
 
@@ -130,6 +132,7 @@ private:
     std::unordered_set<TensorInfo*> collect_valid_tensors();
 
     std::mutex m_mutex;
+    Spinlock m_spin;
     std::condition_variable m_cv;
     MemPool<TensorInfo> m_pool;
     std::unordered_set<Handle> m_valid_handle;
