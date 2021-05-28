@@ -124,7 +124,7 @@ size_t argsort::get_fwd_workspace_in_bytes(uint32_t M, uint32_t N, DType dtype,
         ARGSORT_FOREACH_CTYPE(cb)
 #undef cb
         default:
-            megdnn_throw("argsort only supports float and int32");
+            megdnn_throw("argsort only supports float, int32 and float16");
     }
     if (!iptr_src_given) {
         size = DIVUP(size, sizeof(float)) * sizeof(float) + M * N * sizeof(int);

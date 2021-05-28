@@ -489,7 +489,7 @@ cudaError_t topk::find_kth_radix(const ctype* input, ctype* output,
     if (k < 0) {
         k = length + k + 1;
     }
-    if (!(BUCKET_BITS == 8 && sizeof(ctype) == 4)) {
+    if (!(BUCKET_BITS == 8 && (sizeof(ctype) == 4 || sizeof(ctype) == 2))) {
         // no c++11 in megdnn cuda; so we just trap instead of using static
         // assert
         megdnn_trap();
@@ -668,6 +668,7 @@ namespace topk {
                                         int32_t, uint32_t, cudaStream_t)
 INST(float);
 INST(int32_t);
+DNN_INC_FLOAT16(INST(dt_float16));
 #undef INST
 
 }  // namespace topk
