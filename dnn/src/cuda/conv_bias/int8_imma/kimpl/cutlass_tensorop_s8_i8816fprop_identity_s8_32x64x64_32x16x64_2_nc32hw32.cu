@@ -40,16 +40,19 @@ using Convolution =
     cutlass::arch::OpMultiplyAddSaturate>;
 
 
+
 template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolution>(
-        const typename Convolution::ElementSrc* d_src, 
-        const typename Convolution::ElementFilter* d_filter, 
-        const typename Convolution::ElementBias* d_bias, 
-        const typename Convolution::ElementDst* d_z, 
-        typename Convolution::ElementDst* d_dst, 
-        int* workspace, 
-        typename Convolution::ConvolutionParameter const& conv_param, 
-        typename Convolution::EpilogueOutputOp::Params const& epilogue, 
-        cudaStream_t stream, 
-        typename Convolution::ExtraParam extra_param);
+  const typename Convolution::ElementSrc* d_src, 
+  const typename Convolution::ElementFilter* d_filter, 
+  const typename Convolution::ElementBias* d_bias, 
+  const typename Convolution::ElementDst* d_z, 
+  typename Convolution::ElementDst* d_dst, 
+  int* workspace, 
+  typename Convolution::ConvolutionParameter const& conv_param, 
+  typename Convolution::EpilogueOutputOp::Params const& epilogue, 
+  cudaStream_t stream, 
+  typename Convolution::ExtraParam extra_param);
+
+
 #pragma GCC diagnostic pop
 #endif
