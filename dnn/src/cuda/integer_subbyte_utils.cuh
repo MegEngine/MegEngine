@@ -110,35 +110,33 @@ MEGDNN_DEVICE __forceinline__ static int unpack_integer_4bits(T storage,
     return (result << (shift - bits)) >> shift;
 }
 
-MEGDNN_DEVICE __forceinline__ static void transform_int4x8_to_int8(
+template <bool signedness>
+MEGDNN_DEVICE __forceinline__ static void transform_b4x8_to_int8(
         int (&result)[8], const int& source) {
 #pragma unroll
     for (int i = 0; i < 8; i++) {
-        result[i] = unpack_integer_4bits<true>(
+        result[i] = unpack_integer_4bits<signedness>(
                 reinterpret_cast<unsigned const&>(source), (i << 2));
     }
 }
 
-MEGDNN_DEVICE __forceinline__ static void transform_uint4x8_to_int8(
-        int (&result)[8], const int& source) {
-#pragma unroll
-    for (int i = 0; i < 8; i++) {
-        result[i] = unpack_integer_4bits<false>(
-                reinterpret_cast<unsigned const&>(source), (i << 2));
+template <bool signedness>
+MEGDNN_DEVICE __forceinline__ static void transform_b4x2_to_int8(
+        int (&result)[2], const uint8_t& source) {
+    result[0] = unpack_integer_4bits<signedness>(source, 0);
+    result[1] = unpack_integer_4bits<signedness>(source, 4);
+}
+
+template <bool signedness>
+MEGDNN_DEVICE __forceinline__ static int transform_int8_to_b4x8(
+        int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
+    if (signedness) {
+        return transform_int8_to_int4x8(s0, s1, s2, s3, s4, s5, s6, s7);
+    } else {
+        return transform_int8_to_uint4x8(s0, s1, s2, s3, s4, s5, s6, s7);
     }
 }
 
-MEGDNN_DEVICE __forceinline__ static void transform_int4x2_to_int8(
-        int (&result)[2], const uint8_t& source) {
-    result[0] = unpack_integer_4bits<true>(source, 0);
-    result[1] = unpack_integer_4bits<true>(source, 4);
-}
-
-MEGDNN_DEVICE __forceinline__ static void transform_uint4x2_to_int8(
-        int (&result)[2], const uint8_t& source) {
-    result[0] = unpack_integer_4bits<false>(source, 0);
-    result[1] = unpack_integer_4bits<false>(source, 4);
-}
 }  // namespace integer_subbyte
 }  // namespace cuda
 }  // namespace megdnn

@@ -176,60 +176,22 @@ __global__ void kern_general_nchw4(SrcVisitor src, const float* __restrict mat,
     }
 }
 
-
-
-
-template <bool signedness>
-MEGDNN_DEVICE __forceinline__ int transform_int8_to_bit4x8(int s0, int s1,
-                                                           int s2, int s3,
-                                                           int s4, int s5,
-                                                           int s6, int s7);
-
-template <>
-MEGDNN_DEVICE __forceinline__ int transform_int8_to_bit4x8<true>(
-        int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
-    return transform_int8_to_int4x8(s0, s1, s2, s3, s4, s5, s6, s7);
-}
-
-template <>
-MEGDNN_DEVICE __forceinline__ int transform_int8_to_bit4x8<false>(
-        int s0, int s1, int s2, int s3, int s4, int s5, int s6, int s7) {
-    return transform_int8_to_uint4x8(s0, s1, s2, s3, s4, s5, s6, s7);
-}
-template <bool signedness>
-MEGDNN_DEVICE __forceinline__ void
-transform_bit4x8_to_int8(int (&result)[8], const int& source);
-
-template <>
-MEGDNN_DEVICE __forceinline__ void 
-transform_bit4x8_to_int8<true>(int (&result)[8], const int& source){
-    transform_int4x8_to_int8(result, source);
-}
-
-template <>
-MEGDNN_DEVICE __forceinline__ void 
-transform_bit4x8_to_int8<false>(int (&result)[8], const int& source){
-    transform_uint4x8_to_int8(result, source);
-}
-
 template <bool signedness, typename OutputConverter>
 MEGDNN_DEVICE __forceinline__ int pack_output_func(
         OutputConverter& output_converter, int (&s00)[8], int (&s01)[8],
         int (&s10)[8], int (&s11)[8], float w00, float w01, float w10,
         float w11) {
-    #define warp_perspective_transform(idx)                           \
-    static_cast<int>(output_converter(s00[idx] * w00 + \
-                                      s01[idx] * w01 + \
-                                      s10[idx] * w10 + \
-                                      s11[idx] * w11)  \
+#define warp_perspective_transform(idx)                                 \
+    static_cast<int>(output_converter(s00[idx] * w00 + s01[idx] * w01 + \
+                                      s10[idx] * w10 + s11[idx] * w11)  \
                              .as_storage())
 
-    return transform_int8_to_bit4x8<signedness>(
+    return transform_int8_to_b4x8<signedness>(
             warp_perspective_transform(0), warp_perspective_transform(1),
             warp_perspective_transform(2), warp_perspective_transform(3),
             warp_perspective_transform(4), warp_perspective_transform(5),
             warp_perspective_transform(6), warp_perspective_transform(7));
-    #undef warp_perspective_transform
+#undef warp_perspective_transform
 }
 
 template <typename ctype, typename Getter, typename SrcVisitor,
@@ -278,31 +240,31 @@ __global__ void kern_general_nchw64(SrcVisitor src, const float* __restrict mat,
             s[2] = __ldg(sptr_int4 + i_coor_10 + c1);
             s[3] = __ldg(sptr_int4 + i_coor_11 + c1);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].x);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].x);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].x);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].x);
+            transform_b4x8_to_int8<signedness>(s00, s[0].x);
+            transform_b4x8_to_int8<signedness>(s01, s[1].x);
+            transform_b4x8_to_int8<signedness>(s10, s[2].x);
+            transform_b4x8_to_int8<signedness>(s11, s[3].x);
             d.x = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].y);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].y);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].y);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].y);
+            transform_b4x8_to_int8<signedness>(s00, s[0].y);
+            transform_b4x8_to_int8<signedness>(s01, s[1].y);
+            transform_b4x8_to_int8<signedness>(s10, s[2].y);
+            transform_b4x8_to_int8<signedness>(s11, s[3].y);
             d.y = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].z);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].z);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].z);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].z);
+            transform_b4x8_to_int8<signedness>(s00, s[0].z);
+            transform_b4x8_to_int8<signedness>(s01, s[1].z);
+            transform_b4x8_to_int8<signedness>(s10, s[2].z);
+            transform_b4x8_to_int8<signedness>(s11, s[3].z);
             d.z = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].w);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].w);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].w);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].w);
+            transform_b4x8_to_int8<signedness>(s00, s[0].w);
+            transform_b4x8_to_int8<signedness>(s01, s[1].w);
+            transform_b4x8_to_int8<signedness>(s10, s[2].w);
+            transform_b4x8_to_int8<signedness>(s11, s[3].w);
             d.w = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
@@ -403,15 +365,7 @@ __global__ void kern_const_border_nchw4(SrcVisitor src,
         }
     }
 }
-template <bool signedness>
-MEGDNN_DEVICE __forceinline__ static void transform_bit4x8_to_int8(
-        int (&result)[8], const int& source) {
-#pragma unroll
-    for (int i = 0; i < 8; i++) {
-        result[i] = unpack_integer_4bits<signedness>(
-                reinterpret_cast<unsigned const&>(source), (i << 2));
-    }
-}
+
 
 template <typename ctype, typename SrcVisitor, typename OutputConverter>
 __global__ void kern_const_border_nchw64(SrcVisitor src,
@@ -457,7 +411,7 @@ __global__ void kern_const_border_nchw64(SrcVisitor src,
         bool flag00 = okh0 && okw0, flag01 = okh0 && okw1,
              flag10 = okh1 && okw0, flag11 = okh1 && okw1;
         int8_t bval_4 = bval.as_storage() & 0xF;
-        int bval_8 = transform_int8_to_bit4x8<signedness>(
+        int bval_8 = transform_int8_to_b4x8<signedness>(
                 bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4);
         int4 bval_int4;
         bval_int4.x = bval_8;
@@ -488,31 +442,31 @@ __global__ void kern_const_border_nchw64(SrcVisitor src,
                 s[3] = bval_int4;
             }
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].x);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].x);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].x);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].x);
+            transform_b4x8_to_int8<signedness>(s00, s[0].x);
+            transform_b4x8_to_int8<signedness>(s01, s[1].x);
+            transform_b4x8_to_int8<signedness>(s10, s[2].x);
+            transform_b4x8_to_int8<signedness>(s11, s[3].x);
             d.x = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].y);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].y);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].y);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].y);
+            transform_b4x8_to_int8<signedness>(s00, s[0].y);
+            transform_b4x8_to_int8<signedness>(s01, s[1].y);
+            transform_b4x8_to_int8<signedness>(s10, s[2].y);
+            transform_b4x8_to_int8<signedness>(s11, s[3].y);
             d.y = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].z);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].z);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].z);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].z);
+            transform_b4x8_to_int8<signedness>(s00, s[0].z);
+            transform_b4x8_to_int8<signedness>(s01, s[1].z);
+            transform_b4x8_to_int8<signedness>(s10, s[2].z);
+            transform_b4x8_to_int8<signedness>(s11, s[3].z);
             d.z = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
-            transform_bit4x8_to_int8<signedness>(s00, s[0].w);
-            transform_bit4x8_to_int8<signedness>(s01, s[1].w);
-            transform_bit4x8_to_int8<signedness>(s10, s[2].w);
-            transform_bit4x8_to_int8<signedness>(s11, s[3].w);
+            transform_b4x8_to_int8<signedness>(s00, s[0].w);
+            transform_b4x8_to_int8<signedness>(s01, s[1].w);
+            transform_b4x8_to_int8<signedness>(s10, s[2].w);
+            transform_b4x8_to_int8<signedness>(s11, s[3].w);
             d.w = pack_output_func<signedness>(output_converter, s00, s01, s10,
                                                s11, w00, w01, w10, w11);
 
