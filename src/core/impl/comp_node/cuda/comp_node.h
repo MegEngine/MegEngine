@@ -36,6 +36,13 @@ namespace mgb {
 
             static void set_prealloc_config(size_t alignment, size_t min_req,
                                             size_t max_overhead, double growth_factor);
+#if MGB_CUDA && defined(WIN32)
+            //! FIXME: windows cuda driver shutdown before call atexit function
+            //! even register atexit function after init cuda driver! as a
+            //! workround recovery resource by OS temporarily, may need remove
+            //! this after upgrade cuda runtime
+            static bool is_into_atexit;
+#endif
     };
 }
 

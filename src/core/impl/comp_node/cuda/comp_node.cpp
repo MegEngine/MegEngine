@@ -614,6 +614,18 @@ bool CudaCompNodeImpl::check_global_finalized() {
         }
         return true;
     }
+#if MGB_CUDA && defined(WIN32)
+    //! FIXME: windows cuda driver shutdown before call atexit function even
+    //! register atexit function after init cuda driver! as a workround
+    //! recovery resource by OS temporarily, may need remove this after
+    //! upgrade cuda runtime
+    if (CudaCompNode::is_into_atexit) {
+        mgb_log_debug(
+                "windows cudaErrorCudartUnloading happened!!, resource "
+                "recovery by OS!!");
+        return true;
+    }
+#endif
     return false;
 }
 
@@ -733,11 +745,29 @@ void CudaCompNode::finalize() {
     }
 }
 
-CompNode::Impl* CudaCompNode::load_cuda(
-        const Locator &locator, const Locator &locator_logical) {
+#if MGB_CUDA && defined(WIN32)
+//! FIXME: windows cuda driver shutdown before call atexit function even
+//! register atexit function after init cuda driver! as a workround
+//! recovery resource by OS temporarily, may need remove this after
+//! upgrade cuda runtime
+bool CudaCompNode::is_into_atexit = false;
+#endif
+CompNode::Impl* CudaCompNode::load_cuda(const Locator& locator,
+                                        const Locator& locator_logical) {
     int nr_gpu = get_device_count();
+#if MGB_CUDA && defined(WIN32)
+    //! FIXME: windows cuda driver shutdown before call atexit function even
+    //! register atexit function after init cuda driver! as a workround
+    //! recovery resource by OS temporarily, may need remove this after
+    //! upgrade cuda runtime
+    if (!is_into_atexit) {
+        auto err = atexit([] { is_into_atexit = true; });
+        mgb_assert(!err, "failed to register atexit function");
+    }
+#endif
     mgb_assert(locator.device >= 0 && locator.device < nr_gpu,
-            "request gpu%d out of valid range [0, %d)", locator.device, nr_gpu);
+               "request gpu%d out of valid range [0, %d)", locator.device,
+               nr_gpu);
 
     auto &&sdptr = CudaCompNodeImpl::sd;
     {
