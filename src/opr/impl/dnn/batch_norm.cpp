@@ -12,6 +12,8 @@
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/tensor_manip.h"
 
 #include "../internal/megdnn_opr_wrapper.inl"
 
@@ -243,16 +245,34 @@ void BatchNormForward::mem_plan_fwd_in2out_writable() {
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(BatchNormForward) {
-    mgb_assert(opr.param().fwd_mode == BatchNorm::Param::FwdMode::TRAINING,
-        "batch norm could only take grad in training mode");
     mgb_assert(wrt_idx < 5, "wrt_idx %zu is out of range", wrt_idx);
     VarNodeArray ret(opr.input().size(), nullptr);
-    SymbolVarArray grad = BatchNormBackward::make(
-            opr.input(0), out_grad[4],
-            opr.output(2), opr.output(3),
-            opr.input(1), opr.param());
-    for (size_t i = 0; i < 3; ++ i) {
-        ret[i] = grad[(i + 2) % 3].node();
+    SymbolVarArray grad;
+    switch (opr.param().fwd_mode) {
+    case BatchNorm::Param::FwdMode::TRAINING:
+        grad = BatchNormBackward::make(
+                opr.input(0), out_grad[4],
+                opr.output(2), opr.output(3),
+                opr.input(1), opr.param());
+        for (size_t i = 0; i < 3; ++ i) {
+            ret[i] = grad[(i + 2) % 3].node();
+        }
+        return ret;
+    case BatchNorm::Param::FwdMode::INFERENCE:
+        auto sqrt_var = PowC::make((SymbolVar{opr.input(4)}
+                        + static_cast<dt_float32>(opr.param().epsilon)), 0.5, opr.config());
+        auto d_bn_scale_unreduced = SymbolVar{out_grad[4]} *
+                            (SymbolVar{opr.input(0)} - SymbolVar{opr.input(3)}) / sqrt_var;
+        auto d_bn_scale = Reduce::make(d_bn_scale_unreduced,
+                            Reduce::Param::Mode::SUM, GetVarShape::make(opr.input(1)));
+        auto d_bn_bias = Reduce::make(out_grad[4],
+                            Reduce::Param::Mode::SUM, GetVarShape::make(opr.input(2)));
+        auto dx = SymbolVar{out_grad[4]} * SymbolVar{opr.input(1)} / sqrt_var;
+
+        ret[0] = dx.node();
+        ret[1] = d_bn_scale.node();
+        ret[2] = d_bn_bias.node();
+        return ret;
     }
     return ret;
 }
