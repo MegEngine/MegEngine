@@ -893,6 +893,10 @@ class trace:
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"
             file = open(file, permission)
+
+        if keep_opr_priority:
+            graph._set_priority_to_id(dest_vars)
+
         dump_content, dump_info = G.dump_graph(
             dest_vars,
             keep_var_name=keep_var_name,

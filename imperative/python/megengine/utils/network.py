@@ -241,6 +241,7 @@ class Network:
             if optimize_for_inference:
                 metadata.optimize_options = optimize_options
 
+        G.set_priority_to_id([o._node if isinstance(o, G.VarNode) else o for o in out])
         dump_content, _ = G.dump_graph(
             out,
             keep_var_name=keep_var_name,
@@ -353,7 +354,7 @@ class Network:
                     )
                 shp[0] = batchsize
                 i.shape = tuple(shp)
-
+        self._compile()
         assert prev_batchsize is not None, "no data provider found"
         assert not blacklist, "unused items in blacklist: {}".format(blacklist)
 
@@ -363,7 +364,6 @@ class Network:
         :param repl_dict: the map {old_var: new_var} that specifies how to replace the vars.
         """
         if not all([var.owner for var in repl_dict.values()]):
-            print(repl_dict.values())
             self.add_dep_oprs(*list(repl_dict.values()))
         for var in self.all_vars:
             if var in repl_dict:
@@ -373,6 +373,7 @@ class Network:
                 owner.outputs[idx] = var
                 var.__dict__.update(repl_var.__dict__)
                 var.var = repl_var.var
+        self._compile()
 
     def replace_oprs(self, repl_dict: Dict[OpNode, OpNode]):
         """
@@ -384,11 +385,11 @@ class Network:
                 assert len(opr.outputs) == len(
                     repl_dict[opr].outputs
                 ), "can not replace {} with {}".format(type(opr), type(repl_dict[opr]))
-                repl_dict[opr].outputs = opr.outputs
                 for ind, var in enumerate(opr.outputs):
                     var.owner = repl_dict[opr]
                     var.__dict__.update(repl_dict[opr].outputs[ind].__dict__)
                     var.var = repl_dict[opr].outputs[ind].var
+        self._compile()
 
     def get_opr_by_type(self, oprcls, unique=True):
         assert issubclass(oprcls, OpNode)

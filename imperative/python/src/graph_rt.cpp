@@ -192,7 +192,14 @@ void init_graph_rt(py::module m) {
         })
         .def("__repr__", [](cg::OperatorNodeBase* opr){
             return "Opr:" + opr->name();
-        });
+        })
+        .def_property("priority",
+            [](cg::OperatorNodeBase* opr) {
+                return opr->node_prop().attribute().priority;
+            },
+            [](cg::OperatorNodeBase* opr, int priority) {
+                opr->node_prop().attribute().priority = priority;
+            });
 
     py::class_<cg::AsyncExecutable>(m, "AsyncExecutable")
         .def("execute", &cg::AsyncExecutable::execute, py::call_guard<py::gil_scoped_release>())

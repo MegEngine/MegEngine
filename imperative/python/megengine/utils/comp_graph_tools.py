@@ -6,6 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
+import heapq
 from collections import OrderedDict
 from typing import Dict, List, Tuple, Union
 
@@ -88,6 +89,41 @@ def get_opr_type(opr: _OpNode) -> str:
     return opr.type
 
 
+class _OprStableOrderHeapq:
+    """heap implementation for operator comparison in stable order"""
+
+    _list = None
+    _extra_priority = None
+    _used_id_name_pairs = None
+
+    def __init__(self, extra_priority):
+        assert isinstance(extra_priority, collections.Callable)
+        self._list = []
+        self._extra_priority = extra_priority
+        self._used_id_name_pairs = {}
+
+    def pop_min(self):
+        return heapq.heappop(self._list)[-1]
+
+    def add(self, opr):
+        # named as add to mimic set() interface
+
+        id_ = opr.id
+        name = opr.name
+
+        other = self._used_id_name_pairs.setdefault((id_, name), opr)
+        if other is not opr:
+            raise RuntimeError(
+                "duplicated (id, name) pair: opr0={} opr1={}".format(other, opr)
+            )
+
+        item = self._extra_priority(opr) + (id_, name, opr)
+        heapq.heappush(self._list, item)
+
+    def __bool__(self):
+        return bool(self._list)
+
+
 def graph_traversal(outputs: _VarNode):
     """
     Helper function to traverse the computing graph and return enough useful information.
@@ -110,12 +146,13 @@ def graph_traversal(outputs: _VarNode):
 
     var2oprs = collections.defaultdict(list)
     opr2receivers = collections.defaultdict(list)
-
-    queue = list(set(map(lambda x: x.owner, outputs)))
+    queue = []
+    [queue.append(o) for o in [x.owner for x in outputs] if o not in queue]
     visited = set(map(lambda x: x.id, queue))
 
     # iterate through whole comp_graph, fill in meta information
     indegree2opr = collections.defaultdict(set)
+    indegree2opr[0] = _OprStableOrderHeapq(lambda op: (op.priority,))
     opr2indegree = {}
 
     idx = 0
@@ -138,8 +175,8 @@ def graph_traversal(outputs: _VarNode):
 
             indegree += 1
             opr2receivers[pre_opr.id].append(cur_opr.id)
-
-        indegree2opr[indegree].add(cur_opr.id)
+        opr = cur_opr if indegree == 0 else cur_opr.id
+        indegree2opr[indegree].add(opr)
         opr2indegree[cur_opr.id] = indegree
 
     return map_oprs, map_vars, var2oprs, opr2receivers, indegree2opr, opr2indegree
@@ -162,8 +199,8 @@ def get_oprs_seq(
         oprs_seq = []
         nr_remain = len(map_oprs)
         while indegree2opr[0]:
-            opr_id = indegree2opr[0].pop()
-            opr = map_oprs[opr_id]
+            opr = indegree2opr[0].pop_min()
+            opr_id = opr.id
             nr_remain -= 1
             if opr.type != "ImmutableTensor" or not prune_immtensor:
                 oprs_seq.append(opr)
@@ -173,7 +210,10 @@ def get_oprs_seq(
                 indegree2opr[indegree].remove(post_id)
 
                 indegree -= 1
-                indegree2opr[indegree].add(post_id)
+                if indegree == 0:
+                    indegree2opr[indegree].add(map_oprs[post_id])
+                else:
+                    indegree2opr[indegree].add(post_id)
                 opr2indegree[post_id] = indegree
 
         assert nr_remain == 0, "there are {} remaining nodes; cyclic graph?".format(
@@ -213,10 +253,34 @@ def get_oprs_seq(
         # filter out all marked oprs
         return list(filter(lambda x: x.id not in marked_opr_ids, oprs_seq))
 
+    # adjust the order of oprs, let param/data privoder oprs close to the oprs which use them as inputs.
+    def reorder_oprs_seq(oprs):
+        rst = []
+        param_or_data_provider_oprs = []
+        other_oprs = []
+
+        for o in oprs:
+            if o.type in ["ImmutableTensor", "Host2DeviceCopy"]:
+                param_or_data_provider_oprs.append(o)
+            else:
+                other_oprs.append(o)
+
+        for o in other_oprs:
+            for inp in o.inputs:
+                if inp.owner.type in ["ImmutableTensor", "Host2DeviceCopy"]:
+                    if inp.owner in param_or_data_provider_oprs:
+                        rst.append(inp.owner)
+                        param_or_data_provider_oprs.remove(inp.owner)
+            rst.append(o)
+        rst = rst + param_or_data_provider_oprs
+        assert len(rst) == len(oprs)
+        return rst
+
     map_oprs, _, var2oprs, opr2receivers, indegree2opr, opr2indegree = graph_traversal(
         outputs
     )
     oprs_seq = topological_sort(map_oprs, opr2receivers, indegree2opr, opr2indegree)
+    oprs_seq = reorder_oprs_seq(oprs_seq)
     if prune_reshape is True:
         oprs_seq = prune_reshape_oprs(outputs, oprs_seq, var2oprs.copy())
     return oprs_seq

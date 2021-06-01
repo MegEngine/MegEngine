@@ -90,6 +90,10 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
     def dtype(self):
         return self.var.dtype if self.var else None
 
+    @property
+    def ndim(self):
+        return super().ndim
+
     def __bool__(self):
         return False
 
@@ -134,7 +138,18 @@ class OpNode(NetworkNode):
         self.outputs = []
         self.params = {}
         self._opr = None  # mgb opnode
-        self.id = id(self)
+
+    @property
+    def id(self):
+        if self._opr is not None:
+            return self._opr.id
+        return id(self)
+
+    @property
+    def priority(self):
+        if self._opr is not None:
+            return self._opr.priority
+        return 0
 
     @classmethod
     def load(cls, opr):
@@ -144,16 +159,21 @@ class OpNode(NetworkNode):
         obj._opr = opr
         return obj
 
-    def compile(self, graph=None):
-        op = self.opdef(**self.params)
-        args = [i.var for i in self.inputs]
-        outputs = rt.invoke_op(op, args)
-        assert len(outputs) == len(self.outputs)
-        self._opr = outputs[0].owner
-        for i in range(len(self.outputs)):
-            self.outputs[i].var = outputs[i]
-            self.outputs[i].var.name = self.outputs[i].name
-            assert self.outputs[i].owner is self
+    def compile(self):
+        if (
+            self._opr is None
+            or len(self._opr.inputs) != len(self.inputs)
+            or any([i != j.var for i, j in zip(self._opr.inputs, self.inputs)])
+        ):
+            op = self.opdef(**self.params)
+            args = [i.var for i in self.inputs]
+            outputs = rt.invoke_op(op, args)
+            assert len(outputs) == len(self.outputs)
+            self._opr = outputs[0].owner
+            for i in range(len(self.outputs)):
+                self.outputs[i].var = outputs[i]
+                self.outputs[i].var.name = self.outputs[i].name
+                assert self.outputs[i].owner is self
 
     def add_inp_var(self, x):
         self.inputs.append(x)
@@ -197,11 +217,17 @@ class Host2DeviceCopy(OpNode):
         return self
 
     def compile(self, graph):
-        outputs = rt.make_h2d(graph, self.device, self.dtype, self.shape, self.name)
-        self._opr = outputs.owner
-        if len(self.outputs) == 0:
-            self.outputs.append(VarNode(owner_opr=self, name=self.name))
-        self.outputs[0].var = outputs
+        if (
+            self._opr is None
+            or self._opr.outputs[0].comp_node != self.device
+            or self._opr.outputs[0].shape != self.shape
+            or self._opr.outputs[0].dtype != self.dtype
+        ):
+            outputs = rt.make_h2d(graph, self.device, self.dtype, self.shape, self.name)
+            self._opr = outputs.owner
+            if len(self.outputs) == 0:
+                self.outputs.append(VarNode(owner_opr=self, name=self.name))
+            self.outputs[0].var = outputs
         assert self.outputs[0].owner is self
 
 
