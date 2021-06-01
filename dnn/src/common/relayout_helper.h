@@ -43,8 +43,7 @@ namespace transpose_fallback {
 
 #if MEGDNN_X86 || MEGDNN_NAIVE
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 64;
-#elif MEGDNN_AARCH64 || MEGDNN_ARMV7 /*BEGIN-INLINE-INTERNAL*/ || \
-        MEGDNN_MIPS /*END-INLINE-INTERNAL*/
+#elif MEGDNN_AARCH64 || MEGDNN_ARMV7
 constexpr size_t BLOCK_LINE_SIZE_BYTES = 32;
 #elif MEGDNN_RISCV64
 //! ref U54-MC arch
