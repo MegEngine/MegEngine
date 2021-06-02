@@ -93,6 +93,7 @@ const int8_t* handle_padding(const int8_t* src, size_t IH, size_t IW,
     }
     return need_pad ? sptr_base : src;
 }
+
 bool PoolingImpl::AlgoFilterxModexStride1::usable(
         const PoolingKernSizeParam& param) const {
     auto SH = param.stride[0];
@@ -104,7 +105,8 @@ bool PoolingImpl::AlgoFilterxModexStride1::usable(
                     param.src_type.category() == DTypeCategory::QUANTIZED) &&
                    param.format == Param::Format::NCHW && SH == 1 && SW == 1 &&
                    FH == FW && (FH == 2 || FH == 3);
-    return avaible;
+    bool is_mode_ok = (param.mode == Mode::MAX || param.mode == Mode::AVERAGE);
+    return avaible && is_mode_ok;
 }
 
 void PoolingImpl::AlgoFilterxModexStride1::exec(
@@ -202,7 +204,8 @@ bool PoolingImpl::AlgoFilter2ModexStride2::usable(
                     param.src_type.category() == DTypeCategory::QUANTIZED) &&
                    param.format == Param::Format::NCHW && FH == FW &&
                    SH == SW && FH == 2 && SH == 2;
-    return avaible;
+    bool is_mode_ok = (param.mode == Mode::MAX || param.mode == Mode::AVERAGE);
+    return avaible && is_mode_ok;
 }
 
 void PoolingImpl::AlgoFilter2ModexStride2::exec(

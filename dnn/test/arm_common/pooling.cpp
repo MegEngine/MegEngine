@@ -53,6 +53,18 @@ TEST_F(ARM_COMMON, POOLING)
         if (ih + p * 2 >= 5 && iw + p * 2 >= 5)
             checker.set_param(param).exec({{2, 3, ih, iw}, {}});
     }
+    for (size_t ih: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t iw: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t p: {1, 2})
+    {
+        Param param;
+        param.mode = Param::Mode::AVERAGE_COUNT_EXCLUDE_PADDING;
+        param.window_h = param.window_w = 3;
+        param.stride_h = param.stride_w = 1;
+        param.pad_h = param.pad_w = p;
+        Checker<Pooling> checker(handle());
+        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+    }
     // clang-format on
 }
 
