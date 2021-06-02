@@ -103,6 +103,9 @@ class AvgPool2d(_PoolNd):
     :param kernel_size: the size of the window.
     :param stride: the stride of the window. Default value is kernel_size。
     :param padding: implicit zero padding to be added on both sides.
+    :param mode: whether to count padding values. "average" mode will do counting and 
+    "average_count_exclude_padding" mode won't do counting. 
+        Default: "average_count_exclude_padding"
 
     Examples:
 
@@ -126,5 +129,21 @@ class AvgPool2d(_PoolNd):
 
     """
 
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = None,
+        padding: Union[int, Tuple[int, int]] = 0,
+        mode: str = "average_count_exclude_padding",
+        **kwargs
+    ):
+        super(AvgPool2d, self).__init__(kernel_size, stride, padding, **kwargs)
+        self.mode = mode
+
     def forward(self, inp):
-        return avg_pool2d(inp, self.kernel_size, self.stride, self.padding)
+        return avg_pool2d(inp, self.kernel_size, self.stride, self.padding, self.mode)
+
+    def _module_info_string(self) -> str:
+        return "kernel_size={kernel_size}, stride={stride}, padding={padding}, mode={mode}".format(
+            **self.__dict__
+        )
