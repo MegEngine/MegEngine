@@ -262,7 +262,7 @@ class GradManager:
         if dy is None:
             dys = [ones_like(y) for y in ys]
         elif isinstance(dy, (tuple, list)):
-            dys = ys
+            dys = dy
         else:
             dys = [dy]
         try:
