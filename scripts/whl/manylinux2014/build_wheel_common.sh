@@ -1,5 +1,6 @@
-#!/bin/bash
-set -ex
+#!/bin/bash -e
+set -x
+
 CWD=$(dirname $0)
 BASEDIR=$(readlink -f ${CWD}/../../..)
 OUTPUTDIR=$(readlink -f ${CWD}/output)
@@ -265,7 +266,7 @@ if [ "$BUILD_GCC8" == "ON" ];then
 else
     run_cmd="/home/code/scripts/whl/manylinux2014/do_build_common.sh"
 fi
-
+set +x
 docker run --rm -it $TMPFS_ARGS \
     -e UID=${USERID} \
     -e PUBLIC_VERSION_POSTFIX=${PUBLIC_VERSION_POSTFIX} \

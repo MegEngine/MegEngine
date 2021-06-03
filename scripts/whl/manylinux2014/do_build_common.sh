@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 function handle_strip() {
     echo "now handle strip $1"
@@ -89,6 +89,7 @@ fi
 INCREMENT_KEY_WORDS=".cu.o is dirty"
 IS_IN_FIRST_LOOP=TRUE
 
+ORG_EXTRA_CMAKE_FLAG=${EXTRA_CMAKE_FLAG}
 for ver in ${ALL_PYTHON}
 do
     # we want run a full clean build at the first loop
@@ -103,8 +104,7 @@ do
     MAJOR=${python_ver:0:1}
     MINOR=${ver:1}
     PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}/
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} ${EXTRA_CMAKE_FLAG}"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_DIR}lib/"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python${MAJOR}.${MINOR}"

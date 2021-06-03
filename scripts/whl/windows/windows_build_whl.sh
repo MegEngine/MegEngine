@@ -114,6 +114,7 @@ BUILD_DIR=${SRC_DIR}/build_dir/host/build/
 INCREMENT_KEY_WORDS=".cu.obj is dirty"
 IS_IN_FIRST_LOOP=TRUE
 
+ORG_EXTRA_CMAKE_FLAG=${EXTRA_CMAKE_FLAG}
 function do_build() {
     for ver in ${ALL_PYTHON}
     do
@@ -140,7 +141,7 @@ function do_build() {
         echo "PYTHON_LIBRARY: ${PYTHON_LIBRARY}"
         echo "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}"
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
-        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
+        export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
 
         #call build and install
         HOST_BUILD_ARGS=" -t -s"
