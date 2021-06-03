@@ -45,7 +45,7 @@ def raise_timeout_error():
 class DataLoader:
     r"""Provides a convenient way to iterate on a given dataset.
 
-    DataLoader combines a dataset with 
+    DataLoader combines a dataset with
     :class:`~.Sampler`, :class:`~.Transform` and :class:`~.Collator`,
     make it flexible to get minibatch continually from a dataset.
 
@@ -295,7 +295,7 @@ class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter):
     def _check_workers(self):
         # Check the status of each worker.
         if not self.data_collecting_worker.is_alive():
-            exitcode = self.task_feeding_worker.exitcode
+            exitcode = self.data_collecting_worker.exitcode
             if exitcode != 0:
                 raise RuntimeError("data collecting worker died. {}".format(exitcode))
 
