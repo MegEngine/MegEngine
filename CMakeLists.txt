@@ -808,7 +808,7 @@ if(MGE_ARCH STREQUAL "x86_64" OR MGE_ARCH STREQUAL "i386")
     endif()
 endif()
 # dotprod is not enable by default on APPLE, cpuinfo has some problem on APPLE
-if(NOT APPLE)
+if(NOT APPLE AND ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
     CHECK_CXX_COMPILER_FLAG("-march=armv8.2-a+dotprod" CXX_COMPILER_SUPPORT_DOT)
     if(CXX_COMPILER_SUPPORT_DOT)
         message(STATUS "Enable dotprod feature in armv8.2-a using MGB_ENABLE_DOT")

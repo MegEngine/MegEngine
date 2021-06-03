@@ -10,6 +10,15 @@
 1: please refer to: https://docs.docker.com/engine/security/rootless/ to enable rootless docker env
 2: cd ./scripts/whl/manylinux2014
 3: ./build_image.sh
+4: as aarch64-linux python3.5 pip do not provide megengine depends prebuild binary package, which definition
+    in imperative/python/requires.txt, before install megengine wheel package(just python3.5), you need
+    do follow step to init python3.5 arrow build env:
+        4a: wget https://apache.bintray.com/arrow/debian/apache-arrow-archive-keyring-latest-buster.deb
+        4b: sudo apt install ./apache-arrow-archive-keyring-latest-buster.deb
+        4c: sudo apt update
+        4d: sudo apt install libarrow-dev
+        4c: sudo apt install libarrow-python-dev
+        4e: sudo ln -s /usr/include/locale.h /usr/include/xlocale.h
 
 ```
 

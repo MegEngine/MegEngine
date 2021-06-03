@@ -41,6 +41,8 @@ FULL_PYTHON_VER="3.5.9 3.6.10 3.7.7 3.8.3"
 if [[ -z ${ALL_PYTHON} ]]
 then
     ALL_PYTHON=${FULL_PYTHON_VER}
+else
+    check_python_version_is_valid "${ALL_PYTHON}" "${FULL_PYTHON_VER}"
 fi
 
 PYTHON_DIR=

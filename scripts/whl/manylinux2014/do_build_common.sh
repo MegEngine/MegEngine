@@ -62,10 +62,16 @@ function patch_elf_depend_lib_mgb_mge() {
 }
 
 
+SRC_DIR=$(readlink -f "`dirname $0`/../../../")
+source ${SRC_DIR}/scripts/whl/utils/utils.sh
+
+SUPPORT_ALL_VERSION="35m 36m 37m 38"
 ALL_PYTHON=${ALL_PYTHON}
 if [[ -z ${ALL_PYTHON} ]]
 then
-    ALL_PYTHON="35m 36m 37m 38"
+    ALL_PYTHON=${SUPPORT_ALL_VERSION}
+else
+    check_python_version_is_valid "${ALL_PYTHON}" "${SUPPORT_ALL_VERSION}"
 fi
 
 BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY}
@@ -73,9 +79,6 @@ if [[ -z ${BUILD_WHL_CPU_ONLY} ]]
 then
     BUILD_WHL_CPU_ONLY="OFF"
 fi
-
-SRC_DIR=$(readlink -f "`dirname $0`/../../../")
-source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/
 if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then

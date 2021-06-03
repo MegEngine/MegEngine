@@ -3,6 +3,15 @@ set -e
 
 OS=$(uname -s)
 
+docker_file=""
+function config_docker_file() {
+    case $(uname -m) in
+        x86_64) docker_file=Dockerfile ;;
+        aarch64) docker_file=Dockerfile_aarch64 ;;
+        *) echo "nonsupport env!!!";exit -1 ;;
+    esac
+}
+
 function ninja_dry_run_and_check_increment() {
     if [ $# -eq 3 ]; then
         _BUILD_SHELL=$1
@@ -78,4 +87,30 @@ function check_build_ninja_python_api() {
         echo "Err happened, can not hit any MINOR api in ninja.build"
         exit -1
     fi
+}
+
+function check_python_version_is_valid() {
+    want_build_version=$1
+    support_version=$2
+    if [ $# -eq 2 ]; then
+        ver=$1
+    else
+        echo "err call check_python_version_is_valid"
+        exit -1
+    fi
+    is_valid="false"
+    for i_want_build_version in ${want_build_version}
+    do
+        is_valid="false"
+        for i_support_version in ${support_version}
+        do
+            if [ ${i_want_build_version} == ${i_support_version} ];then
+                is_valid="true"
+            fi
+        done
+        if [ ${is_valid} == "false" ];then
+            echo "invalid build python version : \"${want_build_version}\", now support party of \"${support_version}\""
+            exit -1
+        fi
+    done
 }
