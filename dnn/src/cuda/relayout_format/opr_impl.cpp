@@ -33,7 +33,9 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                             Param::Mode::
                                     NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT ||
                     param().mode == Param::Mode::NCHW_NCHW64 ||
-                    param().mode == Param::Mode::NCHW64_NCHW,
+                    param().mode == Param::Mode::NCHW64_NCHW ||
+                    param().mode == Param::Mode::NCHW_NHWC ||
+                    param().mode == Param::Mode::NHWC_NCHW,
             "relayout format of cuda only support NCHW4->CHWN4 or "
             "CHWN4->NCHW4 or NCHW->NCHW4");
     if ((param().mode == param::RelayoutFormat::Mode::NCHW4_CHWN4 ||
@@ -82,7 +84,9 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                 {src.raw_ptr, exec_src_layout}, {dst.raw_ptr, exec_dst_layout});
     }
     bool is_trans_4bits = (param().mode == Param::Mode::NCHW_NCHW64 ||
-                           param().mode == Param::Mode::NCHW64_NCHW) &&
+                           param().mode == Param::Mode::NCHW64_NCHW ||
+                           param().mode == Param::Mode::NCHW_NHWC ||
+                           param().mode == Param::Mode::NHWC_NCHW) &&
                           (src_dtype.enumv() == DTypeEnum::QuantizedS4 ||
                            src_dtype.enumv() == DTypeEnum::Quantized4Asymm);
     bool is_nchw_nchw4 = param().mode == Param::Mode::NCHW_NCHW4 ||

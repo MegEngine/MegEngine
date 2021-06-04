@@ -66,6 +66,22 @@ void relayout_format::RelayoutFormatFast::exec(const TensorND& src,
         return relayout_format_cuda_nchwx_nchw(src, dst, stream, src_scale,
                                                dst_scale, src_zero_point,
                                                dst_zero_point);
+    } else if (mode == RelayoutFormat::Param::Mode::NCHW_NHWC) {
+#define CHECK(dt)                                             \
+    megdnn_assert(dt.enumv() == DTypeEnum::Quantized4Asymm || \
+                  dt.enumv() == DTypeEnum::QuantizedS4)
+        CHECK(src.layout.dtype);
+        CHECK(dst.layout.dtype);
+        return relayout_format_cuda_nchw_nhwc(src, dst, stream, src_scale,
+                                              dst_scale, src_zero_point,
+                                              dst_zero_point);
+    } else if (mode == RelayoutFormat::Param::Mode::NHWC_NCHW) {
+        CHECK(src.layout.dtype);
+        CHECK(dst.layout.dtype);
+        return relayout_format_cuda_nhwc_nchw(src, dst, stream, src_scale,
+                                              dst_scale, src_zero_point,
+                                              dst_zero_point);
+#undef CHECK
     } else if (mode == RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT) {
         return relayout_format_cuda_nchw_nchw4_weight(src, dst, stream);
     } else if (mode == RelayoutFormat::Param::Mode::NCHW4_NCHW) {

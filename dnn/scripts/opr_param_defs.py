@@ -1001,7 +1001,9 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
      'NCHW_NCHW4_WEIGHT',
      'NCHW_NCHW64', 
      'NCHW64_NCHW', 
-     )
+     'NCHW_NHWC', 
+     'NHWC_NCHW', 
+    )
  )
 
 (pdef('RelayoutFormat', 'Change the tensor layout format', version=1).

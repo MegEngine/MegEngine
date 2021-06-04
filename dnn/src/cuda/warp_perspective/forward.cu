@@ -508,7 +508,7 @@ struct KernCoreNHWC<ctype, OutputConverter, 8> {
                       "assert qu4 or q4");
         constexpr bool signedness = std::is_same<ctype, dt_qint4>::value;
         int8_t bval_4 = bval.as_storage() & 0xF;
-        const int bval_int = transform_int8_to_bit4x8<signedness>(
+        const int bval_int = transform_int8_to_b4x8<signedness>(
                 bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4);
         int src_ori[4];
         src_ori[0] = src0_ok ? *(int*)(src_ptr0 + offset) : bval_int;
@@ -516,10 +516,10 @@ struct KernCoreNHWC<ctype, OutputConverter, 8> {
         src_ori[2] = src2_ok ? *(int*)(src_ptr2 + offset) : bval_int;
         src_ori[3] = src3_ok ? *(int*)(src_ptr3 + offset) : bval_int;
         int src[4][8];
-        transform_bit4x8_to_int8<signedness>(src[0], src_ori[0]);
-        transform_bit4x8_to_int8<signedness>(src[1], src_ori[1]);
-        transform_bit4x8_to_int8<signedness>(src[2], src_ori[2]);
-        transform_bit4x8_to_int8<signedness>(src[3], src_ori[3]);
+        transform_b4x8_to_int8<signedness>(src[0], src_ori[0]);
+        transform_b4x8_to_int8<signedness>(src[1], src_ori[1]);
+        transform_b4x8_to_int8<signedness>(src[2], src_ori[2]);
+        transform_b4x8_to_int8<signedness>(src[3], src_ori[3]);
         int res = pack_output_func<signedness>(output_converter, src[0], src[1],
                                              src[2], src[3], w00, w01, w10,
                                                w11);
@@ -542,7 +542,7 @@ struct KernCoreNHWC<ctype, OutputConverter, 16> {
                       "assert qu4 or q4");
         constexpr bool signedness = std::is_same<ctype, dt_qint4>::value;
         int8_t bval_4 = bval.as_storage() & 0xF;
-        const int bval_int_temp = transform_int8_to_bit4x8<signedness>(
+        const int bval_int_temp = transform_int8_to_b4x8<signedness>(
                 bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4, bval_4);
         const int2 bval_int{bval_int_temp, bval_int_temp};
 
@@ -552,15 +552,15 @@ struct KernCoreNHWC<ctype, OutputConverter, 16> {
         src_ori[2] = src2_ok ? *(int2*)(src_ptr2 + offset) : bval_int;
         src_ori[3] = src3_ok ? *(int2*)(src_ptr3 + offset) : bval_int;
         int src[8][8];
-        transform_bit4x8_to_int8<signedness>(src[0], src_ori[0].x);
-        transform_bit4x8_to_int8<signedness>(src[1], src_ori[1].x);
-        transform_bit4x8_to_int8<signedness>(src[2], src_ori[2].x);
-        transform_bit4x8_to_int8<signedness>(src[3], src_ori[3].x);
+        transform_b4x8_to_int8<signedness>(src[0], src_ori[0].x);
+        transform_b4x8_to_int8<signedness>(src[1], src_ori[1].x);
+        transform_b4x8_to_int8<signedness>(src[2], src_ori[2].x);
+        transform_b4x8_to_int8<signedness>(src[3], src_ori[3].x);
 
-        transform_bit4x8_to_int8<signedness>(src[4], src_ori[0].y);
-        transform_bit4x8_to_int8<signedness>(src[5], src_ori[1].y);
-        transform_bit4x8_to_int8<signedness>(src[6], src_ori[2].y);
-        transform_bit4x8_to_int8<signedness>(src[7], src_ori[3].y);
+        transform_b4x8_to_int8<signedness>(src[4], src_ori[0].y);
+        transform_b4x8_to_int8<signedness>(src[5], src_ori[1].y);
+        transform_b4x8_to_int8<signedness>(src[6], src_ori[2].y);
+        transform_b4x8_to_int8<signedness>(src[7], src_ori[3].y);
 
         int2 res;
         res.x = pack_output_func<signedness>(output_converter, src[0], src[1],

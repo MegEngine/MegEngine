@@ -42,8 +42,9 @@ struct enable_qtype_b4 {
     static constexpr bool val_dst =
             std::is_same<dt_dst, dtype::QuantizedS4>::value ||
             std::is_same<dt_dst, dtype::Quantized4Asymm>::value;
-    using type = typename std::enable_if<std::is_same<dt_src, dt_dst>::value &&
-                                         val_src && val_dst>::type;
+    static constexpr bool value =
+            std::is_same<dt_src, dt_dst>::value && val_src && val_dst;
+    using type = typename std::enable_if<value>::type;
 };
 
 // The input fragment is stored in RowMajor order. The translayout operator
@@ -393,26 +394,32 @@ struct Translayout<2, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     using Fragment = array_wrapper<SrcType, elements_in_type>;
     static inline __device__ void trans(
             Fragment& dst, const Fragment& src,
-            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
-            const char zero_point) {
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
         int intermediate[8][2];
-        transform_b4x2_to_int8<signedness>(intermediate[0],
-                                           reinterpret_cast<uint8_t&>(src[0]));
-        transform_b4x2_to_int8<signedness>(intermediate[1],
-                                           reinterpret_cast<uint8_t&>(src[1]));
-        transform_b4x2_to_int8<signedness>(intermediate[2],
-                                           reinterpret_cast<uint8_t&>(src[2]));
-        transform_b4x2_to_int8<signedness>(intermediate[3],
-                                           reinterpret_cast<uint8_t&>(src[3]));
-        transform_b4x2_to_int8<signedness>(intermediate[4],
-                                           reinterpret_cast<uint8_t&>(src[4]));
-        transform_b4x2_to_int8<signedness>(intermediate[5],
-                                           reinterpret_cast<uint8_t&>(src[5]));
-        transform_b4x2_to_int8<signedness>(intermediate[6],
-                                           reinterpret_cast<uint8_t&>(src[6]));
-        transform_b4x2_to_int8<signedness>(intermediate[7],
-                                           reinterpret_cast<uint8_t&>(src[7]));
-
+        transform_b4x2_to_int8<signedness>(
+                intermediate[0],
+                reinterpret_cast<const uint8_t&>(src[0 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[1],
+                reinterpret_cast<const uint8_t&>(src[1 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[2],
+                reinterpret_cast<const uint8_t&>(src[2 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[3],
+                reinterpret_cast<const uint8_t&>(src[3 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[4],
+                reinterpret_cast<const uint8_t&>(src[4 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[5],
+                reinterpret_cast<const uint8_t&>(src[5 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[6],
+                reinterpret_cast<const uint8_t&>(src[6 * col_in_type]));
+        transform_b4x2_to_int8<signedness>(
+                intermediate[7],
+                reinterpret_cast<const uint8_t&>(src[7 * col_in_type]));
         int* dst_frag = reinterpret_cast<int*>(&dst);
         auto pack = [&](int idx) -> int {
             return transform_int8_to_b4x8<signedness>(
@@ -445,25 +452,24 @@ struct Translayout<8, 8, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     using Fragment = array_wrapper<SrcType, elements_in_type>;
     static inline __device__ void trans(
             Fragment& dst, const Fragment& src,
-            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
-            const char zero_point) {
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
         int intermediate[8][8];
         transform_b4x8_to_int8<signedness>(
-                intermediate[0], reinterpret_cast<const int&>(src[0]));
+                intermediate[0], reinterpret_cast<const int&>(src[0 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[1], reinterpret_cast<const int&>(src[1]));
+                intermediate[1], reinterpret_cast<const int&>(src[1 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[2], reinterpret_cast<const int&>(src[2]));
+                intermediate[2], reinterpret_cast<const int&>(src[2 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[3], reinterpret_cast<const int&>(src[3]));
+                intermediate[3], reinterpret_cast<const int&>(src[3 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[4], reinterpret_cast<const int&>(src[4]));
+                intermediate[4], reinterpret_cast<const int&>(src[4 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[5], reinterpret_cast<const int&>(src[5]));
+                intermediate[5], reinterpret_cast<const int&>(src[5 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[6], reinterpret_cast<const int&>(src[6]));
+                intermediate[6], reinterpret_cast<const int&>(src[6 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[7], reinterpret_cast<const int&>(src[7]));
+                intermediate[7], reinterpret_cast<const int&>(src[7 * col_in_type]));
         int* dst_frag = reinterpret_cast<int*>(&dst);
         auto pack = [&](int idx) {
             return transform_int8_to_b4x8<signedness>(
@@ -502,13 +508,12 @@ struct Translayout<8, 2, SrcType, DnnSrcType_, DnnDstType_, same_scale,
     using Fragment = array_wrapper<SrcType, elements_in_type>;
     static inline __device__ void trans(
             Fragment& dst, const Fragment& src,
-            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process,
-            const char zero_point) {
+            CudaPostProcess<DnnSrcType, DnnDstType, same_scale>& post_process) {
         int intermediate[2][8];
         transform_b4x8_to_int8<signedness>(
-                intermediate[0], reinterpret_cast<const int&>(src[0]));
+                intermediate[0], reinterpret_cast<const int&>(src[0 * col_in_type]));
         transform_b4x8_to_int8<signedness>(
-                intermediate[1], reinterpret_cast<const int&>(src[1]));
+                intermediate[1], reinterpret_cast<const int&>(src[1 * col_in_type]));
         int* dst_frag = reinterpret_cast<int*>(&dst);
         dst_frag[0] = transform_int8_to_b4x8<signedness>(
                 post_process(intermediate[0][0]),

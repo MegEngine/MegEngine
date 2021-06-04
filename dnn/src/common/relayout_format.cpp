@@ -268,6 +268,22 @@ void RelayoutFormat::deduce_layout_fwd(const TensorLayout& src,
             dst[2] = src[2];
             dst[3] = src[3];
             break;
+        case Param::Mode::NCHW_NHWC:
+            megdnn_assert(src.ndim == 4);
+            dst.ndim = 4;
+            dst[0] = src[0];
+            dst[1] = src[2];
+            dst[2] = src[3];
+            dst[3] = src[1];
+            break;
+        case Param::Mode::NHWC_NCHW:
+            megdnn_assert(src.ndim == 4);
+            dst.ndim = 4;
+            dst[0] = src[0];
+            dst[1] = src[3];
+            dst[2] = src[1];
+            dst[3] = src[2];
+            break;
         default:
             megdnn_assert(0, "Invalid RelayoutFormat Mode");
             break;
@@ -373,6 +389,10 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
             dst = src;
             break;
         case Param::Mode::NCHW64_NCHW:
+            dst = src;
+            break;
+        case Param::Mode::NCHW_NHWC:
+        case Param::Mode::NHWC_NCHW:
             dst = src;
             break;
         default:
@@ -664,6 +684,14 @@ void RelayoutFormat::deduce_exec_layout(const TensorLayout& src,
             exec_workspace = TensorLayout({src[0], src[1] * 64, src[2], src[3]},
                                           dst.dtype);
             exec_src = src.dimshuffle({0, 1, 4, 2, 3});
+            exec_dst = dst;
+            break;
+        case Param::Mode::NCHW_NHWC:
+            exec_src = src.dimshuffle({0, 2, 3, 1});
+            exec_dst = dst;
+            break;
+        case Param::Mode::NHWC_NCHW:
+            exec_src = src.dimshuffle({0, 3, 1, 2});
             exec_dst = dst;
             break;
         default:
