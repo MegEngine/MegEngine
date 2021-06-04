@@ -24,6 +24,15 @@ if [[ "$TEST_PLAT" =~ "local" ]]; then
     cd $(dirname "${BASH_SOURCE[0]}")
     megengine_dir=`python3 -c 'from pathlib import Path;import megengine;print(Path(megengine.__file__).resolve().parent)'`
     test_dirs="${megengine_dir} ."
+
+    # FIXME: at aarch64 env, run megengine_dir pytest have exit issue!!
+    machine=$(uname -m)
+    case ${machine} in
+        x86_64) test_dirs="${megengine_dir} ." ;;
+        aarch64) test_dirs="." ;;
+        *) echo "nonsupport env!!!";exit -1 ;;
+    esac
+
     echo "test local env at: ${test_dirs}"
     PY_IGNORE_IMPORTMISMATCH=1 python3 -m pytest -v $test_dirs -m 'not isolated_distributed'
     if [[ "$TEST_PLAT" =~ "cuda" ]]; then

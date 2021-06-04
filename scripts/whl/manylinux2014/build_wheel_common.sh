@@ -13,6 +13,10 @@ CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu"
 aarch64_support_version="cu111 cpu"
+if [[ -z ${IN_CI} ]]
+then
+    IN_CI="false"
+fi
 function usage() {
     echo "use -sdk sdk_version to specify sdk toolkit config!"
     echo "now x86_64 sdk_version support ${x86_64_support_version}"
@@ -91,13 +95,18 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
 
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
-        -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
-        -gencode arch=compute_70,code=sm_70 \
-        -gencode arch=compute_75,code=sm_75 \
-        -gencode arch=compute_80,code=sm_80 \
-        -gencode arch=compute_86,code=sm_86 \
-        -gencode arch=compute_86,code=compute_86\" "
+    if [ ${IN_CI} = "true" ] && [ ${machine} == "aarch64" ]; then
+        EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
+            -DMGE_WITH_TEST=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
+    else
+        EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
+            -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
+            -gencode arch=compute_70,code=sm_70 \
+            -gencode arch=compute_75,code=sm_75 \
+            -gencode arch=compute_80,code=sm_80 \
+            -gencode arch=compute_86,code=sm_86 \
+            -gencode arch=compute_86,code=compute_86\" "
+    fi
 
 elif [ $SDK_NAME == "cu112" ];then
     CUDA_COPY_LIB_LIST="\
@@ -267,7 +276,14 @@ else
     run_cmd="/home/code/scripts/whl/manylinux2014/do_build_common.sh"
 fi
 set +x
-docker run --rm -it $TMPFS_ARGS \
+docker_args="-it"
+if [ -z "${CI_SERVER_NAME}" ]; then
+    Target="null"
+fi
+if [ ${CI_SERVER_NAME} = "GitLab" ];then
+    docker_args="-i"
+fi
+docker run --rm ${docker_args} $TMPFS_ARGS \
     -e UID=${USERID} \
     -e PUBLIC_VERSION_POSTFIX=${PUBLIC_VERSION_POSTFIX} \
     -e LOCAL_VERSION=${LOCAL_VERSION} \

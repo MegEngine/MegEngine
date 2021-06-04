@@ -98,7 +98,6 @@ function check_python_version_is_valid() {
         echo "err call check_python_version_is_valid"
         exit -1
     fi
-    is_valid="false"
     for i_want_build_version in ${want_build_version}
     do
         is_valid="false"
