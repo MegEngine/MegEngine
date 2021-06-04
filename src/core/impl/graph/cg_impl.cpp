@@ -145,6 +145,24 @@ size_t ComputingGraph::prealloc_static_storage(size_t size) {
 }
 #endif
 
+/* ========================== JITConfig ========================== */
+
+bool ComputingGraph::Options::GraphOpt::JITConfig::enabled() const {
+    if (fuse_dimshuffle != UNSET) return true;
+    if (fuse_reduce != UNSET) return true;
+    return false;
+}
+
+void ComputingGraph::Options::GraphOpt::JITConfig::update(
+        const JITConfig& modifier) {
+    if (modifier.fuse_dimshuffle != UNSET) {
+        this->fuse_dimshuffle = modifier.fuse_dimshuffle;
+    }
+    if (modifier.fuse_reduce != UNSET) {
+        this->fuse_reduce = modifier.fuse_reduce;
+    }
+}
+
 /* ========================== CallbackCaller ========================== */
 MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::CallbackCaller,
                            SingleCNOperatorNodeBase) // {
@@ -538,12 +556,18 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 
 
 #if MGB_JIT
-    if (std::abs(options().graph_opt_level) == 0 && options().graph_opt.jit) {
-        setenv("MGB_JIT_BACKEND","NVRTC",1);
+   if (std::abs(options().graph_opt_level) == 0 &&
+        (options().graph_opt.jit || options().graph_opt.jit_config.enabled())) {
+        // Deprecated usage added previously. It allows NVRTC JIT optimization
+        // when graph_opt_level is 0. This usage is not recommanded any more.
+        mgb_log_warn(
+                "It is not recommanded to enable JIT optimization when "
+                "graph_opt_level is 0.");
+        setenv("MGB_JIT_BACKEND", "NVRTC", 1);
         gopt::GraphOptimizer optimizer;
-        optimizer.add_pass<gopt::JITFusionPass>(
-                          sopr_stat.has_virtual_grad,
-                          std::max<uint8_t>(options().graph_opt.jit, 1));
+        optimizer.add_pass<gopt::JITFusionPass>(sopr_stat.has_virtual_grad,
+                                                options().graph_opt.jit,
+                                                options().graph_opt.jit_config);
         optimizer.apply_inplace(dest_vars);
     }
 #endif
