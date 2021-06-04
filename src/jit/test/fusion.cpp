@@ -27,6 +27,8 @@
 #include "megbrain/test/helper.h"
 #include "megbrain/opr/dnn/convolution.h"
 
+#include "../../core/impl/graph/cg_impl_seq.h"
+
 #if MGB_JIT
 
 using namespace mgb;
@@ -1452,6 +1454,122 @@ TEST(TestJITNvrtc, DimshuffleGrad) {
                .run({TensorShape{1, 2, 3, 4}, {2, 3, 4, 1}})
                .run({TensorShape{3, 4, 1, 2}, {4, 1, 2, 3}})
                .run({TensorShape{4, 6, 3, 5}, {6, 3, 5, 4}});
+    }
+}
+
+TEST(TestJITNvrtc, JITConfig) {
+    using JITConfig = cg::ComputingGraph::Options::GraphOpt::JITConfig;
+    using CompSeq = cg::ComputingGraphImpl::ComputingSequence;
+    using ReduceMode = opr::Reduce::Param::Mode;
+    static const int UNSET = JITConfig::UNSET;
+    static const int OFF = JITConfig::OFF;
+    static const int ON = JITConfig::ON;
+
+    REQUIRE_GPU(1);
+    set_backend(Backend::NVRTC);
+    auto cn = CompNode::load("gpu0");
+    HostTensorGenerator<> gen;
+
+    auto run = [&](int graph_opt_level, int jit_opt_level,
+                   const JITConfig& jit_config, bool expect_dimshuffle_fused,
+                   bool expect_reduce_fused, bool expect_jit_enabled) {
+        auto cg = ComputingGraph::make();
+        cg->options().graph_opt_level = graph_opt_level;
+        cg->options().graph_opt.jit = jit_opt_level;
+        cg->options().graph_opt.jit_config = jit_config;
+
+        auto host_x = gen({2, 3, 4, 5}, cn);
+        auto x = opr::SharedDeviceTensor::make(*cg, *host_x);
+
+        // three types of operations to be fused by JIT
+        x = (2 * x + 3) * (3 * x - 1);                       // Elemwise
+        x = opr::Dimshuffle::make(x, {1, 2, 3, 0});          // Dimshuffle
+        x = opr::Reduce::make(x + 2, {ReduceMode::SUM, 2});  // Reduce
+
+        auto func = cg->compile({make_callback_copy(x + 1, *host_x)});
+        auto comp_seq = dynamic_cast<CompSeq*>(func.get());
+        ASSERT_TRUE(comp_seq != nullptr);
+
+        bool dimshuffle_found = false, reduce_found = false,
+             jit_executor_found = false;
+        auto on_opr = [&](cg::OperatorNodeBase* opr) {
+            if (opr->same_type<opr::Dimshuffle>()) {
+                dimshuffle_found = true;
+            } else if (opr->same_type<opr::Reduce>()) {
+                reduce_found = true;
+            } else if (opr->same_type<JITExecutor>()) {
+                jit_executor_found = true;
+            }
+            return true;
+        };
+        comp_seq->iter_opr_seq(on_opr);
+
+        ASSERT_EQ(expect_dimshuffle_fused, !dimshuffle_found);
+        ASSERT_EQ(expect_reduce_fused, !reduce_found);
+        ASSERT_EQ(expect_jit_enabled, jit_executor_found);
+    };
+
+    // graph_opt_level = 1, always OFF
+    for (int jit_opt_level : {0, 1, 2}) {
+        for (int fuse_dimshuffle : {UNSET, OFF, ON}) {
+            for (int fuse_reduce : {UNSET, OFF, ON}) {
+                run(1, jit_opt_level, JITConfig{fuse_dimshuffle, fuse_reduce},
+                    false, false, false);
+            }
+        }
+    }
+
+    // some test cases are commented because dimshuffle and reduce can not be
+    // fused at the same time
+
+    for (int graph_opt_level : {0, 2}) {
+        // jit_opt_level = 0, default = {OFF, OFF}
+        run(graph_opt_level, 0, JITConfig{UNSET, UNSET}, false, false, false);
+        run(graph_opt_level, 0, JITConfig{UNSET, OFF}, false, false, true);
+        run(graph_opt_level, 0, JITConfig{UNSET, ON}, false, true, true);
+        run(graph_opt_level, 0, JITConfig{OFF, UNSET}, false, false, true);
+        run(graph_opt_level, 0, JITConfig{OFF, OFF}, false, false, true);
+        run(graph_opt_level, 0, JITConfig{OFF, ON}, false, true, true);
+        run(graph_opt_level, 0, JITConfig{ON, UNSET}, true, false, true);
+        run(graph_opt_level, 0, JITConfig{ON, OFF}, true, false, true);
+        // run(graph_opt_level, 0, JITConfig{ON, ON}, true, true, true);
+    }
+
+    {
+        // graph_opt_level = 3, jit_opt_level = 0, default = {ON, OFF}
+        run(3, 0, JITConfig{UNSET, UNSET}, true, false, true);
+        run(3, 0, JITConfig{UNSET, OFF}, true, false, true);
+        // run(3, 0, JITConfig{UNSET, ON}, true, true, true);
+        run(3, 0, JITConfig{OFF, UNSET}, false, false, true);
+        run(3, 0, JITConfig{OFF, OFF}, false, false, true);
+        run(3, 0, JITConfig{OFF, ON}, false, true, true);
+        run(3, 0, JITConfig{ON, UNSET}, true, false, true);
+        run(3, 0, JITConfig{ON, OFF}, true, false, true);
+        // run(3, 0, JITConfig{ON, ON}, true, true, true);
+    }
+
+    for (int graph_opt_level : {0, 2, 3}) {
+        // jit_opt_level = 1, default = {ON, OFF}
+        run(graph_opt_level, 1, JITConfig{UNSET, UNSET}, true, false, true);
+        run(graph_opt_level, 1, JITConfig{UNSET, OFF}, true, false, true);
+        // run(graph_opt_level, 1, JITConfig{UNSET, ON}, true, true, true);
+        run(graph_opt_level, 1, JITConfig{OFF, UNSET}, false, false, true);
+        run(graph_opt_level, 1, JITConfig{OFF, OFF}, false, false, true);
+        run(graph_opt_level, 1, JITConfig{OFF, ON}, false, true, true);
+        run(graph_opt_level, 1, JITConfig{ON, UNSET}, true, false, true);
+        run(graph_opt_level, 1, JITConfig{ON, OFF}, true, false, true);
+        // run(graph_opt_level, 1, JITConfig{ON, ON}, true, true, true);
+
+        // jit_opt_level = 2, default = {OFF, ON}
+        run(graph_opt_level, 2, JITConfig{UNSET, UNSET}, false, true, true);
+        run(graph_opt_level, 2, JITConfig{UNSET, OFF}, false, false, true);
+        run(graph_opt_level, 2, JITConfig{UNSET, ON}, false, true, true);
+        run(graph_opt_level, 2, JITConfig{OFF, UNSET}, false, true, true);
+        run(graph_opt_level, 2, JITConfig{OFF, OFF}, false, false, true);
+        run(graph_opt_level, 2, JITConfig{OFF, ON}, false, true, true);
+        // run(graph_opt_level, 2, JITConfig{ON, UNSET}, true, true, true);
+        run(graph_opt_level, 2, JITConfig{ON, OFF}, true, false, true);
+        // run(graph_opt_level, 2, JITConfig{ON, ON}, true, true, true);
     }
 }
 

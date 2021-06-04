@@ -38,6 +38,7 @@ from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
 from ..utils.naming import AutoNaming
 from .dtr_config import DTRConfig
+from .graph_opt_config import GraphOptimizationConfig
 from .sublinear_memory_config import SublinearMemoryConfig
 
 
@@ -129,6 +130,7 @@ class trace:
         If not None, it enables sublinear memory optimization with given setting.
     :param profiling: whether to profile compiled trace. Default: False
     :param opt_level: optimization level for compiling trace. Default: 2
+    :param graph_opt_config: configuration for graph optimization. Default: None
     :param symbolic_shape: whether to use symbolic shape for tracing. Default: True
     """
 
@@ -146,6 +148,7 @@ class trace:
         dtr_config: DTRConfig = None,
         profiling: bool = False,
         opt_level: int = 2,
+        graph_opt_config: GraphOptimizationConfig = None,
         symbolic_shape: bool = True,
     ):
         self.__wrapped__ = function
@@ -156,6 +159,7 @@ class trace:
         self._profiling = profiling
         self._profiler = None
         self._graph_opt_level = opt_level
+        self._graph_opt_config = graph_opt_config
         self._symbolic_shape = symbolic_shape
         self._output_handles = set()
 
@@ -502,7 +506,14 @@ class trace:
             graph.options.dtr_config.evictee_minimum_size = (
                 self._dtr_config.evictee_minimum_size
             )
-
+        # graph optimization
+        if self._graph_opt_config is not None:
+            mapping = {None: 0, False: 1, True: 2}
+            jit_config = graph.options.graph_opt.jit_config
+            jit_config.fuse_dimshuffle = mapping[
+                self._graph_opt_config.jit_fuse_dimshuffle
+            ]
+            jit_config.fuse_reduce = mapping[self._graph_opt_config.jit_fuse_reduce]
         # sublinear
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True

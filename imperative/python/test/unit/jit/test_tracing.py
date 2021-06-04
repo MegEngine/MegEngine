@@ -25,7 +25,7 @@ from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
-from megengine.jit import exclude_from_trace, trace
+from megengine.jit import GraphOptimizationConfig, exclude_from_trace, trace
 from megengine.module import Module
 from megengine.random import normal, uniform
 from megengine.utils.naming import AutoNaming
@@ -605,3 +605,30 @@ def test_trace_advance_indexing(shape_mode):
         for _ in range(3):
             result_trace = f_traced(**params)
             np.testing.assert_equal(expected, result_trace.numpy())
+
+
+@pytest.mark.require_ngpu(1)  # nvrtc backend
+def test_trace_jit_config():
+    def run(fuse_dimshuffle, fuse_reduce):
+        config = GraphOptimizationConfig()
+        config.jit_fuse_dimshuffle = fuse_dimshuffle
+        config.jit_fuse_reduce = fuse_reduce
+
+        # set opt_level = 1 to avoid fusing dimshuffle and reduce at the same time
+        @trace(opt_level=1, graph_opt_config=config)
+        def func(x):
+            return x + 1
+
+        x = tensor(2)
+        y = func(x)
+        func._compile()
+
+        options = func._graph.options
+        mapping = {None: 0, False: 1, True: 2}
+        assert options.graph_opt.jit == 0
+        assert options.graph_opt.jit_config.fuse_dimshuffle == mapping[fuse_dimshuffle]
+        assert options.graph_opt.jit_config.fuse_reduce == mapping[fuse_reduce]
+
+    for fuse_dimshuffle in [None, False, True]:
+        for fuse_reduce in [None, False, True]:
+            run(fuse_dimshuffle, fuse_reduce)

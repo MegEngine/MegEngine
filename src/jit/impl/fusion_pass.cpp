@@ -428,13 +428,32 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
     return false;
 }
 
-JITFusionPass::JITFusionPass(bool after_grad, int8_t jit_opt_level)
+JITFusionPass::JITFusionPass(bool after_grad, int jit_opt_level,
+                             const JITConfig& jit_config)
         : m_after_grad{after_grad}, m_feature_bits{JITFeatureBits::NONE} {
-    // TODO reduce and dimshuffle can not coexsit now.
-    if (jit_opt_level >= 2) {
-        m_feature_bits |= JITFeatureBits::REDUCE;
-    } else {
+    // get default config from jit_opt_level
+    JITConfig config;
+    if (jit_opt_level == 1) {
+        config.fuse_dimshuffle = JITConfig::ON;
+        config.fuse_reduce = JITConfig::OFF;
+    } else if (jit_opt_level >= 2) {
+        config.fuse_dimshuffle = JITConfig::OFF;
+        config.fuse_reduce = JITConfig::ON;
+    }
+
+    // overwrite default config with custom settings
+    config.update(jit_config);
+    bool fuse_dimshuffle = config.fuse_dimshuffle == JITConfig::ON;
+    bool fuse_reduce = config.fuse_reduce == JITConfig::ON;
+
+    if (fuse_dimshuffle && fuse_reduce) {
+        mgb_assert(false, "reduce and dimshuffle can not coexist now");
+    }
+    if (fuse_dimshuffle) {
         m_feature_bits |= JITFeatureBits::DIMSHUFFLE;
+    }
+    if (fuse_reduce) {
+        m_feature_bits |= JITFeatureBits::REDUCE;
     }
 }
 

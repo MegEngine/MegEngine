@@ -338,6 +338,20 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 //! this value indicates JIT level: 1 for basic elemwise opr; 2
                 //! for including reduce oprs
                 uint8_t jit = 0;
+
+                //! jit configurations
+                struct JITConfig {
+                    static const int UNSET = 0;
+                    static const int OFF = 1;
+                    static const int ON = 2;
+
+                    int fuse_dimshuffle = UNSET;
+                    int fuse_reduce = UNSET;
+
+                    bool enabled() const;
+                    void update(const JITConfig& modifier);
+                } jit_config;
+
                 //! whether to enable fine-grained TensorRT opr replace
                 bool tensorrt = false;
             } graph_opt;

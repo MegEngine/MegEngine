@@ -421,12 +421,20 @@ void init_graph_rt(py::module m) {
 #undef CURRENT_CLASS
 #define CURRENT_CLASS cg::ComputingGraph::Options::GraphOpt
 
-    py::class_<cg::ComputingGraph::Options::GraphOpt>(PyComputingGraphOptions, "GraphOpt")
+    auto PyGraphOpt = py::class_<cg::ComputingGraph::Options::GraphOpt>(
+            PyComputingGraphOptions, "GraphOpt")
         DEF_READWRITE(jit)
+        DEF_READWRITE(jit_config)
         DEF_READWRITE(tensorrt);
 
 #undef CURRENT_CLASS
+#define CURRENT_CLASS cg::ComputingGraph::Options::GraphOpt::JITConfig
 
+    py::class_<cg::ComputingGraph::Options::GraphOpt::JITConfig>(PyGraphOpt, "JITConfig")
+        DEF_READWRITE(fuse_dimshuffle)
+        DEF_READWRITE(fuse_reduce);
+
+#undef CURRENT_CLASS
 #define CURRENT_CLASS cg::ComputingGraph::Options::SublinearMemConfig
 
     py::class_<cg::ComputingGraph::Options::SublinearMemConfig>(PyComputingGraphOptions, "SublinearMemConfig")

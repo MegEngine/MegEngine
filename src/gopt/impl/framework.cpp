@@ -645,11 +645,21 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
     add_pass<RemoveRedundantCopyPass>();
 
 #if MGB_JIT
-    bool need_jit = false;
-    if (comp_graph_opt && (std::abs(comp_graph_opt->graph_opt_level) >= 3 ||
-                           comp_graph_opt->graph_opt.jit)) {
-        need_jit = true;
+    using JITConfig = cg::ComputingGraph::Options::GraphOpt::JITConfig;
+    int jit_opt_level = 0;
+    JITConfig jit_config;
+
+    // for more detail on what is happening here, see comments on the
+    // constuctor of class JITFusionPass in fusion_pass.h
+    if (comp_graph_opt) {
+        jit_opt_level = comp_graph_opt->graph_opt.jit;
+        if (comp_graph_opt->graph_opt_level >= 3) {
+            jit_opt_level = std::max(jit_opt_level, 1);
+        }
+        jit_config = comp_graph_opt->graph_opt.jit_config;
     }
+    bool need_jit = (jit_opt_level > 0) || jit_config.enabled();
+
     if (need_jit && after_grad) {
         add_pass<gopt::RecompTypeCvtPass>();
     }
@@ -662,9 +672,7 @@ GraphOptimizer& GraphOptimizer::add_preset_passes(
 
 #if MGB_JIT
     if (need_jit) {
-        add_pass<gopt::JITFusionPass>(
-                after_grad,
-                std::max<uint8_t>(comp_graph_opt->graph_opt.jit, 1));
+        add_pass<gopt::JITFusionPass>(after_grad, jit_opt_level, jit_config);
     }
 #endif
 
