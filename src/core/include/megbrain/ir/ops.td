@@ -123,9 +123,13 @@ def UniformRNG: MgbHashableOp<"UniformRNG", [UniformRNGParam]> {
   let hashFunction = [{
     return mgb::hash_pair_combine(
       mgb::hash($_self.dyn_typeinfo()),
-      mgb::hash($_self.handle));
+      mgb::hash_pair_combine(
+        mgb::hash($_self.handle),
+        mgb::hash($_self.dtype.enumv())
+      )
+    );
   }];
-  let cmpFunction = [{return $0.handle == $1.handle;}];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.dtype == $1.dtype;}];
 }
 
 def GaussianRNG: MgbHashableOp<"GaussianRNG", [GaussianRNGParam]> {
@@ -139,11 +143,70 @@ def GaussianRNG: MgbHashableOp<"GaussianRNG", [GaussianRNGParam]> {
         mgb::hash($_self.handle),
         mgb::hash_pair_combine(
           mgb::hash($_self.mean),
-          mgb::hash($_self.std))
+          mgb::hash_pair_combine(
+            mgb::hash($_self.std),
+            mgb::hash($_self.dtype.enumv())
+          )
+        )
       )
     );
   }];
-  let cmpFunction = [{return $0.handle == $1.handle && $0.mean == $1.mean && $0.std == $1.std;}];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.mean == $1.mean && $0.std == $1.std && $0.dtype == $1.dtype;}];
+}
+
+def GammaRNG: MgbHashableOp<"GammaRNG", [GammaRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash($_self.handle)
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
+def PoissonRNG: MgbHashableOp<"PoissonRNG", [PoissonRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash($_self.handle)
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
+def BetaRNG: MgbHashableOp<"BetaRNG", [BetaRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash($_self.handle)
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
+def PermutationRNG: MgbHashableOp<"PermutationRNG", [PermutationRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.handle),
+        mgb::hash($_self.dtype.enumv())
+      )
+    );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.dtype == $1.dtype;}];
 }
 
 def Linspace: MgbHashableOp<"Linspace", [LinspaceParam]> {

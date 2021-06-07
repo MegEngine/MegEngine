@@ -735,11 +735,34 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
      'dtype', Doc('dtype', 'data type of output value'),
      'DTypeEnum::Float32'))
 
-pdef('UniformRNG').add_fields('uint64', 'seed', 0)
+(pdef('UniformRNG').
+ add_fields('uint64', 'seed', 0).
+ add_fields(
+     'dtype', Doc('dtype', 'The dtype of output Tensor. Only support Float32.'),
+     'DTypeEnum::Float32'))
 
 (pdef('GaussianRNG').
  add_fields('uint64', 'seed', 0).
- add_fields('float32', 'mean', 0, 'std', 1))
+ add_fields('float32', 'mean', 0, 'std', 1).
+ add_fields(
+     'dtype', Doc('dtype', 'The dtype of output Tensor. Only support Float32.'),
+     'DTypeEnum::Float32'))
+
+(pdef('GammaRNG').
+ add_fields('uint64', 'seed', 0))
+
+(pdef('BetaRNG').
+ add_fields('uint64', 'seed', 0))
+
+(pdef('PoissonRNG').
+ add_fields('uint64', 'seed', 0))
+
+(pdef('PermutationRNG').
+ add_fields('uint64', 'seed', 0).
+ add_fields(
+     'dtype', Doc('dtype', 'The dtype of output Tensor. Int32, Int16 and '
+                  'Float32 are supported.'),
+     'DTypeEnum::Int32'))
 
 (pdef('Flip').
  add_fields('bool', 'vertical', 'false', 'horizontal', 'false'))

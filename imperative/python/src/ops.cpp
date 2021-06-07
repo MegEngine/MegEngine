@@ -476,4 +476,5 @@ void init_ops(py::module m) {
     }, py::call_guard<py::gil_scoped_release>());
     m.def("set_global_rng_seed", &rng::set_global_rng_seed);
     m.def("get_global_rng_seed", &rng::get_global_rng_seed);
+    m.def("get_rng_handle_compnode", &rng::get_rng_handle_compnode);
 }

@@ -6,8 +6,17 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from .distribution import normal, uniform
-from .rng import RNG, seed
+from .rng import RNG, beta, gamma, normal, permutation, poisson, seed, uniform
 
+__all__ = [
+    "RNG",
+    "beta",
+    "gamma",
+    "normal",
+    "permutation",
+    "poisson",
+    "seed",
+    "uniform",
+]
 # pylint: disable=undefined-variable
-del distribution, rng  # type: ignore[name-defined]
+del rng  # type: ignore[name-defined]

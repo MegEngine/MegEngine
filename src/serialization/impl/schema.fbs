@@ -108,6 +108,10 @@ union OperatorParam {
     param.TQT = 74,
     param.Correlation = 75,
     param.LSQ = 76,
+    param.GammaRNG = 77,
+    param.PoissonRNG = 78,
+    param.PermutationRNG = 79,
+    param.BetaRNG = 80,
 }
 
 table Operator {

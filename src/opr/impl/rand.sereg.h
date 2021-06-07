@@ -17,6 +17,10 @@ namespace opr {
 
     MGB_SEREG_OPR(UniformRNG, 1);
     MGB_SEREG_OPR(GaussianRNG, 1);
+    MGB_SEREG_OPR(GammaRNG, 2);
+    MGB_SEREG_OPR(PoissonRNG, 1);
+    MGB_SEREG_OPR(PermutationRNG, 1);
+    MGB_SEREG_OPR(BetaRNG, 2);
 
 } // namespace opr
 } // namespace mgb

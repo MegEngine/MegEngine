@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#include "megdnn/oprs.h"
 #include <cstdint>
+#include "megdnn/oprs.h"
 
 namespace megdnn {
 namespace naive {
@@ -19,12 +19,11 @@ namespace naive {
 //! see http://xoroshiro.di.unimi.it/splitmix64.c
 class Splitmix64 {
     uint64_t m_s;
-    public:
-        explicit Splitmix64(uint64_t seed = 0):
-            m_s{seed}
-        {}
 
-        uint64_t operator() ();
+public:
+    explicit Splitmix64(uint64_t seed = 0) : m_s{seed} {}
+
+    uint64_t operator()();
 };
 
 /*!
@@ -36,51 +35,99 @@ class Xoroshiro128plus {
         return (x << k) | (x >> (64 - k));
     }
 
-    public:
-        explicit Xoroshiro128plus(uint64_t seed = 0) {
+public:
+    explicit Xoroshiro128plus(uint64_t seed = 0) { this->seed(seed); }
+
+    //! reset state if seed changed
+    Xoroshiro128plus& ensure_seed(uint64_t seed) {
+        if (seed != m_init_seed) {
             this->seed(seed);
         }
+        return *this;
+    }
 
-        //! reset state if seed changed
-        Xoroshiro128plus& ensure_seed(uint64_t seed) {
-            if (seed != m_init_seed) {
-                this->seed(seed);
-            }
-            return *this;
-        }
+    //! set seed
+    void seed(uint64_t seed);
 
-        //! set seed
-        void seed(uint64_t seed);
-
-        uint64_t operator() ();
+    uint64_t operator()();
 };
 
-class UniformRNGImpl: public UniformRNG {
+class UniformRNGImpl : public UniformRNG {
     Xoroshiro128plus m_rng;
 
-    public:
-        using UniformRNG::UniformRNG;
-        void exec(_megdnn_tensor_inout dst, _megdnn_workspace) override;
+public:
+    using UniformRNG::UniformRNG;
+    void exec(_megdnn_tensor_inout dst, _megdnn_workspace) override;
 
-        size_t get_workspace_in_bytes(const TensorLayout&) override {
-            return 0;
-        }
+    size_t get_workspace_in_bytes(const TensorLayout&) override { return 0; }
 };
 
-class GaussianRNGImpl: public GaussianRNG {
+class GaussianRNGImpl : public GaussianRNG {
     Xoroshiro128plus m_rng;
 
-    public:
-        using GaussianRNG::GaussianRNG;
-        void exec(_megdnn_tensor_inout dst, _megdnn_workspace) override;
+public:
+    using GaussianRNG::GaussianRNG;
+    void exec(_megdnn_tensor_inout dst, _megdnn_workspace) override;
 
-        size_t get_workspace_in_bytes(const TensorLayout&) override {
-            return 0;
-        }
+    size_t get_workspace_in_bytes(const TensorLayout&) override { return 0; }
 };
 
+class GammaRNGImpl : public GammaRNG {
+    Xoroshiro128plus m_rng;
 
-} // namespace naive
-} // namespace megdnn
+public:
+    using GammaRNG::GammaRNG;
+
+    void exec(_megdnn_tensor_in shape,_megdnn_tensor_in scale, _megdnn_tensor_out dst,
+              _megdnn_workspace) override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&,const TensorLayout&,
+                                  const TensorLayout&) override {
+        return 0;
+    }
+};
+
+class PoissonRNGImpl : public PoissonRNG {
+    Xoroshiro128plus m_rng;
+
+public:
+    using PoissonRNG::PoissonRNG;
+
+    void exec(_megdnn_tensor_in lam, _megdnn_tensor_inout dst,
+              _megdnn_workspace) override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&,
+                                  const TensorLayout&) override {
+        return 0;
+    }
+};
+
+class BetaRNGImpl : public BetaRNG {
+    Xoroshiro128plus m_rng;
+
+public:
+    using BetaRNG::BetaRNG;
+
+    void exec(_megdnn_tensor_in alpha,_megdnn_tensor_in beta, _megdnn_tensor_out dst,
+              _megdnn_workspace) override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&,
+                                 const TensorLayout&,
+                                  const TensorLayout&) override {
+        return 0;
+    }
+};
+
+class PermutationRNGImpl : public PermutationRNG {
+    Xoroshiro128plus m_rng;
+
+public:
+    using PermutationRNG::PermutationRNG;
+
+    void exec(_megdnn_tensor_inout dst, _megdnn_workspace) override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&) override { return 0; }
+};
+}  // namespace naive
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen
-

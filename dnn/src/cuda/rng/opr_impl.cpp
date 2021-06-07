@@ -13,6 +13,7 @@
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 #include "./opr_impl.h"
+#include "./kernel.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -120,6 +121,144 @@ size_t GaussianRNGImpl::get_workspace_in_bytes(const TensorLayout &layout) {
     if (layout.total_nr_elems() % 2)
         return 2 * layout.dtype.size();
     return 0;
+}
+
+GammaRNGImpl::GammaRNGImpl(Handle *handle):
+    GammaRNG(handle),
+    m_seed(0),
+    m_offset(0),
+    m_stream(cuda_stream(handle))
+{
+}
+
+void GammaRNGImpl::exec(_megdnn_tensor_in shape, _megdnn_tensor_in scale,
+        _megdnn_tensor_inout dst, _megdnn_workspace workspace) {
+    check_exec(shape.layout, scale.layout ,dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    ensure_seed(m_param.seed);
+    ElemwiseOpParamN<0> ele_param(size);
+    switch (dst.layout.dtype.enumv()){
+#define cb(_dt)                                                                           \
+        case DTypeTrait<_dt>::enumv:                                                      \
+        {                                                                                 \
+            using ctype = DTypeTrait<_dt>::ctype;                                         \
+            run_elemwise<random::GammaKernel<ctype>, ctype, 0>(ele_param, m_stream,       \
+                                                {dst, shape, scale, m_seed, m_offset});   \
+            break ;                                                                       \
+        }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+}
+    m_offset += 16;
+}
+
+PoissonRNGImpl::PoissonRNGImpl(Handle *handle):
+    PoissonRNG(handle),
+    m_seed(0),
+    m_offset(0),
+    m_stream(cuda_stream(handle))
+{
+}
+
+void PoissonRNGImpl::exec(_megdnn_tensor_in lam, _megdnn_tensor_out dst, 
+                _megdnn_workspace workspace) {
+    check_exec(lam.layout, dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    ensure_seed(m_param.seed);
+    ElemwiseOpParamN<0> ele_param(size);
+    switch (dst.layout.dtype.enumv()){
+#define cb(_dt)                                                                           \
+        case DTypeTrait<_dt>::enumv:                                                      \
+        {                                                                                 \
+            using ctype = DTypeTrait<_dt>::ctype;                                         \
+            run_elemwise<random::PoissonKernel<ctype>, ctype, 0>(ele_param, m_stream,     \
+                                                        {dst, lam, m_seed, m_offset});    \
+            break;                                                                        \
+        }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+}
+    m_offset += 20;
+}
+
+BetaRNGImpl::BetaRNGImpl(Handle *handle):
+    BetaRNG(handle),
+    m_seed(0),
+    m_offset(0),
+    m_stream(cuda_stream(handle))
+{
+}
+
+void BetaRNGImpl::exec(_megdnn_tensor_in alpha, _megdnn_tensor_in beta,_megdnn_tensor_out dst, 
+                _megdnn_workspace workspace) {
+    check_exec(alpha.layout, beta.layout ,dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    ensure_seed(m_param.seed);
+    ElemwiseOpParamN<0> ele_param(size);
+    switch (dst.layout.dtype.enumv()){
+#define cb(_dt)                                                                           \
+        case DTypeTrait<_dt>::enumv:                                                      \
+        {                                                                                 \
+            using ctype = DTypeTrait<_dt>::ctype;                                         \
+            run_elemwise<random::BetaKernel<ctype>, ctype, 0>(ele_param, m_stream,        \
+                                                {dst, alpha, beta, m_seed, m_offset});    \
+            break;                                                                        \
+        }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+}
+    m_offset += 32;
+}
+
+PermutationRNGImpl::PermutationRNGImpl(Handle *handle):
+    PermutationRNG(handle),
+    m_seed(0),
+    m_offset(0),
+    m_stream(cuda_stream(handle))
+{
+}
+
+void PermutationRNGImpl::exec(
+        _megdnn_tensor_inout dst, _megdnn_workspace workspace) {
+    check_exec(dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    ensure_seed(m_param.seed);
+
+    auto wk = workspace.ptr<void>();
+    switch (dst.layout.dtype.enumv()){
+#define cb(_dt)                                                                           \
+        case DTypeTrait<_dt>::enumv:                                                      \
+        {                                                                                 \
+            using ctype = DTypeTrait<_dt>::ctype;                                         \
+            ctype max_size = DTypeTrait<_dt>::max() - 1;                                  \
+            megdnn_assert(ctype(size) < max_size);                                        \
+            random::permutation_forward<ctype>(dst.ptr<ctype>(), wk, size, m_seed,           \
+                                             m_offset, m_stream);                         \
+            break;                                                                        \
+        }
+        cb(::megdnn::dtype::Float32)
+        cb(::megdnn::dtype::Int32)
+        cb(::megdnn::dtype::Int16)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+}
+    m_offset += 8;
+}
+
+size_t PermutationRNGImpl::get_workspace_in_bytes(const TensorLayout &layout){
+    size_t size = layout.total_nr_elems();
+    return random::get_permutation_workspace_in_bytes(size);
 }
 
 // vim: syntax=cpp.doxygen

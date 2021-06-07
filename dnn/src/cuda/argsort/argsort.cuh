@@ -24,6 +24,12 @@ size_t get_fwd_workspace_in_bytes(uint32_t M, uint32_t N, DType dtype,
                                   bool is_ascending,
                                   bool iptr_src_given = false);
 
+template <typename KeyType, typename ValueType>
+size_t cub_sort_pairs(
+        bool is_ascending, void* workspace, size_t workspace_size,
+        const KeyType* keys_in, KeyType* keys_out, const ValueType* values_in,
+        ValueType* values_out, uint32_t M, uint32_t N, int begin_bit, int end_bit,cudaStream_t stream);
+
 /*!
  * \param iptr_src pointer to indices; a range would be generated if it is null
  */

@@ -159,6 +159,10 @@ private:
     cb(SleepForward) \
     cb(UniformRNG) \
     cb(GaussianRNG) \
+    cb(GammaRNG) \
+    cb(BetaRNG) \
+    cb(PoissonRNG) \
+    cb(PermutationRNG) \
     cb(SeparableConvForward) \
     cb(SeparableFilterForward) \
     cb(BNForward) \

@@ -49,52 +49,6 @@ bool use_segmented(uint32_t M, uint32_t /*N*/) {
     return M >= 8;
 }
 
-template <typename KeyType>
-MEGDNN_NOINLINE size_t cub_sort_pairs(
-        bool is_ascending, void* workspace, size_t workspace_size,
-        const KeyType* keys_in, KeyType* keys_out, const int* values_in,
-        int* values_out, uint32_t M, uint32_t N, cudaStream_t stream) {
-    cudaError_t err;
-    if (use_segmented(M, N)) {
-        if (is_ascending) {
-            err = cub::DeviceSegmentedRadixSort::SortPairs(
-                    workspace, workspace_size, keys_in, keys_out, values_in,
-                    values_out, N * M, M, StridedOffsetIterator(0, N),
-                    StridedOffsetIterator(N, N), 0, sizeof(float) * 8, stream);
-        } else {
-            err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
-                    workspace, workspace_size, keys_in, keys_out, values_in,
-                    values_out, N * M, M, StridedOffsetIterator(0, N),
-                    StridedOffsetIterator(N, N), 0, sizeof(float) * 8, stream);
-        }
-    } else {
-        if (is_ascending) {
-            for (size_t i = 0; i < M; ++i) {
-                err = cub::DeviceRadixSort::SortPairs(
-                        workspace, workspace_size, keys_in + N * i,
-                        keys_out + N * i, values_in + N * i, values_out + N * i,
-                        N, 0, sizeof(float) * 8, stream);
-                cuda_check(err);
-                if (!keys_in) {
-                    return workspace_size;
-                }
-            }
-        } else {
-            for (size_t i = 0; i < M; ++i) {
-                err = cub::DeviceRadixSort::SortPairsDescending(
-                        workspace, workspace_size, keys_in + N * i,
-                        keys_out + N * i, values_in + N * i, values_out + N * i,
-                        N, 0, sizeof(float) * 8, stream);
-                cuda_check(err);
-                if (!keys_in) {
-                    return workspace_size;
-                }
-            }
-        }
-    }
-    return workspace_size;
-}
-
 __global__ void kern_arange(int* dst, uint32_t n, uint32_t mod) {
     uint32_t i = threadIdx.x + blockIdx.x * blockDim.x;
     if (i < n) {
@@ -107,10 +61,58 @@ size_t get_sort_workspace(uint32_t M, uint32_t N, bool is_ascending) {
     if (use_bitonic(M, N)) {
         return 0;
     }
-    return cub_sort_pairs<ctype>(is_ascending, NULL, 0, NULL, NULL, NULL, NULL,
-                                 M, N, NULL);
+    return argsort::cub_sort_pairs<ctype, int>(is_ascending, NULL, 0, NULL, NULL, NULL, NULL,
+                                 M, N, 0, sizeof(float)*8, NULL);
 }
 }  // anonymous namespace
+
+template <typename KeyType, typename ValueType>
+MEGDNN_NOINLINE size_t argsort::cub_sort_pairs(
+        bool is_ascending, void* workspace, size_t workspace_size,
+        const KeyType* keys_in, KeyType* keys_out, const ValueType* values_in,
+        ValueType* values_out, uint32_t M, uint32_t N, int begin_bit, int end_bit,cudaStream_t stream){
+    cudaError_t err;
+    if (use_segmented(M, N)) {
+        if (is_ascending) {
+            err = cub::DeviceSegmentedRadixSort::SortPairs(
+                    workspace, workspace_size, keys_in, keys_out, values_in,
+                    values_out, N * M, M, StridedOffsetIterator(0, N),
+                    StridedOffsetIterator(N, N), begin_bit, end_bit, stream);
+            cuda_check(err);
+        } else {
+            err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
+                    workspace, workspace_size, keys_in, keys_out, values_in,
+                    values_out, N * M, M, StridedOffsetIterator(0, N),
+                    StridedOffsetIterator(N, N), begin_bit, end_bit, stream);
+            cuda_check(err);
+        }
+    } else {
+        if (is_ascending) {
+            for (size_t i = 0; i < M; ++i) {
+                err = cub::DeviceRadixSort::SortPairs(
+                        workspace, workspace_size, keys_in + N * i,
+                        keys_out + N * i, values_in + N * i, values_out + N * i,
+                        N, begin_bit, end_bit, stream);
+                cuda_check(err);
+                if (!keys_in) {
+                    return workspace_size;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < M; ++i) {
+                err = cub::DeviceRadixSort::SortPairsDescending(
+                        workspace, workspace_size, keys_in + N * i,
+                        keys_out + N * i, values_in + N * i, values_out + N * i,
+                        N, begin_bit, end_bit, stream);
+                cuda_check(err);
+                if (!keys_in) {
+                    return workspace_size;
+                }
+            }
+        }
+    }
+    return workspace_size;
+}
 
 size_t argsort::get_fwd_workspace_in_bytes(uint32_t M, uint32_t N, DType dtype,
                                            bool is_ascending,
@@ -151,17 +153,28 @@ void argsort::forward(const dtype* sptr, dtype* dptr, int* iptr,
                                 stream));
     } else {
         cub_sort_pairs(is_ascending, workspace, wk_size, sptr, dptr, iptr_src,
-                       iptr, M, N, stream);
+                       iptr, M, N, 0, sizeof(float)*8, stream);
     }
 }
 
 namespace megdnn {
 namespace cuda {
+
+#define INST_CUB_SORT(dtype)                                                 \
+template MEGDNN_NOINLINE size_t argsort::cub_sort_pairs<dtype, dtype>(bool,  \
+                                    void*, size_t, const dtype*, dtype*,     \
+                                    const dtype*, dtype*, uint32_t, uint32_t,\
+                                    int, int, cudaStream_t);
+
 #define INST_FORWARD(dtype)                                                  \
-    template void argsort::forward<dtype>(const dtype*, dtype*, int*, void*, \
-                                          uint32_t, uint32_t, bool,          \
-                                          cudaStream_t, const int*);
+template void argsort::forward<dtype>(const dtype*, dtype*, int*, void*,     \
+                                    uint32_t, uint32_t, bool, cudaStream_t,  \
+                                    const int*);
+                                    
 ARGSORT_FOREACH_CTYPE(INST_FORWARD)
+INST_CUB_SORT(uint32_t)
+INST_CUB_SORT(uint64_t)
+#undef INST_CUB_SORT
 #undef INST_FORWARD
 }
 }  // namespace megdnn

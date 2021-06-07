@@ -180,6 +180,20 @@ struct OpMeth<UniformRNG> {
         mgb_assert(handle_seed == rng.seed,
             "inconsistent rng seed: rng op: %lu handle: %lu",
             handle_seed, rng.seed);
+        return {handle_seed, rng.dtype.enumv()};
+    }
+};
+
+template <>
+struct OpMeth<PoissonRNG> {
+    using DnnOp = megdnn::PoissonRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::PoissonRNG;
+    static Param make_param(const PoissonRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
         return {handle_seed};
     }
 };
@@ -194,16 +208,168 @@ struct OpMeth<GaussianRNG> {
         mgb_assert(handle_seed == rng.seed,
             "inconsistent rng seed: rng op: %lu handle: %lu",
             handle_seed, rng.seed);
-        return {handle_seed, rng.mean, rng.std};
+        return {handle_seed, rng.mean, rng.std, rng.dtype.enumv()};
     }
 };
+
+template <>
+struct OpMeth<GammaRNG> {
+    using DnnOp = megdnn::GammaRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::GammaRNG;
+    static Param make_param(const GammaRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
+        return {handle_seed};
+    }
+};
+
+template <>
+struct OpMeth<PermutationRNG> {
+    using DnnOp = megdnn::PermutationRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::PermutationRNG;
+    static Param make_param(const PermutationRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
+        return {handle_seed, rng.dtype.enumv()};
+    }
+};
+
+template <>
+struct OpMeth<BetaRNG> {
+    using DnnOp = megdnn::BetaRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::BetaRNG;
+    static Param make_param(const BetaRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+            "inconsistent rng seed: rng op: %lu handle: %lu",
+            handle_seed, rng.seed);
+        return {handle_seed};
+    }
+};
+
+template <bool>
+struct _InferLayout;
+
+template <int nr_in>
+struct _RNGOprMaker;
+
+template <int nr_in>
+struct _RNGOprInvoker;
+
+template<>
+struct _InferLayout<true>
+{
+    template<typename Op>
+    static TensorLayout do_infer(const TensorPtr& inp, const Op& rng){
+        TensorShape tshape;
+        auto hv = inp->get_value().proxy_to_default_cpu();
+        cg::copy_tensor_value_to_shape(tshape, hv);
+        return TensorLayout(tshape, rng.dtype);
+    }
+
+    template<typename Op>
+    static TensorLayout do_infer(const LogicalTensorDesc& inp, const Op& rng){
+        TensorLayout out_layout = inp.layout;
+        out_layout.dtype = rng.dtype;
+        if (inp.layout.ndim == 0 || inp.value.empty()) {
+            out_layout.ndim = 0;
+            return out_layout;
+        }
+        mgb_assert(
+                inp.layout.ndim == 1,
+                "target shape of %s expects ndim=1; got ndim=%lu actually",
+                rng.dyn_typeinfo()->name,
+                inp.layout.ndim);
+        size_t target_ndim = inp.layout.shape[0];
+        out_layout.ndim = target_ndim;
+        auto* ptr = inp.value.ptr<dt_int32>();
+        for (size_t i = 0; i < target_ndim; ++i) {
+            out_layout.shape[i] = ptr[i];
+        }
+        return out_layout;
+    }
+};
+
+template<>
+struct _InferLayout<false>
+{
+    template<typename Op>
+    static TensorLayout do_infer(const TensorPtr& inp, const Op& rng){
+        return inp->layout();
+    }
+
+    template<typename Op>
+    static TensorLayout do_infer(const LogicalTensorDesc& inp, const Op& rng){
+        size_t size = inp.layout.total_nr_elems();
+        mgb_assert(
+                size > 0,
+                "target size of %s expects size>0; got size=%lu actually",
+                rng.dyn_typeinfo()->name,
+                size);
+        return inp.layout;
+    }
+};
+                                   
+#define _INST_RNG_INVOLKER(DNN_NR_INPUTS)                                                              \
+template<>                                                                                             \
+struct _RNGOprInvoker<DNN_NR_INPUTS> {                                                                 \
+    template<typename Opr>                                                                             \
+    static void exec(Opr *dnn_op, const SmallVector<TensorPtr>& inputs,const TensorPtr& dest){         \
+        size_t wk_size = 0;                                                                            \
+        wk_size = dnn_op->get_workspace_in_bytes(_FOR_EACH_IN(->layout())dest->layout());              \
+        auto workspace = Blob::make(dest->comp_node(), wk_size);                                       \
+        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);                                 \
+        dnn_op->exec(_FOR_EACH_IN(->dev_tensor().as_megdnn())                                          \
+                                 dest->dev_tensor().as_megdnn(), dnn_wk);                              \
+    }                                                                                                  \
+};
+
+#define _INST_RNG_MAKER(MGB_NR_INPUTS)                                                                 \
+template<>                                                                                             \
+struct _RNGOprMaker<MGB_NR_INPUTS> {                                                                   \
+    template<typename Op>                                                                              \
+    static SymbolVar make(const VarNodeArray& inputs, const Op& rng){                                  \
+        auto param = OpMeth<Op>::make_param(rng);                                                      \
+        OperatorNodeConfig config;                                                                     \
+        if (rng.handle) {                                                                              \
+            config = {rng.make_name(), RNGDnnOpManager::get_comp_node(rng.handle)};                    \
+        } else {                                                                                       \
+            config = {rng.make_name()};                                                                \
+        }                                                                                              \
+        return OpMeth<Op>::OpNode::make(_FOR_EACH_IN() param, config);                                 \
+    }                                                                                                  \
+};
+
+#define _FOR_EACH_IN(subfix)   
+_INST_RNG_INVOLKER(0)
+#undef _FOR_EACH_IN
+
+#define _FOR_EACH_IN(subfix) inputs[0] subfix,
+_INST_RNG_INVOLKER(1)
+_INST_RNG_MAKER(1)
+#undef _FOR_EACH_IN
+
+#define _FOR_EACH_IN(subfix) inputs[0] subfix, inputs[1] subfix,
+_INST_RNG_INVOLKER(2)
+_INST_RNG_MAKER(2)
+#undef _FOR_EACH_IN
+
+#undef _INST_RNG_INVOLKER
+#undef _INST_RNG_MAKER
 
 template <typename Op>
 void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
           const SmallVector<TensorPtr>& outputs) {
     auto&& rng = op.cast_final_safe<Op>();
+ 
     auto dest = outputs[0];
-
     auto cn = dest->comp_node();
     auto handle = rng.handle;
     if (!handle) {
@@ -224,38 +390,40 @@ void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
             handle_seed, dnn_op->param().seed);
     }
     dnn_op->param() = OpMeth<Op>::make_param(rng);
-
-    // allocate workspace
-    size_t wk_size = dnn_op->get_workspace_in_bytes(dest->layout());
-    auto workspace = Blob::make(cn, wk_size);
-    megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);
-
-    dnn_op->exec(dest->dev_tensor().as_megdnn(), dnn_wk);
+    _RNGOprInvoker<OpMeth<Op>::DnnOp::NR_INPUTS>::exec(dnn_op,inputs,dest);
 }
 
 template <typename Op>
 SmallVector<LogicalTensorDesc> infer_output_attrs(
         const OpDef& op, const SmallVector<TensorPtr>& inputs) {
     LogicalTensorDesc dest;
-    auto handle = op.cast_final_safe<Op>().handle;
+    auto&& rng = op.cast_final_safe<Op>();
+    auto handle = rng.handle;
     if (handle) {
         dest.comp_node = RNGDnnOpManager::get_comp_node(handle);
     } else {
         dest.comp_node = inputs[0]->comp_node();
     }
-
-    auto hv = inputs[0]->get_value().proxy_to_default_cpu();
-    TensorShape tshape;
-    cg::copy_tensor_value_to_shape(tshape, hv);
-    dest.layout = TensorLayout(tshape, dtype::Float32());
+    constexpr bool rng_with_shape = OpMeth<Op>::DnnOp::NR_INPUTS == 0;
+    if(!rng_with_shape){
+        for(int i = 0; i < inputs.size(); ++i){
+            mgb_assert(inputs[i]->comp_node() == dest.comp_node, 
+                    "%s expects the device of inputs[%d] to be same as the device of handle; "
+                    "got %s and %s actually", rng.dyn_typeinfo()->name, i,
+                    inputs[i]->comp_node().to_string().c_str(),
+                    dest.comp_node.to_string().c_str());
+        }
+    }
+    dest.layout = _InferLayout<rng_with_shape>::do_infer(inputs[0], rng);
     return {dest};
 }
 
 template <typename Op>
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-    auto desc = infer_output_attrs<Op>(def, inputs);
     SmallVector<TensorPtr> outputs;
+    SmallVector<LogicalTensorDesc> desc; 
+    desc = infer_output_attrs<Op>(def, inputs);
     for (auto&& i : desc) {
         outputs.push_back(Tensor::make(i.layout, i.comp_node));
     }
@@ -268,51 +436,32 @@ SymbolVar apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
     size_t nr_inp = inputs.size();
+    constexpr size_t dnn_nr_inp = OpMeth<Op>::DnnOp::NR_INPUTS;
     auto&& rng = def.cast_final_safe<Op>();
-    mgb_assert(nr_inp == 1, "%s expects 1 inputs; got %lu actually",
-               rng.dyn_typeinfo()->name,
-               nr_inp);
-    auto param = OpMeth<Op>::make_param(rng);
-    OperatorNodeConfig config;
-    if (rng.handle) {
-        config = {rng.make_name(), RNGDnnOpManager::get_comp_node(rng.handle)};
-    } else {
-        config = {rng.make_name()};
+    if(dnn_nr_inp == 0){
+        mgb_assert(nr_inp == 1, "%s expects 1 inputs; got %lu actually",
+                rng.dyn_typeinfo()->name,
+                nr_inp);
     }
-    return OpMeth<Op>::OpNode::make(inputs[0], param, config);
+    constexpr size_t mgb_nr_inp = dnn_nr_inp + !dnn_nr_inp;
+    return _RNGOprMaker<mgb_nr_inp>::make(inputs, rng);
 }
 
-template<typename T>
+template<typename Op>
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
         const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
-    auto&& xxx_rng_def = def.cast_final_safe<T>();
+    LogicalTensorDesc dest;
+    auto&& xxx_rng_def = def.cast_final_safe<Op>();
     size_t nr_inp = inputs.size();
-    mgb_assert(nr_inp == 1, "%s expects 1 inputs; got %lu actually",
-               xxx_rng_def.dyn_typeinfo()->name,
-               nr_inp);
-
-    auto&& tshp = inputs[0];
-
-    TensorLayout out_layout = tshp.layout;
-    out_layout.dtype = dtype::Float32();
-    if (tshp.layout.ndim == 0 || tshp.value.empty()) {
-        out_layout.ndim = 0;
-        return {{{out_layout, tshp.comp_node}}, true};
+    constexpr bool rng_with_shape = OpMeth<Op>::DnnOp::NR_INPUTS == 0;
+    if (rng_with_shape){
+        mgb_assert(nr_inp == 1, "%s expects 1 inputs; got %lu actually",
+                xxx_rng_def.dyn_typeinfo()->name,
+                nr_inp);
     }
-    mgb_assert(
-            tshp.layout.ndim == 1,
-            "target shape of %s expects ndim=1; got ndim=%lu actually",
-            xxx_rng_def.dyn_typeinfo()->name,
-            tshp.layout.ndim);
-
-    size_t target_ndim = tshp.layout.shape[0];
-    out_layout.ndim = target_ndim;
-    auto* ptr = tshp.value.ptr<dt_int32>();
-    for (size_t i = 0; i < target_ndim; ++i) {
-        out_layout.shape[i] = ptr[i];
-    }
-
-    return {{{out_layout, tshp.comp_node}}, true};
+    dest.comp_node = inputs[0].comp_node;
+    dest.layout = _InferLayout<rng_with_shape>::do_infer(inputs[0], xxx_rng_def);
+    return {{dest}, true};
 }
 
 } // anonymous namespace
@@ -333,6 +482,10 @@ uint64_t get_global_rng_seed() {
     return RNGDnnOpManager::get_glob_default_seed();
 }
 
+CompNode get_rng_handle_compnode(Handle handle){
+    return RNGDnnOpManager::get_comp_node(handle);
+}
+
 #define REG_RNG_OP(NAME)\
 namespace { \
 OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
@@ -344,6 +497,11 @@ OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
 
 REG_RNG_OP(UniformRNG)
 REG_RNG_OP(GaussianRNG)
+REG_RNG_OP(GammaRNG)
+REG_RNG_OP(PermutationRNG)
+REG_RNG_OP(PoissonRNG)
+REG_RNG_OP(BetaRNG)
+#undef REG_RNG_OP
 
 }  // namespace mgb::imperative::rng
 
