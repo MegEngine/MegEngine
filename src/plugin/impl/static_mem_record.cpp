@@ -86,7 +86,7 @@ std::string draw_polyline(std::string point_seq, std::string color,
 }
 }  // namespace
 
-void StaticMemRecorder::dump_svg(std::string svg_name) {
+void StaticMemRecorder::dump_svg() {
     float svg_width = SVG_WIDTH, svg_height = SVG_HEIGHT,
           opr_rect_width = OPR_RECT_WIDTH, opr_rect_height = OPR_RECT_HEIGHT;
     float address_scale = 1;
@@ -120,7 +120,7 @@ void StaticMemRecorder::dump_svg(std::string svg_name) {
     svg_height = svg_height + opr_rect_height * 2;
 
     std::ofstream outfile;
-    outfile.open(svg_name);
+    outfile.open(m_svg_name);
     outfile << "<?xml version=\"1.0\" standalone=\"no\"?>" << std::endl;
     outfile << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN/\" "
                "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">"
@@ -243,7 +243,7 @@ void StaticMemRecorder::dump_svg(std::string svg_name) {
     outfile.close();
 }
 
-void StaticMemRecorder::show(std::string svg_name) {
+void StaticMemRecorder::show() {
     for (auto&& i : m_memory_chunk_recorder) {
         if (i.id >= m_weight_chunk_id) {
             break;
@@ -291,7 +291,7 @@ void StaticMemRecorder::show(std::string svg_name) {
                     m_opr_seq_recorder.at(chunk.time_begin).name.c_str());
         }
     }
-    dump_svg(svg_name);
+    dump_svg();
 }
 
 std::vector<std::vector<size_t>> StaticMemRecorder::get_chunk_construct(

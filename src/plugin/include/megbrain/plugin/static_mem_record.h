@@ -54,25 +54,38 @@ public:
 
     void regist_peak_mem_size(size_t size) { m_peak_mem_size = size; }
 
-    const size_t& peak_mem_size() { return m_peak_mem_size; }
+    const size_t& peak_mem_size() const { return m_peak_mem_size; }
 
     void set_sum_mem_size(size_t size) { m_sum_mem_size = size; }
 
-    const size_t& sum_mem_size() { return m_sum_mem_size; }
+    const size_t& sum_mem_size() const { return m_sum_mem_size; }
 
     const size_t& set_weight_chunk_id() {
         m_weight_chunk_id = m_memory_chunk_recorder.size();
         return m_weight_chunk_id;
     }
 
-    const size_t& weight_chunk_id() { return m_weight_chunk_id; }
+    const size_t& weight_chunk_id() const { return m_weight_chunk_id; }
 
-    void dump_svg(std::string svg_name);
+    void dump_svg();
 
-    void show(std::string svg_name);
+    void show();
+
+    void set_svg_name(const std::string& svg_name) {
+        mgb_assert(svg_name.length() > 4,
+                   "svg_name must be end with \".svg\"\n");
+        mgb_assert(svg_name.compare(svg_name.length() - 4, 4, ".svg") == 0,
+                   "svg_name must be end with \".svg\"\n");
+        m_svg_name = svg_name;
+    }
+
+    const std::string& get_svg_name() const{
+        return m_svg_name;
+    }
 
 private:
     bool m_is_record = false;
+    std::string m_svg_name;
     // All chunks after m_memory_chunk_recorder.at(m_weight_chunk_id) are
     // weights memory chunks
     size_t m_peak_mem_size, m_sum_mem_size, m_weight_chunk_id;

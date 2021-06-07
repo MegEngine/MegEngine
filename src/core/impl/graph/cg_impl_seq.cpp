@@ -12,6 +12,7 @@
 #include "./cg_impl_seq.h"
 #include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/utils/arith_helper.h"
 
 using namespace mgb;
 using namespace cg;
@@ -298,6 +299,9 @@ void ComputingGraphImpl::ComputingSequence::do_execute(
     }
 
     exec_ctx.perform(&m_exec_env);
+#ifndef __IN_TEE_ENV__
+    do_regist();
+#endif
 }
 
 void ComputingGraphImpl::ComputingSequence::preprocess(ExecContext* ctx) {
@@ -511,35 +515,42 @@ AsyncExecutable& ComputingGraphImpl::ComputingSequence::execute() {
 }
 #ifndef __IN_TEE_ENV__
 void ComputingGraphImpl::ComputingSequence::get_static_memory_alloc_info(
-        const std::string& svg_name) {
-    check_not_finalized();
+        const std::string& svg_name) const {
     auto& recorder = StaticMemRecorder::Instance();
     recorder.active();
-    ExecContext exec_ctx{this};
+    recorder.set_svg_name(svg_name);
+}
+
+void ComputingGraphImpl::ComputingSequence::do_regist() const {
     // regist weights
-    size_t addr_base = recorder.peak_mem_size();
-    size_t chunk_id = recorder.set_weight_chunk_id();
-    for (auto&& i : *(this->m_opr_seq)) {
-        auto op = i->output();
-        for (auto&& j : op) {
-            auto& mp = j->mem_plan();
-            if (mp.valid()) {
-                auto& mc = mp.chunk();
-                if (mp.valid() && mc.mem_alloc_status.is_from_owner_var()) {
-                    recorder.regist_memory_chunk(
-                            {chunk_id++, mc.size(), 0, this->m_opr_seq->size(),
-                             addr_base, addr_base + mc.size(), 0, false,
-                             mc.owner_var->name()});
-                    addr_base += mc.size();
+    auto& recorder = StaticMemRecorder::Instance();
+    if (recorder.valid()) {
+        size_t addr_base = recorder.peak_mem_size();
+        size_t chunk_id = recorder.set_weight_chunk_id();
+        for (auto&& i : *(this->m_opr_seq)) {
+            auto op = i->output();
+            for (auto&& j : op) {
+                auto& mp = j->mem_plan();
+                if (mp.valid()) {
+                    auto& mc = mp.chunk();
+                    if (mp.valid() && mc.mem_alloc_status.is_from_owner_var()) {
+                        auto size = mgb::get_aligned_power2(
+                                mc.size(),
+                                j->comp_node().get_mem_addr_alignment());
+
+                        recorder.regist_memory_chunk(
+                                {chunk_id++, size, 0, this->m_opr_seq->size(),
+                                 addr_base, addr_base + size, 0, false,
+                                 mc.owner_var->name()});
+
+                        addr_base += size;
+                    }
                 }
             }
         }
+        recorder.set_sum_mem_size(addr_base);
+        recorder.show();
     }
-    recorder.set_sum_mem_size(addr_base);
-    mgb_assert(svg_name.length() > 4, "svg_name must be end with \".svg\"\n");
-    mgb_assert(svg_name.compare(svg_name.length() - 4, 4, ".svg") == 0,
-               "svg_name must be end with \".svg\"\n");
-    recorder.show(svg_name);
 }
 #endif
 AsyncExecutable& ComputingGraphImpl::ComputingSequence::wait() {

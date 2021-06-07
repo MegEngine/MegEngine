@@ -195,7 +195,8 @@ class AsyncExecutable : public json::Serializable,
             return (*(output_vars_pair.first))->get_output_vars();
         }
 #ifndef __IN_TEE_ENV__
-        virtual void get_static_memory_alloc_info(const std::string& svg_name) {
+        virtual void get_static_memory_alloc_info(
+                const std::string& svg_name) const {
             mgb_assert(svg_name.length() < 0,
                        "can't call this function directly\n");
         }
