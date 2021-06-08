@@ -38,11 +38,9 @@ index-url = https://mirrors.aliyun.com/pypi/simple
 extra-index-url = 
     http://mirrors.i.brainpp.cn/pypi/simple/
     http://pypi.i.brainpp.cn/brain/dev/+simple
-    https://pypi.tuna.tsinghua.edu.cn/simple
 trusted-host =
     mirrors.i.brainpp.cn
     pypi.i.brainpp.cn
-    pypi.tuna.tsinghua.edu.cn
     mirrors.aliyun.com
 EOF
 }
