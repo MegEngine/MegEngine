@@ -4735,6 +4735,101 @@ TEST(TestGoptInference, PaddingChannelsWithWarpPerspective) {
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 
+TEST(TestGoptInference, PaddingChannelsB4) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(7, 5);
+
+    HostTensorGenerator<dtype::Int8> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {16, 3, 14, 14}, dtype::QuantizedS8(2.5f)),
+         w = mkcvar("w", {16, 3, 3, 3}, dtype::QuantizedS8(2.5f)),
+         b = mkcvar("b", {1, 16, 1, 1}, dtype::QuantizedS32(6.25f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 1;
+    param.pad_h = param.pad_w = 1;
+
+    auto y = opr::ConvBias::make(x, w, b, param, {},
+                                 OperatorNodeConfig{dtype::QuantizedS8(2.5f)});
+    y = opr::TypeCvt::make(y, dtype::Quantized4Asymm{20.f, 8});
+    opr::Pooling::Param pool;
+    pool.format = opr::Pooling::Param::Format::NCHW;
+    y = opr::Pooling::make(y, pool);
+    auto w1 = mkcvar("w1", {48, 16, 3, 3}, dtype::QuantizedS4(1.234f)),
+         b1 = mkcvar("b1", {1, 48, 1, 1}, dtype::QuantizedS32(20.f*1.234f));
+    auto y1 = opr::ConvBias::make(y, w1, b1, param, {},
+                            OperatorNodeConfig{dtype::Quantized4Asymm(20.f, 8)});
+    auto w2 = mkcvar("w2", {48, 48, 3, 3}, dtype::QuantizedS4(1.234f)),
+         b2 = mkcvar("b2", {1, 48, 1, 1}, dtype::QuantizedS32(20.f*1.234f));
+    auto y2 = opr::ConvBias::make(
+            y1, w2, b2, param, {},
+            OperatorNodeConfig{dtype::Quantized4Asymm(20.f, 8)});
+    auto w3 = mkcvar("w2", {16, 48, 3, 3}, dtype::QuantizedS4(1.234f)),
+         b3 = mkcvar("b2", {1, 16, 1, 1}, dtype::QuantizedS32(20.f*1.234f));
+    auto y3 = opr::ConvBias::make(
+            y2, w3, b3, param, {},
+            OperatorNodeConfig{dtype::Quantized4Asymm(20.f, 8)});
+    using ElemMultiMode = opr::ElemwiseMultiType::Param::Mode;
+    auto y4 = opr::ElemwiseMultiType::make(
+            {y, y3}, {ElemMultiMode::QFUSE_ADD_RELU},
+            OperatorNodeConfig{dtype::Quantized4Asymm{20.f, 7}});
+    y4 = opr::TypeCvt::make(y4, dtype::Float32());
+    SymbolVar y4_pad;
+    unpack_vector(gopt::GraphOptimizer{}
+                          .add_pass<gopt::PaddingChannelPass>()
+                          .add_pass<gopt::ParamFusePass>()
+                          .apply({{y4}})
+                          .endpoint_vars(),
+                  y4_pad);
+    ASSERT_EQ(y4_pad.node()->shape()[1], y4.node()->shape()[1]);
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb1 = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::ConvBias>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb1}.add(y4_pad.node()->owner_opr());
+    ASSERT_EQ(oprs.size(), 4);
+    ASSERT_EQ(oprs[0]->output(0)->shape()[1], 16);
+    ASSERT_EQ(oprs[1]->output(0)->shape()[1], 64);
+    ASSERT_EQ(oprs[2]->output(0)->shape()[1], 64);
+    ASSERT_EQ(oprs[3]->output(0)->shape()[1], 16);
+    size_t nr_concat = find_opr_num<opr::Concat>(y4_pad);
+    ASSERT_EQ(nr_concat, 1);
+    cg::OperatorNodeBase* concat = nullptr;
+    auto cb2 = [&concat](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::Concat>()) {
+            concat = opr;
+        }
+    };
+    cg::DepOprIter{cb2}.add(y4_pad.node()->owner_opr());
+    ASSERT_EQ(oprs[0]->input(0)->owner_opr(), concat);
+    HostTensorND t1, t2;
+    auto func1 = graph->compile({make_callback_copy(y4, t1)});
+    func1->execute();
+    auto func2 = graph->compile({make_callback_copy(y4_pad, t2)});
+    func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
 
 #endif
 
