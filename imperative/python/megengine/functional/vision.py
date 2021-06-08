@@ -633,7 +633,8 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
     :src shape: input tensor with shape (n, t, h, w, c4).
     :src dtype: uint8.
     :param precision: 0:NV_OF_PERF_LEVEL_SLOW 1:NV_OF_PERF_LEVEL_MEDIUM 2:NV_OF_PERF_LEVEL_FAST.
-    :output shape: (n, t-1, h//4, w//4, c2).
+    :output shape: ``(n, t-1, (h+out_grid_size-1)//out_grid_size, (w+out_grid_size-1)//out_grid_size, c2)``.
+        By default, out_grid_size = 4.
     :output dtype: int16.
 
     .. code-block:: python
