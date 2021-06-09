@@ -729,9 +729,9 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
 
     auto registry = OprRegistry::find_by_unversioned_id(fbopr->type_id());
     mgb_throw_if(!registry, SerializationError,
-                 "failed to find opr with type %s, use "
-                 "mgb.config.dump_registered_oprs() "
-                 "to get a dict that maps from opr id to opr name",
+                 "failed to find opr with type %s, use python env "
+                 "config.dump_registered_oprs() to get a dict that maps from "
+                 "opr id to opr name",
                  std::to_string(fbopr->type_id()).c_str());
 
     // load inputs
@@ -812,7 +812,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     uint32_t magic;
     m_file->read(&magic, sizeof(magic));
     mgb_throw_if(magic != MGB_MAGIC, SerializationError,
-                 "wrong magic: wanted %#08x, actual %#08x (not a MegBrain fbs "
+                 "wrong magic: wanted %#08x, actual %#08x (not a invalid fbs "
                  "model?)",
                  MGB_MAGIC, magic);
     m_file->skip(4);
@@ -833,7 +833,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     m_file->skip(tensor_begin);
 
     mgb_throw_if(!fbs::GraphBufferHasIdentifier(m_graph_buf.data()),
-                 SerializationError, "not a MegBrain fbs model");
+                 SerializationError, "invalid fbs model");
 
     {
         flatbuffers::Verifier verifier(
@@ -847,7 +847,7 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     m_mgb_version = m_graph->mgb_version();
     if (m_graph->mgb_version() > MGB_VERSION) {
         mgb_log_warn(
-                "loading model from future MegBrain: version=%u "
+                "loading model from future runtime: version=%u "
                 "model_version=%u",
                 MGB_VERSION, m_graph->mgb_version());
     }

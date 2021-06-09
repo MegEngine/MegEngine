@@ -12,12 +12,15 @@ function usage() {
     echo "-v : ninja with verbose and explain, default off"
     echo "-s : Do not build develop even build with training mode, default on when build with training, always for wheel"
     echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
+    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -k)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
     exit -1
 }
 
+READLINK=readlink
+OS=$(uname -s)
 BUILD_TYPE=Release
 MGE_WITH_CUDA=OFF
 MGE_INFERENCE_ONLY=ON
@@ -28,10 +31,15 @@ REMOVE_OLD_BUILD=false
 NINJA_VERBOSE=OFF
 BUILD_DEVELOP=ON
 NINJA_DRY_RUN=OFF
+SPECIFIED_TARGET="install/strip"
+if [[ $OS =~ "NT" ]]; then
+    echo "Windows do not support strip/install by defaut"
+    SPECIFIED_TARGET=""
+fi
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "nsrhdctmv" arg
+while getopts "nsrhdctmve:" arg
 do
     case $arg in
         d)
@@ -72,6 +80,9 @@ do
             MGE_WINDOWS_BUILD_MARCH=m32
             MGE_ARCH=i386
             ;;
+        e)
+            SPECIFIED_TARGET=$OPTARG
+            ;;
         ?)
             echo "unkonw argument"
             usage
@@ -83,9 +94,8 @@ echo "build config summary:"
 echo "BUILD_TYPE: $BUILD_TYPE"
 echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
 echo "MGE_INFERENCE_ONLY: $MGE_INFERENCE_ONLY"
+echo "SPECIFIED_TARGET: ${SPECIFIED_TARGET}"
 echo "------------------------------------"
-READLINK=readlink
-OS=$(uname -s)
 
 if [ $OS = "Darwin" ];then
     READLINK=greadlink
@@ -131,7 +141,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         ${SRC_DIR} "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "install/strip" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
     bash -c "${NINJA_CMD}"
 }
 
@@ -260,7 +270,7 @@ function cmake_build_windows() {
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
         ${EXTRA_CMAKE_ARGS} ../../.. "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
     cmd.exe /c " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && ${NINJA_CMD} "
 }
 

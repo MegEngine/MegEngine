@@ -20,14 +20,14 @@
         var svgHeight = undefined;
 
         var loadDesc = (svgElem) => {
-            var mgeType = svgElem.attributes['mge:type'];
+            var mgeType = svgElem.attributes['tag:type'];
             if (mgeType === undefined) {
                 return;
             }
 
             var elemList = [];
             for (attrName of svgElem.getAttributeNames()) {
-                var prefix = 'mge:';
+                var prefix = 'tag:';
                 if (!attrName.startsWith(prefix)) {
                     continue;
                 }
@@ -57,7 +57,7 @@
                 return;
             }
             svgElem.onmousedown = e => {
-                var mgeType = svgElem.attributes['mge:type'];
+                var mgeType = svgElem.attributes['tag:type'];
                 if (mgeType === undefined) {
                     return;
                 }

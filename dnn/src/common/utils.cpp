@@ -222,7 +222,8 @@ megcoreDeviceHandle_t megdnn::get_device_handle(Handle* handle) {
     megcoreDeviceHandle_t dev_handle;
     megcoreComputingHandle_t comp_handle = handle->megcore_computing_handle();
     status = megcoreGetDeviceHandle(comp_handle, &dev_handle);
-    megdnn_assert(status == megcoreSuccess);
+    megdnn_throw_if(status != megcoreSuccess, megdnn_error,
+                    "get device handle error!");
     return dev_handle;
 }
 
