@@ -63,6 +63,10 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS8::make_inner_layout(
 
 bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     auto&& param = args.opr->param();
     bool is_format_ok = param.format == param::ConvBias::Format::NCHW;
     bool is_version_ok = CUDNN_VERSION >= 7500;

@@ -16,6 +16,7 @@
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
 
+#include "src/common/conv_bias.h"
 #include "src/common/algo_chooser.h"
 
 #include "src/cuda/cudnn_with_check.h"
@@ -28,8 +29,9 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                                _megdnn_tensor_out dst,
                                const PreprocessedFilter* preprocessed_filter,
                                _megdnn_workspace workspace) {
-    check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
-               workspace.size, preprocessed_filter);
+    check_exec_allow_noncontiguous(src.layout, filter.layout, bias.layout,
+                                   z.layout, dst.layout, workspace.size,
+                                   preprocessed_filter);
     AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace,
                             preprocessed_filter);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,

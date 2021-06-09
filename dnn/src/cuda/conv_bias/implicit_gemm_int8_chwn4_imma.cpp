@@ -62,6 +62,10 @@ void dispatch_kernel(const int8_t* d_src, const int8_t* d_filter,
 
 bool ConvBiasForwardImpl::AlgoInt8CHWN4IMMAImplicitGemm::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     if (args.bias_layout->ndim <= 0)
         return false;
 

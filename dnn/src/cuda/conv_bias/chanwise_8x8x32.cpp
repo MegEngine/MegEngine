@@ -21,6 +21,10 @@ using namespace conv_bias;
 
 bool ConvBiasForwardImpl::AlgoChanwise8x8x32::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     if (args.z_layout->ndim > 0)
         return false;
     using NonlineMode = param::ConvBias::NonlineMode;

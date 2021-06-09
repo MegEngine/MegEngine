@@ -233,9 +233,9 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
         dt_byte* workspace_ptr = workspace.raw_ptr;
         // ============================w * f + b================================
 
-        auto filter_meta =
-                check_exec(src.layout, filter.layout, bias.layout, z.layout,
-                           dst.layout, workspace.size, preprocessed_filter);
+        auto filter_meta = check_exec_allow_noncontiguous(
+                src.layout, filter.layout, bias.layout, z.layout, dst.layout,
+                workspace.size, preprocessed_filter);
         auto sfb = dst;
         if (bias.layout.dtype.enumv() != dst.layout.dtype.enumv()) {
             // intermediate result

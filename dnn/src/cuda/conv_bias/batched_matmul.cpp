@@ -75,8 +75,8 @@ ConvBiasForwardImpl::AlgoBatchedMatmul::get_subopr_list(
         const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     const ConvBiasForwardImpl* conv_bias_opr =
             static_cast<const ConvBiasForwardImpl*>(opr);
-    CanonizedFilterMeta fm =
-            conv_bias_opr->check_layout_fwd(layouts[0], layouts[1], layouts[4]);
+    CanonizedFilterMeta fm = conv_bias_opr->make_canonized_filter_meta(
+            layouts[0].ndim, layouts[1]);
     auto&& config = sub_opr_config(fm, layouts[0], layouts[1], layouts[4],
                                    conv_bias_opr);
 
