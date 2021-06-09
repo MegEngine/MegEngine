@@ -96,8 +96,7 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
 
     if [ ${IN_CI} = "true" ] && [ ${machine} == "aarch64" ]; then
-        EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
-            -DMGE_WITH_TEST=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
+        EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
     else
         EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
             -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
@@ -278,10 +277,13 @@ fi
 set +x
 docker_args="-it"
 if [ -z "${CI_SERVER_NAME}" ]; then
-    Target="null"
+    CI_SERVER_NAME="null"
 fi
 if [ ${CI_SERVER_NAME} = "GitLab" ];then
     docker_args="-i"
+fi
+if [ ${IN_CI} = "true" ];then
+    EXTRA_CMAKE_FLAG=" ${EXTRA_CMAKE_FLAG} -DMGE_WITH_TEST=ON"
 fi
 docker run --rm ${docker_args} $TMPFS_ARGS \
     -e UID=${USERID} \
