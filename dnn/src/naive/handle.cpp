@@ -14,6 +14,7 @@
 
 #include "src/common/handle_impl.h"
 
+#include "src/naive/padding/opr_impl.h"
 #include "src/naive/adaptive_pooling/opr_impl.h"
 #include "src/naive/add_update/opr_impl.h"
 #include "src/naive/argmxx/opr_impl.h"

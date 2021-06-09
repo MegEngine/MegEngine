@@ -1171,3 +1171,29 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  add_fields('int32', 'qmax', '2147483647')
  )
 pdef('Fill').add_fields('float32', 'value', '0')
+
+
+PADDING_MODES = [Doc('REPLICATE', 'aaaaaa|abcdefgh|hhhhhhh'),
+                Doc('REFLECT', 'fedcba|abcdefgh|hgfedcb'),
+                Doc('CONSTANT', 'iiiiii|abcdefgh|iiiiiii')]
+(pdef('Padding').
+ add_fields('uint32', Doc('front_offset_dim0','offset in dim 0'), 0).
+ add_fields('uint32', Doc('front_offset_dim1','offset in dim 1'), 0).
+ add_fields('uint32', Doc('front_offset_dim2','offset in dim 2'), 0).
+ add_fields('uint32', Doc('front_offset_dim3','offset in dim 3'), 0).
+ add_fields('uint32', Doc('front_offset_dim4','offset in dim 4'), 0).
+ add_fields('uint32', Doc('front_offset_dim5','offset in dim 5'), 0).
+ add_fields('uint32', Doc('front_offset_dim6','offset in dim 6'), 0).
+ add_fields('uint32', Doc('back_offset_dim0', 'back offset in dim0'), 0).
+ add_fields('uint32', Doc('back_offset_dim1', 'back offset in dim1'), 0).
+ add_fields('uint32', Doc('back_offset_dim2', 'back offset in dim2'), 0).
+ add_fields('uint32', Doc('back_offset_dim3', 'back offset in dim3'), 0).
+ add_fields('uint32', Doc('back_offset_dim4', 'back offset in dim4'), 0).
+ add_fields('uint32', Doc('back_offset_dim5', 'back offset in dim5'), 0).
+ add_fields('uint32', Doc('back_offset_dim6', 'back offset in dim6'), 0).
+ add_fields('float32', Doc('padding_val','param of padding opr'), 0).
+ add_enum('PaddingMode', *PADDING_MODES,
+          name_field='padding_mode', default=2,
+          member_alias=[(i, 'PADDING_{}'.format(i)) for i in PADDING_MODES]
+          )
+)

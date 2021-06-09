@@ -217,7 +217,9 @@ private:
     cb(CheckHasInf) \
     cb(LSQForward) \
     cb(LSQBackward) \
-    cb(Fill)
+    cb(Fill) \
+    cb(PaddingForward) \
+    cb(PaddingBackward) 
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;

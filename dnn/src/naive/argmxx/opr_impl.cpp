@@ -16,7 +16,7 @@
 
 #include <numeric>
 
-namespace megdnn {
+namespace {
 
 using namespace megdnn;
 

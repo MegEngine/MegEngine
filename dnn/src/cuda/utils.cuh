@@ -78,7 +78,7 @@
 #if MEGDNN_THREADS_512
 #define NR_THREADS 512
 #define NR_THREADS_X 32
-#define NR_THREADS_Y 16
+#define NR_THREADS_Y 16 
 #else
 #define NR_THREADS 1024
 #define NR_THREADS_X 32

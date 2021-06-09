@@ -67,4 +67,9 @@ decl_opr('NvOf',
          inputs=['src'], params='NvOf',
          desc='opr Implements NVIDIA Optical Flow SDK.')
 
+decl_opr('Padding',
+         inputs=['src'],
+         params='Padding',
+         desc='tensor padding opr.')
+
 # vim: ft=python

@@ -24,6 +24,35 @@ MGB_SEREG_MODIFY_SUBTENSOR_OPR(IncrSubtensor);
 namespace mgb {
 
 namespace serialization {
+
+    template<>
+    struct OprMaker<opr::Padding, 1> {
+        using Opr = opr::Padding;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph, const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if(inputs.size() == 1) {
+                return Opr::make(inputs[0], param, config).node()->owner_opr();
+            }else{
+                return nullptr;
+            }
+        }
+    };
+
+    template<>
+    struct OprMaker<opr::PaddingBackward, 2> {
+        using Opr = opr::PaddingBackward;
+        using Param = Opr::Param;
+        static cg::OperatorNodeBase* make(const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph, const OperatorNodeConfig& config) {
+            MGB_MARK_USED_VAR(graph);
+            if(inputs.size() == 2) {
+                return Opr::make(inputs[0], inputs[1], param, config).node()->owner_opr();
+            }else{
+                return nullptr;
+            }
+        }
+    };
+
     template<>
     struct OprMaker<opr::Concat, 0>: public OprMakerVariadic<opr::Concat>{};
 
@@ -185,6 +214,10 @@ namespace opr {
     
     using RelayoutFormatV1 = opr::RelayoutFormat;
     MGB_SEREG_OPR(RelayoutFormatV1, 1);
+
+    MGB_SEREG_OPR(Padding, 1);
+
+    MGB_SEREG_OPR(PaddingBackward, 2);
 } // namespace opr
 
 } // namespace mgb

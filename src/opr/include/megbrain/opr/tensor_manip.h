@@ -635,6 +635,26 @@ MGB_DEFINE_OPR_CLASS(RelayoutFormat,
                 const OperatorNodeConfig &config = {});
         void init_output_format() override final;
 };
+
+/*!
+ * \brief padding the src tensor to dst tensor
+ */
+MGB_DEFINE_OPR_CLASS(PaddingForward, intl::MegDNNOprWrapperFwd<megdnn::PaddingForward>) // {
+    public:
+        PaddingForward(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, const Param& param = {}, const OperatorNodeConfig &config = {});
+};
+using Padding = PaddingForward;
+
+/*!
+ * \brief padding backward
+ */
+MGB_DEFINE_OPR_CLASS(PaddingBackward, intl::MegDNNOprWrapperBwd<megdnn::PaddingBackward>) // {
+    public:
+        PaddingBackward(VarNode* src, VarNode* in_for_shape, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, SymbolVar in_for_shape, const Param &param = {}, const OperatorNodeConfig &config = {});
+};
+
 } // opr
 } // mgb
 

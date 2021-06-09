@@ -1353,6 +1353,53 @@ public:
 protected:
     void check_exec(const TensorLayout& dst, size_t workspace_in_bytes);
 };
+
+/*!
+ * \brief standard padding operator
+ * Inputs must have the same dtype, and the output tensor shape must greater or equal than
+ * input tensor in every dimensions, the extra space will be fulled with m which default to
+ * be 0.
+ */
+
+class PaddingBase: public OperatorBase {
+    DEF_OPR_PARAM(Padding);
+    DEF_OPR_IMPL(PaddingBase, OperatorBase, 1, 1);
+public:
+    using Mode = Param::PaddingMode;
+protected:
+    SmallVector<size_t> get_offsets();
+    void check_exec(const TensorLayout& src, const TensorLayout& dst);
+};
+
+class PaddingForward: public PaddingBase {
+    DEF_OPR_IMPL(PaddingForward, PaddingBase, 1, 1);
+public:
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) = 0;
+    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+              _megdnn_workspace) {
+        return exec(src, dst);
+    }
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src, const TensorLayout& dst) = 0;
+    void deduce_layout(const TensorLayout &src, TensorLayout &dst);
+protected:
+    void forward_check_exec(const TensorLayout& src, const TensorLayout& dst);
+};
+
+using Padding = PaddingForward;
+
+class PaddingBackward: public PaddingBase {
+    DEF_OPR_IMPL(PaddingBackward, PaddingBase, 1, 1);
+public:
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) = 0;
+    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+              _megdnn_workspace) {
+        return exec(src, dst);
+    }
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src, const TensorLayout& dst) = 0;
+protected:
+    void backward_check_exec(const TensorLayout& src, const TensorLayout& dst);
+};
+
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"

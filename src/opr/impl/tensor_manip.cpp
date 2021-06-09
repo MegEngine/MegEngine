@@ -1608,4 +1608,30 @@ void RelayoutFormat::init_output_format() {
 // f}}}
 //
 
+
+/* f{{{ ======================= PaddingForward ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(PaddingForward);
+MEGDNN_OPR_INIT1(PaddingForward, "padding")
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(PaddingForward) {
+    mgb_assert(opr.input().size() == 1);
+    if (wrt_idx == 0) {
+        SymbolVar grad = PaddingBackward::make(out_grad[0], opr.input(0), opr.param());
+        return grad.node();
+    } else
+        return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+// f}}}
+
+/* f{{{ ======================= PaddingBackward ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(PaddingBackward);
+MEGDNN_OPR_INIT2(PaddingBackward, "padding_backward", 1, false);
+
+// f}}}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
