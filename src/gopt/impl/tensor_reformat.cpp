@@ -3833,8 +3833,9 @@ void PaddingChannelPass::apply(OptState& opt) const {
                    inp->dtype().enumv() == DTypeEnum::QuantizedS32);
         TensorShape shape{inp->shape()[0], pad_channels, inp->shape()[2],
                           inp->shape()[3]};
-        std::shared_ptr<HostTensorND> host_val = std::make_shared<HostTensorND>(
-                inp->comp_node(), shape, inp->dtype());
+        std::shared_ptr<HostTensorND> host_val =
+                std::make_shared<HostTensorND>(inp->comp_node(), inp->dtype());
+        host_val->resize(shape);
         auto ptr = host_val->raw_ptr();
         size_t size_bytes =
                 TensorLayout{shape, inp->dtype()}.span().dist_byte();
@@ -3853,8 +3854,9 @@ void PaddingChannelPass::apply(OptState& opt) const {
                    inp->dtype().enumv() == DTypeEnum::QuantizedS32);
         TensorShape shape{pad_channels, inp->shape()[1], inp->shape()[2],
                           inp->shape()[3]};
-        std::shared_ptr<HostTensorND> host_val = std::make_shared<HostTensorND>(
-                inp->comp_node(), shape, inp->dtype());
+        std::shared_ptr<HostTensorND> host_val =
+                std::make_shared<HostTensorND>(inp->comp_node(), inp->dtype());
+        host_val->resize(shape);
         auto ptr = host_val->raw_ptr();
         size_t size_bytes =
                 TensorLayout{shape, inp->dtype()}.span().dist_byte();

@@ -443,7 +443,7 @@ TensorND<TensorStorage>::name
 
 DEF(resize, &)(const TensorShape& shape) {
     mgb_assert(m_layout.dtype.valid());
-    m_layout = TensorLayout(shape, m_layout.dtype);
+    m_layout.init_contiguous_stride(shape);
     m_storage.ensure_size(m_layout.span().dist_byte());
     return static_cast<ChainReturnType&>(*this);
 }
@@ -479,7 +479,7 @@ DEF(storage, &)(const TensorStorage &storage) {
 
 DEF(dtype, &)(DType dtype) {
     if (m_layout.dtype != dtype) {
-        m_layout.dtype = dtype;
+        m_layout.modify_dtype_inplace(dtype);
         m_layout.ndim = 0;
     }
     return static_cast<ChainReturnType&>(*this);

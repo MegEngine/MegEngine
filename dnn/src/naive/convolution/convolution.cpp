@@ -270,8 +270,8 @@ ConvolutionForwardImpl:: get_all_algorithms(const TensorLayout &,
 }
 
 ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_heuristic(
-        const TensorLayout& /* src */, const TensorLayout& /* diff */,
-        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
+        const TensorLayout& /* src */, const TensorLayout& /* filter */,
+        const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
         const AlgoAttribute& positive_attr,
         const AlgoAttribute& negative_attr) {
     auto algo =

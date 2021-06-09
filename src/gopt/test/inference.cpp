@@ -1208,6 +1208,85 @@ TEST(TestGoptInference, ConvertFormatNHWCD4) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+#if MGB_OPENCL
+#include "megcore_opencl.h"
+
+#define REQUIRE_OPENCL()                                                 \
+    do {                                                                 \
+        if (!CompNode::get_device_count(CompNode::DeviceType::OPENCL)) { \
+            return;                                                      \
+        }                                                                \
+    } while (0)
+
+TEST(TestGoptInference, ConvertFormatNHWCD4OpenCL) {
+    REQUIRE_OPENCL();
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("openclx");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+    };
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_x = gen({8, 8, 8, 8}, cn);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 0;
+    auto w1 = mkcvar("w1", {4, 8, 3, 3}),
+         conv = opr::Convolution::make(x, w1, param);
+    auto shape_of = opr::GetVarShape::make(conv);
+    auto subtensor = opr::Subtensor::make(
+            shape_of, {opr::Subtensor::AxisIndexer::make_interval(
+                              0, x.make_scalar(2), None, x.make_scalar(1))});
+
+    opr::Resize::Param param_resize;
+    param_resize.format = opr::Resize::Param::Format::NCHW;
+    auto resize = opr::ResizeForward::make(conv, subtensor * 2, param_resize);
+    auto mat = mkcvar("mat", {8, 3, 3}),
+         warp = opr::WarpPerspectiveForward::make(
+                 resize, mat, nullptr, cg::var_from_tensor_shape(x, {4, 4}));
+
+    auto b = mkvar("b", {1, 4, 1, 1}),
+         elem = opr::Elemwise::make({warp + b},
+                                    opr::Elemwise::Param::Mode::RELU);
+    param.pad_h = param.pad_w = 1;
+    auto w2 = mkcvar("w2", {4, 4, 3, 3}),
+         y = opr::Convolution::make(elem, w2, param),
+         z = opr::AxisAddRemove::make(
+                 y, {opr::AxisAddRemove::AxisDesc::make_add(0)});
+
+    SymbolVar y_opt, z_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    unpack_vector(gopt::optimize_for_inference({z}, options), z_opt);
+
+    ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
+              find_opr<opr::Convolution>(y_opt).param().format);
+
+    ASSERT_EQ(TensorFormat::Type::DEFAULT,
+              find_opr<opr::AxisAddRemove>(z_opt).input(0)->format().type());
+    ASSERT_EQ(4, find_opr<opr::AxisAddRemove>(z_opt).input(0)->shape().ndim);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+
+    *host_x = *gen({8, 8, 16, 16}, cn);
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+}
+#undef REQUIRE_OPENCL
+#endif
+
 TEST(TestGoptInference, ConvertFormatNHWCD4Elemwise) {
     // hwcd4 is only supported in naive handle
     NaiveMegDNNHandleScope naive_megdnn_handle;
