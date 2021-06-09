@@ -223,7 +223,7 @@ enum class LogLevel { kInfo, kWarn, kDebug, kFatal };
 void Log(LogLevel level, char const* file, int line, char const* func,
         char const *fmt, ...) {
 
-    std::string new_fmt("[megwave] ");
+    std::string new_fmt("[wave] ");
     new_fmt.append(fmt);
     va_list ap;
     va_start(ap, fmt);

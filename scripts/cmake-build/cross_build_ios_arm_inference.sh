@@ -9,6 +9,7 @@ ARCH=arm64
 REMOVE_OLD_BUILD=false
 NINJA_VERBOSE=OFF
 NINJA_DRY_RUN=OFF
+SPECIFIED_TARGET="install"
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
@@ -22,13 +23,14 @@ function usage() {
     echo "-r : remove old build dir before make, default off"
     echo "-v : ninja with verbose and explain, default off"
     echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
+    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -k)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
     exit -1
 }
 
-while getopts "nvrkhdfa:" arg
+while getopts "nvrkhdfa:e:" arg
 do
     case $arg in
         d)
@@ -75,6 +77,9 @@ do
             echo "config NINJA_DRY_RUN=ON"
             NINJA_DRY_RUN=ON
             ;;
+        e)
+            SPECIFIED_TARGET=$OPTARG
+            ;;
         ?)
             echo "unkonw argument"
             usage
@@ -86,6 +91,7 @@ echo "build config summary:"
 echo "BUILD_TYPE: $BUILD_TYPE"
 echo "MGE_ARMV8_2_FEATURE_FP16: $MGE_ARMV8_2_FEATURE_FP16"
 echo "MGE_DISABLE_FLOAT16: $MGE_DISABLE_FLOAT16"
+echo "SPECIFIED_TARGET: ${SPECIFIED_TARGET}"
 echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
 
@@ -139,7 +145,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         $SRC_DIR "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "install" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
     bash -c "${NINJA_CMD}"
 }
 
