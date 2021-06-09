@@ -749,6 +749,18 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_CUDNN_CONVOLUTION) {
                 .set_param(arg.param)
                 .execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+                {{16, 16, 3, 3}, {144, 9, 3, 1}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+        });
+    }
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_INPLACE_MATMUL) {
@@ -790,6 +802,18 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_INPLACE_MATMUL) {
         checker.set_param(cur_param)
                 .execs({{2, 3, 3, 16}, {5, 3, 3, 3}, {1, 5, 1, 1}, {}, {}})
                 .execs({{2, 2, 8, 3}, {3, 2, 3, 3}, {1, 3, 1, 1}, {}, {}});
+    }
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+                {{16, 16, 3, 3}, {144, 9, 3, 1}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+        });
     }
 }
 
@@ -834,6 +858,18 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL) {
         checker.set_param(cur_param)
                 .execs({{2, 3, 3, 16}, {5, 3, 3, 3}, {1, 5, 1, 1}, {}, {}})
                 .execs({{2, 2, 8, 3}, {3, 2, 3, 3}, {1, 3, 1, 1}, {}, {}});
+    }
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+                {{16, 16, 3, 3}, {144, 9, 3, 1}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+        });
     }
 }
 
@@ -880,6 +916,21 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_8x8x32) {
                 .execs({{2, 3, 16, 3}, {5, 3, 3, 3}, {1, 1, 1, 5}, {}, {}})
                 .execs({{2, 8, 3, 2}, {3, 3, 3, 2}, {1, 1, 1, 3}, {}, {}});
     }
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.format = param::ConvBias::Format::NHWC;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 7, 7, 16}, {1568, 224, 32, 1}, dtype::QuantizedS8{1.2f}},
+                {{16, 3, 3, 16}, {144, 48, 16, 1}, dtype::QuantizedS8{1.3f}},
+                {{}, {}, dtype::QuantizedS32{1.2f * 1.3f}},
+                {{}, {}, dtype::QuantizedS8{1.1f}},
+                {{2, 7, 7, 16},
+                 {1568, 224, 32, 1},
+                 dtype::QuantizedS32{1.2f * 1.3f}},
+        });
+    }
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_NCHW4) {
@@ -913,6 +964,21 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_MATMUL_NCHW4) {
     checker.exec({{1, 4, 2, 2, 4}, {16, 4, 3, 3, 4}, {1, 4, 1, 1, 4}, {}, {}});
     checker.exec(
             {{8, 64, 12, 12, 4}, {256, 64, 3, 3, 4}, {1, 64, 1, 1, 4}, {}, {}});
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.format = ConvBias::Param::Format::NCHW4;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 4, 7, 7, 4}, {1568, 196, 28, 4, 1}, dtype::QuantizedS8{1.2f}},
+                {{16, 4, 3, 3, 4}, {144, 36, 12, 4, 1}, dtype::QuantizedS8{1.3f}},
+                {{}, {}, dtype::QuantizedS32{1.2f * 1.3f}},
+                {{}, {}, dtype::QuantizedS8{1.1f}},
+                {{2, 4, 7, 7, 4},
+                 {1568, 196, 28, 4, 1},
+                 dtype::QuantizedS32{1.2f * 1.3f}},
+        });
+    }
 }
 
 TEST_F(CUDA, CONV_BIAS_FORWARD_BATCHED_MATMUL) {
@@ -938,6 +1004,17 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_BATCHED_MATMUL) {
     for (auto&& arg : args) {
         checker.set_param(arg.param);
         checker.execs({arg.src, arg.filter, arg.bias, {}, {}});
+    }
+    //! noncontiguous case
+    {
+        param::ConvBias param;
+        checker.set_param(param).execl(TensorLayoutArray{
+                {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::Float32()},
+                {{16, 16, 1, 1}, {16, 1, 1, 1}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{}, {}, dtype::Float32()},
+                {{2, 16, 7, 7}, {784, 49, 7, 1}, dtype::Float32()},
+        });
     }
 }
 

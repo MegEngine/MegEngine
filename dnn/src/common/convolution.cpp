@@ -595,8 +595,6 @@ ConvolutionBase<Parameter>::deduce_layout_fwd(const TensorLayout& src,
                                               TensorLayout& dst) const {
     auto errmsg = [&]() { return get_errmsg(src, filter, dst, param()); };
     MEGDNN_MARK_USED_VAR(errmsg);
-    megdnn_assert_contiguous(src);
-    megdnn_assert_contiguous(filter);
     megdnn_assert(src.ndim >= 3_z, "%s", errmsg().c_str());
     megdnn_assert(((src.dtype.enumv() == filter.dtype.enumv()) ||
                    (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
@@ -976,6 +974,8 @@ ConvolutionBase<param::Convolution>::CanonizedFilterMeta
 ConvolutionBase<param::Convolution>::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) const {
+    megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(filter);
     TensorLayout dst_expected;
     dst_expected.dtype = dst.dtype;
 
@@ -989,6 +989,8 @@ ConvolutionBase<param::ConvBias>::CanonizedFilterMeta
 ConvolutionBase<param::ConvBias>::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) const {
+    megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(filter);
     TensorLayout dst_expected;
     dst_expected.dtype = dst.dtype;
 
@@ -1002,6 +1004,8 @@ ConvolutionBase<param::BatchConvBias>::CanonizedFilterMeta
 ConvolutionBase<param::BatchConvBias>::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) const {
+    megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(filter);
     TensorLayout dst_expected;
     dst_expected.dtype = dst.dtype;
 

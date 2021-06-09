@@ -12,6 +12,7 @@
 #include "megdnn/handle.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/general.h"
+#include "megdnn/oprs/nn.h"
 #include "megdnn/oprs/nn_int.h"
 #include "src/common/utils.h"
 

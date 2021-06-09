@@ -116,8 +116,9 @@ ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         const TensorLayout& filter, const TensorLayout& bias,
         const TensorLayout& z, const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter)
-        : SizeArgs(o, src, filter, o->check_layout_fwd(src, filter, dst), bias,
-                   z, dst, preprocessed_filter) {}
+        : SizeArgs(o, src, filter,
+                   o->make_canonized_filter_meta(src.ndim, filter), bias, z,
+                   dst, preprocessed_filter) {}
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvBiasForwardImpl* o, const TensorLayout& src,

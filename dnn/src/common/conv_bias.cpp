@@ -11,11 +11,131 @@
  */
 
 #include "src/common/conv_bias.h"
-#include "megdnn/oprs/nn.h"
 #include "src/common/utils.h"
 #include "src/common/opr_delegate.h"
 
 namespace megdnn {
+namespace {
+
+void do_check_exec_common(
+        ConvBiasForward* opr, const TensorLayout& src,
+        const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst,
+        size_t workspace_in_bytes,
+        const ConvBiasForward::PreprocessedFilter* preprocessed_filter) {
+    megdnn_assert((src.dtype.enumv() == filter.dtype.enumv()) ||
+                  (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+                   filter.dtype.enumv() == DTypeEnum::QuantizedS4));
+    // check compatibility of bias's scale
+    if (src.dtype.category() == DTypeCategory::QUANTIZED) {
+        if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
+            float scale_expected = mul_scale(src.dtype, filter.dtype);
+            float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
+            megdnn_assert(std::abs(scale_expected - scale_bias) < 1e-6,
+                          "scale_src: %f scale_filter: %f scale_bias: %f",
+                          get_scale(src.dtype), get_scale(filter.dtype),
+                          scale_bias);
+        } else {
+            megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
+        }
+    }
+
+    megdnn_assert_contiguous(bias);
+    auto required_workspace_in_bytes = opr->get_workspace_in_bytes(
+            src, filter, bias, z, dst, preprocessed_filter);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes,
+                  "worksapce have size of %zu, but need %zu",
+                  workspace_in_bytes, required_workspace_in_bytes);
+    if (bias.ndim != 0) {
+        //! bias.layout == dst.layout failed, no assert information
+        auto check_eq = [](const TensorLayout& bias, const TensorLayout& dst) {
+            if (dst.dtype.category() == DTypeCategory::QUANTIZED) {
+                return bias.eq_shape(dst);
+            } else {
+                return bias.eq_layout(dst);
+            }
+        };
+        if (check_eq(bias, dst)) {
+            return;
+        }
+        if (opr->param().format == param::ConvBias::Format::NCHW ||
+            opr->param().format == param::ConvBias::Format::NCHW4_NCHW) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+        } else if (opr->param().format == param::ConvBias::Format::NHWC) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == 1);
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == dst.shape[3], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+        } else if (opr->param().format == param::ConvBias::Format::NCHW4 ||
+                   opr->param().format == param::ConvBias::Format::NCHW44 ||
+                   opr->param().format == param::ConvBias::Format::NCHW44_DOT ||
+                   opr->param().format ==
+                           param::ConvBias::Format::NCHW32_NCHW4) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 4);
+        } else if (opr->param().format == param::ConvBias::Format::NCHW8 ||
+                   opr->param().format == param::ConvBias::Format::NCHW88) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 8);
+        } else if (opr->param().format == param::ConvBias::Format::NCHW32 ||
+                   opr->param().format ==
+                           param::ConvBias::Format::NCHW4_NCHW32) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 32);
+        } else if (opr->param().format == param::ConvBias::Format::CHWN4) {
+            megdnn_assert(bias.shape[0] == dst.shape[0], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[1] == 1);
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 4);
+        } else if (opr->param().format == param::ConvBias::Format::NCHW64) {
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[2] == 1);
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 64);
+        } else {
+            megdnn_assert(opr->param().format ==
+                          param::ConvBias::Format::NHWCD4);
+            megdnn_assert(bias.shape[0] == 1);
+            megdnn_assert(bias.shape[1] == 1);
+            megdnn_assert(bias.shape[2] == dst.shape[2], "bias:%s, dst:%s",
+                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(bias.shape[3] == 1);
+            megdnn_assert(bias.shape[4] == 4);
+        }
+    }
+
+    if (z.ndim != 0) {
+        megdnn_assert(opr->param().format !=
+                      param::ConvBias::Format::NCHW4_NCHW32);
+        megdnn_assert(opr->param().format !=
+                      param::ConvBias::Format::NCHW32_NCHW4);
+        megdnn_assert(z.dtype.enumv() == dst.dtype.enumv());
+        megdnn_assert(z.eq_shape(dst));
+    }
+}
+
+}  // namespace
 
 void ConvBiasForward::deduce_dtype(DType src, DType filter, DType /* bias */,
                                    DType /* z */, DType& dst) {
@@ -35,111 +155,24 @@ ConvBiasForward::CanonizedFilterMeta ConvBiasForward::check_exec(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, size_t workspace_in_bytes,
         const PreprocessedFilter* preprocessed_filter) {
-    megdnn_assert((src.dtype.enumv() == filter.dtype.enumv()) ||
-                  (src.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
-                   filter.dtype.enumv() == DTypeEnum::QuantizedS4));
-    // check compatibility of bias's scale
-    if (src.dtype.category() == DTypeCategory::QUANTIZED) {
-        if (bias.dtype.enumv() == DTypeEnum::QuantizedS32) {
-            float scale_expected = mul_scale(src.dtype, filter.dtype);
-            float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
-            megdnn_assert(std::abs(scale_expected - scale_bias) < 1e-6,
-                          "scale_src: %f scale_filter: %f scale_bias: %f",
-                          get_scale(src.dtype), get_scale(filter.dtype),
-                          scale_bias);
-        } else {
-            megdnn_assert(bias.dtype.enumv() == DTypeEnum::Float32);
-        }
-    }
-
+    do_check_exec_common(this, src, filter, bias, z, dst, workspace_in_bytes,
+                         preprocessed_filter);
     auto ret = check_layout_fwd(src, filter, dst);
-    megdnn_assert_contiguous(bias);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(
-            src, filter, bias, z, dst, preprocessed_filter);
-    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes,
-                  "worksapce have size of %zu, but need %zu",
-                  workspace_in_bytes, required_workspace_in_bytes);
-    if (bias.ndim != 0) {
-        //! bias.layout == dst.layout failed, no assert information
-        auto check_eq = [](const TensorLayout& bias, const TensorLayout& dst) {
-            if (dst.dtype.category() == DTypeCategory::QUANTIZED) {
-                return bias.eq_shape(dst);
-            } else {
-                return bias.eq_layout(dst);
-            }
-        };
-        if (check_eq(bias, dst))
-            return ret;
-        if (param().format == param::ConvBias::Format::NCHW ||
-            param().format == param::ConvBias::Format::NCHW4_NCHW) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-        } else if (param().format == param::ConvBias::Format::NHWC) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == 1);
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == dst.shape[3], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-        } else if (param().format == param::ConvBias::Format::NCHW4 ||
-                   param().format == param::ConvBias::Format::NCHW44 ||
-                   param().format == param::ConvBias::Format::NCHW44_DOT ||
-                   param().format == param::ConvBias::Format::NCHW32_NCHW4) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 4);
-        } else if (param().format == param::ConvBias::Format::NCHW8 ||
-                   param().format == param::ConvBias::Format::NCHW88 ) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 8);
-        } else if (param().format == param::ConvBias::Format::NCHW32 ||
-                   param().format == param::ConvBias::Format::NCHW4_NCHW32) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 32);
-        } else if (param().format == param::ConvBias::Format::CHWN4) {
-            megdnn_assert(bias.shape[0] == dst.shape[0], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[1] == 1);
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 4);
-        } else if (param().format == param::ConvBias::Format::NCHW64) {
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[2] == 1);
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 64);
-        } else {
-            megdnn_assert(param().format == param::ConvBias::Format::NHWCD4);
-            megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == 1);
-            megdnn_assert(bias.shape[2] == dst.shape[2], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
-            megdnn_assert(bias.shape[3] == 1);
-            megdnn_assert(bias.shape[4] == 4);
-        }
-    }
+    return ret;
+}
 
-    if (z.ndim != 0) {
-        megdnn_assert(param().format != param::ConvBias::Format::NCHW4_NCHW32);
-        megdnn_assert(param().format != param::ConvBias::Format::NCHW32_NCHW4);
-        megdnn_assert(z.dtype.enumv() == dst.dtype.enumv());
-        megdnn_assert(z.eq_shape(dst));
-    }
+ConvBiasForward::CanonizedFilterMeta
+ConvBiasForward::check_exec_allow_noncontiguous(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst, size_t workspace_in_bytes,
+        const PreprocessedFilter* preprocessed_filter) {
+    do_check_exec_common(this, src, filter, bias, z, dst, workspace_in_bytes,
+                         preprocessed_filter);
+    TensorLayout dst_expected;
+    dst_expected.dtype = dst.dtype;
+    auto ret = deduce_layout_fwd(src, filter, dst_expected);
+    megdnn_assert_eq_shape(dst_expected, dst);
     return ret;
 }
 

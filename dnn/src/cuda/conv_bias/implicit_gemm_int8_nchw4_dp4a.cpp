@@ -20,6 +20,10 @@ using namespace cuda;
 
 bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     if (args.bias_layout->ndim <= 0)
         return false;
 

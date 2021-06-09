@@ -25,6 +25,10 @@ using namespace activation_u4;
 #if CUDA_VERSION >= 10000
 bool ConvBiasForwardImpl::AlgoQUInt4x4x32WMMA::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     if (args.z_layout->ndim > 0)
         return false;
 

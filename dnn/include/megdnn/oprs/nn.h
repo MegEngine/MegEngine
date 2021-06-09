@@ -511,6 +511,12 @@ protected:
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst, size_t workspace_in_bytes,
             const PreprocessedFilter* preprocessed_filter);
+
+    CanonizedFilterMeta check_exec_allow_noncontiguous(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst, size_t workspace_in_bytes,
+            const PreprocessedFilter* preprocessed_filter);
 };
 using ConvBias = ConvBiasForward;
 

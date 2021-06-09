@@ -87,6 +87,7 @@ public:
             const AlgoAttribute& negative_attr) override;
 
 private:
+
     static AlgoPack sm_algo_pack;
 };
 

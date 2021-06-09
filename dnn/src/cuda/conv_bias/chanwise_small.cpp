@@ -30,6 +30,10 @@ inline bool is_available_small(const chanwise::Param& param) {
 
 bool ConvBiasForwardImpl::AlgoChanwiseSmall::is_available(
         const SizeArgs& args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.dst_layout->is_contiguous()) {
+        return false;
+    }
     if (args.src_layout->dtype == args.filter_layout->dtype &&
         args.src_layout->dtype == dtype::BFloat16()) {
         return false;
