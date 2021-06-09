@@ -31,10 +31,10 @@ const std::string polyline =
         "<polyline points=\"{}\" style=\"fill:none;stroke:{};stroke-width:{}\" "
         "/>";
 const std::string opr_info =
-        "mge:type=\"opr\" mge:id=\"{}\" mge:size=\"{}\" mge:name=\"{}\"";
+        "tag:type=\"opr\" tag:id=\"{}\" tag:size=\"{}\" tag:name=\"{}\"";
 const std::string chunk_info =
-        "mge:type=\"chunk\" mge:id=\"{}\" mge:time=\"{}\" mge:addr=\"{}\" "
-        "mge:size=\"{}\" mge:owner_var_name=\"{}\"";
+        "tag:type=\"chunk\" tag:id=\"{}\" tag:time=\"{}\" tag:addr=\"{}\" "
+        "tag:size=\"{}\" tag:owner_var_name=\"{}\"";
 const std::string animate =
         "<animate attributeName=\"opacity\" from=\"0\" to=\"1\" "
         "begin=\"{}.mouseover\" fill=\"freeze\" dur=\"1s\"/>\n<animate "

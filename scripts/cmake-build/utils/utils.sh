@@ -69,15 +69,21 @@ function try_remove_old_build() {
 }
 
 function config_ninja_target_cmd() {
-    NINJA_CMD="${NINJA_BASE} all"
     if [ $# -eq 4 ]; then
         _NINJA_VERBOSE=$1
         _BUILD_DEVELOP=$2
-        _INSTALL_ALL_TARGET=$3
+        _NINJA_TARGET=$3
         _NINJA_DRY_RUN=$4
     else
         echo "err call config_ninja_target_cmd"
         exit -1
+    fi
+    if [ -z "${_NINJA_TARGET}" ]; then
+        NINJA_CMD="${NINJA_BASE} all"
+    elif [[ ${_NINJA_TARGET} =~ "install" ]]; then
+        NINJA_CMD="${NINJA_BASE} all && ${NINJA_BASE} ${_NINJA_TARGET}"
+    else
+        NINJA_CMD="${NINJA_BASE} ${_NINJA_TARGET}"
     fi
 
     if [ ${_NINJA_DRY_RUN} = "ON" ]; then
@@ -89,9 +95,6 @@ function config_ninja_target_cmd() {
         if [ ${_BUILD_DEVELOP} = "ON" ]; then
             echo "add develop target"
             NINJA_CMD="${NINJA_CMD} && ${NINJA_BASE} develop"
-        fi
-        if [ -n "${_INSTALL_ALL_TARGET}" ]; then
-            NINJA_CMD="${NINJA_CMD} && ${NINJA_BASE} ${_INSTALL_ALL_TARGET}"
         fi
     fi
 
