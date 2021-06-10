@@ -18,7 +18,6 @@ from ..core._trace_option import use_symbolic_shape
 from ..core._wrap import Device
 from ..core.ops import builtin
 from ..core.tensor.array_method import ArrayMethodMixin
-from ..core.tensor.megbrain_graph import OutputNode
 from .comp_graph_tools import replace_vars
 from .module_stats import (
     preprocess_receptive_field,
@@ -106,9 +105,7 @@ class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
         return id(self)
 
     def numpy(self):
-        o = OutputNode(self.var)
-        self.graph.compile(o.outputs).execute()
-        return o.get_value().numpy()
+        return super().numpy()
 
     def _reset(self, other):
         if not isinstance(other, VarNode):
@@ -141,15 +138,13 @@ class OpNode(NetworkNode):
 
     @property
     def id(self):
-        if self._opr is not None:
-            return self._opr.id
         return id(self)
 
     @property
     def priority(self):
         if self._opr is not None:
-            return self._opr.priority
-        return 0
+            return (self._opr.priority, self._opr.id)
+        return (0, 0)
 
     @classmethod
     def load(cls, opr):

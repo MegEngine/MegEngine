@@ -10,7 +10,7 @@ import copy
 
 import numpy as np
 import pytest
-from utils import make_tensor
+from utils import get_var_value, make_tensor
 
 from megengine.core.tensor.dtype import get_scale, get_zero_point, qint8, quint8
 from megengine.tensor import Parameter, Tensor
@@ -55,7 +55,12 @@ def test_matmul(is_varnode):
     A = make_tensor(np.random.rand(5, 7).astype("float32"), network)
     B = make_tensor(np.random.rand(7, 10).astype("float32"), network)
     C = A @ B
-    np.testing.assert_almost_equal(C.numpy(), A.numpy() @ B.numpy(), decimal=6)
+    if is_varnode:
+        np.testing.assert_almost_equal(
+            get_var_value(C), get_var_value(A) @ get_var_value(B), decimal=6
+        )
+    else:
+        np.testing.assert_almost_equal(C.numpy(), A.numpy() @ B.numpy(), decimal=6)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
@@ -116,11 +121,17 @@ def test_set_subtensor(is_varnode):
 
     x = make_tensor([1, 2, 3], network)
     x[:] = [1, 1, 1]
-    np.testing.assert_almost_equal(x.numpy(), [1, 1, 1], decimal=6)
+    np.testing.assert_almost_equal(
+        get_var_value(x) if is_varnode else x.numpy(), [1, 1, 1], decimal=6
+    )
     x[[0, 2]] = [3, 2]
-    np.testing.assert_almost_equal(x.numpy(), [3, 1, 2], decimal=6)
+    np.testing.assert_almost_equal(
+        get_var_value(x) if is_varnode else x.numpy(), [3, 1, 2], decimal=6
+    )
     x[1:3] = [4, 5]
-    np.testing.assert_almost_equal(x.numpy(), [3, 4, 5], decimal=6)
+    np.testing.assert_almost_equal(
+        get_var_value(x) if is_varnode else x.numpy(), [3, 4, 5], decimal=6
+    )
 
 
 def test_computing_with_numpy_array():

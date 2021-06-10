@@ -5,6 +5,7 @@ import numpy as np
 import megengine.core.tensor.megbrain_graph as G
 import megengine.utils.comp_graph_tools as cgtools
 from megengine import tensor
+from megengine.core.tensor.megbrain_graph import OutputNode
 from megengine.jit import trace
 from megengine.utils.network_node import VarNode
 
@@ -12,8 +13,10 @@ from megengine.utils.network_node import VarNode
 def _default_compare_fn(x, y):
     if isinstance(x, np.ndarray):
         np.testing.assert_allclose(x, y, rtol=1e-6)
-    else:
+    elif isinstance(x, tensor):
         np.testing.assert_allclose(x.numpy(), y, rtol=1e-6)
+    else:
+        np.testing.assert_allclose(get_var_value(x), y, rtol=1e-6)
 
 
 def make_tensor(x, network=None, device=None):
@@ -23,6 +26,15 @@ def make_tensor(x, network=None, device=None):
         return network.make_const(x, device=device)
     else:
         return tensor(x, device=device)
+
+
+def get_var_value(x):
+    try:
+        o = OutputNode(x.var)
+        o.graph.compile(o.outputs).execute()
+        return o.get_value().numpy()
+    except RuntimeError:
+        raise ValueError("value invalid!")
 
 
 def opr_test(

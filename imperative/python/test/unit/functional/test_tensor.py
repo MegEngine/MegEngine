@@ -11,7 +11,7 @@ import platform
 
 import numpy as np
 import pytest
-from utils import make_tensor, opr_test
+from utils import get_var_value, make_tensor, opr_test
 
 import megengine.functional as F
 from megengine import tensor
@@ -75,8 +75,12 @@ def test_condtake(is_varnode):
     xx = make_tensor(x, network)
     yy = make_tensor(y, network)
     val, idx = F.cond_take(yy, xx)
-    np.testing.assert_equal(val.numpy(), x[y])
-    np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
+    if is_varnode:
+        np.testing.assert_equal(get_var_value(val), x[y])
+        np.testing.assert_equal(get_var_value(idx), np.where(y.reshape(-1))[0])
+    else:
+        np.testing.assert_equal(val.numpy(), x[y])
+        np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
