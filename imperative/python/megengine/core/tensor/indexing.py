@@ -18,9 +18,9 @@ from .utils import astensor1d, isscalar, make_shape_tuple
 
 
 def remove_ellipsis(tensor, tuple_val):
-    ndim_sum = tensor.ndim
     cur_sum = 0
     pos = -1
+    has_unkown_ndim_bool_index = False
     for i_idx, i in enumerate(tuple_val):
         if i is Ellipsis:
             for j in tuple_val[:i_idx:-1]:
@@ -28,10 +28,28 @@ def remove_ellipsis(tensor, tuple_val):
                     raise IndexError("only one ellipsis is allowed")
             pos = i_idx
         else:
-            cur_sum += i.ndim if hasattr(i, "ndim") else 1
+            try:
+                cur_sum += (
+                    i.ndim
+                    if hasattr(i, "dtype")
+                    and i.dtype == np.bool_
+                    and hasattr(i, "ndim")
+                    else 1
+                )
+            except ValueError:
+                has_unkown_ndim_bool_index = True
+
     if pos == -1:
         return tuple_val
     else:
+        if has_unkown_ndim_bool_index:
+            raise IndexError(
+                "Does not support bool index with unknown shape when using Ellipsis"
+            )
+        try:
+            ndim_sum = tensor.ndim
+        except ValueError:
+            raise IndexError("Does not support Ellipsis when tensor's ndim is unknown.")
         return (
             tuple_val[:pos]
             + (slice(None, None, None),) * (ndim_sum - cur_sum)
@@ -41,7 +59,11 @@ def remove_ellipsis(tensor, tuple_val):
 
 # XXX: assume same results during trace
 def check_bool_index(tensor, tuple_val):
-    cur_shape = make_shape_tuple(tensor.shape)
+    try:
+        cur_shape = make_shape_tuple(tensor.shape)
+    except ValueError:
+        return tensor, tuple_val
+
     new_tuple_val = []
     offset = 0
     tdim = 0
@@ -92,20 +114,31 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
     ndim_indexed_scalar = 0
     for i in tuple_val:
         if not i is Ellipsis:
-            ndim_indexed += 1 if not hasattr(i, "ndim") else i.ndim
+            ndim_indexed += (
+                i.ndim
+                if hasattr(i, "dtype") and i.dtype == np.bool_ and hasattr(i, "ndim")
+                else 1
+            )
             if isscalar(i):
                 ndim_indexed_scalar += 1
-
-    if ndim_indexed > inp.ndim:
-        raise IndexError(
-            "too many indices for tensor: tensor is {}-dimensional, but {} were indexed".format(
-                inp.ndim, ndim_indexed
+    ret_scalar = False
+    try:
+        ret_scalar = ndim_indexed_scalar == inp.ndim
+    except ValueError:
+        # inp.ndim is unknown
+        pass
+    else:
+        if ndim_indexed > inp.ndim:
+            raise IndexError(
+                "too many indices for tensor: tensor is {}-dimensional, but {} were indexed".format(
+                    inp.ndim, len(tuple_val)
+                )
             )
-        )
 
     tuple_val = remove_ellipsis(inp, tuple_val)
     use_subtensor = True
-    inp, tuple_val = check_bool_index(inp, tuple_val)
+    if inp.shape is not None:
+        inp, tuple_val = check_bool_index(inp, tuple_val)
 
     new_axes = []
     tensors = []
@@ -186,7 +219,7 @@ def unpack_getitem(inp, tuple_val, *, allow_newaxis=True):
         items.append(item)
     if new_axes:
         raise IndexError("newaxis is not allowed here")
-    return inp, tensors, items, use_subtensor, ndim_indexed_scalar == inp.ndim
+    return inp, tensors, items, use_subtensor, ret_scalar
 
 
 def try_condtake(tensor, index):
@@ -249,16 +282,21 @@ def setitem(tensor, index, value):
         op = builtin.IndexingMultiAxisVec(items=items)
 
     (tmp_result,) = apply(op, tensor, *tensors)
-
-    for i in range(min(len(value.shape), len(tmp_result.shape))):
-        if (value.shape[-i - 1] != 1) & (
-            value.shape[-i - 1] != tmp_result.shape[-i - 1]
-        ):
-            raise ValueError(
-                "cannot copy tensor with shape {} to subtensor with shape {}".format(
-                    value.shape, tmp_result.shape
+    try:
+        value_shape = value._tuple_shape
+        tmp_result_shape = tmp_result._tuple_shape
+    except ValueError:
+        pass
+    else:
+        for i in range(min(len(value_shape), len(tmp_result_shape))):
+            if (value_shape[-i - 1] != 1) & (
+                value_shape[-i - 1] != tmp_result_shape[-i - 1]
+            ):
+                raise ValueError(
+                    "cannot copy tensor with shape {} to subtensor with shape {}".format(
+                        value_shape, tmp_result_shape
+                    )
                 )
-            )
     value = value._broadcast(tmp_result.shape)
 
     if use_subtensor:

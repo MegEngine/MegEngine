@@ -849,8 +849,15 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         return list(map(int, axis))
 
     axis = get_axes()
-    ndim = inp.ndim + len(axis)
-    axis = sorted(i + ndim if i < 0 else i for i in axis)
+    try:
+        ndim = inp.ndim + len(axis)
+        axis = sorted(i + ndim if i < 0 else i for i in axis)
+    except ValueError:
+        if any([ind < 0 for ind in axis]):
+            raise IndexError(
+                "Does not support negative index when tensor's ndim is unknown"
+            )
+        axis = sorted(axis)
     assert axis, "axis could not be empty"
     if inp._isscalar():
         assert axis[0] == 0, "invalid axis {} for ndim 0".format(axis[0])

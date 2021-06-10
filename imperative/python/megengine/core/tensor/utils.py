@@ -137,6 +137,13 @@ def astensor1d(x, *reference, dtype=None, device=None):
         ndim = x.ndim
     except AttributeError:
         pass
+    except ValueError:
+        if dtype is not None and dtype != x.dtype:
+            x = astype(x, dtype)
+        if device is not None:
+            cn = as_device(device).to_c()
+            (x,) = apply(builtin.Copy(comp_node=cn), x)
+        return x
     else:
         if ndim != 0 and ndim != 1:
             raise ValueError("ndim != 1 or 0, get : %d" % ndim)
@@ -148,7 +155,7 @@ def astensor1d(x, *reference, dtype=None, device=None):
         raise TypeError
 
     if any(isinstance(i, (Tensor, SymbolVar)) for i in x):
-        x = concatenate(x, device=device)
+        x = concatenate(x, device=device) if len(x) > 1 else x[0]
         if dtype is not None:
             x = astype(x, dtype)
         return x

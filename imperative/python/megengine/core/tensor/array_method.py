@@ -86,16 +86,22 @@ def _broadcast(inp, shape):
 
 
 def _reshape(x, shape):
-    shape_tuple = _make_shape_tuple(shape)
     unspec_axis = None
-    # XXX: assume unspec_axis is not changed in trace
-    for i, s in enumerate(shape_tuple):
-        if s < 0:
-            if s != -1:
-                raise ValueError("expect shape[{}] >= -1, got {}".format(i, s))
-            if unspec_axis is not None:
-                raise ValueError("multiple -1 in shape: {} & {}".format(unspec_axis, i))
-            unspec_axis = i
+    try:
+        shape_tuple = _make_shape_tuple(shape)
+    except ValueError:
+        pass
+    else:
+        # XXX: assume unspec_axis is not changed in trace
+        for i, s in enumerate(shape_tuple):
+            if s < 0:
+                if s != -1:
+                    raise ValueError("expect shape[{}] >= -1, got {}".format(i, s))
+                if unspec_axis is not None:
+                    raise ValueError(
+                        "multiple -1 in shape: {} & {}".format(unspec_axis, i)
+                    )
+                unspec_axis = i
     shape = utils.astensor1d(shape, x, dtype="int32", device=x.device)
     if unspec_axis is None:
         op = builtin.Reshape()

@@ -384,6 +384,11 @@ PyObject* TensorWrapper::shape() {
     TensorShape shape;
     if (m_tensor->m_var) {      // get shape from m_var
         auto&& mgr = m_tensor->m_var->owner_graph()->static_infer_manager();
+        auto&& type = mgr.get_infer_type(m_tensor->m_var);
+        using InferType = cg::static_infer::InferType;
+        if (!(type.shape & (InferType::CONST | InferType::RT_STATIC))) {
+            Py_RETURN_NONE;
+        }
         auto *tshp = mgr.infer_shape_fallible(m_tensor->m_var);
         if (!tshp) {
             Py_RETURN_NONE;
@@ -878,6 +883,24 @@ void init_tensor(py::module m) {
                                              ->static_infer_manager();
                         return mgr.infer_shape_fallible(v->m_node);
                     })
+            .def("numpy", [](PySymbolVar* v){
+                auto&& mgr = v->m_node->owner_graph()->static_infer_manager();
+                auto&& type = mgr.get_infer_type(v->m_node);
+                using InferType = cg::static_infer::InferType;
+                if (!(type.value & (InferType::CONST | InferType::RT_STATIC))) {
+                    throw py::value_error("value invalid!");
+                }
+                auto* val = mgr.infer_value_fallible(v->m_node);
+                if (!val) {
+                    throw py::value_error("value invalid!");
+                }
+                auto np_val = py::cast(*val).attr("numpy")();
+                if (v->is_scalar) {
+                    return py::object(py::array(np_val).squeeze());
+                }
+                return np_val; 
+
+            })
             .def("_isscalar", [](PySymbolVar* v) { return v->is_scalar; })
             .def("_setscalar",
                  [](PySymbolVar* v) { return v->is_scalar = true; })
