@@ -442,3 +442,18 @@ def test_removeAxis():
 
     grad(y, F.ones_like(y))
     np.testing.assert_equal(np.ones((3, 3, 1, 1), dtype=np.float32), x.grad.numpy())
+
+
+def test_dot():
+    x = np.random.rand(2, 2).astype("float32")
+    x = mge.Tensor(x)
+    u = F.ones((2,))
+    v = F.ones((2,))
+    grad = Grad().wrt(x, callback=save_to(x))
+
+    def f(x):
+        return F.dot(u, F.matmul(x, v))
+
+    y = f(x)
+    grad(y, F.ones_like(y))
+    np.testing.assert_equal(np.ones((2, 2), dtype=np.float32), x.grad.numpy())
