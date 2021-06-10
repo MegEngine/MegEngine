@@ -192,8 +192,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
          dst_dtype = args.dst_layout->dtype;
     megdnn_assert(
             (src_dtype.category() == dst_dtype.category()) ||
-            (args.opr->param().format == param::ConvBias::Format::NCHW4_NCHW &&
-             src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+            (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
              dst_dtype.enumv() == DTypeEnum::Float32));
     megdnn_assert(src_dtype.category() == filter_dtype.category());
 

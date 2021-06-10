@@ -28,6 +28,15 @@ namespace megdnn {
 namespace test {
 namespace conv{
 
+TEST_F(CUDA, CONV_BIAS_INT8_NCHW4_CUDNN_CONVOLUTION) {
+    require_compute_capability(7, 5);
+    conv_bias::check_conv_bias(
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.3f},
+            handle_cuda(), "DEFAULT:CUDNN:ConvBiasActivation:",
+            param::ConvBias::Format::NCHW4);
+}
+
 TEST_F(CUDA, CONV_BIAS_INT8_NCHW4_1x1) {
     require_compute_capability(6, 1);
     conv_bias::check_conv_bias(
@@ -688,6 +697,82 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
             conv_bias::get_int8_chwn4_args_small_batch(1));
 }
 
+
+TEST_F(CUDA, FALLBACK_CONV_QS8) {
+    require_compute_capability_eq(7, 5);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    auto check = [&checker](const std::string&& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-3, 3};
+        UniformIntRNG bias_rng{-50, 50};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &bias_rng)
+                .set_rng(3, &rng)
+                .set_dtype(0, dtype::QuantizedS8{1.2f})
+                .set_dtype(1, dtype::QuantizedS8{1.3f})
+                .set_dtype(2, dtype::QuantizedS32{1.2f * 1.3f})
+                .set_dtype(3, dtype::QuantizedS8{19.990229f})
+                .set_dtype(4, dtype::QuantizedS8{19.990228f})
+                .set_epsilon(1e-3)
+                .set_max_avg_error(1e-1)
+                .set_max_avg_biased_error(1e-3);
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 2;
+        param.format = param::ConvBias::Format::NCHW;
+        checker.set_param(param).execs({{16, 15, 14, 14},
+                                        {28, 15, 3, 3},
+                                        {1, 28, 1, 1},
+                                        {16, 28, 7, 7},
+                                        {}});
+        checker.set_param(param).execs({{16, 32, 14, 14},
+                                        {32, 32, 3, 3},
+                                        {1, 32, 1, 1},
+                                        {},
+                                        {}});
+    };
+    check("FALLBACK_CONV_NCHW_QS8");
+}
+
+TEST_F(CUDA, FALLBACK_CONV_QS8_F32) {
+    require_compute_capability_eq(7, 5);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    auto check = [&checker](const std::string&& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-3, 3};
+        UniformFloatRNG bias_rng{-50.f, 50.f};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &bias_rng)
+                .set_rng(3, &rng)
+                .set_dtype(0, dtype::QuantizedS8{1.2f})
+                .set_dtype(1, dtype::QuantizedS8{1.3f})
+                .set_dtype(2, dtype::Float32{})
+                .set_dtype(3, dtype::Float32{})
+                .set_dtype(4, dtype::Float32{})
+                .set_epsilon(1e-3)
+                .set_max_avg_error(1e-1)
+                .set_max_avg_biased_error(1e-3);
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 2;
+        param.format = param::ConvBias::Format::NCHW;
+        checker.set_param(param).execs({{16, 15, 14, 14},
+                                        {28, 15, 3, 3},
+                                        {1, 28, 1, 1},
+                                        {16, 28, 7, 7},
+                                        {}});
+        checker.set_param(param).execs({{16, 32, 14, 14},
+                                        {32, 32, 3, 3},
+                                        {1, 32, 1, 1},
+                                        {},
+                                        {}});
+    };
+    check("FALLBACK_CONV_NCHW_QS8");
+}
 
 TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_WEIGHT_PREPROCESS) {
     require_compute_capability(6, 1);
