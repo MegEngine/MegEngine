@@ -64,8 +64,9 @@ ConvolutionBackwardFilterImpl::AlgoMatmul::get_subopr_list(
         const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     const ConvolutionBackwardFilterImpl* conv_backward_filter_opr =
             static_cast<const ConvolutionBackwardFilterImpl*>(opr);
-    CanonizedFilterMeta fm = conv_backward_filter_opr->check_layout_fwd(
-            layouts[0], layouts[2], layouts[1]);
+    CanonizedFilterMeta fm =
+            conv_backward_filter_opr->make_canonized_filter_meta(
+                    layouts[0].ndim, layouts[2]);
     auto&& config = sub_opr_config(fm, layouts[0], layouts[1], layouts[2],
                                    conv_backward_filter_opr);
 

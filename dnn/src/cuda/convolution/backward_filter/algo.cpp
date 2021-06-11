@@ -71,7 +71,7 @@ ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvolutionBackwardFilterImpl *o,
         const TensorLayout &src, const TensorLayout &diff,
         const TensorLayout &grad):
-    SizeArgs(o, src, diff, grad, o->check_layout_fwd(src, grad, diff))
+    SizeArgs(o, src, diff, grad, o->make_canonized_filter_meta(src.ndim, grad))
 {
 }
 

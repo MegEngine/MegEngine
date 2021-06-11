@@ -20,6 +20,10 @@ using namespace convolution;
 
 bool ConvolutionBackwardDataImpl::AlgoChanwise::is_available(
         const SizeArgs& args) const {
+    if (!args.grad_layout->is_contiguous() ||
+        !args.diff_layout->is_contiguous()) {
+        return false;
+    }
     if ((args.diff_layout->dtype == args.filter_layout->dtype &&
          args.diff_layout->dtype == dtype::BFloat16()) ||
         (args.diff_layout->dtype == args.filter_layout->dtype &&
