@@ -1189,7 +1189,12 @@ ConvolutionBackwardFilter::check_exec(const TensorLayout& src,
                           diff.dtype.category() == DTypeCategory::FLOAT &&
                           grad.dtype.category() == DTypeCategory::FLOAT,
                   "only float type is supported for conv backward filter");
-    auto ret = check_layout_fwd(src, grad, diff);
+    auto src_fwd = src;
+    auto diff_fwd = diff;
+
+    src_fwd.init_contiguous_stride();
+    diff_fwd.init_contiguous_stride();
+    auto ret = check_layout_fwd(src_fwd, grad, diff_fwd);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     return ret;
