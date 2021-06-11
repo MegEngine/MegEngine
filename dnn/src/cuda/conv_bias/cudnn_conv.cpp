@@ -31,6 +31,15 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
         }
     }
 
+    // FIXME: cudnn cannot handle the case when the initial value of dst tensor
+    // contains nan and beta is zero, because the result of 0.f * nan is still
+    // nan
+    if (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8 &&
+        args.dst_layout->dtype.enumv() == DTypeEnum::Float32 &&
+        args.opr->param().format == param::ConvBias::Format::NCHW) {
+        return false;
+    }
+
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();

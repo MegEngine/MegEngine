@@ -3088,6 +3088,88 @@ TEST(TestGoptInference, ConvertFormatNCHW4GPU) {
     MGB_ASSERT_TENSOR_EQ(host_y, host_y_opt);
 }
 
+TEST(TestGoptInference, ConvertFormatNCHW4FloatGPU) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(6, 1);
+
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+
+    auto mkvar = [&](const char* name, const TensorShape& shp,
+                     const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name),
+                dtype);
+    };
+
+    auto mkcvar = [&](const char* name, const TensorShape& shp,
+                      const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                        .rename(name),
+                dtype);
+    };
+
+    auto x = mkvar("x", {2, 4, 16, 16}, dtype::QuantizedS8(1.2f));
+    opr::ConvBias::Param param_conv_bias;
+    param_conv_bias.pad_h = param_conv_bias.pad_w = 1;
+    param_conv_bias.sparse = opr::ConvBias::Param::Sparse::DENSE;
+
+    // conv1, with bias
+    auto w1 = mkcvar("w1", {8, 4, 3, 3}, dtype::QuantizedS8(1.3f)),
+         b1 = mkcvar("b1", {1, 8, 1, 1}, dtype::Float32());
+    auto conv1 = opr::ConvBias::make(x, w1, b1, param_conv_bias, {},
+                                     OperatorNodeConfig{dtype::Float32()});
+
+    // conv2, with bias and z
+    auto w2 = mkcvar("w2", {8, 4, 3, 3}, dtype::QuantizedS8(1.3f)),
+         b2 = mkcvar("b2", {1, 8, 1, 1}, dtype::Float32()),
+         z2 = mkcvar("z2", {2, 8, 16, 16}, dtype::Float32());
+    auto conv2 = opr::ConvBias::make(x, w2, b2, z2, param_conv_bias, {},
+                                     OperatorNodeConfig{dtype::Float32()});
+
+    // conv3, relu
+    param_conv_bias.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    auto w3 = mkcvar("w3", {8, 4, 3, 3}, dtype::QuantizedS8(1.3f)),
+         b3 = mkcvar("b3", {1, 8, 1, 1}, dtype::Float32()),
+         z3 = mkcvar("z3", {2, 8, 16, 16}, dtype::Float32());
+    auto conv3 = opr::ConvBias::make(x, w3, b3, z3, param_conv_bias, {},
+                                     OperatorNodeConfig{dtype::Float32()});
+
+    auto y = conv1 + conv2 + conv3;
+
+    SymbolVar y_opt;
+    {
+        auto options = gopt::OptimizeForInferenceOptions{};
+        options.enable_nchw4();
+        unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+    }
+
+    bool succ = true;
+    auto cb = [&succ](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::ConvBias>()) {
+            auto& conv_bias = opr->cast_final_safe<opr::ConvBias>();
+            if (conv_bias.param().format !=
+                opr::ConvBias::Param::Format::NCHW4_NCHW) {
+                succ = false;
+            }
+        }
+    };
+
+    cg::DepOprIter{cb}.add(y_opt);
+    ASSERT_TRUE(succ);
+
+    HostTensorND host_y, host_y_opt;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    func->execute();
+
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+}
+
 #endif
 
 TEST(TestGoptInference, ConvertFormatNCHW4NonConvOpr) {

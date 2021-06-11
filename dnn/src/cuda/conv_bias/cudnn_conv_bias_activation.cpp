@@ -57,6 +57,15 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
     }
 #endif
 
+    // FIXME: cudnn cannot handle the case when the initial value of dst tensor
+    // contains nan and beta is zero, because the result of 0.f * nan is still
+    // nan
+    if (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8 &&
+        args.dst_layout->dtype.enumv() == DTypeEnum::Float32 &&
+        param.format == param::ConvBias::Format::NCHW) {
+        return false;
+    }
+
     //! FIXME: conv kernel of cudnn for NCHW4_NCHW tensor format causes illegal
     //! memory access errors, so we have to disable this kernel here.
     if (param.format == param::ConvBias::Format::NCHW4_NCHW ||
