@@ -82,8 +82,8 @@ ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
         const TensorLayout& diff, const TensorLayout& grad)
-        : SizeArgs(o, filter, o->check_layout_fwd(grad, filter, diff), diff,
-                   grad) {}
+        : SizeArgs(o, filter, o->make_canonized_filter_meta(grad.ndim, filter),
+                   diff, grad) {}
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         ConvolutionBackwardDataImpl* o, const TensorLayout& filter,

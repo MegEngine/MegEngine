@@ -24,9 +24,12 @@ using namespace conv_bias;
 
 bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         const SizeArgs& args) const {
-    if (!args.src_layout->is_contiguous() ||
-        !args.dst_layout->is_contiguous()) {
-        return false;
+    if (args.filter_meta.format != Param::Format::NCHW &&
+        args.filter_meta.format != Param::Format::NHWC) {
+        if (!args.src_layout->is_contiguous() ||
+            !args.dst_layout->is_contiguous()) {
+            return false;
+        }
     }
     if ((args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
          args.src_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) &&
