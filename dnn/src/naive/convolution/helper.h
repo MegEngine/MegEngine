@@ -661,7 +661,6 @@ template <typename ftype, typename dtype, typename gtype>
 void backward_data(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
                    _megdnn_tensor_out grad,
                    const Convolution::CanonizedFilterMeta& filter_meta) {
-    megdnn_assert(grad.layout.is_contiguous());
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
     if (filter_meta.format == param::Convolution::Format::NHWCD4) {
@@ -676,7 +675,6 @@ template <typename stype, typename dtype, typename gtype>
 void backward_filter(_megdnn_tensor_in src, _megdnn_tensor_in diff,
                      _megdnn_tensor_out grad,
                      const Convolution::CanonizedFilterMeta& filter_meta) {
-    megdnn_assert(grad.layout.is_contiguous());
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 2);
     compute2d<stype, gtype, dtype, dtype, StrategyBwdFlt>(

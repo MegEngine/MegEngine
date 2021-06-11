@@ -23,6 +23,14 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
     if (args.z_layout->ndim > 0)
         return false;
 
+    if (args.filter_meta.format != Param::Format::NCHW &&
+        args.filter_meta.format != Param::Format::NHWC) {
+        if (!args.src_layout->is_contiguous() ||
+            !args.dst_layout->is_contiguous()) {
+            return false;
+        }
+    }
+
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();

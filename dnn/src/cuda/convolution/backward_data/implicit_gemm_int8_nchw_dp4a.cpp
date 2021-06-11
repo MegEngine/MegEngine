@@ -25,6 +25,11 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
     if (fm.format != Param::Format::NCHW)
         return false;
 
+    if (!args.grad_layout->is_contiguous() ||
+        !args.diff_layout->is_contiguous()) {
+        return false;
+    }
+
     bool available = true;
 
     auto src_dtype = args.diff_layout->dtype,

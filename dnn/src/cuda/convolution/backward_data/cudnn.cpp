@@ -21,6 +21,14 @@ using namespace convolution;
 
 bool ConvolutionBackwardDataImpl::AlgoCUDNN::is_available(
         const SizeArgs &args) const {
+    if (args.filter_meta.format != Param::Format::NCHW &&
+        args.filter_meta.format != Param::Format::NHWC) {
+        if (!args.grad_layout->is_contiguous() ||
+            !args.diff_layout->is_contiguous()) {
+            return false;
+        }
+    }
+
     CUDNNBwdDataDescs D;
 
     if (!is_cudnn_supported(args.as_fwd_args()))
