@@ -60,7 +60,20 @@ bool ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::is_available(
         args.dst_layout->dtype.enumv() != src_dtype())
         return false;
 
+    // uint4 do not support H_SWISH activition
+    if (src_dtype() == DTypeEnum::Quantized4Asymm &&
+        param.nonlineMode == NonlineMode::H_SWISH)
+        return false;
+
     if (!is_compute_capability_required(7, 5))
+        return false;
+
+    size_t fh = args.filter_layout->operator[](1),
+           fw = args.filter_layout->operator[](2);
+
+    // param buffer size is 4K, use 3.4K to store precomputed offset
+    size_t kMaxFilterPixels = 848 / (2 * m_algo_param.warp_k / 64) - 2;
+    if (fh * fw > kMaxFilterPixels)
         return false;
 
     return true;
@@ -108,7 +121,7 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
 
 std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%uX%uX%u_%uX%uX%u", algo_param.threadblock_m,
+    return ssprintf("%dX%dX%d_%dX%dX%d", algo_param.threadblock_m,
                     algo_param.threadblock_n, algo_param.threadblock_k,
                     algo_param.warp_m, algo_param.warp_n, algo_param.warp_k);
 }

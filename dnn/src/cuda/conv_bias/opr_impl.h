@@ -67,6 +67,9 @@ public:
     class AlgoInt4NCHW64IMMAImplicitGemmBase;
     class AlgoInt4Int4NCHW64IMMAImplicitGemm;
     class AlgoUInt4Int4NCHW64IMMAImplicitGemm;
+    class AlgoInt4NHWCIMMAImplicitGemmBase;
+    class AlgoInt4Int4NHWCIMMAImplicitGemm;
+    class AlgoUInt4Int4NHWCIMMAImplicitGemm;
     class AlgoBFloat16;
 
     class AlgoPack;

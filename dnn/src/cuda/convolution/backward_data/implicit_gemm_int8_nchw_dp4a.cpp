@@ -50,7 +50,7 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::
     // TODO: support dialtion
     available &= (fm.dilation[0] == 1 && fm.dilation[1] == 1);
     // FIXME: too large filter size is not supported now
-    available &= fm.spatial[0] * fm.spatial[1] <= 64;
+    available &= fm.spatial[0] * fm.spatial[1] <= (848 / (2 * 8 / 4) - 2);
     // only support sm_61 or later, platform should have fast native int8
     // support
     available &= is_compute_capability_required(6, 1);

@@ -62,7 +62,7 @@ void megdnn::cuda::cutlass_wrapper::do_deconv_int8_implicit_gemm_dp4a_ncdiv4hw4(
                 ThreadBlockShape, WarpShape, InstructionShape, EpilogueOp,     \
                 cutlass::conv::threadblock::                                   \
                         ConvolutionDgradNCxHWxThreadblockSwizzle,              \
-                stage_, 4, aligned_>;                                          \
+                stage_, 4, aligned_, true, cutlass::arch::OpMultiplyAdd>;      \
         typename Deconvolution::ConvolutionParameter conv_param(               \
                 param.n, param.hi, param.wi, param.ci, param.co, param.fh,     \
                 param.fw, param.ho, param.wo, param.ph, param.pw, param.sh,    \

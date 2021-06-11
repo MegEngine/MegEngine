@@ -100,6 +100,11 @@ std::vector<BenchArgs> get_det_first_bench_args(size_t batch) {
     std::vector<BenchArgs> args;
     args.emplace_back(BenchArgs{batch, 4, 736, 1280, 16, 3, 2});
     args.emplace_back(BenchArgs{batch, 16, 384, 640, 16, 3, 1});
+    args.emplace_back(BenchArgs{batch, 16, 384, 640, 32, 3, 2});
+    args.emplace_back(BenchArgs{batch, 32, 184, 320, 32, 3, 1});
+    args.emplace_back(BenchArgs{batch, 32, 384, 640, 64, 3, 2});
+    args.emplace_back(BenchArgs{batch, 32, 184, 320, 32, 1, 1});
+    args.emplace_back(BenchArgs{batch, 32, 384, 640, 64, 1, 2});
     return args;
 }
 

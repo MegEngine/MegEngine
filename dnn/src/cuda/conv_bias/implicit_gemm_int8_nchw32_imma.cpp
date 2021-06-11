@@ -75,8 +75,9 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
     // only support sm_75 or later, platform should have tensorcore int8
     // support
     available &= is_compute_capability_required(7, 5);
-    // FIXME: too large filter size is not supported now 
-    available &= fh * fw <= 49;
+    // FIXME: too large filter size is not supported now
+    size_t kMaxFilterPixels = 848 / (2 * m_algo_param.warp_k / 32) - 2;
+    available &= fh * fw <= kMaxFilterPixels;
     return available;
 }
 

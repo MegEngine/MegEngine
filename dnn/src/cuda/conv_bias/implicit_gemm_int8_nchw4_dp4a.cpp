@@ -95,8 +95,10 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     // only support sm_61 or later, platform should have fast native int8
     // support
     available &= is_compute_capability_required(6, 1);
-    // FIXME: too large filter size is not supported now 
-    available &= fh * fw <= 49;
+    // FIXME: too large filter size is not supported now
+    size_t kMaxFilterPixels = 848 / (2 * m_algo_param.warp_k / 4) - 2;
+    available &= fh * fw <= kMaxFilterPixels;
+    ;
     return available;
 }
 
