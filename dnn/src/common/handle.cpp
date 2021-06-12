@@ -90,9 +90,10 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
             } else {
                 megdnn_throw("Debug level must be 0/1/2.");
             }
+#endif
         }
         MIDOUT_END();
-#endif
+
         }
         else if (platform == megcorePlatformROCM) {
 #if MEGDNN_WITH_ROCM
