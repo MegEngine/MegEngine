@@ -19,6 +19,7 @@ MegEngine is a fast, scalable and easy-to-use deep learning framework, with auto
 To install the pre-built binaries via pip wheels:
 
 ```bash
+python3 -m pip install --upgrade pip
 python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 ```
 
