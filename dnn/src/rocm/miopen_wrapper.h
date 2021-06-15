@@ -38,14 +38,6 @@ public:
     miopenConvolutionDescriptor_t desc;
 };
 
-class PoolingDesc {
-public:
-    PoolingDesc();
-    void set(const param::Pooling& param);
-    ~PoolingDesc();
-    miopenPoolingDescriptor_t desc;
-};
-
 class LRNDesc {
 public:
     LRNDesc();

@@ -96,34 +96,6 @@ void ConvDesc::set(const param::Convolution& param, const size_t nr_group,
     //! not supported
 }
 
-PoolingDesc::PoolingDesc() {
-    miopen_check(miopenCreatePoolingDescriptor(&desc));
-}
-
-PoolingDesc::~PoolingDesc() {
-    miopen_check(miopenDestroyPoolingDescriptor(desc));
-}
-
-void PoolingDesc::set(const param::Pooling& param) {
-    miopenPoolingMode_t mode;
-    switch (param.mode) {
-        case param::Pooling::Mode::MAX:
-            mode = miopenPoolingMax;
-            break;
-        case param::Pooling::Mode::AVERAGE_COUNT_EXCLUDE_PADDING:
-            mode = miopenPoolingAverage;
-            break;
-        case param::Pooling::Mode::AVERAGE:
-            mode = miopenPoolingAverageInclusive;
-            break;
-        default:
-            megdnn_throw("Unsupported pooling mode for miopen");
-    }
-    miopen_check(miopenSet2dPoolingDescriptor(
-            desc, mode, param.window_h, param.window_w, param.pad_h,
-            param.pad_w, param.stride_h, param.stride_w));
-}
-
 LRNDesc::LRNDesc() {
     miopen_check(miopenCreateLRNDescriptor(&desc));
 }
