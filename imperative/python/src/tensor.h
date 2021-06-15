@@ -271,18 +271,17 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
     return apply(op, args, nargs);
 }
 
+std::shared_ptr<Tensor> make_const(imperative::TensorPtr value);
+
 inline auto apply(Subgraph graph, Tensor*const* args, size_t nargs) {
     SmallVector<std::shared_ptr<Tensor>> inputs;
     for (size_t i = 0; i < nargs; ++i) {
         inputs.push_back(args[i]->shared_from_this());
     }
     auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<std::shared_ptr<Tensor>> inputs) {
-        return apply(op, inputs);
+        return apply(op, std::move(inputs));
     };
-    auto const_functor = [](imperative::TensorPtr value) {
-        return std::make_shared<Tensor>(interpreter_for_py->put(value->dev_tensor()));
-    };
-    return graph.apply(inputs, apply_functor, const_functor);
+    return graph.apply(inputs, apply_functor, &make_const);
 }
 
 template <typename T>
