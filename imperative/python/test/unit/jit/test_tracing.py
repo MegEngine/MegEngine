@@ -583,7 +583,7 @@ def test_trace_advance_indexing(shape_mode):
 
     inputs = {
         "x": np.random.randn(5, 5, 5, 5, 5).astype("float32"),
-        "i": 0,
+        "i": 4,
         "j": 2,
         "start": 1,
         "end": 3,
