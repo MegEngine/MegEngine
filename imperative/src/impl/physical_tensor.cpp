@@ -232,7 +232,7 @@ namespace {
 
 Blob::Blob(const DeviceTensorStorage& s):
     m_comp_node{s.comp_node()}, m_storage{s.raw_storage()},
-    m_size{s.size()} {
+    m_size{s.size() + s.offset()} {
     m_id = next_blob_id++;
     BlobManager::inst()->register_blob(this);
 }
