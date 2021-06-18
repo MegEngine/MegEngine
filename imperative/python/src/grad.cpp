@@ -468,7 +468,7 @@ PyObject* GradKeyWrapper::get_priority() {
 }
 
 void GradKeyWrapper::set_priority(pybind11::handle priority) {
-    m_key->name = py::cast<int>(priority);
+    m_key->priority = py::cast<int>(priority);
 }
 
 void GradKeyWrapper::attach(PyObject*const* args, size_t nargs) {
@@ -535,7 +535,7 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
         size_t priority_backup;
         CleanupGuard(GradKey* this_) : owner(this_) {
             priority_backup = sm_min_priority;
-            sm_min_priority = owner->priority;
+            sm_min_priority = owner->priority + 1;
         }
         ~CleanupGuard() {
             owner->cleanup();
@@ -636,7 +636,7 @@ PyObject* GradKeyWrapper::is_attached_to(PyObject*const* args, size_t nargs) {
     Py_RETURN_FALSE;
 }
 
-int GradKey::sm_min_priority = 0;
+int GradKey::sm_min_priority = std::numeric_limits<int>::min();
 
 GradKey::~GradKey() {
     cleanup();

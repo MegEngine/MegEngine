@@ -345,12 +345,12 @@ class GradManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
 
-    def __and__(self, other):
+    def __or__(self, other):
         if isinstance(other, GradManager):
             return GradManagerGroup([self, other])
         return NotImplemented
 
-    __rand__ = __and__
+    __ror__ = __or__
 
 
 class GradManagerGroup:
@@ -364,8 +364,6 @@ class GradManagerGroup:
             return NotImplemented
         return GradManagerGroup([*self._gms, *other._gms])
 
-    __and__ = merge_with
-    __rand__ = merge_with
     __or__ = merge_with
     __ror__ = merge_with
 

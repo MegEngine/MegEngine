@@ -966,6 +966,7 @@ void init_tensor(py::module m) {
         .def<&GradKeyWrapper::attach>("attach")
         .def<&GradKeyWrapper::is_attached_to>("is_attached_to")
         .def_getset<&GradKeyWrapper::get_name, &GradKeyWrapper::set_name>("name")
+        .def_getset<&GradKeyWrapper::get_priority, &GradKeyWrapper::set_priority>("priority")
         .finalize();
     if (!grad_key_type) throw py::error_already_set();
     py::setattr(m, "GradKey", grad_key_type);

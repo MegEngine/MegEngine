@@ -126,7 +126,7 @@ def test_2nd_grad():
 
     x.grad = None
     grad2(z, ones)
-    np.testing.assert_almost_equal(x.grad.numpy(), -np.cos(x_np))
+    np.testing.assert_almost_equal(x.grad.numpy(), -np.cos(x_np), decimal=5)
 
 
 def test_grad_with_tensor_wrapper():
