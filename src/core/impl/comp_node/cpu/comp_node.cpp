@@ -604,12 +604,8 @@ class CpuCompNode::CompNodeRecorderImpl final : public CompNodeBaseImpl {
         using EventImpl::EventImpl;
     };
 
-//! TODO: because the x-code bug, see
-//! https://github.com/tensorflow/tensorflow/issues/18356
-//! thread local is no support on IOS,
-//! When update x-xode, this code should be deleted
-#if !defined(IOS) && MGB_HAVE_THREAD
-    static thread_local SeqRecorderImpl* sm_cur_recorder;
+#if MGB_HAVE_THREAD
+    static MGB_THREAD_LOCAL_PTR(SeqRecorderImpl) sm_cur_recorder;
 #else
     SeqRecorderImpl* sm_cur_recorder = nullptr;
 #endif
@@ -822,9 +818,9 @@ public:
     }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompNodeRecorderImpl);
-#if !defined(IOS) && MGB_HAVE_THREAD
-thread_local CpuCompNode::SeqRecorderImpl*
-        CompNodeRecorderImpl::sm_cur_recorder = nullptr;
+#if MGB_HAVE_THREAD
+MGB_THREAD_LOCAL_PTR(CpuCompNode::SeqRecorderImpl)
+CompNodeRecorderImpl::sm_cur_recorder = nullptr;
 #endif
 
 /* ======================== CpuCompNode ======================== */
