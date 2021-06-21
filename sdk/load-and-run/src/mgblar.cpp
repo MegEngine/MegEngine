@@ -13,6 +13,7 @@
 #include "./infile_persistent_cache.h"
 #include "./json_loader.h"
 #include "./npy.h"
+#include "./text_table.h"
 
 #include "megbrain/comp_node_env.h"
 #include "megbrain/gopt/inference.h"
@@ -91,6 +92,8 @@ R"__usage__(
     param.json --data bbox:bbox.npy@batchid:b.npy --data rect:[0,0,227,227];
     batchid:0,1,2,3. --io-dump or --bin-io-dump
     should be enabled at the same time.
+  --verbose
+    Format and display model input/output  tensor info.
   --io-dump <output> | --bin-io-dump <output dir>
     Dump input/output values of all internal variables to output file or
     directory, in text or binary format. The binary file can be parsed by
@@ -526,6 +529,7 @@ struct Args {
 
     COprArgs c_opr_args;
 
+    bool show_verbose = false;
     bool disable_assert_throw = false;
     bool share_param_mem = false;
 #if MGB_ENABLE_FASTRUN
@@ -637,6 +641,36 @@ public:
     }
 };
 
+void format_and_print(const std::string& tablename, const Args& env) {
+    auto table = mgb::TextTable(tablename);
+    table.padding(1);
+    table.align(mgb::TextTable::Align::Mid)
+        .add("type")
+        .add("name")
+        .add("shape")
+        .eor();
+
+    for (auto &&i: env.load_ret.tensor_map) {
+        table.align(mgb::TextTable::Align::Mid)
+            .add("INPUT")
+            .add(i.first)
+            .add(i.second->shape().to_string())
+            .eor();
+    }
+    
+    for (auto&& i : env.load_ret.output_var_list) {
+        table.align(mgb::TextTable::Align::Mid)
+            .add("OUTPUT")
+            .add(i.node()->name())
+            .add(i.shape().to_string())
+            .eor();
+    }
+
+    std::stringstream ss;
+    ss << table;
+    printf("%s\n\n", ss.str().c_str());
+}
+
 void run_test_st(Args &env) {
     std::unique_ptr<serialization::InputFile> inp_file;
 
@@ -675,6 +709,10 @@ void run_test_st(Args &env) {
     // compile function to compute all outputs
     ComputingGraph::OutputSpec out_spec;
     std::string output_names;
+    
+    if (env.show_verbose) {
+        format_and_print("Original Model Info", env);
+    }
 
     OutputDumper output_dumper(env);
     for (auto&& i : env.load_ret.output_var_list) {
@@ -987,6 +1025,10 @@ void run_test_st(Args &env) {
         TensorRTEngineCache::inst().dump_cache();
     }
 #endif
+    
+    if (env.show_verbose) {
+        format_and_print("Runtime Model Info", env);
+    }
 }
 
 }  // anonymous namespace
@@ -1215,6 +1257,11 @@ Args Args::from_argv(int argc, char **argv) {
                 ret.data_files.emplace_back(substr);
                 start = end + 1;
             }
+            continue;
+        }
+        if (!strcmp(argv[i], "--verbose")) {
+            ++i;
+            ret.show_verbose = true;
             continue;
         }
         if (!strcmp(argv[i], "--io-dump")) {
