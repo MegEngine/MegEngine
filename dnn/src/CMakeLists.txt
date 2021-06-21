@@ -113,6 +113,31 @@ if(MGE_WITH_CUDA)
     list(APPEND SOURCES ${SOURCES_})
 
     file(GLOB_RECURSE CUSOURCES cuda/*.cu)
+
+    set(CUTLASS_GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/cutlass_generator/generator.py)
+    set(CUTLASS_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/cuda/cutlass/generated)
+    function(gen_cutlass_kimpl op type)
+        set(CURRENT_CUTLASS_GEN_DIR ${CUTLASS_GEN_DIR}/${op}_${type})
+        file(MAKE_DIRECTORY ${CURRENT_CUTLASS_GEN_DIR})
+        execute_process(
+            COMMAND ${PYTHON3_EXECUTABLE_WITHOUT_VERSION} ${CUTLASS_GEN_SCRIPT} --operations ${op} --type ${type} ${CURRENT_CUTLASS_GEN_DIR}
+            RESULT_VARIABLE gen_cutlass_result
+            OUTPUT_FILE ${CURRENT_CUTLASS_GEN_DIR}/gen_cutlass.log
+            ERROR_FILE ${CURRENT_CUTLASS_GEN_DIR}/gen_cutlass.log
+        )
+        if (NOT gen_cutlass_result EQUAL 0)
+            message(FATAL_ERROR "Error generating library instances. See ${CURRENT_CUTLASS_GEN_DIR}/gen_cutlass.log")
+        endif()
+    endfunction()
+    gen_cutlass_kimpl(gemm simt)
+    gen_cutlass_kimpl(gemv simt)
+    gen_cutlass_kimpl(deconv simt)
+    gen_cutlass_kimpl(conv2d simt)
+    gen_cutlass_kimpl(conv2d tensorop8816)
+    gen_cutlass_kimpl(conv2d tensorop8832)
+    file(GLOB_RECURSE CUTLASS_SOURCES ${CUTLASS_GEN_DIR}/*.cu)
+    list(APPEND SOURCES ${CUTLASS_SOURCES})
+
     list(APPEND SOURCES ${CUSOURCES})
 endif()
 

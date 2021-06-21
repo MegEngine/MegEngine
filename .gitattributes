@@ -1,5 +1,6 @@
 # Mark generated files as binary, ignore them in git diff.
 # dnn
+dnn/scripts/cutlass_generator/list.bzl binary
 dnn/src/cuda/conv_bias/int4/kimpl/* binary
 dnn/src/cuda/conv_bias/int8/kimpl/* binary
 dnn/src/cuda/conv_bias/int8_imma/kimpl/* binary
