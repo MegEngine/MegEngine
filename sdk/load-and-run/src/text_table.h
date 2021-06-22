@@ -15,6 +15,7 @@
 #include <array>
 #include <iomanip>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <type_traits>
