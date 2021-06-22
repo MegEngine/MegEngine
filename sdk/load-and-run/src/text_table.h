@@ -56,16 +56,7 @@ public:
 
     template <typename T>
     TextTable& add(const T& value) {
-        if constexpr (std::is_floating_point<T>::value) {
-            std::stringstream ss;
-            ss << std::setiosflags(std::ios::fixed) << std::setprecision(2);
-            ss << value;
-            m_row.values.emplace_back(ss.str());
-        } else if constexpr (std::is_integral<T>::value) {
-            m_row.values.emplace_back(std::to_string(value));
-        } else {
-            m_row.values.emplace_back(value);
-        }
+        m_row.values.emplace_back(value);
         if (m_cols_max_w.size() < m_row.values.size()) {
             m_cols_max_w.emplace_back(m_row.values.back().length());
         } else {
@@ -74,6 +65,29 @@ public:
             m_cols_max_w[i] =
                 std::max(m_cols_max_w[i], m_row.values.back().length());
         }
+        return *this;
+    }
+
+    template <typename T, typename std::enable_if<std::is_floating_point<T>::value, bool>::type = 0>
+    TextTable& add(const T& value) {
+        std::stringstream ss;
+        ss << std::setiosflags(std::ios::fixed) << std::setprecision(2);
+        ss << value;
+        m_row.values.emplace_back(ss.str());
+        if (m_cols_max_w.size() < m_row.values.size()) {
+            m_cols_max_w.emplace_back(m_row.values.back().length());
+        } else {
+            mgb_assert(m_row.values.size() >= 1);
+            size_t i = m_row.values.size() - 1;
+            m_cols_max_w[i] =
+                std::max(m_cols_max_w[i], m_row.values.back().length());
+        }
+        return *this;
+    }
+
+    template <typename T, typename std::enable_if<std::is_integral<T>::value, bool>::type = 0>
+    TextTable& add(const T& value) {
+        m_row.values.emplace_back(std::to_string(value));
         return *this;
     }
 
