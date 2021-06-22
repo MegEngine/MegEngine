@@ -92,7 +92,7 @@ R"__usage__(
     param.json --data bbox:bbox.npy@batchid:b.npy --data rect:[0,0,227,227];
     batchid:0,1,2,3. --io-dump or --bin-io-dump
     should be enabled at the same time.
-  --verbose
+  --model-info
     Format and display model input/output  tensor info.
   --io-dump <output> | --bin-io-dump <output dir>
     Dump input/output values of all internal variables to output file or
@@ -529,7 +529,7 @@ struct Args {
 
     COprArgs c_opr_args;
 
-    bool show_verbose = false;
+    bool display_model_info = false;
     bool disable_assert_throw = false;
     bool share_param_mem = false;
 #if MGB_ENABLE_FASTRUN
@@ -710,7 +710,7 @@ void run_test_st(Args &env) {
     ComputingGraph::OutputSpec out_spec;
     std::string output_names;
     
-    if (env.show_verbose) {
+    if (env.display_model_info) {
         format_and_print("Original Model Info", env);
     }
 
@@ -1026,7 +1026,7 @@ void run_test_st(Args &env) {
     }
 #endif
     
-    if (env.show_verbose) {
+    if (env.display_model_info) {
         format_and_print("Runtime Model Info", env);
     }
 }
@@ -1259,9 +1259,9 @@ Args Args::from_argv(int argc, char **argv) {
             }
             continue;
         }
-        if (!strcmp(argv[i], "--verbose")) {
+        if (!strcmp(argv[i], "--model-info")) {
             ++i;
-            ret.show_verbose = true;
+            ret.display_model_info = true;
             continue;
         }
         if (!strcmp(argv[i], "--io-dump")) {
