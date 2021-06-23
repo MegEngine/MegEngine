@@ -37,6 +37,7 @@ class VarNodeMeta(type(SymbolVar), type(ArrayMethodMixin)):
 class VarNode(NetworkNode, SymbolVar, ArrayMethodMixin, metaclass=VarNodeMeta):
     def __init__(self, var=None, *, owner_opr=None, name=None):
         SymbolVar.__init__(self, var)
+        self.users = []  # List[OpNode]
         self.owner = owner_opr
         self.name = name
         self.id = id(self)
@@ -214,6 +215,7 @@ class Host2DeviceCopy(OpNode):
     def compile(self, graph):
         if (
             self._opr is None
+            or self._opr.graph != graph
             or self._opr.outputs[0].comp_node != self.device
             or self._opr.outputs[0].shape != self.shape
             or self._opr.outputs[0].dtype != self.dtype
@@ -226,10 +228,11 @@ class Host2DeviceCopy(OpNode):
         assert self.outputs[0].owner is self
 
 
-class ImmutableTensor(OpNode):
-    type = "ImmutableTensor"
+class ConstOpBase(OpNode):
+    type = "ConstOpBase"
 
     def __init__(self, data=None, name=None, device=None, graph=None):
+        assert type(self) is not ConstOpBase, "ConstOpBase cannot be instantiated"
         super().__init__()
         self.name = name
         self.outputs = []
@@ -254,7 +257,7 @@ class ImmutableTensor(OpNode):
         return self._opr.outputs[0].dtype if self._opr else None
 
     def numpy(self):
-        return self._opr.outputs[0].value if self._opr else None
+        return self.outputs[0].numpy()
 
     def set_value(self, data, device=None):
         assert self.graph is not None
@@ -266,7 +269,7 @@ class ImmutableTensor(OpNode):
             data = data.astype(np.float32)
         elif data.dtype == np.int64:
             data = data.astype(np.int32)
-        varnode = rt.make_const(self.graph, data, cn, data.dtype, self.name)
+        varnode = type(self).rt_fun(self.graph, data, cn, data.dtype, self.name)
         if len(self.outputs) == 0:
             self.outputs.append(VarNode(owner_opr=self, name=self.name))
         self.outputs[0].var = varnode
@@ -289,6 +292,16 @@ class ImmutableTensor(OpNode):
             self.set_value(self.numpy())
         if self.name is not None:
             self.outputs[0].var.name = self.name
+
+
+class ImmutableTensor(ConstOpBase):
+    type = "ImmutableTensor"
+    rt_fun = rt.make_const
+
+
+class SharedDeviceTensor(ConstOpBase):
+    type = "SharedDeviceTensor"
+    rt_fun = rt.make_shared
 
 
 class ReadOnlyOpNode(OpNode):

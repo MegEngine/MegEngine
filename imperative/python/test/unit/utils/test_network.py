@@ -130,6 +130,52 @@ def test_replace_opr():
     np.testing.assert_equal(out["o"], [0, 0])
 
 
+def test_splice_network():
+    x = F.ones((2,))
+    y = F.ones((2,))
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fun1(a, b):
+        return (a + b) * 2
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fun2(a):
+        return a * 2 - 1
+
+    model = io.BytesIO()
+    fun1(x, y)
+    fun2(x)
+    fun1.dump(
+        model,
+        arg_names=["net1_i0", "net1_i1"],
+        output_names=["net1_o0"],
+        optimize_for_inference=False,
+    )
+    model.seek(0)
+    net1 = Net.load(model)
+    model.seek(0)
+    fun2.dump(
+        model,
+        arg_names=["net2_i0"],
+        output_names=["net2_o0"],
+        optimize_for_inference=False,
+    )
+    model.seek(0)
+    net2 = Net.load(model)
+    net1.add_output(*net2.output_vars)
+    var = net1.var_filter.name("net1_i0").as_unique()
+    repl_var = net2.var_filter.name("net2_o0").as_unique()
+    net1.replace_vars({var: repl_var})
+    assert "net1_i0" not in [var.name for var in net1.all_vars]
+    assert "net2_i0" in [var.name for var in net1.all_vars]
+    model.seek(0)
+    net1.dump(model, keep_var_name=2, optimize_for_inference=False)
+    model.seek(0)
+    net = Net.load(model)
+    assert "net1_i0" not in [var.name for var in net.all_vars]
+    assert "net2_i0" in [var.name for var in net.all_vars]
+
+
 def test_modify_params():
 
     a = Tensor([1, 2])

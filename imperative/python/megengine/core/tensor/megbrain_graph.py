@@ -519,8 +519,7 @@ def _unwrap(x):
         return type(x)(map(_unwrap, x))
     if isinstance(x, VarNode):
         return x._node
-    else:
-        return x
+    return x
 
 
 def apply_normal_varnode(op: OpDef, *args: VarNode):
