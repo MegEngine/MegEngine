@@ -635,6 +635,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44) {
         benchmark_impl(param, shape_arg, ".+", RUNS, {4, {4, 5, 6, 7}},
                        {1, {7}}, data_type);
     };
+    bench_case(1, 2, 64, 160, 160, 1, 1, 0, 1, true);
     bench_case(1, 3, 64, 224, 224, 7, 1, 3, 2, true);
     bench_case(1, 64, 64, 56, 56, 3, 1, 1, 1);
     bench_case(1, 128, 128, 28, 28, 3, 1, 1, 1);

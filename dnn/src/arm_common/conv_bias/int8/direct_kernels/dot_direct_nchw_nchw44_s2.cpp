@@ -60,6 +60,17 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 8, 2, T, T2, T3, T4> {
 
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
+struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 1, oc_block, ow_block,
+                                2> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
+    static void impl(const int8_t*, const int8_t*, const int32_t*, int8_t*, int,
+                     int, int, int, const Op&) {
+        megdnn_assert(0, "not impl");
+    }
+};
+
+template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
+          int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 2, oc_block, ow_block,
                                 2> {
     MEGDNN_ATTRIBUTE_TARGET("dotprod")
@@ -429,6 +440,7 @@ void conv_direct_int8_nchw_nchw44_dot(const int8_t* src, const int8_t* filter,
     GET_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)
 
 #define DISPATCH_CONV_KERN(stride) \
+    GET_BIAS_MODE_PARAM(stride, 1) \
     GET_BIAS_MODE_PARAM(stride, 2) \
     GET_BIAS_MODE_PARAM(stride, 3) \
     GET_BIAS_MODE_PARAM(stride, 5) \

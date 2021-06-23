@@ -47,6 +47,52 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, Func, 8, 1, T, T2, T3, T4> {
     }
 };
 ////////////////////stride 1///////////////////
+
+template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
+          int ow_block>
+struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 1, oc_block, ow_block,
+                                1> {
+    MEGDNN_ATTRIBUTE_TARGET("dotprod")
+    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
+                     const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
+                     int iw, int ld_dst_oc, const Op& op) {
+        constexpr int stride = 1;
+        constexpr int filter_hight = 1;
+        constexpr int filter_width = 4;
+        constexpr int weight_reg = 2;
+        constexpr int src_reg = 2;
+
+        constexpr int oc_step = 4;
+        constexpr int ic_step = 1;
+        constexpr int pack_iw_len = 4;
+        constexpr int simd_len = 16;
+
+        const int ld_bias = oc_step;
+        const int ic_stride = ih * iw * pack_iw_len;
+        const int ld_weight_oc = oc_step * filter_hight * filter_width * ic;
+        constexpr int c_dim = OCHelper<oc_block>::val;
+
+        int32x4_t c[c_dim][8];
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, ld_bias);
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += ic_step) {
+            int8x16_t src[src_reg];
+            int8x16_t weight[c_dim][weight_reg];
+            // row 0
+            load_helper<src_reg, 0, simd_len, 0, Vld1q_s8>(
+                    src, src_ptr + 0 * iw * pack_iw_len, 0);
+            load_helper<weight_reg, 0, simd_len, c_dim, Vld1q_s8>(
+                    weight, weight_ptr, ld_weight_oc);
+            cal_helper<0, 0, c_dim, Vdotq_laneq_s32, ow_block, stride>(c, src,
+                                                                       weight);
+
+            src_ptr += ic_stride;
+            weight_ptr += filter_hight * filter_width * oc_step;
+        }
+        store_ocx_ow8_remain_static_dt<c_dim, remain_w, Op, dt_qint8*>(
+                c, op, dst_ptr, ld_dst_oc);
+    }
+};
+
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
           int ow_block>
 struct KerNeonDotXXs2Nchw44Int8<bias_mode, Op, remain_w, 2, oc_block, ow_block,
@@ -441,6 +487,7 @@ void conv_direct_int8_nchw_nchw44_dot(const int8_t* src, const int8_t* filter,
     GET_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)
 
 #define DISPATCH_CONV_KERN(stride) \
+    GET_BIAS_MODE_PARAM(stride, 1) \
     GET_BIAS_MODE_PARAM(stride, 2) \
     GET_BIAS_MODE_PARAM(stride, 3) \
     GET_BIAS_MODE_PARAM(stride, 5) \

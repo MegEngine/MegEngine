@@ -113,6 +113,47 @@ struct ShiftCalHelper<src_idx, weight_idx, 1, 1, T, T2, T3, T4> {
 };
 
 template <BiasMode bias_mode, typename Op, int remain_w, int oc_block>
+struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 1, oc_block, 1> {
+    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
+                     const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
+                     int iw, int ld_dst_oc, const Op& op) {
+        constexpr int stride = 1;
+        constexpr int filter_height = 1;
+        constexpr int filter_width = 4;
+        constexpr int oc_step = 4;
+        constexpr int loop_ic_step = 1;
+        constexpr int simd_len = 16;
+        constexpr int pack_iw_len = 16;
+        constexpr int src_reg = 8;
+        constexpr int weight_reg = 1;
+
+        const int ic_stride = ih * iw * pack_iw_len;
+        const int ld_weight_oc = oc_step * filter_height * filter_width * ic;
+        constexpr int c_dim = OCHelper<oc_block>::val;
+        int32x4_t c[c_dim][8];
+        init_ocx_ow8<c_dim, bias_mode, remain_w>(c, bias_ptr, oc_step);
+
+        for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
+            const int8_t* nchw_src_ptr = src_ptr + ic_idx * ic_stride;
+            int8x16_t src[src_reg];
+            int8x16_t dot4_weight[c_dim][weight_reg];
+            int16x8_t temp_c[4];
+            load_helper<weight_reg, 0, simd_len, c_dim, Vld1q_s8>(
+                    dot4_weight, weight_ptr, ld_weight_oc);
+            load_helper<src_reg, 0, simd_len, 0, Vld1q_s8>(
+                    src, nchw_src_ptr + 0 * iw * pack_iw_len, 0);
+            cal_helper<0, 0, c_dim, stride>(c, src, dot4_weight, temp_c);
+
+            weight_ptr += oc_step * filter_height * filter_width;
+        }
+
+        store_ocx_ow8_remain_static_dt<c_dim, remain_w, Op, dt_qint8*>(
+                c, op, dst_ptr, ld_dst_oc);
+    }
+};
+
+
+template <BiasMode bias_mode, typename Op, int remain_w, int oc_block>
 struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 2, oc_block, 1> {
     static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
                      const int32_t* bias_ptr, int8_t* dst_ptr, int ic, int ih,
@@ -547,6 +588,7 @@ struct ConvDiectStrideInt8NchwNchw44<bias_mode, Op, filter_size, 1> {
     INSTANCE_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)
 
 #define INSTANCE_CONV_KERN(stride)      \
+    INSTANCE_BIAS_MODE_PARAM(stride, 1) \
     INSTANCE_BIAS_MODE_PARAM(stride, 2) \
     INSTANCE_BIAS_MODE_PARAM(stride, 3) \
     INSTANCE_BIAS_MODE_PARAM(stride, 5) \

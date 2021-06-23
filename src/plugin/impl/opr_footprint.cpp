@@ -131,7 +131,8 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
         if (param.format == Param::Format::NCHW44 ||
             param.format == Param::Format::NCHW44_DOT) {
             //! if channel wise weight layout is {group/4, FH, FW, 1, 1, 4}
-            if (filter_shape[1] == 1 && filter_shape[2] == 1) {
+            if (filter_shape[1] == 1 && filter_shape[2] == 1 &&
+                filter_shape.ndim == 6) {
                 group *= 4;
             }
             size_t computation = dst_shape.total_nr_elems() * fh * fw *
