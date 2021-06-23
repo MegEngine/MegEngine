@@ -245,6 +245,9 @@ ConvBiasImpl::AlgoDotS8DirectNCHWNCHW44::dispatch_kerns(
 
 #define DISPATCH_CONV_KERN(stride)          \
     switch (param.filter_meta.spatial[0]) { \
+        case 1:                             \
+            GET_BIAS_MODE_PARAM(stride, 1)  \
+            break;                          \
         case 2:                             \
             GET_BIAS_MODE_PARAM(stride, 2)  \
             break;                          \

@@ -487,6 +487,13 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44_S2) {
             handle(), "S8_CONV_NCHW_NCHW44");
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_INT8_NCHW_NCHW44_S1_F1) {
+    checker_conv_bias_qint8x8x8(
+            get_nchw44_conv_bias_args({1}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1,
+                                      false, true),
+            handle(), "S8_CONV_NCHW_NCHW44");
+}
+
 /*****************************quint8 direct****************************/
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_QUINT8_STRIDE1) {
     checker_conv_bias_quint8x8x8(get_int8_quint8_conv_bias_args(
@@ -511,6 +518,15 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44) {
 
     args = get_nchw44_conv_bias_args({2, 3, 5, 7}, QUAN_NLMODE,
                                      BR_AND_NO_BIASMODE, 1, false, true);
+    for (auto&& arg : args) {
+        arg.param.format = param::ConvBias::Format::NCHW44_DOT;
+    }
+    checker_conv_bias_qint8x8x8(args, handle(), "ARMDOTS8_NCHW_NCHW44");
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_DOT_NCHW_NCHW44_S1_F1) {
+    auto args = get_nchw44_conv_bias_args({1}, QUAN_NLMODE, BR_AND_NO_BIASMODE,
+                                          1, false, true);
     for (auto&& arg : args) {
         arg.param.format = param::ConvBias::Format::NCHW44_DOT;
     }

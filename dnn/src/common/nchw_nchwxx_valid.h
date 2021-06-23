@@ -74,9 +74,11 @@ inline bool nchw_nchwxx_valid<NCHW44_INT8>(
                       nonline_mode == param::ConvBias::NonlineMode::H_SWISH;
     bool ok_src_dst =
             fm.icpg < 4 && (fm.ocpg % 4 == 0 && fm.ocpg >= 4) && fm.group == 1;
-    bool ok_filter = fm.spatial_ndim == 2 && fm.spatial[0] == fm.spatial[1] &&
-                     (fm.spatial[0] == 2 || fm.spatial[0] == 3 ||
-                      fm.spatial[0] == 5 || fm.spatial[0] == 7);
+    bool ok_filter =
+            fm.spatial_ndim == 2 && fm.spatial[0] == fm.spatial[1] &&
+            (fm.spatial[0] == 2 || fm.spatial[0] == 3 || fm.spatial[0] == 5 ||
+             fm.spatial[0] == 7 ||
+             (fm.spatial[0] == 1 && fm.stride[0] == 1 && fm.stride[1] == 1));
     bool ok_slide = fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
                     fm.stride[0] == fm.stride[1] &&
                     (fm.stride[0] == 1 || fm.stride[1] == 2);
@@ -126,9 +128,11 @@ inline bool nchw_nchwxx_valid<NCHW44_INT8_DOT>(
                       nonline_mode == param::ConvBias::NonlineMode::H_SWISH;
     bool ok_src_dst =
             fm.icpg < 4 && (fm.ocpg % 4 == 0 && fm.ocpg >= 4) && fm.group == 1;
-    bool ok_filter = fm.spatial_ndim == 2 && fm.spatial[0] == fm.spatial[1] &&
-                     (fm.spatial[0] == 2 || fm.spatial[0] == 3 ||
-                      fm.spatial[0] == 5 || fm.spatial[0] == 7);
+    bool ok_filter =
+            fm.spatial_ndim == 2 && fm.spatial[0] == fm.spatial[1] &&
+            (fm.spatial[0] == 2 || fm.spatial[0] == 3 || fm.spatial[0] == 5 ||
+             fm.spatial[0] == 7 ||
+             (fm.spatial[0] == 1 && fm.stride[0] == 1 && fm.stride[1] == 1));
     bool ok_slide = fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
                     fm.stride[0] == fm.stride[1] &&
                     (fm.stride[0] == 1 || fm.stride[1] == 2);

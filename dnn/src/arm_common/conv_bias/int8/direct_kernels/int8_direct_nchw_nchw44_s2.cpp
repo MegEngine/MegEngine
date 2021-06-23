@@ -1033,6 +1033,15 @@ struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 2, oc_block, stride> {
     }
 };
 
+template <BiasMode bias_mode, typename Op, int remain_w, int oc_block,
+          int stride>
+struct KerNeonXXs2NchwNchw44<bias_mode, Op, remain_w, 1, oc_block, stride> {
+    static void impl(const int8_t*, const int8_t*, const int32_t*, int8_t*, int,
+                     int, int, int, const Op&) {
+        megdnn_assert(0, "not impl nchw_nchw44 1x1 s2");
+    }
+};
+
 enum PACK_MODE { NO_PAD = 0, FIRST_PAD = 1, LAST_PAD = 2 };
 template <PACK_MODE mode>
 MEGDNN_ALWAYS_INLINE void pack_src_one_line(const int8_t* inptr, int8_t* outptr,
@@ -1398,6 +1407,7 @@ struct ConvDiectStrideInt8NchwNchw44<bias_mode, Op, filter_size, 2> {
     INSTANCE_OP_PARAM(stride, filter, BiasMode::BROADCAST_CHANNEL_BIAS)
 
 #define INSTANCE_CONV_KERN(stride)      \
+    INSTANCE_BIAS_MODE_PARAM(stride, 1) \
     INSTANCE_BIAS_MODE_PARAM(stride, 2) \
     INSTANCE_BIAS_MODE_PARAM(stride, 3) \
     INSTANCE_BIAS_MODE_PARAM(stride, 5) \
