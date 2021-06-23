@@ -959,3 +959,16 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     op = builtin.SVD(full_matrices=full_matrices, compute_uv=compute_uv)
     U, sigma, V = apply(op, inp)
     return U, sigma, V
+
+
+def _has_inf(inp: Tensor) -> Tensor:
+    """
+    Check whether input contains infinite value.
+
+    :param inp: a tensor to be checked.
+    :return: a int32 scalar tensor, 0 for False and 1 for True.
+    """
+    op = builtin.CheckHasInf()
+    (oup,) = apply(op, inp.reshape(-1).astype("float32"))
+    oup._setscalar()
+    return oup

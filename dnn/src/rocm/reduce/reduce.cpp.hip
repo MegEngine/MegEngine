@@ -18,15 +18,15 @@ namespace rocm {
 
 using namespace reduce;
 
-#define COMMOA ,
+#define COMMA ,
 
 #define INST(sctype, dctype, wtype)                                  \
-    INST_REDUCE(SumOp<sctype COMMOA dctype COMMOA wtype>, false);    \
-    INST_REDUCE(SumSqrOp<sctype COMMOA dctype COMMOA wtype>, false); \
-    INST_REDUCE(ProdOp<sctype COMMOA dctype COMMOA wtype>, false);   \
-    INST_REDUCE(MinOp<sctype COMMOA dctype COMMOA wtype>, false);    \
-    INST_REDUCE(MaxOp<sctype COMMOA dctype COMMOA wtype>, false);    \
-    INST_REDUCE(MeanOp<sctype COMMOA dctype COMMOA wtype>, false);
+    INST_REDUCE(SumOp<sctype COMMA dctype COMMA wtype>, false);    \
+    INST_REDUCE(SumSqrOp<sctype COMMA dctype COMMA wtype>, false); \
+    INST_REDUCE(ProdOp<sctype COMMA dctype COMMA wtype>, false);   \
+    INST_REDUCE(MinOp<sctype COMMA dctype COMMA wtype>, false);    \
+    INST_REDUCE(MaxOp<sctype COMMA dctype COMMA wtype>, false);    \
+    INST_REDUCE(MeanOp<sctype COMMA dctype COMMA wtype>, false);
 
 #define cb(_dt) \
     INST(DTypeTrait<_dt>::ctype, DTypeTrait<_dt>::ctype, DTypeTrait<_dt>::ctype)
@@ -39,6 +39,7 @@ INST(float, dt_float16, float)
 INST(int, float, float)
 #undef cb
 #undef INST
+#undef COMMA
 
 }  // namespace rocm
 }  // namespace megdnn

@@ -4,9 +4,9 @@
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
 #include "megdnn/dtype.h"
@@ -149,6 +149,33 @@ struct MaxOp {
     }
     MEGDNN_HOST MEGDNN_DEVICE MaxOp(src_ctype* src, dst_ctype* dst, size_t B)
             : INIT(wtype(DTypeTrait<wtype>::min())), src(src), dst(dst), B(B) {}
+};
+
+template <typename src_ctype, typename dst_ctype, typename wtype_>
+struct CheckHasInfOp {
+    typedef wtype_ wtype;
+    const wtype INIT;
+
+    src_ctype* src;
+    dst_ctype* dst;
+    const size_t B;
+
+    MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) {
+#if defined(__CUDA_ARCH__)
+        return isinf(src[idx]);
+#else
+        return std::isinf(src[idx]);
+#endif
+    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
+        dst[idx] = val;
+    }
+    static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
+        return lhs | rhs;
+    }
+    MEGDNN_HOST MEGDNN_DEVICE CheckHasInfOp(src_ctype* src, dst_ctype* dst,
+                                            size_t B)
+            : INIT(wtype(0)), src(src), dst(dst), B(B) {}
 };
 
 #if MEGDNN_CC_HOST

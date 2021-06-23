@@ -307,4 +307,6 @@ def CambriconRuntime: MgbHashableOp<"CambriconRuntime"> {
 
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
+def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
+
 #endif // MGB_OPS

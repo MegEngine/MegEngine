@@ -207,7 +207,8 @@ private:
     cb(FakeQuantForward) \
     cb(FakeQuantBackward) \
     cb(TQTForward) \
-    cb(TQTBackward)
+    cb(TQTBackward) \
+    cb(CheckHasInf)
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;

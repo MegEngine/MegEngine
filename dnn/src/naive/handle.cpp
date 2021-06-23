@@ -21,6 +21,7 @@
 #include "src/naive/batch_conv_bias/opr_impl.h"
 #include "src/naive/batch_normalization/opr_impl.h"
 #include "src/naive/batched_matrix_mul/opr_impl.h"
+#include "src/naive/check_has_inf/opr_impl.h"
 #include "src/naive/checksum/opr_impl.h"
 #include "src/naive/concat/opr_impl.h"
 #include "src/naive/cond_take/opr_impl.h"

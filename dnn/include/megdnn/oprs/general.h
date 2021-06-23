@@ -1317,6 +1317,27 @@ protected:
                             TensorLayout& exec_workspace,
                             TensorLayout& exec_src, TensorLayout& exec_dst);
 };
+
+/*!
+ * \brief check whether input contains inf value.
+ */
+class CheckHasInf: public OperatorBase {
+    DEF_OPR_PARAM(Empty);
+    DEF_OPR_IMPL(CheckHasInf, OperatorBase, 1, 1);
+
+    public:
+        virtual size_t get_workspace_in_bytes(const TensorLayout &src,
+                const TensorLayout &dst) = 0;
+
+        void deduce_layout(const TensorLayout &src, TensorLayout &dst);
+
+        virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace) = 0;
+
+    protected:
+        void check_exec(const TensorLayout &src, const TensorLayout &dst,
+                size_t workspace_in_bytes);
+};
 }  // namespace megdnn
 
 #include "megdnn/internal/opr_header_epilogue.h"
