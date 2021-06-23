@@ -84,8 +84,12 @@ ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_subopr_list(
                       inner_dst_layout, inner_bias_layout, inner_z_layout);
 
     Param inner_conv_param = o->param();
-    inner_conv_param.format = Param::Format::NCHW4;
- 
+    if (layouts[4].dtype.enumv() == DTypeEnum::Float32) {
+        inner_conv_param.format = Param::Format::NCHW4_NCHW;
+    } else {
+        inner_conv_param.format = Param::Format::NCHW4;
+    }
+
     std::string param_str;
     Algorithm::serialize_write_pod(inner_conv_param, param_str);
 
@@ -192,9 +196,9 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS8::exec(
     inner_conv_param.format =
             dst_float ? Param::Format::NCHW4_NCHW : Param::Format::NCHW4;
     auto inner_opr = args.handle->create_operator<ConvBiasForward>();
+    inner_opr->param() = inner_conv_param;
     set_execution_policy<ConvBiasForward, ConvBiasForward*>(args.opr,
                                                             inner_opr.get());
-    inner_opr->param() = inner_conv_param;
 
     relayout_nchw_nchw4->exec(*args.src_tensor, inner_src, {});
     relayout_weight->exec(*args.filter_tensor, inner_weight, {});

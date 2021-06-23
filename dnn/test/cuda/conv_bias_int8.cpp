@@ -701,9 +701,11 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
 TEST_F(CUDA, FALLBACK_CONV_QS8) {
     require_compute_capability_eq(7, 5);
     Checker<ConvBiasForward> checker(handle_cuda());
-    auto check = [&checker](const std::string&& algo) {
+    auto check = [&checker](const std::string&& algo,
+                            const std::string&& sub_algo) {
         checker.set_before_exec_callback(
-                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                        {algo.c_str(), {sub_algo.c_str()}}));
         UniformIntRNG rng{-3, 3};
         UniformIntRNG bias_rng{-50, 50};
         checker.set_rng(0, &rng)
@@ -733,15 +735,17 @@ TEST_F(CUDA, FALLBACK_CONV_QS8) {
                                         {},
                                         {}});
     };
-    check("FALLBACK_CONV_NCHW_QS8");
+    check("FALLBACK_CONV_NCHW_QS8", "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM");
 }
 
 TEST_F(CUDA, FALLBACK_CONV_QS8_F32) {
     require_compute_capability_eq(7, 5);
     Checker<ConvBiasForward> checker(handle_cuda());
-    auto check = [&checker](const std::string&& algo) {
+    auto check = [&checker](const std::string&& algo,
+                            const std::string&& sub_algo) {
         checker.set_before_exec_callback(
-                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                        {algo.c_str(), {sub_algo.c_str()}}));
         UniformIntRNG rng{-3, 3};
         UniformFloatRNG bias_rng{-50.f, 50.f};
         checker.set_rng(0, &rng)
@@ -771,7 +775,7 @@ TEST_F(CUDA, FALLBACK_CONV_QS8_F32) {
                                         {},
                                         {}});
     };
-    check("FALLBACK_CONV_NCHW_QS8");
+    check("FALLBACK_CONV_NCHW_QS8", "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM");
 }
 
 TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_WEIGHT_PREPROCESS) {

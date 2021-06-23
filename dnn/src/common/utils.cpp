@@ -353,7 +353,8 @@ bool megdnn::check_bias_share_in_channel(const TensorLayout& bias,
         format == param::ConvBias::Format::NCHW4_NCHW) {
         share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[2] == 1 &&
                             bias[3] == 1);
-    } else if (format == param::ConvBias::Format::NHWC) {
+    } else if (format == param::ConvBias::Format::NHWC ||
+               format == param::ConvBias::Format::NCHW4_NHWC) {
         share_in_channel = (bias.ndim == 4 && bias[0] == 1 && bias[1] == 1 &&
                             bias[2] == 1);
     } else if (format == param::ConvBias::Format::NCHW4 ||
