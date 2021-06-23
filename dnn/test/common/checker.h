@@ -79,6 +79,7 @@ protected:
     bool m_no_naive_and_check = false;
     bool m_stable_check = false;
     bool m_force_deduce_dst = true;
+    bool m_allow_invalid_check = false;
     /**
      * the offset from the start of malloc memory
      *
@@ -248,6 +249,11 @@ public:
         return *this;
     }
 
+    Checker& set_allow_invalid_check(bool allow_invalid_check) {
+        m_allow_invalid_check = allow_invalid_check;
+        return *this;
+    }
+
     //! load input tensors from file for next run
     Checker& load_input_tensors(const char* fpath) {
         m_input_tensors_fpath = fpath;
@@ -329,12 +335,23 @@ private:
         const char* expr0, const char* expr1, const char* expr_maxerr,
         const char* expr_maxerr_avg, const char* expr_maxerr_avg_biased,
         const TensorND& v0, const TensorND& v1, float maxerr, float maxerr_avg,
+        float maxerr_avg_biased, bool allow_invalid = false);
+
+::testing::AssertionResult __assert_tensor_eq_allow_invalid(
+        const char* expr0, const char* expr1, const char* expr_maxerr,
+        const char* expr_maxerr_avg, const char* expr_maxerr_avg_biased,
+        const TensorND& v0, const TensorND& v1, float maxerr, float maxerr_avg,
         float maxerr_avg_biased);
 
 #define MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG(v0, v1, maxerr, maxerr_avg,         \
                                         maxerr_avg_biased)                  \
     ASSERT_PRED_FORMAT5(::megdnn::test::__assert_tensor_eq, v0, v1, maxerr, \
                         maxerr_avg, maxerr_avg_biased)
+
+#define MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG_ALLOW_INVALID(                        \
+        v0, v1, maxerr, maxerr_avg, maxerr_avg_biased)                        \
+    ASSERT_PRED_FORMAT5(::megdnn::test::__assert_tensor_eq_allow_invalid, v0, \
+                        v1, maxerr, maxerr_avg, maxerr_avg_biased)
 
 #define MEGDNN_ASSERT_TENSOR_EQ_EPS(v0, v1, maxerr) \
     MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG(v0, v1, maxerr, maxerr, maxerr)
@@ -435,7 +452,7 @@ TensorND TensorValue(const TensorShape& shape, T dtype,
 
 template <typename T, typename U>
 TensorND TensorValueLowbit4(const TensorShape& shape, T dtype,
-                                std::vector<U> values) {
+                            std::vector<U> values) {
     TensorND tensor;
     tensor.layout = {shape, dtype};
     tensor.raw_ptr =

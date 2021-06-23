@@ -301,9 +301,8 @@ void UniformFloatNonZeroRNG::fill_fast_float32(dt_float32* dest, size_t size) {
     }
 }
 
-void UniformFloatWithZeroRNG::fill_fast_float32(dt_float32 *dest, size_t size) {
+void UniformFloatWithValueRNG::fill_fast_float32(dt_float32 *dest, size_t size) {
     RNGxorshf gen{RandomState::generator()};
-    printf("a %f, b %f \n", m_dist.a(), m_dist.b());
     auto k = double(m_dist.b() - m_dist.a()) /
         double(RNGxorshf::max() - RNGxorshf::min() + 1.0);
     auto b = m_dist.a() - RNGxorshf::min() * k;
@@ -312,9 +311,8 @@ void UniformFloatWithZeroRNG::fill_fast_float32(dt_float32 *dest, size_t size) {
     auto pb = 0.f - RNGxorshf::min() * p;
     for (size_t i = 0; i < size; ++ i) {
         float rnd = gen() * p + pb;
-        //printf("%.3f \n", rnd);
-        if(rnd < zero_val_proportion_) {
-            dest[i] = 0.f;
+        if(rnd < val_proportion_) {
+            dest[i] = val_;
         } else {
             dest[i] = gen() * k + b;
         }

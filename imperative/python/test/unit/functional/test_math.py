@@ -157,3 +157,14 @@ def test_sum_neg_axis():
         np.testing.assert_allclose(get.numpy(), ref, rtol=1e-6)
     with pytest.raises(AssertionError):
         F.sum(tensor(data), axis=(-1, 1))
+
+
+def test_has_inf():
+    shape = (32, 3, 32, 32)
+    data = np.random.random(shape).astype(np.float32)
+    rst = F.math._has_inf(tensor(data))
+    np.testing.assert_equal(rst.numpy(), [0])
+
+    data[0][0][0][0] = float("inf")
+    rst = F.math._has_inf(tensor(data))
+    np.testing.assert_equal(rst.numpy(), [1])

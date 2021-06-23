@@ -11,10 +11,10 @@
 #pragma once
 #include "megdnn/dtype.h"
 
-#include "test/common/utils.h"
-#include "test/common/random_state.h"
 #include <random>
 #include <set>
+#include "test/common/random_state.h"
+#include "test/common/utils.h"
 
 namespace megdnn {
 namespace test {
@@ -80,7 +80,8 @@ public:
     }
 
     void gen(const TensorND& tensor) override {
-        megdnn_assert(tensor.layout.dtype.enumv() == DTypeTrait<dt_bfloat16>::enumv);
+        megdnn_assert(tensor.layout.dtype.enumv() ==
+                      DTypeTrait<dt_bfloat16>::enumv);
         size_t nr_elems = tensor.layout.span().dist_elem();
         auto offset = tensor.layout.span().low_elem;
         for (size_t i = 0; i < nr_elems; ++i) {
@@ -185,22 +186,29 @@ public:
     void fill_fast_float32(dt_float32* dest, size_t size) override;
 };
 
-class UniformFloatWithZeroRNG final : public UniformFloatRNG {
+class UniformFloatWithValueRNG : public UniformFloatRNG {
 public:
-    UniformFloatWithZeroRNG(dt_float32 a, dt_float32 b,
-                            float zero_val_proportion)
-            : UniformFloatRNG(a, b) {
-        if (zero_val_proportion < 0.f)
-            zero_val_proportion_ = 0.f;
-        else if (zero_val_proportion > 1.f)
-            zero_val_proportion_ = 1.f;
+    UniformFloatWithValueRNG(dt_float32 a, dt_float32 b, float val_proportion,
+                             float val)
+            : UniformFloatRNG(a, b), val_(val) {
+        if (val_proportion < 0.f)
+            val_proportion_ = 0.f;
+        else if (val_proportion > 1.f)
+            val_proportion_ = 1.f;
         else
-            zero_val_proportion_ = zero_val_proportion;
+            val_proportion_ = val_proportion;
     }
 
 private:
-    float zero_val_proportion_;
+    float val_proportion_, val_;
     void fill_fast_float32(dt_float32* dest, size_t size) override;
+};
+
+class UniformFloatWithZeroRNG final : public UniformFloatWithValueRNG {
+public:
+    UniformFloatWithZeroRNG(dt_float32 a, dt_float32 b,
+                            float zero_val_proportion)
+            : UniformFloatWithValueRNG(a, b, zero_val_proportion, 0.f) {}
 };
 
 class BernoulliRNG final : public IIDRNG {
