@@ -12,7 +12,7 @@ function usage() {
     echo "-v : ninja with verbose and explain, default off"
     echo "-s : Do not build develop even build with training mode, default on when build with training, always for wheel"
     echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
-    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -k)"
+    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -e)"
     echo "-h : show usage"
     echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
     echo "example: $0 -d"
