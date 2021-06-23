@@ -201,7 +201,8 @@ class Apply(Expr):
                 NodeMixin.wrap_safe(i, Constant.make(i))
         apply_node = cls.make(opdef)
         for i in inputs:
-            apply_node.add_input(NodeMixin.get(i))
+            assert isinstance(i, RawTensor)
+            apply_node.inputs.append(NodeMixin.get(i))
 
         unset_module_tracing()
         outputs = apply(opdef, *inputs)

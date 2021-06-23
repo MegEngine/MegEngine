@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+# MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+#
+# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+import collections
 from typing import Callable, NamedTuple
 
 SUPPORTED_TYPE = {}
@@ -9,11 +19,22 @@ def register_supported_type(type, flatten, unflatten):
     SUPPORTED_TYPE[type] = NodeType(flatten, unflatten)
 
 
+def _dict_flatten(inp):
+    aux_data = []
+    results = []
+    for key, value in sorted(inp.items()):
+        results.append(value)
+        aux_data.append(key)
+    return results, aux_data
+
+
+def _dict_unflatten(inps, aux_data):
+    return dict(zip(aux_data, inps))
+
+
 register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
 register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: list(x))
-register_supported_type(
-    dict, lambda x: (list(x.values()), list(x.keys())), lambda x, y: dict(zip(y, x))
-)
+register_supported_type(dict, _dict_flatten, _dict_unflatten)
 register_supported_type(
     slice,
     lambda x: ([x.start, x.stop, x.step], None),
@@ -68,6 +89,8 @@ class TreeDef:
 
 class LeafDef(TreeDef):
     def __init__(self, type):
+        if not isinstance(type, collections.abc.Sequence):
+            type = (type,)
         super().__init__(type, None, [])
         self.num_leaves = 1
 
@@ -77,4 +100,4 @@ class LeafDef(TreeDef):
         return leaves[0]
 
     def __repr__(self):
-        return "Leaf({})".format(self.type.__name__)
+        return "Leaf({})".format(", ".join(t.__name__ for t in self.type))

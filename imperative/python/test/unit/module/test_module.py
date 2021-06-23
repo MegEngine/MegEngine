@@ -15,6 +15,7 @@ import pytest
 import megengine as mge
 import megengine.functional as F
 from megengine import Parameter, Tensor, tensor
+from megengine.experimental.traced_module import TracedModule, trace_module
 from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
@@ -67,8 +68,18 @@ class MyModule(Module):
         return x
 
 
-def test_module_api():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_module_api(test_traced_module):
     m = MyModule()
+    if test_traced_module:
+        buff = m.buff
+        param = m.param
+        m = trace_module(m, Tensor(np.random.random((1, 4, 16, 16))))
+        assert "buff" not in m.__dict__
+        assert "param" not in m.__dict__
+        m.buff = buff
+        m.param = param
+
     assert list(m.children()) == [m.bn, m.i]
     assert list(m.named_children()) == [("bn", m.bn), ("i", m.i)]
     assert list(m.modules()) == [m, m.bn, m.i, m.i.bn]
@@ -141,8 +152,11 @@ def test_module_api():
     assert m.bn.training == False and m.i.bn.training == False
 
 
-def test_module_api_reuse_submodule():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_module_api_reuse_submodule(test_traced_module):
     m = MyModule()
+    if test_traced_module:
+        m = trace_module(m, Tensor(np.random.random((1, 4, 16, 16))))
     m.h = m.i  # pylint: disable=attribute-defined-outside-init
     assert list(m.modules()) == [m, m.bn, m.i, m.i.bn]
     assert list(m.named_modules()) == [
@@ -153,15 +167,21 @@ def test_module_api_reuse_submodule():
     ]
 
 
-def test_module_api_iterable_stability():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_module_api_iterable_stability(test_traced_module):
     m = MyModule()
+    if test_traced_module:
+        m = trace_module(m, Tensor(np.random.random((1, 4, 16, 16))))
     l = list(m.modules())
     for _ in range(100):
         assert list(m.modules()) == l
 
 
-def test_module_api_hooks():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_module_api_hooks(test_traced_module):
     net = MyModule()
+    if test_traced_module:
+        net = trace_module(net, Tensor(np.zeros((1, 4, 1, 1))))
     pre_hook_num = 0
     post_hook_num = 0
     hooks = []
@@ -383,11 +403,16 @@ class Simple(Module):
         self.conv1.weight = self.conv0.weight
 
     def forward(self, inputs):
-        pass
+        x = self.conv0(inputs)
+        y = self.conv1(inputs)
+        return x + y
 
 
-def test_shared_param():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_shared_param(test_traced_module):
     net = Simple()
+    if test_traced_module:
+        net = trace_module(net, tensor(np.random.random((1, 1, 8, 8))))
     assert net.conv0.weight is net.conv1.weight
     data = tensor(np.random.random((1, 1, 8, 8)).astype(np.float32))
     np.testing.assert_allclose(net.conv0(data).numpy(), net.conv1(data).numpy())
@@ -449,15 +474,21 @@ def test_shared_param_1d():
     np.testing.assert_allclose(conv0(data).numpy(), conv1(data).numpy())
 
 
-def test_pickle_module():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_pickle_module(test_traced_module):
     data_shape = (2, 28)
     data = tensor(np.random.random(data_shape))
     mlp = MLP()
+    pred_gt = mlp(data)
+    if test_traced_module:
+        mlp = trace_module(mlp, data)
     # pickle before forward
     with BytesIO() as fout:
         mge.save(mlp, fout)
         fout.seek(0)
         mlp1 = mge.load(fout)
+        if test_traced_module:
+            assert type(mlp1) == TracedModule
         pred0 = mlp1(data)
 
     pred1 = mlp(data)
@@ -467,8 +498,11 @@ def test_pickle_module():
         mge.save(mlp, fout)
         fout.seek(0)
         mlp1 = mge.load(fout)
+        if test_traced_module:
+            assert type(mlp1) == TracedModule
         pred2 = mlp1(data)
 
+    np.testing.assert_allclose(pred_gt.numpy(), pred1.numpy(), atol=5e-6)
     np.testing.assert_allclose(pred0.numpy(), pred1.numpy(), atol=5e-6)
     np.testing.assert_allclose(pred0.numpy(), pred2.numpy(), atol=5e-6)
 

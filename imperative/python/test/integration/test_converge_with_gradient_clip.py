@@ -15,6 +15,7 @@ import megengine.autodiff as ad
 import megengine.functional as F
 import megengine.optimizer as optim
 from megengine import Tensor
+from megengine.experimental.traced_module import trace_module
 from megengine.jit import trace
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
@@ -73,8 +74,12 @@ class XORNet(Module):
         return x
 
 
-def test_training_converge():
+@pytest.mark.parametrize("test_traced_module", [True, False])
+def test_training_converge(test_traced_module):
     net = XORNet()
+    if test_traced_module:
+        inp = Tensor(np.random.random((14, 2)))
+        net = trace_module(net, inp)
     opt = SGD(net.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     gm = ad.GradManager().attach(net.parameters())
 
@@ -110,9 +115,8 @@ def test_training_converge():
     xx = xx.reshape((ngrid * ngrid, 1))
     yy = yy.reshape((ngrid * ngrid, 1))
     data = mge.tensor(np.concatenate((xx, yy), axis=1).astype(np.float32))
-
-    pred = infer(data).numpy()
-    precision = calculate_precision(data.numpy(), pred)
+    pred = infer(data)
+    precision = calculate_precision(data.numpy(), pred.numpy())
     print("precision=", precision)
     assert precision == 1.0, "Test precision must be high enough, get {}".format(
         precision
