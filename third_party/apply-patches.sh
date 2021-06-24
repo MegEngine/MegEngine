@@ -5,6 +5,8 @@ function apply_cpuinfo_patches() {
     if [ -d "./cpuinfo" ]; then
         cp ./patches/0001-fix-arm-linux-fix-uclibc-build-error.patch cpuinfo/
         pushd cpuinfo >/dev/null
+        git config user.name "$1"
+        git config user.email "$2"
         git am --abort || true
         git rebase --abort || true
         git reset --hard
