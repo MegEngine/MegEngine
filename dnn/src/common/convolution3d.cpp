@@ -122,8 +122,6 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
         TensorLayout& dst) const {
     auto errmsg = [&]() { return get_errmsg(src, filter, dst, param()); };
     MEGDNN_MARK_USED_VAR(errmsg);
-    megdnn_assert_contiguous(src);
-    megdnn_assert_contiguous(filter);
     megdnn_assert(src.ndim >= 5_z, "%s", errmsg().c_str());
     megdnn_assert(src.dtype == filter.dtype, "%s", errmsg().c_str());
     if (param().data_type == Param::DataType::FLOAT) {
@@ -170,6 +168,8 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBase::deduce_layout_fwd(
 Convolution3DBase::CanonizedFilterMeta Convolution3DBase::check_layout_fwd(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) const {
+    megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(filter);
     TensorLayout dst_expected;
     auto ret = deduce_layout_fwd(src, filter, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
@@ -185,7 +185,12 @@ void Convolution3DForward::deduce_layout(const TensorLayout& src,
 Convolution3DBase::CanonizedFilterMeta Convolution3DForward::check_exec(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst, size_t workspace_in_bytes) {
-    auto ret = check_layout_fwd(src, filter, dst);
+    auto src_fwd = src;
+    auto dst_fwd = dst;
+    src_fwd.init_contiguous_stride();
+    dst_fwd.init_contiguous_stride();
+
+    auto ret = check_layout_fwd(src_fwd, filter, dst_fwd);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, filter, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     return ret;
@@ -196,7 +201,12 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBackwardData::check_exec(
         const TensorLayout& grad, size_t workspace_in_bytes) {
     megdnn_assert(param().data_type == Param::DataType::FLOAT,
                   "only float type is supported for conv backward");
-    auto ret = check_layout_fwd(grad, filter, diff);
+    auto diff_fwd = diff;
+    auto grad_fwd = grad;
+    diff_fwd.init_contiguous_stride();
+    grad_fwd.init_contiguous_stride();
+
+    auto ret = check_layout_fwd(grad_fwd, filter, diff_fwd);
     auto required_workspace_in_bytes =
             get_workspace_in_bytes(filter, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
@@ -244,7 +254,12 @@ Convolution3DBase::CanonizedFilterMeta Convolution3DBackwardFilter::check_exec(
         const TensorLayout& grad, size_t workspace_in_bytes) {
     megdnn_assert(param().data_type == Param::DataType::FLOAT,
                   "only float type is supported for conv backward");
-    auto ret = check_layout_fwd(src, grad, diff);
+    auto src_fwd = src;
+    auto diff_fwd = diff;
+    src_fwd.init_contiguous_stride();
+    diff_fwd.init_contiguous_stride();
+
+    auto ret = check_layout_fwd(src_fwd, grad, diff_fwd);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     return ret;

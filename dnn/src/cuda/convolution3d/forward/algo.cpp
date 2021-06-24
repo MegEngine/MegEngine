@@ -69,7 +69,7 @@ Convolution3DForwardImpl::AlgoBase::SizeArgs::SizeArgs(
         Convolution3DForwardImpl *o,
         const TensorLayout &src, const TensorLayout &filter,
         const TensorLayout &dst):
-    SizeArgs(o, src, o->check_layout_fwd(src, filter, dst), dst)
+    SizeArgs(o, src, o->make_canonized_filter_meta(src.ndim, filter), dst)
 {
 }
 

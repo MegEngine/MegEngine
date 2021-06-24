@@ -215,7 +215,6 @@ void backward_data(_megdnn_tensor_in filter,
         _megdnn_tensor_in diff,
         _megdnn_tensor_out grad,
         const Convolution3D::CanonizedFilterMeta &filter_meta) {
-    megdnn_assert(grad.layout.is_contiguous());
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 3);
     compute3d<gtype, ftype, dtype, StrategyBwdData>(
@@ -227,7 +226,6 @@ void backward_filter(_megdnn_tensor_in src,
         _megdnn_tensor_in diff,
         _megdnn_tensor_out grad,
         const Convolution3D::CanonizedFilterMeta &filter_meta) {
-    megdnn_assert(grad.layout.is_contiguous());
     memset(grad.raw_ptr, 0, grad.layout.span().dist_byte());
     megdnn_assert(filter_meta.spatial_ndim == 3);
     compute3d<stype, gtype, dtype, StrategyBwdFlt>(

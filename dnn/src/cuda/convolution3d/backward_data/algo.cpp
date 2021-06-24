@@ -64,7 +64,7 @@ Convolution3DBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
         Convolution3DBackwardDataImpl *o,
         const TensorLayout &filter, const TensorLayout &diff,
         const TensorLayout &grad):
-    SizeArgs(o, o->check_layout_fwd(grad, filter, diff), diff, grad)
+    SizeArgs(o, o->make_canonized_filter_meta(grad.ndim, filter), diff, grad)
 {
 }
 
