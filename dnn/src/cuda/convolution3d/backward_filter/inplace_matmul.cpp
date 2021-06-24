@@ -17,6 +17,10 @@ using namespace cuda;
 
 bool Convolution3DBackwardFilterImpl::AlgoInplaceMatmul::is_available(
         const SizeArgs &args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.diff_layout->is_contiguous()) {
+        return false;
+    }
     auto &&fm = args.grad_filter_meta;
     return args.grad_filter_meta.format == Param::Format::NCDHW &&
         args.src_layout->dtype == dtype::Float32() &&

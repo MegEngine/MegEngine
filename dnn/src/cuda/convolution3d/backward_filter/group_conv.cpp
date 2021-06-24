@@ -38,6 +38,8 @@ Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::AlgoGroupConvGeneral(
 
 bool Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::is_available(
         const SizeArgs &args) const {
+    if (args.grad_filter_meta.group <= 1)
+        return false;
     auto sub_args = args;
     TensorLayout src_pg, diff_pg;
     modify_size_args(sub_args, src_pg, diff_pg);

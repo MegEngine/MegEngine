@@ -19,6 +19,10 @@ using namespace convolution3d;
 
 bool Convolution3DBackwardFilterImpl::AlgoChanwise::is_available(
         const SizeArgs &args) const {
+    if (!args.src_layout->is_contiguous() ||
+        !args.diff_layout->is_contiguous()) {
+        return false;
+    }
     auto &&fm = args.grad_filter_meta;
     return fm.format == Param::Format::NCDHW &&
         args.diff_layout->dtype.category() == DTypeCategory::FLOAT &&

@@ -19,7 +19,7 @@ using namespace convolution;
 
 bool ConvolutionBackwardFilterImpl::AlgoChanwise::is_available(
         const SizeArgs &args) const {
-    if (!args.grad_layout->is_contiguous() ||
+    if (!args.src_layout->is_contiguous() ||
         !args.diff_layout->is_contiguous()) {
         return false;
     }

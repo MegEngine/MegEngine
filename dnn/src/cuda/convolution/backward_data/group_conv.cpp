@@ -44,6 +44,8 @@ bool ConvolutionBackwardDataImpl::AlgoGroupConvGeneral::is_available(
          args.diff_layout->dtype == dtype::QuantizedS8())) {
         return false;
     }
+    if (args.filter_meta.group <= 1)
+        return false;
     auto sub_args = args;
     TensorLayout diff_pg, grad_pg;
     modify_size_args(sub_args, diff_pg, grad_pg);

@@ -45,6 +45,8 @@ Convolution3DForwardImpl::AlgoGroupConvGeneral::AlgoGroupConvGeneral(
 
 bool Convolution3DForwardImpl::AlgoGroupConvGeneral::is_available(
         const SizeArgs &args) const {
+    if (args.filter_meta.group <= 1)
+        return false;
     auto sub_args = args;
     TensorLayout src_pg, dst_pg;
     modify_size_args(sub_args, src_pg, dst_pg);

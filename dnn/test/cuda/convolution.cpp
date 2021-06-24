@@ -384,16 +384,6 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A) {
         }
         checker.set_rng(0, &rng).set_rng(1, &rng).set_param(arg.param).exec(
                 TensorLayoutArray{filter, dst, src});
-        //! noncontiguous case
-        {
-            param::Convolution param;
-            param.pad_h = param.pad_w = 1;
-            checker.set_param(param).execl(TensorLayoutArray{
-                    {{16, 16, 3, 3}, {144, 9, 3, 1}, dtype::QuantizedS8{1.3f}},
-                    {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::QuantizedS8{1.2f}},
-                    {{2, 16, 7, 7}, {1568, 49, 7, 1}, dtype::QuantizedS8{1.2f}}
-            });
-        }
     }
 }
 
