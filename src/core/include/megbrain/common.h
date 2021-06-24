@@ -13,6 +13,7 @@
 
 #include "megbrain_build_config.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/common.h"
 
 #include <memory>
 #include <string>
@@ -198,17 +199,6 @@ void __log__(LogLevel level, const char *file, const char *func, int line,
 #endif // MGB_ENABLE_LOGGING
 
 /* ================ misc ================  */
-
-#if MGB_ENABLE_GETENV
-#define MGB_GETENV  ::std::getenv
-#else
-#define MGB_GETENV(_name)  static_cast<char*>(nullptr)
-#endif
-
-#ifdef WIN32
-#define unsetenv(_name) _putenv_s(_name, "");
-#define setenv(name,value,overwrite) _putenv_s(name,value)
-#endif
 
 // use some macro tricks to get lock guard with unique variable name
 #define MGB_TOKENPASTE(x, y) x ## y
