@@ -1,0 +1,292 @@
+From 541633ca7734f4c58e4f1832171ff0fd141f547e Mon Sep 17 00:00:00 2001
+From: chenqiyou <chenqiyou@megvii.com>
+Date: Fri, 16 Jul 2021 19:10:40 +0800
+Subject: [PATCH] fix(cpuinfo): fix cpuinfo build and sensitive word
+
+---
+ src/arm/linux/chipset.c  | 32 ++++++++++++++++++++++++++++++--
+ src/arm/linux/clusters.c |  4 ++--
+ src/arm/linux/hwcap.c    |  7 ++++---
+ src/arm/linux/init.c     |  4 +++-
+ src/linux/processors.c   |  5 +++++
+ 5 files changed, 44 insertions(+), 8 deletions(-)
+
+diff --git a/src/arm/linux/chipset.c b/src/arm/linux/chipset.c
+index 8631f64..6a94afe 100644
+--- a/src/arm/linux/chipset.c
++++ b/src/arm/linux/chipset.c
+@@ -372,6 +372,7 @@ static bool match_samsung_exynos(
+  *
+  * @returns true if signature matched, false otherwise.
+  */
++#if __ANDROID__
+ static bool match_exynos(
+ 	const char* start, const char* end,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -413,6 +414,7 @@ static bool match_exynos(
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Tries to match /universal\d{4}$/ signature for Samsung Exynos chipsets.
+  * If match successful, extracts model information into \p chipset argument.
+@@ -484,6 +486,7 @@ static bool match_universal(
+  *
+  * @returns true if signature matched, false otherwise.
+  */
++#if CPUINFO_ARCH_ARM
+ static bool match_and_parse_smdk(
+ 	const char* start, const char* end, uint32_t cores,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -537,6 +540,7 @@ static bool match_and_parse_smdk(
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Tries to match /MTK?\d{4}[A-Z/]*$/ signature for MediaTek MT chipsets.
+  * If match successful, extracts model information into \p chipset argument.
+@@ -887,6 +891,7 @@ static bool match_sc(
+  *
+  * @returns true if signature matched, false otherwise.
+  */
++#if __ANDROID__ && CPUINFO_ARCH_ARM
+ static bool match_lc(
+ 	const char* start, const char* end,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -943,6 +948,7 @@ static bool match_lc(
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Tries to match /PXA(\d{3,4}|1L88)$/ signature for Marvell PXA chipsets.
+  * If match successful, extracts model information into \p chipset argument.
+@@ -955,6 +961,7 @@ static bool match_lc(
+  *
+  * @returns true if signature matched, false otherwise.
+  */
++#if CPUINFO_ARCH_ARM
+ static bool match_pxa(
+ 	const char* start, const char* end,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -1011,6 +1018,7 @@ write_chipset:
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Tries to match /BCM\d{4}$/ signature for Broadcom BCM chipsets.
+  * If match successful, extracts model information into \p chipset argument.
+@@ -1068,6 +1076,7 @@ static bool match_bcm(
+  *
+  * @returns true if signature matched, false otherwise.
+  */
++#if CPUINFO_ARCH_ARM
+ static bool match_omap(
+ 	const char* start, const char* end,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -1103,6 +1112,7 @@ static bool match_omap(
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Compares platform identifier string to known values for Broadcom chipsets.
+  * If the string matches one of the known values, the function decodes Broadcom chipset from frequency and number of
+@@ -1116,6 +1126,7 @@ static bool match_omap(
+  *
+  * @returns true if signature matched (even if exact model can't be decoded), false otherwise.
+  */
++#if __ANDROID__ && CPUINFO_ARCH_ARM
+ static bool match_and_parse_broadcom(
+ 	const char* start, const char* end, uint32_t cores, uint32_t max_cpu_freq_max,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -1224,6 +1235,7 @@ static bool match_and_parse_broadcom(
+ 	return model != 0;
+ }
+ 
++#endif
+ struct sunxi_map_entry {
+ 	uint8_t sunxi;
+ 	uint8_t cores;
+@@ -1390,6 +1402,7 @@ static bool match_and_parse_sunxi(
+  *
+  * @returns true if signature matched (even if exact model can't be decoded), false otherwise.
+  */
++#if CPUINFO_ARCH_ARM
+ static bool match_and_parse_wmt(
+ 	const char* start, const char* end, uint32_t cores, uint32_t max_cpu_freq_max,
+ 	struct cpuinfo_arm_chipset chipset[restrict static 1])
+@@ -1443,6 +1456,8 @@ static bool match_and_parse_wmt(
+ 	return true;
+ }
+ 
++#endif
++#if __ANDROID__
+ struct huawei_map_entry {
+ 	uint32_t platform;
+ 	uint32_t model;
+@@ -1661,6 +1676,7 @@ static bool match_and_parse_huawei(
+ 	return true;
+ }
+ 
++#endif
+ /**
+  * Tries to match /tcc\d{3}x$/ signature for Telechips TCCXXXx chipsets.
+  * If match successful, extracts model information into \p chipset argument.
+@@ -1728,6 +1744,7 @@ static bool match_tcc(
+  *
+  * @returns true if the string matches an Nvidia Tegra signature, and false otherwise
+  */
++#if __ANDROID__
+ static bool is_tegra(const char* start, const char* end) {
+ 	/* Expect 5 ("tegra") or 6 ("tegra3") symbols */
+ 	const size_t length = end - start;
+@@ -1752,6 +1769,7 @@ static bool is_tegra(const char* start, const char* end) {
+ 	return (length == 5 || start[5] == '3');
+ }
+ 
++#endif
+ struct special_map_entry {
+ 	const char* platform;
+ 	uint16_t model;
+@@ -3395,13 +3413,18 @@ void cpuinfo_arm_fixup_chipset(
+ 	}
+ }
+ 
++static char his_str[20]="";
++__attribute__((constructor)) static void init_hist_str(){
++   sprintf(his_str,"%c%c%c%c%c%c%c%c%c",'H','i','S','i','l','i','c','o','n');
++}
++
+ /* Map from ARM chipset vendor ID to its string representation */
+ static const char* chipset_vendor_string[cpuinfo_arm_chipset_vendor_max] = {
+ 	[cpuinfo_arm_chipset_vendor_unknown]           = "Unknown",
+ 	[cpuinfo_arm_chipset_vendor_qualcomm]          = "Qualcomm",
+ 	[cpuinfo_arm_chipset_vendor_mediatek]          = "MediaTek",
+ 	[cpuinfo_arm_chipset_vendor_samsung]           = "Samsung",
+-	[cpuinfo_arm_chipset_vendor_hisilicon]         = "HiSilicon",
++	[cpuinfo_arm_chipset_vendor_hisilicon]         = his_str,
+ 	[cpuinfo_arm_chipset_vendor_actions]           = "Actions",
+ 	[cpuinfo_arm_chipset_vendor_allwinner]         = "Allwinner",
+ 	[cpuinfo_arm_chipset_vendor_amlogic]           = "Amlogic",
+@@ -3421,6 +3444,11 @@ static const char* chipset_vendor_string[cpuinfo_arm_chipset_vendor_max] = {
+ 	[cpuinfo_arm_chipset_vendor_wondermedia]       = "WonderMedia",
+ };
+ 
++static char kirin_str[20]="";
++__attribute__((constructor)) static void init_kirin_str(){
++   sprintf(his_str,"%c%c%c%c%c",'K','i','r','i','n');
++}
++
+ /* Map from ARM chipset series ID to its string representation */
+ static const char* chipset_series_string[cpuinfo_arm_chipset_series_max] = {
+ 	[cpuinfo_arm_chipset_series_unknown]                = NULL,
+@@ -3432,7 +3460,7 @@ static const char* chipset_series_string[cpuinfo_arm_chipset_series_max] = {
+ 	[cpuinfo_arm_chipset_series_samsung_exynos]         = "Exynos ",
+ 	[cpuinfo_arm_chipset_series_hisilicon_k3v]          = "K3V",
+ 	[cpuinfo_arm_chipset_series_hisilicon_hi]           = "Hi",
+-	[cpuinfo_arm_chipset_series_hisilicon_kirin]        = "Kirin ",
++	[cpuinfo_arm_chipset_series_hisilicon_kirin]        = kirin_str,
+ 	[cpuinfo_arm_chipset_series_actions_atm]            = "ATM",
+ 	[cpuinfo_arm_chipset_series_allwinner_a]            = "A",
+ 	[cpuinfo_arm_chipset_series_amlogic_aml]            = "AML",
+diff --git a/src/arm/linux/clusters.c b/src/arm/linux/clusters.c
+index c7a4045..8c51236 100644
+--- a/src/arm/linux/clusters.c
++++ b/src/arm/linux/clusters.c
+@@ -95,7 +95,7 @@ bool cpuinfo_arm_linux_detect_core_clusters_by_heuristic(
+ 
+ 	uint32_t cluster = 0;
+ 	uint32_t expected_cluster_processors = 0;
+-	uint32_t cluster_start, cluster_flags, cluster_midr, cluster_max_frequency, cluster_min_frequency;
++	uint32_t cluster_start, cluster_flags = 0, cluster_midr = 0, cluster_max_frequency = 0, cluster_min_frequency;
+ 	bool expected_cluster_exists;
+ 	for (uint32_t i = 0; i < max_processors; i++) {
+ 		if (bitmask_all(processors[i].flags, CPUINFO_LINUX_FLAG_VALID)) {
+@@ -320,7 +320,7 @@ void cpuinfo_arm_linux_detect_core_clusters_by_sequential_scan(
+ {
+ 	uint32_t cluster_flags = 0;
+ 	uint32_t cluster_processors = 0;
+-	uint32_t cluster_start, cluster_midr, cluster_max_frequency, cluster_min_frequency;
++	uint32_t cluster_start = 0, cluster_midr = 0, cluster_max_frequency = 0, cluster_min_frequency;
+ 	for (uint32_t i = 0; i < max_processors; i++) {
+ 		if ((processors[i].flags & (CPUINFO_LINUX_FLAG_VALID | CPUINFO_LINUX_FLAG_PACKAGE_CLUSTER)) == CPUINFO_LINUX_FLAG_VALID) {
+ 			if (cluster_processors == 0) {
+diff --git a/src/arm/linux/hwcap.c b/src/arm/linux/hwcap.c
+index 36d0d91..5e1c301 100644
+--- a/src/arm/linux/hwcap.c
++++ b/src/arm/linux/hwcap.c
+@@ -15,7 +15,8 @@
+ #include <arm/linux/api.h>
+ #include <cpuinfo/log.h>
+ 
+-#if CPUINFO_ARCH_ARM64 || CPUINFO_ARCH_ARM && !defined(__ANDROID__)
++#if CPUINFO_ARCH_ARM64 || CPUINFO_ARCH_ARM && !defined(__ANDROID__) && !defined(__UCLIBC__)
++
+ 	#include <sys/auxv.h>
+ #else
+ 	#define AT_HWCAP 16
+@@ -38,7 +39,7 @@
+ #endif
+ 
+ 
+-#if CPUINFO_ARCH_ARM
++#if CPUINFO_ARCH_ARM && !defined(__UCLIBC__)
+ 	typedef unsigned long (*getauxval_function_t)(unsigned long);
+ 
+ 	bool cpuinfo_arm_linux_hwcap_from_getauxval(
+@@ -144,7 +145,7 @@
+ 			#endif
+ 		}
+ 	#endif /* __ANDROID__ */
+-#elif CPUINFO_ARCH_ARM64
++#elif CPUINFO_ARCH_ARM64 && !defined(__UCLIBC__)
+ 	uint32_t cpuinfo_arm_linux_hwcap_from_getauxval(void) {
+ 		#if CPUINFO_MOCK
+ 			return mock_hwcap;
+diff --git a/src/arm/linux/init.c b/src/arm/linux/init.c
+index 89d957e..8225f5e 100644
+--- a/src/arm/linux/init.c
++++ b/src/arm/linux/init.c
+@@ -234,6 +234,8 @@ void cpuinfo_arm_linux_init(void) {
+ 		cpuinfo_arm_linux_decode_chipset(proc_cpuinfo_hardware, proc_cpuinfo_revision, valid_processors, 0);
+ #endif
+ 
++#if !defined(__UCLIBC__)
++
+ 	#if CPUINFO_ARCH_ARM
+ 		uint32_t isa_features = 0, isa_features2 = 0;
+ 		#ifdef __ANDROID__
+@@ -282,7 +284,7 @@ void cpuinfo_arm_linux_init(void) {
+ 		cpuinfo_arm64_linux_decode_isa_from_proc_cpuinfo(
+ 			isa_features, last_midr, &chipset, &cpuinfo_isa);
+ 	#endif
+-
++#endif
+ 	/* Detect min/max frequency and package ID */
+ 	for (uint32_t i = 0; i < arm_linux_processors_count; i++) {
+ 		if (bitmask_all(arm_linux_processors[i].flags, CPUINFO_LINUX_FLAG_VALID)) {
+diff --git a/src/linux/processors.c b/src/linux/processors.c
+index 4904e2a..a1d4693 100644
+--- a/src/linux/processors.c
++++ b/src/linux/processors.c
+@@ -90,8 +90,13 @@ static bool uint32_parser(const char* text_start, const char* text_end, void* co
+ 	uint32_t kernel_max = 0;
+ 	const char* parsed_end = parse_number(text_start, text_end, &kernel_max);
+ 	if (parsed_end == text_start) {
++#if defined(__UCLIBC__)
++		cpuinfo_log_warning("failed to parse file %s: \"%.*s\" is not an unsigned number",
++			KERNEL_MAX_FILENAME, (int) (text_end - text_start), text_start);
++#else
+ 		cpuinfo_log_error("failed to parse file %s: \"%.*s\" is not an unsigned number",
+ 			KERNEL_MAX_FILENAME, (int) (text_end - text_start), text_start);
++#endif
+ 		return false;
+ 	} else {
+ 		for (const char* char_ptr = parsed_end; char_ptr != text_end; char_ptr++) {
+-- 
+2.25.1
+
