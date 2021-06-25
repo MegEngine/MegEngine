@@ -19,6 +19,7 @@ from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.tensor import megbrain_graph as G
 from megengine.core.tensor.utils import astensor1d
 from megengine.distributed.helper import get_device_count_by_fork
+from megengine.jit import trace
 from megengine.utils.network import Network, set_symbolic_shape
 from megengine.utils.network_node import VarNode
 
@@ -175,6 +176,48 @@ def test_reshape(is_varnode):
     ]:
         yy = F.reshape(xx, shape)
         np.testing.assert_equal(yy.numpy(), y)
+
+
+@pytest.mark.parametrize("is_trace", [True, False])
+def test_reshape_on_empty_tensor(is_trace):
+    input1_shape = (100, 0, 1)
+    output1_shape = (100, 0, 10)
+    data1 = tensor(np.random.random(input1_shape).astype(np.float32))
+
+    input2_shape = (10, 0)
+    output2_shape = (0,)
+    data2 = tensor(np.random.random(input2_shape).astype(np.float32))
+
+    input3_shape = (10, 0, 10)
+    output3_shape = (0, 1, 2, 3)
+    data3 = tensor(np.random.random(input3_shape).astype(np.float32))
+
+    def comp(out, target_shp):
+        assert out._tuple_shape == target_shp
+
+    def func(x, shp):
+        return F.reshape(x, shp)
+
+    cases = [
+        [data1, output1_shape],
+        [data2, output2_shape],
+        [data3, output3_shape],
+    ]
+
+    def test(func, inp, comp, target_shp):
+        out = func(inp, target_shp)
+        comp(out, target_shp)
+
+    if is_trace:
+        for symbolic in [False, True]:
+            for inp, target_shp in cases:
+                func_traced = trace(symbolic=symbolic)(func)
+                test(func_traced, inp, comp, target_shp)
+                test(func_traced, inp, comp, target_shp)
+                test(func_traced, inp, comp, target_shp)
+    else:
+        for inp, target_shp in cases:
+            test(func, inp, comp, target_shp)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
@@ -478,6 +521,48 @@ def test_broadcast(is_varnode):
 
     with pytest.raises(RuntimeError):
         F.broadcast_to(x, (1, 3))
+
+
+@pytest.mark.parametrize("is_trace", [True, False])
+def test_broadcast_on_empty_tensor(is_trace):
+    input1_shape = (100, 0, 1)
+    output1_shape = (100, 0, 10)
+    data1 = tensor(np.random.random(input1_shape).astype(np.float32))
+
+    input2_shape = (10, 0)
+    output2_shape = (10, 10, 0)
+    data2 = tensor(np.random.random(input2_shape).astype(np.float32))
+
+    input3_shape = (0, 0, 1, 10)
+    output3_shape = (10, 0, 0, 10, 10)
+    data3 = tensor(np.random.random(input3_shape).astype(np.float32))
+
+    def comp(out, target_shp):
+        assert out._tuple_shape == target_shp
+
+    def func(x, shp):
+        return F.broadcast_to(x, shp)
+
+    cases = [
+        [data1, output1_shape],
+        [data2, output2_shape],
+        [data3, output3_shape],
+    ]
+
+    def test(func, inp, comp, target_shp):
+        out = func(inp, target_shp)
+        comp(out, target_shp)
+
+    if is_trace:
+        for symbolic in [False, True]:
+            for inp, target_shp in cases:
+                func_traced = trace(symbolic=symbolic)(func)
+                test(func_traced, inp, comp, target_shp)
+                test(func_traced, inp, comp, target_shp)
+                test(func_traced, inp, comp, target_shp)
+    else:
+        for inp, target_shp in cases:
+            test(func, inp, comp, target_shp)
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])

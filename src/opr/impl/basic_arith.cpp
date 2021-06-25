@@ -259,6 +259,10 @@ void Elemwise::perform(
             mgb_assert(t.comp_node() == out_cn);
             mgb_assert(t.dtype() == out_dt);
         }
+        if (t.shape().is_empty()) {
+            mgb_assert(dest.empty());
+            return;
+        }
         inp_shapes[i] = t.shape();
     }
     if (!opr) {

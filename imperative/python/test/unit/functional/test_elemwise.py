@@ -7,12 +7,14 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
+import pytest
 
 import megengine.functional as F
 import megengine.functional.elemwise as elemwise
 from megengine import tensor
 from megengine.core.tensor import dtype
 from megengine.functional.elemwise import Elemwise, _elwise
+from megengine.jit import trace
 
 
 def test_abs():
@@ -180,3 +182,80 @@ def test_int32_input():
             inp = (x,) * nargs
         y = op(*inp)
         y.numpy()
+
+
+@pytest.mark.parametrize("is_trace", [True, False])
+def test_empty_tensor(is_trace):
+    binary_func = []
+    unary_func = []
+    for op_name in elemwise.__all__:
+        op = getattr(elemwise, op_name)
+        nargs = op.__code__.co_argcount
+        if op_name == "clip":
+            unary_func.append(["clip", lambda x, f=op: f(x, lower=0, upper=1)])
+        elif op_name.endswith("_shift"):
+            unary_func.append(
+                [op_name, lambda x, f=op: f(tensor(x.numpy(), dtype="int32"), 1)]
+            )
+        elif op_name.startswith("logical_"):  # logical_xxx op only accept boolean type
+            if nargs == 1:
+                unary_func.append(
+                    [op_name, lambda x, f=op: f(tensor(x.numpy(), dtype="bool"))]
+                )
+            else:
+                assert nargs == 2
+                binary_func.append(
+                    [
+                        op_name,
+                        lambda x, y, f=op: f(
+                            tensor(x.numpy(), dtype="bool"),
+                            tensor(y.numpy(), dtype="bool"),
+                        ),
+                    ]
+                )
+        elif nargs == 1:
+            unary_func.append([op_name, op])
+        elif nargs == 2:
+            binary_func.append([op_name, op])
+        else:
+            print(nargs)
+            raise NotImplementedError
+
+    def run_test(func, args, ref_shape, is_trace, sym=False):
+        args = [tensor(t, dtype="float32") for t in args]
+        if is_trace:
+            func = trace(symbolic=sym)(func)
+            for _ in range(3):
+                out = func(*args)
+                assert out.numpy().shape == ref_shape
+        else:
+            out = func(*args)
+            assert out.numpy().shape == ref_shape
+            print(out.numpy().shape)
+
+    inps = [
+        np.array([]).astype("float32"),
+        np.random.randn(2, 0, 3).astype("float32"),
+        123,
+    ]
+    for op_name, op in unary_func:
+        if is_trace:
+            for sym in [True, False]:
+                run_test(op, [inps[0],], inps[0].shape, True, sym)
+                run_test(op, [inps[1],], inps[1].shape, True, sym)
+        else:
+            run_test(op, [inps[0],], inps[0].shape, False)
+            run_test(op, [inps[1],], inps[1].shape, False)
+
+    for op_name, op in binary_func:
+        if is_trace:
+            for sym in [True, False]:
+                run_test(op, [inps[0], inps[0]], (inps[0] + inps[0]).shape, True, sym)
+                run_test(op, [inps[1], inps[1]], (inps[1] + inps[1]).shape, True, sym)
+                run_test(op, [inps[0], inps[2]], (inps[0] + inps[2]).shape, True, sym)
+                run_test(op, [inps[1], inps[2]], (inps[1] + inps[2]).shape, True, sym)
+        else:
+            run_test(op, [inps[0], inps[0]], (inps[0] + inps[0]).shape, False)
+            run_test(op, [inps[1], inps[1]], (inps[1] + inps[1]).shape, False)
+            run_test(op, [inps[0], inps[2]], (inps[0] + inps[2]).shape, False)
+            run_test(op, [inps[1], inps[2]], (inps[1] + inps[2]).shape, False)
