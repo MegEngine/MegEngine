@@ -45,7 +45,10 @@ InputCallback::InputCallback(cg::ComputingGraph& graph, callback_t callback,
     if(m_use_static_shape){
         mgb_assert(m_output_shape.ndim);
     }
-    add_output(None)->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC).dtype(dt);
+    add_output(None)
+            ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
+            .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
+            .dtype(dt);
     add_output(None)
             ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
             .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
@@ -108,6 +111,11 @@ void InputCallback::scn_do_execute() {
     auto dev_tensor = m_callback();
     if (m_use_static_shape) {
         mgb_assert(dev_tensor.shape().eq_shape(m_output_shape));
+    }
+    if (dev_tensor.empty()) {
+        auto layout = dev_tensor.layout();
+        layout.init_contiguous_stride();
+        dev_tensor.reset(dev_tensor.storage(), layout);
     }
     output(0)->reset_dev_tensor_from_tensor(dev_tensor);
 }
@@ -172,6 +180,7 @@ cg::OperatorNodeBase::NodeProp* OutputCallback::do_make_node_prop() const {
     };
     m_use_host_value = m_param.prefer_host_value && host_value_avail();
     dep_types[0] = m_use_host_value ? NodeProp::DepType::HOST_VALUE : NodeProp::DepType::DEV_VALUE;
+    dep_types[0] |= NodeProp::DepType::VALUE_ALLOW_EMPTY;
     prop->reset_dep_type(input(), dep_types);
     return prop;
 }

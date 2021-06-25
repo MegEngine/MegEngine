@@ -361,9 +361,19 @@ VarNode& VarNode::reset_dev_tensor_from_tensor(const DeviceTensorND& value) {
 }
 
 void VarNode::assign_dev_tensor_from_tensor(const DeviceTensorND& value) {
-    mgb_assert(value.layout().is_contiguous() &&
+    mgb_assert((value.layout().is_contiguous() || value.empty()) &&
                m_dev_tensor.dtype() == value.dtype() &&
                m_dev_tensor.format() == value.format());
+    if (value.empty()) {
+        mgb_assert(value.shape_valid() && value.layout().is_empty());
+        bool allow_empty = contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+        auto &&recv = owner_graph()->var_receiver_in_current_comp_seq(this);
+        mgb_throw_if(!allow_empty || !recv.is_empty_allowed(),
+                GraphError,
+                "assign empty tensor to var %s, but allowed=%d, receiver=%s",
+                cg::dump_var_info({this}).c_str(),
+                allow_empty, recv.to_string().c_str());
+    }
     if (cg::is_static_var_shape(this)) {
         mgb_assert(shape().eq_shape(value.shape()),
                    "shape mismatch for static inferrable var when setting dev "

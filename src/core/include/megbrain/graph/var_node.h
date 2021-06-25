@@ -480,8 +480,8 @@ class VarNode final: public GraphNodeBase {
          *
          * \param src_var the var node to provide dev tensor, which must have
          *      been initialized, and does not have to be in the same computing
-         *      graph. Its value must be contiguous. It can also be placed on a
-         *      different comp node.
+         *      graph. Its value must be contiguous or empty. It can also be
+         *      placed on a different comp node.
          *
          * \return whether memory forwarding succeeds; if false is returned, a
          *      new tensor would be allocated and its value is copied from src
@@ -495,8 +495,8 @@ class VarNode final: public GraphNodeBase {
          * This function should only be called by this var's owner operator and
          * this var must have NO_SYS_MEM_ALLOC flag
          *
-         * \param value the tensor to be used; it must be contiguous and be
-         *      placed on the same comp node of this var.
+         * \param value the tensor to be used; it must be contiguous or empty
+         *       and be placed on the same comp node of this var.
          */
         VarNode& reset_dev_tensor_from_tensor(const DeviceTensorND &value);
 
