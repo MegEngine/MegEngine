@@ -776,6 +776,10 @@ void TypeCvt::perform(DeviceTensorND &dest,
         intl::UniqPtrWithCN<megdnn::TypeCvt> &opr) {
     mgb_assert(src.comp_node() == opr.comp_node());
     mgb_assert(dest_type.valid());
+    if (src.empty()) {
+        mgb_assert(dest.empty());
+        return;
+    }
     if (src.dtype() == dest_type) {
         dest.copy_from(src);
         return;
@@ -1739,7 +1743,13 @@ void Reduce::record_execute_deps(ExecDependencyArray& deps) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(PowC);
 
-MEGDNN_OPR_CTOR_INIT1(PowC, ssprintf("powc_%g", param.exp))
+PowC::PowC(VarNode *i0, const Param &param, const OperatorNodeConfig &config)
+        : Super(OperatorNodeBaseCtorParam{ i0->owner_graph(), config, ssprintf("powc_%g", param.exp), {i0}} ) {
+    init_megdnn_opr(*this, param);
+    add_input({i0});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    intl::MegDNNOprInitPostCtor<PowC>::apply(*this);
+}
 
 SymbolVar PowC::make(SymbolVar x, const Param& param,
                      const OperatorNodeConfig& config) {
@@ -1776,6 +1786,22 @@ void PowC::init_output_static_infer_desc() {
     owner_graph()->static_infer_manager().register_value_infer(
             output(0),
             {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
+}
+
+void PowC::scn_do_execute() {
+    if (input(0)->dev_tensor().empty()) {
+        mgb_assert(output(0)->dev_tensor().empty());
+        return;
+    }
+    mgb_assert(!output(0)->dev_tensor().empty());
+    Super::scn_do_execute();
+}
+
+PowC::NodeProp* PowC::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD

@@ -352,6 +352,8 @@ MGB_DEFINE_OPR_CLASS(PowC, intl::MegDNNOprWrapperFwd<megdnn::PowC>) // {
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
     void mem_plan_fwd_in2out_writable() override;
+    NodeProp* do_make_node_prop() const override;
+    void scn_do_execute() override;
 
 public:
     PowC(VarNode* inp, const Param& param, const OperatorNodeConfig& config);

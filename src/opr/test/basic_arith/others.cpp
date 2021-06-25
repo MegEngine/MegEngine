@@ -589,6 +589,23 @@ TEST(TestOprBasicArith, TypeCvtFromBool) {
     ASSERT_EQ(TensorShape({2}), host_y.shape());
 }
 
+TEST(TestOprBasicArith, TypeCvtPerformEmptyIO) {
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("xpu0");
+    auto host_x = gen({2, 0, 3, 4});
+    auto dev_x = std::make_shared<DeviceTensorND>(cn);
+    dev_x->copy_from(*host_x);
+
+    auto dev_y = std::make_shared<DeviceTensorND>(cn, dtype::Int32{});
+    dev_y->resize(dev_x->shape());
+
+    auto dnn_opr = opr::intl::create_megdnn_opr<megdnn::TypeCvt>(cn);
+    ASSERT_NO_THROW(opr::TypeCvt::perform(*dev_y, dtype::Int32{}, *dev_x, dnn_opr));
+    ASSERT_TRUE(dev_y->empty());
+    ASSERT_TRUE(dev_y->shape().is_empty());
+    MGB_ASSERT_SHAPE_EQ(dev_x->shape(), dev_y->shape());
+}
+
 TEST(TestOprBasicArith, ElemwiseMemFwd) {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
@@ -754,6 +771,21 @@ TEST(TestOprBasicArith, PowCInfer) {
     };
     run(false);
     run(true);
+}
+
+TEST(TestOprBasicArith, PowCEmptyIO) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+    // empty input
+    auto host_x = gen({4, 0, 2, 3});
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+         y = opr::PowC::make(x, 3.f);
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    ASSERT_NO_THROW(func->execute().wait());
+    ASSERT_TRUE(host_y.empty());
+    ASSERT_TRUE(host_y.shape().is_empty());
+    MGB_ASSERT_SHAPE_EQ(host_x->shape(), host_y.shape());
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
