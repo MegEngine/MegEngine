@@ -68,19 +68,21 @@ void check_matrix_mul(
         DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
         const ExecutionPolicyAlgoName& algo = {"", {}},
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
-        size_t nbase = 8, float eps = 1e-3, std::vector<TestArg>&& args = {});
+        size_t nbase = 8, float eps = 1e-3, std::vector<TestArg>&& args = {},
+        bool force_deduce_dst = true);
 
 void check_matrix_mul(
         DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
         const ExecutionPolicyAlgoName& algo = {"", {}},
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
-        size_t nbase = 8, float eps = 1e-3);
+        size_t nbase = 8, float eps = 1e-3, bool force_deduce_dst = true);
 
 void check_batched_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
                               Handle* handle,
                               const ExecutionPolicyAlgoName& algo = {"", {}},
                               float eps = 1e-3,
-                              std::vector<TestArg>&& args = {});
+                              std::vector<TestArg>&& args = {},
+                              bool force_deduce_dst = true);
 
 #if MEGDNN_WITH_BENCHMARK
 std::vector<TestArg> get_benchmark_matmul_args();

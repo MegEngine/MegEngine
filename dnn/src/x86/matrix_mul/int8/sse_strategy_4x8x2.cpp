@@ -59,13 +59,13 @@ static inline void gemm_kern(const dt_int16* pack_a_ptr,
         auto iter_a_ptr = pack_a_ptr + m_offset * roundup_k;
         for (int n_offset = 0; n_offset < n_end; n_offset += n_tile) {
             auto iter_b_ptr = pack_b_ptr + n_offset * roundup_k;
-            auto iter_c_ptr = c_ptr + m_offset * n + n_offset;
+            auto iter_c_ptr = c_ptr + m_offset * ldc + n_offset;
             matmul_sse_4x8x2::kern_gemm_s8s8s32_sse_4x8x2(
                     iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k);
         }
         if (n_remain > 0) {
             auto iter_b_ptr = pack_b_ptr + n_end * roundup_k;
-            auto iter_c_ptr = c_ptr + m_offset * n + n_end;
+            auto iter_c_ptr = c_ptr + m_offset * ldc + n_end;
             matmul_sse_4x8x2::kern_gemm_s8s8s32_sse_4x8x2_remain_n(
                     iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, n_remain);
         }
@@ -74,13 +74,13 @@ static inline void gemm_kern(const dt_int16* pack_a_ptr,
         auto iter_a_ptr = pack_a_ptr + m_end * roundup_k;
         for (int n_offset = 0; n_offset < n_end; n_offset += n_tile) {
             auto iter_b_ptr = pack_b_ptr + n_offset * roundup_k;
-            auto iter_c_ptr = c_ptr + m_end * n + n_offset;
+            auto iter_c_ptr = c_ptr + m_end * ldc + n_offset;
             matmul_sse_4x8x2::kern_gemm_s8s8s32_sse_4x8x2_remain_m(
                     iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain);
         }
         if (n_remain > 0) {
             auto iter_b_ptr = pack_b_ptr + n_end * roundup_k;
-            auto iter_c_ptr = c_ptr + m_end * n + n_end;
+            auto iter_c_ptr = c_ptr + m_end * ldc + n_end;
             matmul_sse_4x8x2::kern_gemm_s8s8s32_sse_4x8x2_remain_m_n(
                     iter_a_ptr, iter_b_ptr, iter_c_ptr, ldc, k, m_remain,
                     n_remain);

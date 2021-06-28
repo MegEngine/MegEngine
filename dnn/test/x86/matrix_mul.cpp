@@ -44,21 +44,31 @@ TEST_F(X86, MATRIX_MUL_MKLDNN_8X8X32) {
 //! FIXME: need to add tests of GEMV and QUINT8
 TEST_F(X86, MATRIX_MUL_AVX2_8X8X32) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "X86_INT8X8X32_AVX2_2X4X16");
+                                 handle(), "X86_INT8X8X32_AVX2_2X4X16",
+                                 param::MatrixMul::Format::DEFAULT, 8, 1e-3,
+                                 false);
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "X86_INT8X8X32_AVX2_4X16X2");
+                                 handle(), "X86_INT8X8X32_AVX2_4X16X2",
+                                 param::MatrixMul::Format::DEFAULT, 8, 1e-3,
+                                 false);
 }
 TEST_F(X86, MATRIX_MUL_AVX2_8X8X16) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle(), "X86_INT8X8X16_AVX2");
+                                 handle(), "X86_INT8X8X16_AVX2",
+                                 param::MatrixMul::Format::DEFAULT, 8, 1e-3,
+                                 false);
 }
 TEST_F(X86, MATRIX_MUL_SSE_8X8X16) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle(), "X86_INT8X8X16_SSE");
+                                 handle(), "X86_INT8X8X16_SSE",
+                                 param::MatrixMul::Format::DEFAULT, 8, 1e-3,
+                                 false);
 }
 TEST_F(X86, MATRIX_MUL_SSE_8X8X32) {
     matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "X86_INT8X8X32_SSE_4X8X2");
+                                 handle(), "X86_INT8X8X32_SSE_4X8X2",
+                                 param::MatrixMul::Format::DEFAULT, 8, 1e-3,
+                                 false);
 }
 
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
@@ -72,7 +82,7 @@ TEST_F(X86, MATRIX_MUL_MKL_PACKA) {
 TEST_F(X86, MATRIX_MUL_AVX2_MK8_8X8) {
     matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
                                  dtype::Float32{}, handle(), "X86_F32MK8_8X8",
-                                 param::MatrixMul::Format::MK8, 1);
+                                 param::MatrixMul::Format::MK8, 1, 1e-3, false);
 }
 
 #if MEGDNN_WITH_BENCHMARK

@@ -78,6 +78,7 @@ protected:
     TensorsConstriant m_tensor_constraint;
     bool m_no_naive_and_check = false;
     bool m_stable_check = false;
+    bool m_force_deduce_dst = true;
     /**
      * the offset from the start of malloc memory
      *
@@ -236,6 +237,12 @@ public:
         return *this;
     }
 
+    //! froce deduce dst
+    Checker& set_force_deduce_dst(bool force_deduce_dst) {
+        m_force_deduce_dst = force_deduce_dst;
+        return *this;
+    }
+
     Checker& set_no_naive_check(bool no_naive_and_check) {
         m_no_naive_and_check = no_naive_and_check;
         return *this;
@@ -343,7 +350,10 @@ void Checker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
     auto opr_cur = this->opr();
     opr_naive->param() = m_param;
     opr_cur->param() = m_param;
-    m_naive_proxy.deduce_layout(opr_naive.get(), layouts);
+    bool deduce_layout = layouts.back().ndim == 0;
+    if (deduce_layout || m_force_deduce_dst) {
+        m_naive_proxy.deduce_layout(opr_naive.get(), layouts);
+    }
     auto exec_naive = [this, &opr_naive, &layouts,
                        &opr_relayout](const TensorValueArray& values) {
         TensorValueArray contig_values = values;
