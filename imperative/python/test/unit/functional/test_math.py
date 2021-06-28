@@ -168,3 +168,39 @@ def test_has_inf():
     data[0][0][0][0] = float("inf")
     rst = F.math._has_inf(tensor(data))
     np.testing.assert_equal(rst.numpy(), [1])
+
+
+@pytest.mark.parametrize("descending", [True, False])
+@pytest.mark.parametrize("sorted", [True, False])
+@pytest.mark.parametrize("inp1d", [True, False])
+@pytest.mark.parametrize("kth_only", [True, False])
+def test_topk(descending, sorted, inp1d, kth_only):
+    k = 3
+    if inp1d:
+        data = np.random.permutation(7)
+    else:
+        data = np.random.permutation(5 * 7).reshape(5, 7)
+    data = data.astype(np.int32)
+
+    def np_sort(x):
+        if descending:
+            return np.sort(x)[..., ::-1]
+        return np.sort(x)
+
+    res = F.topk(
+        tensor(data), k, descending=descending, no_sort=(not sorted), kth_only=kth_only
+    )
+
+    values, indices = res
+    values = values.numpy()
+    indices = indices.numpy()
+    if kth_only:
+        np.testing.assert_equal(
+            values, np.take_along_axis(data, indices[..., None], -1).squeeze(-1)
+        )
+        np.testing.assert_equal(values, np_sort(data)[..., k - 1])
+    else:
+        np.testing.assert_equal(values, np.take_along_axis(data, indices, -1))
+        if not sorted:
+            values = np_sort(values)
+        np.testing.assert_equal(values, np_sort(data)[..., :k])
