@@ -50,6 +50,7 @@
 #include "src/naive/local/opr_impl.h"
 #include "src/naive/local_share/opr_impl.h"
 #include "src/naive/lrn/opr_impl.h"
+#include "src/naive/lsq/opr_impl.h"
 #include "src/naive/mask_conv/opr_impl.h"
 #include "src/naive/matrix_inverse/opr_impl.h"
 #include "src/naive/matrix_mul/opr_impl.h"

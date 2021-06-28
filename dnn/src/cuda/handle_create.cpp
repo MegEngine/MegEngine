@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/common/handle_impl.h"
@@ -15,6 +16,7 @@
 #include "src/cuda/add_update/opr_impl.h"
 #include "src/cuda/argmxx/opr_impl.h"
 #include "src/cuda/argsort/opr_impl.h"
+#include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/batch_normalization/opr_impl.h"
 #include "src/cuda/batched_matrix_mul/opr_impl.h"
 #include "src/cuda/check_has_inf/opr_impl.h"
@@ -35,6 +37,7 @@
 #include "src/cuda/elemwise/opr_impl.h"
 #include "src/cuda/elemwise_multi_type/opr_impl.h"
 #include "src/cuda/eye/opr_impl.h"
+#include "src/cuda/fake_quant/opr_impl.h"
 #include "src/cuda/flip/opr_impl.h"
 #include "src/cuda/gaussian_blur/opr_impl.h"
 #include "src/cuda/group_local/opr_impl.h"
@@ -45,6 +48,7 @@
 #include "src/cuda/local/opr_impl.h"
 #include "src/cuda/local_share/opr_impl.h"
 #include "src/cuda/lrn/opr_impl.h"
+#include "src/cuda/lsq/opr_impl.h"
 #include "src/cuda/mask_conv/opr_impl.h"
 #include "src/cuda/matrix_inverse/opr_impl.h"
 #include "src/cuda/matrix_mul/opr_impl.h"
@@ -56,9 +60,11 @@
 #include "src/cuda/reduce/opr_impl.h"
 #include "src/cuda/relayout/opr_impl.h"
 #include "src/cuda/relayout_format/opr_impl.h"
+#include "src/cuda/remap/opr_impl.h"
 #include "src/cuda/repeat/opr_impl.h"
 #include "src/cuda/resize/opr_impl.h"
 #include "src/cuda/rng/opr_impl.h"
+#include "src/cuda/roi_align/opr_impl.h"
 #include "src/cuda/roi_copy/opr_impl.h"
 #include "src/cuda/roi_pooling/opr_impl.h"
 #include "src/cuda/rotate/opr_impl.h"
@@ -70,16 +76,11 @@
 #include "src/cuda/tensor_remap/opr_impl.h"
 #include "src/cuda/tile/opr_impl.h"
 #include "src/cuda/topk/opr_impl.h"
+#include "src/cuda/tqt/opr_impl.h"
 #include "src/cuda/transpose/opr_impl.h"
 #include "src/cuda/type_cvt/opr_impl.h"
 #include "src/cuda/warp_affine/opr_impl.h"
 #include "src/cuda/warp_perspective/opr_impl.h"
-#include "src/cuda/local_share/opr_impl.h"
-#include "src/cuda/roi_align/opr_impl.h"
-#include "src/cuda/batch_conv_bias/opr_impl.h"
-#include "src/cuda/remap/opr_impl.h"
-#include "src/cuda/fake_quant/opr_impl.h"
-#include "src/cuda/tqt/opr_impl.h"
 
 namespace megdnn {
 namespace cuda {

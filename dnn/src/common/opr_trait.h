@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/oprs.h"
@@ -121,6 +122,8 @@ DEF(UniformRNG, 1, true, true);
 DEF(GaussianRNG, 1, true, true);
 DEF(ChecksumForward, 1, true, false);
 DEF(CheckHasInf, 2, true, true);
+DEF(LSQForward, 5, true, true);
+DEF(LSQBackward, 7, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

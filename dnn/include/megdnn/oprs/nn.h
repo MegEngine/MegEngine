@@ -1741,6 +1741,67 @@ protected:
                     const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
+class LSQBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(LSQBase, OperatorBase);
+    DEF_OPR_PARAM(LSQ);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& input, TensorLayout& output);
+    void check_layout_fwd(const TensorLayout& input, const TensorLayout& scale,
+                          const TensorLayout& zero_point,
+                          const TensorLayout& grad_scale,
+                          const TensorLayout& output);
+};
+
+class LSQForward : public LSQBase {
+    DEF_OPR_IMPL(LSQForward, LSQBase, 4, 1);
+
+public:
+    virtual void exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
+                      _megdnn_tensor_in zero_point,
+                      _megdnn_tensor_in grad_scale, _megdnn_tensor_out output,
+                      _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& input, const TensorLayout& scale,
+                       const TensorLayout& zero_point,
+                       const TensorLayout& grad_scale, TensorLayout& output);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& zero_point,
+                                          const TensorLayout& grad_scale,
+                                          const TensorLayout& output) = 0;
+
+protected:
+    void check_exec(const TensorLayout& input, const TensorLayout& scale,
+                    const TensorLayout& zero_point,
+                    const TensorLayout& grad_scale, const TensorLayout& output,
+                    size_t workspace_in_bytes);
+};
+using LSQ = LSQForward;
+
+class LSQBackward : public LSQBase {
+    DEF_OPR_IMPL(LSQBackward, LSQBase, 5, 2);
+
+public:
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
+                      _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+                      _megdnn_tensor_in grad_scale, _megdnn_tensor_out grad_x,
+                      _megdnn_tensor_out grad_s,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& input,
+                                          const TensorLayout& scale,
+                                          const TensorLayout& zero_point,
+                                          const TensorLayout& grad_scale,
+                                          const TensorLayout& grad_x,
+                                          const TensorLayout& grad_s) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& input,
+                    const TensorLayout& scale, const TensorLayout& zero_point,
+                    const TensorLayout& grad_scale, const TensorLayout& grad_x,
+                    const TensorLayout& grad_s, size_t workspace_in_bytes);
+};
+
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"
 

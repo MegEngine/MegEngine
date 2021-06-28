@@ -107,6 +107,7 @@ union OperatorParam {
     param.FakeQuant = 73,
     param.TQT = 74,
     param.Correlation = 75,
+    param.LSQ = 76,
 }
 
 table Operator {

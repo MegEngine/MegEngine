@@ -6,20 +6,22 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
+#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/correlation.h"
+#include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
-#include "megbrain/opr/dnn/pooling.h"
-#include "megbrain/opr/dnn/adaptive_pooling.h"
-#include "megbrain/opr/dnn/roi_pooling.h"
-#include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
-#include "megbrain/opr/dnn/fake_quant.h"
+#include "megbrain/opr/dnn/lsq.h"
+#include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/dnn/roi_align.h"
+#include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/dnn/tqt.h"
 #include "megbrain/serialization/sereg.h"
 #include "megdnn/opr_param_defs.h"
@@ -183,7 +185,8 @@ struct ConvLoadDumpImpl {
     static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr_) {
         auto&& opr = opr_.cast_final_safe<Opr>();
         ctx.write_param<ConvParam>(opr.param());
-        ctx.write_param<megdnn::param::ExecutionPolicy>(opr.execution_policy_transient());
+        ctx.write_param<megdnn::param::ExecutionPolicy>(
+                opr.execution_policy_transient());
     }
 
     static VarNode* make(const cg::VarNodeArray& inputs, const ConvParam& param,
@@ -251,6 +254,20 @@ struct OprMaker<opr::TQTBackward, 3> {
     }
 };
 
+template <>
+struct OprMaker<opr::LSQBackward, 5> {
+    using Param = opr::LSQBackward::Param;
+    static cg::OperatorNodeBase* make(const Param& param,
+                                      const cg::VarNodeArray& i,
+                                      ComputingGraph& graph,
+                                      const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::LSQBackward::make(i[0], i[1], i[2], i[3], i[4], param,
+                                      config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
 template <>
 struct OprLoadDumpImpl<opr::AdaptivePoolingBackward, 0>
         : public PoolingLoadDumpImpl<opr::AdaptivePoolingBackward,
@@ -587,6 +604,8 @@ MGB_SEREG_OPR(FakeQuant, 3);
 MGB_SEREG_OPR(FakeQuantBackward, 4);
 MGB_SEREG_OPR(TQT, 2);
 MGB_SEREG_OPR(TQTBackward, 3);
+MGB_SEREG_OPR(LSQ, 4);
+MGB_SEREG_OPR(LSQBackward, 5);
 }  // namespace opr
 
 

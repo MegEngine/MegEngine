@@ -947,6 +947,119 @@ struct OpCallerUniform<Op, 5, PVis> {
     }
 };
 
+
+//! specialization for arity == 6
+template <class Op, class PVis>
+struct OpCallerUniform<Op, 6, PVis> {
+    Op op;
+    PVis par[6];
+    static const uint32_t packed_size = PVis::packed_size;
+
+    devfunc void thread_init(uint32_t idx) {
+        idx = idx * packed_size;
+        par[0].thread_init(idx);
+        par[1].thread_init(idx);
+        par[2].thread_init(idx);
+        par[3].thread_init(idx);
+        par[4].thread_init(idx);
+        par[5].thread_init(idx);
+    }
+
+    devfunc void on(uint32_t idx) {
+        idx = idx * packed_size;
+        op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx), par[3].at(idx),
+           par[4].at(idx), par[5].at(idx));
+    }
+
+    devfunc void on(uint32_t idx, uint32_t remain) {
+        idx = idx * packed_size;
+        if (remain >= packed_size) {
+            op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx),
+               par[3].at(idx), par[4].at(idx), par[5].at(idx));
+        } else {
+            auto ptr0 = par[0].ptr();
+            auto ptr1 = par[1].ptr();
+            auto ptr2 = par[2].ptr();
+            auto ptr3 = par[3].ptr();
+            auto ptr4 = par[4].ptr();
+            auto ptr5 = par[5].ptr();
+            for (int i = 0; i < remain; i++) {
+                op(idx + i, ptr0[par[0].offset(idx + i)],
+                   ptr1[par[1].offset(idx + i)], ptr2[par[2].offset(idx + i)],
+                   ptr3[par[3].offset(idx + i)], ptr4[par[4].offset(idx + i)],
+                   ptr5[par[5].offset(idx + i)]);
+            }
+        }
+    }
+
+    devfunc void next() {
+        par[0].next();
+        par[1].next();
+        par[2].next();
+        par[3].next();
+        par[4].next();
+        par[5].next();
+    }
+};
+
+
+//! specialization for arity == 7
+template <class Op, class PVis>
+struct OpCallerUniform<Op, 7, PVis> {
+    Op op;
+    PVis par[7];
+    static const uint32_t packed_size = PVis::packed_size;
+
+    devfunc void thread_init(uint32_t idx) {
+        idx = idx * packed_size;
+        par[0].thread_init(idx);
+        par[1].thread_init(idx);
+        par[2].thread_init(idx);
+        par[3].thread_init(idx);
+        par[4].thread_init(idx);
+        par[5].thread_init(idx);
+        par[6].thread_init(idx);
+    }
+
+    devfunc void on(uint32_t idx) {
+        idx = idx * packed_size;
+        op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx), par[3].at(idx),
+           par[4].at(idx), par[5].at(idx), par[6].at(idx));
+    }
+
+    devfunc void on(uint32_t idx, uint32_t remain) {
+        idx = idx * packed_size;
+        if (remain >= packed_size) {
+            op(idx, par[0].at(idx), par[1].at(idx), par[2].at(idx),
+               par[3].at(idx), par[4].at(idx), par[5].at(idx), par[6].at(idx));
+        } else {
+            auto ptr0 = par[0].ptr();
+            auto ptr1 = par[1].ptr();
+            auto ptr2 = par[2].ptr();
+            auto ptr3 = par[3].ptr();
+            auto ptr4 = par[4].ptr();
+            auto ptr5 = par[5].ptr();
+            auto ptr6 = par[6].ptr();
+            for (int i = 0; i < remain; i++) {
+                op(idx + i, ptr0[par[0].offset(idx + i)],
+                   ptr1[par[1].offset(idx + i)], ptr2[par[2].offset(idx + i)],
+                   ptr3[par[3].offset(idx + i)], ptr4[par[4].offset(idx + i)],
+                   ptr5[par[5].offset(idx + i)], ptr6[par[6].offset(idx + i)]);
+            }
+        }
+    }
+
+    devfunc void next() {
+        par[0].next();
+        par[1].next();
+        par[2].next();
+        par[3].next();
+        par[4].next();
+        par[5].next();
+        par[6].next();
+    }
+};
+
 /*!
  * \brief call binary (i.e. arity == 2) operator with different param
  *      visitors

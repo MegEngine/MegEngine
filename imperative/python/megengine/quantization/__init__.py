@@ -6,7 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-from .fake_quant import TQT, FakeQuantize
+from .fake_quant import LSQ, TQT, FakeQuantize
 from .observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,

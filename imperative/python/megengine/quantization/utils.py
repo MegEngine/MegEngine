@@ -43,6 +43,16 @@ def tqt_forward(qmin, qmax, inp, scale):
     return output
 
 
+def lsq_forward(qmin, qmax, inp, step_size, zero_point=None, scale_grad=None):
+    if zero_point is None:
+        zero_point = Tensor([0.0], dtype=np.float32)
+    if scale_grad is None:
+        scale_grad = Tensor([1.0], dtype=np.float32)
+    op = builtin.LSQ(qmin=qmin, qmax=qmax)
+    (output,) = apply(op, inp, step_size, zero_point, scale_grad)
+    return output
+
+
 def register_method_to_class(cls):
     def decorator(func):
         @wraps(func)
@@ -103,6 +113,47 @@ class QParams:
             ["{}={}".format(key, getattr(self, key)) for key in self.__slots__]
         )
         return "QParams({})".format(content)
+
+
+class LSQParams:
+    """
+    To standardize LSQ's qparams format. If custom
+    qparams is needed, inherit this class and add custom ``__slots__``.
+    """
+
+    __slots__ = "mode", "dtype_meta", "scale", "zero_point", "grad_scale"
+
+    def __init__(
+        self,
+        mode: QuantMode,
+        dtype_meta: QuantDtypeMeta,
+        scale: Tensor,
+        zero_point: Tensor,
+        grad_scale: Tensor,
+    ):
+        self.mode = mode
+        self.dtype_meta = dtype_meta
+        self.scale = scale
+        self.zero_point = zero_point
+        self.grad_scale = grad_scale
+
+    def update(self, lsqparams: "LSQParams"):
+        for key in self.__slots__:
+            setattr(self, key, getattr(lsqparams, key))
+
+    def __eq__(self, other):
+        if len(self.__slots__) != len(other.__slots__):
+            return False
+        for key in self.__slots__:
+            if not hasattr(other, key) or getattr(self, key) != getattr(other, key):
+                return False
+        return True
+
+    def __repr__(self):
+        content = ", ".join(
+            ["{}={}".format(key, getattr(self, key)) for key in self.__slots__]
+        )
+        return "LSQParams({})".format(content)
 
 
 class QParamsModuleMixin(abc.ABC):

@@ -37,6 +37,7 @@ namespace megdnn {
         megdnn_assert(size, "uninitialized ElemwiseOpParamN");
     }
 
+    template struct ElemwiseOpParamN<7>;
     template struct ElemwiseOpParamN<6>;
     template struct ElemwiseOpParamN<5>;
     template struct ElemwiseOpParamN<4>;

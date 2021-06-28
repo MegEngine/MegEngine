@@ -12,13 +12,15 @@ from .. import functional as F
 from ..core.tensor.dtype import QuantDtypeMeta, _builtin_quant_dtypes
 from ..logger import get_logger
 from ..module import Module
-from ..tensor import Parameter
+from ..tensor import Parameter, Tensor
 from .utils import (
+    LSQParams,
     QParams,
     QParamsModuleMixin,
     QuantMode,
     create_qparams,
     fake_quant_tensor,
+    lsq_forward,
     tqt_forward,
 )
 
@@ -117,3 +119,58 @@ class FakeQuantize(_FakeQuantize):
             qparams.dtype_meta, self.dtype
         )
         return fake_quant_tensor(inp, qparams)
+
+
+class LSQ(_FakeQuantize, QParamsModuleMixin):
+    r"""
+    LSQ: https://arxiv.org/pdf/1902.08153.pdf Estimating and scaling the 
+    task loss gradient at each weight and activation layer's quantizer step size
+
+    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+        quantization dtype of input.
+    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
+    :param eps:a small value to avoid division by zero. Default: 1e-5
+    """
+
+    def init(
+        self,
+        dtype: Union[str, QuantDtypeMeta],
+        enable: bool = True,
+        eps: float = 1e-5,
+        **kwargs
+    ):
+        super().__init__(dtype=dtype, enable=enable, **kwargs)
+        self.eps = Tensor(eps, dtype="float32")
+        self.step_size = Parameter(1.0, dtype="float32")
+
+    def set_qparams(self, qparams: LSQParams):
+        self.mode = qparams.mode
+        if qparams.mode == QuantMode.ASYMMERTIC:
+            self.zero_point = qparams.zero_point
+        else:
+            self.zero_point = Tensor([0.0], dtype="float32")
+        if qparams.scale is None:
+            raise AssertionError("Can not get an initialized scale")
+        init_step_size = qparams.scale
+        if init_step_size < self.eps:
+            init_step_size = 0
+        else:
+            init_step_size = init_step_size - self.eps
+        self.step_size = Parameter(init_step_size, dtype="float32")
+
+        self.grad_scale = qparams.grad_scale
+
+    def fake_quant_forward(self, inp, qparams: LSQParams = None):
+        step_size = F.abs(self.step_size) + self.eps
+        return lsq_forward(
+            self.qmin, self.qmax, inp, step_size, self.zero_point, self.grad_scale
+        )
+
+    def get_qparams(self):
+        return LSQParams(
+            mode=self.mode,
+            dtype_meta=self.dtype,
+            scale=F.abs(self.step_size.detach()) + self.eps,
+            zero_point=self.zero_point,
+            grad_scale=self.grad_scale,
+        )

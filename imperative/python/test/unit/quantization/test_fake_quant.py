@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.functional as F
 from megengine import tensor
 from megengine.core.autodiff.grad import Function, Grad
 from megengine.core.tensor.dtype import QuantDtypeMeta
@@ -19,6 +20,7 @@ from megengine.quantization.utils import (
     QuantMode,
     create_qparams,
     fake_quant_tensor,
+    lsq_forward,
     tqt_forward,
 )
 
@@ -150,3 +152,78 @@ def test_fakequant():
     zero_point = tensor(1.0 * np.ones((1, 32, 1, 1)), dtype=np.float32)
     scale = tensor(4.0 * np.ones((1, 32, 1, 1)), dtype=np.float32)
     run(zero_point, scale)
+
+
+class LSQ_numpy:
+    def __init__(self, lowerbound, upperbound):
+        super().__init__()
+        self.lowerbound = lowerbound
+        self.upperbound = upperbound
+
+    def forward(self, inp, scale, zero_point, grad_scale):
+        inp_scaled = inp / scale + zero_point
+        inp_clipped = np.maximum(
+            np.minimum(inp_scaled, self.upperbound), self.lowerbound
+        )
+        inp_rounded = np.floor(inp_clipped + 0.5)
+        inp_flq = (inp_rounded - zero_point) * scale
+        self.saved_tensors = (inp_scaled, inp_rounded, scale, grad_scale)
+        return inp_flq
+
+    def backward(self, grad_inp_flq):
+        (inp_scaled, inp_rounded, scale, grad_scale) = self.saved_tensors
+
+        ind_small = inp_scaled < self.lowerbound
+        ind_big = inp_scaled > self.upperbound
+        ind_middle = np.logical_xor(ind_small, ind_big)
+        ind_middle = np.abs(ind_middle - 1)
+
+        grad_s = (
+            ind_small * self.lowerbound
+            + ind_big * self.upperbound
+            + ind_middle * (-inp_scaled + inp_rounded)
+        )
+        grad_s = grad_s * grad_scale * grad_inp_flq
+        grad_s = grad_s.sum()
+        grad_inp = grad_inp_flq * ind_middle
+
+        return grad_inp, grad_s
+
+
+def test_lsq():
+    def preprocess(scale, eps):
+        scale = np.array([0]) if scale < eps else scale - eps
+        return np.abs(scale) + eps
+
+    g = []
+
+    def cb(grad):
+        g.append(grad)
+
+    x = np.random.randint(-128, 128, size=(1, 2, 3, 4)).astype("float32")
+    s = np.random.rand(1)
+    eps = np.array([1e-5], dtype="float32")
+    s = preprocess(s, eps)
+    zero_point = np.array([1.0], dtype="float32")
+    grad_s = np.array([2.0], dtype="float32")
+
+    g_y = np.ones(shape=(1, 2, 3, 4), dtype="float32")
+
+    n = LSQ_numpy(-127, 127)
+    y_np = n.forward(x, s, zero_point, grad_s)
+    g_x_np, g_s_np = n.backward(g_y)
+
+    x = mge.tensor(x, dtype="float32")
+    s = mge.tensor(s, dtype="float32")
+    zero_point = mge.tensor(zero_point, dtype="float32")
+    grad_s = mge.tensor(grad_s, dtype="float32")
+
+    g_y = mge.tensor(g_y, dtype="float32")
+    grad = Grad().wrt(x, s, callback=cb)
+    y = lsq_forward(-127, 127, x, s, zero_point, grad_s)
+    grad(y, g_y)
+    g_x, g_s = g
+
+    np.testing.assert_allclose(y.numpy(), y_np, rtol=1e-7, atol=1e-7)
+    np.testing.assert_allclose(g_x.numpy(), g_x_np, rtol=1e-7, atol=1e-7)
+    np.testing.assert_allclose(g_s.numpy(), g_s_np, rtol=5e-7, atol=5e-7)
