@@ -101,7 +101,7 @@ std::vector<matrix_mul::TestArg> matrix_mul::get_matmul_args_mask(
                 size_t Astride = mask & 1 ? m + 2 : k + 2;
                 // B: (k, n)
                 size_t Bstride = mask & 2 ? k + 2 : n + 2;
-                size_t Cstride = n + 2;
+                size_t Cstride = n * 2 + 2;
                 args.emplace_back(m, n, k, mask, Astride, Bstride, Cstride);
             }
     return args;
@@ -183,9 +183,11 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
                                   Handle* handle,
                                   const ExecutionPolicyAlgoName& algo,
                                   param::MatrixMul::Format format, size_t nbase,
-                                  float eps, std::vector<TestArg>&& user_args) {
+                                  float eps, std::vector<TestArg>&& user_args,
+                                  bool force_deduce_dst) {
     megdnn_assert(A_dtype.enumv() == B_dtype.enumv());
     Checker<Opr> checker(handle);
+    checker.set_force_deduce_dst(force_deduce_dst);
     if (!algo.name.empty()) {
         checker.set_before_exec_callback(AlgoChecker<Opr>(algo));
     }
@@ -245,16 +247,16 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
     for (auto& arg : args) {
         size_t m = arg.m, n = arg.n, k = arg.k;
 
-#if MEGDNN_WITH_CUDA
-        //[NOTE]: cublas can only process 4B aligned 8-bit input matrix;
-        bool is_dt_8bit = A_dtype.enumv() == DTypeEnum::Int8 ||
-                          A_dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                          A_dtype.enumv() == DTypeEnum::Uint8 ||
-                          A_dtype.enumv() == DTypeEnum::Quantized8Asymm;
-        if (is_dt_8bit && ((m % 4 != 0) || (n % 4 != 0))) {
-            continue;
+        if (handle->type() == Handle::HandleType::CUDA) {
+            //! NOTE: cublas can only process 4B aligned 8-bit input matrix;
+            bool is_dt_8bit = A_dtype.enumv() == DTypeEnum::Int8 ||
+                              A_dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                              A_dtype.enumv() == DTypeEnum::Uint8 ||
+                              A_dtype.enumv() == DTypeEnum::Quantized8Asymm;
+            if (is_dt_8bit && ((m % 4 != 0) || (n % 4 != 0))) {
+                continue;
+            }
         }
-#endif
 
         Param param;
         param.transposeA = arg.mask & 0x1;
@@ -312,20 +314,22 @@ void matrix_mul::check_batched_matrix_mul(DType A_dtype, DType B_dtype,
                                           DType C_dtype, Handle* handle,
                                           const ExecutionPolicyAlgoName& algo,
                                           float eps,
-                                          std::vector<TestArg>&& args) {
+                                          std::vector<TestArg>&& args,
+                                          bool force_deduce_dst) {
     check_matrix_mul<megdnn::BatchedMatrixMul>(
             A_dtype, B_dtype, C_dtype, handle, algo,
             param::MatrixMul::Format::DEFAULT, 8, eps,
-            std::forward<decltype(args)>(args));
+            std::forward<decltype(args)>(args), force_deduce_dst);
 }
 
 void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
                                   Handle* handle,
                                   const ExecutionPolicyAlgoName& algo,
                                   param::MatrixMul::Format format, size_t nbase,
-                                  float eps) {
+                                  float eps, bool force_deduce_dst) {
     check_matrix_mul<megdnn::MatrixMul>(A_dtype, B_dtype, C_dtype, handle, algo,
-                                        format, nbase, eps);
+                                        format, nbase, eps, {},
+                                        force_deduce_dst);
 }
 
 #if MEGDNN_WITH_BENCHMARK
