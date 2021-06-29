@@ -1019,7 +1019,7 @@ def batch_norm(
     momentum: float = 0.9,
     eps: float = 1e-5,
     inplace: bool = True,
-    compute_mode="default",
+    compute_mode="default"
 ):
     r"""
     Applies batch normalization to the input.

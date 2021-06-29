@@ -1,5 +1,13 @@
+# MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+#
+# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import weakref
-from typing import Callable, Iterable
+from collections import OrderedDict
+from typing import Callable, Iterable, List, Union
 
 from ..core._imperative_rt.core2 import pop_scope, push_scope, set_option
 from ..core.autodiff.grad import Grad
@@ -123,6 +131,10 @@ class GradManager:
         self._gradients = {}
         self._priority = None
 
+    def attached_tensors(self):
+        r"""Return attached tensor list from :meth:`attach`."""
+        return [spec.tensor() for spec in self._attach_specs.values()]
+
     def attach(self, tensors: Iterable[Tensor], callbacks=None):
         r"""
         Instruct GradManager to track operations on tensors, so that gradients with respect
@@ -210,13 +222,18 @@ class GradManager:
             spec.callbacks.extend(callbacks)
             if new_attach and self._recording:
                 self._do_record(spec)
+
         return self
 
     def _register_after_backward_callback(self, callback):
         self._after_backward_callback.append(callback)
         return self
 
-    def backward(self, y=None, dy=None):
+    def backward(
+        self,
+        y: Union[Tensor, List[Tensor]] = None,
+        dy: Union[Tensor, List[Tensor]] = None,
+    ):
         r"""
         Compute gradients (or vector-Jacobian product) for all attached tensors, accumulate to
         corresponding .grad attribute, and release resources along the way.
@@ -257,6 +274,7 @@ class GradManager:
                 "call a method that clears the history?"
             )
         assert self._grad is not None
+        # These checks should be consistent with GradScaler's
         if y is None:
             ys = []
         elif isinstance(y, (tuple, list)):

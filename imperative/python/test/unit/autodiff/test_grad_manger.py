@@ -49,6 +49,32 @@ def test_basic():
     np.testing.assert_equal(b.grad.numpy(), [1])
 
 
+def test_dy():
+    x = mge.tensor([1.0, 3.0, 5.0]).reshape(1, 3)
+    w = mge.tensor([2.0, 4.0, 6.0]).reshape(3, 1)
+    b = mge.tensor(-1.0)
+
+    gm = GradManager().attach([w, b])
+
+    def get_grad(grad, dy, idx):
+        if isinstance(dy, (list, tuple)):
+            return np.array(grad) * dy[idx]
+        else:
+            return np.array(grad) * dy
+
+    # dy's shape should be the same as y's
+    dy = mge.tensor(2.5).reshape(1, 1)
+    w.grad = None
+    b.grad = None
+    with gm:
+        p = F.matmul(x, w)
+        y = p + b
+        gm.backward(y, dy=dy)
+
+    np.testing.assert_equal(w.grad.numpy(), [[1], [3], [5]] * dy.numpy())
+    np.testing.assert_equal(b.grad.numpy(), [1] * dy.numpy())
+
+
 def test_attach_in_with_block():
     a = mge.Parameter([1.0])
     gm = GradManager()
@@ -91,6 +117,25 @@ def test_attach_temporary():
     #         del x
     #         assert ref() is None
     #         gm.backward(y)
+
+
+def test_attached_tensors():
+    w1 = mge.Parameter(2.0)
+    w2 = mge.Parameter(2.0)
+    gm = GradManager()
+
+    def check(expected):
+        actual = gm.attached_tensors()
+        assert len(expected) == len(actual)
+        for exp, act in zip(expected, actual):
+            assert exp is act
+
+    gm.attach(w1)
+    check([w1])
+    gm.attach(w2)
+    check([w1, w2])
+    gm.attach(w1)
+    check([w1, w2])
 
 
 def test_no_dependency():
