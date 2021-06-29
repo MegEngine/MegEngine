@@ -382,19 +382,11 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
 
     if (dst.type() == TensorFormat::Type::IMAGE2D_PACK4 &&
         (
-                handle()->type() != Handle::HandleType::NAIVE)) {
-#if MEGDNN_ENABLE_MANGLING
-        megdnn_throw(
-                "Only naive and opencl handle support "
-                "Image2DPack4TensorFormat, try build with debug for get more "
-                "info");
-#else
-        megdnn_throw(
-                "Only naive and opencl handle support "
-                "Image2DPack4TensorFormat, try to export MGB_USE_MEGDNN_DBG=2 "
-                "and also export CUDA_VISIBLE_DEVICES=\'\' at CUDA env"
-                "to enable naive handle");
-#endif
+            handle()->type() != Handle::HandleType::NAIVE && 
+            handle()->type() != Handle::HandleType::X86)) {
+            megdnn_throw(
+                    "Dump with Image2DPack4TensorFormat is not available on CUDA compnode, "
+                    "try export CUDA_VISIBLE_DEVICES=\'\'");
     }
 #undef CHECK_SRC
 }
