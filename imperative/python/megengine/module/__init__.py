@@ -34,4 +34,4 @@ from .normalization import GroupNorm, InstanceNorm, LayerNorm
 from .pooling import AvgPool2d, MaxPool2d
 from .quant_dequant import DequantStub, QuantStub
 from .sequential import Sequential
-from .sliding_window import SlidingWindow
+from .sliding_window import SlidingWindow, SlidingWindowTranspose

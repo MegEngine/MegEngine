@@ -224,6 +224,10 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_fields('uint32', 'pad_h', 0, 'pad_w', 0, 'stride_h', 1, 'stride_w', 1,
             'dilate_h', 1, 'dilate_w', 1, 'window_h', 3, 'window_w', 3))
 
+(pdef('SlidingWindowTranspose').
+ add_fields('uint32', 'out_h', 0, 'out_w', 0, 'pad_h', 0, 'pad_w', 0, 'stride_h', 1, 'stride_w', 1,
+            'dilate_h', 1, 'dilate_w', 1, 'window_h', 3, 'window_w', 3))
+
 (pdef('Pooling', version=0, is_legacy=True).
  add_enum(
      'Mode',

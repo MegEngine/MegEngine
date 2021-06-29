@@ -73,6 +73,7 @@
 #include "src/naive/separable_conv/opr_impl.h"
 #include "src/naive/separable_filter/opr_impl.h"
 #include "src/naive/sleep/opr_impl.h"
+#include "src/naive/sliding_window_transpose/opr_impl.h"
 #include "src/naive/split/opr_impl.h"
 #include "src/naive/svd/opr_impl.h"
 #include "src/naive/tensor_remap/opr_impl.h"

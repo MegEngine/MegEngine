@@ -16,6 +16,8 @@
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
+#include "megbrain/opr/dnn/sliding_window_transpose.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
@@ -530,6 +532,9 @@ MGB_SEREG_OPR(ConvolutionBackwardFilterV2, 0);
 
 MGB_SEREG_OPR(Images2Neibs, 1);
 MGB_SEREG_OPR(Images2NeibsBackward, 2);
+
+MGB_SEREG_OPR(SlidingWindowTranspose, 1);
+MGB_SEREG_OPR(SlidingWindowTransposeBackward, 2);
 
 using LocalV2 = Local;
 using LocalBackwardDataV2 = LocalBackwardData;

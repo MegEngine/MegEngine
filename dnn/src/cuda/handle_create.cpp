@@ -71,6 +71,7 @@
 #include "src/cuda/separable_conv/opr_impl.h"
 #include "src/cuda/separable_filter/opr_impl.h"
 #include "src/cuda/sleep/opr_impl.h"
+#include "src/cuda/sliding_window_transpose/opr_impl.h"
 #include "src/cuda/split/opr_impl.h"
 #include "src/cuda/svd/opr_impl.h"
 #include "src/cuda/tensor_remap/opr_impl.h"

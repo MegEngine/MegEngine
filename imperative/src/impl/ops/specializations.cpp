@@ -35,6 +35,8 @@
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
+#include "megbrain/opr/dnn/images2neibs.h"
+#include "megbrain/opr/dnn/sliding_window_transpose.h"
 
 #include "../op_trait.h"
 
@@ -658,4 +660,17 @@ OP_TRAIT_REG(LSQ, LSQ).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace lsq
 }  // namespace
 
-}  // namespace mgb::imperative
+namespace { namespace sliding_window_transpose {
+auto apply_on_var_node(
+        const OpDef& def,
+        const VarNodeArray& inputs) {
+    auto&& op = static_cast<const SlidingWindowTranspose&>(def);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::SlidingWindowTranspose::make(inputs[0], op.param(), config);
+}
+OP_TRAIT_REG(SlidingWindowTranspose, SlidingWindowTranspose)
+    .apply_on_var_node(apply_on_var_node)
+    .fallback();
+}} // sliding_window_transpose
+
+} // namespace mgb::imperative

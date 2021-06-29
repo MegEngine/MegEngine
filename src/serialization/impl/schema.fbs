@@ -112,6 +112,7 @@ union OperatorParam {
     param.PoissonRNG = 78,
     param.PermutationRNG = 79,
     param.BetaRNG = 80,
+    param.SlidingWindowTranspose = 81,
 }
 
 table Operator {

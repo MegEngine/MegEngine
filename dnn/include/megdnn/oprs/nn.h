@@ -666,7 +666,7 @@ public:
      * http://deeplearning.net/software/theano/library/tensor/nnet/neighbours.html
      *
      * \f$ dst_{n, c, oh, ow, wh, ww} = src_{n, c, ih+wh, iw+fw}\f$,
-     * where \f$ ih=-pad_h+oh*stride_h, iw=-pad_w+ow*stride_w\f$.
+     * where \f$ ih=-pad_h+oh*stride_h+(wh-1)*(dilation_h-1), iw=-pad_w+ow*stride_w+(ww-1)*(dilation_w-1)\f$.
      */
     virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                       _megdnn_workspace workspace) = 0;
@@ -682,6 +682,53 @@ using Images2Neibs = Images2NeibsForward;
 
 class Images2NeibsBackward : public Images2NeibsBase {
     DEF_OPR_IMPL(Images2NeibsBackward, Images2NeibsBase, 1, 1);
+
+public:
+    /**
+     * \param[in] diff the backpropagated gradient wrt. dst
+     * \param[out] grad the backpropagated gradient wrt. src
+     */
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& grad) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& grad,
+                    size_t workspace_in_bytes);
+};
+
+class SlidingWindowTransposeBase : public OperatorBase {
+    DEF_OPR_IMPL_CTOR(SlidingWindowTransposeBase, OperatorBase);
+    DEF_OPR_PARAM(SlidingWindowTranspose);
+
+protected:
+    void deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst);
+    void check_layout_fwd(const TensorLayout& filter, const TensorLayout& dst);
+};
+
+class SlidingWindowTransposeForward : public SlidingWindowTransposeBase {
+    DEF_OPR_IMPL(SlidingWindowTransposeForward, SlidingWindowTransposeBase, 1, 1);
+
+public:
+    /**
+     * \param[in] src (N, C, IH, IW, window_h, window_w)
+     * \param[out] dst (N, C, OH, OW)
+     */
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                      _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
+                                          const TensorLayout& dst) = 0;
+    void deduce_layout(const TensorLayout& src, TensorLayout& dst);
+
+protected:
+    void check_exec(const TensorLayout& src, const TensorLayout& dst,
+                    size_t workspace_in_bytes);
+};
+using SlidingWindowTranspose = SlidingWindowTransposeForward;
+
+class SlidingWindowTransposeBackward : public SlidingWindowTransposeBase {
+    DEF_OPR_IMPL(SlidingWindowTransposeBackward, SlidingWindowTransposeBase, 1, 1);
 
 public:
     /**

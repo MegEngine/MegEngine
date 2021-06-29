@@ -71,6 +71,7 @@ __all__ = [
     "resize",
     "sigmoid",
     "sliding_window",
+    "sliding_window_transpose",
     "softmax",
     "softplus",
     "sync_batch_norm",
@@ -1383,6 +1384,60 @@ def sliding_window(
     window_h, window_w = _pair_nonzero(kernel_size)
 
     op = builtin.Images2Neibs(
+        pad_h=padding_h,
+        pad_w=padding_w,
+        stride_h=stride_h,
+        stride_w=stride_w,
+        dilate_h=dilation_h,
+        dilate_w=dilation_w,
+        window_h=window_h,
+        window_w=window_w,
+    )
+    (output,) = apply(op, inp)
+    return output
+
+
+def sliding_window_transpose(
+    inp: Tensor,
+    output_size: Union[int, Tuple[int, int]],
+    kernel_size: Union[int, Tuple[int, int]],
+    padding: Union[int, Tuple[int, int]] = 0,
+    stride: Union[int, Tuple[int, int]] = 1,
+    dilation: Union[int, Tuple[int, int]] = 1,
+) -> Tensor:
+    """
+    Sum over the sliding windows on the corresponding input location.
+
+    Refer to :class:`~.SlidingWindowTranspose` for more information.
+
+    :param inp: input tensor.
+    :param output_size: shape of output tensor.
+    :param kernel_size: size of the window.
+    :param padding: implicit zero padding added on both sides of input. Default: 0
+    :param stride: stride of the window. Default: 1
+    :param dilation: dilation of the window. Default: 1
+    :return: output tensor.
+    """
+    output_h, output_w = _pair_nonzero(output_size)
+    padding_h, padding_w = _pair(padding)
+    stride_h, stride_w = _pair_nonzero(stride)
+    dilation_h, dilation_w = _pair_nonzero(dilation)
+    window_h, window_w = _pair_nonzero(kernel_size)
+
+    expected_h = (
+        output_h + 2 * padding_h - dilation_h * (window_h - 1) - 1
+    ) // stride_h + 1
+    expected_w = (
+        output_w + 2 * padding_w - dilation_w * (window_w - 1) - 1
+    ) // stride_w + 1
+    assert inp.ndim == 6, "the input dimension of sliding_window_transpose should be 6"
+    assert (
+        inp.shape[2] == expected_h and inp.shape[3] == expected_w
+    ), "the input shape and output size do not match"
+
+    op = builtin.SlidingWindowTranspose(
+        out_h=output_h,
+        out_w=output_w,
         pad_h=padding_h,
         pad_w=padding_w,
         stride_h=stride_h,

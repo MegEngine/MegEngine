@@ -39,6 +39,8 @@ DEF(SeparableConvForward, 4, true, true);
 DEF(SeparableFilterForward, 4, true, true);
 DEF(Images2NeibsForward, 2, true, true);
 DEF(Images2NeibsBackward, 2, true, false);
+DEF(SlidingWindowTransposeForward, 2, true, true);
+DEF(SlidingWindowTransposeBackward, 2, true, false);
 DEF(PoolingForward, 2, true, true);
 DEF(PoolingBackward, 4, true, false);
 DEF(AdaptivePoolingForward, 2, true, false);

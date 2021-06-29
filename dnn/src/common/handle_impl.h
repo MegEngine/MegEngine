@@ -104,6 +104,8 @@ private:
     cb(ConvBiasForward) \
     cb(Images2NeibsForward) \
     cb(Images2NeibsBackward) \
+    cb(SlidingWindowTransposeForward) \
+    cb(SlidingWindowTransposeBackward) \
     cb(ElemwiseForward) \
     cb(ElemwiseMultiType) \
     cb(AddUpdateForward) \

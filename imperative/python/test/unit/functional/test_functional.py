@@ -953,3 +953,39 @@ def test_sliding_window():
         tensor(inp), (wh, ww), padding=(ph, pw), stride=(sh, sw), dilation=(dh, dw)
     )
     np.testing.assert_equal(gt_out, out.numpy())
+
+
+def test_sliding_window_transpose():
+    N, C, H, W = 2, 3, 7, 8
+    ph, pw = 1, 2
+    sh, sw = 2, 1
+    wh, ww = 3, 2
+    dh, dw = 1, 3
+    s = lambda i, p, s, d, w: (i + p * 2 - (w - 1) * d - 1) // s + 1
+    inp = np.random.normal(
+        size=(N, C, s(H, ph, sh, dh, wh), s(W, pw, sw, dw, ww), wh, ww)
+    ).astype(np.float32)
+    gt_out = np.zeros((N, C, H, W), dtype=np.float32)
+
+    for n, c in itertools.product(*map(range, inp.shape[:2])):
+        oh = 0
+        for ih in range(-ph, H + ph - dh * (wh - 1), sh):
+            ow = 0
+            for iw in range(-pw, W + pw - dw * (ww - 1), sw):
+                for kh, kw in itertools.product(*map(range, inp.shape[-2:])):
+                    ih2 = ih + dh * kh
+                    iw2 = iw + dw * kw
+                    if ih2 >= 0 and ih2 < H and iw2 >= 0 and iw2 < W:
+                        gt_out[n, c, ih2, iw2] += inp[n, c, oh, ow, kh, kw]
+                ow += 1
+            oh += 1
+
+    out = F.sliding_window_transpose(
+        tensor(inp),
+        (H, W),
+        (wh, ww),
+        padding=(ph, pw),
+        stride=(sh, sw),
+        dilation=(dh, dw),
+    )
+    np.testing.assert_equal(gt_out, out.numpy())
