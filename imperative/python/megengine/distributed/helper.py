@@ -165,6 +165,18 @@ def _get_device_count_worker(queue, device_type):
     queue.put(num)
 
 
+def _check_device_initialized(device_type: str):
+    try:
+        test = Tensor(1, device=device_type)
+        inited = False
+        del test
+    except:
+        inited = True
+    errmsg = "The cuda env is set before the forked thread starts. Please do not use any cuda function or variable before forking."
+    if inited:
+        raise RuntimeError(errmsg)
+
+
 def get_device_count_by_fork(device_type: str):
     """
     Get device count in fork thread.

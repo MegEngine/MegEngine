@@ -246,3 +246,16 @@ def test_io_remote(shape):
 
     val = np.random.random_sample(shape).astype("float32")
     worker(val, shape)
+
+
+@pytest.mark.require_ngpu(2)
+def test_cuda_init_before_fork():
+    a = mge.tensor(1, device="gpu0")
+
+    @dist.launcher(n_gpus=2)
+    def worker():
+        a += 1
+        b = mge.tensor(2)
+
+    with pytest.raises(AssertionError):
+        worker()
