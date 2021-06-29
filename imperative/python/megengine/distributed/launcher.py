@@ -15,7 +15,7 @@ from .. import _exit
 from ..core._imperative_rt.core2 import full_sync
 from ..logger import get_logger
 from .group import group_barrier, init_process_group
-from .helper import get_device_count_by_fork
+from .helper import _check_device_initialized, get_device_count_by_fork
 from .server import Client, Server
 
 WARN_SUBPROCESS_EXIT_WITHOUT_RETURN = (
@@ -37,6 +37,7 @@ def _run_wrapped(
     queue: mp.Queue,
 ):
     """Init distributed process group and run wrapped function."""
+    _check_device_initialized(device_type)
     init_process_group(
         master_ip=master_ip,
         port=port,
