@@ -2,7 +2,7 @@ name: CI GPU
 
 on:
   push:
-    branches: [master]
+    branches: [master, try-import]
   pull_request:
 
 jobs:
