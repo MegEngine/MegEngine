@@ -8,14 +8,25 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
 import copy
+import functools
 from typing import List, Type
 
 from ... import module as M
-from ...core._imperative_rt.core2 import set_module_tracing, unset_module_tracing
+from ...core._imperative_rt.core2 import (
+    is_tracing_module,
+    set_module_tracing,
+    unset_module_tracing,
+)
+from ...core.tensor.array_method import ArrayMethodMixin
 from ...module import Module
 from ...tensor import Tensor
-from .expr import Apply, Call, Constant, Expr, GetAttr, Input
-from .module_tracer import active_module_tracer, module_tracer, set_active_module_tracer
+from .expr import Apply, CallFunction, CallMethod, Constant, Expr, GetAttr, Input
+from .module_tracer import (
+    Patcher,
+    active_module_tracer,
+    module_tracer,
+    set_active_module_tracer,
+)
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 
 
@@ -54,7 +65,9 @@ class InternalGraph:
         for n, v in zip(self._inputs, inputs):
             node2value[n] = v
         for expr in self._exprs:
-            values = expr.interpret(*list(node2value[i] for i in expr.inputs))
+            values = expr.interpret(
+                *list(Expr.get_arg_value(i, node2value) for i in expr.inputs)
+            )
             for n, v in zip(expr.outputs, values):
                 node2value[n] = v
         return list(node2value[i] for i in self._outputs)
@@ -65,6 +78,41 @@ class InternalGraph:
             "\n\t".join(str(i) for i in self._exprs),
             ", ".join(str(i) for i in self._outputs),
         )
+
+
+def _wrapped_function(orig_func):
+    @functools.wraps(orig_func)
+    def wrapped_fn(*inputs, **kwargs):
+        if is_tracing_module():
+            unset_module_tracing()
+            const_kwargs = {}
+            arg_names = orig_func.__code__.co_varnames
+            if orig_func.__qualname__.split(".").__len__() > 1:
+                # FIXME: a robust way to distinguish method and function. <XP>
+                self = inputs[0]
+                call_node = CallMethod.make(NodeMixin.get(self), orig_func.__name__)
+            else:
+                call_node = CallFunction.make(orig_func)
+
+            def add_input(inp, varname=None):
+                node = Expr.get_args_node(inp)
+                if node is not None:
+                    call_node.add_input(node, varname)
+                else:
+                    const_kwargs[varname] = inp
+
+            for ind, inp in enumerate(inputs):
+                add_input(inp, arg_names[ind])
+            for k, v in kwargs.items():
+                add_input(v, k)
+            call_node.kwargs = const_kwargs
+            outputs = orig_func(*inputs, **kwargs)
+            call_node.add_outputs(outputs)
+            set_module_tracing()
+            return outputs
+        return orig_func(*inputs, **kwargs)
+
+    return wrapped_fn
 
 
 class TracedModuleBuilder(NodeMixin):
@@ -120,7 +168,7 @@ class TracedModuleBuilder(NodeMixin):
             mark_constant(i)
         for k, v in kwargs.items():
             mark_constant(v)
-        callnode = Call.make(NodeMixin.get(self))
+        callnode = CallMethod.make(NodeMixin.get(self))
 
         def add_input(x):
             callnode.add_input(NodeMixin.get(x))
@@ -145,7 +193,8 @@ class TracedModuleBuilder(NodeMixin):
             )
             # prepare args and kwargs for inner graph
             def wrap(x):
-                wrapped = copy.copy(x)  # FIXME
+                # wrapped = copy.copy(x)  # FIXME
+                wrapped = x  # FIXME: <XP>
                 NodeMixin.wrap(
                     wrapped,
                     lambda: Input.make(type=NodeMixin.get_wrapped_type(wrapped)),
@@ -157,7 +206,9 @@ class TracedModuleBuilder(NodeMixin):
                 args.append(wrap(i))
             for k, v in kwargs.items():
                 kwargs[k] = wrap(v)
-
+            active_module_tracer().patcher.auto_patch(
+                getattr(getattr(self._mod, "forward", self._mod), "__globals__", {})
+            )
             outputs = type(self._mod).forward(self, *args, **kwargs)
 
             for i in (
@@ -171,11 +222,6 @@ class TracedModuleBuilder(NodeMixin):
 
         # rebind output to outer graph
         callnode.add_outputs(outputs)
-        for i, node in zip(
-            outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,),
-            callnode.outputs,
-        ):
-            NodeMixin.wrap_safe(i, node)
         return outputs
 
     def __getattr__(self, name):
@@ -229,6 +275,55 @@ class TracedModule(Module):
             rst = rst[0]
         return rst
 
+    @property
+    def all_exprs(self):
+        """
+        Visit all ``Expr``s in the graph recursively.
+
+        :return: List[Expr]
+        """
+
+        in_nodes = [i.expr for i in self.m_node.graph._inputs if not i is self]
+
+        def _flatten_submodule(module, call=None):
+            if not isinstance(module, TracedModule):
+                call.inputs[0] = module
+                return (call,)
+
+            exprs = []
+
+            graph = module.m_node.graph
+            for expr in graph._exprs:
+
+                # replace inputs for submodule's expr
+                for idx, inp in enumerate(expr.inputs):
+                    if call and inp in graph._inputs:
+                        expr.inputs[idx] = call.inputs[idx]
+                # replace outputs for submodule's expr
+                for idx, outp in enumerate(expr.outputs):
+                    if call and outp in graph._outputs:
+                        expr.outputs[idx] = call.outputs[idx]
+
+                if isinstance(expr, GetAttr):
+                    # replace GetAttr with Constant
+                    if isinstance(expr.outputs[0], TensorNode):
+                        const = Constant(getattr(module, expr.name))
+                        const.outputs = expr.outputs
+                        exprs.append(const)
+                elif isinstance(expr, CallMethod):
+                    obj_node = expr.inputs[0]
+                    if isinstance(obj_node, ModuleNode):
+                        (obj,) = expr.inputs[0].expr.interpret(module)
+                        exprs.extend(_flatten_submodule(obj, expr))
+                    else:
+                        exprs.append(expr)
+                else:
+                    exprs.append(expr)
+
+            return exprs
+
+        return in_nodes + _flatten_submodule(self)
+
     def __getstate__(self):
         d = self.__dict__
         for k in Module.__dict__:
@@ -273,23 +368,23 @@ def trace_module(mod: Module, *inputs: Tensor, **kwargs: Tensor) -> TracedModule
     assert active_module_tracer() is None
     try:
         set_module_tracing()
-        set_active_module_tracer(module_tracer())
-        global_scope = InternalGraph()
+        set_active_module_tracer(module_tracer(_wrapped_function))
+        with active_module_tracer().patcher:
+            global_scope = InternalGraph()
+            active_module_tracer().push_scope(global_scope)
 
-        active_module_tracer().push_scope(global_scope)
+            builder = TracedModuleBuilder(mod)
+            NodeMixin.wrap_safe(builder, Input.make("TopModule", ModuleNode))
 
-        builder = TracedModuleBuilder(mod)
-        NodeMixin.wrap_safe(builder, Input.make("TopModule", ModuleNode))
+            for _, i in enumerate(inputs):
+                NodeMixin.wrap_safe(i, Input.make("arg_{}".format(_)))
+            for k, v in kwargs.items():
+                NodeMixin.wrap_safe(v, Input.make("kwarg_{}".format(k)))
 
-        for _, i in enumerate(inputs):
-            NodeMixin.wrap_safe(i, Input.make("arg_{}".format(_)))
-        for k, v in kwargs.items():
-            NodeMixin.wrap_safe(v, Input.make("kwarg_{}".format(k)))
+            builder(*inputs, **kwargs)
+            active_module_tracer().pop_scope()
 
-        builder(*inputs, **kwargs)
-        active_module_tracer().pop_scope()
-
-        return builder.build()
+            return builder.build()
     finally:
         set_active_module_tracer(None)
         unset_module_tracing()

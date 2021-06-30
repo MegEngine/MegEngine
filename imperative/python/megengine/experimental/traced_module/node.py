@@ -34,6 +34,10 @@ class Node:
         Node.__total_id += 1
         self._name = name
 
+    def __setstate__(self, d):
+        self.__dict__ = d
+        Node.__total_id = max(Node.__total_id, self._id) + 1
+
     def __repr__(self):
         if self._name is None:
             return "%{}".format(self._id)
