@@ -193,23 +193,15 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
             return algo;
     }
 
-    if (args.filter_meta.group > 1) {
-        auto orig_args = conv_args;
-        TensorLayout src, dst, bias;
-        AlgoGroupConvGeneral::modify_size_args(conv_args, src, dst, bias);
-        if (auto algo = get_1x1_algo(conv_args)) {
-            return sm_algo_pack.algo2gconv.at(algo);
-        }
-        if (is_cudnn_supported(conv_args)) {
-            if (auto algo = get_cudnn_algo(cudnn_conv_from_enum_wrapper)) {
-                return sm_algo_pack.algo2gconv.at(algo);
-            }
-        }
-        conv_args = orig_args;
-    }
-
     if (auto algo = get_1x1_algo(args)) {
         return algo;
+    }
+
+    if (args.filter_meta.group > 1) {
+        if (auto algo = megdnn::get_algo_match_attribute<ConvBiasForwardImpl>(
+                    &sm_algo_pack.group, positive_attr, negative_attr)){
+            return algo;
+        }
     }
 
     if (sm_algo_pack.fallback_nchw_qs8.is_available_attribute(

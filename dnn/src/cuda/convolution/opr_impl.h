@@ -75,17 +75,6 @@ public:
     void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
-            const TensorLayout& diff, const TensorLayout& grad,
-            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(filter, filter_meta, diff, grad,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
-                ->info();
-    }
-
-    AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad, size_t workspace_limit_in_bytes,
             const AlgoAttribute& positive_attr,
@@ -128,14 +117,6 @@ protected:
             const AlgoAttribute& negative_attr) override;
 
 private:
-    Algorithm* get_algorithm_heuristic(const TensorLayout& filter,
-                                       const CanonizedFilterMeta& filter_meta,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr);
-
     static AlgoPack sm_algo_pack;
 };
 
@@ -147,17 +128,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
-    AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& src, const TensorLayout& diff,
-            const TensorLayout& grad, const CanonizedFilterMeta& grad_meta,
-            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(src, diff, grad, grad_meta,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
-                ->info();
-    }
-
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad, size_t workspace_limit_in_bytes,
@@ -195,14 +165,6 @@ protected:
             const AlgoAttribute& negative_attr) override;
 
 private:
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       const CanonizedFilterMeta& grad_meta,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr);
-
     static AlgoPack sm_algo_pack;
 };
 

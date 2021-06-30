@@ -1034,10 +1034,11 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_GROUP) {
             // float case
             Checker<ConvBiasForward> checker(handle_cuda());
             checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
-                                             ConvBias>(
+                                             ConvBias>(ExecutionPolicyAlgoName{
                     ConvBiasForward::algo_name<ConvBiasForward::DirectParam>(
                             "CUDA:GROUP_CONV", {})
-                            .c_str()));
+                            .c_str(),
+                    {{"CUDNN", {}}}}));
             ConvBias::Param param;
             param.sparse = ConvBias::Param::Sparse::GROUP;
             param.nonlineMode = mode;

@@ -45,16 +45,18 @@ public:
         HandleImpl* handle;
         const TensorLayout *src_layout, *diff_layout, *grad_layout;
         CanonizedFilterMeta grad_filter_meta;
-        ConvolutionBackwardFilterImpl* opr;
+        const ConvolutionBackwardFilterImpl* opr;
 
         std::string to_string() const;
         void init_desc(convolution::CUDNNBwdFilterDescs& desc) const {
             desc.set(*src_layout, *diff_layout, grad_filter_meta, opr->param());
         }
-        SizeArgs(ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const TensorLayout& grad);
-        SizeArgs(ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const TensorLayout& grad,
+        SizeArgs(const ConvolutionBackwardFilterImpl* opr,
+                 const TensorLayout& src, const TensorLayout& diff,
+                 const TensorLayout& grad);
+        SizeArgs(const ConvolutionBackwardFilterImpl* opr,
+                 const TensorLayout& src, const TensorLayout& diff,
+                 const TensorLayout& grad,
                  const CanonizedFilterMeta& grad_meta);
 
         convolution::ForwardSizeArgs as_fwd_args() const {
@@ -66,9 +68,9 @@ public:
         const TensorND *src_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(ConvolutionBackwardFilterImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(const ConvolutionBackwardFilterImpl* opr,
+                 _megdnn_tensor_in src, _megdnn_tensor_in diff,
+                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -203,29 +205,25 @@ private:
 //! implement group conv by another algo
 class ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral final
         : public AlgoBase {
-    AlgoBase* m_impl;
-    std::string m_name;
-
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
-    const char* name() const override { return m_name.c_str(); }
-
-    static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
-                                 TensorLayout& diff_pg);
+    const char* name() const override {
+        return "CUDA:GROUP_CONV_BACKWARD_FILTER";
+    }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
     AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
+        return AlgoAttribute::REPRODUCIBLE;
     }
+
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class ConvolutionBackwardFilterImpl::AlgoPack : NonCopyableObj {
@@ -240,8 +238,7 @@ public:
     std::vector<AlgoCUDNN> cudnn;
     AlgoMatmul matmul;
     AlgoChanwise chanwise;
-    std::vector<AlgoGroupConvGeneral> gconv;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+    AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
 
     std::vector<AlgoBase*>

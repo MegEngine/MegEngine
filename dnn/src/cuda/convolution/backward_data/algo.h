@@ -49,15 +49,17 @@ public:
         HandleImpl* handle;
         CanonizedFilterMeta filter_meta;
         const TensorLayout *diff_layout, *grad_layout, *filter_layout;
-        ConvolutionBackwardDataImpl* opr;
+        const ConvolutionBackwardDataImpl* opr;
 
         std::string to_string() const;
         void init_desc(convolution::CUDNNBwdDataDescs& desc) const {
             desc.set(filter_meta, *diff_layout, *grad_layout, opr->param());
         }
-        SizeArgs(ConvolutionBackwardDataImpl* opr, const TensorLayout& filter,
-                 const TensorLayout& diff, const TensorLayout& grad);
-        SizeArgs(ConvolutionBackwardDataImpl* opr, const TensorLayout& filter,
+        SizeArgs(const ConvolutionBackwardDataImpl* opr,
+                 const TensorLayout& filter, const TensorLayout& diff,
+                 const TensorLayout& grad);
+        SizeArgs(const ConvolutionBackwardDataImpl* opr,
+                 const TensorLayout& filter,
                  const CanonizedFilterMeta& filter_meta,
                  const TensorLayout& diff, const TensorLayout& grad);
 
@@ -70,7 +72,7 @@ public:
         const TensorND *filter_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
+        ExecArgs(const ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
                  _megdnn_tensor_in diff, _megdnn_tensor_out grad,
                  _megdnn_workspace workspace);
     };
@@ -219,35 +221,26 @@ private:
 //! implement group conv by another algo
 class ConvolutionBackwardDataImpl::AlgoGroupConvGeneral final
         : public AlgoBase {
-    AlgoBase* m_impl;
-    std::string m_name;
-
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    const char* name() const override { return m_name.c_str(); }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
+    const char* name() const override {
+        return "CUDA:GROUP_CONV_BACKWARD_DATA";
+    }
 
-    static void modify_size_args(SizeArgs& args, TensorLayout& diff_pg,
-                                 TensorLayout& grad_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
     AlgoAttribute attribute() const override {
-        auto ret = AlgoAttribute::DEFAULT;
-#define cb(attr)                               \
-    if (m_impl->contain_attribute_all(attr)) { \
-        ret |= attr;                           \
+        return AlgoAttribute::REPRODUCIBLE;
     }
-        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
-#undef cb
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
-    }
+
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm final
@@ -319,9 +312,8 @@ public:
     AlgoMatmul matmul;
     AlgoChanwise chanwise;
     AlgoChanwiseSmall chanwise_small;
-    std::vector<AlgoGroupConvGeneral> gconv;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
     AlgoBFloat16 bfloat16;
+    AlgoGroupConvGeneral group;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8NCHWDotProdImplicitGemm int8_nchw_dotprod;
 

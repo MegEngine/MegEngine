@@ -42,24 +42,11 @@ ConvBiasForwardImpl::AlgoPack::AlgoPack() {
     conv_algos.push_back(&matmul);
     conv_algos.push_back(&matmul8x8x32);
     conv_algos.push_back(&batched_matmul);
-
-    conv_algos.reserve(conv_algos.size() * 2);
-    //! add gconv algos by AlgoGroupConvGeneral
-    size_t algo_size = conv_algos.size();
-    for (size_t i = 3; i < algo_size; ++i) {
-        gconv_refhold.emplace_back(new AlgoGroupConvGeneral(conv_algos[i]));
-        algo2gconv[conv_algos[i]] = gconv_refhold.back().get();
-        conv_algos.push_back(gconv_refhold.back().get());
-    }
+    conv_algos.push_back(&group);
 
     for (auto&& algo : conv_algos) {
         all_algos.push_back(algo);
     }
-    non_cudnn_algos.push_back(all_algos.rbegin()[4]);  // group inplace_matmul
-    non_cudnn_algos.push_back(all_algos.rbegin()[3]);  // group matmul
-    non_cudnn_algos.push_back(all_algos.rbegin()[2]);  // group matmul_8x8x32
-    non_cudnn_algos.push_back(all_algos.rbegin()[1]);  // group batched_matmul
-    non_cudnn_algos.push_back(all_algos.rbegin()[0]);  // group 1x1
 
     all_algos.push_back(&bfloat16);
     bfloat16_algos.push_back(&bfloat16);
@@ -118,7 +105,7 @@ ConvBiasForwardImpl::AlgoPack ConvBiasForwardImpl::sm_algo_pack;
 MEGDNN_DEF_GET_ALGO_FROM_DESC(ConvBiasForwardImpl)
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvBiasForwardImpl* o, const TensorLayout& src,
+        const ConvBiasForwardImpl* o, const TensorLayout& src,
         const TensorLayout& filter, const TensorLayout& bias,
         const TensorLayout& z, const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter)
@@ -127,7 +114,7 @@ ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
                    dst, preprocessed_filter) {}
 
 ConvBiasForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvBiasForwardImpl* o, const TensorLayout& src,
+        const ConvBiasForwardImpl* o, const TensorLayout& src,
         const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst, const PreprocessedFilter* preprocessed_filter)

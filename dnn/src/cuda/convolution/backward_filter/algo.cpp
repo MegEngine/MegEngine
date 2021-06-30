@@ -26,23 +26,8 @@ ConvolutionBackwardFilterImpl::AlgoPack::AlgoPack() {
         all_algos.push_back(&i);
     }
     all_algos.push_back(&matmul);
+    all_algos.push_back(&group);
 
-    all_algos.reserve(all_algos.size() * 2);
-
-    // add gconv algos by AlgoGroupConvGeneral
-    auto all_algos_data = all_algos.data();
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        gconv.push_back({all_algos[i]});
-    }
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        algo2gconv[all_algos[i]] = &gconv[i - 1];
-    }
-    for (auto &&i: gconv) {
-        all_algos.push_back(&i);
-    }
-    megdnn_assert(all_algos_data == all_algos.data());
-
-    non_cudnn_algos.push_back(all_algos.rbegin()[0]);   // group matmul
     all_algos.push_back(&bfloat16);
     bfloat16_algos.push_back(&bfloat16);
 
@@ -68,7 +53,7 @@ ConvolutionBackwardFilterImpl::AlgoPack
 ConvolutionBackwardFilterImpl::sm_algo_pack;
 
 ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardFilterImpl *o,
+        const ConvolutionBackwardFilterImpl *o,
         const TensorLayout &src, const TensorLayout &diff,
         const TensorLayout &grad):
     SizeArgs(o, src, diff, grad, o->make_canonized_filter_meta(src.ndim, grad))
@@ -76,7 +61,7 @@ ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
 }
 
 ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardFilterImpl* o, const TensorLayout& src,
+        const ConvolutionBackwardFilterImpl* o, const TensorLayout& src,
         const TensorLayout& diff, const TensorLayout& grad,
         const CanonizedFilterMeta& grad_meta)
         : handle{concrete_handle(o->handle())},
@@ -87,7 +72,7 @@ ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
           opr{o} {}
 
 ConvolutionBackwardFilterImpl::AlgoBase::ExecArgs::ExecArgs(
-        ConvolutionBackwardFilterImpl *opr,
+        const ConvolutionBackwardFilterImpl *opr,
         _megdnn_tensor_in src,
         _megdnn_tensor_in diff,
         _megdnn_tensor_out grad,

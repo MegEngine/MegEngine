@@ -78,15 +78,15 @@ public:
 
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs : public conv_bias::BiasForwardSizeArgs {
-        ConvBiasForwardImpl* opr;
+        const ConvBiasForwardImpl* opr;
         const PreprocessedFilter* preprocessed_filter;
 
         std::string to_string() const;
-        SizeArgs(ConvBiasForwardImpl* opr, const TensorLayout& src,
+        SizeArgs(const ConvBiasForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter, const TensorLayout& bias,
                  const TensorLayout& z, const TensorLayout& dst,
                  const PreprocessedFilter* preprocessed_filter = nullptr);
-        SizeArgs(ConvBiasForwardImpl* opr, const TensorLayout& src,
+        SizeArgs(const ConvBiasForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter,
                  const CanonizedFilterMeta& filter_meta,
                  const TensorLayout& bias, const TensorLayout& z,
@@ -434,27 +434,24 @@ private:
 //! implement group conv by another algo
 class ConvBiasForwardImpl::AlgoGroupConvGeneral final : public AlgoBase {
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    const char* name() const override { return m_name.c_str(); }
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
+
+    const char* name() const override {
+        if (m_name.empty()) {
+            m_name = ConvBiasForward::algo_name<DirectParam>("CUDA:GROUP_CONV",
+                                                             {});
+        }
+        return m_name.c_str();
+    }
 
     AlgoAttribute attribute() const override {
-        auto ret = AlgoAttribute::DEFAULT;
-#define cb(attr)                               \
-    if (m_impl->contain_attribute_all(attr)) { \
-        ret |= attr;                           \
-    }
-        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
-#undef cb
-
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
+        return AlgoAttribute::REPRODUCIBLE;
     }
 
     static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
@@ -463,8 +460,7 @@ public:
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
-    AlgoBase* m_impl;
-    std::string m_name;
+    mutable std::string m_name;
 };
 
 #if CUDA_VERSION >= 10000
@@ -1087,9 +1083,8 @@ public:
     std::vector<AlgoInt4Int4NHWCIMMAImplicitGemm> int4_int4_nhwc_imma;
     std::vector<AlgoUInt4Int4NHWCIMMAImplicitGemm> uint4_int4_nhwc_imma;
 #endif
-    std::vector<std::unique_ptr<AlgoGroupConvGeneral>> gconv_refhold;
+    AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
 
     AlgoBase* cudnn_conv_bias_act_from_enum(cudnnConvolutionFwdAlgo_t algo);
 

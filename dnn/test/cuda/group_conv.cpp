@@ -108,39 +108,33 @@ TEST_F(CUDA, GROUP_CONV_FORWARD)
 }
 
 TEST_F(CUDA, GROUP_CONV_FORWARD_1x1) {
-    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW,
-            size_t FH, size_t FW,
-            size_t OC, size_t group) {
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t FH,
+                   size_t FW, size_t OC, size_t group) {
         Checker<Convolution> checker(handle_cuda());
-#if CUDNN_MAJOR <= 6
         std::string conv1x1_name =
-                ConvBiasForward::algo_name<ConvBiasForward::MatmulParam>(
-                        "BATCHEDMATMUL", {});
-        checker.set_before_exec_callback(
-                AlgoChecker<ConvolutionForward>(ExecutionPolicyAlgoName{
-                        "DEFAULT",
-                        {{ConvBiasForward::algo_name<
-                                  ConvBiasForward::DirectParam>(
-                                  ssprintf("%s:%s", "CUDA:GROUP_CONV",
-                                           conv1x1_name.c_str())
-                                          .c_str(),
-                                  {})
-                                  .c_str(),
-                          {}}}}));
-#endif
+                ConvBiasForward::algo_name<ConvBias::MatmulParam>(
+                        "INPLACE_MATMUL", {});
+        checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
+                ExecutionPolicyAlgoName{"DEFAULT",
+                                        {{ConvBiasForward::algo_name<
+                                                  ConvBiasForward::DirectParam>(
+                                                  "CUDA:GROUP_CONV", {})
+                                                  .c_str(),
+                                          {{conv1x1_name.c_str(), {}}}}}}));
+
         Convolution::Param param;
         param.sparse = Convolution::Param::Sparse::GROUP;
         auto ICg = IC / group;
         auto OCg = OC / group;
-        checker.set_param(param).exec({{N, IC, IH, IW},
-                {group, OCg, ICg, FH, FW}, {}});
+        checker.set_param(param).exec(
+                {{N, IC, IH, IW}, {group, OCg, ICg, FH, FW}, {}});
     };
     size_t ic = 192;
     for (size_t g = 2; g <= 3; g += 1) {
         for (size_t ih = 8; ih <= 128; ih *= 4) {
             size_t iw = ih;
             run(2, ic, ih, iw, 1, 1, ic / g, g);
-            run(2, ic, ih+1, iw+1, 1, 1, ic / g, g);
+            run(2, ic, ih + 1, iw + 1, 1, 1, ic / g, g);
         }
     }
 }
@@ -155,6 +149,54 @@ TEST_F(CUDA, GROUP_CONV_BACKWARD_DATA)
             size_t group)
     {
         Checker<ConvolutionBackwardData> checker(handle_cuda());
+        ConvolutionBackwardData::Param param;
+        param.sparse = Convolution::Param::Sparse::GROUP;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_h = SH;
+        param.stride_w = SW;
+        auto ICg = IC / group;
+        auto OCg = OC / group;
+        checker.set_param(param).exec({{group, OCg, ICg, FH, FW},
+                {N, OC, OH, OW}, {N, IC, IH, IW}});
+    };
+    // normal case
+    run(2, 64, 7, 7,
+            3, 3,
+            32, 5, 5,
+            0, 0,
+            1, 1,
+            2);
+    // padded case
+    run(2, 32, 7, 7,
+            3, 3,
+            64, 7, 7,
+            1, 1,
+            1, 1,
+            4);
+    // strided case
+    run(2, 32, 7, 7,
+            3, 3,
+            64, 3, 3,
+            0, 0,
+            2, 2,
+            8);
+}
+
+TEST_F(CUDA, GROUP_CONV_BACKWARD_DATA_CUDNN)
+{
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW,
+            size_t FH, size_t FW,
+            size_t OC, size_t OH, size_t OW,
+            size_t PH, size_t PW,
+            size_t SH, size_t SW,
+            size_t group)
+    {
+        Checker<ConvolutionBackwardData> checker(handle_cuda());
+        checker.set_before_exec_callback(
+                AlgoChecker<ConvolutionBackwardData>(ExecutionPolicyAlgoName{
+                        "CUDA:GROUP_CONV_BACKWARD_DATA", {{"CUDNN", {}}}}));
+
         ConvolutionBackwardData::Param param;
         param.sparse = Convolution::Param::Sparse::GROUP;
         param.pad_h = PH;
@@ -233,6 +275,52 @@ TEST_F(CUDA, GROUP_CONV_BACKWARD_FILTER)
             8);
 }
 
+TEST_F(CUDA, GROUP_CONV_BACKWARD_FILTER_CUDNN)
+{
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW,
+            size_t FH, size_t FW,
+            size_t OC, size_t OH, size_t OW,
+            size_t PH, size_t PW,
+            size_t SH, size_t SW,
+            size_t group)
+    {
+        Checker<ConvolutionBackwardFilter> checker(handle_cuda());
+        checker.set_before_exec_callback(
+                AlgoChecker<ConvolutionBackwardFilter>(ExecutionPolicyAlgoName{
+                        "CUDA:GROUP_CONV_BACKWARD_FILTER", {{"CUDNN", {}}}}));
+        ConvolutionBackwardFilter::Param param;
+        param.sparse = Convolution::Param::Sparse::GROUP;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_h = SH;
+        param.stride_w = SW;
+        auto ICg = IC / group;
+        auto OCg = OC / group;
+        checker.set_param(param).exec({{N, IC, IH, IW},
+                {N, OC, OH, OW}, {group, OCg, ICg, FH, FW}});
+    };
+    // normal case
+    run(2, 64, 7, 7,
+            3, 3,
+            32, 5, 5,
+            0, 0,
+            1, 1,
+            2);
+    // padded case
+    run(2, 32, 7, 7,
+            3, 3,
+            64, 7, 7,
+            1, 1,
+            1, 1,
+            4);
+    // strided case
+    run(2, 32, 7, 7,
+            3, 3,
+            64, 3, 3,
+            0, 0,
+            2, 2,
+            8);
+}
 } // namespace test
 } // namespace megdnn
 

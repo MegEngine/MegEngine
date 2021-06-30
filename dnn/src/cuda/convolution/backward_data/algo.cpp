@@ -39,25 +39,9 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
     int8_algos.push_back(&int8_nchw_dotprod);
     all_algos.push_back(&int8_nchw_dotprod);
 
-    all_algos.reserve(all_algos.size() * 2);
-
-    // add gconv algos by AlgoGroupConvGeneral
-    auto all_algos_data = all_algos.data();
-    size_t group_algo_start = 2;
-    for (size_t i = group_algo_start; i < all_algos.size(); ++i) {
-        gconv.push_back({all_algos[i]});
-    }
-    for (size_t i = group_algo_start; i < all_algos.size(); ++i) {
-        algo2gconv[all_algos[i]] = &gconv[i - group_algo_start];
-    }
-    for (auto&& i : gconv) {
-        all_algos.push_back(&i);
-    }
-    megdnn_assert(all_algos_data == all_algos.data());
-
-    non_cudnn_algos.push_back(all_algos.rbegin()[0]);  // group matmul
     all_algos.push_back(&bfloat16);
     bfloat16_algos.push_back(&bfloat16);
+    all_algos.push_back(&group);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
@@ -80,13 +64,13 @@ ConvolutionBackwardDataImpl::AlgoPack::cudnn_from_enum(
 ConvolutionBackwardDataImpl::AlgoPack ConvolutionBackwardDataImpl::sm_algo_pack;
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
+        const ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
         const TensorLayout& diff, const TensorLayout& grad)
         : SizeArgs(o, filter, o->make_canonized_filter_meta(grad.ndim, filter),
                    diff, grad) {}
 
 ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
-        ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
+        const ConvolutionBackwardDataImpl* o, const TensorLayout& filter,
         const CanonizedFilterMeta& filter_meta, const TensorLayout& diff,
         const TensorLayout& grad)
         : handle{concrete_handle(o->handle())},
@@ -97,7 +81,7 @@ ConvolutionBackwardDataImpl::AlgoBase::SizeArgs::SizeArgs(
           opr{o} {}
 
 ConvolutionBackwardDataImpl::AlgoBase::ExecArgs::ExecArgs(
-        ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
+        const ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
         _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace)
         : SizeArgs(opr, filter.layout, diff.layout, grad.layout),
