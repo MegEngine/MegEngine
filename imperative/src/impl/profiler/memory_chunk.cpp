@@ -89,7 +89,8 @@ struct MemoryChunk {
     std::array<uintptr_t, 2> address;
     std::string name;
     TensorLayout layout;
-    std::array<uint64_t, 2> time;
+    std::array<profiler::Duration, 2> time;
+    std::optional<uint64_t> group;
 
     bool empty() const {
         return address[1] - address[0] == 0;
@@ -111,9 +112,9 @@ struct MemoryFlow {
         return {addr_begin, addr_end};
     }
 
-    std::pair<uint64_t, uint64_t> time_range() const {
-        auto time_begin = std::numeric_limits<uint64_t>::max();
-        auto time_end = std::numeric_limits<uint64_t>::min();
+    std::pair<profiler::Duration, profiler::Duration> time_range() const {
+        auto time_begin = profiler::Duration::max();
+        auto time_end = profiler::Duration::min();
         for(auto&& [id, chunk]: chunks) {
             MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
@@ -121,27 +122,6 @@ struct MemoryFlow {
             time_end = std::max(time_end, chunk.time[1]);
         }
         return {time_begin, time_end};
-    }
-
-    std::shared_ptr<json::Array> to_json() const {
-        auto results = json::Array::make();
-        for(auto&& [id, chunk]: chunks) {
-            MGB_MARK_USED_VAR(id);
-            if (chunk.empty()) continue;
-            auto address = json::Array::make();
-            auto time = json::Array::make();
-            address->add(json::String::make(std::to_string(chunk.address[0])));
-            address->add(json::String::make(std::to_string(chunk.address[1])));
-            time->add(json::String::make(std::to_string(chunk.time[0])));
-            time->add(json::String::make(std::to_string(chunk.time[1])));
-            results->add(json::Object::make({
-                {"address", address},
-                {"name", json::String::make(chunk.name)},
-                {"layout", json::String::make(chunk.layout.to_string())},
-                {"time", time}
-            }));
-        }
-        return results;
     }
 
     XMLWriter to_svg() const {
@@ -157,13 +137,13 @@ struct MemoryFlow {
         svg.attr("xmlns:tag", std::string{"https://megengine.org.cn"});
         double time_scale = 1e5;
         double addr_scale = 1e6;
-        svg.attr("width", (time_end-time_begin)/time_scale);
+        svg.attr("width", (time_end-time_begin).count()/time_scale);
         svg.attr("height", (addr_end-addr_begin)/addr_scale);
         {
             auto rect = writer.element("rect");
             rect.attr("x", 0);
             rect.attr("y", 0);
-            rect.attr("width", (time_end-time_begin)/time_scale);
+            rect.attr("width", (time_end-time_begin).count()/time_scale);
             rect.attr("height", (addr_end-addr_begin)/addr_scale);
             rect.attr("fill", std::string{"blue"});
         }
@@ -177,7 +157,7 @@ struct MemoryFlow {
             {1000 * ms, "#888888"},
             {std::numeric_limits<double>::infinity(), "#555555"},
         };
-        auto time2str = [](uint64_t ns){
+        auto time2str = [](profiler::Duration ns){
             using pair_t = std::pair<uint64_t, const char*>;
             static pair_t units[] = {
                 {1, "ns "},
@@ -189,9 +169,9 @@ struct MemoryFlow {
             auto comparator = [](const pair_t& lhs, const pair_t& rhs) {
                 return lhs.first < rhs.first;
             };
-            while (ns > 0) {
-                auto iter = std::upper_bound(std::begin(units), std::end(units), std::make_pair(ns, ""), comparator) - 1;
-                builder += std::to_string(ns / iter->first) + iter->second;
+            while (ns.count() > 0) {
+                auto iter = std::upper_bound(std::begin(units), std::end(units), std::make_pair(ns.count(), ""), comparator) - 1;
+                builder += std::to_string(ns.count() / iter->first) + iter->second;
                 ns = ns % iter->first;
             }
             return builder;
@@ -218,11 +198,11 @@ struct MemoryFlow {
         for (auto&& [id, chunk]: chunks) {
             MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
-            double left = (chunk.time[0]-time_begin)/time_scale;
-            double right = (chunk.time[1]-time_begin)/time_scale;
+            double left = (chunk.time[0]-time_begin).count()/time_scale;
+            double right = (chunk.time[1]-time_begin).count()/time_scale;
             double top = (chunk.address[0]-addr_begin)/addr_scale;
             double bottom = (chunk.address[1]-addr_begin)/addr_scale;
-            double duration = chunk.time[1] - chunk.time[0];
+            double duration = (chunk.time[1] - chunk.time[0]).count();
             {
                 auto rect = writer.element("rect");
                 rect.attr("x", left);
@@ -241,70 +221,48 @@ struct MemoryFlow {
                 mge_attr("produced", time2str(chunk.time[0]));
                 mge_attr("erased", time2str(chunk.time[1]));
                 mge_attr("duration", time2str(chunk.time[1] - chunk.time[0]));
+                if (chunk.group) {
+                    mge_attr("group", std::to_string(*chunk.group));
+                }
             }
         }
         return writer;
     }
 };
 
-void dump_memory_flow(std::string filename, Profiler::options_t options, Profiler::thread_dict_t thread_dict, Profiler::results_t results) {
-    MemoryFlow flow;
+struct MemoryFlowVisitor: EventVisitor<MemoryFlowVisitor> {
+    MemoryFlow memory_flow;
 
-    ProfileDataCollector collector;
-    ProfileState state;
-#define HANDLE_EVENT(type, ...) \
-    collector.handle<type>([&](uint64_t id, std::thread::id tid, uint64_t time, type event) __VA_ARGS__ );
-
-    HANDLE_EVENT(TensorDeclareEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id] = {};
-        tensor_state.id = event.tensor_id;
-        tensor_state.name = event.name;
-    });
-
-    HANDLE_EVENT(TensorProduceEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id];
-        tensor_state.device = event.device;
-        tensor_state.layout = event.layout;
-        tensor_state.produced = time;
-        state.tensors_by_size.insert({tensor_state.id, tensor_state.size_in_bytes()});
-        state.tensors_by_produced.insert({tensor_state.id, tensor_state.produced});
-        auto& chunk = flow.chunks[event.tensor_id];
-        uintptr_t address = reinterpret_cast<uintptr_t>(event.ptr);
-        auto span = event.layout.span();
-        auto dtype = event.layout.dtype;
-        // assume dtype is not lowbit
-        if (!address) {
-            chunk.address = {0, 0};
-        } else {
-            chunk.address = {address+span.low_elem*dtype.size(), address+span.high_elem*dtype.size()};
+    template <typename TEvent>
+    void visit_event(const TEvent &event) {
+        if constexpr (std::is_same_v<TEvent, TensorProduceEvent>) {
+            auto& chunk = memory_flow.chunks[event.tensor_id];
+            uint64_t address = reinterpret_cast<uintptr_t>(event.ptr);
+            auto span = event.layout.span();
+            auto dtype = event.layout.dtype;
+            // assume dtype is not lowbit
+            if (!address) {
+                chunk.address = {0, 0};
+            } else {
+                chunk.address = {address+span.low_elem*dtype.size(), address+span.high_elem*dtype.size()};
+            }
+            chunk.layout = event.layout;
+            chunk.time[0] = since_start(to_device_time(current->time, current_tensor->device));
+            chunk.name = current_tensor->name;
+            chunk.group = current_tensor->source;
+        } else if constexpr (std::is_same_v<TEvent, TensorReleaseEvent>) {
+            auto& chunk = memory_flow.chunks[event.tensor_id];
+            chunk.time[1] = since_start(to_device_time(current->time, current_tensor->device));
         }
-        chunk.layout = tensor_state.layout;
-        chunk.time[0] = time;
-        chunk.name = tensor_state.name;
-    });
-
-    HANDLE_EVENT(TensorReleaseEvent, {
-        auto& tensor_state = state.tensors[event.tensor_id];
-        state.tensors_by_size.erase({tensor_state.id, tensor_state.size_in_bytes()});
-        state.tensors_by_produced.erase({tensor_state.id, tensor_state.produced});
-        auto& chunk = flow.chunks[event.tensor_id];
-        chunk.time[1] = time;
-    });
-
-    HANDLE_EVENT(ScopeEvent, {
-        state.threads[tid].scope_stack.push_back(event.name);
-    });
-
-    HANDLE_EVENT(ScopeFinishEvent, {
-        mgb_assert(state.threads[tid].scope_stack.back() == event.name);
-        state.threads[tid].scope_stack.pop_back();
-    });
-
-    for (auto&& result: results) {
-        collector(result.second.id, result.first, result.second.time, result.second.data);
     }
 
-    debug::write_to_file(filename.c_str(), flow.to_svg().to_string());
+    void notify_counter(std::string key, int64_t old_val, int64_t new_val) {}
+};
+
+void dump_memory_flow(std::string filename, Profiler::bundle_t result) {
+    MemoryFlowVisitor visitor;
+    visitor.process_events(std::move(result));
+    debug::write_to_file(filename.c_str(), visitor.memory_flow.to_svg().to_string());
 }
 
 }

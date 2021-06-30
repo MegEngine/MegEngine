@@ -102,7 +102,8 @@ std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
 }
 
 std::string make_name(const OpDef& def) {
-    return "OprAttr";
+    auto&& attr = def.cast_final_safe<OprAttr>();
+    return attr.type;
 }
 
 OP_TRAIT_REG(OprAttr, OprAttr)

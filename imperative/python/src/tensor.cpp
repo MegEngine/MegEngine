@@ -1013,9 +1013,8 @@ void init_tensor(py::module m) {
               interpreter_for_py->sync();
               imperative::Profiler::stop_profile();
               auto results = imperative::Profiler::collect();
-              auto options = imperative::Profiler::get_options();
-              return [results=std::move(results), options=std::move(options)](std::string basename, std::string format){
-                  imperative::Profiler::dump_profile(basename, format, results, options);
+              return [results=std::move(results)](std::string basename, std::string format){
+                  imperative::Profiler::dump_profile(basename, format, results);
               };
           }, py::call_guard<py::gil_scoped_release>());
     m.def("sync",

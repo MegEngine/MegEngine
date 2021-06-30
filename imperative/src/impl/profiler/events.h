@@ -12,7 +12,9 @@
 #pragma once
 
 #include "megbrain/utils/small_vector.h"
+#include "megbrain/imperative/profiler.h"
 
+#include "../interpreter/stack_manager.h"
 #include "../op_trait.h"
 
 namespace mgb::imperative::profiler {
@@ -52,6 +54,11 @@ struct ToStringTrait<profiler::TensorProp>{
 
 namespace mgb::imperative::profiler {
 
+using Trace = interpreter::intl::StackManager::Trace;
+
+struct ProfileOperatorState;
+struct ProfileTensorState;
+
 #define DEF_EVENT(X, ...) struct X##Event __VA_ARGS__;
 #define DEF_DUR_EVENT(X, ...) struct X##Event __VA_ARGS__; struct X##FinishEvent __VA_ARGS__;
 
@@ -61,14 +68,10 @@ DEF_EVENT(OpDispatch, {
     std::function<OpParams()> op_params;
     SmallVector<uint64_t> inputs;
     SmallVector<uint64_t> outputs;
+    Trace trace;
 });
 
 DEF_DUR_EVENT(OpInput, {
-    uint64_t tensor_id;
-    TensorShape shape;
-});
-
-DEF_DUR_EVENT(OpDel, {
     uint64_t tensor_id;
     TensorShape shape;
 });
@@ -80,16 +83,13 @@ DEF_DUR_EVENT(OpOutput, {
 
 DEF_DUR_EVENT(OpExecute, {
     uint64_t op_id;
+    SmallVector<CompNode> device_list;
 });
 
-DEF_DUR_EVENT(OpPostExecute, {
-    uint64_t op_id;
-});
-
-DEF_DUR_EVENT(KernelExecute, {
+DEF_DUR_EVENT(KernelLaunch, {
     uint64_t op_id;
     uint64_t kernel_id;
-    std::shared_ptr<CompNode::Event> event;
+    CompNode device;
 });
 
 DEF_EVENT(TensorDeclare, {
@@ -128,17 +128,10 @@ DEF_EVENT(TensorNotifyProp, {
     TensorProp prop;
 });
 
-DEF_EVENT(TensorWaitProp, {
+DEF_DUR_EVENT(TensorWaitProp, {
     uint64_t tensor_id;
     uint64_t wait_id;
     TensorProp prop;
-});
-
-DEF_EVENT(TensorWaitPropFinish, {
-    uint64_t tensor_id;
-    uint64_t wait_id;
-    TensorProp prop;
-    bool notified;
 });
 
 DEF_DUR_EVENT(SampleDevice, {
@@ -157,12 +150,9 @@ DEF_DUR_EVENT(Scope, {
     std::string name;
 });
 
-DEF_DUR_EVENT(DeviceScope, {
-    std::string name;
-    std::shared_ptr<CompNode::Event> event;
+DEF_DUR_EVENT(Sync, {
+    Trace trace;
 });
-
-DEF_DUR_EVENT(Sync, {});
 
 DEF_DUR_EVENT(StartProfile, {
     size_t capture_count;
@@ -172,10 +162,13 @@ DEF_DUR_EVENT(StopProfile, {
     size_t escape_count;
 });
 
+
+enum class TensorCommandKind {
+    Put, Del, SwapIn, SwapOut, Drop, ReGen, RecFree, GetValue
+};
+
 DEF_DUR_EVENT(TensorCommand, {
-    enum Kind {
-        Put, Del, SwapIn, SwapOut, Drop, ReGen, RecFree, GetValue
-    };
+    using Kind = TensorCommandKind;
     uint64_t tensor_id;
     Kind kind;
 });
@@ -185,6 +178,17 @@ DEF_DUR_EVENT(AutoEvict, {});
 DEF_DUR_EVENT(Custom, {
     std::string title;
     std::string content;
+});
+
+DEF_EVENT(RecordDevice, {
+    std::shared_ptr<CompNode::Event> event;
+});
+
+DEF_DUR_EVENT(HostToDevice, {
+    TensorLayout layout;
+    CompNode device;
+    void* host_ptr;
+    void* device_ptr;
 });
 
 #undef DEF_EVENT

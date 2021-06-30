@@ -32,15 +32,22 @@
 namespace mgb {
 namespace imperative {
 
+namespace profiler {
+
+using HostTime = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
+using Duration = std::chrono::nanoseconds;
+using RealDuration = std::chrono::duration<double, std::nano>;
+
+using Time = HostTime;
+
+}  // namespace profiler
+
 class Timer {
 public:
-    void reset();
-    uint64_t get_nsecs();
-    uint64_t get_started_at();
-    static std::shared_ptr<CompNode::Event> record_event(CompNode device);
-private:
-    decltype(std::chrono::steady_clock::now()) m_start;
-    uint64_t m_started_at;
+    using Time = profiler::Time;
+    static profiler::Time record_host();
+    static std::shared_ptr<CompNode::Event> record_device(CompNode device);
 };
 
 
@@ -48,7 +55,8 @@ class Profiler {
 public:
     struct Record {
         uint64_t id;
-        uint64_t time; //in ns
+        std::thread::id tid;
+        profiler::Time time;
         std::any data;
     };
     enum Status: uint8_t {
@@ -56,23 +64,32 @@ public:
         Recording = 1,
         Collecting = 2,
     };
-    using ProfileCollector = std::function<void(std::thread::id, Record)>;
+    struct ResultBundle;
+    using ProfileCollector = std::function<void(Record)>;
     using option_t = uint64_t;
     using options_t = std::unordered_map<std::string, option_t>;
-    using result_t = std::pair<std::thread::id, Record>;
-    using results_t = std::vector<result_t>;
+    using entry_t = Record;
+    using bundle_t = ResultBundle;
     using thread_dict_t = std::unordered_map<std::thread::id, std::string>;
+
+    struct ResultBundle {
+        profiler::HostTime start_at;
+        thread_dict_t thread_dict;
+        options_t options;
+        std::vector<entry_t> entries;
+    };
 private:
     std::thread::id m_thread_id;
     std::vector<Record> m_records;
+    std::vector<std::any> m_duration_stack;
     std::atomic<Status> m_status = Running;
-    uint64_t m_last_time = 0;
     std::string m_thread_name;
 
     static options_t sm_profile_options;
     static std::mutex sm_mutex;
     static std::unordered_map<std::thread::id, Profiler*> sm_profilers;
     static Timer sm_timer;
+    static profiler::HostTime sm_start_at;
     static std::atomic_uint64_t sm_last_id;
     static std::atomic_size_t sm_preferred_capacity;
     static bool sm_profiling;
@@ -100,7 +117,7 @@ public:
 
     static void reset() {
         mgb_assert(sm_profilers.size() == 0, "profiler already running");
-        sm_timer.reset();
+        sm_start_at = profiler::HostTime::min();
     }
 
     static uint64_t next_id() {
@@ -110,16 +127,13 @@ public:
     template <typename T, typename... TArgs>
     static uint64_t record(TArgs&&... args) {
         auto& profiler = get_instance();
-        auto last_time = profiler.m_last_time;
         if constexpr (sm_debug) {
             Status expected = Running;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Recording));
         }
         uint64_t id = next_id();
-        uint64_t time = sm_timer.get_nsecs();
-        time = std::max(time, last_time + 2000);
-        profiler.m_last_time = time;
-        profiler.m_records.push_back({id, time, T{std::forward<TArgs>(args)...}});
+        profiler::Time time = sm_timer.record_host();
+        profiler.m_records.push_back({id, std::this_thread::get_id(), time, T{std::forward<TArgs>(args)...}});
         if constexpr (sm_debug) {
             Status expected = Recording;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Running));
@@ -127,7 +141,8 @@ public:
         return id;
     }
 
-    static results_t collect() {
+    static bundle_t collect() {
+        bundle_t bundle;
         MGB_LOCK_GUARD(sm_mutex);
         if constexpr (sm_debug) {
             for (auto&& [tid, profiler]: sm_profilers) {
@@ -136,17 +151,17 @@ public:
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Collecting));
             }
         }
-        std::vector<std::pair<std::thread::id, Record>> profile_data;
+        std::vector<entry_t> profile_data;
         for (auto&& [tid, profiler]: sm_profilers) {
             sm_preferred_capacity = std::max(sm_preferred_capacity.load(), profiler->m_records.size());
             for (auto& record: profiler->m_records) {
-                profile_data.push_back({tid, std::move(record)});
+                profile_data.push_back(std::move(record));
             }
             profiler->m_records.clear();
             profiler->m_records.reserve(sm_preferred_capacity);
         }
         std::sort(profile_data.begin(), profile_data.end(), [](auto& lhs, auto& rhs){
-            return lhs.second.id < rhs.second.id;
+            return lhs.id < rhs.id;
         });
         if constexpr (sm_debug) {
             for (auto&& [tid, profiler]: sm_profilers) {
@@ -155,7 +170,11 @@ public:
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Running));
             }
         }
-        return profile_data;
+        bundle.entries = profile_data;
+        bundle.options = get_options();
+        bundle.start_at = sm_start_at;
+        bundle.thread_dict = get_thread_dict();
+        return bundle;
     }
 
     static option_t get_option(std::string key, option_t default_val) {
@@ -179,6 +198,7 @@ public:
 
     static void start_profile() {
         mgb_assert(!sm_profiling);
+        sm_start_at = Timer::record_host();
         sm_profiling = true;
     }
 
@@ -189,7 +209,7 @@ public:
 
     static thread_dict_t get_thread_dict();
 
-    static void dump_profile(std::string basename, std::string format, results_t results, options_t options);
+    static void dump_profile(std::string basename, std::string format, bundle_t result);
 };
 
 

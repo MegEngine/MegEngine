@@ -19,7 +19,7 @@ target_include_directories(imperative_test PRIVATE ${MODULE_SRC_INCLUDE} ${PYTHO
 target_compile_definitions(imperative_test PRIVATE MODULE_NAME=C)
 target_compile_options(imperative_test PRIVATE -Wno-unused-parameter)
 
-set(LINK_LIBS megbrain megdnn ${MGE_CUDA_LIBS} gtest gmock pybind11::embed range-v3)
+set(LINK_LIBS megbrain megdnn ${MGE_CUDA_LIBS} gtest gmock pybind11::embed range-v3 nlohmann_json::nlohmann_json)
 
 if(MGE_WITH_CUDA)
     list(APPEND LINK_LIBS cudart)

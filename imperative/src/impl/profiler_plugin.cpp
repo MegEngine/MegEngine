@@ -25,6 +25,9 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
     auto on_seq_start = [this](CompSeqExecBeforeStart const& event) {
         // reset
         mgb_assert(!event.graph->options().imperative_proxy_graph);
+        CompNode::foreach([](CompNode device){
+            Profiler::record<RecordDeviceEvent>(Timer::record_device(device));
+        });
         if (m_opr_dict.empty() && m_var_dict.empty()) {
             init_seq(event.exec);
         }
@@ -122,11 +125,13 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
     };
     auto on_before_kern = [this](BeforeKernel const& event) {
         OperatorNodeBase* opr = event.opr;
-        Profiler::record<KernelExecuteEvent>(get_opr_info(opr).id, get_opr_info(opr).id, Timer::record_event(event.comp_node));
+        Profiler::record<KernelLaunchEvent>(get_opr_info(opr).id, get_opr_info(opr).id, event.comp_node);
+        Profiler::record<RecordDeviceEvent>(Timer::record_device(event.comp_node));
     };
     auto on_after_kern = [this](AfterKernel const& event) {
         OperatorNodeBase* opr = event.opr;
-        Profiler::record<KernelExecuteFinishEvent>(get_opr_info(opr).id, get_opr_info(opr).id, Timer::record_event(event.comp_node));
+        Profiler::record<RecordDeviceEvent>(Timer::record_device(event.comp_node));
+        Profiler::record<KernelLaunchEvent>(get_opr_info(opr).id, get_opr_info(opr).id, event.comp_node);
     };
     auto on_graph_compile = [this](const CompSeqOrderDetermined&) {
         m_opr_dict.clear();

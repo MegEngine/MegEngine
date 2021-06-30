@@ -26,6 +26,7 @@
 #include "./commands.h"
 #include "./tensor_info.h"
 #include "./option_manager.h"
+#include "./stack_manager.h"
 
 #include "../profiler/events.h"
 
@@ -94,7 +95,7 @@ private:
     TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
     void notify_tensor_unsafe(TensorInfo* info);
 
-    void process_one_task(IdentifiedCommand&);
+    void process_one_task(Command&);
 
     void check_worker_exc_unsafe();
 
@@ -129,10 +130,10 @@ private:
     void assert_in_worker();
     std::thread::id get_worker_tid();
 
-    template <typename TCommand>
-    void enqueue_command(TCommand&& cmd) {
-        m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
-    }
+    // template <typename TCommand>
+    // void enqueue_command(TCommand&& cmd) {
+    //     m_buffer.enqueue(Command{std::forward<TCommand>(cmd)});
+    // }
 
     void sample_on_device(CompNode device, bool force);
 
@@ -153,13 +154,13 @@ private:
     bool m_applying = false;
     bool m_closed = false;
 
-    struct WorkQueue : AsyncQueueSC<IdentifiedCommand, WorkQueue> {
+    struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
         // this won't affect throughput when python interpreter is sending enough task,
         // but will significantly save CPU time when waiting for task, e.g. wait for data input
         // limit pending tasks to 10000
         WorkQueue(ChannelImpl* owner)
-                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0, 10000), m_owner(owner) {
+                : AsyncQueueSC<Command, WorkQueue>(0, 10000), m_owner(owner) {
             sys::set_thread_name("interpreter");
             if (const char* env_val = MGB_GETENV("MEGENGINE_ASYNC_QUEUE_SIZE")) {
                 int len = strlen(env_val);
@@ -171,7 +172,7 @@ private:
                 update_max_items(val);
             }
         }
-        void process_one_task(IdentifiedCommand& icmd) {
+        void process_one_task(Command& icmd) {
             m_owner->process_one_task(icmd);
         }
         void on_async_queue_worker_thread_start() override;
@@ -193,7 +194,7 @@ private:
      */
     struct CommandBuffer {
         CommandBuffer(ChannelImpl* owner) : m_owner(owner) {}
-        void enqueue(Command cmd);
+        void enqueue(CommandData cmd);
         bool empty() const {
             return m_commands.empty();
         }
@@ -224,91 +225,13 @@ private:
     //! level 0: both sync.
     int m_async_level = 2;
 
-    struct Scope {
-        std::string name;
-        std::unordered_map<std::string, std::unique_ptr<Scope>> children;
-        size_t version = 0;
-        size_t parent_version = 0;
-        size_t tensor_count = 0;
-        Scope* active_child = nullptr;
-        Scope* parent = nullptr;
-
-        Scope* enter(std::string name) {
-            auto& child = children[name];
-            if (!child) {
-                child = std::make_unique<Scope>();
-                child->name = name;
-                child->parent = this;
-            }
-            if (version != child->parent_version) {
-                child->version = 0;
-                child->parent_version = version;
-            } else {
-                child->version++;
-            }
-            child->tensor_count = 0;
-            return active_child = child.get();
-        }
-
-        Scope* exit(std::string name) {
-            mgb_assert(this->name == name, "scope name mismatch");
-            parent->active_child = nullptr;
-            return parent;
-        }
-    };
-
-    class ScopeManager {
-    private:
-        Scope m_root;
-        Scope* m_current_scope = &m_root;
-    public:
-        class ScopeGuard{
-        private:
-            ScopeManager* m_manager;
-            std::string m_name;
-        public:
-            ScopeGuard(ScopeManager* manager, std::string name): m_manager{manager}, m_name{name} {
-                m_manager->push(m_name);
-            }
-            ~ScopeGuard() {
-                m_manager->pop(m_name);
-            }
-        };
-        void push(std::string name) {
-            m_current_scope = m_current_scope->enter(name);
-        }
-        void pop(std::string name) {
-            m_current_scope = m_current_scope->exit(name);
-        }
-        std::string next_tensor_name() {
-            std::string builder;
-            Scope* scope = &m_root;
-            while (true) {
-                builder.append(scope->name);
-                if (scope->version != 0) {
-                    builder.append(ssprintf("(%ld)", scope->version));
-                }
-                if (scope != &m_root) {
-                    builder.append(".");
-                }
-                if (scope->active_child == nullptr) {
-                    builder.append(ssprintf(":%%%ld", scope->tensor_count++));
-                    break;
-                } else {
-                    scope = scope->active_child;
-                }
-            }
-            return builder;
-        }
-    };
-
     struct State {
         std::thread::id tid;
         OptionManager options;
     };
 
     struct ChannelState: State {
-        ScopeManager scopes;
+        StackManager stack_manager;
     };
 
     struct WorkerState: State {};

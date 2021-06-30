@@ -19,6 +19,7 @@
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/utils/to_string.h"
 
+#include "./stack_manager.h"
 #include "./tensor_info.h"
 
 namespace mgb::imperative {
@@ -193,7 +194,7 @@ struct PopScope {
     }
 };
 
-using Command = std::variant<Put,
+using CommandData = std::variant<Put,
                              ApplyOp,
                              Del,
                              GetValue,
@@ -206,14 +207,20 @@ using Command = std::variant<Put,
                              PushScope,
                              PopScope>;
 
-using IdentifiedCommand = std::pair<uint64_t, Command>;
+struct Command {
+    uint64_t id;
+    CommandData data;
+    StackManager::Trace trace;
+    
+};
+// using IdentifiedCommand = std::pair<uint64_t, Command>;
 
 }
 
 template <>
 struct ToStringTrait<interpreter::intl::Command>{
     std::string operator()(const interpreter::intl::Command& cmd) const {
-        return std::visit([](const auto& cmd){
+        std::string content = std::visit([](const auto& cmd){
             std::string result = cmd.get_name();
             result += "{";
             cmd.get_props([&](const char* key, auto&& value) {
@@ -224,7 +231,8 @@ struct ToStringTrait<interpreter::intl::Command>{
             });
             result += "}";
             return result;
-        }, cmd);
+        }, cmd.data);
+        return content;
     }
 };
 
