@@ -11,13 +11,16 @@
  */
 
 #include "megbrain/plugin/static_mem_record.h"
+#ifndef __IN_TEE_ENV__
 #include <fstream>
 #include <iostream>
+#endif
 
 using namespace mgb;
 using namespace cg;
 
 namespace {
+#ifndef __IN_TEE_ENV__
 #define SVG_WIDTH 20000.0
 #define SVG_HEIGHT 15000.0
 #define OPR_RECT_WIDTH 40.0
@@ -42,6 +45,7 @@ const std::string animate =
         "fill=\"freeze\" dur=\"1s\"/>";
 
 std::string& replace_by_parameter(std::string& original_str, size_t index) {
+    MGB_MARK_USED_VAR(index);
     return original_str;
 }
 
@@ -82,9 +86,13 @@ std::string draw_polyline(std::string point_seq, std::string color,
                           std::string width, std::string p = polyline) {
     return replace_by_parameter(p, 0, point_seq, color, width);
 }
+#endif
 }  // namespace
 
 void StaticMemRecorder::dump_svg(std::string svg_name) {
+#ifdef __IN_TEE_ENV__
+    MGB_MARK_USED_VAR(svg_name);
+#else
     float svg_width = SVG_WIDTH, svg_height = SVG_HEIGHT,
           opr_rect_width = OPR_RECT_WIDTH, opr_rect_height = OPR_RECT_HEIGHT;
     float address_scale = 1;
@@ -239,6 +247,7 @@ void StaticMemRecorder::dump_svg(std::string svg_name) {
             << std::endl;
     outfile << "</svg>" << std::endl;
     outfile.close();
+#endif
 }
 
 void StaticMemRecorder::show(std::string svg_name) {
