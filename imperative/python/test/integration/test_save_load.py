@@ -11,6 +11,7 @@ import numpy as np
 
 import megengine as mge
 import megengine.autodiff as ad
+import megengine.module as M
 import megengine.optimizer as optimizer
 from megengine import Parameter, tensor
 from megengine.module import Module
@@ -24,6 +25,37 @@ class Simple(Module):
     def forward(self, x):
         x = x * self.a
         return x
+
+
+class Net(Module):
+    def __init__(self):
+        super().__init__()
+        self.fc = M.Linear(1, 1)
+
+    def forward(self, images):
+        x = self.fc(images)
+        loss = x.mean() * 10000
+        return loss
+
+
+def test_load_state_dict_no_cache(monkeypatch):
+    with monkeypatch.context() as mk:
+        mk.setenv("MEGENGINE_INPLACE_UPDATE", "1")
+        net = Net()
+
+        optim = optimizer.SGD(net.parameters(), lr=0.1)
+        gm = ad.GradManager().attach(net.parameters())
+        state = {
+            "fc.weight": np.array([[0]], dtype=np.float32),
+            "fc.bias": np.array([0.0], dtype=np.float32),
+        }
+        net.load_state_dict(state)
+        images = mge.tensor([[0]], dtype=np.float32)
+        with gm:
+            loss = net(images)
+            gm.backward(loss)
+            optim.step()
+            optim.clear_grad()
 
 
 def test_save_load():

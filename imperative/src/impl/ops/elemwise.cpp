@@ -224,6 +224,9 @@ cg::OperatorNodeBase* apply_inplace_add_on_var_node(
 SmallVector<TensorPtr> apply_inplace_add_on_physical_tensor(
         const OpDef& def,
         const SmallVector<TensorPtr>& inputs){
+    mgb_assert(inputs[0]->blob().unique() && inputs[0]->blob()->storage().unique(),
+            "This inplace modification may change the elements of other tensors. "
+            "Please set MEGENGINE_INPLACE_UPDATE to 0 to ensure the program runs correctly.");
     auto dest = inputs[0], delta = inputs[1],
          alpha = inputs[2], beta = inputs[3];
     auto tensor_to_scalar = [](const TensorPtr& tensor) -> float {

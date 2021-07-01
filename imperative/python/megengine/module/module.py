@@ -600,7 +600,11 @@ class Module(metaclass=ABCMeta):
                             k, var_shape, to_be_load_shape
                         )
                     )
-            var._reset(type(var)(to_be_load, dtype=to_be_load.dtype, device=var.device))
+            var._reset(
+                type(var)(
+                    to_be_load, dtype=to_be_load.dtype, device=var.device, no_cache=True
+                )
+            )
             loaded.append(k)
 
         return set(loaded), set(skipped)
