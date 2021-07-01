@@ -86,10 +86,6 @@ public:
         m_args[key] = value;
         return *this;
     }
-    ChromeTraceEvent& arg(std::string key, nlohmann::json value) {
-        m_args[key] = value;
-        return *this;
-    }
     ChromeTraceEvent& stack(Trace trace) {
         m_stack = std::move(trace);
         return *this;
@@ -163,7 +159,7 @@ public:
         return m_content.back();
     }
 
-    std::string metadata(std::string key) {
+    std::string& metadata(std::string key) {
         return m_metadata[key];
     }
 
@@ -184,8 +180,8 @@ public:
 
     std::string to_string() const {
         auto json = to_json();
-        return "{" "traceEvents:" + nlohmann::to_string(json["traceEvents"]) + ","
-            "metadata:" + nlohmann::to_string(json["metadata"]) + "}";
+        return "{" "\"traceEvents\":" + nlohmann::to_string(json["traceEvents"]) + ","
+            "\"metadata\":" + nlohmann::to_string(json["metadata"]) + "}";
     }
 private:
     std::vector<ChromeTraceEvent> m_content;
@@ -360,11 +356,29 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
             new_host_event("AutoEvict", 'B');
         } else if constexpr (std::is_same_v<TEvent, AutoEvictFinishEvent>) {
             new_host_event("AutoEvict", 'E');
+        } else if constexpr (std::is_same_v<TEvent, HostToDeviceEvent>) {
+            new_device_event("HostToDevice", 'B', event.device);
+        } else if constexpr (std::is_same_v<TEvent, HostToDeviceFinishEvent>) {
+            new_device_event("HostToDevice", 'E', event.device)
+                    .arg("shape", event.layout.TensorShape::to_string())
+                    .arg("dtype", event.layout.dtype.name())
+                    .arg("nr_elements", event.layout.total_nr_elems())
+                    .arg("device", event.device.to_string());
         }
     }
 
     void notify_counter(std::string key, int64_t old_val, int64_t new_val) {
         new_host_event(key, 'C').arg("value", new_val);
+    }
+
+    void name_threads(Profiler::thread_dict_t thread_dict) {
+        for (auto&& [tid, tname]: thread_dict) {
+            trace_events.new_event()
+                    .name("thread_name")
+                    .pid('M')
+                    .tid(to_tid(tid))
+                    .arg("name", tname);
+        }
     }
 };
 
@@ -372,8 +386,10 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
 void dump_chrome_timeline(std::string filename, Profiler::bundle_t result){
     ChromeTimelineEventVisitor visitor;
     visitor.process_events(result);
-    visitor.trace_events.metadata("localTime") = std::to_string(result.start_at.time_since_epoch().count());
-    std::string json_repr = visitor.trace_events.to_string();
+    visitor.name_threads(result.thread_dict);
+    auto trace_events = std::move(visitor.trace_events);
+    trace_events.metadata("localTime") = std::to_string(result.start_at.time_since_epoch().count());
+    std::string json_repr = trace_events.to_string();
     mgb::debug::write_to_file(filename.c_str(), json_repr);
 }
 

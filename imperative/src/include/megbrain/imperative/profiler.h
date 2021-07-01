@@ -81,10 +81,9 @@ public:
 private:
     std::thread::id m_thread_id;
     std::vector<Record> m_records;
-    std::vector<std::any> m_duration_stack;
     std::atomic<Status> m_status = Running;
-    std::string m_thread_name;
 
+    static std::vector<entry_t> sm_records;
     static options_t sm_profile_options;
     static std::mutex sm_mutex;
     static std::unordered_map<std::thread::id, Profiler*> sm_profilers;
@@ -99,9 +98,6 @@ public:
     Profiler() {
         m_thread_id = std::this_thread::get_id();
         MGB_LOCK_GUARD(sm_mutex);
-        if (sm_profilers.size() == 0) {
-            reset();
-        }
         mgb_assert(sm_profilers.count(m_thread_id) == 0);
         sm_profilers[m_thread_id] = this;
     }
@@ -109,15 +105,11 @@ public:
         MGB_LOCK_GUARD(sm_mutex);
         mgb_assert(sm_profilers.count(m_thread_id) == 1);
         sm_profilers.erase(m_thread_id);
+        sm_records.insert(sm_records.end(), m_records.begin(), m_records.end());
     }
 public:
     static Profiler& get_instance() {
         return *tm_profiler;
-    }
-
-    static void reset() {
-        mgb_assert(sm_profilers.size() == 0, "profiler already running");
-        sm_start_at = profiler::HostTime::min();
     }
 
     static uint64_t next_id() {
@@ -151,12 +143,10 @@ public:
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Collecting));
             }
         }
-        std::vector<entry_t> profile_data;
+        std::vector<entry_t> profile_data = std::move(sm_records);
         for (auto&& [tid, profiler]: sm_profilers) {
             sm_preferred_capacity = std::max(sm_preferred_capacity.load(), profiler->m_records.size());
-            for (auto& record: profiler->m_records) {
-                profile_data.push_back(std::move(record));
-            }
+            profile_data.insert(profile_data.end(), profiler->m_records.begin(), profiler->m_records.end());
             profiler->m_records.clear();
             profiler->m_records.reserve(sm_preferred_capacity);
         }
@@ -237,6 +227,11 @@ public:
         handler(id, tid, time, std::move(event));
     }
 };
+
+#define MGB_RECORD_EVENT(type, ...) \
+    if (mgb::imperative::Profiler::is_profiling()) { \
+        mgb::imperative::Profiler::record<type>(type{__VA_ARGS__}); \
+    } \
 
 }  // namespace imperative
 }  // namespace mgb

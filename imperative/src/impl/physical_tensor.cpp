@@ -11,9 +11,12 @@
 
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/blob_manager.h"
+#include "megbrain/imperative/profiler.h"
 
 #include "./event_pool.h"
 #include "./async_releaser.h"
+
+#include "./profiler/events.h"
 
 #include <mutex>
 
@@ -128,9 +131,11 @@ Tensor::Tensor(BlobPtr blob, const TensorLayout& layout, size_t offset, const Ho
 Tensor::Tensor(const HostTensorND &hv)
     : Tensor(hv.layout(), hv.comp_node()) {
     m_value = hv;
+    MGB_RECORD_EVENT(profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(), dev_tensor().raw_ptr());
     dev_tensor().copy_from_fixlayout(hv);
     // even though hv is saved in m_value, Tensor itself could be
     // released before copy completes
+    MGB_RECORD_EVENT(profiler::HostToDeviceFinishEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(), dev_tensor().raw_ptr());
     AsyncReleaser::inst()->add(hv);
 }
 

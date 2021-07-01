@@ -53,10 +53,6 @@ def main():
     if args.format:
         prof_args["formats"] = args.format
 
-    if args.clean:
-        for file in os.listdir(profiler.directory):
-            os.remove(os.path.join(profiler.directory, file))
-
     if len(extras) == 0:
         if not args.merge_trace_events:
             parser.print_usage()
@@ -74,9 +70,14 @@ def main():
         sys.argv[:] = [filename, *extras[1:]]
 
         profiler = Profiler(**prof_args)
+
+        if args.clean:
+            for file in os.listdir(profiler.directory):
+                os.remove(os.path.join(profiler.directory, file))
+
         with profiler:
             if args.module:
-                runpy.run_module(filename)
+                run_module(filename)
             else:
                 run_script(filename)
         profiler.dump()

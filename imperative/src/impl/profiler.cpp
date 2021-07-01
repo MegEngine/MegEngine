@@ -37,11 +37,12 @@ std::shared_ptr<CompNode::Event> Timer::record_device(CompNode device) {
     return event;
 }
 
+std::vector<Profiler::entry_t> Profiler::sm_records;
 Profiler::options_t Profiler::sm_profile_options;
 std::mutex Profiler::sm_mutex;
 std::unordered_map<std::thread::id, Profiler*> Profiler::sm_profilers;
 Timer Profiler::sm_timer;
-profiler::HostTime Profiler::sm_start_at;
+profiler::HostTime Profiler::sm_start_at = profiler::HostTime::min();
 std::atomic_uint64_t Profiler::sm_last_id = 0;
 bool Profiler::sm_profiling = false;
 thread_local std::unique_ptr<Profiler> Profiler::tm_profiler = std::make_unique<Profiler>();
@@ -50,13 +51,16 @@ std::atomic_size_t Profiler::sm_preferred_capacity;
 auto Profiler::get_thread_dict() -> thread_dict_t {
     thread_dict_t thread_dict;
     for (auto&& [tid, profiler]: sm_profilers) {
-        thread_dict[tid] = profiler->m_thread_name;
+        thread_dict[tid] = sys::get_thread_name(tid);
     }
     return thread_dict;
 }
 
 void Profiler::dump_profile(std::string basename, std::string format, bundle_t result) {
-    std::unordered_map<std::string, void(*)(std::string, bundle_t)> format_table;
+    static std::unordered_map<std::string, void(*)(std::string, bundle_t)> format_table = {
+        {"chrome_timeline.json", profiler::dump_chrome_timeline},
+        {"memory_flow.svg", profiler::dump_memory_flow},
+    };
     auto iter = format_table.find(format);
     if (iter == format_table.end()) {
         mgb_log_error("unsupported profiling format %s", format.c_str());

@@ -234,7 +234,8 @@ public:
                 SampleDeviceEvent, WorkerExceptionEvent, ShapeInferEvent, SyncEvent, SyncFinishEvent,
                 StartProfileEvent, StartProfileFinishEvent, StopProfileEvent, StopProfileFinishEvent,
                 TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent, AutoEvictFinishEvent,
-                CustomEvent, CustomFinishEvent, RecordDeviceEvent, ScopeEvent, ScopeFinishEvent> converter;
+                CustomEvent, CustomFinishEvent, RecordDeviceEvent, ScopeEvent, ScopeFinishEvent,
+                HostToDeviceEvent, HostToDeviceFinishEvent> converter;
 
         auto for_each_entry = [&](auto&& handler) {
             for (auto& entry: bundle.entries) {
@@ -308,6 +309,7 @@ public:
             if constexpr (is_op_event<T>::value) {
                 current_op = &m_operators.at(event.op_id);
             } else if constexpr (is_tensor_event<T>::value) {
+                mgb_assert(m_tensors.count(event.tensor_id) != 0, "tensor not found");
                 current_tensor = &m_tensors.at(event.tensor_id);
             }
             if constexpr (std::is_same_v<T, OpExecuteEvent>) {

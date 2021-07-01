@@ -31,6 +31,19 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
         if (m_opr_dict.empty() && m_var_dict.empty()) {
             init_seq(event.exec);
         }
+        Profiler::record<ScopeEvent>("Constants");
+        for (auto&& [var, var_info]: m_var_dict) {
+            if (var_info->is_const) {
+                bool valid = var->dev_tensor_valid();
+                auto layout = valid ? var->layout() : TensorLayout();
+                var_info->id = Profiler::next_id();
+                Profiler::record<TensorDeclareEvent>(var_info->id, var->name());
+                Profiler::record<TensorProduceEvent>(var_info->id, layout, var->comp_node(), valid ? var->dev_tensor().raw_ptr() : nullptr);
+            } else {
+                var_info->rt_ref_cnt = var_info->ref_cnt;
+            }
+        }
+        Profiler::record<ScopeFinishEvent>("Constants");
         Profiler::record<ScopeEvent>("DispatchOprs");
         event.exec->iter_opr_seq([this](OperatorNodeBase* opr) -> bool{
             auto& opr_info = get_opr_info(opr);
@@ -44,26 +57,15 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
             }
             auto opr_name = opr->dyn_typeinfo()->name;
             auto copy_params = [params = opr_info.params] { return *params; };
-            Profiler::record<OpDispatchEvent>(opr_info.id, opr_name, copy_params, inputs, outputs);
             for (auto output: opr->output()) {
-                auto var_id = get_var_info(output).id;
-                Profiler::record<TensorDeclareEvent>(var_id);
+                auto& var_id = get_var_info(output).id;
+                var_id = Profiler::next_id();
+                Profiler::record<TensorDeclareEvent>(var_id, output->name());
             }
+            Profiler::record<OpDispatchEvent>(opr_info.id, opr_name, copy_params, inputs, outputs);
             return true;
         });
         Profiler::record<ScopeFinishEvent>("DispatchOprs");
-        Profiler::record<ScopeEvent>("Constants");
-        for (auto&& [var, var_info]: m_var_dict) {
-            if (var_info->is_const) {
-                bool valid = var->dev_tensor_valid();
-                auto layout = valid ? var->layout() : TensorLayout();
-                Profiler::record<TensorDeclareEvent>(var_info->id);
-                Profiler::record<TensorProduceEvent>(var_info->id, layout, var->comp_node(), valid ? var->dev_tensor().raw_ptr() : nullptr);
-            } else {
-                var_info->rt_ref_cnt = var_info->ref_cnt;
-            }
-        }
-        Profiler::record<ScopeFinishEvent>("Constants");
     };
     auto on_opr_start = [this](OprExecStart const& event) {
         OperatorNodeBase* opr = event.opr;
@@ -144,6 +146,7 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
                 Profiler::record<TensorReleaseEvent>(var_info->id);
             }
             Profiler::record<TensorEraseEvent>(var_info->id, var_info->ref_cnt);
+            var_info->id = 0;
         }
     };
     add_event_handler(graph->event().register_receiver<CompSeqExecBeforeStart>(on_seq_start));
@@ -194,11 +197,12 @@ ProfilerPlugin::OprInfo& ProfilerPlugin::register_opr(cg::OperatorNodeBase *opr)
 
 ProfilerPlugin::VarInfo& ProfilerPlugin::register_var(cg::VarNode *var) {
     auto info = std::make_unique<VarInfo>();
-    info->id = Profiler::next_id();
+    info->id = 0;
     info->is_const = false;
     info->ref_cnt = 0;
     info->rt_ref_cnt = 0;
-    return *m_var_dict.insert({var, std::move(info)}).first->second;
+    mgb_assert(m_var_dict.count(var) == 0, "var exists");
+    return *(m_var_dict[var] = std::move(info));
 }
 
 ProfilerPlugin::OprInfo& ProfilerPlugin::get_opr_info(cg::OperatorNodeBase *opr) {
