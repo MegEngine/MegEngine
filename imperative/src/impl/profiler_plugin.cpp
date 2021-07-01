@@ -26,7 +26,7 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
         // reset
         mgb_assert(!event.graph->options().imperative_proxy_graph);
         CompNode::foreach([](CompNode device){
-            Profiler::record<RecordDeviceEvent>(Timer::record_device(device));
+            MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(device));
         });
         if (m_opr_dict.empty() && m_var_dict.empty()) {
             init_seq(event.exec);
@@ -47,22 +47,21 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
         Profiler::record<ScopeEvent>("DispatchOprs");
         event.exec->iter_opr_seq([this](OperatorNodeBase* opr) -> bool{
             auto& opr_info = get_opr_info(opr);
-            SmallVector<uint64_t> inputs;
-            for (auto input: opr->input()) {
-                inputs.push_back(get_var_info(input).id);
-            }
-            SmallVector<uint64_t> outputs;
-            for (auto output: opr->output()) {
-                outputs.push_back(get_var_info(output).id);
-            }
-            auto opr_name = opr->dyn_typeinfo()->name;
-            auto copy_params = [params = opr_info.params] { return *params; };
             for (auto output: opr->output()) {
                 auto& var_id = get_var_info(output).id;
                 var_id = Profiler::next_id();
                 Profiler::record<TensorDeclareEvent>(var_id, output->name());
             }
-            Profiler::record<OpDispatchEvent>(opr_info.id, opr_name, copy_params, inputs, outputs);
+            auto opr_name = opr->dyn_typeinfo()->name;
+            auto copy_params = [params = opr_info.params] { return *params; };
+            SmallVector<uint64_t> inputs, outputs;
+            for (auto input: opr->input()) {
+                inputs.push_back(get_var_info(input).id);
+            }
+            for (auto output: opr->output()) {
+                outputs.push_back(get_var_info(output).id);
+            }
+            Profiler::record<OpDispatchEvent>(opr_info.id = Profiler::next_id(), opr_name, copy_params, inputs, outputs);
             return true;
         });
         Profiler::record<ScopeFinishEvent>("DispatchOprs");
@@ -128,12 +127,12 @@ ProfilerPlugin::ProfilerPlugin(cg::ComputingGraph* graph): PluginBase(graph) {
     auto on_before_kern = [this](BeforeKernel const& event) {
         OperatorNodeBase* opr = event.opr;
         Profiler::record<KernelLaunchEvent>(get_opr_info(opr).id, get_opr_info(opr).id, event.comp_node);
-        Profiler::record<RecordDeviceEvent>(Timer::record_device(event.comp_node));
+        MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(event.comp_node));
     };
     auto on_after_kern = [this](AfterKernel const& event) {
         OperatorNodeBase* opr = event.opr;
-        Profiler::record<RecordDeviceEvent>(Timer::record_device(event.comp_node));
-        Profiler::record<KernelLaunchEvent>(get_opr_info(opr).id, get_opr_info(opr).id, event.comp_node);
+        MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(event.comp_node));
+        Profiler::record<KernelLaunchFinishEvent>(get_opr_info(opr).id, get_opr_info(opr).id, event.comp_node);
     };
     auto on_graph_compile = [this](const CompSeqOrderDetermined&) {
         m_opr_dict.clear();
@@ -182,7 +181,6 @@ void ProfilerPlugin::init_seq(cg::AsyncExecutable *comp_seq) {
 
 ProfilerPlugin::OprInfo& ProfilerPlugin::register_opr(cg::OperatorNodeBase *opr) {
     OprInfo info;
-    info.id = Profiler::next_id();
     auto params = std::make_shared<std::unordered_map<std::string, std::string>>();
     auto params_json = opr->to_json();
     for (auto&& [k, v]: params_json->cast_final<json::Object>().get_impl()) {

@@ -233,5 +233,10 @@ public:
         mgb::imperative::Profiler::record<type>(type{__VA_ARGS__}); \
     } \
 
+#define MGB_RECORD_EVENT_IF(expr, type, ...) \
+    if (mgb::imperative::Profiler::is_profiling() && (expr)) { \
+        mgb::imperative::Profiler::record<type>(type{__VA_ARGS__}); \
+    } \
+
 }  // namespace imperative
 }  // namespace mgb

@@ -724,14 +724,14 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     // Before execute
     for (auto&& [device, kernel_id]: kernels) {
         MGB_RECORD_EVENT(KernelLaunchEvent, apply_id, kernel_id, device);
-        MGB_RECORD_EVENT(RecordDeviceEvent, Timer::record_device(device));
+        MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(device));
     }
     // Apply op
     // Here std::move is REQUIRED for removing duplicated references.
     auto outputs = apply_on_physical_tensor(apply_on_physical_tensor, *cmd.op, inputs);
     // After execute
     for (auto&& [device, kernel_id]: kernels) {
-        MGB_RECORD_EVENT(RecordDeviceEvent, Timer::record_device(device));
+        MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(device));
         MGB_RECORD_EVENT(KernelLaunchFinishEvent, apply_id, kernel_id, device);
     }
     // End profiling operator
@@ -1009,9 +1009,9 @@ void ChannelImpl::process_one_task(Command& icmd) {
             using T = std::decay_t<decltype(cmd)>;
             if constexpr (std::is_same_v<T, Put>) {
                 MGB_RECORD_EVENT(TensorCommandEvent, cmd.dest->id, TensorCommandKind::Put);
-                MGB_RECORD_EVENT(RecordDeviceEvent, Timer::record_device(cmd.value.comp_node()));
+                MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(cmd.value.comp_node()));
                 auto value = cmd.no_cache ? std::make_shared<Tensor>(cmd.value) : Tensor::make(cmd.value);
-                MGB_RECORD_EVENT(RecordDeviceEvent, Timer::record_device(cmd.value.comp_node()));
+                MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(cmd.value.comp_node()));
                 produce_tensor(cmd.dest, std::move(value));
                 MGB_RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandKind::Put);
                 sample_on_device(cmd.dest->desc.comp_node, false);
@@ -1136,7 +1136,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
                     if (Profiler::get_option("sample_rate", 0)) {
                         sample_on_device(device, true);
                     }
-                    MGB_RECORD_EVENT(RecordDeviceEvent, Timer::record_device(device));
+                    MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(device));
                 });
                 MGB_RECORD_EVENT(StartProfileFinishEvent);
             } else if constexpr (std::is_same_v<T, StopProfile>) {

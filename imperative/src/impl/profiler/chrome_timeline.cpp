@@ -302,6 +302,8 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
         } else if constexpr (std::is_same_v<TEvent, TensorGetPropEvent>) {
             new_host_event("TensorGetProp", 'X')
                     .dur(0).args(current_tensor->detail(current->time));
+        } else if constexpr (std::is_same_v<TEvent, TensorWaitPropEvent>) {
+            new_host_event("TensorWaitProp", 'B');
         } else if constexpr (std::is_same_v<TEvent, TensorWaitPropFinishEvent>) {
             new_host_event(pid_str, 'f')
                     .id(event.tensor_id)
