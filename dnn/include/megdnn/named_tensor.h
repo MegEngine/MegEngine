@@ -14,7 +14,6 @@
 
 #include "megdnn/internal/defs.h"
 #include "megdnn/opr_param_defs.h"
-#include "src/common/utils.h"
 
 #include <array>
 #include <string>
