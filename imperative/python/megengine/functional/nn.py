@@ -1462,6 +1462,5 @@ warp_affine = deprecated_func("1.3", "megengine.functional.vision", "warp_affine
 warp_perspective = deprecated_func(
     "1.3", "megengine.functional.vision", "warp_perspective", True
 )
-
-from .loss import *  # isort:skip
 from .quantized import conv_bias_activation  # isort:skip
+from .loss import *  # isort:skip
