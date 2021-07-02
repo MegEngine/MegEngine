@@ -851,7 +851,14 @@ def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
     axis = get_axes()
     ndim = inp.ndim + len(axis)
     axis = sorted(i + ndim if i < 0 else i for i in axis)
-
+    assert axis, "axis could not be empty"
+    if inp._isscalar():
+        assert axis[0] == 0, "invalid axis {} for ndim 0".format(axis[0])
+        if len(axis) == 1:
+            inp = copy(inp, device=None)
+            inp._unsetscalar()
+            return inp
+        axis = axis[1:]
     op = builtin.AddAxis(axis=axis)
     (result,) = apply(op, inp)
     return result
