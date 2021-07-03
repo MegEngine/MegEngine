@@ -368,10 +368,10 @@ class AssertModule(Module):
 
 
 def test_assert_message():
-    m = AssertModule()
     with pytest.raises(
         AssertionError, match="keys for Tensor and Module must be str, error key: True"
     ):
+        m = AssertModule()
         list(m._flatten())
 
 

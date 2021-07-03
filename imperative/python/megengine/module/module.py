@@ -609,14 +609,6 @@ class Module(metaclass=ABCMeta):
 
         return set(loaded), set(skipped)
 
-    def __getattribute__(self, name: str):
-        value = super().__getattribute__(name)
-        if name == "__dict__":
-            return value
-        for prefix, variable in _expand_structure(name, value):
-            variable._name = prefix
-        return value
-
     def __setattr__(self, name: str, value):
         is_module_like = _is_module(value) or isinstance(value, (list, tuple, dict))
         if name != "_modules":
@@ -631,6 +623,15 @@ class Module(metaclass=ABCMeta):
             else:
                 if modules is not None and name in modules:
                     modules.remove(name)
+        for k, v in _expand_structure(name, value):
+            if not v._name:
+                v._name = k
+            else:
+                logger.warning(
+                    "try setting the submodule `{}` to a new attribute `{}`, its name `{}` will remain unchanged".format(
+                        v._name, k, v._name
+                    )
+                )
         super().__setattr__(name, value)
 
     def __delattr__(self, name: str):

@@ -155,13 +155,13 @@ def test_with_submodule_in_container(symbolic):
     m = Simple("simple")
 
     ops = _dump_and_load(m, symbolic)
-    assert ops[-1].outputs[0].name == "simple.l2.l2-1.ADD"
-    assert ops[-1].name == "simple.l2.l2-1.ADD"
-    assert ops[-2].name == "simple.l2.l2-1.MatrixMul"
-    assert ops[-3].name == "simple.l1.1.ADD"
-    assert ops[-4].name == "simple.l1.1.MatrixMul"
-    assert ops[-5].name == "simple.l0.1.ADD"
-    assert ops[-6].name == "simple.l0.1.MatrixMul"
+    assert ops[-1].outputs[0].name == "simple.l0.1.ADD[2]"
+    assert ops[-1].name == "simple.l0.1.ADD[2]"
+    assert ops[-2].name == "simple.l0.1.MatrixMul[2]"
+    assert ops[-3].name == "simple.l0.1.ADD[1]"
+    assert ops[-4].name == "simple.l0.1.MatrixMul[1]"
+    assert ops[-5].name == "simple.l0.1.ADD[0]"
+    assert ops[-6].name == "simple.l0.1.MatrixMul[0]"
 
 
 @pytest.mark.parametrize("symbolic", [False, True])
