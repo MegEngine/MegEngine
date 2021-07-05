@@ -1163,7 +1163,7 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
     mgb_assert(palgo, "Unknown algo description");
     ret.append("): algo=" + std::string(palgo->name()));
-    ret.append(ssprintf(" workspace=%.2fMiB attirbute=%d",
+    ret.append(ssprintf(" workspace=%.2fMiB attribute=%d",
                         workspace / (1024 * 1024.0),
                         static_cast<uint32_t>(palgo->attribute())));
     mgb_log_debug("%s", ret.c_str());
