@@ -9,9 +9,11 @@
 import collections
 import copy
 import functools
+from inspect import getmembers, isclass, ismethod
 from typing import List, Type
 
 from ... import module as M
+from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...core._imperative_rt.core2 import (
     is_tracing_module,
     set_module_tracing,
@@ -28,6 +30,16 @@ from .module_tracer import (
     set_active_module_tracer,
 )
 from .node import ModuleNode, Node, NodeMixin, TensorNode
+from .pytree import tree_flatten
+
+
+def _leaf_type(node):
+    if isinstance(node, RawTensor):
+        return (Tensor, TensorNode)
+    elif isinstance(node, (NodeMixin, Module)):
+        return (Module, ModuleNode, NodeMixin)
+    else:
+        return type(node)
 
 
 class InternalGraph:
@@ -65,9 +77,7 @@ class InternalGraph:
         for n, v in zip(self._inputs, inputs):
             node2value[n] = v
         for expr in self._exprs:
-            values = expr.interpret(
-                *list(Expr.get_arg_value(i, node2value) for i in expr.inputs)
-            )
+            values = expr.interpret(*list(node2value[i] for i in expr.inputs))
             for n, v in zip(expr.outputs, values):
                 node2value[n] = v
         return list(node2value[i] for i in self._outputs)
@@ -80,37 +90,39 @@ class InternalGraph:
         )
 
 
+def _get_meth_name(obj, func):
+    for cls in type(obj).mro():
+        for k, v in cls.__dict__.items():
+            if v == func:
+                return k
+    return None
+
+
 def _wrapped_function(orig_func):
     @functools.wraps(orig_func)
-    def wrapped_fn(*inputs, **kwargs):
+    def wrapped_fn(*args, **kwargs):
         if is_tracing_module():
             unset_module_tracing()
-            const_kwargs = {}
-            arg_names = orig_func.__code__.co_varnames
-            if orig_func.__qualname__.split(".").__len__() > 1:
-                # FIXME: a robust way to distinguish method and function. <XP>
+            inputs, tree_def = tree_flatten((args, kwargs), leaf_type=_leaf_type)
+            for i in inputs:
+                if not NodeMixin.get(i, None):
+                    if isinstance(i, (RawTensor, NodeMixin)):
+                        NodeMixin.wrap_safe(i, Constant.make(i))
+            meth_name = _get_meth_name(args[0], wrapped_fn)
+            if meth_name:
                 self = inputs[0]
-                call_node = CallMethod.make(NodeMixin.get(self), orig_func.__name__)
+                call_node = CallMethod.make(NodeMixin.get(self), meth_name)
             else:
                 call_node = CallFunction.make(orig_func)
 
-            def add_input(inp, varname=None):
-                node = Expr.get_args_node(inp)
-                if node is not None:
-                    call_node.add_input(node, varname)
-                else:
-                    const_kwargs[varname] = inp
+            call_node.add_inputs(inputs)
 
-            for ind, inp in enumerate(inputs):
-                add_input(inp, arg_names[ind])
-            for k, v in kwargs.items():
-                add_input(v, k)
-            call_node.kwargs = const_kwargs
-            outputs = orig_func(*inputs, **kwargs)
+            call_node.arg_def = tree_def
+            outputs = orig_func(*args, **kwargs)
             call_node.add_outputs(outputs)
             set_module_tracing()
             return outputs
-        return orig_func(*inputs, **kwargs)
+        return orig_func(*args, **kwargs)
 
     return wrapped_fn
 
@@ -120,14 +132,14 @@ class TracedModuleBuilder(NodeMixin):
     _mod = None  # type: Module
     _body = None  # type: InternalGraph
     _is_builtin = None  # type: bool
-
+    _arg_def = None  # type: TreeDef
     __builder_attributes__ = [
         "_mod",
         "_body",
         "_NodeMixin__node",
         "_is_builtin",
         "_is_traced",
-        "build",
+        "_arg_def" "build",
     ]
 
     def __init__(self, mod):
@@ -146,6 +158,7 @@ class TracedModuleBuilder(NodeMixin):
             node = NodeMixin.get(self)
             node.graph = self._body
             node.attr_type_map = {}
+            node.arg_def = self._arg_def
             traced_module = TracedModule(node)
             for k, v in self.__dict__.items():
                 if k not in TracedModuleBuilder.__builder_attributes__:
@@ -155,32 +168,34 @@ class TracedModuleBuilder(NodeMixin):
                     traced_module.m_node.attr_type_map[k] = type(v)
             return traced_module
 
-    def __call__(self, *inputs, **kwargs):
+    def __call__(self, *args, **kwargs):
         assert isinstance(self._mod, Module)
+        for arg in args:
+            assert isinstance(arg, RawTensor)
 
+        for k, v in kwargs.items():
+            assert isinstance(v, RawTensor)
         # prepare args and kwargs for inner graph
         def mark_constant(x):
             node = NodeMixin.get(x, None)
             if node is None:  # capture as constant
                 NodeMixin.wrap(x, lambda: Constant.make(x))
 
+        inputs, tree_def = tree_flatten(((self, *args), kwargs), leaf_type=_leaf_type)
+        if self._arg_def is None:
+            self._arg_def = tree_def
+        assert self._arg_def == tree_def
         for i in inputs:
             mark_constant(i)
-        for k, v in kwargs.items():
-            mark_constant(v)
         callnode = CallMethod.make(NodeMixin.get(self))
 
-        def add_input(x):
-            callnode.add_input(NodeMixin.get(x))
+        callnode.add_inputs(inputs)
 
-        for i in inputs:
-            add_input(i)
-        for k, v in kwargs.items():
-            add_input(v)
+        callnode.arg_def = tree_def
 
         if self._is_builtin or self._is_traced:
             unset_module_tracing()
-            outputs = self._mod(*inputs, **kwargs)
+            outputs = self._mod(*args, **kwargs)
             set_module_tracing()
             if self._is_builtin:
                 self._body = None
@@ -193,23 +208,21 @@ class TracedModuleBuilder(NodeMixin):
             )
             # prepare args and kwargs for inner graph
             def wrap(x):
-                # wrapped = copy.copy(x)  # FIXME
-                wrapped = x  # FIXME: <XP>
+                wrapped = copy.copy(x)  # FIXME
                 NodeMixin.wrap(
                     wrapped,
                     lambda: Input.make(type=NodeMixin.get_wrapped_type(wrapped)),
                 )
                 return wrapped
 
-            args = []
-            for i in inputs:
+            args = [self]
+            for i in inputs[1:]:
                 args.append(wrap(i))
-            for k, v in kwargs.items():
-                kwargs[k] = wrap(v)
+            args, kwargs = tree_def.unflatten(args)
             active_module_tracer().patcher.auto_patch(
                 getattr(getattr(self._mod, "forward", self._mod), "__globals__", {})
             )
-            outputs = type(self._mod).forward(self, *args, **kwargs)
+            outputs = type(self._mod).forward(*args, **kwargs)
 
             for i in (
                 outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,)
@@ -269,8 +282,10 @@ class TracedModule(Module):
         super(TracedModule, self).__init__()
         self.m_node = node
 
-    def forward(self, *inputs):
-        rst = self.m_node.graph.interpret(self, *inputs)
+    def forward(self, *args, **kwargs):
+        inputs, treedef = tree_flatten(((self, *args), kwargs), leaf_type=_leaf_type)
+        assert treedef == self.m_node.arg_def
+        rst = self.m_node.graph.interpret(*inputs)
         if len(rst) == 1:
             rst = rst[0]
         return rst
@@ -345,7 +360,6 @@ def register_as_builtin(mod_cls: Type[Module]) -> None:
 
 
 def _register_all_builtin_module():
-    from inspect import getmembers, isclass
 
     for sub_mod in [M, M.qat, M.quantized]:
         for m in getmembers(sub_mod):
@@ -357,7 +371,7 @@ def _register_all_builtin_module():
                 module_tracer.register_as_builtin(m[1])
 
 
-def trace_module(mod: Module, *inputs: Tensor, **kwargs: Tensor) -> TracedModule:
+def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
     """
     Traces module ``mod`` and returns corresponding TracedModule.
 
@@ -375,15 +389,13 @@ def trace_module(mod: Module, *inputs: Tensor, **kwargs: Tensor) -> TracedModule
 
             builder = TracedModuleBuilder(mod)
             NodeMixin.wrap_safe(builder, Input.make("TopModule", ModuleNode))
-
+            inputs, _ = tree_flatten((args, kwargs))
             for _, i in enumerate(inputs):
-                NodeMixin.wrap_safe(i, Input.make("arg_{}".format(_)))
-            for k, v in kwargs.items():
-                NodeMixin.wrap_safe(v, Input.make("kwarg_{}".format(k)))
-
-            builder(*inputs, **kwargs)
+                NodeMixin.wrap_safe(
+                    i, Input.make("arg_{}".format(_), NodeMixin.get_wrapped_type(i))
+                )
+            builder(*args, **kwargs)
             active_module_tracer().pop_scope()
-
             return builder.build()
     finally:
         set_active_module_tracer(None)

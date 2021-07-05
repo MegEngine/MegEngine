@@ -15,6 +15,72 @@ from ...module import Module
 
 _active_module_tracer = None
 
+BUILTIN_ARRAY_METHOD = [
+    "__lt__",
+    "__le__",
+    "__gt__",
+    "__ge__",
+    "__eq__",
+    "__ne__",
+    "__neg__",
+    "__pos__",
+    "__abs__",
+    "__invert__",
+    "__round__",
+    "__floor__",
+    "__ceil__",
+    "__add__",
+    "__sub__",
+    "__mul__",
+    "__matmul__",
+    "__truediv__",
+    "__floordiv__",
+    "__mod__",
+    "__pow__",
+    "__lshift__",
+    "__rshift__",
+    "__and__",
+    "__or__",
+    "__xor__",
+    "__radd__",
+    "__rsub__",
+    "__rmul__",
+    "__rmatmul__",
+    "__rtruediv__",
+    "__rfloordiv__",
+    "__rmod__",
+    "__rpow__",
+    "__rlshift__",
+    "__rrshift__",
+    "__rand__",
+    "__ror__",
+    "__rxor__",
+    "__iadd__",
+    "__isub__",
+    "__imul__",
+    "__imatmul__",
+    "__itruediv__",
+    "__ifloordiv__",
+    "__imod__",
+    "__ipow__",
+    "__ilshift__",
+    "__irshift__",
+    "__iand__",
+    "__ior__",
+    "__ixor__",
+    "T",
+    "astype",
+    "reshape",
+    "_broadcast",
+    "transpose",
+    "flatten",
+    "sum",
+    "prod",
+    "min",
+    "max",
+    "mean",
+]
+
 
 def active_module_tracer():
     return _active_module_tracer
@@ -108,9 +174,8 @@ class Patcher:
         self.wrap_fn = wrap_fn
         for module in self._builtin_modules:
             self.patch_module(module)
-
-        for cls in self._builtin_methods:
-            self.patch_cls(cls)
+        for meth in BUILTIN_ARRAY_METHOD:
+            self.patch_method(ArrayMethodMixin, meth, self.wrap_fn)
 
         for i, j in self._builtin_functions:
             if id(i) not in self.visited_frames_ids:

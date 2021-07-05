@@ -13,6 +13,7 @@ import numpy
 from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...module import Module
 from ...tensor import Tensor
+from .pytree import TreeDef
 
 
 class Node:
@@ -58,6 +59,7 @@ class ModuleNode(Node):
     module_type = Module  # type: Type[Module]
     graph = None
     attr_type_map = None  # type: Dict[str, Type[Any]]
+    arg_def = None  # type: TreeDef
 
     def __repr__(self):
         if self._name is None:

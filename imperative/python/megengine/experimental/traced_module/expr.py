@@ -7,7 +7,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-
+import builtins
 import collections
 from typing import Callable, List
 
@@ -19,6 +19,7 @@ from ...module import Module
 from ...tensor import Tensor
 from .module_tracer import active_module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
+from .pytree import TreeDef
 
 
 class Expr:
@@ -28,9 +29,22 @@ class Expr:
 
     inputs = None  # type: List[Node]
     outputs = None  # type: List[Node]
+    const_val = None  # type: List[Any]
+    arg_def = None  # type: TreeDef
 
-    def add_input(self, node):
-        self.inputs.append(node)
+    def add_inputs(self, vals):
+        if not isinstance(vals, collections.abc.Sequence):
+            vals = (vals,)
+        for val in vals:
+            node = NodeMixin.get(val, None)
+            if isinstance(node, (TensorNode, ModuleNode)):
+                if node not in self.inputs:
+                    self.inputs.append(node)
+            else:
+                assert node is None
+                assert type(val) in builtins.__dict__.values()
+                idx = len(self.inputs) + len(self.const_val)
+                self.const_val.append((idx, val))
 
     def add_outputs(self, outputs):
         self.outputs = []
@@ -38,50 +52,31 @@ class Expr:
             outputs = (outputs,)
 
         for i in outputs:
+            assert isinstance(i, RawTensor)
             self.outputs.append(NodeMixin.get_wrapped_type(i)(self))
 
         for i, node in zip(outputs, self.outputs,):
             NodeMixin.wrap_safe(i, node)
 
-    @classmethod
-    def get_args_node(cls, arg):
-        """
-        Create nodes by ``arg``, which may be a container.
-        Return the same structure with arg.
-
-        If ``arg`` was not Tensor or Module, it will be stored as const.
-
-        :param arg: tensor, module or const.
-        """
-        if isinstance(arg, (RawTensor, Module)):
-            if not NodeMixin.get(arg, None):
-                NodeMixin.wrap_safe(arg, Constant.make(arg))
-            return NodeMixin.get(arg)
-        elif isinstance(arg, collections.abc.Sequence):
-            seq_cls = type(arg)
-            return seq_cls([Expr.get_args_node(a) for a in arg])
+    def unflatten_args(self, inputs):
+        if self.arg_def is not None:
+            inputs = list(inputs)
+            for idx, val in self.const_val:
+                inputs.insert(idx, val)
+            args, kwargs = self.arg_def.unflatten(inputs)
+            return args, kwargs
         else:
-            # TODO: assert arg type
-            return arg  # as const
+            return inputs, {}
 
-    @classmethod
-    def get_arg_value(cls, inp_node, node2value):
-        """
-        Get values from node2value by inp_node, which may be a container.
-        Return the same structure with inp_node.
+    @property
+    def kwargs(self):
+        _, kwargs = self.unflatten_args(self.inputs)
+        return kwargs
 
-        If ``inp_node`` was not in node2value, it is a const.
-
-        :param inp_node: nodes.
-        :param node2value: dict from node to tensor and module.
-        """
-        if inp_node in node2value:
-            return node2value[inp_node]
-        elif isinstance(inp_node, collections.abc.Sequence):
-            seq_cls = type(inp_node)
-            return seq_cls([Expr.get_arg_value(i, node2value) for i in inp_node])
-        else:
-            return inp_node
+    @property
+    def args(self):
+        args, _ = self.unflatten_args(self.inputs)
+        return args
 
 
 # expr: None (i.e. fake expression which is used to mark input)
@@ -144,16 +139,8 @@ class CallMethod(Expr):
         self.inputs = [
             module,
         ]
+        self.const_val = []
         self.method = method
-        self.arg_names = []
-        self.kwargs = {}  # const kwargs
-
-    def add_input(self, node, arg_name=None):
-        if arg_name == "self":  # FIXME: <XP>
-            return
-        self.inputs.append(node)
-        if arg_name is not None:
-            self.arg_names.append(arg_name)
 
     @classmethod
     def make(cls, *args, **kwargs):
@@ -162,19 +149,22 @@ class CallMethod(Expr):
         return expr
 
     def interpret(self, *inputs):
-        mod = inputs[0]
-        args = inputs[1:]
-        outputs = getattr(mod, self.method)(*args, **self.kwargs)
+        args, kwargs = self.unflatten_args(inputs)
+        obj = args[0]
+        args = args[1:]
+        outputs = getattr(obj, self.method)(*args, **kwargs)
         if isinstance(outputs, RawTensor):
             outputs = (outputs,)
         return outputs
 
     def __repr__(self):
-        return "{} = CallMethod({}, {})({})".format(
+        args = ", ".join(str(i) for i in self.args[1:])
+        kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
+        return "{} = {}.{}({})".format(
             ", ".join(str(i) for i in self.outputs),
             self.inputs[0],
             self.method,
-            ", ".join(str(i) for i in self.inputs[1:]),
+            ", ".join([args, kwargs]),
         )
 
 
@@ -227,13 +217,8 @@ class CallFunction(Expr):
     def __init__(self, func):
         assert isinstance(func, Callable)
         self.func = func
+        self.const_val = []
         self.inputs = []
-        self.arg_names = []
-        self.kwargs = {}  # const kwargs
-
-    def add_input(self, node, arg_name):
-        self.inputs.append(node)
-        self.arg_names.append(arg_name)
 
     @classmethod
     def make(cls, *args, **kwargs):
@@ -242,18 +227,20 @@ class CallFunction(Expr):
         return expr
 
     def interpret(self, *inputs):
-        inp_dict = dict([(name, node) for node, name in zip(inputs, self.arg_names)])
-        outputs = self.func(**inp_dict, **self.kwargs)
+        args, kwargs = self.unflatten_args(inputs)
+        outputs = self.func(*args, **kwargs)
         outputs = (
             outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,)
         )
         return outputs
 
     def __repr__(self):
+        args = ", ".join(str(i) for i in self.args)
+        kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
         return "{} = {}({})".format(
             ", ".join(str(i) for i in self.outputs),
             self.func.__module__ + "." + self.func.__name__,
-            ", ".join(str(i) for i in self.inputs),
+            ", ".join([args, kwargs]),
         )
 
 
