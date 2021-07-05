@@ -170,9 +170,8 @@ void test::run_topk_test(Handle* handle) {
         run(-5, 123, 3, mode);        // equiv to rev sort
         run(5, 3, 1231, mode, 2000);  // non contig
 
-//! opencl on armv7's CI does not support large batch.
-//! but P30 and MI9 are ok. fix it in the future.
-#if !defined(MEGDNN_ARMV7) && defined(MGB_CUDA)
+//! opencl does not support large batch. fix it in the future.
+#if MGB_CUDA
         run(3, 70000, 5, mode, 10);  // non contig
 #endif
     }
