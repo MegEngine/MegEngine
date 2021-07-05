@@ -16,6 +16,8 @@
 #include "megbrain/utils/timer.h"
 #include "megbrain/system.h"
 #include "megbrain/comp_node.h"
+#include "megbrain/tensor.h"
+#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 
 #include "megdnn/basic_types.h"
 #include "megdnn/oprs.h"
@@ -149,6 +151,13 @@ private:
     static const double timeout_setting;
 
     static double init_timeout_setting();
+    static void preprocess(const megdnn::TensorLayoutArray& preprocessed_layout,
+                           const SmallVector<DeviceTensorND>& flt_val,
+                           intl::UniqPtrWithCN<Opr>& megdnn_opr,
+                           megdnn::Workspace& mdn_workspace,
+                           std::array<TensorLayout, arity>& layouts,
+                           std::array<DeviceTensorND, arity_in>& inp_val,
+                           PreprocessFilter<Opr>& prep_flt);
     static TResult prof_impl(const TParam& raw_param);
     static void prof_init_device(const TParam& raw_param);
 };
