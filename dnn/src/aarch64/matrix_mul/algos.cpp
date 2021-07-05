@@ -908,6 +908,9 @@ bool MatrixMulImpl::AlgoInt8x8x16MK4_16x12x4::preferred(
     return false;
 #else
     auto arch = cpuinfo_get_current_core()->uarch;
+#ifdef __IN_TEE_ENV__
+    arch = cpuinfo_uarch_unknown;
+#endif
     bool little_core = arch == cpuinfo_uarch_cortex_a53 ||
                        arch == cpuinfo_uarch_cortex_a55;
     return little_core;
@@ -986,6 +989,9 @@ bool MatrixMulImpl::AlgoInt8x8x16MK4_4x4x8::preferred(
     return false;
 #else
     auto arch = cpuinfo_get_current_core()->uarch;
+#ifdef __IN_TEE_ENV__
+    arch = cpuinfo_uarch_unknown;
+#endif
     bool little_core = arch == cpuinfo_uarch_cortex_a53 ||
                        arch == cpuinfo_uarch_cortex_a55;
     return !little_core;

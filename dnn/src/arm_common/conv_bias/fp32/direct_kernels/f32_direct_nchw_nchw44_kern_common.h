@@ -851,6 +851,10 @@ struct ConvDirectFp32NchwNchw44<bias_mode, Op, 3, 2> {
 #else
         auto arch_tag = CpuTag::A7_TAG;
 #endif
+
+#ifdef __IN_TEE_ENV__
+        arch_tag = CpuTag::DEFAULT_CPU_TAG;
+#endif
         if (arch_tag == CpuTag::A7_TAG) {
             for (int oc_idx = 0; oc_idx < oc_end; oc_idx += big_oc_step) {
                 const int weight_offset = oc_idx * ic * fh * fw;

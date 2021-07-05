@@ -181,6 +181,9 @@ void sgemm_8x12::kern(const float* packA, const float* packB, size_t M,
                                            is_first_k);
 #else
     auto arch = cpuinfo_get_current_core()->uarch;
+#ifdef __IN_TEE_ENV__
+    arch = cpuinfo_uarch_unknown;
+#endif
     if (arch == cpuinfo_uarch_cortex_a53) {
         sgemm_8x12_helper<matmul_general_8x12_a53>(packA, packB, M, N, K, C,
                                                    LDC, is_first_k);
@@ -274,6 +277,9 @@ void sgemm_mk4_8x12::kern(const float* packA, const float* packB, size_t M,
                                            is_first_k);
 #else
     auto arch = cpuinfo_get_current_core()->uarch;
+#ifdef __IN_TEE_ENV__
+    arch = cpuinfo_uarch_unknown;
+#endif
     if (arch == cpuinfo_uarch_cortex_a53) {
         sgemm_mk4_8x12_helper<matmul_mk4_8x12_a53>(packA, packB, M, N, K, C,
                                                    LDC, is_first_k);
