@@ -36,6 +36,7 @@ struct GradKey : std::enable_shared_from_this<GradKey>, NonCopyableObj {
     bool is_blocked() const {
         return priority < sm_min_priority;
     }
+    inline static bool allow_higher_order_directive = false;
 private:
     static int sm_min_priority;
 };

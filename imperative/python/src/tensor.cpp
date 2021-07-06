@@ -990,6 +990,9 @@ void init_tensor(py::module m) {
 
     m.def("set_tracing", &set_tracing);
     m.def("unset_tracing", &unset_tracing);
+    m.def("set_allow_higher_order_directive", [](bool value){
+        GradKey::allow_higher_order_directive = value;
+    });
 }
 
 #undef MGE_PY_INTERFACE

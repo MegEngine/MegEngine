@@ -281,6 +281,7 @@ def test_broadcast_grad(trace_mode):
     worker()
 
 
+@pytest.mark.require_higher_order_directive()
 def test_2nd_grad_with_manager():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -299,6 +300,7 @@ def test_2nd_grad_with_manager():
     )
 
 
+@pytest.mark.require_higher_order_directive()
 def test_grad_manager_group():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -315,6 +317,7 @@ def test_grad_manager_group():
     x.grad = None
 
 
+@pytest.mark.require_higher_order_directive()
 def test_grad_manager_group_visibility():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
@@ -330,6 +333,7 @@ def test_grad_manager_group_visibility():
         np.testing.assert_almost_equal(x.grad.numpy(), -np.sin(x_np), decimal=5)
 
 
+@pytest.mark.require_higher_order_directive()
 def test_grad_manager_visibility_by_order():
     x_np = np.random.rand(10).astype("float32")
     x = mge.tensor(x_np)
