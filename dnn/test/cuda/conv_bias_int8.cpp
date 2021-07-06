@@ -840,21 +840,21 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_IMMA) {
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
         param.format = param::ConvBias::Format::NCHW32;
-        checker.set_param(param).execs({{16, 16, 7, 7, 32},
-                                        {512, 16, 3, 3, 32},
-                                        {1, 16, 1, 1, 32},
+        checker.set_param(param).execs({{16, 8, 7, 7, 32},
+                                        {256, 8, 3, 3, 32},
+                                        {1, 8, 1, 1, 32},
                                         {},
                                         {}});
         param.nonlineMode = param::ConvBias::NonlineMode::RELU;
-        checker.set_param(param).execs({{16, 16, 7, 7, 32},
-                                        {512, 16, 1, 1, 32},
-                                        {1, 16, 1, 1, 32},
+        checker.set_param(param).execs({{16, 8, 7, 7, 32},
+                                        {256, 8, 1, 1, 32},
+                                        {1, 8, 1, 1, 32},
                                         {},
                                         {}});
         param.nonlineMode = param::ConvBias::NonlineMode::H_SWISH;
-        checker.set_param(param).execs({{16, 16, 7, 7, 32},
-                                        {512, 16, 3, 3, 32},
-                                        {1, 16, 1, 1, 32},
+        checker.set_param(param).execs({{16, 8, 7, 7, 32},
+                                        {256, 8, 3, 3, 32},
+                                        {1, 8, 1, 1, 32},
                                         {},
                                         {}});
         // use non integer scale
@@ -867,18 +867,18 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_IMMA) {
                 .set_epsilon(1 + 1e-3)
                 .set_max_avg_error(1e-1)
                 .set_max_avg_biased_error(1e-1)
-                .execs({{16, 16, 7, 7, 32},
-                        {512, 16, 3, 3, 32},
-                        {1, 16, 1, 1, 32},
-                        {16, 16, 7, 7, 32},
+                .execs({{16, 8, 7, 7, 32},
+                        {256, 8, 3, 3, 32},
+                        {1, 8, 1, 1, 32},
+                        {16, 8, 7, 7, 32},
                         {}});
     };
     std::string algo = ConvBias::algo_name<ConvBias::DirectParam>(
-            "INT8_NCHW32_IMMA_IMPLICIT_GEMM_256X128X64_64X64X64",
+            "INT8_NCHW32_IMMA_IMPLICIT_GEMM_128X128X64_64X64X64_2",
             ConvBias::DirectParam{});
     check(algo);
     algo = ConvBias::algo_name<ConvBias::DirectParam>(
-            "INT8_NCHW32_IMMA_IMPLICIT_GEMM_32X64X64_32X16X64",
+            "INT8_NCHW32_IMMA_IMPLICIT_GEMM_128X32X32_64X32X32_1",
             ConvBias::DirectParam{});
     check(algo);
 }
@@ -969,7 +969,7 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_NCHW4) {
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
                                      ConvBiasForward>(
             ConvBias::algo_name<ConvBias::DirectParam>(
-                    "INT8_NCHW32_IMMA_IMPLICIT_GEMM_256X128X64_64X64X64",
+                    "INT8_NCHW32_IMMA_IMPLICIT_GEMM_128X128X64_64X64X64_2",
                     ConvBias::DirectParam{})
                     .c_str()));
     checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))

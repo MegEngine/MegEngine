@@ -20,7 +20,7 @@ class Conv2dOperation:
   #
   def __init__(self, conv_kind, conv_type, arch, tile_description, src, flt, bias, dst, element_epilogue, \
     epilogue_functor = EpilogueFunctor.LinearCombination, swizzling_functor = SwizzlingFunctor.Identity4, \
-    need_load_from_const = True, implicit_gemm_mode = ImplicitGemmMode.GemmNt):
+    need_load_from_const = True, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False):
 
     self.operation_kind = OperationKind.Conv2d
     self.conv_kind = conv_kind
@@ -36,6 +36,7 @@ class Conv2dOperation:
     self.swizzling_functor = swizzling_functor
     self.need_load_from_const = need_load_from_const  
     self.implicit_gemm_mode = implicit_gemm_mode
+    self.without_shared_load = without_shared_load
   #
   def accumulator_type(self):
     accum = self.tile_description.math_instruction.element_accumulator
@@ -58,11 +59,15 @@ class Conv2dOperation:
 
     unity_kernel = ''
     if not self.need_load_from_const:
-        unity_kernel = '_1x1'
+      unity_kernel = '_1x1'
 
-    return "%s%s%s%s%s_%s" % (ShortDataTypeNames[self.accumulator_type()], \
+    reorder_k = ''
+    if self.without_shared_load:
+      reorder_k = '_roc'
+
+    return "%s%s%s%s%s%s_%s" % (ShortDataTypeNames[self.accumulator_type()], \
       inst_shape, intermediate_type, ConvKindNames[self.conv_kind], unity_kernel, \
-      ShortEpilogueNames[self.epilogue_functor])
+      reorder_k, ShortEpilogueNames[self.epilogue_functor])
 
   #
   def extended_name(self):
@@ -177,7 +182,8 @@ using Convolution =
     ${alignment_filter}, 
     ${nonuninity_kernel}, 
     ${math_operator},
-    ${implicit_gemm_mode}>;
+    ${implicit_gemm_mode}, 
+    ${without_shared_load}>;
 """
 
 
@@ -219,7 +225,8 @@ using Convolution =
       'alignment_filter': str(operation.flt.alignment), 
       'nonuninity_kernel': str(operation.need_load_from_const).lower(),  
       'math_operator': MathOperationTag[operation.tile_description.math_instruction.math_operation],
-      'implicit_gemm_mode': ImplicitGemmModeTag[operation.implicit_gemm_mode]
+      'implicit_gemm_mode': ImplicitGemmModeTag[operation.implicit_gemm_mode],
+      'without_shared_load': str(operation.without_shared_load).lower()
     }
 
     return SubstituteTemplate(self.template, values)
@@ -312,13 +319,13 @@ using Deconvolution =
 
 #
 def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_layout, dst_type, min_cc, src_align = 32, flt_align = 32, dst_align = 128, \
-  skip_unity_kernel = False, implicit_gemm_mode = ImplicitGemmMode.GemmNt):
+  skip_unity_kernel = False, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False):
   operations = []
 
   element_epilogue = DataType.f32 
   if conv_kind == ConvKind.Fprop:
-    if src_layout == LayoutType.TensorNHWC:
-      swizzling_functor = SwizzlingFunctor.ConvFpropNHWC
+    if implicit_gemm_mode == ImplicitGemmMode.GemmTN:
+      swizzling_functor = SwizzlingFunctor.ConvFpropTrans
     else:
       swizzling_functor = SwizzlingFunctor.ConvFpropNCxHWx
   else:
@@ -399,10 +406,10 @@ def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_lay
       bias = TensorDescription(bias_type, dst_layout, max(1, int(32 / DataTypeSize[bias_type])))
       dst = TensorDescription(dst_type, dst_layout, int(dst_align / DataTypeSize[dst_type])) 
 
-      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, True, implicit_gemm_mode)
+      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, True, implicit_gemm_mode, without_shared_load)
       operations.append(new_operation)
       if not skip_unity_kernel:
-        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, False, implicit_gemm_mode)
+        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, False, implicit_gemm_mode, without_shared_load)
         operations.append(new_operation)
   return operations
 

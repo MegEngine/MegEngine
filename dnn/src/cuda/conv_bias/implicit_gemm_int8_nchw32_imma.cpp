@@ -11,6 +11,7 @@
  */
 
 #include "./algo.h"
+#include "src/cuda/conv_bias/cutlass_reorder_filter.cuh"
 #include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/utils.h"
@@ -110,11 +111,14 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     size_t ho = args.dst_layout->operator[](2),
            wo = args.dst_layout->operator[](3);
     size_t co;
+    bool trans_oc;
     if (param.format == Format::NCHW32) {
         co = args.dst_layout->operator[](1) * 32;
+        trans_oc = true;
     } else {
         megdnn_assert(param.format == Format::NCHW32_NCHW4);
         co = args.dst_layout->operator[](1) * 4;
+        trans_oc = false;
     }
     UNPACK_CONV_PARAMETER(fm, param);
     MARK_USED_VAR
@@ -123,23 +127,11 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     int8_t* filter_ptr = nullptr;
     if (args.preprocessed_filter == nullptr) {
         filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
-        // reformat filter from nchw32 to chwn32
-        TensorLayout src{{co, ci / 32, fh, fw, 32}, dtype::Int8()};
-        src.init_contiguous_stride();
-        TensorLayout dst = src;
-        dst.stride[0] = 32;
-        dst.stride[1] = co * fh * fw * 32;
-        dst.stride[2] = co * fw * 32;
-        dst.stride[3] = co * 32;
-        dst.stride[4] = 1;
-        TensorND ts_src, ts_dst;
-        ts_src.raw_ptr = args.filter_tensor->raw_ptr;
-        ts_src.layout = src;
-        ts_dst.raw_ptr = args.workspace.raw_ptr;
-        ts_dst.layout = dst;
-        auto&& transpose =
-                args.opr->handle()->create_operator<RelayoutForward>();
-        transpose->exec(ts_src, ts_dst);
+        // filter: KCRS32 => CRSK32 and reorder oc
+        cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
+                filter_ptr,
+                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
+                fh, fw, trans_oc, stream);
     } else {
         filter_ptr = reinterpret_cast<int8_t*>(
                 args.preprocessed_filter->tensors[0].raw_ptr);
@@ -182,7 +174,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                     cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                m_algo_param.warp_n,
                                                m_algo_param.warp_k},
-                    stream);
+                    m_algo_param.stage, stream);
         } else {
             megdnn_assert(param.format == Format::NCHW32_NCHW4);
             cutlass_wrapper::
@@ -202,7 +194,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
         }
     } else {
         if (param.format == Format::NCHW32) {
@@ -218,7 +210,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                     cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                m_algo_param.warp_n,
                                                m_algo_param.warp_k},
-                    stream);
+                    m_algo_param.stage, stream);
         } else {
             megdnn_assert(param.format == Format::NCHW32_NCHW4);
             cutlass_wrapper::
@@ -238,7 +230,7 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
                             cutlass_wrapper::GemmCoord{m_algo_param.warp_m,
                                                        m_algo_param.warp_n,
                                                        m_algo_param.warp_k},
-                            stream);
+                            m_algo_param.stage, stream);
         }
     }
     after_kernel_launch();
@@ -246,9 +238,10 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
 
 std::string ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%uX%uX%u_%uX%uX%u", algo_param.threadblock_m,
+    return ssprintf("%uX%uX%u_%uX%uX%u_%u", algo_param.threadblock_m,
                     algo_param.threadblock_n, algo_param.threadblock_k,
-                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k);
+                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k,
+                    algo_param.stage);
 }
 
 size_t ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::
@@ -267,36 +260,26 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec_preprocess(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 32,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
-    size_t ho = args.dst_layout->operator[](2),
-           wo = args.dst_layout->operator[](3);
+    size_t ci = args.src_layout->operator[](1) * 32;
     size_t co;
+    bool trans_oc;
     if (param.format == Format::NCHW32) {
         co = args.dst_layout->operator[](1) * 32;
+        trans_oc = true;
     } else {
         megdnn_assert(param.format == Format::NCHW32_NCHW4);
         co = args.dst_layout->operator[](1) * 4;
+        trans_oc = false;
     }
-    UNPACK_CONV_PARAMETER(fm, param);
-    MARK_USED_VAR
-    TensorLayout src{{co, ci / 32, fh, fw, 32}, dtype::Int8()};
-    src.init_contiguous_stride();
-    TensorLayout dst = src;
-    dst.stride[0] = 32;
-    dst.stride[1] = co * fh * fw * 32;
-    dst.stride[2] = co * fw * 32;
-    dst.stride[3] = co * 32;
-    dst.stride[4] = 1;
-    TensorND ts_src, ts_dst;
-    ts_src.raw_ptr = args.filter_tensor->raw_ptr;
-    ts_src.layout = src;
-    ts_dst.raw_ptr = args.preprocessed_filter->tensors[0].raw_ptr;
-    ts_dst.layout = dst;
-    auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
-    transpose->exec(ts_src, ts_dst);
+    size_t fh = fm.spatial[0], fw = fm.spatial[1];
+
+    cudaStream_t stream = cuda_stream(args.opr->handle());
+    // filter: KCRS32 => CRSK32 and reorder oc
+    cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
+            reinterpret_cast<int8_t*>(
+                    args.preprocessed_filter->tensors[0].raw_ptr),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh,
+            fw, trans_oc, stream);
 }
 #endif
 

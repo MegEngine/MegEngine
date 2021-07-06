@@ -175,12 +175,10 @@ def GenerateConv2d_Simt(args):
           TileDescription([128, 128, 32], 2, [2, 4, 1], math_inst, min_cc, max_cc),
           TileDescription([128,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
           TileDescription([ 64, 128, 32], 2, [1, 4, 1], math_inst, min_cc, max_cc),
-          TileDescription([ 64,  64, 32], 2, [1, 2, 1], math_inst, min_cc, max_cc),
           TileDescription([128,  32, 32], 2, [2, 1, 1], math_inst, min_cc, max_cc),
           TileDescription([ 32, 128, 32], 2, [1, 2, 1], math_inst, min_cc, max_cc),
           TileDescription([ 32,  64, 32], 2, [1, 1, 1], math_inst, min_cc, max_cc), 
           TileDescription([ 64,  32, 32], 2, [1, 1, 1], math_inst, min_cc, max_cc), 
-          TileDescription([ 32,  32, 32], 2, [1, 1, 1], math_inst, min_cc, max_cc), 
           TileDescription([ 16, 128, 16], 1, [1, 1, 1], math_inst, min_cc, max_cc), 
           TileDescription([ 16,  64,  8], 2, [1, 1, 1], math_inst, min_cc, max_cc), 
         ] 
@@ -223,28 +221,36 @@ def GenerateConv2d_TensorOp_8816(args):
       for dst_type, dst_layout in zip(dst_types, dst_layouts):
         if dst_layout == LayoutType.TensorNC32HW32:
           tile_descriptions = [
-            TileDescription([256, 128, 64], 2, [4, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 256, 64], 2, [2, 4, 1], math_inst, min_cc, max_cc),
+            TileDescription([256, 128, 64], 2, [4, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 64, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128,  64, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 64,  64, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 32,  64, 64], 2, [1, 4, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 64, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128,  64, 32], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128,  32, 32], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 64, 128, 32], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 32, 128, 32], 1, [1, 2, 1], math_inst, min_cc, max_cc),
           ] 
+          operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
+                                     dst_layout, dst_type, min_cc, 128, 128, 64,  
+                                     False, ImplicitGemmMode.GemmTN, True) 
         else:
           assert dst_layout == LayoutType.TensorNC4HW4
           tile_descriptions = [
-            TileDescription([256, 128, 64], 2, [4, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 256, 64], 2, [2, 4, 1], math_inst, min_cc, max_cc),
+            TileDescription([256, 128, 64], 2, [4, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 64, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
             TileDescription([128,  64, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 64,  64, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
-            TileDescription([ 32,  64, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 64, 128, 64], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128,  64, 32], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([128,  32, 32], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 64, 128, 32], 1, [2, 2, 1], math_inst, min_cc, max_cc),
+            TileDescription([ 32, 128, 32], 1, [1, 2, 1], math_inst, min_cc, max_cc),
           ]
-        operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
+          operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
                                      False) 
+        
   return operations
 
 def GenerateConv2d_TensorOp_8832(args):
@@ -279,12 +285,14 @@ def GenerateConv2d_TensorOp_8832(args):
       for dst_layout in dst_layouts:
         dst_type = math_inst.element_b
         tile_descriptions = [
-          TileDescription([256, 128, 128], 2, [4, 2, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 256, 128], 2, [2, 4, 1], math_inst, min_cc, max_cc),
           TileDescription([128, 128, 128], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 64, 128], 2, [2, 1, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 64, 64], 1, [2, 1, 1], math_inst, min_cc, max_cc),
         ] 
         operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
-                                     True) 
+                                     True, ImplicitGemmMode.GemmTN, True) 
 
   layouts_nhwc = [
     (LayoutType.TensorNHWC, LayoutType.TensorNC8HW8, 32), 
@@ -299,14 +307,21 @@ def GenerateConv2d_TensorOp_8832(args):
   for math_inst in math_instructions:
     for layout in layouts_nhwc:
       for dst_layout in dst_layouts_nhwc:
-        dst_type = math_inst.element_b
-        tile_descriptions = [
-          TileDescription([128, 32, 64], 2, [2, 1, 1], math_inst, min_cc, max_cc),
-          TileDescription([128, 64, 64], 2, [2, 1, 1], math_inst, min_cc, max_cc),
-        ] 
-        operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
-                                     dst_layout, dst_type, min_cc, layout[2], layout[2], 32,  
-                                     False, ImplicitGemmMode.GemmTn) 
+          dst_type = math_inst.element_b
+          tile_descriptions = [
+              TileDescription([128, 32, 64], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+              TileDescription([128, 64, 64], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+          ]
+          for tile in tile_descriptions:
+            operations += GenerateConv2d(ConvKind.Fprop, [tile], layout[0], layout[1], 
+                                      dst_layout, dst_type, min_cc, layout[2], layout[2], 32, 
+                                      False, ImplicitGemmMode.GemmTN, False)
+            if tile.threadblock_shape[1] == 32 or tile.threadblock_shape[1] == 64:
+              dst_align = 32 if tile.threadblock_shape[1] == 32 else 64
+              operations += GenerateConv2d(ConvKind.Fprop, [tile], layout[0], layout[1], 
+                                      dst_layout, dst_type, min_cc, layout[2], layout[2], dst_align, 
+                                      False, ImplicitGemmMode.GemmTN, True)
+
   return operations
 
 def GenerateDeconv_Simt(args):
@@ -649,3 +664,4 @@ if __name__ == "__main__":
   
 #
 ###################################################################################################
+          

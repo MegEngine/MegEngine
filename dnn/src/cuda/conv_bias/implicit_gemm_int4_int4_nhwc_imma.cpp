@@ -104,7 +104,7 @@ void ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm::do_exec(
                 reinterpret_cast<int8_t*>(args.dst_tensor->raw_ptr), nullptr,
                 kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,
                 threadblock_shape, warp_shape, m_algo_param.access_size,
-                stream);
+                m_algo_param.stage, stream);
     } else {
         cutlass_wrapper::do_conv_bias_int4_int4_implicit_gemm_imma_nhwc<true>(
                 reinterpret_cast<int8_t*>(args.src_tensor->raw_ptr),
@@ -114,7 +114,7 @@ void ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm::do_exec(
                 reinterpret_cast<int8_t*>(args.dst_tensor->raw_ptr), nullptr,
                 kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,
                 threadblock_shape, warp_shape, m_algo_param.access_size,
-                stream);
+                m_algo_param.stage, stream);
     }
 }
 #endif

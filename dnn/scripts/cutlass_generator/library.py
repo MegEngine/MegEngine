@@ -464,10 +464,10 @@ EpilogueFunctorTag = {
 ShortEpilogueNames = {
   EpilogueFunctor.BiasAddLinearCombinationHSwishClamp: 'hswish', 
   EpilogueFunctor.BiasAddLinearCombinationReluClamp: 'relu', 
-  EpilogueFunctor.BiasAddLinearCombinationClamp: 'identity', 
+  EpilogueFunctor.BiasAddLinearCombinationClamp: 'id', 
   EpilogueFunctor.BiasAddLinearCombinationHSwish: 'hswish', 
   EpilogueFunctor.BiasAddLinearCombinationRelu: 'relu', 
-  EpilogueFunctor.BiasAddLinearCombination: 'identity', 
+  EpilogueFunctor.BiasAddLinearCombination: 'id', 
 }
 
 
@@ -482,7 +482,7 @@ class SwizzlingFunctor(enum.Enum):
   Identity4 = enum_auto()
   Identity8 = enum_auto()
   ConvFpropNCxHWx = enum_auto()
-  ConvFpropNHWC = enum_auto()
+  ConvFpropTrans = enum_auto()
   ConvDgradNCxHWx = enum_auto()
 
 #
@@ -492,7 +492,7 @@ SwizzlingFunctorTag = {
   SwizzlingFunctor.Identity4: 'cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<4>',
   SwizzlingFunctor.Identity8: 'cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>',
   SwizzlingFunctor.ConvFpropNCxHWx: 'cutlass::conv::threadblock::ConvolutionFpropNCxHWxThreadblockSwizzle',  
-  SwizzlingFunctor.ConvFpropNHWC: 'cutlass::conv::threadblock::ConvolutionFpropNHWCThreadblockSwizzle',  
+  SwizzlingFunctor.ConvFpropTrans: 'cutlass::conv::threadblock::ConvolutionFpropTransThreadblockSwizzle',  
   SwizzlingFunctor.ConvDgradNCxHWx: 'cutlass::conv::threadblock::ConvolutionDgradNCxHWxThreadblockSwizzle', 
 }
 
@@ -563,17 +563,17 @@ StrideSupportNames = {
 }
 
 class ImplicitGemmMode(enum.Enum):
-  GemmNt = enum_auto()
-  GemmTn = enum_auto()
+  GemmNT = enum_auto()
+  GemmTN = enum_auto()
 
 ImplicitGemmModeNames = {
-  ImplicitGemmMode.GemmNt: 'gemm_nt',
-  ImplicitGemmMode.GemmTn: 'gemm_tn',
+  ImplicitGemmMode.GemmNT: 'gemm_nt',
+  ImplicitGemmMode.GemmTN: 'gemm_tn',
 }
 
 ImplicitGemmModeTag = {
-  ImplicitGemmMode.GemmNt: 'cutlass::conv::ImplicitGemmMode::GEMM_NT',
-  ImplicitGemmMode.GemmTn: 'cutlass::conv::ImplicitGemmMode::GEMM_TN',
+  ImplicitGemmMode.GemmNT: 'cutlass::conv::ImplicitGemmMode::GEMM_NT',
+  ImplicitGemmMode.GemmTN: 'cutlass::conv::ImplicitGemmMode::GEMM_TN',
 }
 
 ###################################################################################################

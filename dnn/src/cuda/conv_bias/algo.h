@@ -723,6 +723,7 @@ public:
         int warp_m;
         int warp_n;
         int warp_k;
+        int stage;
     };
     AlgoInt8NCHW32IMMAImplicitGemm(AlgoParam algo_param)
             : m_algo_param{algo_param} {
@@ -770,6 +771,7 @@ public:
         int warp_m;
         int warp_n;
         int warp_k;
+        int stage;
     };
 
     AlgoInt4NCHW64IMMAImplicitGemmBase(AlgoParam algo_param)
@@ -897,6 +899,7 @@ public:
         int warp_m;
         int warp_n;
         int warp_k;
+        int stage;
         int access_size;
     };
 

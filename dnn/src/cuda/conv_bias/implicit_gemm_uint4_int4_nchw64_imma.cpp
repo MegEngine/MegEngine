@@ -144,7 +144,8 @@ void ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGemm::do_exec(
                   reinterpret_cast<uint8_t*>(z_ptr),
                   reinterpret_cast<uint8_t*>(args.dst_tensor->raw_ptr), nullptr,
                   kern_param, nonlinear_mode, alpha, beta, gamma, delta, theta,
-                  dst_scale, src_zero, threadblock_shape, warp_shape, stream);
+                  dst_scale, src_zero, threadblock_shape, warp_shape,
+                  m_algo_param.stage, stream);
 }
 
 void ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGemm::update_bias(

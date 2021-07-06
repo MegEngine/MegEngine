@@ -12,6 +12,7 @@
 
 #include "./algo.h"
 #include "src/common/conv_bias.h"
+#include "src/cuda/conv_bias/cutlass_reorder_filter.cuh"
 #include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 #include "src/cuda/conv_bias/reduce_filter.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
@@ -121,41 +122,26 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
 
 std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%dX%dX%d_%dX%dX%d", algo_param.threadblock_m,
+    return ssprintf("%dX%dX%d_%dX%dX%d_%d", algo_param.threadblock_m,
                     algo_param.threadblock_n, algo_param.threadblock_k,
-                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k);
+                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k,
+                    algo_param.stage);
 }
 
 void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::reorder_filter(
         const ExecArgs& args, void* reordered_filter) const {
-    auto&& param = args.opr->param();
+    size_t ci = args.src_layout->operator[](1) * 64;
+    size_t co = args.dst_layout->operator[](1) * 64;
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 64,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
-    size_t co = args.dst_layout->operator[](1) * 64,
-           ho = args.dst_layout->operator[](2),
-           wo = args.dst_layout->operator[](3);
-    UNPACK_CONV_PARAMETER(fm, param);
-    MARK_USED_VAR;
+    size_t fh = fm.spatial[0], fw = fm.spatial[1];
 
-    // filter: KCRS64 => CRSK64
-    TensorLayout src{{co, ci / 64, fh, fw, 64}, dtype::QuantizedS4()};
-    src.init_contiguous_stride();
-    TensorLayout dst = src;
-    dst.stride[0] = 64;
-    dst.stride[1] = co * fh * fw * 64;
-    dst.stride[2] = co * fw * 64;
-    dst.stride[3] = co * 64;
-    dst.stride[4] = 1;
-    TensorND ts_src, ts_dst;
-    ts_src.raw_ptr = args.filter_tensor->raw_ptr;
-    ts_src.layout = src;
-    ts_dst.raw_ptr = reordered_filter;
-    ts_dst.layout = dst;
-    auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
-    transpose->exec(ts_src, ts_dst);
+    cudaStream_t stream = cuda_stream(args.opr->handle());
+
+    // filter: KCRS64 => CRSK64 and reorder oc
+    cutlass_wrapper::reorder_ncxhwx_imma_filter<4, 64>(
+            reinterpret_cast<int8_t*>(reordered_filter),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh,
+            fw, true, stream);
 }
 #endif
 

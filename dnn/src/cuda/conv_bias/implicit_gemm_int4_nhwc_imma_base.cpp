@@ -12,6 +12,7 @@
 
 #include "./algo.h"
 #include "src/common/conv_bias.h"
+#include "src/cuda/conv_bias/cutlass_reorder_filter.cuh"
 #include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 #include "src/cuda/conv_bias/reduce_filter.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
@@ -128,10 +129,10 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::exec(
 
 std::string ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%dX%dX%d_%dX%dX%d_%d", algo_param.threadblock_m,
+    return ssprintf("%dX%dX%d_%dX%dX%d_%d_%d", algo_param.threadblock_m,
                     algo_param.threadblock_n, algo_param.threadblock_k,
                     algo_param.warp_m, algo_param.warp_n, algo_param.warp_k,
-                    algo_param.access_size);
+                    algo_param.stage, algo_param.access_size);
 }
 
 void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::reorder_filter(
@@ -142,17 +143,32 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::reorder_filter(
            fh = args.filter_layout->operator[](1),
            fw = args.filter_layout->operator[](2);
 
-    // reformat grad from nhwc to ncxhwx
-    TensorLayout exec_src{{co, fh, fw, ci / iterleaved, (size_t)iterleaved / 2},
-                          dtype::Int8()};
-    TensorLayout exec_dst{{co, ci / iterleaved, fh, fw, (size_t)iterleaved / 2},
-                          dtype::Int8()};
+    cudaStream_t stream = cuda_stream(args.opr->handle());
 
-    exec_src = exec_src.dimshuffle({0, 3, 1, 2, 4});
+    // reformat filter from nhwc to ncxhwx and reorder oc
+    // use trans_oc threadblock_n must be 32 or 64
+    bool trans_oc = ((co % m_algo_param.threadblock_n == 0) &&
+                     (m_algo_param.threadblock_n == 32 ||
+                      m_algo_param.threadblock_n == 64));
+    uint32_t oc_iterleave = (m_algo_param.threadblock_n == 64) ? 64 : 32;
 
-    auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
-    relayout->exec({args.filter_tensor->raw_ptr, exec_src},
-                   {reordered_filter, exec_dst});
+    if (iterleaved == 8) {
+        cutlass_wrapper::reorder_nhwc_imma_filter<4, 32>(
+                reinterpret_cast<int8_t*>(reordered_filter),
+                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
+                fh, fw, trans_oc, oc_iterleave, stream);
+    } else if (iterleaved == 16) {
+        cutlass_wrapper::reorder_nhwc_imma_filter<4, 64>(
+                reinterpret_cast<int8_t*>(reordered_filter),
+                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
+                fh, fw, trans_oc, oc_iterleave, stream);
+    } else {
+        megdnn_assert(iterleaved == 32);
+        cutlass_wrapper::reorder_nhwc_imma_filter<4, 128>(
+                reinterpret_cast<int8_t*>(reordered_filter),
+                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
+                fh, fw, trans_oc, oc_iterleave, stream);
+    }
 }
 #endif
 
