@@ -491,7 +491,7 @@ AsyncExecutable& ComputingGraphImpl::ComputingSequence::execute() {
     do_execute(nullptr);
     return *this;
 }
-
+#ifndef __IN_TEE_ENV__
 void ComputingGraphImpl::ComputingSequence::get_static_memory_alloc_info(
         const std::string& svg_name) {
     check_not_finalized();
@@ -523,7 +523,7 @@ void ComputingGraphImpl::ComputingSequence::get_static_memory_alloc_info(
                "svg_name must be end with \".svg\"\n");
     recorder.show(svg_name);
 }
-
+#endif
 AsyncExecutable& ComputingGraphImpl::ComputingSequence::wait() {
     do_wait(true);
     return *this;

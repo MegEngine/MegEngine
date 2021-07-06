@@ -141,9 +141,13 @@ R"__usage__(
     level 2 the computing graph can be destructed to reduce memory usage. Read
     the doc of `ComputingGraph::Options::comp_node_seq_record_level` for more
     details.
+)__usage__"
+#ifndef __IN_TEE_ENV__ 
+R"__usage__(
   --get-static-mem-info <svgname>
     Record the static graph's static memory info.
 )__usage__"
+#endif
 #if MGB_ENABLE_FASTRUN
 R"__usage__(
  --full-run
@@ -538,7 +542,9 @@ struct Args {
 #endif
     bool reproducible = false;
     std::string fast_run_cache_path;
+#ifndef __IN_TEE_ENV__
     std::string static_mem_svg_path;
+#endif
     bool copy_to_host = false;
     int nr_run = 10;
     int nr_warmup = 1;
@@ -797,9 +803,11 @@ void run_test_st(Args &env) {
     }
 
     auto func = env.load_ret.graph_compile(out_spec);
+#ifndef __IN_TEE_ENV__
     if (!env.static_mem_svg_path.empty()) {
         func->get_static_memory_alloc_info(env.static_mem_svg_path);
     }
+#endif
     auto warmup = [&]() {
         printf("=== prepare: %.3fms; going to warmup\n",
                timer.get_msecs_reset());
@@ -1383,6 +1391,7 @@ Args Args::from_argv(int argc, char **argv) {
             graph_opt.comp_node_seq_record_level = 2;
             continue;
         }
+#ifndef __IN_TEE_ENV__
         if (!strcmp(argv[i], "--get-static-mem-info")) {
             ++i;
             mgb_assert(i < argc, "value not given for --get-static-mem-info");
@@ -1393,6 +1402,7 @@ Args Args::from_argv(int argc, char **argv) {
                     ret.static_mem_svg_path.c_str());
             continue;
         }
+#endif
 #if MGB_ENABLE_FASTRUN
         if (!strcmp(argv[i], "--fast-run")) {
             ret.use_fast_run = true;

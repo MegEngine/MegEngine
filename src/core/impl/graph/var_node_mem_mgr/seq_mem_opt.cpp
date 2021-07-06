@@ -178,18 +178,19 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
     ThinHashMap<MemAllocPlan::Chunk*, MemChunkLifeInterval> chk2interval;
 
     // get all memory chunks
+#ifndef __IN_TEE_ENV__
     if (StaticMemRecorder::Instance().valid()) {
         StaticMemRecorder::Instance().clear_opr_seq();
     }
-    
+#endif
     for (size_t idx = 0; idx < m_cur_seq_full->size(); ++ idx) {
         OperatorNodeBase *opr = m_cur_seq_full->at(idx);
-
+#ifndef __IN_TEE_ENV__
         if (StaticMemRecorder::Instance().valid()) {
             StaticMemRecorder::Instance().regist_opr_seq(
                     {idx, 0, opr->name()});
         }
-
+#endif
         auto &&dep_map = opr->node_prop().dep_map();
 
         if (in_sys_alloc(opr)) {
@@ -358,6 +359,7 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
             chk.chunk->mem_alloc_status.set_static_offset(
                     allocator->get_start_addr(&chk));
         }
+#ifndef __IN_TEE_ENV__
         auto& recorder = StaticMemRecorder::Instance();
         if (recorder.valid()) {
             for (size_t i = 0; i < chunks.size(); i++) {
@@ -366,6 +368,7 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
             }
             recorder.regist_peak_mem_size(size);
         }
+#endif
     }
 
     return should_realloc;

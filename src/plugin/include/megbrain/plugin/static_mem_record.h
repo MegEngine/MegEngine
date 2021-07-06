@@ -12,7 +12,7 @@
 
 #pragma once
 #include "megbrain/utils/metahelper.h"
-
+#ifndef __IN_TEE_ENV__
 namespace mgb {
 namespace cg {
 
@@ -83,3 +83,4 @@ private:
 };
 }  // namespace cg
 }  // namespace mgb
+#endif

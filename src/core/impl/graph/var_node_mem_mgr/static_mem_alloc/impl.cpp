@@ -119,7 +119,7 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
     do_solve();
 
     check_result_and_calc_lower_bound();
-
+#ifndef __IN_TEE_ENV__
     if (StaticMemRecorder::Instance().valid()) {
         StaticMemRecorder::Instance().clear_memory_chunk();
         for (auto&& i : m_interval) {
@@ -135,7 +135,7 @@ StaticMemAlloc& StaticMemAllocImplHelper::solve() {
                      is_overwrite, ""});
         }
     }
-
+#endif
     return *this;
 }
 

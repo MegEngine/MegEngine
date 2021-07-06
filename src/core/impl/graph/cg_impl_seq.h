@@ -170,9 +170,10 @@ public:
     }
 
     std::unique_ptr<RecordedComputingSequence> as_recorded_seq();
-
+#ifndef __IN_TEE_ENV__
     void get_static_memory_alloc_info(
             const std::string& svg_name = "static_mem_record.svg") override;
+#endif
 };
 
 class ComputingGraphImpl::MegDNNDtorCheck : public NonCopyableObj {
