@@ -10,16 +10,16 @@ import collections
 import math
 from typing import Optional, Sequence, Tuple, Union
 
-from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.special import Const
 from ..core.tensor import amp
-from ..core.tensor.utils import _normalize_axis, cast_tensors, convert_inputs, setscalar
+from ..core.tensor.utils import _normalize_axis, cast_tensors, setscalar
 from ..tensor import Tensor
 from .debug_param import get_execution_strategy
-from .elemwise import clip, exp, log, log1p
-from .tensor import broadcast_to, concat, expand_dims, reshape, squeeze
+from .elemwise import clip
+from .tensor import broadcast_to, concat, expand_dims, squeeze
 
 __all__ = [
     "argmax",
@@ -816,10 +816,13 @@ def matmul(
         compute_mode = "float32"
         inp1, inp2 = cast_tensors(inp1, inp2)
     else:
-        inp1, inp2 = convert_inputs(inp1, inp2)
+        dtype = dtype_promotion(inp1, inp2)
+        if inp1.dtype != dtype:
+            inp1 = inp1.astype(dtype)
+        if inp2.dtype != dtype:
+            inp2 = inp2.astype(dtype)
 
     remove_row, remove_col = False, False
-
     dim1, dim2 = inp1.ndim, inp2.ndim
     # handle dim=1 cases, dot and matrix-vector multiplication
     if dim1 == 1 and dim2 == 1:
@@ -931,7 +934,6 @@ def dot(inp1: Tensor, inp2: Tensor) -> Tensor:
 
     """
     op = builtin.Dot()
-    inp1, inp2 = convert_inputs(inp1, inp2)
     assert (
         inp1.ndim <= 1 and inp2.ndim <= 1
     ), "Input tensors for dot must be 1-dimensional or scalar"

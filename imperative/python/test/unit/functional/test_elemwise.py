@@ -13,7 +13,7 @@ import megengine.functional as F
 import megengine.functional.elemwise as elemwise
 from megengine import tensor
 from megengine.core.tensor import dtype
-from megengine.functional.elemwise import Elemwise, _elwise
+from megengine.functional.elemwise import Elemwise
 from megengine.jit import trace
 
 
@@ -54,6 +54,17 @@ def test_multiply():
             np.array([3.0, 4.0], dtype=np.float32),
             np.array([3.0, 4.0], dtype=np.float32),
         ),
+    )
+
+
+def test_div():
+    np.testing.assert_allclose(
+        F.div(tensor([3, 4]), 2).numpy(),
+        np.divide(np.array([3, 4], dtype=np.float32), 2),
+    )
+
+    np.testing.assert_allclose(
+        (tensor([3, 4]) / 2).numpy(), np.divide(np.array([3, 4], dtype=np.float32), 2),
     )
 
 

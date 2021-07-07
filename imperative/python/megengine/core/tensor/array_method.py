@@ -13,7 +13,7 @@ from typing import Union
 import numpy as np
 
 from .._imperative_rt.common import CompNode
-from .._imperative_rt.core2 import SymbolVar, Tensor, apply
+from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion
 from ..ops import builtin
 from . import amp
 from .indexing import getitem, setitem
@@ -81,7 +81,11 @@ def _matmul(inp1, inp2):
         inp1, inp2 = cast_tensors(inp1, inp2)
     else:
         compute_mode = "default"
-        inp1, inp2 = convert_inputs(inp1, inp2)
+        dtype = dtype_promotion(inp1, inp2)
+        if inp1.dtype != dtype:
+            inp1 = inp1.astype(dtype)
+        if inp2.dtype != dtype:
+            inp2 = inp2.astype(dtype)
     op = builtin.MatrixMul(
         transposeA=False, transposeB=False, compute_mode=compute_mode, format="default"
     )
@@ -91,7 +95,6 @@ def _matmul(inp1, inp2):
 
 def _transpose(data, axes):
     op = builtin.Dimshuffle(axes)
-    (data,) = convert_inputs(data)
     (result,) = apply(op, data)
     return result
 
@@ -201,7 +204,6 @@ def _remove_axis(inp: Tensor, axis) -> Tensor:
 def _reduce(mode):
     def f(self, axis=None, keepdims: bool = False):
         data = self
-        (data,) = convert_inputs(data)
         if mode == "mean":
             data = data.astype("float32")
         elif self.dtype == np.bool_:

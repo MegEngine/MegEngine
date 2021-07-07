@@ -6,25 +6,18 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import math
 from typing import Iterable, Optional, Sequence, Union
 
 import numpy as np
 
 from ..core._imperative_rt import CompNode
-from ..core._imperative_rt.core2 import SymbolVar, apply
+from ..core._imperative_rt.core2 import SymbolVar, apply, dtype_promotion
 from ..core._wrap import as_device
 from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
 from ..core.ops.special import Const
 from ..core.tensor.array_method import _broadcast, _remove_axis
-from ..core.tensor.utils import (
-    astensor1d,
-    convert_inputs,
-    convert_single_value,
-    dtype_promotion,
-    get_device,
-)
+from ..core.tensor.utils import astensor1d, convert_inputs, get_device
 from ..device import get_default_device
 from ..tensor import Tensor
 from .elemwise import ceil, floor_div
@@ -288,6 +281,7 @@ def concat(inps: Iterable[Tensor], axis: int = 0, device=None) -> Tensor:
     if len(inps) == 1:
         return inps[0]
 
+    # FIXME: remove this convert_inputs
     inps = convert_inputs(*inps, device=device)
     if device is None:
         device = get_device(inps)
@@ -640,6 +634,7 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
 
     .. testcode::
 
+        import numpy as np
         from megengine import tensor
         import megengine.functional as F
         mask = tensor(np.array([[True, False], [False, True]], dtype=np.bool))
@@ -657,7 +652,6 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
          [7. 4.]]
     """
 
-    x, y = convert_inputs(x, y)
     if not isinstance(x, Tensor):
         raise TypeError("input x must be a tensor")
     if not isinstance(y, Tensor):
@@ -668,6 +662,12 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         raise ValueError("mask must be bool")
     if x.device != mask.device:
         raise ValueError("ambiguous device: {} vs {}".format(x.device, mask.device))
+
+    dtype = dtype_promotion(x, y)
+    if x.dtype != dtype:
+        x = x.astype(dtype)
+    if y.dtype != dtype:
+        y = y.astype(dtype)
 
     v0, index0 = cond_take(mask, x)
     v1, index1 = cond_take(~mask, y)
@@ -1021,12 +1021,10 @@ def arange(
     if stop is None:
         start, stop = 0, start
 
-    if isinstance(start, Tensor):
-        start = start.astype("float32")
-    if isinstance(stop, Tensor):
-        stop = stop.astype("float32")
-    if isinstance(step, Tensor):
-        step = step.astype("float32")
+    start = Tensor(start, dtype="float32")
+    stop = Tensor(stop, dtype="float32")
+    step = Tensor(step, dtype="float32")
+
     num = ceil((stop - start) / step)
     stop = start + step * (num - 1)
     result = linspace(start, stop, num, device=device)

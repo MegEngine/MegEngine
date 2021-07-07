@@ -36,7 +36,7 @@ def test_level1_infer_value():
 def test_level1_infer_shape_with_unknown():
     config_async_level(2)
     a = mge.tensor([[1, 2, 2, 3]], dtype="float32")
-    b = mge.tensor([1, 1])
+    b = mge.tensor([1, 1], dtype="float32")
     multi2 = mge.tensor(np.array([[2, 0], [0, 2]]), dtype="float32")
     c = F.matmul(b, multi2)
     # make DepType::SHAPE unknown

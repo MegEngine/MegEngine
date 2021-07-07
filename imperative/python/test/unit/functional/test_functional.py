@@ -456,9 +456,10 @@ def test_interpolate_fastpath():
     np.testing.assert_equal(out.item(), np_x.mean())
 
 
-def test_warp_perspective():
+@pytest.mark.parametrize("dt", [np.float32, np.int8, np.uint8, np.float16])
+def test_warp_perspective(dt):
     inp_shape = (1, 1, 4, 4)
-    x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+    x = tensor(np.arange(16, dtype=dt).reshape(inp_shape))
     M_shape = (1, 3, 3)
     # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
     M = tensor(
@@ -467,14 +468,13 @@ def test_warp_perspective():
         ).reshape(M_shape)
     )
     outp = F.vision.warp_perspective(x, M, (2, 2))
-    np.testing.assert_equal(
-        outp.numpy(), np.array([[[[5.0, 6.0], [9.0, 10.0]]]], dtype=np.float32)
-    )
+    np.testing.assert_equal(outp.numpy(), np.array([[[[5, 6], [9, 10]]]], dtype=dt))
 
 
-def test_warp_perspective_mat_idx():
+@pytest.mark.parametrize("dt", [np.float32, np.int8, np.uint8, np.float16])
+def test_warp_perspective_mat_idx(dt):
     inp_shape = (2, 1, 4, 4)
-    x = tensor(np.arange(32, dtype=np.float32).reshape(inp_shape))
+    x = tensor(np.arange(32, dtype=dt).reshape(inp_shape))
     M_shape = (1, 3, 3)
     # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
     M = tensor(
@@ -488,12 +488,12 @@ def test_warp_perspective_mat_idx():
         outp.numpy(),
         np.array(
             [
-                [[[5.0, 6.0], [9.0, 10.0]]],
-                [[[21.0, 22.0], [25.0, 26.0]]],
-                [[[21.0, 22.0], [25.0, 26.0]]],
-                [[[5.0, 6.0], [9.0, 10.0]]],
+                [[[5, 6], [9, 10]]],
+                [[[21, 22], [25, 26]]],
+                [[[21, 22], [25, 26]]],
+                [[[5, 6], [9, 10]]],
             ],
-            dtype=np.float32,
+            dtype=dt,
         ),
     )
 

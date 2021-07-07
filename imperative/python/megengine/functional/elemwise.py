@@ -13,7 +13,7 @@ from ..core._imperative_rt.core2 import SymbolVar, apply
 from ..core.ops import builtin
 from ..core.ops.builtin import Elemwise
 from ..core.tensor.array_method import _elwise
-from ..core.tensor.utils import astype, convert_inputs
+from ..core.tensor.utils import convert_inputs
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 

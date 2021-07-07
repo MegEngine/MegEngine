@@ -5,11 +5,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-import platform
-import weakref
 
 import numpy as np
-import pytest
 
 import megengine as mge
 import megengine.autodiff as ad
@@ -65,7 +62,7 @@ def test_clip_grad_value():
     gm = ad.GradManager().attach(net.parameters())
     opt = optim.SGD(net.parameters(), 1e-3, momentum=0.9)
     with gm:
-        y = net(x)
+        y = net(mge.tensor(x))
         y = y.mean()
         gm.backward(y)
     save_grad_value(net)

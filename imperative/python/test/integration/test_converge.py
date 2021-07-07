@@ -9,7 +9,6 @@
 import itertools
 
 import numpy as np
-import pytest
 
 import megengine as mge
 import megengine.autodiff as ad
@@ -105,10 +104,10 @@ def test_training_converge():
     xx, yy = np.meshgrid(x, x)
     xx = xx.reshape((ngrid * ngrid, 1))
     yy = yy.reshape((ngrid * ngrid, 1))
-    data = np.concatenate((xx, yy), axis=1).astype(np.float32)
+    data = mge.tensor(np.concatenate((xx, yy), axis=1).astype(np.float32))
 
     pred = infer(data).numpy()
-    precision = calculate_precision(data, pred)
+    precision = calculate_precision(data.numpy(), pred)
     assert precision == 1.0, "Test precision must be high enough, get {}".format(
         precision
     )

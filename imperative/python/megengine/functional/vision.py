@@ -8,6 +8,8 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Iterable, Optional, Tuple, Union
 
+import numpy as np
+
 from ..core._imperative_rt.core2 import apply
 from ..core.ops import builtin
 from ..core.tensor import megbrain_graph, utils
@@ -98,7 +100,6 @@ def roi_pooling(
         output_shape = (output_shape, output_shape)
 
     op = builtin.ROIPooling(mode=mode, scale=scale)
-    inp, rois = utils.convert_inputs(inp, rois)
     result, _ = apply(
         op, inp, rois, Tensor(output_shape, dtype="int32", device=inp.device)
     )
@@ -187,6 +188,8 @@ def roi_align(
               [0.1359 0.1359]]]
 
     """
+    if inp.dtype != np.float32:
+        inp = inp.astype(np.float32)
     mode = mode.lower()
     assert mode in ["max", "average"], "only max/average mode is supported"
     if isinstance(output_shape, int):
@@ -207,7 +210,6 @@ def roi_align(
         sample_height=sample_height,
         sample_width=sample_width,
     )
-    inp, rois = utils.convert_inputs(inp, rois)
     result, *_ = apply(op, inp, rois)
     return result
 
@@ -270,7 +272,7 @@ def nms(
         max_output = boxes.shape[0]
 
     op = builtin.NMSKeep(iou_thresh, max_output)
-    inp = utils.convert_inputs(boxes.reshape(1, -1, 4))
+    inp = (boxes.reshape(1, -1, 4),)
     indices, count = apply(op, *inp)
     indices = indices[0][: count[0]]
     keep_inds = sorted_idx[indices]
@@ -442,10 +444,13 @@ def warp_perspective(
            [ 9. 10.]]]]
 
     """
+    if inp.dtype == np.float32:
+        mat = mat.astype("float32")
+    if inp.dtype == np.float16:
+        inp = inp.astype("float32")
     op = builtin.WarpPerspective(
         imode=interp_mode, bmode=border_mode, format=format, border_val=border_val
     )
-    inp, mat = utils.convert_inputs(inp, mat)
     out_shape = astensor1d(out_shape, inp, dtype="int32", device=inp.device)
     if mat_idx is not None:
         mat_idx = astensor1d(mat_idx, inp, dtype="int32", device=inp.device)

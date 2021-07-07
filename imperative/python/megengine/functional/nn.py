@@ -10,8 +10,6 @@
 from typing import Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt.core2 import apply
-from ..core._imperative_rt.graph import VarNode
-from ..core._trace_option import use_symbolic_shape
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm, Elemwise
 from ..core.ops.special import Const
@@ -21,7 +19,6 @@ from ..core.tensor.utils import (
     astensor1d,
     astype,
     cast_tensors,
-    convert_inputs,
     convert_single_value,
     setscalar,
 )
@@ -33,18 +30,9 @@ from ..utils.deprecation import deprecated_func
 from ..utils.tuple_function import _pair, _pair_nonzero, _triple, _triple_nonzero
 from .debug_param import get_execution_strategy
 from .distributed import all_reduce_sum
-from .elemwise import _elwise, exp, floor, log, log1p, maximum, minimum
-from .math import argsort, matmul, max, prod, sum
-from .tensor import (
-    broadcast_to,
-    concat,
-    expand_dims,
-    full,
-    ones,
-    reshape,
-    squeeze,
-    zeros,
-)
+from .elemwise import _elwise, exp, log, log1p, maximum, minimum
+from .math import matmul, max, sum
+from .tensor import broadcast_to, concat, expand_dims, ones, squeeze, zeros
 
 __all__ = [
     "adaptive_avg_pool2d",
@@ -167,8 +155,6 @@ def conv1d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        inp, weight = convert_inputs(inp, weight)
 
     inp = expand_dims(inp, 3)
     weight = expand_dims(weight, 3)
@@ -246,8 +232,6 @@ def conv2d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        inp, weight = convert_inputs(inp, weight)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -304,7 +288,6 @@ def conv3d(
     :return: output tensor.
     """
     assert conv_mode.lower() == "cross_correlation"
-    inp, weight = convert_inputs(inp, weight)
 
     D, H, W = 0, 1, 2
 
@@ -379,8 +362,6 @@ def conv_transpose2d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
-    else:
-        inp, weight = convert_inputs(inp, weight)
 
     if groups != 1:
         raise NotImplementedError("group transposed conv2d is not supported yet.")
@@ -454,7 +435,8 @@ def deformable_conv2d(
         compute_mode = "float32"
         inp, weight, offset, mask, bias = cast_tensors(inp, weight, offset, mask, bias)
     else:
-        inp, weight, offset, mask = convert_inputs(inp, weight, offset, mask)
+        offset = offset.astype("float32")
+        mask = mask.astype("float32")
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -493,7 +475,6 @@ def local_conv2d(
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
     )
-    inp, weight = convert_inputs(inp, weight)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -539,8 +520,6 @@ def conv_transpose3d(
     :param dilation: dilation of the 3D convolution operation. Default: 1
     :return: output tensor.
     """
-    inp, weight = convert_inputs(inp, weight)
-
     D, H, W = 0, 1, 2
     pad = _triple(padding)
     stride = _triple_nonzero(stride)
@@ -1077,10 +1056,6 @@ def batch_norm(
         inp = inp.astype("float16")
         weight, bias, running_mean, running_var = cast_tensors(
             weight, bias, running_mean, running_var, promote=True
-        )
-    elif compute_mode != "float32":
-        inp, weight, bias, running_mean, running_var = convert_inputs(
-            inp, weight, bias, running_mean, running_var
         )
     weight = make_full_if_none(weight, 1)
     bias = make_full_if_none(bias, 0)

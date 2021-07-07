@@ -14,8 +14,7 @@ import megengine.autodiff as ad
 import megengine.distributed as dist
 import megengine.functional as F
 import megengine.optimizer as optimizer
-from megengine import Parameter, tensor
-from megengine.distributed.helper import get_device_count_by_fork
+from megengine import tensor
 from megengine.jit import trace
 from megengine.module import BatchNorm2d, Conv2d, Module, Sequential, SyncBatchNorm
 
@@ -88,7 +87,7 @@ def test_bn_no_track_stat():
     optim = optimizer.SGD(m.parameters(), lr=1.0)
     optim.clear_grad()
 
-    data = np.random.random((6, nchannel, 2, 2)).astype("float32")
+    data = tensor(np.random.random((6, nchannel, 2, 2)).astype("float32"))
     with gm:
         loss = m(data).sum()
         gm.backward(loss)
@@ -110,7 +109,7 @@ def test_bn_no_track_stat2():
     optim = optimizer.SGD(m.parameters(), lr=1.0)
     optim.clear_grad()
 
-    data = np.random.random((6, nchannel, 2, 2)).astype("float32")
+    data = tensor(np.random.random((6, nchannel, 2, 2)).astype("float32"))
     with gm:
         loss = m(data).sum()
         gm.backward(loss)
@@ -146,7 +145,7 @@ def test_trace_bn_forward_twice():
         pred = net(inp)
         return pred
 
-    x = np.ones((1, 1, 32, 32), dtype=np.float32)
+    x = tensor(np.ones((1, 1, 32, 32), dtype=np.float32))
     y = train_bn(x, net=Simple())
     np.testing.assert_equal(y.numpy(), 0)
 
@@ -194,5 +193,5 @@ def test_trace_several_syncbn(trace_mode):
 def test_frozen_bn_no_affine():
     nchannel = 3
     m = BatchNorm2d(nchannel, freeze=True, affine=False)
-    data = megengine.Tensor(np.random.random((6, nchannel, 2, 2)).astype("float32"))
+    data = tensor(np.random.random((6, nchannel, 2, 2)).astype("float32"))
     m(data).numpy()
