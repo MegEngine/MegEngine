@@ -163,7 +163,9 @@ apply_result_t indexingMultiAxisVec_grad_rule(ApplyContext& ctx, CustomBackward:
 apply_result_t reduce_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto& op = ctx.op->cast_final_safe<Reduce>();
     if (op.mode == Reduce::Mode::SUM) {
-        mgb_assert(ctx.nargs == 1);
+        if (ctx.nargs != 1) {
+            throw GradRuleFallback();
+        }
         std::array<std::shared_ptr<Tensor>, 1> input_shapes;
         if (input_requires_grad(ctx, 0)) {
             input_shapes[0] = get_shape(ctx.args[0]);
