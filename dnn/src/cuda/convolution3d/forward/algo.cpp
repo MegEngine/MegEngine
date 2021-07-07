@@ -28,22 +28,7 @@ Convolution3DForwardImpl::AlgoPack::AlgoPack() {
     }
     all_algos.push_back(&inplace_matmul);
     all_algos.push_back(&a1x1x1);
-    all_algos.reserve(all_algos.size() * 2);
-
-    // add gconv algos by AlgoGroupConvGeneral
-    auto all_algos_data = all_algos.data();
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        gconv.push_back({all_algos[i]});
-    }
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        algo2gconv[all_algos[i]] = &gconv[i - 1];
-    }
-    for (auto &&i: gconv) {
-        all_algos.push_back(&i);
-    }
-    megdnn_assert(all_algos_data == all_algos.data());
-    non_cudnn_algos.push_back(all_algos.rbegin()[1]); // group inplace_matmul
-    non_cudnn_algos.push_back(all_algos.rbegin()[0]); // group 1x1x1
+    all_algos.push_back(&group);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
@@ -66,28 +51,25 @@ Convolution3DForwardImpl::AlgoPack::cudnn_from_enum(
 Convolution3DForwardImpl::AlgoPack Convolution3DForwardImpl::sm_algo_pack;
 
 Convolution3DForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        Convolution3DForwardImpl *o,
-        const TensorLayout &src, const TensorLayout &filter,
-        const TensorLayout &dst):
-    SizeArgs(o, src, o->make_canonized_filter_meta(src.ndim, filter), dst)
-{
-}
+        const Convolution3DForwardImpl* o, const TensorLayout& src,
+        const TensorLayout& filter, const TensorLayout& dst)
+        : SizeArgs(o, src, filter,
+                   o->make_canonized_filter_meta(src.ndim, filter), dst) {}
 
 Convolution3DForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        Convolution3DForwardImpl *o,
-        const TensorLayout &src, const CanonizedFilterMeta &filter,
-        const TensorLayout &dst):
-    ForwardSizeArgs{
-        concrete_handle(o->handle()),
-        &src, filter, &dst,
-        o->param().data_type
-    },
-    opr{o}
-{
-}
+        const Convolution3DForwardImpl* o, const TensorLayout& src,
+        const TensorLayout& filter, const CanonizedFilterMeta& filter_meta,
+        const TensorLayout& dst)
+        : ForwardSizeArgs{concrete_handle(o->handle()),
+                          &src,
+                          &filter,
+                          filter_meta,
+                          &dst,
+                          o->param().data_type},
+          opr{o} {}
 
 Convolution3DForwardImpl::AlgoBase::ExecArgs::ExecArgs(
-        Convolution3DForwardImpl *opr,
+        const Convolution3DForwardImpl *opr,
         _megdnn_tensor_in src,
         _megdnn_tensor_in filter,
         _megdnn_tensor_out dst,

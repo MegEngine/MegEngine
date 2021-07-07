@@ -42,31 +42,33 @@ public:
     struct SizeArgs {
         HandleImpl* handle;
         CanonizedFilterMeta filter_meta;
-        const TensorLayout *diff_layout, *grad_layout;
-        Convolution3DBackwardDataImpl* opr;
+        const TensorLayout *diff_layout, *grad_layout, *filter_layout;
+        const Convolution3DBackwardDataImpl* opr;
 
         std::string to_string() const;
         void init_desc(convolution3d::CUDNNBwdDataDescs& desc) const {
             desc.set(filter_meta, *diff_layout, *grad_layout, opr->param());
         }
-        SizeArgs(Convolution3DBackwardDataImpl* opr, const TensorLayout& filter,
-                 const TensorLayout& diff, const TensorLayout& grad);
-        SizeArgs(Convolution3DBackwardDataImpl* opr,
-                 const CanonizedFilterMeta& filter, const TensorLayout& diff,
+        SizeArgs(const Convolution3DBackwardDataImpl* opr,
+                 const TensorLayout& filter, const TensorLayout& diff,
                  const TensorLayout& grad);
+        SizeArgs(const Convolution3DBackwardDataImpl* opr,
+                 const TensorLayout& filter,
+                 const CanonizedFilterMeta& filter_meta,
+                 const TensorLayout& diff, const TensorLayout& grad);
 
         convolution3d::ForwardSizeArgs as_fwd_args() const {
-            return {handle, grad_layout, filter_meta, diff_layout,
-                    opr->param().data_type};
+            return {handle,      grad_layout, filter_layout,
+                    filter_meta, diff_layout, opr->param().data_type};
         }
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *filter_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(Convolution3DBackwardDataImpl* opr, _megdnn_tensor_in filter,
-                 _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(const Convolution3DBackwardDataImpl* opr,
+                 _megdnn_tensor_in filter, _megdnn_tensor_in diff,
+                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -154,29 +156,25 @@ public:
 //! implement group conv by another algo
 class Convolution3DBackwardDataImpl::AlgoGroupConvGeneral final
         : public AlgoBase {
-    AlgoBase* m_impl;
-    std::string m_name;
-
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
-    const char* name() const override { return m_name.c_str(); }
+    const char* name() const override {
+        return "CUDA:GROUP_CONV3D_BACKWARD_DATA";
+    }
 
-    static void modify_size_args(SizeArgs& args, TensorLayout& diff_pg,
-                                 TensorLayout& grad_pg);
     AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
+        return AlgoAttribute::REPRODUCIBLE;
     }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class Convolution3DBackwardDataImpl::AlgoPack : NonCopyableObj {
@@ -190,8 +188,7 @@ public:
 
     std::vector<AlgoCUDNN> cudnn;
     AlgoChanwise chanwise;
-    std::vector<AlgoGroupConvGeneral> gconv;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+    AlgoGroupConvGeneral group;
 
     std::vector<AlgoBase*>
             //! all algorithms

@@ -66,12 +66,10 @@ TEST_F(CUDA, GROUP_CONVOLUTION3D_FORWARD_1x1x1) {
     auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
                    size_t FD, size_t FH, size_t FW, size_t OC, size_t group) {
         Checker<Convolution3D> checker(handle_cuda());
-#if CUDNN_MAJOR <= 6
-        bool require_algo = true;
-        checker.set_before_exec_callback(
-                AlgoChecker<Convolution3DForward>{
-                        "group_conv3d:1x1x1", &require_algo});
-#endif
+        checker.set_before_exec_callback(AlgoChecker<Convolution3DForward>(
+                ExecutionPolicyAlgoName{"CUDA:GROUP_CONV3D_FORWARD",
+                                        {{"1x1x1",
+                                          {}}}}));
         Convolution3D::Param param;
         param.sparse = Convolution3D::Param::Sparse::GROUP;
         auto ICg = IC / group;
@@ -125,12 +123,84 @@ TEST_F(CUDA, GROUP_CONVOLUTION3D_BACKWARD_DATA) {
     run(2, 32, 64, 64, 64, 3, 3, 3, 32, 62, 62, 62, 0, 0, 0, 1, 1, 1, 4);
 }
 
+TEST_F(CUDA, GROUP_CONVOLUTION3D_BACKWARD_DATA_CUDNN) {
+    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
+                   size_t FD, size_t FH, size_t FW, size_t OC, size_t OD,
+                   size_t OH, size_t OW, size_t PD, size_t PH, size_t PW,
+                   size_t SD, size_t SH, size_t SW, size_t group) {
+        Checker<Convolution3DBackwardData> checker(handle_cuda());
+        checker.set_before_exec_callback(
+                AlgoChecker<Convolution3DBackwardData>(ExecutionPolicyAlgoName{
+                        "CUDA:GROUP_CONV3D_BACKWARD_DATA", {{"CUDNN", {}}}}));
+        Convolution3DBackwardData::Param param;
+        param.sparse = Convolution3D::Param::Sparse::GROUP;
+        param.pad_d = PD;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_d = SD;
+        param.stride_h = SH;
+        param.stride_w = SW;
+        auto ICg = IC / group;
+        auto OCg = OC / group;
+        checker.set_param(param).exec({{group, OCg, ICg, FD, FH, FW},
+                                       {N, OC, OD, OH, OW},
+                                       {N, IC, ID, IH, IW}});
+    };
+    // bug case in prev ver
+
+    run(1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 3, 0, 0, 1, 1, 1, 1, 2);
+    run(1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 0, 0, 1, 1, 1, 2, 2);
+    run(1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 0, 1, 0, 1, 2, 1, 2);
+    run(1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 0, 0, 2, 1, 1, 2);
+    // normal case
+    run(2, 64, 7, 7, 7, 3, 3, 3, 32, 5, 5, 5, 0, 0, 0, 1, 1, 1, 2);
+    // padded case
+    run(2, 32, 7, 7, 7, 3, 3, 3, 64, 7, 7, 7, 1, 1, 1, 1, 1, 1, 4);
+    // strided case
+    run(2, 32, 7, 7, 7, 3, 3, 3, 64, 3, 3, 3, 0, 0, 0, 2, 2, 2, 8);
+    // bigger case
+    run(2, 32, 64, 64, 64, 3, 3, 3, 32, 62, 62, 62, 0, 0, 0, 1, 1, 1, 4);
+}
+
 TEST_F(CUDA, GROUP_CONVOLUTION3D_BACKWARD_FILTER) {
     auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
                    size_t FD, size_t FH, size_t FW, size_t OC, size_t OD,
                    size_t OH, size_t OW, size_t PD, size_t PH, size_t PW,
                    size_t SD, size_t SH, size_t SW, size_t group) {
         Checker<Convolution3DBackwardFilter> checker(handle_cuda());
+        Convolution3DBackwardFilter::Param param;
+        param.sparse = Convolution3D::Param::Sparse::GROUP;
+        param.pad_d = PD;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_d = SD;
+        param.stride_h = SH;
+        param.stride_w = SW;
+        auto ICg = IC / group;
+        auto OCg = OC / group;
+        checker.set_param(param).exec({{N, IC, ID, IH, IW},
+                                       {N, OC, OD, OH, OW},
+                                       {group, OCg, ICg, FD, FH, FW}});
+    };
+    // normal case
+    run(2, 64, 7, 7, 7, 3, 3, 3, 32, 5, 5, 5, 0, 0, 0, 1, 1, 1, 2);
+    // padded case
+    run(2, 32, 7, 7, 7, 3, 3, 3, 64, 7, 7, 7, 1, 1, 1, 1, 1, 1, 4);
+    // strided case
+    run(2, 32, 7, 7, 7, 3, 3, 3, 64, 3, 3, 3, 0, 0, 0, 2, 2, 2, 8);
+}
+
+TEST_F(CUDA, GROUP_CONVOLUTION3D_BACKWARD_FILTER_CUDNN) {
+    auto run = [&](size_t N, size_t IC, size_t ID, size_t IH, size_t IW,
+                   size_t FD, size_t FH, size_t FW, size_t OC, size_t OD,
+                   size_t OH, size_t OW, size_t PD, size_t PH, size_t PW,
+                   size_t SD, size_t SH, size_t SW, size_t group) {
+        Checker<Convolution3DBackwardFilter> checker(handle_cuda());
+        checker.set_before_exec_callback(
+                AlgoChecker<Convolution3DBackwardFilter>(
+                        ExecutionPolicyAlgoName{
+                                "CUDA:GROUP_CONV3D_BACKWARD_FILTER",
+                                {{"CUDNN", {}}}}));
         Convolution3DBackwardFilter::Param param;
         param.sparse = Convolution3D::Param::Sparse::GROUP;
         param.pad_d = PD;

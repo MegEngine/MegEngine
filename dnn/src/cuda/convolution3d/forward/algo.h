@@ -48,22 +48,24 @@ public:
 
     AlgoBase() : Algorithm() { m_handle_type = Handle::HandleType::CUDA; }
     struct SizeArgs : public convolution3d::ForwardSizeArgs {
-        Convolution3DForwardImpl* opr;
+        const Convolution3DForwardImpl* opr;
 
         std::string to_string() const;
         void init_desc(convolution3d::CUDNNForwardDescs& desc) const {
             desc.set(*src_layout, filter_meta, *dst_layout, opr->param());
         }
-        SizeArgs(Convolution3DForwardImpl* opr, const TensorLayout& src,
+        SizeArgs(const Convolution3DForwardImpl* opr, const TensorLayout& src,
                  const TensorLayout& filter, const TensorLayout& dst);
-        SizeArgs(Convolution3DForwardImpl* opr, const TensorLayout& src,
-                 const CanonizedFilterMeta& filter, const TensorLayout& dst);
+        SizeArgs(const Convolution3DForwardImpl* opr, const TensorLayout& src,
+                 const TensorLayout& filter,
+                 const CanonizedFilterMeta& filter_meta,
+                 const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *filter_tensor, *dst_tensor;
         Workspace workspace;
 
-        ExecArgs(Convolution3DForwardImpl* opr, _megdnn_tensor_in src,
+        ExecArgs(const Convolution3DForwardImpl* opr, _megdnn_tensor_in src,
                  _megdnn_tensor_in filter, _megdnn_tensor_out dst,
                  _megdnn_workspace workspace);
     };
@@ -114,35 +116,22 @@ public:
 
 //! implement group conv by another algo
 class Convolution3DForwardImpl::AlgoGroupConvGeneral final : public AlgoBase {
-    AlgoBase* m_impl;
-    std::string m_name;
-
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
-    const char* name() const override { return m_name.c_str(); }
+    const char* name() const override { return "CUDA:GROUP_CONV3D_FORWARD"; }
 
     AlgoAttribute attribute() const override {
-        auto ret = AlgoAttribute::DEFAULT;
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-#define cb(attr)                               \
-    if (m_impl->contain_attribute_all(attr)) { \
-        ret |= attr;                           \
+        return AlgoAttribute::REPRODUCIBLE;
     }
-        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
-#undef cb
-
-        return ret;
-    }
-    static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
-                                 TensorLayout& dst_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class Convolution3DForwardImpl::AlgoCUDNN final : public AlgoBase {
@@ -226,8 +215,7 @@ public:
     Algo1x1x1 a1x1x1;
     AlgoInplaceMatmul inplace_matmul;
     AlgoChanwise chanwise;
-    std::vector<AlgoGroupConvGeneral> gconv;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+    AlgoGroupConvGeneral group;
 
     std::vector<AlgoBase*>
             //! all algorithms

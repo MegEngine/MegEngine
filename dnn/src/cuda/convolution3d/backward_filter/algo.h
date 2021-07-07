@@ -36,31 +36,34 @@ public:
 
     struct SizeArgs {
         HandleImpl* handle;
-        const TensorLayout *src_layout, *diff_layout;
+        const TensorLayout *src_layout, *diff_layout, *grad_layout;
         CanonizedFilterMeta grad_filter_meta;
-        Convolution3DBackwardFilterImpl* opr;
+        const Convolution3DBackwardFilterImpl* opr;
 
         std::string to_string() const;
         void init_desc(convolution3d::CUDNNBwdFilterDescs& desc) const {
             desc.set(*src_layout, *diff_layout, grad_filter_meta, opr->param());
         }
-        SizeArgs(Convolution3DBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const TensorLayout& grad);
-        SizeArgs(Convolution3DBackwardFilterImpl* opr, const TensorLayout& src,
-                 const TensorLayout& diff, const CanonizedFilterMeta& grad);
+        SizeArgs(const Convolution3DBackwardFilterImpl* opr,
+                 const TensorLayout& src, const TensorLayout& diff,
+                 const TensorLayout& grad);
+        SizeArgs(const Convolution3DBackwardFilterImpl* opr,
+                 const TensorLayout& src, const TensorLayout& diff,
+                 const TensorLayout& grad,
+                 const CanonizedFilterMeta& grad_meta);
 
         convolution3d::ForwardSizeArgs as_fwd_args() const {
-            return {handle, src_layout, grad_filter_meta, diff_layout,
-                    opr->param().data_type};
+            return {handle,           src_layout,  grad_layout,
+                    grad_filter_meta, diff_layout, opr->param().data_type};
         }
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(Convolution3DBackwardFilterImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(const Convolution3DBackwardFilterImpl* opr,
+                 _megdnn_tensor_in src, _megdnn_tensor_in diff,
+                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -162,30 +165,25 @@ public:
 //! implement group conv by another algo
 class Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral final
         : public AlgoBase {
-    AlgoBase* m_impl;
-    std::string m_name;
-
 public:
-    AlgoGroupConvGeneral(AlgoBase* impl);
-
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
+    std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray& layouts,
+            const OperatorBase* opr) const override;
 
-    const char* name() const override { return m_name.c_str(); }
-
-    AlgoAttribute attribute() const override {
-        auto ret = static_cast<AlgoAttribute>(0);
-        if (m_impl->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
-            ret |= AlgoAttribute::REPRODUCIBLE;
-        }
-        return ret;
+    const char* name() const override {
+        return "CUDA:GROUP_CONV3D_BACKWARD_FILTER";
     }
 
-    static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
-                                 TensorLayout& diff_pg);
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
+private:
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
 class Convolution3DBackwardFilterImpl::AlgoPack : NonCopyableObj {
@@ -200,8 +198,7 @@ public:
     std::vector<AlgoCUDNN> cudnn;
     AlgoInplaceMatmul inplace_matmul;
     AlgoChanwise chanwise;
-    std::vector<AlgoGroupConvGeneral> gconv;
-    std::unordered_map<AlgoBase*, AlgoGroupConvGeneral*> algo2gconv;
+    AlgoGroupConvGeneral group;
 
     std::vector<AlgoBase*>
             //! all algorithms

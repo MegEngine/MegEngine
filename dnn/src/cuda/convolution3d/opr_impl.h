@@ -21,17 +21,6 @@ public:
     using Convolution3DForward::Convolution3DForward;
     void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
               _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
-    AlgorithmInfo get_algorithm_info_heuristic(const TensorLayout& src,
-                                       const CanonizedFilterMeta& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(src, filter, dst,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
-                ->info();
-    }
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& filter,
                                   const TensorLayout& dst) override;
@@ -57,13 +46,6 @@ protected:
             const AlgoAttribute& negative_attr) override;
 
 private:
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const CanonizedFilterMeta& filter,
-                                       const TensorLayout& dst,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr);
-
     static AlgoPack sm_algo_pack;
 };
 
@@ -72,16 +54,6 @@ public:
     using Convolution3DBackwardData::Convolution3DBackwardData;
     void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
-    AlgorithmInfo get_algorithm_info_heuristic(
-            const CanonizedFilterMeta& filter, const TensorLayout& diff,
-            const TensorLayout& grad, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(filter, diff, grad,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
-                ->info();
-    }
     size_t get_workspace_in_bytes(const TensorLayout& filter,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
@@ -109,13 +81,6 @@ protected:
             const AlgoAttribute& negative_attr) override;
 
 private:
-    Algorithm* get_algorithm_heuristic(const CanonizedFilterMeta& filter,
-                                       const TensorLayout& diff,
-                                       const TensorLayout& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr);
-
     static AlgoPack sm_algo_pack;
 };
 
@@ -127,17 +92,6 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& diff,
                                   const TensorLayout& grad) override;
-    AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& src, const TensorLayout& diff,
-            const CanonizedFilterMeta& grad, size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(src, diff, grad,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
-                ->info();
-    }
-
     const char* get_algorithm_set_name() const override;
 
     class AlgoBase;
@@ -162,13 +116,6 @@ protected:
             const AlgoAttribute& negative_attr) override;
 
 private:
-    Algorithm* get_algorithm_heuristic(const TensorLayout& src,
-                                       const TensorLayout& diff,
-                                       const CanonizedFilterMeta& grad,
-                                       size_t workspace_limit_in_bytes,
-                                       const AlgoAttribute& positive_attr,
-                                       const AlgoAttribute& negative_attr);
-
     static AlgoPack sm_algo_pack;
 };
 }  // namespace cuda

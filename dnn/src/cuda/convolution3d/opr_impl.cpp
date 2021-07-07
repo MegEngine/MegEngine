@@ -35,16 +35,6 @@ Convolution3DForwardImpl::get_algorithm_heuristic(
         const TensorLayout& dst, size_t workspace_limit_in_bytes,
         const AlgoAttribute& positive_attr,
         const AlgoAttribute& negative_attr) {
-    auto fm = check_layout_fwd(src, filter, dst);
-    return get_algorithm_heuristic(src, fm, dst, workspace_limit_in_bytes,
-                                   positive_attr, negative_attr);
-}
-Convolution3DForwardImpl::Algorithm*
-Convolution3DForwardImpl::get_algorithm_heuristic(
-        const TensorLayout& src, const CanonizedFilterMeta& filter,
-        const TensorLayout& dst, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, filter, dst);
 
 #if CUDNN_MAJOR < 7 || (CUDNN_MAJOR == 7 && CUDNN_MINOR < 5)
@@ -98,18 +88,14 @@ Convolution3DForwardImpl::get_algorithm_heuristic(
         if (auto algo = get_cudnn_algo())
             return algo;
     }
+
     if (args.filter_meta.group > 1) {
-        auto orig_args = args;
-        TensorLayout a, b;
-        AlgoGroupConvGeneral::modify_size_args(args, a, b);
-        if (prefer_1x1x1()) {
-            return sm_algo_pack.algo2gconv.at(&sm_algo_pack.a1x1x1);
+        if (auto algo =
+                    megdnn::get_algo_match_attribute<Convolution3DForwardImpl>(
+                            &sm_algo_pack.group, positive_attr,
+                            negative_attr)) {
+            return algo;
         }
-        if (is_cudnn_supported(args)) {
-            if (auto algo = get_cudnn_algo())
-                return sm_algo_pack.algo2gconv.at(algo);
-        }
-        args = orig_args;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DForwardImpl>(
@@ -129,7 +115,7 @@ size_t Convolution3DForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) {
     AlgoBase::SizeArgs args(this, src, filter, dst);
-    return get_algorithm(this, src, args.filter_meta, dst)
+    return get_algorithm(this, src, filter, dst)
             ->get_workspace_in_bytes(args);
 }
 
@@ -138,7 +124,7 @@ void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
                                     _megdnn_tensor_out dst,
                                     _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, src, filter, dst, workspace);
-    auto algo = get_algorithm(this, src.layout, args.filter_meta, dst.layout);
+    auto algo = get_algorithm(this, src.layout, filter.layout, dst.layout);
     algo->check_workspace(args, workspace).exec(args);
 }
 
@@ -151,7 +137,7 @@ void Convolution3DBackwardDataImpl::exec(_megdnn_tensor_in filter,
                                          _megdnn_tensor_out grad,
                                          _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, filter, diff, grad, workspace);
-    auto algo = get_algorithm(this, args.filter_meta, diff.layout, grad.layout);
+    auto algo = get_algorithm(this, filter.layout, diff.layout, grad.layout);
     algo->check_workspace(args, workspace).exec(args);
 }
 
@@ -166,17 +152,6 @@ Convolution3DBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
 Convolution3DBackwardDataImpl::Algorithm*
 Convolution3DBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& filter, const TensorLayout& diff,
-        const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
-    auto fm = check_layout_fwd(grad, filter, diff);
-    return get_algorithm_heuristic(fm, diff, grad, workspace_limit_in_bytes,
-                                   positive_attr, negative_attr);
-}
-
-Convolution3DBackwardDataImpl::Algorithm*
-Convolution3DBackwardDataImpl::get_algorithm_heuristic(
-        const CanonizedFilterMeta& filter, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
         const AlgoAttribute& positive_attr,
         const AlgoAttribute& negative_attr) {
@@ -215,14 +190,11 @@ Convolution3DBackwardDataImpl::get_algorithm_heuristic(
     }
 
     if (args.filter_meta.group > 1) {
-        auto orig_args = args;
-        TensorLayout a, b;
-        AlgoGroupConvGeneral::modify_size_args(args, a, b);
-        if (is_cudnn_supported(args.as_fwd_args())) {
-            if (auto algo = get_cudnn_algo())
-                return sm_algo_pack.algo2gconv.at(algo);
+        if (auto algo = megdnn::get_algo_match_attribute<
+                    Convolution3DBackwardDataImpl>(
+                    &sm_algo_pack.group, positive_attr, negative_attr)) {
+            return algo;
         }
-        args = orig_args;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DBackwardDataImpl>(
@@ -234,7 +206,7 @@ size_t Convolution3DBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
     AlgoBase::SizeArgs args(this, filter, diff, grad);
-    return get_algorithm(this, args.filter_meta, diff, grad)
+    return get_algorithm(this, filter, diff, grad)
             ->get_workspace_in_bytes(args);
 }
 
@@ -248,7 +220,7 @@ void Convolution3DBackwardFilterImpl::exec(_megdnn_tensor_in src,
                                            _megdnn_workspace workspace) {
     AlgoBase::ExecArgs args(this, src, diff, grad, workspace);
     auto algo =
-            get_algorithm(this, src.layout, diff.layout, args.grad_filter_meta);
+            get_algorithm(this, src.layout, diff.layout, grad.layout);
     algo->check_workspace(args, workspace).exec(args);
 }
 
@@ -264,17 +236,6 @@ Convolution3DBackwardFilterImpl::Algorithm*
 Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad, size_t workspace_limit_in_bytes,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
-    auto fm = check_layout_fwd(src, grad, diff);
-    return get_algorithm_heuristic(src, diff, fm, workspace_limit_in_bytes,
-                                   positive_attr, negative_attr);
-}
-
-Convolution3DBackwardFilterImpl::Algorithm*
-Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
-        const TensorLayout& src, const TensorLayout& diff,
-        const CanonizedFilterMeta& grad, size_t workspace_limit_in_bytes,
         const AlgoAttribute& positive_attr,
         const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
@@ -310,15 +271,13 @@ Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
         if (auto algo = get_cudnn_algo())
             return algo;
     }
+
     if (args.grad_filter_meta.group > 1) {
-        auto orig_args = args;
-        TensorLayout a, b;
-        AlgoGroupConvGeneral::modify_size_args(args, a, b);
-        if (is_cudnn_supported(args.as_fwd_args())) {
-            if (auto algo = get_cudnn_algo())
-                return sm_algo_pack.algo2gconv.at(algo);
+        if (auto algo = megdnn::get_algo_match_attribute<
+                    Convolution3DBackwardFilterImpl>(
+                    &sm_algo_pack.group, positive_attr, negative_attr)) {
+            return algo;
         }
-        args = orig_args;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DBackwardFilterImpl>(
@@ -330,7 +289,7 @@ size_t Convolution3DBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad) {
     AlgoBase::SizeArgs args(this, src, diff, grad);
-    return get_algorithm(this, src, diff, args.grad_filter_meta)
+    return get_algorithm(this, src, diff, grad)
             ->get_workspace_in_bytes(args);
 }
 

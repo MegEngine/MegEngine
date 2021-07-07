@@ -26,21 +26,7 @@ Convolution3DBackwardFilterImpl::AlgoPack::AlgoPack() {
     }
 
     all_algos.push_back(&inplace_matmul);
-    all_algos.reserve(all_algos.size() * 2);
-
-    // add gconv algos by AlgoGroupConvGeneral
-    auto all_algos_data = all_algos.data();
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        gconv.push_back({all_algos[i]});
-    }
-    for (size_t i = 1; i < all_algos.size(); ++ i) {
-        algo2gconv[all_algos[i]] = &gconv[i - 1];
-    }
-    for (auto &&i: gconv) {
-        all_algos.push_back(&i);
-    }
-    megdnn_assert(all_algos_data == all_algos.data());
-    non_cudnn_algos.push_back(all_algos.rbegin()[0]); //group inplace_matmul
+    all_algos.push_back(&group);
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);
@@ -64,27 +50,26 @@ Convolution3DBackwardFilterImpl::AlgoPack
 Convolution3DBackwardFilterImpl::sm_algo_pack;
 
 Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
-        Convolution3DBackwardFilterImpl *o,
+        const Convolution3DBackwardFilterImpl *o,
         const TensorLayout &src, const TensorLayout &diff,
         const TensorLayout &grad):
-    SizeArgs(o, src, diff, o->make_canonized_filter_meta(src.ndim, grad))
+    SizeArgs(o, src, diff, grad, o->make_canonized_filter_meta(src.ndim, grad))
 {
 }
 
 Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs::SizeArgs(
-        Convolution3DBackwardFilterImpl *o,
-        const TensorLayout &src, const TensorLayout &diff,
-        const CanonizedFilterMeta &grad):
-    handle{concrete_handle(o->handle())},
-    src_layout{&src},
-    diff_layout{&diff},
-    grad_filter_meta{grad},
-    opr{o}
-{
-}
+        const Convolution3DBackwardFilterImpl* o, const TensorLayout& src,
+        const TensorLayout& diff, const TensorLayout& grad,
+        const CanonizedFilterMeta& grad_meta)
+        : handle{concrete_handle(o->handle())},
+          src_layout{&src},
+          diff_layout{&diff},
+          grad_layout{&grad},
+          grad_filter_meta{grad_meta},
+          opr{o} {}
 
 Convolution3DBackwardFilterImpl::AlgoBase::ExecArgs::ExecArgs(
-        Convolution3DBackwardFilterImpl *opr,
+        const Convolution3DBackwardFilterImpl *opr,
         _megdnn_tensor_in src,
         _megdnn_tensor_in diff,
         _megdnn_tensor_out grad,
