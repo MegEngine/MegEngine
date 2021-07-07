@@ -251,6 +251,7 @@ void init_graph_rt(py::module m) {
         .def_readwrite("f16_io_comp", &_OptimizeForInferenceOptions::f16_io_comp)
         .def_readwrite("fuse_conv_bias_nonlinearity", &_OptimizeForInferenceOptions::fuse_conv_bias_nonlinearity)
         .def_readwrite("fuse_conv_bias_with_z", &_OptimizeForInferenceOptions::fuse_conv_bias_with_z)
+        .def_readwrite("fuse_preprocess", &_OptimizeForInferenceOptions::fuse_preprocess)
         .def_readwrite("layout_transform", &_OptimizeForInferenceOptions::layout_transform)
         ;
 

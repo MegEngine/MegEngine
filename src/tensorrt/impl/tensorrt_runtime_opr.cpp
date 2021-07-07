@@ -117,7 +117,7 @@ void TensorRTRuntimeOpr::get_output_var_shape(
                 chan_pos = 1;
             }
             dims.nbDims = dims.nbDims + 1;
-            dims.d[chan_pos] = dims.d[chan_pos] / 4;
+            dims.d[chan_pos] = (dims.d[chan_pos] + 3) / 4;
             dims.d[dims.nbDims - 1] = 4;
         }
 #endif

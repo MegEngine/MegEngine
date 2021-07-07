@@ -309,6 +309,7 @@ def optimize_for_inference(args, outputs):
         "enable_chwn4",
         "enable_fuse_conv_bias_nonlinearity",
         "enable_fuse_conv_bias_with_z",
+        "eaable_fuse_preprocess",
     ]
     kwargs = {}
     for k in args_list:
@@ -464,6 +465,12 @@ def main():
         help="fuse conv_bias with z input for inference on "
         "nvidia GPU (this optimization pass will result in mismatch "
         "of the precision of output of training and inference)",
+    )
+    parser.add_argument(
+        "--enable-fuse-preprocess",
+        action="store_true",
+        help="fuse astype\pad_channel\dimshuffle and etc opr "
+        "from h2d opr",
     )
     args = parser.parse_args()
 
