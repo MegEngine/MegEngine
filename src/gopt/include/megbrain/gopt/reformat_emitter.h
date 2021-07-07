@@ -20,8 +20,8 @@ namespace gopt {
 
 class Emitter {
 public:
-    using Builder = thin_function<VarNode*(VarNode*)>;
-    using Checker = thin_function<bool(VarNode*)>;
+    using Builder = thin_function<VarNode*(const VarNodeArray&)>;
+    using Checker = thin_function<bool(const VarNodeArray&)>;
     using EmitResult = std::tuple<Builder, Checker>;
     virtual ~Emitter() = default;
     virtual EmitResult emit() const = 0;
@@ -37,6 +37,14 @@ protected:
     Pattern mixin_analyze() const;
     Checker mixin_emit_checker(const Pattern& pattern) const;
     megdnn::NamedTensorShape m_src, m_dest;
+};
+
+class MakeShapeEmitter final : public Emitter, ModifyShapeMixin {
+public:
+    MakeShapeEmitter(const megdnn::NamedTensorShape& src,
+                     const megdnn::NamedTensorShape& dest)
+            : ModifyShapeMixin(src, dest) {}
+    EmitResult emit() const override;
 };
 
 class ReshapeEmitter final : public Emitter, ModifyShapeMixin {
@@ -64,7 +72,10 @@ public:
     EmitResult emit() const override;
 
 private:
-    SmallVector<Builder> analyze() const;
+    struct UnderlyingBuilders {
+        Builder make_shape1, make_shape2, reshape1, reshape2, dimshuffle;
+    };
+    UnderlyingBuilders analyze() const;
 };
 }  // namespace gopt
 }  // namespace mgb

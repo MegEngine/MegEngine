@@ -19,6 +19,7 @@ using namespace gopt;
 using Dimension = megdnn::Dimension;
 using NamedTensorShape = megdnn::NamedTensorShape;
 
+// =================== ModifyShapeMixin ====================*/
 ModifyShapeMixin::Pattern ModifyShapeMixin::mixin_analyze() const {
     static constexpr uint32_t UNDETERMINED_EXTENT =
             Dimension::UNDETERMINED_EXTENT;
@@ -50,7 +51,9 @@ ModifyShapeMixin::Pattern ModifyShapeMixin::mixin_analyze() const {
 ModifyShapeMixin::Checker ModifyShapeMixin::mixin_emit_checker(
         const Pattern& pattern) const {
     auto src = m_src;
-    auto checker = [src, pattern](VarNode* var) {
+    auto checker = [src, pattern](const VarNodeArray& input) {
+        mgb_assert(input.size() >= 1);
+        const auto& var = input.front();
         const auto& shp = var->shape();
         if (shp.ndim != src.ndim)
             return false;
@@ -73,10 +76,14 @@ ModifyShapeMixin::Checker ModifyShapeMixin::mixin_emit_checker(
     return checker;
 }
 
-ReshapeEmitter::EmitResult ReshapeEmitter::emit() const {
+// =================== MakeShapeEmitter ====================*/
+MakeShapeEmitter::EmitResult MakeShapeEmitter::emit() const {
     auto pattern = mixin_analyze();
-    auto builder = [pattern](VarNode* var) {
-        auto sym_var = SymbolVar(var);
+    auto builder = [pattern](const VarNodeArray& input) {
+        mgb_assert(input.size() == 1,
+                   "number of input of MakeShapeBuilder should be 1(got:%zu)",
+                   input.size());
+        auto sym_var = SymbolVar(input.front());
         auto shp = opr::GetVarShape::make(sym_var);
         auto cv = [&sym_var](int c) { return sym_var.make_scalar(c); };
         auto sub = [&shp, &cv](int ax) {
@@ -97,31 +104,59 @@ ReshapeEmitter::EmitResult ReshapeEmitter::emit() const {
             }
         }
         auto tshp = opr::Concat::make(axs, 0);
-        auto ovar = opr::Reshape::make(sym_var, tshp);
+        return tshp.node();
+    };
+    auto checker = mixin_emit_checker(pattern);
+    return std::make_tuple(builder, checker);
+}
+
+// =================== ReshapeEmitter ====================*/
+ReshapeEmitter::EmitResult ReshapeEmitter::emit() const {
+    auto pattern = mixin_analyze();
+    auto builder = [pattern](const VarNodeArray& input) {
+        mgb_assert(input.size() == 2,
+                   "number of input of Reshape should be 2(got:%zu)",
+                   input.size());
+        auto ovar = opr::Reshape::make(input[0], input[1]);
         return ovar.node();
     };
     auto checker = mixin_emit_checker(pattern);
     return std::make_tuple(builder, checker);
 }
 
+// =================== DimshuffleEmitter ====================*/
 DimshuffleEmitter::EmitResult DimshuffleEmitter::emit() const {
     auto&& pattern = m_pattern;
-    auto builder = [pattern](VarNode* var) {
-        auto sym_var = SymbolVar(var);
+    auto builder = [pattern](const VarNodeArray& input) {
+        mgb_assert(input.size() == 1,
+                   "number of input of Dimshuffle should be 1(got:%zu)",
+                   input.size());
+        auto sym_var = SymbolVar(input.front());
         return opr::Dimshuffle::make(sym_var, pattern).node();
     };
-    auto checker = [pattern](VarNode* var) {
-        return var->shape().ndim == pattern.size();
+    auto checker = [pattern](const VarNodeArray& input) {
+        mgb_assert(input.size() == 1,
+                   "number of input of Dimshuffle should be 1(got:%zu)",
+                   input.size());
+        return input.front()->shape().ndim == pattern.size();
     };
     return std::make_tuple(builder, checker);
 }
 
+// =================== ReformatEmitter ====================*/
 ReformatEmitter::EmitResult ReformatEmitter::emit() const {
-    auto ops = analyze();
-    auto builder = [ops](VarNode* var) {
-        VarNode* ovar = var;
-        for (const auto& i : ops) {
-            ovar = i(ovar);
+    auto builders = analyze();
+    auto builder = [builders](const VarNodeArray& input) {
+        VarNode *var, *ovar;
+        var = ovar = input.front();
+        if (builders.make_shape1) {
+            auto shp1 = builders.make_shape1({var});
+            ovar = builders.reshape1({ovar, shp1});
+        }
+        ovar = builders.dimshuffle({ovar});
+        if (builders.make_shape2) {
+            auto shp2 = builders.make_shape2({var});
+            ovar = builders.reshape2({ovar, shp2});
         }
         return ovar;
     };
@@ -130,7 +165,7 @@ ReformatEmitter::EmitResult ReformatEmitter::emit() const {
     return std::make_tuple(builder, checker);
 }
 
-SmallVector<ReformatEmitter::Builder> ReformatEmitter::analyze() const {
+ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
     struct Dim {
         Dimension dim;
         int index;
@@ -196,12 +231,21 @@ SmallVector<ReformatEmitter::Builder> ReformatEmitter::analyze() const {
         i1[i] = src_dims[src_perm[i]].dim;
         i2[i] = src_dims[src_perm[permute[i]]].dim;
     }
-    SmallVector<Builder> ops;
-    if (!m_src.eq_shape(i1))
-        ops.emplace_back(std::get<0>(ReshapeEmitter(m_src, i1).emit()));
-    ops.emplace_back(std::get<0>(DimshuffleEmitter(permute).emit()));
-    if (!m_dest.eq_shape(i2))
-        ops.emplace_back(std::get<0>(ReshapeEmitter(i2, m_dest).emit()));
-    return ops;
+    UnderlyingBuilders builders;
+    if (!m_src.eq_shape(i1)) {
+        builders.make_shape1 =
+                std::move(std::get<0>(MakeShapeEmitter(m_src, i1).emit()));
+        builders.reshape1 =
+                std::move(std::get<0>(ReshapeEmitter(m_src, i1).emit()));
+    }
+    builders.dimshuffle =
+            std::move(std::get<0>(DimshuffleEmitter(permute).emit()));
+    if (!m_dest.eq_shape(i2)) {
+        builders.make_shape2 =
+                std::move(std::get<0>(MakeShapeEmitter(m_src, m_dest).emit()));
+        builders.reshape2 =
+                std::move(std::get<0>(ReshapeEmitter(i2, m_dest).emit()));
+    }
+    return builders;
 }
 // vim: syntax=cpp.doxygen
