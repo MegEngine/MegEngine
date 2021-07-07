@@ -25,7 +25,9 @@ TEST(TestReformatEmitter, Basic) {
             NamedTensorShape::Format::NCHW4);
     auto src = NamedTensorShape::make_named_tensor_shape(
             NamedTensorShape::Format::NCHW32);
-    auto reformat = gopt::ReformatEmitter(src, dest).emit();
+    auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
+    auto reformat = std::get<0>(tuple);
+    auto checker = std::get<1>(tuple);
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
@@ -51,6 +53,9 @@ TEST(TestReformatEmitter, Basic) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
     auto x = mkvar("x", {N, C / 32, H, W, 32});
+    EXPECT_TRUE(checker(x.node()));
+    auto x_ = mkvar("x", {N, H, W, C});
+    EXPECT_FALSE(checker(x_.node()));
     auto y1 = SymbolVar(reformat(x.node()));
     auto y2 = SymbolVar(nchw32_to_nchw4(x.node()));
     HostTensorND t1, t2;
@@ -69,7 +74,9 @@ TEST(TestReformatEmitter, MoreComplicated) {
             NamedTensorShape::Format::NCHW64);
     auto dest = NamedTensorShape::make_named_tensor_shape(
             NamedTensorShape::Format::NCHW88);
-    auto reformat = gopt::ReformatEmitter(src, dest).emit();
+    auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
+    auto reformat = std::get<0>(tuple);
+    auto checker = std::get<1>(tuple);
 
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
@@ -77,6 +84,9 @@ TEST(TestReformatEmitter, MoreComplicated) {
         return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
     };
     auto x = mkvar("x", {N, C / 64, H, W, 64});
+    EXPECT_TRUE(checker(x.node()));
+    auto x_ = mkvar("x", {N, H, W, C});
+    EXPECT_FALSE(checker(x_.node()));
     auto y = SymbolVar(reformat(x.node()));
     HostTensorND t;
     auto func = graph->compile({make_callback_copy(y, t)});

@@ -20,45 +20,51 @@ namespace gopt {
 
 class Emitter {
 public:
-    using Operator = thin_function<VarNode*(VarNode*)>;
+    using Builder = thin_function<VarNode*(VarNode*)>;
+    using Checker = thin_function<bool(VarNode*)>;
+    using EmitResult = std::tuple<Builder, Checker>;
     virtual ~Emitter() = default;
-    virtual Operator emit() const = 0;
+    virtual EmitResult emit() const = 0;
 };
 
-class ReshapeEmitter final : public Emitter {
+class ModifyShapeMixin {
+protected:
+    using Pattern = SmallVector<std::tuple<int, int, bool>>;
+    using Checker = Emitter::Checker;
+    ModifyShapeMixin(const megdnn::NamedTensorShape& src,
+                     const megdnn::NamedTensorShape& dest)
+            : m_src(src), m_dest(dest) {}
+    Pattern mixin_analyze() const;
+    Checker mixin_emit_checker(const Pattern& pattern) const;
+    megdnn::NamedTensorShape m_src, m_dest;
+};
+
+class ReshapeEmitter final : public Emitter, ModifyShapeMixin {
 public:
-    using Operator = typename Emitter::Operator;
     ReshapeEmitter(const megdnn::NamedTensorShape& src,
                    const megdnn::NamedTensorShape& dest)
-            : m_src{src}, m_dest{dest} {}
-    Operator emit() const override;
-
-private:
-    SmallVector<std::tuple<int, int, bool>> analyze() const;
-    megdnn::NamedTensorShape m_src, m_dest;
+            : ModifyShapeMixin(src, dest) {}
+    EmitResult emit() const override;
 };
 
 class DimshuffleEmitter final : public Emitter {
 public:
-    using Operator = typename Emitter::Operator;
     DimshuffleEmitter(const std::vector<int>& pattern) : m_pattern{pattern} {}
-    Operator emit() const override;
+    EmitResult emit() const override;
 
 private:
     std::vector<int> m_pattern;
 };
 
-class ReformatEmitter final : public Emitter {
+class ReformatEmitter final : public Emitter, ModifyShapeMixin {
 public:
-    using Operator = typename Emitter::Operator;
     ReformatEmitter(const megdnn::NamedTensorShape& src,
                     const megdnn::NamedTensorShape& dest)
-            : m_src{src}, m_dest{dest} {}
-    Operator emit() const override;
+            : ModifyShapeMixin(src, dest) {}
+    EmitResult emit() const override;
 
 private:
-    SmallVector<Operator> analyze() const;
-    megdnn::NamedTensorShape m_src, m_dest;
+    SmallVector<Builder> analyze() const;
 };
 }  // namespace gopt
 }  // namespace mgb
