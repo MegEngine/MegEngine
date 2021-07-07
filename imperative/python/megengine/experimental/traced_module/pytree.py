@@ -25,7 +25,7 @@ def _dict_flatten(inp):
     for key, value in sorted(inp.items()):
         results.append(value)
         aux_data.append(key)
-    return results, aux_data
+    return results, tuple(aux_data)
 
 
 def _dict_unflatten(inps, aux_data):
@@ -43,16 +43,23 @@ register_supported_type(
 
 
 def tree_flatten(
-    values, leaf_type: Callable = lambda x: type(x), is_leaf: Callable = lambda x: True
+    values,
+    leaf_type: Callable = lambda x: type(x),
+    is_leaf: Callable = lambda _: True,
+    is_const_leaf: Callable = lambda _: False,
 ):
     if type(values) not in SUPPORTED_TYPE:
         assert is_leaf(values)
-        return [values,], LeafDef(leaf_type(values))
+        node = LeafDef(leaf_type(values))
+        if is_const_leaf(values):
+            node.const_val = values
+        return [values,], node
+
     rst = []
     children_defs = []
     children_values, aux_data = SUPPORTED_TYPE[type(values)].flatten(values)
     for v in children_values:
-        v_list, treedef = tree_flatten(v, leaf_type)
+        v_list, treedef = tree_flatten(v, leaf_type, is_leaf, is_const_leaf)
         rst.extend(v_list)
         children_defs.append(treedef)
 
@@ -75,6 +82,18 @@ class TreeDef:
             start += ch.num_leaves
         return SUPPORTED_TYPE[self.type].unflatten(children, self.aux_data)
 
+    def __hash__(self):
+        return hash(
+            tuple(
+                [
+                    self.type,
+                    self.aux_data,
+                    self.num_leaves,
+                    tuple([hash(x) for x in self.children_defs]),
+                ]
+            )
+        )
+
     def __eq__(self, other):
         return (
             self.type == other.type
@@ -93,11 +112,20 @@ class LeafDef(TreeDef):
             type = (type,)
         super().__init__(type, None, [])
         self.num_leaves = 1
+        self.const_val = None
 
     def unflatten(self, leaves):
         assert len(leaves) == 1
         assert isinstance(leaves[0], self.type), self.type
         return leaves[0]
 
+    def __eq__(self, other):
+        return self.type == other.type and self.const_val == other.const_val
+
+    def __hash__(self):
+        return hash(tuple([self.type, self.const_val]))
+
     def __repr__(self):
-        return "Leaf({})".format(", ".join(t.__name__ for t in self.type))
+        return "Leaf({}[{}])".format(
+            ", ".join(t.__name__ for t in self.type), self.const_val
+        )

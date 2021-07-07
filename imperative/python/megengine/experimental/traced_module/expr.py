@@ -17,7 +17,7 @@ from ...core._imperative_rt.core2 import apply, set_module_tracing, unset_module
 from ...core.ops.special import Const
 from ...module import Module
 from ...tensor import Tensor
-from .module_tracer import active_module_tracer
+from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import TreeDef
 
@@ -148,6 +148,15 @@ class CallMethod(Expr):
         active_module_tracer().current_scope().insert(expr)
         return expr
 
+    @property
+    def graph(self):
+        if isinstance(self.inputs[0], ModuleNode):
+            m_node = self.inputs[0]
+            if m_node.argdef_graph_map:
+                assert self.arg_def in m_node.argdef_graph_map
+                return m_node.argdef_graph_map[self.arg_def]
+        return None
+
     def interpret(self, *inputs):
         args, kwargs = self.unflatten_args(inputs)
         obj = args[0]
@@ -252,7 +261,9 @@ class Constant(Expr):
     _constant_cache = {}
 
     def __init__(self, c):
-        # TODO: type check, since not all types should be captured as constant
+        assert isinstance(c, (RawTensor, Module))
+        if isinstance(c, Module):
+            assert module_tracer.is_builtin(c)
         self.value = c
         self.inputs = []
         node_cls = NodeMixin.get_wrapped_type(c)

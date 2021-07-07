@@ -57,9 +57,13 @@ class ModuleNode(Node):
     """
 
     module_type = Module  # type: Type[Module]
-    graph = None
     attr_type_map = None  # type: Dict[str, Type[Any]]
-    arg_def = None  # type: TreeDef
+    argdef_graph_map = None  # type: Dict[Treedef, "InternalGraph"]
+
+    def __init__(self, expr: "Expr", name: str = None):
+        super().__init__(expr, name)
+        self.attr_type_map = {}
+        self.argdef_graph_map = {}
 
     def __repr__(self):
         if self._name is None:
