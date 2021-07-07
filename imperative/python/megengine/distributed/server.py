@@ -145,6 +145,16 @@ class Methods:
                 del self.bcast_dict[key]
         return val
 
+    def _del(self, key):
+        with self.lock:
+            del self.user_dict[key]
+
+    # thread safe function
+    def user_pop(self, key):
+        ret = self.user_get(key)
+        self._del(key)
+        return ret
+
 
 class ThreadXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     pass
@@ -273,6 +283,10 @@ class Client:
     def user_get(self, key):
         """Get user defined key-value pairs across processes."""
         return self.proxy.user_get(key)
+
+    def user_pop(self, key):
+        """Get user defined key-value pairs and delete the resources when the get is done"""
+        return self.proxy.user_pop(key)
 
     def bcast_val(self, val, key, size):
         idx = self.bcast_dict[key] + 1

@@ -219,3 +219,17 @@ def test_collect_results(early_return, output_size):
         else [[dev] * output_size for dev in range(world_size)]
     )
     assert results == expects
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
+def test_user_set_pop():
+    @dist.launcher
+    def worker():
+        # set in race condition
+        dist.get_client().user_set("foo", 1)
+        if dist.get_rank() == 1:
+            ret = dist.get_client().user_pop("foo")
+            assert ret == 1
+
+    worker()
