@@ -6,7 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type
 
 import numpy
 
@@ -31,6 +31,7 @@ class Node:
 
     def __init__(self, expr: "Expr", name: str = None):
         self.expr = expr
+        self.users = []  # List[Expr]
         self._id = Node.__total_id
         Node.__total_id += 1
         self._name = name
@@ -59,11 +60,13 @@ class ModuleNode(Node):
     module_type = Module  # type: Type[Module]
     attr_type_map = None  # type: Dict[str, Type[Any]]
     argdef_graph_map = None  # type: Dict[Treedef, "InternalGraph"]
+    argdef_outdef_map = None  # type: Dict[Treedef, Treedef]
 
     def __init__(self, expr: "Expr", name: str = None):
         super().__init__(expr, name)
         self.attr_type_map = {}
         self.argdef_graph_map = {}
+        self.argdef_outdef_map = {}
 
     def __repr__(self):
         if self._name is None:

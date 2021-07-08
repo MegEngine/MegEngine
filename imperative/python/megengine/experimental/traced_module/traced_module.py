@@ -10,8 +10,13 @@ import collections
 import copy
 import functools
 from inspect import getmembers, isclass, ismethod
-from typing import Dict, List, Type
+from typing import Callable, Dict, Iterable, List, Sequence, Type
 
+import numpy as np
+from numpy.lib.arraysetops import isin
+
+from ... import functional as F
+from ... import get_logger
 from ... import module as M
 from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...core._imperative_rt.core2 import (
@@ -19,6 +24,7 @@ from ...core._imperative_rt.core2 import (
     set_module_tracing,
     unset_module_tracing,
 )
+from ...core._trace_option import set_symbolic_shape
 from ...core.tensor.array_method import ArrayMethodMixin
 from ...module import Module
 from ...tensor import Tensor
@@ -32,6 +38,8 @@ from .module_tracer import (
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import tree_flatten
 
+logger = get_logger(__name__)
+
 
 def _leaf_type(node):
     if isinstance(node, RawTensor):
@@ -40,6 +48,11 @@ def _leaf_type(node):
         return (Module, ModuleNode, NodeMixin)
     else:
         return type(node)
+
+
+def _is_leaf(node):
+    assert isinstance(node, RawTensor), type(node)
+    return isinstance(node, RawTensor)
 
 
 def _is_const_leaf(node):
@@ -80,7 +93,13 @@ class InternalGraph:
 
     @property
     def exprs(self):
-        return _expr_list(self)
+        return ExprFilter(_expr_iter(self))
+
+    def get_call_function(self, func: Callable = None):
+        return self.exprs.call_function(func)
+
+    def get_call_method(self, method: str = None):
+        return self.exprs.call_method(method)
 
     def add_input(self, i):
         self._inputs.append(i)
@@ -88,16 +107,131 @@ class InternalGraph:
     def add_output(self, o):
         self._outputs.append(o)
 
+    def get_dep_exprs(self, nodes: Sequence[Node]) -> List[Expr]:
+        if not isinstance(nodes, Sequence):
+            nodes = (nodes,)
+        ret = list()
+        queue = list(nodes)
+        while queue:
+            node = queue.pop()
+            expr = node.expr
+            if expr not in ret:
+                ret.append(expr)
+            for i in expr.inputs:
+                if i not in queue:
+                    queue.append(i)
+        return ret
+
+    def insert_call_function(self, func: Callable, nodes: Sequence[Node]):
+        if not isinstance(nodes, Sequence):
+            nodes = [nodes]
+        assert isinstance(func, Callable)
+        for i in nodes:
+            assert isinstance(
+                i, TensorNode
+            ), "CallFunction only accept TensorNode as inputs"
+
+        expr = CallFunction(func)
+        expr.inputs = nodes
+
+        for i in nodes:
+            i.users.append(expr)
+
+        idx = max(self._exprs.index(i.expr) for i in nodes) + 1
+        self._exprs.insert(idx, expr)
+
+        fake_inp_val = tuple(F.zeros(shape=i.shape, dtype=i.dtype) for i in nodes)
+        fake_out_val = func(*fake_inp_val)
+
+        def create_node(val: Tensor):
+            node = TensorNode(expr)
+            node.shape = val.shape
+            node.dtype = val.dtype
+            return node
+
+        out_nodes = list(create_node(i) for i in fake_out_val)
+        expr.outputs = out_nodes
+
+        return out_nodes
+
+    def insert_call_method(self, target, method, args):
+        if not isinstance(args, Sequence):
+            args = [args]
+        assert isinstance(target, (TensorNode, ModuleNode))
+        assert isinstance(method, str)
+        for i in args:
+            assert isinstance(i, TensorNode)
+
+        expr = CallMethod(method)
+        expr.inputs = [target, *args]
+
+        if isinstance(target, TensorNode):
+            fake_target_val = F.zeros(shape=target.shape, dtype=target.dtype)
+            fake_inp_val = tuple(F.zeros(shape=i.shape, dtype=i.dtype) for i in args)
+            fake_out_val = getattr(fake_target_val, method)(fake_inp_val)
+
+            def create_node(val: Tensor):
+                node = TensorNode(expr)
+                node.shape = val.shape
+                node.dtype = val.dtype
+                return node
+
+            out_nodes = list(create_node(i) for i in fake_out_val)
+            expr.outputs = out_nodes
+        else:
+            raise NotImplementedError()
+
+        return out_nodes
+
+    def replace_node(self, repl_dict: Dict[Node, Node]):
+        while repl_dict:
+            node, repl_node = repl_dict.popitem()
+            # check graph inputs and outputs
+            assert node not in self.inputs, "Cannot replace inputs"
+            for i, n in enumerate(self.outputs):
+                if n is node:
+                    self.outputs[i] = repl_node
+            # update users of node and repl_node
+            # update inputs of expr in node.users
+            dep_exprs = self.get_dep_exprs(repl_node)
+            i = 0
+            while i < len(node.users):
+                n = node.users[i]
+                if n in dep_exprs:
+                    logger.info("Find a loop: ignore this replacement once")
+                    logger.info("node: %s" % node.__repr__())
+                    logger.info("repl_node: %s" % repl_node.__repr__())
+                    i += 1
+                    continue
+                repl_node.users.append(n)
+                node.users.pop(i)
+                idx = n.inputs.index(node)
+                n.inputs[idx] = repl_node
+
+    def compile(self):
+        """
+        Delete unused expr.
+        """
+        dep_exprs = self.get_dep_exprs(self.outputs)
+        i = 0
+        while i < len(self._exprs):
+            expr = self._exprs[i]
+            if expr in dep_exprs:
+                i += 1
+                continue
+            for n in expr.inputs:
+                n.users.remove(expr)
+            self._exprs.remove(expr)
+
     def interpret(self, *inputs):
-        # TODO: support kwargs ?
-        # TODO: skip expressions which are independent and have no side effect
         node2value = {}
         for n, v in zip(self._inputs, inputs):
             node2value[n] = v
         for expr in self._exprs:
             values = expr.interpret(*list(node2value[i] for i in expr.inputs))
-            for n, v in zip(expr.outputs, values):
-                node2value[n] = v
+            if values is not None:
+                for n, v in zip(expr.outputs, values):
+                    node2value[n] = v
         return list(node2value[i] for i in self._outputs)
 
     def __repr__(self):
@@ -109,7 +243,8 @@ class InternalGraph:
 
 
 def _get_meth_name(obj, func):
-    for cls in type(obj).mro():
+    tp = obj if isinstance(obj, type) else type(obj)
+    for cls in tp.mro():
         for k, v in cls.__dict__.items():
             if v == func:
                 return k
@@ -131,15 +266,31 @@ def _wrapped_function(orig_func):
             meth_name = _get_meth_name(args[0], wrapped_fn)
             if meth_name:
                 self = inputs[0]
-                call_node = CallMethod.make(NodeMixin.get(self), meth_name)
+                if meth_name == "__new__":
+                    if all([not isinstance(i, RawTensor) for i in inputs]):
+                        # only trace Tensor.__new__() when there are tensors in args
+                        set_module_tracing()
+                        return orig_func(*args, **kwargs)
+                    if isinstance(args[1], RawTensor):
+                        node = NodeMixin.get(inputs[1])
+                        inputs[1] = copy.copy(inputs[1])
+                        # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor, which will cause they have same _NodeMixin__node in tracing.
+                        NodeMixin.wrap_safe(inputs[1], node)
+                        args, kwargs = tree_def.unflatten(inputs)
+                    call_node = CallMethod.make(self, meth_name)
+                else:
+                    call_node = CallMethod.make(NodeMixin.get(self), meth_name)
+                call_node.add_inputs(inputs[1:])
             else:
                 call_node = CallFunction.make(orig_func)
-
-            call_node.add_inputs(inputs)
+                call_node.add_inputs(inputs)
 
             call_node.arg_def = tree_def
             outputs = orig_func(*args, **kwargs)
-            call_node.add_outputs(outputs)
+            if meth_name == "__new__":
+                call_node.add_outputs(outputs, False)
+            else:
+                call_node.add_outputs(outputs)
             set_module_tracing()
             return outputs
         return orig_func(*args, **kwargs)
@@ -197,13 +348,14 @@ class TracedModuleBuilder(NodeMixin):
             mark_constant(i)
         callnode = CallMethod.make(NodeMixin.get(self))
 
-        callnode.add_inputs(inputs)
+        callnode.add_inputs(inputs[1:])
 
         callnode.arg_def = tree_def
 
         if self._is_builtin:
             unset_module_tracing()
-            outputs = self._mod(*args, **kwargs)
+            rst = self._mod(*args, **kwargs)
+            outputs, out_def = tree_flatten(rst, leaf_type=_leaf_type, is_leaf=_is_leaf)
             set_module_tracing()
             if self._is_builtin:
                 self._body = None
@@ -215,14 +367,13 @@ class TracedModuleBuilder(NodeMixin):
             NodeMixin.wrap_safe(
                 self, Input.make("self", NodeMixin.get_wrapped_type(self))
             )
+            origin_inp_node = [NodeMixin.get(i, None) for i in inputs[1:]]
             # prepare args and kwargs for inner graph
             def wrap(x):
-                wrapped = copy.copy(x)  # FIXME
                 NodeMixin.wrap(
-                    wrapped,
-                    lambda: Input.make(type=NodeMixin.get_wrapped_type(wrapped)),
+                    x, lambda: Input.make(type=NodeMixin.get_wrapped_type(x)),
                 )
-                return wrapped
+                return x
 
             args = [self]
             for i in inputs[1:]:
@@ -231,21 +382,25 @@ class TracedModuleBuilder(NodeMixin):
             active_module_tracer().patcher.auto_patch(
                 getattr(getattr(self._mod, "forward", self._mod), "__globals__", {})
             )
-            outputs = type(self._mod).forward(*args, **kwargs)
-
+            rst = type(self._mod).forward(*args, **kwargs)
+            outputs, out_def = tree_flatten(rst, leaf_type=_leaf_type, is_leaf=_is_leaf)
             for i in (
                 outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,)
             ):
                 active_module_tracer().current_scope().add_output(NodeMixin.get(i))
 
             NodeMixin.wrap_safe(self, orig_self)
+            for arg, node in zip(inputs[1:], origin_inp_node):
+                if node:
+                    NodeMixin.wrap_safe(arg, node)
             active_module_tracer().pop_scope()
 
         # rebind output to outer graph
         callnode.add_outputs(outputs)
         self_node = NodeMixin.get(self)
         self_node.argdef_graph_map[callnode.arg_def] = self._body
-        return outputs
+        self_node.argdef_outdef_map[callnode.arg_def] = out_def
+        return rst
 
     def __getattr__(self, name):
         if name not in self._mod.__dict__:
@@ -268,20 +423,29 @@ class TracedModuleBuilder(NodeMixin):
             return super().__getattribute__(name)
         else:
             wrapped = super().__getattribute__(name)
-            if name in self._mod.__dict__ and not NodeMixin.get(wrapped, None):
-                assert not self._is_builtin
-                NodeMixin.wrap(
-                    wrapped,
-                    lambda: GetAttr.make(
+            if name in self._mod.__dict__:
+                if not NodeMixin.get(wrapped, None):
+                    assert not self._is_builtin
+                    NodeMixin.wrap(
+                        wrapped,
+                        lambda: GetAttr.make(
+                            NodeMixin.get(self),
+                            name,
+                            type=NodeMixin.get_wrapped_type(wrapped),
+                        ),
+                    )
+                else:
+                    node = NodeMixin.get(wrapped)
+                    expr = GetAttr.make(
                         NodeMixin.get(self),
                         name,
                         type=NodeMixin.get_wrapped_type(wrapped),
-                    ),
-                )
+                    ).expr
+                    expr.outputs[0] = node
             return wrapped
 
 
-class _expr_list:
+class _expr_iter:
     def __init__(self, graph: InternalGraph):
         self.graph = graph
 
@@ -293,6 +457,59 @@ class _expr_list:
                     yield from expr.graph.exprs
             else:
                 yield expr
+
+
+class ExprFilter:
+    def __init__(self, expr_iter: Iterable):
+        self._iter = expr_iter
+
+    def __iter__(self):
+        return iter(self._iter)
+
+    def call_function(self, func):
+        return ExprFilterCallFunction(self, func)
+
+    def call_method(self, method):
+        return ExprFilterCallMethod(self, method)
+
+    def as_list(self):
+        return list(self)
+
+    def as_dict(self):
+        raise NotImplementedError("need key")
+
+    def as_unique(self):
+        (expr,) = self
+        return expr
+
+    def as_count(self):
+        return sum(1 for _ in self)
+
+
+class ExprFilterCallFunction(ExprFilter):
+    def __init__(self, expr_iter, func: Callable = None):
+        super().__init__(expr_iter)
+        self.func = func
+
+    def __iter__(self):
+        for i in self._iter:
+            if not isinstance(i, CallFunction):
+                continue
+            if self.func is None or i.func == self.func:
+                yield i
+
+
+class ExprFilterCallMethod(ExprFilter):
+    def __init__(self, expr_iter, method: str = None):
+        super().__init__(expr_iter)
+        self.method = method
+
+    def __iter__(self):
+        for i in self._iter:
+            if not isinstance(i, CallMethod):
+                continue
+            if self.method is None or i.method == self.method:
+                yield i
 
 
 class TracedModule(Module):
@@ -312,10 +529,12 @@ class TracedModule(Module):
             ((self, *args), kwargs), _leaf_type, is_const_leaf=_is_const_leaf
         )
         assert treedef in self.m_node.argdef_graph_map
-        inputs = [i for i in inputs if isinstance(i, (Module, RawTensor))]
+        inputs = filter(
+            lambda i: isinstance(i, (Module, TracedModuleBuilder, RawTensor)), inputs
+        )  # allow TracedModuleBuilder for retrace.
         outputs = self.m_node.argdef_graph_map[treedef].interpret(*inputs)
-        if len(outputs) == 1:
-            return outputs[0]
+        out_def = self.m_node.argdef_outdef_map[treedef]
+        outputs = out_def.unflatten(outputs)
         return outputs
 
     @property
@@ -339,9 +558,8 @@ class TracedModule(Module):
             if graph is None:
                 assert not isinstance(module, TracedModule)
                 const = Constant(module)
-                modulenode = const.outputs[0]
-                modulenode.module_type = type(module)
-                call.inputs[0] = modulenode
+                const.outputs[0] = call.inputs[0]
+                const.outputs[0].expr = const
                 return [const, call]
             exprs = []
             for expr in graph._exprs:
@@ -350,29 +568,40 @@ class TracedModule(Module):
                     if call and inp in graph._inputs:
                         inp_idx = graph._inputs.index(inp)
                         expr.inputs[idx] = call.inputs[inp_idx]
+                        call.inputs[inp_idx].users.append(expr)
                 # replace outputs for submodule's expr
                 for idx, outp in enumerate(expr.outputs):
                     if call and outp in graph._outputs:
                         oup_idx = graph._outputs.index(outp)
                         expr.outputs[idx] = call.outputs[oup_idx]
+                        call.outputs[oup_idx].expr = expr
 
                 if isinstance(expr, GetAttr):
                     # replace GetAttr with Constant
                     if isinstance(expr.outputs[0], TensorNode):
                         const = Constant(getattr(module, expr.name))
                         const.outputs = expr.outputs
+                        const.outputs[0].expr = const
                         exprs.append(const)
 
                 elif isinstance(expr, CallMethod):
                     obj_node = expr.inputs[0]
                     if isinstance(obj_node, ModuleNode):
-                        assert isinstance(expr.inputs[0].expr, GetAttr)
-                        (obj,) = expr.inputs[0].expr.interpret(module)
-                        exprs.extend(_flatten_subgraph(expr.graph, obj, expr))
+                        pre_expr = expr.inputs[0].expr
+                        if isinstance(pre_expr, GetAttr):
+                            (obj,) = expr.inputs[0].expr.interpret(module)
+                            exprs.extend(_flatten_subgraph(expr.graph, obj, expr))
+                        else:
+                            # module has been replaced.
+                            assert isinstance(pre_expr, Constant)
                     else:
                         exprs.append(expr)
                 else:
                     exprs.append(expr)
+
+            if call is not None:
+                for i in call.inputs:
+                    i.users.remove(call)
 
             return exprs
 
@@ -422,22 +651,26 @@ def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
     """
     assert active_module_tracer() is None
     try:
+        use_sym_shape = set_symbolic_shape(True)
         set_module_tracing()
         set_active_module_tracer(module_tracer(_wrapped_function))
+
         with active_module_tracer().patcher:
             global_scope = InternalGraph()
             active_module_tracer().push_scope(global_scope)
 
             builder = TracedModuleBuilder(mod, True)
             NodeMixin.wrap_safe(builder, Input.make("TopModule", ModuleNode))
-            inputs, _ = tree_flatten((args, kwargs))
+            inputs, _ = tree_flatten((args, kwargs), is_const_leaf=_is_const_leaf)
             for _, i in enumerate(inputs):
-                NodeMixin.wrap_safe(
-                    i, Input.make("arg_{}".format(_), NodeMixin.get_wrapped_type(i))
-                )
+                if isinstance(i, RawTensor):
+                    NodeMixin.wrap_safe(
+                        i, Input.make("arg_{}".format(_), NodeMixin.get_wrapped_type(i))
+                    )
             builder(*args, **kwargs)
             active_module_tracer().pop_scope()
             return builder.build()
     finally:
+        set_symbolic_shape(use_sym_shape)
         set_active_module_tracer(None)
         unset_module_tracing()

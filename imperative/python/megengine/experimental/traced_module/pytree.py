@@ -10,6 +10,8 @@
 import collections
 from typing import Callable, NamedTuple
 
+import numpy as np
+
 SUPPORTED_TYPE = {}
 
 NodeType = NamedTuple("NodeType", [("flatten", Callable), ("unflatten", Callable)])
@@ -33,7 +35,7 @@ def _dict_unflatten(inps, aux_data):
 
 
 register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
-register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: list(x))
+register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: tuple(x))
 register_supported_type(dict, _dict_flatten, _dict_unflatten)
 register_supported_type(
     slice,
@@ -52,7 +54,10 @@ def tree_flatten(
         assert is_leaf(values)
         node = LeafDef(leaf_type(values))
         if is_const_leaf(values):
-            node.const_val = values
+            if isinstance(values, np.ndarray):
+                node.const_val = str(values)
+            else:
+                node.const_val = values
         return [values,], node
 
     rst = []

@@ -9,6 +9,7 @@
 
 import builtins
 import collections
+import inspect
 from typing import Callable, List
 
 from ...core._imperative_rt import OpDef
@@ -16,10 +17,10 @@ from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...core._imperative_rt.core2 import apply, set_module_tracing, unset_module_tracing
 from ...core.ops.special import Const
 from ...module import Module
-from ...tensor import Tensor
+from ...tensor import Parameter, Tensor
 from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
-from .pytree import TreeDef
+from .pytree import TreeDef, tree_flatten
 
 
 class Expr:
@@ -38,25 +39,28 @@ class Expr:
         for val in vals:
             node = NodeMixin.get(val, None)
             if isinstance(node, (TensorNode, ModuleNode)):
-                if node not in self.inputs:
-                    self.inputs.append(node)
+                self.inputs.append(node)
+                node.users.append(self)
             else:
                 assert node is None
-                assert type(val) in builtins.__dict__.values()
                 idx = len(self.inputs) + len(self.const_val)
                 self.const_val.append((idx, val))
 
-    def add_outputs(self, outputs):
+    def add_outputs(self, outputs, check_inplace=True):
         self.outputs = []
-        if not isinstance(outputs, collections.Sequence):
-            outputs = (outputs,)
+        if outputs is not None:
+            if not isinstance(outputs, collections.Sequence):
+                outputs = (outputs,)
 
-        for i in outputs:
-            assert isinstance(i, RawTensor)
-            self.outputs.append(NodeMixin.get_wrapped_type(i)(self))
+            for i in outputs:
+                assert isinstance(i, RawTensor)
+                node = NodeMixin.get(i, None) if check_inplace else None
+                self.outputs.append(
+                    node if node else NodeMixin.get_wrapped_type(i)(self)
+                )
 
-        for i, node in zip(outputs, self.outputs,):
-            NodeMixin.wrap_safe(i, node)
+            for i, node in zip(outputs, self.outputs,):
+                NodeMixin.wrap_safe(i, node)
 
     def unflatten_args(self, inputs):
         if self.arg_def is not None:
@@ -110,6 +114,7 @@ class GetAttr(Expr):
         self.inputs = [
             module,
         ]
+        module.users.append(self)
         self.name = name
         node_cls = type if type else Node
         self.outputs = [
@@ -134,12 +139,20 @@ class GetAttr(Expr):
 
 # expr: outputs = inputs[0].__call__(*inputs[1:])
 class CallMethod(Expr):
-    def __init__(self, module, method="__call__"):
-        assert isinstance(module, (TensorNode, ModuleNode))
-        self.inputs = [
-            module,
-        ]
-        self.const_val = []
+    def __init__(self, node, method="__call__"):
+        if isinstance(node, type):
+            assert issubclass(node, Tensor)
+            cls = Parameter if issubclass(node, Parameter) else Tensor
+
+            self.inputs = []
+            self.const_val = [(0, cls)]
+        else:
+            assert isinstance(node, (TensorNode, ModuleNode))
+            node.users.append(self)
+            self.inputs = [
+                node,
+            ]
+            self.const_val = []
         self.method = method
 
     @classmethod
@@ -160,10 +173,13 @@ class CallMethod(Expr):
     def interpret(self, *inputs):
         args, kwargs = self.unflatten_args(inputs)
         obj = args[0]
-        args = args[1:]
+        meth = getattr(obj, self.method)
+        if inspect.ismethod(meth):
+            args = args[1:]
         outputs = getattr(obj, self.method)(*args, **kwargs)
-        if isinstance(outputs, RawTensor):
-            outputs = (outputs,)
+        if outputs is None:
+            return outputs
+        outputs, _ = tree_flatten(outputs, is_leaf=lambda x: isinstance(x, RawTensor))
         return outputs
 
     def __repr__(self):
@@ -171,7 +187,7 @@ class CallMethod(Expr):
         kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
         return "{} = {}.{}({})".format(
             ", ".join(str(i) for i in self.outputs),
-            self.inputs[0],
+            self.args[0],
             self.method,
             ", ".join([args, kwargs]),
         )
@@ -209,9 +225,8 @@ class Apply(Expr):
             if node is None:  # capture as constant
                 NodeMixin.wrap_safe(i, Constant.make(i))
         apply_node = cls.make(opdef)
-        for i in inputs:
-            assert isinstance(i, RawTensor)
-            apply_node.inputs.append(NodeMixin.get(i))
+        apply_node.add_inputs(inputs)
+        assert not apply_node.const_val
 
         unset_module_tracing()
         outputs = apply(opdef, *inputs)
@@ -283,7 +298,7 @@ class Constant(Expr):
         return (self.value,)
 
     def __repr__(self):
-        return "{} = Constant({})".format(self.outputs[0], self.value)
+        return "{} = Constant({})".format(self.outputs[0], type(self.value))
 
     def __getstate__(self):
         state = self.__dict__.copy()

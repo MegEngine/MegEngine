@@ -79,6 +79,8 @@ BUILTIN_ARRAY_METHOD = [
     "min",
     "max",
     "mean",
+    "__getitem__",
+    "__setitem__",
 ]
 
 
@@ -176,7 +178,8 @@ class Patcher:
             self.patch_module(module)
         for meth in BUILTIN_ARRAY_METHOD:
             self.patch_method(ArrayMethodMixin, meth, self.wrap_fn)
-
+        self.patch_method(Tensor, "detach", self.wrap_fn)
+        self.patch_method(Tensor, "__new__", self.wrap_fn)
         for i, j in self._builtin_functions:
             if id(i) not in self.visited_frames_ids:
                 self.patch_function(i, j, self.wrap_fn)
@@ -203,7 +206,13 @@ class Patcher:
         import inspect
 
         if id(module.__dict__) not in self.visited_frames_ids:
-            for k, v in module.__dict__.items():
+            keys = (
+                getattr(module, "__all__")
+                if hasattr(module, "__all__")
+                else module.__dict__.keys()
+            )
+            for k in keys:
+                v = getattr(module, k)
                 if inspect.isfunction(v) and not k.startswith("_"):
                     self.patch_function(module.__dict__, k, self.wrap_fn)
             self.visited_frames_ids.add(id(module.__dict__))
