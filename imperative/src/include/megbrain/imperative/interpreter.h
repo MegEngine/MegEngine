@@ -41,6 +41,7 @@ struct Interpreter {
 
         virtual DeviceTensorND get_dev_tensor(Handle) = 0;
 
+        virtual bool check_available() = 0;
         virtual void sync() = 0;
         virtual void close() = 0;
 

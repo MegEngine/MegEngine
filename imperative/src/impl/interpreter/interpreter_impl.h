@@ -60,6 +60,7 @@ struct ChannelImpl : Interpreter::Channel {
 
     DeviceTensorND get_dev_tensor(Handle) override;
 
+    bool check_available() override;
     void sync() override;
     void close() override;
 
@@ -111,8 +112,6 @@ private:
         const SmallVector<TensorInfo*>& input_infos,
         const SmallVector<LogicalTensorDesc>& input_descs,
         SmallVector<Handle>* outputs);
-
-    bool check_available();
 
     void push_scope(std::string, State&);
     void pop_scope(std::string, State&);
