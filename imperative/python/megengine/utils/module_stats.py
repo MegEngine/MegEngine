@@ -113,7 +113,12 @@ def flops_norm(module: m.Linear, inputs, outputs):
 
 @register_flops(m.AvgPool2d, m.MaxPool2d)
 def flops_pool(module: m.AvgPool2d, inputs, outputs):
-    return np.prod(outputs[0].shape) * (module.kernel_size ** 2)
+    kernel_sum = 0
+    if isinstance(module.kernel_size, tuple) and len(module.kernel_size) == 2:
+        kernel_sum = np.prod(module.kernel_size)
+    else:
+        kernel_sum = module.kernel_size ** 2
+    return np.prod(outputs[0].shape) * kernel_sum
 
 
 @register_flops(m.AdaptiveAvgPool2d, m.AdaptiveMaxPool2d)
@@ -157,12 +162,12 @@ hook_modules = (
 
 
 def _mean(inp):
-    inp = mge.tensor(inp)
+    inp = mge.tensor(inp).astype(np.float32)
     return F.mean(inp).numpy()
 
 
 def _std(inp):
-    inp = mge.tensor(inp)
+    inp = mge.tensor(inp).astype(np.float32)
     return F.std(inp).numpy()
 
 
@@ -337,7 +342,7 @@ def print_param_stats(params):
     )
 
 
-def get_activation_stats(output: np.ndarray, has_input=False):
+def get_activation_stats(output: Tensor, has_input=False):
     out_shape = output.shape
     activations_dtype = np.dtype(output.dtype)
     nbits = get_dtype_bit(activations_dtype.name)
@@ -351,8 +356,8 @@ def get_activation_stats(output: np.ndarray, has_input=False):
         "size": act_size,
     }
     if has_input:
-        activation_stats["mean"] = "{:.3g}".format(output.mean())
-        activation_stats["std"] = "{:.3g}".format(output.std())
+        activation_stats["mean"] = "{:.3g}".format(_mean(output))
+        activation_stats["std"] = "{:.3g}".format(_std(output))
     return activation_stats
 
 
@@ -462,21 +467,21 @@ def module_stats(
         if cal_params:
             if hasattr(module, "weight") and module.weight is not None:
                 w = module.weight
-                param_stats = get_param_stats(w.numpy())
+                param_stats = get_param_stats(w)
                 param_stats["name"] = name + "-w"
                 params.append(param_stats)
 
             if hasattr(module, "bias") and module.bias is not None:
                 b = module.bias
-                param_stats = get_param_stats(b.numpy())
+                param_stats = get_param_stats(b)
                 param_stats["name"] = name + "-b"
                 params.append(param_stats)
 
         if cal_activations:
             if not isinstance(outputs, (tuple, list)):
-                output = outputs.numpy()
+                output = outputs
             else:
-                output = outputs[0].numpy()
+                output = outputs[0]
             activation_stats = get_activation_stats(output, has_inputs)
             activation_stats["name"] = name
             activation_stats["class_name"] = class_name
@@ -486,7 +491,9 @@ def module_stats(
     flops = []
     hooks = []
     activations = []
-    total_stats = namedtuple("total_stats", ["param_size", "flops", "act_size"])
+    total_stats = namedtuple(
+        "total_stats", ["param_size", "param_dims", "flops", "act_size", "act_dims"]
+    )
     stats_details = namedtuple("module_stats", ["params", "flops", "activations"])
 
     for (name, module) in model.named_modules():
@@ -536,7 +543,7 @@ def module_stats(
         if logging_to_stdout:
             print_activations_stats(activations, has_inputs)
 
-    if cal_flops and cal_params:
+    if cal_flops and cal_params and total_param_size != 0:
         extra_info["flops/param_size"] = "{:3.3f}".format(
             total_flops / total_param_size
         )
@@ -545,7 +552,11 @@ def module_stats(
 
     return (
         total_stats(
-            param_size=total_param_size, flops=total_flops, act_size=total_act_size,
+            param_size=total_param_size,
+            param_dims=total_param_dims,
+            flops=total_flops,
+            act_size=total_act_size,
+            act_dims=total_act_dims,
         ),
         stats_details(params=params, flops=flops, activations=activations),
     )

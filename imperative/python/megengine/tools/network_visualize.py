@@ -14,6 +14,7 @@ from collections import namedtuple
 import numpy as np
 from tqdm import tqdm
 
+import megengine as mge
 from megengine.core.tensor.dtype import is_quantize
 from megengine.logger import _imperative_rt_logger, get_logger, set_mgb_log_level
 from megengine.utils.module_stats import (
@@ -119,7 +120,9 @@ def visualize(
     flops_list = []
     params_list = []
     activations_list = []
-    total_stats = namedtuple("total_stats", ["param_size", "flops", "act_size"])
+    total_stats = namedtuple(
+        "total_stats", ["param_size", "param_dims", "flops", "act_size", "act_dims"]
+    )
     stats_details = namedtuple("module_stats", ["params", "flops", "activations"])
 
     for node in tqdm(graph.all_oprs):
@@ -166,14 +169,14 @@ def visualize(
                 flops_list.append(flops_stats)
 
         if cal_activations:
-            acts = get_activation_stats(node_oup.numpy(), has_input=has_input)
+            acts = get_activation_stats(node_oup, has_input=has_input)
             acts["name"] = node.name
             acts["class_name"] = node.type
             activations_list.append(acts)
 
         if cal_params:
             if node.type == "ImmutableTensor":
-                param_stats = get_param_stats(node.numpy())
+                param_stats = get_param_stats(node_oup)
                 # add tensor size attr
                 if log_path:
                     attr["size"] = AttrValue(
@@ -248,7 +251,11 @@ def visualize(
 
     return (
         total_stats(
-            param_size=total_param_size, flops=total_flops, act_size=total_act_size,
+            param_size=total_param_size,
+            param_dims=total_param_dims,
+            flops=total_flops,
+            act_size=total_act_size,
+            act_dims=total_act_dims,
         ),
         stats_details(
             params=params_list, flops=flops_list, activations=activations_list
@@ -263,6 +270,10 @@ def main():
     )
     parser.add_argument("model_path", help="dumped model path.")
     parser.add_argument("--log_path", help="tensorboard log path.")
+    parser.add_argument(
+        "--load_input_data",
+        help="load input data from pickle file; it should be a numpy array or a dict of numpy array",
+    )
     parser.add_argument(
         "--bar_length_max",
         type=int,
@@ -295,6 +306,19 @@ def main():
         help="whether print all stats. Tensorboard logs will be placed in './log' if not specified.",
     )
     args = parser.parse_args()
+    if args.load_input_data:
+        logger.info("load data from {}".format(args.load_input_data))
+        data = mge.load(args.load_input_data)
+        if isinstance(data, dict):
+            for v in data.values():
+                assert isinstance(
+                    v, np.ndarray
+                ), "data should provide ndarray; got {} instead".format(v)
+            args.inp_dict = data
+        elif isinstance(data, np.ndarray):
+            args.input = data
+        else:
+            logger.error("input data should be a numpy array or a dict of numpy array")
     if args.all:
         args.cal_params = True
         args.cal_flops = True
@@ -304,6 +328,7 @@ def main():
             args.log_path = "./log"
     kwargs = vars(args)
     kwargs.pop("all")
+    kwargs.pop("load_input_data")
     visualize(**kwargs)
 
 

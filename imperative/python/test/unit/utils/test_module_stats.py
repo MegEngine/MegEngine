@@ -21,16 +21,10 @@ def test_module_stats():
     total_stats, stats_details = module_stats(net, input_shapes=input_shape)
     x1 = np.random.random((1, 3, 224, 224)).astype("float32")
     gt_flops, gt_acts = net.get_stats(mge.tensor(x1))
-    assert (total_stats.flops, stats_details.activations[-1]["act_dim"]) == (
-        gt_flops,
-        gt_acts,
-    )
+    assert (total_stats.flops, total_stats.act_dims) == (gt_flops, gt_acts,)
 
     total_stats, stats_details = module_stats(net, inputs=x1)
-    assert (total_stats.flops, stats_details.activations[-1]["act_dim"]) == (
-        gt_flops,
-        gt_acts,
-    )
+    assert (total_stats.flops, total_stats.act_dims) == (gt_flops, gt_acts,)
 
 
 class BasicBlock(M.Module):
