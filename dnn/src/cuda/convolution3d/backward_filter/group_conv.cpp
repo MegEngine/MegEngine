@@ -19,21 +19,12 @@ namespace {
 std::pair<TensorLayoutArray, Convolution3DBackwardFilterImpl::Param>
 sub_opr_config(
         const Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs& args) {
-    SmallVector<size_t> flt_shape(0);
-    std::vector<ptrdiff_t> flt_stride(0);
-    size_t idx = 0;
-    // check if the first dim is group
-    if (args.grad_layout->ndim > args.src_layout->ndim)
-        ++idx;
-    for (; idx < args.grad_layout->ndim; ++idx) {
-        flt_shape.push_back(args.grad_layout->shape[idx]);
-        flt_stride.push_back(args.grad_layout->stride[idx]);
-    }
-    TensorLayout grad_pg(flt_shape, flt_stride, args.grad_layout->dtype,
-                         args.grad_layout->format);
+
+    TensorLayout grad_pg = *args.grad_layout;
     TensorLayout src_pg = *args.src_layout;
     TensorLayout diff_pg = *args.diff_layout;
 
+    grad_pg.remove_axis_inplace(0);
     auto nr_grp = args.grad_filter_meta.group;
     size_t c_pos = 1;
     src_pg.shape[c_pos] /= nr_grp;
@@ -86,9 +77,11 @@ bool Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::is_available(
     }
 
     auto config = prepare_sub_opr(args);
-    return get_algorithm(
+    AlgoBase::SizeArgs sub_args{
             static_cast<Convolution3DBackwardFilterImpl*>(config.second.get()),
-            config.first[0], config.first[1], config.first[2]);
+            config.first[0], config.first[1], config.first[2]};
+
+    return has_available_algo<Convolution3DBackwardFilterImpl>(sub_args);
 }
 
 WorkspaceBundle

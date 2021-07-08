@@ -226,11 +226,11 @@ TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
     ConvBias::Param param;
     param.format = ConvBias::Param::Format::NCHW;
 
-    checker.set_dtype(0, dtype::QuantizedS8(2.5f))
-            .set_dtype(1, dtype::QuantizedS8(2.5f))
-            .set_dtype(2, dtype::QuantizedS32(6.25f))
-            .set_dtype(3, dtype::QuantizedS8(0.25f))
-            .set_dtype(4, dtype::QuantizedS8(0.25f))
+    checker.set_dtype(0, dtype::QuantizedS8(1.f))
+            .set_dtype(1, dtype::QuantizedS8(1.f))
+            .set_dtype(2, dtype::QuantizedS32(1.f))
+            .set_dtype(3, dtype::QuantizedS8(1.f))
+            .set_dtype(4, dtype::QuantizedS8(1.f))
             .set_rng(0, &int_rng)
             .set_rng(1, &int_rng)
             .set_rng(2, &int_rng)

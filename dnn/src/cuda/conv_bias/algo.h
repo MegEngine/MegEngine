@@ -454,8 +454,6 @@ public:
         return AlgoAttribute::REPRODUCIBLE;
     }
 
-    static void modify_size_args(SizeArgs& args, TensorLayout& src_pg,
-                                 TensorLayout& dst_pg, TensorLayout& bias_pg);
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
 
 private:
@@ -578,11 +576,6 @@ public:
             const OperatorBase* opr) const override;
  
 private:
-    void make_inner_layout(const SizeArgs& args, TensorLayout& inner_src_layout,
-                           TensorLayout& inner_weight_layout,
-                           TensorLayout& inner_dst_layout,
-                           TensorLayout& inner_bias_layout,
-                           TensorLayout& inner_z_layout) const;
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 

@@ -12,6 +12,9 @@
 
 #include "src/cuda/relayout_format/relayout_format.cuh"
 #include "src/cuda/relayout_format/relayout_format.h"
+#include "src/common/utils.h"
+#include "megdnn/dtype.h"
+
 using namespace megdnn;
 using namespace cuda;
 
@@ -35,8 +38,38 @@ inline void get_scale_zeropoint(const DType& tensor_dtype, float& scale,
 }  // namespace
 
 bool relayout_format::RelayoutFormatFast::usable(
-        const TensorLayout& src_layout, const TensorLayout& dst_layout) {
-    return relayout_format_cuda_usable(src_layout, dst_layout);
+        const TensorLayout& src_layout, const TensorLayout& dst_layout,
+        const RelayoutFormat::Param::Mode& mode) {
+
+    bool is_all_continue =
+            src_layout.is_contiguous() && dst_layout.is_contiguous();
+    bool is_all_int32 =
+            (src_layout.dtype.enumv() == DTypeEnum::QuantizedS32 &&
+             dst_layout.dtype.enumv() == DTypeEnum::QuantizedS32);
+    bool is_all_int8 =
+            (src_layout.dtype.enumv() == DTypeEnum::Uint8 &&
+             dst_layout.dtype.enumv() == DTypeEnum::QuantizedS8) ||
+            (src_layout.dtype.enumv() == DTypeEnum::Quantized8Asymm &&
+             dst_layout.dtype.enumv() == DTypeEnum::QuantizedS8) ||
+            (src_layout.dtype.enumv() == DTypeEnum::Quantized8Asymm &&
+             dst_layout.dtype.enumv() == DTypeEnum::Quantized8Asymm) ||
+            (src_layout.dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             dst_layout.dtype.enumv() == DTypeEnum::QuantizedS8);
+    bool is_all_int4 =
+            (src_layout.dtype.enumv() == DTypeEnum::QuantizedS4 &&
+             dst_layout.dtype.enumv() == DTypeEnum::QuantizedS4) ||
+            (src_layout.dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+             dst_layout.dtype.enumv() == DTypeEnum::Quantized4Asymm);
+    bool is_nchw4_nchw_ok = true;
+    if (mode == RelayoutFormat::Param::Mode::NCHW4_NCHW) {
+        is_nchw4_nchw_ok =
+                (src_layout.dtype.enumv() ==
+                         DTypeEnum::Quantized8Asymm ||
+                 src_layout.dtype.enumv() == DTypeEnum::QuantizedS8) &&
+                src_layout.dtype == dst_layout.dtype;
+    }
+    return is_all_continue && (is_all_int32 || is_all_int8 || is_all_int4) &&
+           is_nchw4_nchw_ok;
 }
 
 void relayout_format::RelayoutFormatFast::exec(const TensorND& src,

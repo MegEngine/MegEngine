@@ -461,28 +461,6 @@ void relayout_format::relayout_format_cuda_nchw_nchwx(
     }
 }
 
-bool relayout_format::relayout_format_cuda_usable(
-        const TensorLayout& src_layout, const TensorLayout& dst_layout) {
-    bool is_all_continue =
-            src_layout.is_contiguous() && dst_layout.is_contiguous();
-    bool is_all_int32 =
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS32);
-    bool is_all_int8 =
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Uint8 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) ||
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized8Asymm &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8) ||
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS8);
-    bool is_all_int4 =
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS4 &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::QuantizedS4) ||
-            (src_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized4Asymm &&
-             dst_layout.dtype.enumv().ev == DTypeEnum::Ev::Quantized4Asymm);
-    return is_all_continue && (is_all_int32 || is_all_int8 || is_all_int4);
-}
-
 void relayout_format::relayout_format_cuda_nchwx_nchw(
         const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
         const float src_scale, const float dst_scale,

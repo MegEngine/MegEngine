@@ -22,7 +22,9 @@ namespace relayout_format {
 
 struct RelayoutFormatFast {
     static bool usable(const TensorLayout& src_layout,
-                       const TensorLayout& dst_layout);
+                       const TensorLayout& dst_layout,
+                       const RelayoutFormat::Param::Mode& mode =
+                               RelayoutFormat::Param::Mode::NCHW_NCHW4);
     static void exec(const TensorND& src, const TensorND& dst,
                      cudaStream_t stream, RelayoutFormat::Param::Mode mode,
                      int group);

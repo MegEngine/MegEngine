@@ -37,12 +37,19 @@ TEST_F(CUDA, RELAYOUT_FORMAT) {
 TEST_F(CUDA, RELAYOUT_FORMAT_NCHW4_NCHW) {
     Checker<RelayoutFormat> checker(handle_cuda());
     UniformIntRNG rng{-50, 50};
+    UniformIntRNG u8_rng{0, 255};
     param::RelayoutFormat param;
     param.mode = param::RelayoutFormat::Mode::NCHW4_NCHW;
 
     checker.set_dtype(0, dtype::QuantizedS8{0.1f})
             .set_dtype(1, dtype::QuantizedS8{0.1f})
             .set_rng(0, &rng)
+            .set_param(param)
+            .execs({{1, 1, 2, 2, 4}, {}});
+
+    checker.set_dtype(0, dtype::Quantized8Asymm{1.f, 128})
+            .set_dtype(1, dtype::Quantized8Asymm{1.f, 128})
+            .set_rng(0, &u8_rng)
             .set_param(param)
             .execs({{1, 1, 2, 2, 4}, {}});
 

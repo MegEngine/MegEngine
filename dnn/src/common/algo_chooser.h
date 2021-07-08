@@ -75,6 +75,21 @@ std::vector<typename Opr::Algorithm*> get_all_algorithms(
 }
 
 /*!
+ * \brief whether there is an algorithm from algo_pack() that is available for
+ * current size
+ */
+template <class Opr>
+bool has_available_algo(
+        const typename Opr::AlgoBase::SizeArgs& args) {
+    for (auto i : Opr::algo_pack().all_algos) {
+        if (i->is_available(args)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*!
  * \brief a helper function to get an algorithm match attribute. If require a
  * algorithm with specified attribute, and the given algorithm match that
  * attribute, return the given algorithm. Otherwise return nullptr

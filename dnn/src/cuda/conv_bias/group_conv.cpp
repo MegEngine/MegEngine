@@ -21,20 +21,7 @@ namespace {
 std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> sub_opr_config(
         const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
     TensorLayout src_pg = *args.src_layout;
-
-    SmallVector<size_t> flt_shape(0);
-    std::vector<ptrdiff_t> flt_stride(0);
-    size_t idx = 0;
-    // check if the first dim is group
-    if (args.filter_layout->ndim > args.src_layout->ndim)
-        ++idx;
-    for (; idx < args.filter_layout->ndim; ++idx) {
-        flt_shape.push_back(args.filter_layout->shape[idx]);
-        flt_stride.push_back(args.filter_layout->stride[idx]);
-    }
-    TensorLayout filter_pg(flt_shape, flt_stride,
-                               args.filter_layout->dtype,
-                               args.filter_layout->format);
+    TensorLayout filter_pg = *args.filter_layout;
     TensorLayout bias_pg = *args.bias_layout;
     TensorLayout z_pg = *args.z_layout;
     TensorLayout dst_pg = *args.dst_layout;
@@ -50,6 +37,8 @@ std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> sub_opr_config(
                       "invalid conv format");
         c_pos = 3;
     }
+
+    filter_pg.remove_axis_inplace(0);
     src_pg.shape[c_pos] /= nr_grp;
     bias_pg.ndim = 0;
     dst_pg.shape[c_pos] /= nr_grp;
@@ -107,10 +96,27 @@ bool ConvBiasForwardImpl::AlgoGroupConvGeneral::is_available(
         param.format == param::ConvBias::Format::NCHW32)
         return false;
 
-    auto config = prepare_sub_opr(args);
-    return get_algorithm(static_cast<ConvBiasForwardImpl*>(config.second.get()),
-                         config.first[0], config.first[1], config.first[2],
-                         config.first[3], config.first[4]);
+    auto dst_layout = *args.dst_layout;
+    if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
+        dst_layout.dtype = DType();
+        args.opr->check_or_deduce_dtype_fwd(args.src_layout->dtype,
+                                            args.filter_layout->dtype,
+                                            dst_layout.dtype);
+    }
+
+    auto conv_args = args;
+    conv_args.dst_layout = &dst_layout;
+    auto config = prepare_sub_opr(conv_args);
+    AlgoBase::SizeArgs sub_args{
+            static_cast<ConvBiasForwardImpl*>(config.second.get()),
+            config.first[0],
+            config.first[1],
+            config.first[2],
+            config.first[3],
+            config.first[4]};
+
+    bool ret = has_available_algo<ConvBiasForwardImpl>(sub_args);
+    return  ret;
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoGroupConvGeneral::get_workspace_bundle(
@@ -125,7 +131,9 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoGroupConvGeneral::get_workspace_bundle(
         sizes.push_back(dst_layout.span().dist_byte());
     }
 
-    auto config = prepare_sub_opr(args);
+    auto conv_args = args;
+    conv_args.dst_layout = &dst_layout;
+    auto config = prepare_sub_opr(conv_args);
     size_t mm_ws = config.second->get_workspace_in_bytes(
                     config.first[0], config.first[1], config.first[2],
                     config.first[3], config.first[4], nullptr);

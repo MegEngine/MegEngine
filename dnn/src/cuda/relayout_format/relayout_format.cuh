@@ -25,9 +25,6 @@ void relayout_format_cuda_nchw_nchwx(
         const uint8_t src_zero_point = 0, const uint8_t dst_zero_point = 0,
         const int group = 1);
 
-bool relayout_format_cuda_usable(const TensorLayout& src_layout,
-                                 const TensorLayout& dst_layout);
-
 void relayout_format_cuda_nchw4_nchw(const TensorND& src, const TensorND& dst,
                                      const cudaStream_t& stream,
                                      const int group);

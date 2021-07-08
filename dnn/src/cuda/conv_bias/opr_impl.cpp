@@ -197,11 +197,10 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         return algo;
     }
 
-    if (args.filter_meta.group > 1) {
-        if (auto algo = megdnn::get_algo_match_attribute<ConvBiasForwardImpl>(
-                    &sm_algo_pack.group, positive_attr, negative_attr)){
-            return algo;
-        }
+    if (args.filter_meta.group > 1 &&
+        sm_algo_pack.group.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.group;
     }
 
     if (sm_algo_pack.fallback_nchw_qs8.is_available_attribute(

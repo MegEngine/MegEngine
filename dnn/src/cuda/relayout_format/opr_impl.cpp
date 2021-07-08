@@ -94,7 +94,7 @@ void RelayoutFormatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                          param().mode == Param::Mode::NCHW_NCHW4_WEIGHT;
     if (is_trans_4bits || is_nchw_nchw4) {
         bool is_usable = relayout_format::RelayoutFormatFast::usable(
-                src.layout, dst.layout);
+                src.layout, dst.layout, param().mode);
         megdnn_assert(is_usable,
                       "RelayoutFormatFast kernel is not usable for "
                       "transforming %s(%s) to %s(%s).",

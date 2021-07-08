@@ -14,6 +14,7 @@
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/cudnn_wrapper.h"
 #include "src/cuda/relayout_format/opr_impl.h"
+#include "src/cuda/relayout_format/relayout_format.h"
 #include "src/cuda/utils.h"
 
 using namespace megdnn;
@@ -37,18 +38,21 @@ inline void deduce_reformat_layout(std::unique_ptr<RelayoutFormat>& relayout,
         dst_layout = src_layout;
     }
 }
-}  // namespace
 
-void ConvBiasForwardImpl::AlgoFallbackNCHWQS8::make_inner_layout(
-        const SizeArgs& args, TensorLayout& inner_src_layout,
-        TensorLayout& inner_weight_layout, TensorLayout& inner_dst_layout,
-        TensorLayout& inner_bias_layout, TensorLayout& inner_z_layout) const {
+std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> sub_opr_config(
+        const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
+    TensorLayout inner_src_layout;
+    TensorLayout inner_filter_layout;
+    TensorLayout inner_bias_layout;
+    TensorLayout inner_z_layout;
+    TensorLayout inner_dst_layout;
+
     auto relayout_src = args.handle->create_operator<RelayoutFormat>();
     deduce_reformat_layout(relayout_src, *args.src_layout, inner_src_layout,
                            RelayoutFormat::Param::Mode::NCHW_NCHW4, 0,
                            args.filter_meta.group);
     deduce_reformat_layout(relayout_src, *args.filter_layout,
-                           inner_weight_layout,
+                           inner_filter_layout,
                            RelayoutFormat::Param::Mode::NCHW_NCHW4_WEIGHT);
     bool dst_float = args.dst_layout->dtype.enumv() == DTypeEnum::Float32;
     if (dst_float) {
@@ -67,7 +71,32 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS8::make_inner_layout(
                                RelayoutFormat::Param::Mode::NCHW_NCHW4, 0,
                                args.filter_meta.group);
     }
-};
+
+    megdnn::param::ConvBias inner_conv_param = args.opr->param();
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::Float32) {
+        inner_conv_param.format = megdnn::param::ConvBias::Format::NCHW4_NCHW;
+    } else {
+        inner_conv_param.format = megdnn::param::ConvBias::Format::NCHW4;
+    }
+    std::pair<TensorLayoutArray, ConvBiasForwardImpl::Param> ret;
+    ret.first = {inner_src_layout, inner_filter_layout, inner_bias_layout,
+                 inner_z_layout, inner_dst_layout};
+    ret.second = inner_conv_param;
+
+    return ret;
+}
+
+std::pair<TensorLayoutArray, std::unique_ptr<ConvBiasForward>> prepare_sub_opr(
+        const ConvBiasForwardImpl::AlgoBase::SizeArgs& args) {
+    auto convbias_opr = args.handle->create_operator<ConvBias>();
+    set_execution_policy<ConvBiasForward, ConvBiasForward*>(args.opr,
+                                                            convbias_opr.get());
+    auto&& config = sub_opr_config(args);
+    convbias_opr->param() = config.second;
+
+    return {config.first, std::move(convbias_opr)};
+}
+}  // namespace
 
 std::vector<Algorithm::SearchItem>
 ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_subopr_list(
@@ -75,28 +104,12 @@ ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_subopr_list(
     const ConvBiasForwardImpl* o = static_cast<const ConvBiasForwardImpl*>(opr);
     SizeArgs args(const_cast<ConvBiasForwardImpl*>(o), layouts[0], layouts[1],
                   layouts[2], layouts[3], layouts[4], nullptr);
-    TensorLayout inner_src_layout;
-    TensorLayout inner_weight_layout;
-    TensorLayout inner_dst_layout;
-    TensorLayout inner_bias_layout;
-    TensorLayout inner_z_layout;
-    make_inner_layout(args, inner_src_layout, inner_weight_layout,
-                      inner_dst_layout, inner_bias_layout, inner_z_layout);
 
-    Param inner_conv_param = o->param();
-    if (layouts[4].dtype.enumv() == DTypeEnum::Float32) {
-        inner_conv_param.format = Param::Format::NCHW4_NCHW;
-    } else {
-        inner_conv_param.format = Param::Format::NCHW4;
-    }
+    auto&& config = sub_opr_config(args);
 
     std::string param_str;
-    Algorithm::serialize_write_pod(inner_conv_param, param_str);
-
-    return {{Algorithm::OprType::CONVBIAS_FORWARD,
-             param_str,
-             {inner_src_layout, inner_weight_layout, inner_bias_layout,
-              inner_z_layout, inner_dst_layout}}};
+    Algorithm::serialize_write_pod(config.second, param_str);
+    return {{Algorithm::OprType::CONVBIAS_FORWARD, param_str, config.first}};
 }
 
 bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
@@ -115,39 +128,46 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
              args.bias_layout->shape[2] == 1 &&
              args.bias_layout->shape[3] == 1);
     bool is_ok = is_format_ok && is_version_ok && is_dtype_ok && is_bias_ok;
-    return is_ok;
+    if (!is_ok) {
+        return false;
+    }
+
+    auto config = prepare_sub_opr(args);
+
+    AlgoBase::SizeArgs sub_args{
+            static_cast<ConvBiasForwardImpl*>(config.second.get()),
+            config.first[0],
+            config.first[1],
+            config.first[2],
+            config.first[3],
+            config.first[4]};
+    bool is_relayout_ok = true;
+    if (args.dst_layout->dtype.enumv() != DTypeEnum::Float32) {
+        is_relayout_ok = relayout_format::RelayoutFormatFast::usable(
+            config.first[4], *args.dst_layout,
+            RelayoutFormat::Param::Mode::NCHW4_NCHW);
+    }
+
+    return is_relayout_ok && has_available_algo<ConvBiasForwardImpl>(sub_args);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
-    TensorLayout inner_src_layout;
-    TensorLayout inner_weight_layout;
-    TensorLayout inner_dst_layout;
-    TensorLayout inner_bias_layout;
-    TensorLayout inner_z_layout;
-    make_inner_layout(args, inner_src_layout, inner_weight_layout,
-                      inner_dst_layout, inner_bias_layout, inner_z_layout);
-    Param inner_conv_param = args.opr->param();
+    auto config = prepare_sub_opr(args);
     size_t ws_dst = 0, ws_bias = 0, ws_z = 0;
-    if (args.dst_layout->dtype.enumv() == DTypeEnum::Float32) {
-        inner_conv_param.format = Param::Format::NCHW4_NCHW;
-    } else {
-        inner_conv_param.format = Param::Format::NCHW4;
-        ws_dst = inner_dst_layout.span().dist_byte();
-        ws_bias = inner_bias_layout.span().dist_byte();
-        ws_z = inner_z_layout.span().dist_byte();
+
+    if (args.dst_layout->dtype.enumv() != DTypeEnum::Float32) {
+        ws_bias = config.first[2].span().dist_byte();
+        ws_z = config.first[3].span().dist_byte();
+        ws_dst = config.first[4].span().dist_byte();
     }
-    auto opr = args.handle->create_operator<ConvBiasForward>();
-    opr->param() = inner_conv_param;
-    set_execution_policy<ConvBiasForward, ConvBiasForward*>(args.opr,
-                                                            opr.get());
-    return WorkspaceBundle(
-            ptr,
-            {inner_src_layout.span().dist_byte(),
-             inner_weight_layout.span().dist_byte(), ws_dst, ws_bias, ws_z,
-             opr->get_workspace_in_bytes(inner_src_layout, inner_weight_layout,
-                                         inner_bias_layout, inner_z_layout,
-                                         inner_dst_layout, nullptr)});
+    size_t inner_ws = config.second->get_workspace_in_bytes(
+            config.first[0], config.first[1], config.first[2], config.first[3],
+            config.first[4], nullptr);
+
+    return WorkspaceBundle(ptr, {config.first[0].span().dist_byte(),
+                                 config.first[1].span().dist_byte(), ws_bias,
+                                 ws_z, ws_dst, inner_ws});
 }
 
 size_t ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_workspace_in_bytes(
@@ -177,46 +197,35 @@ void ConvBiasForwardImpl::AlgoFallbackNCHWQS8::exec(
     relayout_nchw4_nchw->param() = nchw4_nchw_trans;
 
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
-    TensorLayout inner_src_layout;
-    TensorLayout inner_weight_layout;
-    TensorLayout inner_dst_layout;
-    TensorLayout inner_bias_layout;
-    TensorLayout inner_z_layout;
-    make_inner_layout(args, inner_src_layout, inner_weight_layout,
-                      inner_dst_layout, inner_bias_layout, inner_z_layout);
-    TensorND inner_src(bundle.get(0), inner_src_layout);
-    TensorND inner_weight(bundle.get(1), inner_weight_layout);
-    TensorND inner_dst(bundle.get(2), inner_dst_layout);
-    TensorND inner_bias(bundle.get(3), inner_bias_layout);
-    TensorND inner_z(bundle.get(4), inner_z_layout);
+
+    auto config = prepare_sub_opr(args);
+    TensorND inner_src(bundle.get(0), config.first[0]);
+    TensorND inner_weight(bundle.get(1), config.first[1]);
+    TensorND inner_bias(bundle.get(2), config.first[2]);
+    TensorND inner_z(bundle.get(3), config.first[3]);
+    TensorND inner_dst(bundle.get(4), config.first[4]);
 
     bool dst_float = args.dst_layout->dtype.enumv() == DTypeEnum::Float32;
-
-    Param inner_conv_param = args.opr->param();
-    inner_conv_param.format =
-            dst_float ? Param::Format::NCHW4_NCHW : Param::Format::NCHW4;
-    auto inner_opr = args.handle->create_operator<ConvBiasForward>();
-    inner_opr->param() = inner_conv_param;
-    set_execution_policy<ConvBiasForward, ConvBiasForward*>(args.opr,
-                                                            inner_opr.get());
 
     relayout_nchw_nchw4->exec(*args.src_tensor, inner_src, {});
     relayout_weight->exec(*args.filter_tensor, inner_weight, {});
 
     if (dst_float) {
-        inner_opr->exec(inner_src, inner_weight, *args.bias_tensor,
-                        *args.z_tensor, *args.dst_tensor, nullptr,
-                        Workspace((dt_byte*)bundle.get(5), bundle.get_size(5)));
+        config.second->exec(
+                inner_src, inner_weight, *args.bias_tensor, *args.z_tensor,
+                *args.dst_tensor, nullptr,
+                Workspace((dt_byte*)bundle.get(5), bundle.get_size(5)));
     } else {
-        if (inner_bias_layout.ndim > 0) {
+        if (inner_bias.layout.ndim > 0) {
             relayout_nchw_nchw4->exec(*args.bias_tensor, inner_bias, {});
         }
-        if (inner_z_layout.ndim > 0) {
+        if (inner_z.layout.ndim > 0) {
             relayout_nchw_nchw4->exec(*args.z_tensor, inner_z, {});
         }
-        inner_opr->exec(inner_src, inner_weight, inner_bias, inner_z, inner_dst,
-                        nullptr,
-                        Workspace((dt_byte*)bundle.get(5), bundle.get_size(5)));
+        config.second->exec(
+                inner_src, inner_weight, inner_bias, inner_z, inner_dst,
+                nullptr,
+                Workspace((dt_byte*)bundle.get(5), bundle.get_size(5)));
         relayout_nchw4_nchw->exec(inner_dst, *args.dst_tensor, {});
     }
 }

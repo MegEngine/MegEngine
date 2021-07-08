@@ -164,9 +164,9 @@ public:
         }
         std::vector<Algorithm::Info::Desc> ret;
         megdnn_assert(layouts.size() == OprTrait<Opr>::arity);
-        for (auto algo_info :
-             AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info(
-                     opr, layouts)) {
+        auto vec = AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info(
+                     opr, layouts);
+        for (auto algo_info : vec) {
             if (!(algo_info.attribute &
                   AlgoAttribute::ACCURACY_DEPEND_ON_BATCH) &&
                 (algo_info.attribute & AlgoAttribute::REPRODUCIBLE) &&

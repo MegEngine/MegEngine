@@ -19,21 +19,11 @@ using namespace convolution;
 namespace {
 std::pair<TensorLayoutArray, Convolution::Param> sub_opr_config(
         const ConvolutionBackwardDataImpl::AlgoBase::SizeArgs& args) {
-    SmallVector<size_t> flt_shape(0);
-    std::vector<ptrdiff_t> flt_stride(0);
-    size_t idx = 0;
-    // check if the first dim is group
-    if (args.filter_layout->ndim > args.diff_layout->ndim)
-        ++idx;
-    for (; idx < args.filter_layout->ndim; ++idx) {
-        flt_shape.push_back(args.filter_layout->shape[idx]);
-        flt_stride.push_back(args.filter_layout->stride[idx]);
-    }
-    TensorLayout filter_pg(flt_shape, flt_stride, args.filter_layout->dtype,
-                           args.filter_layout->format);
+    TensorLayout filter_pg = *args.filter_layout;
     TensorLayout diff_pg = *args.diff_layout;
     TensorLayout grad_pg = *args.grad_layout;
 
+    filter_pg.remove_axis_inplace(0);
     auto nr_grp = args.filter_meta.group;
     size_t c_pos = 1;
     diff_pg.shape[c_pos] /= nr_grp;
@@ -92,9 +82,11 @@ bool ConvolutionBackwardDataImpl::AlgoGroupConvGeneral::is_available(
     }
 
     auto config = prepare_sub_opr(args);
-    return get_algorithm(
+    AlgoBase::SizeArgs sub_args{
             static_cast<ConvolutionBackwardDataImpl*>(config.second.get()),
-            config.first[0], config.first[1], config.first[2]);
+            config.first[0], config.first[1], config.first[2]};
+
+    return has_available_algo<ConvolutionBackwardDataImpl>(sub_args);
 }
 
 WorkspaceBundle

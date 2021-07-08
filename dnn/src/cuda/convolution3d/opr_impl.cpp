@@ -89,13 +89,10 @@ Convolution3DForwardImpl::get_algorithm_heuristic(
             return algo;
     }
 
-    if (args.filter_meta.group > 1) {
-        if (auto algo =
-                    megdnn::get_algo_match_attribute<Convolution3DForwardImpl>(
-                            &sm_algo_pack.group, positive_attr,
-                            negative_attr)) {
-            return algo;
-        }
+    if (args.filter_meta.group > 1 &&
+        sm_algo_pack.group.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.group;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DForwardImpl>(
@@ -189,12 +186,10 @@ Convolution3DBackwardDataImpl::get_algorithm_heuristic(
             return algo;
     }
 
-    if (args.filter_meta.group > 1) {
-        if (auto algo = megdnn::get_algo_match_attribute<
-                    Convolution3DBackwardDataImpl>(
-                    &sm_algo_pack.group, positive_attr, negative_attr)) {
-            return algo;
-        }
+    if (args.filter_meta.group > 1 &&
+        sm_algo_pack.group.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.group;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DBackwardDataImpl>(
@@ -272,12 +267,10 @@ Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
             return algo;
     }
 
-    if (args.grad_filter_meta.group > 1) {
-        if (auto algo = megdnn::get_algo_match_attribute<
-                    Convolution3DBackwardFilterImpl>(
-                    &sm_algo_pack.group, positive_attr, negative_attr)) {
-            return algo;
-        }
+    if (args.grad_filter_meta.group > 1 &&
+        sm_algo_pack.group.is_available_attribute(
+                args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
+        return &sm_algo_pack.group;
     }
 
     return megdnn::get_algo_match_attribute<Convolution3DBackwardFilterImpl>(
