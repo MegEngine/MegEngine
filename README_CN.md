@@ -20,6 +20,7 @@ MegEngine 是一个快速、可拓展、易于使用且支持自动求导的深�
 通过 pip 安装的命令如下：
 
 ```bash
+python3 -m pip install --upgrade pip
 python3 -m pip install megengine -f https://megengine.org.cn/whl/mge.html
 ```
 
