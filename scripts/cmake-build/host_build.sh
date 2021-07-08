@@ -162,7 +162,7 @@ function prepare_env_for_windows_build() {
     echo $VS_PATH
 
     # only use cmake/clang-cl/Ninja install from Visual Studio, if not, may build failed
-    # some user env may install cmake/clang-cl/Ninja at MSYS env, so we put Visual Studio
+    # some user env may install cmake/clang-cl/Ninja at windows-git-bash env, so we put Visual Studio
     # path at the head of PATH, and check the valid
     echo "check cmake install..."
     export PATH=$VS_PATH/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/:$PATH

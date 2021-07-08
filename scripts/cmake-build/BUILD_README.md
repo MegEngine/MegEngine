@@ -18,16 +18,55 @@
 ### Windows host build
 * commands:
 ```
-1: installl Visual Studio (need support LLVM/clang-cl), eg 2019. Please install LLVM-10/11, VS LLVM linker have issue, please replace lld-link.exe, which can be download from https://releases.llvm.org/download.html#10.0.0, what`s more,  Visual Studio cl.exe version >=14.28.29910 do not compat with cuda 10.1, please do not use this issue version!
-2: install extension of VS: Python/Cmake/LLVM/Ninja
-3: now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows, as Windows can only use DLL in fact with cudnn/TensorRT, so please install the same version;
-    3a: install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
-    3b: install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
-    3c: install TensorRT6.0 to C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5
-    3d: add C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin to system PATH env
-    3e: add C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin to system Path env
-    3f: add C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5\lib Path, if you do not do 4d/4e/4f, CUDA runtime can not find dll
-4: install Python3 (default is 3.8.3) to /c/Users/${USER}/mge_whl_python_env/3.8.3 and put it to PATH env and run python3 -m pip install numpy (if you want to build with training mode)
+1: install git (Windows GUI)
+	* download git-install.exe from https://git-scm.com/download/win
+	* only need choose git-lfs component
+	* install to default dir:  /c/Program\ Files/Git
+2: install visual studio 2019 Enterprise (Windows GUI)
+	* download install exe from https://visualstudio.microsoft.com
+	* choose "c++ develop" -> choose cmake/MSVC/clang/cmake/windows-sdk when install
+	* NOTICE: windows sdk version >=14.28.29910 do not compat with CUDA 10.1, please
+		choose version < 14.28.29910
+	* then install choosed components
+	* after install visual studio 2019 Enterprise, time to replace lld-link.exe
+		caused by visual studio 2019 lld-link.exe have crash issue
+		download office exe from https://releases.llvm.org/download.html
+		install to default: C:\Program Files\LLVM
+		cd "/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Tools/Llvm/bin"
+		cp /c/Program\ Files/LLVM/bin/lld-link.exe lld-link.exe
+3: install python3 (Windows GUI)
+	* download python 64-bit install exe (we support python3.5-python3.8 now)
+	     https://www.python.org/ftp/python/3.5.4/python-3.5.4-amd64.exe
+	     https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe
+	     https://www.python.org/ftp/python/3.7.7/python-3.7.7-amd64.exe
+	     https://www.python.org/ftp/python/3.8.3/python-3.8.3-amd64.exe
+	* install 3.5.4 to /c/Users/${USER}/mge_whl_python_env/3.5.4
+	* install 3.6.8 to /c/Users/${USER}/mge_whl_python_env/3.6.8
+	* install 3.7.7 to /c/Users/${USER}/mge_whl_python_env/3.7.7
+	* install 3.8.3 to /c/Users/${USER}/mge_whl_python_env/3.8.3
+	* cp python.exe to python3.exe
+		loop cd /c/Users/${USER}/mge_whl_python_env/*
+		copy python.exe to python3.exe
+	* install python depends components
+		loop cd /c/Users/${USER}/mge_whl_python_env/*
+		python3.exe -m pip install --upgrade pip
+		python3.exe -m pip install -r imperative/python/requires.txt
+		python3.exe -m pip install -r imperative/python/requires-test.txt
+4: install cuda components (Windows GUI)
+	* now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows
+	* install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
+	* install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
+	* install TensorRT6.0 to C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5
+5: edit system env variables (Windows GUI)
+	* create new key: "VS_PATH", value: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
+	* append "Path" env value
+        C:\Program Files\Git\cmd
+		C:\Users\build\mge_whl_python_env\3.8.3
+		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin
+		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\libnvvp
+		C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin
+		C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\lib\clang\11.0.0\lib\windows
+		C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\lib\clang\11.0.0\lib\windows
 ```
 
 ### Linux host build
@@ -55,10 +94,8 @@ Now we support Windows/Linux/MacOS cross build to ARM-Android
 
 * commands:
 ```
-1: install unix-like tools, eg MSYS if you are using windows(recommend), we also support CMD.exe or powershell on windows
 2: download NDK from https://developer.android.google.cn/ndk/downloads/ for diff OS platform package, suggested NDK20 or NDK21
 3: export NDK_ROOT=NDK_DIR at bash-like env
-4: config NDK_ROOT to PATH env at windows control board if use CMD/powershell
 ```
 
 ### Cross build for ARM-Linux
@@ -72,7 +109,7 @@ Now we support ARM-Linux on Linux and Windows fully, also experimental on MacOS
 
 ### Cross build for IOS
 Now we only support cross build to IOS from MACOS
- 
+
 * commands:
 ```
 1: install full xcode: https://developer.apple.com/xcode/
@@ -87,7 +124,7 @@ With bash env(Linux/MacOS/Unix-Like tools on Windows, eg: msys etc)
 ./third_party/install-mkl.sh
 ```
 
-Windows shell env(eg, CMD, Powershell etc), infact if you can use git command on Windows, which means you always install bash.exe at the same dir of git.exe, find it, then you can prepare third-party code by
+Windows shell env(bash from windows-git), infact if you can use git command on Windows, which means you always install bash.exe at the same dir of git.exe, find it, then you can prepare third-party code by
 
 * command:
 ```
@@ -96,7 +133,7 @@ bash.exe ./third_party/install-mkl.sh
 ```
 
 # How to build
-## With bash env(Linux/MacOS/Unix-Like tools on Windows, eg: msys etc)
+## With bash env(Linux/MacOS/Windows-git-bash)
 
 * command:
 ```
@@ -104,13 +141,6 @@ bash.exe ./third_party/install-mkl.sh
 2: cross build to ARM-Android: scripts/cmake-build/cross_build_android_arm_inference.sh
 3: cross build to ARM-Linux:   scripts/cmake-build/cross_build_linux_arm_inference.sh
 4: cross build to IOS:         scripts/cmake-build/cross_build_ios_arm_inference.sh
-```
-
-## Windows shell env(eg, CMD, Powershell etc)
-
-* command:
-```
-1: we do not provide BAT for CMD/Powershlel scripts, BUT you can refer for scripts/cmake-build/*.sh
 ```
 
 ## Visual Studio GUI(only for Windows host)
