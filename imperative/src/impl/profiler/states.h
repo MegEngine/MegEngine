@@ -139,22 +139,22 @@ struct is_trace_event<T, decltype(std::declval<T>().trace, void())> : std::true_
 template <typename... TItems>
 class AnyToVariantConverter {
 public:
-    using any_t = std::any;
+    using any_t = AnyPtr;
     using variant_t = std::variant<TItems...>;
 private:
-    std::unordered_map<std::type_index, std::function<variant_t(any_t)>> m_table;
+    std::unordered_map<std::type_index, std::function<variant_t(const any_t&)>> m_table;
 
     template <typename TItem>
     void register_converter() {
-        m_table[typeid(TItem)] = [](any_t input) {
-            return variant_t(std::any_cast<TItem>(std::move(input)));
+        m_table[typeid(TItem)] = [](const any_t& input) {
+            return variant_t(*input.as<TItem>());
         };
     }
 public:
     AnyToVariantConverter() {
         (register_converter<TItems>(), ...);
     }
-    variant_t operator()(any_t input) {
+    variant_t operator()(const any_t& input) {
         return m_table[input.type()](std::move(input));
     }
 };
@@ -222,7 +222,7 @@ protected:
         value += delta;
     }
 public:
-    void process_events(Profiler::bundle_t bundle) {
+    void process_events(Profiler::bundle_t& bundle) {
         m_start_time = bundle.start_at;
 
         auto& self = static_cast<TSelf&>(*this);
@@ -231,7 +231,7 @@ public:
                 OpInputEvent, OpInputFinishEvent, OpOutputEvent, OpOutputFinishEvent,
                 TensorDeclareEvent, TensorProduceEvent, TensorUsageEvent, TensorReleaseEvent, TensorEraseEvent,
                 TensorGetPropEvent, TensorNotifyPropEvent, TensorWaitPropEvent, TensorWaitPropFinishEvent,
-                SampleDeviceEvent, WorkerExceptionEvent, ShapeInferEvent, SyncEvent, SyncFinishEvent,
+                SampleDeviceEvent, SampleDeviceFinishEvent, WorkerExceptionEvent, ShapeInferEvent, SyncEvent, SyncFinishEvent,
                 StartProfileEvent, StartProfileFinishEvent, StopProfileEvent, StopProfileFinishEvent,
                 TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent, AutoEvictFinishEvent,
                 CustomEvent, CustomFinishEvent, RecordDeviceEvent, ScopeEvent, ScopeFinishEvent,
@@ -298,6 +298,7 @@ public:
                     m_device_tid_table[event.device] = {m_device_tid_table.size() + m_host_tid_table.size()};
                 }
                 tensor.device = event.device;
+                tensor.layout = event.layout;
             }
         });
 

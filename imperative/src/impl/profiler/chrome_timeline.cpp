@@ -268,7 +268,7 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
                     .cat("Kernel")
                     .args(current_op->detail());
         } else if constexpr (std::is_same_v<TEvent, TensorProduceEvent>) {
-            if (current_tensor->living_time != profiler::Duration::zero()) {
+            if (current_tensor->living_time == profiler::Duration::zero()) {
                 new_host_event(pid_str, 's')
                     .id(event.tensor_id)
                     .cat("TensorLink")
@@ -319,8 +319,8 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
                     .scope(pid_str);
         } else if constexpr (std::is_same_v<TEvent, SampleDeviceFinishEvent>) {
             std::string device_name = event.device.locator().to_string();
-            new_host_event("memory", 'C')
-                    .arg(ssprintf("%s_alloc_mem", device_name.c_str()), event.total_memory - event.free_memory);
+            new_host_event(ssprintf("%s_alloc_mem", device_name.c_str()), 'C')
+                    .arg("value", event.total_memory - event.free_memory);
         } else if constexpr (std::is_same_v<TEvent, TensorCommandEvent>) {
             new_host_event(ssprintf("%s %zu", to_cstr(event.kind), event.tensor_id), 'B');
         } else if constexpr (std::is_same_v<TEvent, TensorCommandFinishEvent>) {
@@ -366,6 +366,12 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
                     .arg("dtype", event.layout.dtype.name())
                     .arg("nr_elements", event.layout.total_nr_elems())
                     .arg("device", event.device.to_string());
+        } else if constexpr (std::is_same_v<TEvent, RecordDeviceEvent>) {
+            auto current_host_time = current->time;
+            auto current_device_time = to_device_time(current->time, event.event->comp_node());
+            auto device_ahead = std::chrono::duration_cast<std::chrono::milliseconds>(current_device_time-current_host_time);
+            new_host_event("device_ahead_ms", 'C')
+                    .arg("value", device_ahead.count());
         }
     }
 

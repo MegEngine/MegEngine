@@ -34,9 +34,10 @@ namespace imperative {
 
 namespace profiler {
 
-using HostTime = std::chrono::time_point<std::chrono::high_resolution_clock>;
+using HostTime = std::chrono::time_point<std::chrono::system_clock>;
 
 using Duration = std::chrono::nanoseconds;
+
 using RealDuration = std::chrono::duration<double, std::nano>;
 
 using Time = HostTime;
@@ -50,6 +51,52 @@ public:
     static std::shared_ptr<CompNode::Event> record_device(CompNode device);
 };
 
+class AnyPtr {
+public:
+    struct Deleter {
+        void* object;
+        void (*method)(void*, void*);
+        void operator() (void* ptr) {
+            method(object, ptr);
+        }
+    };
+private:
+    using holder_t = std::unique_ptr<void, Deleter>;
+
+    const std::type_info* m_type = nullptr;
+    holder_t m_holder = nullptr;
+public:
+    AnyPtr() = default;
+    template <typename T, typename=std::enable_if_t<!std::is_same_v<std::decay_t<T>, AnyPtr>>>
+    explicit AnyPtr(T* value, Deleter deleter) {
+        m_type = &typeid(T);
+        m_holder = {value, deleter};
+    }
+    template <typename T>
+    T* as() {
+        mgb_assert(is_exactly<T>(), "type mismatch");
+        return reinterpret_cast<T*>(m_holder.get());
+    }
+    template <typename T>
+    const T* as() const {
+        mgb_assert(is_exactly<T>(), "type mismatch");
+        return reinterpret_cast<const T*>(m_holder.get());
+    }
+    template <typename T>
+    bool is_exactly() const {
+        return std::type_index{typeid(T)} == std::type_index{*m_type};
+    }
+    const std::type_info& type() const {
+        return *m_type;
+    }
+    bool operator==(std::nullptr_t nptr) const {
+        return m_holder == nullptr;
+    }
+    operator bool() const {
+        return m_holder != nullptr;
+    }
+};
+
 
 class Profiler {
 public:
@@ -57,7 +104,10 @@ public:
         uint64_t id;
         std::thread::id tid;
         profiler::Time time;
-        std::any data;
+        AnyPtr data;
+        Record() = default;
+        Record(uint64_t id, std::thread::id tid, profiler::Time time, AnyPtr data):
+            id{id}, tid{tid}, time{time}, data{std::move(data)} {};
     };
     enum Status: uint8_t {
         Running = 0,
@@ -82,34 +132,50 @@ private:
     std::thread::id m_thread_id;
     std::vector<Record> m_records;
     std::atomic<Status> m_status = Running;
+    std::unordered_map<std::type_index, AnyPtr> m_mem_pools;
 
     static std::vector<entry_t> sm_records;
     static options_t sm_profile_options;
     static std::mutex sm_mutex;
-    static std::unordered_map<std::thread::id, Profiler*> sm_profilers;
+    // assume std::thread::id is unique
+    static std::unordered_map<std::thread::id, std::unique_ptr<Profiler>> sm_profilers;
     static Timer sm_timer;
     static profiler::HostTime sm_start_at;
     static std::atomic_uint64_t sm_last_id;
     static std::atomic_size_t sm_preferred_capacity;
     static bool sm_profiling;
     static constexpr bool sm_debug = false;
-    thread_local static std::unique_ptr<Profiler> tm_profiler;
+    thread_local static Profiler* tm_profiler;
 public:
-    Profiler() {
-        m_thread_id = std::this_thread::get_id();
-        MGB_LOCK_GUARD(sm_mutex);
-        mgb_assert(sm_profilers.count(m_thread_id) == 0);
-        sm_profilers[m_thread_id] = this;
-    }
-    ~Profiler() {
-        MGB_LOCK_GUARD(sm_mutex);
-        mgb_assert(sm_profilers.count(m_thread_id) == 1);
-        sm_profilers.erase(m_thread_id);
-        sm_records.insert(sm_records.end(), m_records.begin(), m_records.end());
+    explicit Profiler(std::thread::id tid): m_thread_id{tid} {
+        mgb_assert(tid == std::this_thread::get_id(), "thread id mismatch");
     }
 public:
     static Profiler& get_instance() {
+        if (!tm_profiler) {
+            MGB_LOCK_GUARD(sm_mutex);
+            auto& profiler = sm_profilers[std::this_thread::get_id()];
+            if (!profiler) {
+                profiler = std::make_unique<Profiler>(std::this_thread::get_id());
+            }
+            tm_profiler = profiler.get();
+        }
         return *tm_profiler;
+    }
+
+    template <typename T>
+    static MemPool<T>& get_mem_pool() {
+        thread_local MemPool<T>* t_pool = nullptr;
+        if (t_pool == nullptr) {
+            auto& pool = get_instance().m_mem_pools[typeid(MemPool<T>)];
+            if (pool == nullptr) {
+                pool = AnyPtr(new MemPool<T>(), {nullptr, [](void*, void* ptr){
+                    delete reinterpret_cast<MemPool<T>*>(ptr);
+                }});
+            }
+            t_pool = pool.as<MemPool<T>>();
+        }
+        return *t_pool;
     }
 
     static uint64_t next_id() {
@@ -119,13 +185,19 @@ public:
     template <typename T, typename... TArgs>
     static uint64_t record(TArgs&&... args) {
         auto& profiler = get_instance();
+        auto& mem_pool = get_mem_pool<T>();
         if constexpr (sm_debug) {
             Status expected = Running;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Recording));
         }
         uint64_t id = next_id();
         profiler::Time time = sm_timer.record_host();
-        profiler.m_records.push_back({id, std::this_thread::get_id(), time, T{std::forward<TArgs>(args)...}});
+        auto deleter = [](void* obj, void* ptr){
+            reinterpret_cast<MemPool<T>*>(obj)->free(reinterpret_cast<T*>(ptr));
+        };
+        profiler.m_records.emplace_back(id, profiler.m_thread_id, time, AnyPtr{
+            mem_pool.alloc(T{std::forward<TArgs>(args)...}), {&mem_pool, deleter}
+        });
         if constexpr (sm_debug) {
             Status expected = Recording;
             mgb_assert(profiler.m_status.compare_exchange_strong(expected, Running));
@@ -146,7 +218,9 @@ public:
         std::vector<entry_t> profile_data = std::move(sm_records);
         for (auto&& [tid, profiler]: sm_profilers) {
             sm_preferred_capacity = std::max(sm_preferred_capacity.load(), profiler->m_records.size());
-            profile_data.insert(profile_data.end(), profiler->m_records.begin(), profiler->m_records.end());
+            profile_data.insert(profile_data.end(),
+                    std::make_move_iterator(profiler->m_records.begin()),
+                    std::make_move_iterator(profiler->m_records.end()));
             profiler->m_records.clear();
             profiler->m_records.reserve(sm_preferred_capacity);
         }
@@ -160,11 +234,11 @@ public:
                 mgb_assert(profiler->m_status.compare_exchange_strong(expected, Running));
             }
         }
-        bundle.entries = profile_data;
+        bundle.entries = std::move(profile_data);
         bundle.options = get_options();
         bundle.start_at = sm_start_at;
         bundle.thread_dict = get_thread_dict();
-        return bundle;
+        return std::move(bundle);
     }
 
     static option_t get_option(std::string key, option_t default_val) {
@@ -202,31 +276,6 @@ public:
     static void dump_profile(std::string basename, std::string format, bundle_t result);
 };
 
-
-class ProfileDataCollector {
-public:
-    template <typename T>
-    using SubCollector = std::function<void(uint64_t, std::thread::id, uint64_t, T)>;
-private:
-    std::unordered_map<std::type_index, SubCollector<std::any>> m_collectors;
-public:
-    template <typename T>
-    ProfileDataCollector& handle(SubCollector<T> collector) {
-        auto erased = [collector](uint64_t id, std::thread::id tid, uint64_t time, std::any data){
-            collector(id, tid, time, std::any_cast<T>(std::move(data)));
-        };
-        m_collectors[typeid(T)] = erased;
-        return *this;
-    }
-    void operator()(uint64_t id, std::thread::id tid, uint64_t time, std::any event) {
-        std::type_index type = event.type();
-        if (m_collectors.count(type) == 0) {
-            return;
-        }
-        auto& handler = m_collectors.at(type);
-        handler(id, tid, time, std::move(event));
-    }
-};
 
 #define MGB_RECORD_EVENT(type, ...) \
     if (mgb::imperative::Profiler::is_profiling()) { \

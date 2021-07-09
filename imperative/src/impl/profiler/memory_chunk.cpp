@@ -261,7 +261,7 @@ struct MemoryFlowVisitor: EventVisitor<MemoryFlowVisitor> {
 
 void dump_memory_flow(std::string filename, Profiler::bundle_t result) {
     MemoryFlowVisitor visitor;
-    visitor.process_events(std::move(result));
+    visitor.process_events(result);
     debug::write_to_file(filename.c_str(), visitor.memory_flow.to_svg().to_string());
 }
 

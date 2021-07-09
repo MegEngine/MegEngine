@@ -1133,9 +1133,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
                     }
                 }
                 CompNode::foreach([&](CompNode device){
-                    if (Profiler::get_option("sample_rate", 0)) {
-                        sample_on_device(device, true);
-                    }
+                    sample_on_device(device, true);
                     MGB_RECORD_EVENT_IF((Profiler::get_option("profile_device", 0)), RecordDeviceEvent, Timer::record_device(device));
                 });
                 MGB_RECORD_EVENT(StartProfileFinishEvent);
@@ -1149,9 +1147,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
                     MGB_RECORD_EVENT(TensorEraseEvent, info->id);
                 }
                 CompNode::foreach([&](CompNode device){
-                    if (Profiler::get_option("sample_rate", 0)) {
-                        sample_on_device(device, true);
-                    }
+                    sample_on_device(device, true);
                 });
                 MGB_RECORD_EVENT(StopProfileFinishEvent);
             } else if constexpr (std::is_same_v<T, PushScope>) {

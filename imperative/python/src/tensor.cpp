@@ -1012,9 +1012,10 @@ void init_tensor(py::module m) {
               interpreter_for_py->stop_profile();
               interpreter_for_py->sync();
               imperative::Profiler::stop_profile();
-              auto results = imperative::Profiler::collect();
-              return [results=std::move(results)](std::string basename, std::string format){
-                  imperative::Profiler::dump_profile(basename, format, results);
+              auto results = std::make_shared<imperative::Profiler::bundle_t>(imperative::Profiler::collect());
+              return [results=results](std::string basename, std::string format) mutable {
+                  imperative::Profiler::dump_profile(basename, format, std::move(*results));
+                  results = nullptr;
               };
           }, py::call_guard<py::gil_scoped_release>());
     m.def("sync",

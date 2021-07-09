@@ -28,7 +28,7 @@ namespace mgb {
 namespace imperative {
 
 profiler::Time Timer::record_host() {
-    return std::chrono::high_resolution_clock::now();
+    return std::chrono::system_clock::now();
 }
 
 std::shared_ptr<CompNode::Event> Timer::record_device(CompNode device) {
@@ -40,12 +40,12 @@ std::shared_ptr<CompNode::Event> Timer::record_device(CompNode device) {
 std::vector<Profiler::entry_t> Profiler::sm_records;
 Profiler::options_t Profiler::sm_profile_options;
 std::mutex Profiler::sm_mutex;
-std::unordered_map<std::thread::id, Profiler*> Profiler::sm_profilers;
+std::unordered_map<std::thread::id, std::unique_ptr<Profiler>> Profiler::sm_profilers;
 Timer Profiler::sm_timer;
 profiler::HostTime Profiler::sm_start_at = profiler::HostTime::min();
 std::atomic_uint64_t Profiler::sm_last_id = 0;
 bool Profiler::sm_profiling = false;
-thread_local std::unique_ptr<Profiler> Profiler::tm_profiler = std::make_unique<Profiler>();
+thread_local Profiler* Profiler::tm_profiler = nullptr;
 std::atomic_size_t Profiler::sm_preferred_capacity;
 
 auto Profiler::get_thread_dict() -> thread_dict_t {
@@ -65,7 +65,7 @@ void Profiler::dump_profile(std::string basename, std::string format, bundle_t r
     if (iter == format_table.end()) {
         mgb_log_error("unsupported profiling format %s", format.c_str());
     }
-    return (iter->second)(basename, result);
+    return (iter->second)(basename, std::move(result));
 }
 
 }  // namespace imperative
