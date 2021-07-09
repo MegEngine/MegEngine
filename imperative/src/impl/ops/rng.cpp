@@ -127,10 +127,8 @@ public:
         auto&& glob_handle = glob_default_handles[comp_node];
         if (!glob_handle) {
             glob_handle = inst().do_new_handle(comp_node, glob_default_seed);
-        } else if (get_seed(glob_handle) != glob_default_seed) {
-            inst().DnnOpManagerBase::delete_handle(glob_handle);
-            glob_handle = inst().do_new_handle(comp_node, glob_default_seed);
         }
+        mgb_assert(get_seed(glob_handle) == glob_default_seed);
         return glob_handle;
     }
 
@@ -141,6 +139,13 @@ public:
 
     static void set_glob_default_seed(uint64_t seed) {
         MGB_LOCK_GUARD(sm_mtx);
+        for(auto && elem : glob_default_handles){
+            mgb_assert(elem.first.valid());
+            if(elem.second){
+                inst().DnnOpManagerBase::delete_handle(elem.second);
+            }
+            elem.second = inst().do_new_handle(elem.first, seed);
+        }
         glob_default_seed = seed;
     }
 
