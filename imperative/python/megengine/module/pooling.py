@@ -104,7 +104,7 @@ class AvgPool2d(_PoolNd):
     :param stride: the stride of the window. Default value is kernel_size。
     :param padding: implicit zero padding to be added on both sides.
     :param mode: whether to count padding values. "average" mode will do counting and 
-    "average_count_exclude_padding" mode won't do counting. 
+        "average_count_exclude_padding" mode won't do counting. 
         Default: "average_count_exclude_padding"
 
     Examples:

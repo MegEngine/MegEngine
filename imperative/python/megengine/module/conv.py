@@ -144,9 +144,9 @@ class Conv1d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(out_channels, in_channels, kernel_size)``,
-            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, kernel_size)``
-        :attr:`bias` usually has shape ``(1, out_channels, 1)``
+       * ``weight`` usually has shape ``(out_channels, in_channels, kernel_size)`` ,
+         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, kernel_size)``
+       * ``bias`` usually has shape ``(1, out_channels, 1)``
 
     Examples:
 
@@ -309,9 +309,9 @@ class Conv2d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(out_channels, in_channels, height, width)``,
-            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
+         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
 
@@ -455,9 +455,9 @@ class Conv3d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(out_channels, in_channels, depth, height, width)``,
-            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, depth, height, width)``
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(out_channels, in_channels, depth, height, width)`` ,
+         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, depth, height, width)``
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
 
@@ -587,9 +587,10 @@ class ConvTranspose2d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(in_channels, out_channels, height, width)``,
-            if groups is not 1, shape will be ``(groups, in_channels // groups, out_channels // groups, height, width)``
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(in_channels, out_channels, height, width)`` ,
+         if groups is not 1, shape will be ``(groups, in_channels // groups, out_channels // groups, height, width)``
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
+
     """
 
     def __init__(
@@ -685,9 +686,10 @@ class LocalConv2d(Conv2d):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(out_height, out_width, in_channels, height, width, in_channels)``,
-            if groups is not 1, shape will be ``(groups, out_height, out_width, in_channels // groups, height, width, out_channels // groups)``
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(out_height, out_width, in_channels, height, width, in_channels)`` ,
+         if groups is not 1, shape will be ``(groups, out_height, out_width, in_channels // groups, height, width, out_channels // groups)``
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
+
     """
 
     def __init__(
@@ -788,9 +790,9 @@ class DeformableConv2d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(out_channels, in_channels, height, width)``,
-            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
+         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     """
 
@@ -898,8 +900,9 @@ class ConvTranspose3d(_ConvNd):
 
     .. note::
 
-        :attr:`weight` usually has shape ``(in_channels, out_channels, depth, height, width)``.
-        :attr:`bias` usually has shape ``(1, out_channels, *1)``
+       * ``weight`` usually has shape ``(in_channels, out_channels, depth, height, width)`` .
+       * ``bias`` usually has shape ``(1, out_channels, *1)``
+
     """
 
     def __init__(

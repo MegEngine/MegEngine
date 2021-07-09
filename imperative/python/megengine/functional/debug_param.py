@@ -24,7 +24,7 @@ if os.getenv("MEGENGINE_CONV_EXECUTION_STRATEGY") != None:
 
 def get_execution_strategy() -> Strategy:
     """
-    Returns the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
+    Returns the execution strategy of :class:`~module..Conv2d` and :func:`~.matmul`
 
     See :func:`~.set_execution_strategy` for possible return values
     """
@@ -33,9 +33,9 @@ def get_execution_strategy() -> Strategy:
 
 def set_execution_strategy(option):
     """
-    Sets the execution strategy of :class:`~.Conv2d` and :func:'~.matmul'
+    Sets the execution strategy of :class:`~module.Conv2d` and :func:`~.matmul`
 
-    :param option: Decides how :class:`~.Conv2d`and :func:'~.matmul' algorithms are chosen.
+    :param option: Decides how :class:`~module.Conv2d`and :func:`~.matmul` algorithms are chosen.
         Available value Strategy
         * HEURISTIC uses heuristic to choose the fastest algorithm.
         * PROFILE runs possible algorithms on real device to find the best one.
