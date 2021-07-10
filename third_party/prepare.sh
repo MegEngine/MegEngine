@@ -31,8 +31,18 @@ git submodule update --init gtest
 git submodule update --init cutlass
 
 git submodule update --init cpuinfo
+
+name=`git config --get user.name`
+if [ -z "$name" ]; then
+    name="default"
+fi
+email=`git config --get user.email`
+if [ -z "$email" ]; then
+    email="default"
+fi
+
 source ./apply-patches.sh
-apply_cpuinfo_patches
+apply_cpuinfo_patches ${name} ${email}
 
 git submodule update --init OpenBLAS
 git submodule update --init libzmq
