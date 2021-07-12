@@ -159,6 +159,42 @@ TEST(TestOprDNN, PoolingExePolicy) {
                        "cudnnReproducible") != std::string::npos);
 }
 
+TEST(TestOprDNN, PoolingForwardFastrun) {
+    using Param = opr::Pooling::Param;
+    Param param;
+    using Policy = opr::Pooling::ExecutionPolicy;
+    using S = Policy::Strategy;
+
+    auto cn = CompNode::load("xpux");
+    cn.activate();
+
+    auto orig_impl = PersistentCache::set_impl(
+            std::make_shared<InMemoryPersistentCache>());
+
+    HostTensorND host_y;
+    S strategy = S::PROFILE | S::REPRODUCIBLE;
+
+    auto graph = ComputingGraph::make();
+
+    HostTensorGenerator<> gen;
+    TensorShape shape = {1, 20, 24, 24};
+    auto input = opr::Host2DeviceCopy::make(*graph, gen(shape, cn));
+
+    param.mode = Param::Mode::MAX;
+    param.window_h = param.window_w = 2;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 0;
+    param.format = Param::Format::NCHW;
+
+    Policy policy;
+    policy.strategy = strategy;
+
+    auto pooling = opr::PoolingForward::make(input, param, {}, policy);
+
+    auto func = graph->compile({make_callback_copy(pooling, host_y)});
+    func->execute().wait();
+}
+
 } // anonymous namespace
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
