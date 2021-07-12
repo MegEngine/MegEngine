@@ -163,7 +163,7 @@ using Convolution =
     ${element_bias}, 
     ${layout_bias}, 
     ${element_accumulator}, 
-    ${conv_type}, 
+    ${conv_type},
     ${opcode_class},
     ${arch},
     cutlass::gemm::GemmShape<${threadblock_shape_m}, ${threadblock_shape_n}, ${threadblock_shape_k}>,
@@ -246,6 +246,7 @@ using Deconvolution =
     ${element_bias}, 
     ${layout_bias}, 
     ${element_accumulator}, 
+    ${conv_type},
     ${opcode_class},
     ${arch},
     cutlass::gemm::GemmShape<${threadblock_shape_m}, ${threadblock_shape_n}, ${threadblock_shape_k}>,
@@ -276,6 +277,7 @@ using Deconvolution =
 
     values = {
       'operation_name': operation.procedural_name(),
+      'conv_type': ConvTypeTag[operation.conv_type],
       'element_src': DataTypeTag[operation.src.element],
       'layout_src': LayoutTag[operation.src.layout],
       'element_flt': DataTypeTag[operation.flt.element],
@@ -530,44 +532,17 @@ void initialize_${configuration_name}(Manifest &manifest) {
 ###################################################################################################
 
 class EmitConvSingleKernelWrapper():
-  def __init__(self, kernel_path, operation, wrapper_path):
+  def __init__(self, kernel_path, operation):
     self.kernel_path = kernel_path
-    self.wrapper_path = wrapper_path
     self.operation = operation
 
-    self.conv_wrappers = { \
-      ConvKind.Fprop: """
-template void megdnn::cuda::cutlass_wrapper::cutlass_convolution_wrapper<Convolution>(
-  const typename Convolution::ElementSrc* d_src, 
-  const typename Convolution::ElementFilter* d_filter, 
-  const typename Convolution::ElementBias* d_bias, 
-  const typename Convolution::ElementDst* d_z, 
-  typename Convolution::ElementDst* d_dst, 
-  int* workspace, 
-  typename Convolution::ConvolutionParameter const& conv_param, 
-  typename Convolution::EpilogueOutputOp::Params const& epilogue, 
-  cudaStream_t stream, 
-  typename Convolution::ExtraParam extra_param);
-""", \
-      ConvKind.Dgrad: """
-template void megdnn::cuda::cutlass_wrapper::cutlass_deconvolution_wrapper<Deconvolution>(
-  const typename Deconvolution::ElementSrc* d_src, 
-  const typename Deconvolution::ElementFilter* d_filter, 
-  const typename Deconvolution::ElementBias* d_bias, 
-  const typename Deconvolution::ElementDst* d_z, 
-  typename Deconvolution::ElementDst* d_dst, 
-  int* workspace, 
-  typename Deconvolution::ConvolutionParameter const& conv_param, 
-  typename Deconvolution::EpilogueOutputOp::Params const& epilogue, 
-  cudaStream_t stream);
-""", \
-    }
-    
     if self.operation.conv_kind == ConvKind.Fprop:
       self.instance_emitter = EmitConv2dInstance()
+      self.convolution_name = "Convolution"
     else:
       assert self.operation.conv_kind == ConvKind.Dgrad
       self.instance_emitter = EmitDeconvInstance()
+      self.convolution_name = "Deconvolution"
 
     self.header_template = """
 #if !MEGDNN_TEGRA_X1
@@ -575,13 +550,30 @@ template void megdnn::cuda::cutlass_wrapper::cutlass_deconvolution_wrapper<Decon
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "${wrapper_path}"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
+#include "cutlass/convolution/device/convolution.h"
+
+#include "src/cuda/cutlass/manifest.h"
+#include "src/cuda/cutlass/convolution_operation.h"
 """
     self.instance_template = """
 ${operation_instance}
 """
-    self.wrapper_template = """
-${wrapper_instance}
+
+    self.manifest_template = """
+namespace cutlass {
+namespace library {
+
+void initialize_${operation_name}(Manifest &manifest) {
+  manifest.append(new ConvolutionOperation<${convolution_name}>(
+    "${operation_name}"
+  ));
+}
+
+}  // namespace library
+}  // namespace cutlass
 """
 
     self.epilogue_template = """
@@ -593,9 +585,7 @@ ${wrapper_instance}
   def __enter__(self):
     self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
     self.kernel_file = LazyFile(self.kernel_path)
-    self.kernel_file.write(SubstituteTemplate(self.header_template, {
-      'wrapper_path': self.wrapper_path, 
-      }))
+    self.kernel_file.write(self.header_template)
     return self
 
   #
@@ -604,11 +594,12 @@ ${wrapper_instance}
       'operation_instance': self.instance_emitter.emit(self.operation),
       }))
 
-    # emit wrapper
-    wrapper = SubstituteTemplate(self.wrapper_template, {
-      'wrapper_instance': self.conv_wrappers[self.operation.conv_kind], 
+    # emit manifest helper
+    manifest = SubstituteTemplate(self.manifest_template, {
+      'operation_name': self.operation.procedural_name(),
+      'convolution_name': self.convolution_name
     })
-    self.kernel_file.write(wrapper)
+    self.kernel_file.write(manifest)
 
   #
   def __exit__(self, exception_type, exception_value, traceback):

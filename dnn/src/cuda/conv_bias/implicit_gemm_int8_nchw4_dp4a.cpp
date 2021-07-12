@@ -6,14 +6,14 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include "./algo.h"
-#include "src/cuda/utils.h"
-#include "src/cuda/convolution_helper/parameter.cuh"
-#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 #include "src/common/conv_bias.h"
+#include "src/cuda/conv_bias/algo.h"
+#include "src/cuda/convolution_helper/parameter.cuh"
+#include "src/cuda/utils.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -34,8 +34,7 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     bool available = true;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    if (!check_bias_share_in_channel(*(args.bias_layout),
-                                                param.format))
+    if (!check_bias_share_in_channel(*(args.bias_layout), param.format))
         return false;
     bool valid_format = param.format == Format::NCHW4_NCHW32 &&
                         m_algo_param.threadblock_m % 32 == 0;
@@ -48,7 +47,8 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
             (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
              args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm);
     valid_format |= param.format == Format::NCHW4;
-    if (!valid_format) return false;
+    if (!valid_format)
+        return false;
     size_t n = args.src_layout->operator[](0),
            ci = args.src_layout->operator[](1) * 4,
            hi = args.src_layout->operator[](2),
@@ -170,16 +170,13 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                 args.preprocessed_filter->tensors[0].raw_ptr);
     }
 
-    convolution::ConvParam kern_param;
-    kern_param.n = n, kern_param.co = co, kern_param.ci = ci,
-    kern_param.hi = hi, kern_param.wi = wi, kern_param.ho = ho,
-    kern_param.wo = wo, kern_param.ph = ph, kern_param.pw = pw,
-    kern_param.sh = sh, kern_param.sw = sw, kern_param.fh = fh,
-    kern_param.fw = fw;
-
     float src_scale = args.src_layout->dtype.param<dtype::QuantizedS8>().scale,
           filter_scale =
                   args.filter_layout->dtype.param<dtype::QuantizedS8>().scale;
+
+    // \note these constants of cutlass epilogue will be passed to method
+    // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
+    // a different dtype here results in undefined epilogue behaviors
     float alpha = src_scale * filter_scale;
     float beta = 1.f;
     float dst_scale = 1.f;
@@ -192,13 +189,15 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     if (args.bias_layout->dtype.enumv() == DTypeEnum::QuantizedS32) {
         megdnn_assert(args.dst_layout->dtype.category() ==
                       DTypeCategory::QUANTIZED);
-        float bias_scale = args.bias_layout->dtype.param<dtype::QuantizedS32>()
-                                   .scale;
+        float bias_scale =
+                args.bias_layout->dtype.param<dtype::QuantizedS32>().scale;
         dst_scale = get_scale(args.dst_layout->dtype);
         alpha /= dst_scale, beta = bias_scale / dst_scale;
     }
     float delta = 0.f;
+    void* z_ptr = nullptr;
     if (args.z_layout->ndim > 0) {
+        z_ptr = args.z_tensor->raw_ptr;
         gamma = 1.f;
         if (args.z_layout->dtype.category() == DTypeCategory::QUANTIZED) {
             megdnn_assert(args.dst_layout->dtype.category() ==
@@ -213,98 +212,20 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
             delta = -z_zero * gamma;
         }
     }
-    uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
-    bool nonunity_kernel = !(fh == 1 && fw == 1);
-#define DISPATCH(_nonunity_kernel)             \
-    if (nonunity_kernel == _nonunity_kernel) { \
-        cb(_nonunity_kernel)                   \
-    }
-    if (param.format == Format::NCHW4) {
-#define cb(_nonunity_kernel)                                                \
-    cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4<        \
-            _nonunity_kernel>(                                              \
-            args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,          \
-            args.bias_tensor->compatible_ptr<int32_t>(),                    \
-            args.z_tensor->compatible_ptr<int8_t>(),                        \
-            args.dst_tensor->compatible_ptr<int8_t>(), nullptr, kern_param, \
-            nonlinear_mode, alpha, beta, gamma, dst_scale,                  \
-            cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,          \
-                                       m_algo_param.threadblock_n,          \
-                                       m_algo_param.threadblock_k},         \
-            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,                 \
-                                       m_algo_param.warp_n,                 \
-                                       m_algo_param.warp_k},                \
-            m_algo_param.stage, stream);
-        DISPATCH(true);
-        DISPATCH(false);
-#undef cb
-    } else if (param.format == Format::NCHW4_NCHW) {
-#define cb(_nonunity_kernel)                                               \
-    cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nchw<  \
-            _nonunity_kernel>(                                             \
-            args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,         \
-            args.bias_tensor->compatible_ptr<float>(),                     \
-            args.z_tensor->compatible_ptr<float>(),                        \
-            args.dst_tensor->compatible_ptr<float>(), nullptr, kern_param, \
-            nonlinear_mode, alpha, beta, gamma, dst_scale,                 \
-            cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,         \
-                                       m_algo_param.threadblock_n,         \
-                                       m_algo_param.threadblock_k},        \
-            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,                \
-                                       m_algo_param.warp_n,                \
-                                       m_algo_param.warp_k},               \
-            m_algo_param.stage, stream);
-        DISPATCH(true);
-        DISPATCH(false);
-#undef cb
-    } else if (param.format == Format::NCHW4_NHWC) {
-#define cb(_signedness)                                                   \
-    cutlass_wrapper::do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_nhwc< \
-            _signedness>(                                                 \
-            args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,        \
-            args.bias_tensor->compatible_ptr<int32_t>(),                  \
-            reinterpret_cast<int8_t*>(args.z_tensor->raw_ptr),            \
-            reinterpret_cast<int8_t*>(args.dst_tensor->raw_ptr), nullptr, \
-            kern_param, nonlinear_mode, alpha, beta, gamma, delta, theta, \
-            dst_scale,                                                    \
-            cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,        \
-                                       m_algo_param.threadblock_n,        \
-                                       m_algo_param.threadblock_k},       \
-            cutlass_wrapper::GemmCoord{m_algo_param.warp_m,               \
-                                       m_algo_param.warp_n,               \
-                                       m_algo_param.warp_k},              \
-            m_algo_param.stage, stream);
-        if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
-            cb(true);
-        } else {
-            megdnn_assert(args.dst_layout->dtype.enumv() ==
-                          DTypeEnum::Quantized4Asymm);
-            cb(false);
-        }
-#undef cb
-    } else {
-        megdnn_assert(param.format == Format::NCHW4_NCHW32);
-#define cb(_nonunity_kernel)                                                   \
-    cutlass_wrapper::                                                          \
-            do_conv_bias_int8_implicit_gemm_dp4a_ncdiv4hw4_ncdiv32hw32<        \
-                    _nonunity_kernel>(                                         \
-                    args.src_tensor->compatible_ptr<int8_t>(), filter_ptr,     \
-                    args.bias_tensor->compatible_ptr<int32_t>(),               \
-                    args.z_tensor->compatible_ptr<int8_t>(),                   \
-                    args.dst_tensor->compatible_ptr<int8_t>(), nullptr,        \
-                    kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale, \
-                    cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,     \
-                                               m_algo_param.threadblock_n,     \
-                                               m_algo_param.threadblock_k},    \
-                    cutlass_wrapper::GemmCoord{m_algo_param.warp_m,            \
-                                               m_algo_param.warp_n,            \
-                                               m_algo_param.warp_k},           \
-                    m_algo_param.stage, stream);
-        DISPATCH(true);
-        DISPATCH(false);
-#undef cb
-#undef DISPATCH
-    }
+    float threshold = 0.f;
+    bool load_from_const = !(fh == 1 && fw == 1);
+    bool without_shared_load = false;
+
+    const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
+                                         ConvType::kConvolution,
+                                         load_from_const, without_shared_load);
+
+    execute_cutlass_conv_op(
+            op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr,
+            z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw,
+            ho, wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta,
+            &theta, &threshold, &dst_scale, stream);
+
     after_kernel_launch();
 }
 

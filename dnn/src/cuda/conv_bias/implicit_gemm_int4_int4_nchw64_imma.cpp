@@ -10,8 +10,7 @@
  * implied.
  */
 
-#include "./algo.h"
-#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
+#include "src/cuda/conv_bias/algo.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -80,29 +79,6 @@ ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm::get_constants(
     }
 
     return {alpha, beta, gamma, delta, theta};
-}
-
-void ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm::do_exec(
-        const ExecArgs& args, void* filter_ptr, void* bias_ptr, void* z_ptr,
-        ConvParam kern_param, uint32_t nonlinear_mode, float alpha, float beta,
-        float gamma, float delta, float theta, cudaStream_t stream) const {
-    float dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
-
-    cutlass_wrapper::GemmCoord threadblock_shape{m_algo_param.threadblock_m,
-                                                 m_algo_param.threadblock_n,
-                                                 m_algo_param.threadblock_k};
-
-    cutlass_wrapper::GemmCoord warp_shape{
-            m_algo_param.warp_m, m_algo_param.warp_n, m_algo_param.warp_k};
-
-    cutlass_wrapper::do_conv_bias_int4_int4_implicit_gemm_imma_ncdiv64hw64<
-            true>(reinterpret_cast<int8_t*>(args.src_tensor->raw_ptr),
-                  reinterpret_cast<int8_t*>(filter_ptr),
-                  reinterpret_cast<int32_t*>(bias_ptr),
-                  reinterpret_cast<int8_t*>(z_ptr),
-                  reinterpret_cast<int8_t*>(args.dst_tensor->raw_ptr), nullptr,
-                  kern_param, nonlinear_mode, alpha, beta, gamma, dst_scale,
-                  threadblock_shape, warp_shape, m_algo_param.stage, stream);
 }
 #endif
 

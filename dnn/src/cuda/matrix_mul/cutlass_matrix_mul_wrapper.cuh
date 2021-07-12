@@ -21,22 +21,6 @@ namespace cutlass_wrapper {
 using GemmCoord = cutlass::gemm::GemmCoord;
 using BatchedGemmCoord = cutlass::gemm::BatchedGemmCoord;
 
-template <typename Gemm>
-void cutlass_matrix_mul_wrapper(
-        const typename Gemm::ElementA* d_A, size_t lda,
-        const typename Gemm::ElementB* d_B, size_t ldb,
-        typename Gemm::ElementC* d_C, size_t ldc, int* workspace,
-        GemmCoord const& problem_size,
-        typename Gemm::EpilogueOutputOp::Params const& epilogue,
-        cudaStream_t stream, int split_k_slices = 1);
-
-void cutlass_matrix_mul_float32_simt(
-        const float* d_A, bool transpose_A, size_t lda, const float* d_B,
-        bool transpose_B, size_t ldb, float* d_C, size_t ldc, int* workspace,
-        GemmCoord const& problem_size, float alpha, float beta,
-        const GemmCoord& threadblock_shape, const GemmCoord& warp_shape,
-        cudaStream_t stream, int split_k_slices = 1);
-
 template <typename GemvKernel>
 void cutlass_vector_matrix_mul_batched_strided_wrapper(
         BatchedGemmCoord const& problem_size,

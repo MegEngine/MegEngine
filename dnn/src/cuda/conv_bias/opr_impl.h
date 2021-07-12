@@ -57,6 +57,7 @@ public:
     class AlgoBatchedMatmul;
     class AlgoGroupConvGeneral;
     class AlgoQUInt4x4x32WMMA;
+    class AlgoCutlassConvolutionBase;
     class AlgoInt8CHWN4DotProdImplicitGemm;
     class AlgoInt8NCHW4DotProdImplicitGemm;
     class AlgoInt8CHWN4IMMAImplicitGemm;

@@ -1,5 +1,6 @@
 /**
- * \file dnn/src/cuda/convolution/backward_data/implicit_gemm_int8_nchw4_dp4a.cpp
+ * \file
+ * dnn/src/cuda/convolution/backward_data/implicit_gemm_int8_nchw4_dp4a.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -10,11 +11,11 @@
  * implied.
  */
 
-#include "./algo.h"
-#include "src/cuda/utils.h"
-#include "src/cuda/convolution_helper/parameter.cuh"
-#include "src/cuda/convolution/backward_data/cutlass_deconvolution_wrapper.cuh"
+#include "src/cuda/convolution/backward_data/algo.h"
 #include "src/cuda/convolution/backward_data/deconv_int8_helper.cuh"
+#include "src/cuda/convolution_helper/parameter.cuh"
+#include "src/cuda/cutlass/singleton.h"
+#include "src/cuda/utils.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -70,6 +71,7 @@ size_t ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
 
 void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         const ExecArgs& args) const {
+    auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
     size_t n = args.diff_layout->operator[](0),
            co = args.diff_layout->operator[](1) * 4,
@@ -81,6 +83,7 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     size_t fh = fm.spatial[0], fw = fm.spatial[1];
     size_t sh = fm.stride[0], sw = fm.stride[1];
     size_t ph = fm.padding[0], pw = fm.padding[1];
+    size_t dh = param.dilate_h, dw = param.dilate_w;
 
     auto&& stream = cuda_stream(args.opr->handle());
 
@@ -93,12 +96,6 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                 filter_ptr, args.filter_tensor->compatible_ptr<int8_t>(), co,
                 ci, fh, fw, stream);
     }
-    convolution::ConvParam kern_param;
-    kern_param.n = n, kern_param.co = co, kern_param.ci = ci,
-    kern_param.hi = hi, kern_param.wi = wi, kern_param.ho = ho,
-    kern_param.wo = wo, kern_param.ph = ph, kern_param.pw = pw,
-    kern_param.sh = sh, kern_param.sw = sw, kern_param.fh = fh,
-    kern_param.fw = fw;
 
     float diff_scale =
                   args.diff_layout->dtype.param<dtype::QuantizedS8>().scale,
@@ -106,17 +103,60 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
                   args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
           grad_scale =
                   args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
-    float alpha = diff_scale * filter_scale / grad_scale;
-    cutlass_wrapper::do_deconv_int8_implicit_gemm_dp4a_ncdiv4hw4(
-            args.diff_tensor->compatible_ptr<int8_t>(), filter_ptr,
-            args.grad_tensor->compatible_ptr<int8_t>(), nullptr, kern_param,
-            alpha,
-            cutlass_wrapper::GemmCoord{m_algo_param.threadblock_m,
-                                       m_algo_param.threadblock_n,
-                                       m_algo_param.threadblock_k},
-            cutlass_wrapper::GemmCoord{m_algo_param.warp_m, m_algo_param.warp_n,
-                                       m_algo_param.warp_k},
-            m_algo_param.stage, stream);
+
+    // \note these constants of cutlass epilogue will be passed to struct
+    // `ConvolutionArguments` by pointer and interpreted as ElementCompute*, a
+    // different dtype here results in undefined epilogue behaviors
+    float alpha = diff_scale * filter_scale / grad_scale, beta = 0.f,
+          gamma = 0.f, delta = 0.f;
+
+    using namespace cutlass::library;
+
+    // only use 16x64x8_16x64x8_2stages impl
+    ConvolutionKey key{
+            cutlass::conv::Operator::kDgrad,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorK4RSC4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS32,
+            LayoutTypeID::kTensorNC4HW4,
+            cutlass::conv::ConvType::kConvolution,
+            m_algo_param.threadblock_m,
+            m_algo_param.threadblock_n,
+            m_algo_param.threadblock_k,
+            m_algo_param.warp_m,
+            m_algo_param.warp_n,
+            m_algo_param.warp_k,
+            1,
+            1,
+            4,
+            cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
+            m_algo_param.stage,
+            true,
+            false};
+
+    const Operation* op = Singleton::get().operation_table.find_op(key);
+
+    // gcc prints warnings when size_t values are implicitly narrowed to int
+    cutlass::conv::Conv2dProblemSize problem_size{
+            int(n),  int(hi), int(wi), int(ci),
+            int(co), int(fh), int(fw), int(ho),
+            int(wo), int(ph), int(pw), int(sh),
+            int(sw), int(dh), int(dw), cutlass::conv::Mode::kCrossCorrelation};
+
+    cutlass::library::ConvolutionArguments conv_args{
+            problem_size, args.diff_tensor->compatible_ptr<int8_t>(),
+            filter_ptr,   nullptr,
+            nullptr,      args.grad_tensor->compatible_ptr<int8_t>(),
+            &alpha,       &beta,
+            &gamma,       &delta,
+            nullptr,      nullptr,
+            nullptr,      nullptr};
+
+    cutlass_check(op->run(&conv_args, nullptr, stream));
 
     after_kernel_launch();
 }

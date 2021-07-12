@@ -10,8 +10,7 @@
  * implied.
  */
 
-#include "./algo.h"
-#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
+#include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/conv_bias/reduce_filter.cuh"
 #include "src/cuda/utils.h"
 
@@ -121,44 +120,15 @@ ConvBiasForwardImpl::AlgoUInt4Int4NHWCIMMAImplicitGemm::get_constants(
         delta = -z_zero * gamma;
     }
 
-    return {alpha, beta, gamma, delta, theta};
-}
-
-void ConvBiasForwardImpl::AlgoUInt4Int4NHWCIMMAImplicitGemm::do_exec(
-        const ExecArgs& args, void* filter_ptr, void* bias_ptr, void* z_ptr,
-        ConvParam kern_param, uint32_t nonlinear_mode, float alpha, float beta,
-        float gamma, float delta, float theta, cudaStream_t stream) const {
-    float dst_scale =
-            args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
-    uint8_t src_zero =
-            args.src_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
-    cutlass_wrapper::GemmCoord threadblock_shape{m_algo_param.threadblock_m,
-                                                 m_algo_param.threadblock_n,
-                                                 m_algo_param.threadblock_k};
-
-    cutlass_wrapper::GemmCoord warp_shape{
-            m_algo_param.warp_m, m_algo_param.warp_n, m_algo_param.warp_k};
-    if (kern_param.fh == 1 && kern_param.fw == 1) {
-        cutlass_wrapper::do_conv_bias_uint4_int4_implicit_gemm_imma_nhwc<false>(
-                reinterpret_cast<uint8_t*>(args.src_tensor->raw_ptr),
-                reinterpret_cast<int8_t*>(filter_ptr),
-                reinterpret_cast<int32_t*>(bias_ptr),
-                reinterpret_cast<uint8_t*>(z_ptr),
-                reinterpret_cast<uint8_t*>(args.dst_tensor->raw_ptr), nullptr,
-                kern_param, nonlinear_mode, alpha, beta, gamma, delta, theta,
-                dst_scale, src_zero, threadblock_shape, warp_shape,
-                m_algo_param.access_size, m_algo_param.stage, stream);
-    } else {
-        cutlass_wrapper::do_conv_bias_uint4_int4_implicit_gemm_imma_nhwc<true>(
-                reinterpret_cast<uint8_t*>(args.src_tensor->raw_ptr),
-                reinterpret_cast<int8_t*>(filter_ptr),
-                reinterpret_cast<int32_t*>(bias_ptr),
-                reinterpret_cast<uint8_t*>(z_ptr),
-                reinterpret_cast<uint8_t*>(args.dst_tensor->raw_ptr), nullptr,
-                kern_param, nonlinear_mode, alpha, beta, gamma, delta, theta,
-                dst_scale, src_zero, threadblock_shape, warp_shape,
-                m_algo_param.access_size, m_algo_param.stage, stream);
+    // identity epilogue has no theta:
+    // alpha * accumulator + beta * bias + gamma * source + delta
+    if (args.opr->param().nonlineMode ==
+        param::ConvBias::NonlineMode::IDENTITY) {
+        delta += theta;
+        theta = 0.f;
     }
+
+    return {alpha, beta, gamma, delta, theta};
 }
 
 void ConvBiasForwardImpl::AlgoUInt4Int4NHWCIMMAImplicitGemm::update_bias(

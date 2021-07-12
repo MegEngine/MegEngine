@@ -28,6 +28,17 @@
 #include <memory>
 #include <unordered_map>
 
+namespace cutlass {
+namespace library {
+
+// forward declaration of cutlass library concepts, we hope that algo.h does
+// not depend on cutlass headers
+
+class Operation;
+
+}  // namespace library
+}  // namespace cutlass
+
 namespace megdnn {
 namespace cuda {
 
@@ -505,9 +516,44 @@ public:
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_CHWN4_DOTPROD_INT8)
 };
 
-class ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm final
-        : public AlgoBase {
+/*********************** Cutlass Algorithms ************************/
+
+/* The inheritance of cutlass algorithm classes:
+ *
+ * AlgoCutlassConvolutionBase
+ * +
+ * +--- AlgoInt8NCHW4DotProdImplicitGemm
+ * +--- AlgoInt8NCHW32IMMAImplicitGemm
+ * +
+ * +--- AlgoInt4NCHW64IMMAImplicitGemmBase
+ * +----+--- AlgoInt4Int4NCHW64IMMAImplicitGemm
+ * +----+--- AlgoUInt4Int4NCHW64IMMAImplicitGemm
+ * +
+ * +--- AlgoInt4NHWCIMMAImplicitGemmBase
+ * +----+--- AlgoInt4Int4NHWCIMMAImplicitGemm
+ * +----+--- AlgoUInt4Int4NHWCIMMAImplicitGemm
+ * +
+ */
+
+/*
+ * The base class for all cutlass algorithm classes
+ */
+class ConvBiasForwardImpl::AlgoCutlassConvolutionBase : public AlgoBase {
 public:
+    // corresponds to cutlass::conv::Operator. we hope that algo.h does not
+    // depend on cutlass headers
+    enum class ConvOperator { kFprop, kDgrad, kWgrad };
+
+    // corresponds to cutlass::conv::ConvType. we hope that algo.h does not
+    // depend on cutlass headers
+    enum class ConvType {
+        kConvolution,
+        kBatchConvolution,
+        kLocal,
+        kLocalShare
+    };
+
+    // common parameters for operation selection
     struct AlgoParam {
         int threadblock_m;
         int threadblock_n;
@@ -515,21 +561,54 @@ public:
         int warp_m;
         int warp_n;
         int warp_k;
+        int instruction_m;
+        int instruction_n;
+        int instruction_k;
         int stage;
-        std::string to_string() {
-            /// default algorithm
-            if (threadblock_m == 128 && threadblock_n == 128 &&
-                threadblock_k == 32 && warp_m == 32 && warp_n == 64 &&
-                warp_k == 32 && stage == 2) {
-                return "";
-            }
-            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m,
-                            threadblock_n, threadblock_k, warp_m, warp_n,
-                            warp_k, stage);
-        }
+        int access_size;
+
+        AlgoParam(int threadblock_m_, int threadblock_n_, int threadblock_k_,
+                  int warp_m_, int warp_n_, int warp_k_, int instruction_m_,
+                  int instruction_n_, int instruction_k_, int stage_,
+                  int access_size_ = 0);
+
+        std::string to_string() const;
     };
+
+    AlgoCutlassConvolutionBase(AlgoParam algo_param)
+            : m_algo_param{algo_param} {}
+
+    // generate a cutlass::library::ConvolutionKey and find the corresponding
+    // operation (cutlass kernel) from the global OperationTable
+    const cutlass::library::Operation* get_cutlass_conv_op(
+            const SizeArgs& args, ConvOperator conv_op, ConvType conv_type,
+            bool load_from_const, bool without_shared_load) const;
+
+    // execute the cutlass kernel found by get_cutlass_conv_op. we give
+    // subclasses full freedom to decide where and how these arguments are
+    // extracted
+    void execute_cutlass_conv_op(const cutlass::library::Operation* op,
+                                 const void* src, const void* filter,
+                                 const void* bias, const void* z, void* dst,
+                                 void* workspace, size_t n, size_t hi,
+                                 size_t wi, size_t ci, size_t co, size_t fh,
+                                 size_t fw, size_t ho, size_t wo, size_t ph,
+                                 size_t pw, size_t sh, size_t sw, size_t dh,
+                                 size_t dw, const void* alpha, const void* beta,
+                                 const void* gamma, const void* delta,
+                                 const void* theta, const void* threshold,
+                                 const void* dst_scale, cudaStream_t stream,
+                                 const void* extra_param = nullptr) const;
+
+protected:
+    AlgoParam m_algo_param;
+};
+
+class ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm final
+        : public AlgoCutlassConvolutionBase {
+public:
     AlgoInt8NCHW4DotProdImplicitGemm(AlgoParam algo_param)
-            : m_algo_param{algo_param},
+            : AlgoCutlassConvolutionBase(algo_param),
               m_name{ssprintf("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM%s",
                               m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
@@ -555,7 +634,6 @@ public:
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
-    AlgoParam m_algo_param;
     std::string m_name;
 };
 
@@ -714,19 +792,10 @@ private:
 
 #if CUDA_VERSION >= 10020
 class ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm final
-        : public AlgoBase {
+        : public AlgoCutlassConvolutionBase {
 public:
-    struct AlgoParam {
-        int threadblock_m;
-        int threadblock_n;
-        int threadblock_k;
-        int warp_m;
-        int warp_n;
-        int warp_k;
-        int stage;
-    };
     AlgoInt8NCHW32IMMAImplicitGemm(AlgoParam algo_param)
-            : m_algo_param{algo_param} {
+            : AlgoCutlassConvolutionBase(algo_param) {
         m_name = ConvBias::algo_name<ConvBias::DirectParam>(
                 ssprintf("INT8_NCHW32_IMMA_IMPLICIT_GEMM_%s",
                          to_string(m_algo_param).c_str()),
@@ -757,25 +826,14 @@ private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
 
-    AlgoParam m_algo_param;
     std::string m_name;
 };
 
 class ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase
-        : public AlgoBase {
+        : public AlgoCutlassConvolutionBase {
 public:
-    struct AlgoParam {
-        int threadblock_m;
-        int threadblock_n;
-        int threadblock_k;
-        int warp_m;
-        int warp_n;
-        int warp_k;
-        int stage;
-    };
-
     AlgoInt4NCHW64IMMAImplicitGemmBase(AlgoParam algo_param)
-            : m_algo_param(algo_param) {}
+            : AlgoCutlassConvolutionBase(algo_param) {}
 
     AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE;
@@ -799,16 +857,9 @@ protected:
     virtual std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const = 0;
 
-    virtual void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                         void* z_ptr, convolution::ConvParam kern_param,
-                         uint32_t nonlinear_mode, float alpha, float beta,
-                         float gamma, float delta, float theta,
-                         cudaStream_t stream) const = 0;
-
     void reorder_filter(const ExecArgs& args, void* reordered_filter) const;
 
     std::string m_name;
-    AlgoParam m_algo_param;
 };
 
 class ConvBiasForwardImpl::AlgoInt4Int4NCHW64IMMAImplicitGemm final
@@ -842,11 +893,6 @@ private:
 
     std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const override;
-
-    void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                 void* z_ptr, convolution::ConvParam kern_param,
-                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
-                 float delta, float theta, cudaStream_t stream) const override;
 };
 
 class ConvBiasForwardImpl::AlgoUInt4Int4NCHW64IMMAImplicitGemm final
@@ -881,30 +927,15 @@ private:
     std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const override;
 
-    void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                 void* z_ptr, convolution::ConvParam kern_param,
-                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
-                 float delta, float theta, cudaStream_t stream) const override;
-
     void update_bias(const ExecArgs& args, void* updated_bias,
                      void* reduce_filter_ptr, void* reduce_workspace) const;
 };
 
-class ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase : public AlgoBase {
+class ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase
+        : public AlgoCutlassConvolutionBase {
 public:
-    struct AlgoParam {
-        int threadblock_m;
-        int threadblock_n;
-        int threadblock_k;
-        int warp_m;
-        int warp_n;
-        int warp_k;
-        int stage;
-        int access_size;
-    };
-
     AlgoInt4NHWCIMMAImplicitGemmBase(AlgoParam algo_param)
-            : m_algo_param(algo_param) {}
+            : AlgoCutlassConvolutionBase(algo_param) {}
 
     AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE;
@@ -928,17 +959,10 @@ protected:
     virtual std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const = 0;
 
-    virtual void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                         void* z_ptr, convolution::ConvParam kern_param,
-                         uint32_t nonlinear_mode, float alpha, float beta,
-                         float gamma, float delta, float theta,
-                         cudaStream_t stream) const = 0;
-
     void reorder_filter(const ExecArgs& args, int interleaved,
                         void* reordered_filter) const;
 
     std::string m_name;
-    AlgoParam m_algo_param;
 };
 
 class ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm final
@@ -971,11 +995,6 @@ private:
 
     std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const override;
-
-    void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                 void* z_ptr, convolution::ConvParam kern_param,
-                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
-                 float delta, float theta, cudaStream_t stream) const override;
 };
 
 class ConvBiasForwardImpl::AlgoUInt4Int4NHWCIMMAImplicitGemm final
@@ -1008,11 +1027,6 @@ private:
 
     std::tuple<float, float, float, float, float> get_constants(
             const ExecArgs& args) const override;
-
-    void do_exec(const ExecArgs& args, void* filter_ptr, void* bias_ptr,
-                 void* z_ptr, convolution::ConvParam kern_param,
-                 uint32_t nonlinear_mode, float alpha, float beta, float gamma,
-                 float delta, float theta, cudaStream_t stream) const override;
 
     void update_bias(const ExecArgs& args, void* updated_bias,
                      void* reduce_filter_ptr, void* reduce_workspace) const;

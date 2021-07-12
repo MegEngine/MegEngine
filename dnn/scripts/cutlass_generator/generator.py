@@ -292,7 +292,7 @@ def GenerateConv2d_TensorOp_8832(args):
         ] 
         operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
-                                     True, ImplicitGemmMode.GemmTN, True) 
+                                     False, ImplicitGemmMode.GemmTN, True)
 
   layouts_nhwc = [
     (LayoutType.TensorNHWC, LayoutType.TensorNC8HW8, 32), 
@@ -633,16 +633,10 @@ if __name__ == "__main__":
   parser.add_argument("--type", type=str, choices=['simt', 'tensorop8816', 'tensorop8832'], 
                       default='simt', help="kernel type of CUTLASS kernel generator")
 
-  operation2wrapper_path = {
-    "gemm": "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper.cuinl", \
-    "gemv": "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper_batched_gemv_strided.cuinl", \
-    "conv2d": "src/cuda/conv_bias/implicit_gemm_conv_bias_cutlass_wrapper.cuinl", \
-    "deconv": "src/cuda/convolution/backward_data/implicit_gemm_deconv_cutlass_wrapper.cuinl", \
-  }
+  gemv_wrapper_path = "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper_batched_gemv_strided.cuinl"
 
   args = parser.parse_args()
 
-  wrapper_path = operation2wrapper_path[args.operations] 
   if args.operations == "gemm":
     operations = GenerateGemmOperations(args)
   elif args.operations == "gemv":
@@ -652,16 +646,22 @@ if __name__ == "__main__":
   elif args.operations == "deconv":
     operations = GenerateDeconvOperations(args)
   
-
   if args.operations == "conv2d" or args.operations == "deconv":
     for operation in operations:
-      with EmitConvSingleKernelWrapper(args.output, operation, wrapper_path) as emitter:
+      with EmitConvSingleKernelWrapper(args.output, operation) as emitter:
         emitter.emit()
-  elif args.operations == "gemm" or args.operations == "gemv":
+  elif args.operations == "gemm":
     for operation in operations:
-      with EmitGemmSingleKernelWrapper(args.output, operation, wrapper_path) as emitter:
+      with EmitGemmSingleKernelWrapper(args.output, operation) as emitter:
         emitter.emit()
-  
+  elif args.operations == "gemv":
+    for operation in operations:
+      with EmitGemvSingleKernelWrapper(args.output, operation, gemv_wrapper_path) as emitter:
+        emitter.emit()
+
+  if args.operations != "gemv":
+    GenerateManifest(args, operations, args.output)
+
 #
 ###################################################################################################
           

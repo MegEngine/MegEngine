@@ -940,8 +940,8 @@ void initialize_${configuration_name}(Manifest &manifest) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-} // namespace library
-} // namespace cutlass
+}  // namespace library
+}  // namespace cutlass
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -995,48 +995,101 @@ void initialize_${configuration_name}(Manifest &manifest) {
 ###################################################################################################
 
 class EmitGemmSingleKernelWrapper:
-  def __init__(self, kernel_path, gemm_operation, wrapper_path):
+  def __init__(self, kernel_path, gemm_operation):
     self.kernel_path = kernel_path
-    self.wrapper_path = wrapper_path
     self.operation = gemm_operation
-
-    gemm_wrapper = """
-template void megdnn::cuda::cutlass_wrapper::cutlass_matrix_mul_wrapper<Operation_${operation_name}>(
-  const typename Operation_${operation_name}::ElementA* d_A, size_t lda, 
-  const typename Operation_${operation_name}::ElementB* d_B, size_t ldb,  
-  typename Operation_${operation_name}::ElementC* d_C, size_t ldc,  
-  int* workspace, 
-  cutlass::gemm::GemmCoord const& problem_size,   
-  typename Operation_${operation_name}::EpilogueOutputOp::Params const& epilogue, 
-  cudaStream_t stream, int split_k_slices);
-"""
-
-    gemv_wrapper = """
-template void megdnn::cuda::cutlass_wrapper::
-  cutlass_vector_matrix_mul_batched_strided_wrapper<Operation_${operation_name}>(
-      BatchedGemmCoord const& problem_size,
-      const typename Operation_${operation_name}::ElementA* d_A, size_t lda, size_t batch_stride_a, 
-      const typename Operation_${operation_name}::ElementB* d_B, size_t ldb, size_t batch_stride_b, 
-      typename Operation_${operation_name}::ElementCD* d_C, size_t ldc, size_t batch_stride_c,
-      cudaStream_t stream);
-"""
-
-    if self.operation.gemm_kind == GemmKind.SplitKParallel or \
-            self.operation.gemm_kind == GemmKind.Gemm:
-      self.wrapper_template = gemm_wrapper
-    else:
-      assert self.operation.gemm_kind == GemmKind.GemvBatchedStrided
-      self.wrapper_template = gemv_wrapper
 
     instance_emitters = {
       GemmKind.Gemm: EmitGemmInstance(), 
       GemmKind.SplitKParallel: EmitGemmSplitKParallelInstance(),
-      GemmKind.GemvBatchedStrided: EmitGemvBatchedStridedInstance(), 
     }
     self.instance_emitter = instance_emitters[self.operation.gemm_kind]
 
     self.header_template = """
 #if __CUDACC_VER_MAJOR__ > 9 || (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)                 
+// ignore warning of cutlass
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
+#include "cutlass/gemm/device/gemm.h"
+#include "cutlass/gemm/device/gemm_splitk_parallel.h"
+
+#include "src/cuda/cutlass/manifest.h"
+#include "src/cuda/cutlass/gemm_operation.h"
+"""
+    self.instance_template = """
+${operation_instance}
+"""
+
+    self.manifest_template = """
+namespace cutlass {
+namespace library {
+
+void initialize_${operation_name}(Manifest &manifest) {
+  manifest.append(new GemmOperation<
+      Operation_${operation_name}
+    >("${operation_name}"));
+}
+
+}  // namespace library
+}  // namespace cutlass
+"""
+
+    self.epilogue_template = """
+#pragma GCC diagnostic pop
+#endif
+"""
+  #
+  def __enter__(self):
+    self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
+    self.kernel_file = LazyFile(self.kernel_path)
+    self.kernel_file.write(self.header_template)
+    return self
+
+  #
+  def emit(self):
+    self.kernel_file.write(SubstituteTemplate(self.instance_template, {
+      'operation_instance': self.instance_emitter.emit(self.operation),
+      }))
+
+    # emit manifest helper
+    manifest = SubstituteTemplate(self.manifest_template, {
+      'operation_name': self.operation.procedural_name(), 
+    })
+    self.kernel_file.write(manifest)
+
+  #
+  def __exit__(self, exception_type, exception_value, traceback):
+    self.kernel_file.write(self.epilogue_template)
+    self.kernel_file.close()
+
+
+###################################################################################################
+###################################################################################################
+
+class EmitGemvSingleKernelWrapper:
+  def __init__(self, kernel_path, gemm_operation, wrapper_path):
+    self.kernel_path = kernel_path
+    self.wrapper_path = wrapper_path
+    self.operation = gemm_operation
+
+    self.wrapper_template = """
+template void megdnn::cuda::cutlass_wrapper::
+  cutlass_vector_matrix_mul_batched_strided_wrapper<Operation_${operation_name}>(
+      BatchedGemmCoord const& problem_size,
+      const typename Operation_${operation_name}::ElementA* d_A, size_t lda, size_t batch_stride_a,
+      const typename Operation_${operation_name}::ElementB* d_B, size_t ldb, size_t batch_stride_b,
+      typename Operation_${operation_name}::ElementCD* d_C, size_t ldc, size_t batch_stride_c,
+      cudaStream_t stream);
+"""
+
+    self.instance_emitter = EmitGemvBatchedStridedInstance()
+
+    self.header_template = """
+#if __CUDACC_VER_MAJOR__ > 9 || (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)
 // ignore warning of cutlass
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -1055,10 +1108,10 @@ ${operation_instance}
 """
   #
   def __enter__(self):
-    self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
+    self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name())
     self.kernel_file = LazyFile(self.kernel_path)
     self.kernel_file.write(SubstituteTemplate(self.header_template, {
-      'wrapper_path': self.wrapper_path, 
+      'wrapper_path': self.wrapper_path,
       }))
     return self
 
@@ -1070,7 +1123,7 @@ ${operation_instance}
 
     # emit wrapper
     wrapper = SubstituteTemplate(self.wrapper_template, {
-      'operation_name': self.operation.procedural_name(), 
+      'operation_name': self.operation.procedural_name(),
     })
     self.kernel_file.write(wrapper)
 
@@ -1079,7 +1132,5 @@ ${operation_instance}
     self.kernel_file.write(self.epilogue_template)
     self.kernel_file.close()
 
-
 ###################################################################################################
 ###################################################################################################
-

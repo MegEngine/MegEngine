@@ -10,10 +10,9 @@
  * implied.
  */
 
-#include "./algo.h"
 #include "src/common/conv_bias.h"
+#include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/conv_bias/cutlass_reorder_filter.cuh"
-#include "src/cuda/conv_bias/cutlass_convolution_wrapper.cuh"
 #include "src/cuda/conv_bias/reduce_filter.cuh"
 #include "src/cuda/convolution_helper/parameter.cuh"
 #include "src/cuda/utils.h"
@@ -102,22 +101,40 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
     if (args.z_layout->ndim > 0)
         z_ptr = args.z_tensor->raw_ptr;
 
+    // \note these constants of cutlass epilogue will be passed to method
+    // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
+    // a different dtype here results in undefined epilogue behaviors
     float alpha, beta, gamma, delta, theta;
+
     std::tie(alpha, beta, gamma, delta, theta) = get_constants(args);
+    float dst_scale = 0.f;
+    float threshold = 0.f;
+    uint8_t src_zero = 0;
+    bool load_from_const = !(fh == 1 && fw == 1);
+    bool without_shared_load = true;
 
-    ConvParam kern_param;
-    kern_param.n = n, kern_param.co = co, kern_param.ci = ci,
-    kern_param.hi = hi, kern_param.wi = wi, kern_param.ho = ho,
-    kern_param.wo = wo, kern_param.ph = ph, kern_param.pw = pw,
-    kern_param.sh = sh, kern_param.sw = sw, kern_param.fh = fh,
-    kern_param.fw = fw;
-
-    uint32_t nonlinear_mode = static_cast<uint32_t>(param.nonlineMode);
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        dst_scale =
+                args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
+        src_zero = args.src_layout->dtype.param<dtype::Quantized4Asymm>()
+                           .zero_point;
+    } else {  // DTypeEnum::QuantizedS4
+        dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
+    }
 
     cudaStream_t stream = cuda_stream(args.opr->handle());
 
-    do_exec(args, filter_ptr, bias_ptr, z_ptr, kern_param, nonlinear_mode,
-            alpha, beta, gamma, delta, theta, stream);
+    const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
+                                         ConvType::kConvolution,
+                                         load_from_const, without_shared_load);
+
+    execute_cutlass_conv_op(op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr,
+                            z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi,
+                            ci, co, fh, fw, ho, wo, ph, pw, sh, sw, dh, dw,
+                            &alpha, &beta, &gamma, &delta, &theta, &threshold,
+                            &dst_scale, stream, &src_zero);
+
+    after_kernel_launch();
 }
 
 std::string ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::to_string(

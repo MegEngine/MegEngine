@@ -23,6 +23,8 @@ def write_op_list(f, gen_op, gen_type):
         operations = GenerateDeconvOperations(GenArg(gen_op, gen_type))
     for op in operations:
         f.write('    "%s.cu",\n' % op.procedural_name())
+    if gen_op != "gemv":
+        f.write('    "all_%s_%s_operations.cu",\n' % (gen_op, gen_type))
 
 
 if __name__ == "__main__":
