@@ -41,6 +41,7 @@ public:
     DEF_OPTION(enable_host_compute,     "MEGENGINE_HOST_COMPUTE",           1,
         "enable host compute, thus computation may be done in host event if it's device is gpu.");
     DEF_OPTION(enable_dtr_auto_drop,    "MEGENGINE_DTR_AUTO_DROP",          0, "");
+    DEF_OPTION(enable_dtr_sqrt_sampling, "MEGENGINE_DTR_SQRT_SAMPLING",     0, "");
     DEF_OPTION(dtr_eviction_threshold,  "MEGENGINE_DTR_EVICTION_THRESHOLD", 0,
         "auto drop will start whenever gpu memory usage exceeds this value.");
     DEF_OPTION(dtr_evictee_minimum_size, "MEGENGINE_DTR_EVICTEE_MINIMUM_SIZE", 1048576,

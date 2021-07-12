@@ -9,13 +9,12 @@
 import re
 from typing import Union
 
-from mprop import mproperty
-
-from .core._imperative_rt.core2 import set_option as _set_option
-from .core._imperative_rt.utils import _set_defrag
+from ..core._imperative_rt.core2 import set_option as _set_option
+from ..core._imperative_rt.utils import _set_defrag
 
 _eviction_threshold = 0
 _evictee_minimum_size = 1024 ** 2
+_enable_sqrt_sampling = False
 
 
 def _str2bytes(text: str) -> int:
@@ -29,7 +28,7 @@ def _str2bytes(text: str) -> int:
     return int(float(result[0][0]) * 1024 ** order.index(result[0][1].lower()))
 
 
-@mproperty
+@property
 def eviction_threshold(mod):
     r"""
     Get or set the eviction threshold in bytes. It can also be set to a string,
@@ -50,21 +49,22 @@ def eviction_threshold(mod):
         mge.dtr.eviction_threshold = "2GB"
 
     """
-    return mod._eviction_threshold
+    return _eviction_threshold
 
 
 @eviction_threshold.setter
 def eviction_threshold(mod, value: Union[int, str]):
+    global _eviction_threshold
     if isinstance(value, str):
-        mod._eviction_threshold = mod._str2bytes(value)
+        _eviction_threshold = _str2bytes(value)
     elif isinstance(value, int):
-        mod._eviction_threshold = value
+        _eviction_threshold = value
     else:
         raise TypeError("`value` should be a str or an int")
-    _set_option("dtr_eviction_threshold", mod._eviction_threshold)
+    _set_option("dtr_eviction_threshold", _eviction_threshold)
 
 
-@mproperty
+@property
 def evictee_minimum_size(mod):
     r"""
     Get or set the memory threshold of tensors in bytes. It can also be set to a
@@ -85,18 +85,45 @@ def evictee_minimum_size(mod):
         mge.dtr.evictee_minimum_size = "2MB"
 
     """
-    return mod._evictee_minimum_size
+    return _evictee_minimum_size
 
 
 @evictee_minimum_size.setter
 def evictee_minimum_size(mod, value: Union[int, str]):
+    global _evictee_minimum_size
     if isinstance(value, str):
-        mod._evictee_minimum_size = mod._str2bytes(value)
+        _evictee_minimum_size = _str2bytes(value)
     elif isinstance(value, int):
-        mod._evictee_minimum_size = value
+        _evictee_minimum_size = value
     else:
         raise TypeError("`value` should be a str or an int")
-    _set_option("dtr_evictee_minimum_size", mod._evictee_minimum_size)
+    _set_option("dtr_evictee_minimum_size", _evictee_minimum_size)
+
+
+@property
+def enable_sqrt_sampling(mod):
+    r"""
+    Get or set whether sqrt sampling is allowed. Sqrt sampling means that given
+    the size of the candidate set is N, only enumerate sqrt(N) tensors. When
+    the number of tensors is very high, enabling this optimization will speed
+    up the training.
+
+    Examples:
+
+    .. code-block::
+
+        import megengine as mge
+        mge.dtr.enable_sqrt_sampling = True
+
+    """
+    return _enable_sqrt_sampling
+
+
+@enable_sqrt_sampling.setter
+def enable_sqrt_sampling(mod, value: bool):
+    global _enable_sqrt_sampling
+    _enable_sqrt_sampling = value
+    _set_option("enable_dtr_sqrt_sampling", _enable_sqrt_sampling)
 
 
 def enable():

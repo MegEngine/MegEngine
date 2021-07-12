@@ -323,7 +323,7 @@ private:
          * \return the pointer of the best tensor; nullptr is returned if no 
          * available tensor is found
          */
-        TensorInfo* find_best_tensor();
+        TensorInfo* find_best_tensor(bool);
 
         /*!
          * \brief estimate the cost of recomputing tensor ptr

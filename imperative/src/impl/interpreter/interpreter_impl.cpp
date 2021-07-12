@@ -761,7 +761,7 @@ bool ChannelImpl::auto_evict(size_t force_num=0) {
     while ((state.options.dtr_eviction_threshold > 0 && current_memory > state.options.dtr_eviction_threshold) || force_num > 0) {
         RECORD_EVENT(AutoEvictEvent);
         sample_on_device(m_dtr.comp_node, false);
-        auto best = m_dtr.find_best_tensor();
+        auto best = m_dtr.find_best_tensor(state.options.enable_dtr_sqrt_sampling && !force_num);
         if (!best) {
             break;
         }
@@ -988,8 +988,15 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                     if (!inplace && !cross_cn && !m_dtr.is_bad_op(get_name(*cmd.op))) {
                         TensorInfo::ComputePath::make(cmd.id, cmd.op, cmd.inputs, cmd.outputs);
                         size_t detach_cnt = 0;
+                        if (!strcmp(get_name(*cmd.op), "BatchNorm") && cmd.outputs.size() == 5) {
+                            cmd.outputs[0]->detach_producer(); // detach running_mean
+                            cmd.outputs[1]->detach_producer(); // detach running_var
+                            for (auto input : cmd.inputs) {
+                                input->ref_cnt -= 2;
+                            }
+                        }
                         for (auto output : cmd.outputs) {
-                            if (!output->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
+                            if (output->producer && !output->size_exceeds_thd(state.options.dtr_evictee_minimum_size)) {
                                 output->detach_producer();
                                 detach_cnt ++;
                             }
@@ -1339,9 +1346,15 @@ double ChannelImpl::DynamicSublinear::estimate_neighbor_cost(TensorInfo* ptr) {
     return cost;
 }
 
-TensorInfo* ChannelImpl::DynamicSublinear::find_best_tensor() {
+TensorInfo* ChannelImpl::DynamicSublinear::find_best_tensor(bool enable_dtr_sqrt_sampling=false) {
     double min_msps = -1;
     TensorInfo* best = nullptr;
+    size_t sz = 1;
+    if (enable_dtr_sqrt_sampling) {
+        while (sz * sz <= candidates.size()) sz ++;
+    } else {
+        sz = candidates.size();
+    }
     for (auto i : candidates) {
         if (i->producer && i->ptr && !i->pinned && i->evict_type == EvictType::NONE) {
             double neighbor_cost = estimate_neighbor_cost(i);
@@ -1354,6 +1367,7 @@ TensorInfo* ChannelImpl::DynamicSublinear::find_best_tensor() {
                 best = i;
             }
         }
+        if (--sz == 0) break;
     }
     return best;
 }
