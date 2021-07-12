@@ -20,6 +20,7 @@
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/utils/to_string.h"
 
+#include "../blob_manager_impl.h"
 #include "../event_pool.h"
 #include "../op_trait.h"
 
@@ -629,8 +630,9 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         tensor_inputs.push_back(i->ptr);
         input_memory_desc.push_back(i->mem_desc);
     }
-    // SmallVector<MemoryDesc> outputs_mem_desc;
-    // SmallVector<TensorPtr> tensor_outputs, workspaces;
+    if (state.options.enable_dtr_auto_drop && state.options.dtr_eviction_threshold > 0) {
+        auto_evict(0);
+    }
     auto [outputs_mem_desc, tensor_outputs, workspaces] = init_output_and_workspace(*cmd.op, tensor_inputs, input_memory_desc);
     if (outputs_mem_desc.size()) {
         for (size_t i = 0;i < outputs_mem_desc.size();i ++) {
@@ -681,9 +683,6 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     // Before execute
     for (auto&& [device, kernel_id]: kernels) {
         RECORD_EVENT(KernelExecuteEvent, apply_id, kernel_id, Timer::record_event(device));
-    }
-    if (state.options.enable_dtr_auto_drop && state.options.dtr_eviction_threshold > 0) {
-        auto_evict();
     }
     // Apply op
     // Here std::move is REQUIRED for removing duplicated references.
@@ -752,29 +751,26 @@ void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
     }
 }
 
-void ChannelImpl::auto_evict() {
+bool ChannelImpl::auto_evict(size_t force_num=0) {
     auto& state = get_worker_state();
     if (!m_dtr.comp_node.valid()) {
-        return;
+        return false;
     }
     size_t current_memory = m_dtr.comp_node.get_used_memory();
-    while (current_memory > state.options.dtr_eviction_threshold) {
+    size_t flag = false;
+    while ((state.options.dtr_eviction_threshold > 0 && current_memory > state.options.dtr_eviction_threshold) || force_num > 0) {
         RECORD_EVENT(AutoEvictEvent);
         sample_on_device(m_dtr.comp_node, false);
         auto best = m_dtr.find_best_tensor();
         if (!best) {
-            if (!m_dtr.warn_printed) {
-                m_dtr.warn_printed = true;
-                mgb_log_warn("No tensors on %s can be evicted automatically "
-                             "when memory usage is %.0lfMB. Maybe memory "
-                             "budget is too small.",
-                              m_dtr.comp_node.to_string().c_str(),
-                              current_memory / 1024.0 / 1024.0);
-            }
             break;
         }
         if (best->ptr.unique() && best->ptr->blob().unique()) {
             current_memory -= best->memory;
+            if (force_num > 0) {
+                force_num --;
+            }
+            flag = true;
         }
         do_drop(best);
         if (best->evict_type == EvictType::DROP) {
@@ -783,6 +779,7 @@ void ChannelImpl::auto_evict() {
         sample_on_device(m_dtr.comp_node, false);
         RECORD_EVENT(AutoEvictFinishEvent);
     }
+    return flag;
 }
 
 void ChannelImpl::detach_users(TensorInfo* dest) {
@@ -859,6 +856,41 @@ std::unordered_set<TensorInfo*> ChannelImpl::collect_valid_tensors() {
     return valid_tensors;
 }
 
+void ChannelImpl::alloc_tensor_with_evict(TensorPtr x) {
+    auto reserve_size = [&](size_t size) {
+        if (!m_dtr.comp_node.valid()) {
+            return false;
+        }
+        while (size > m_dtr.comp_node.get_max_block_size_available()) {
+            bool evict_suc = auto_evict(1);
+            if (!evict_suc) return false;
+        }
+        return true;
+    };
+    auto pre_level = set_log_level(LogLevel::NO_LOG);
+    reserve_size(x->blob()->size());
+    MGB_TRY { BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size()); }
+    MGB_CATCH(MemAllocError&, {
+        bool suc = false;
+        while (!suc) {
+            if (!auto_evict(1)) {
+                break;
+            }
+            MGB_TRY { BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size()); }
+            MGB_CATCH(MemAllocError&, { continue; });
+            suc = true;
+        }
+        if (!suc) {
+            set_log_level(pre_level);
+            mgb_log_warn("reallocating all cuda memory to alleviate fragmentation, the performance may be affected");
+            set_log_level(LogLevel::NO_LOG);
+            BlobManager::inst()->defrag(x->blob()->comp_node());
+            BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size());
+        }
+    });
+    set_log_level(pre_level);
+}
+
 std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>> ChannelImpl::init_output_and_workspace(
         const OpDef& def,
         SmallVector<TensorPtr> inputs,
@@ -876,11 +908,15 @@ std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPt
             desc.id->id = ++ m_storage_id;
         }
     }
+    auto& state = get_worker_state();
     auto alloc_storage = [&](SmallVector<MemoryDesc>& desc) {
         SmallVector<TensorPtr> tensors;
         for (size_t i = 0; i < desc.size(); i ++) {
             if (desc[i].id->is_sys_alloc()) {
                 tensors.push_back(Tensor::make(desc[i].layout, desc[i].cn));
+                if (!desc[i].layout.is_empty() && state.options.enable_dtr_auto_drop) {
+                    alloc_tensor_with_evict(tensors.back());
+                }
             } else if (desc[i].id->is_from_other()) {
                 for (size_t j = 0; j < inputs_mem_desc.size();j ++) {
                     if (inputs_mem_desc[j].id->desc == desc[i].id->desc) {

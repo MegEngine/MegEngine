@@ -267,9 +267,13 @@ public:
     }
 
 #if !MGB_BUILD_SLIM_SERVING
-    std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr,
-                                                      size_t end_ptr) override {
+    std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr, size_t end_ptr) override {
         return m_mem_alloc->get_free_left_and_right(begin_ptr, end_ptr);
+    }
+
+    size_t get_max_block_size_available() {
+        activate();
+        return m_mem_alloc->get_max_block_size_available();
     }
 #endif
 

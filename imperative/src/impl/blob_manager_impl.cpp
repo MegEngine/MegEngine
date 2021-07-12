@@ -156,6 +156,9 @@ void BlobManagerImpl::set_enable(bool flag) {
 }
 
 struct BlobManagerStub : BlobManager {
+    void alloc_direct(Blob* blob, size_t size) {
+        mgb_assert(0, "prohibited after global variable destruction");
+    };
     void alloc_with_defrag(Blob* blob, size_t size) {
         mgb_assert(0, "prohibited after global variable destruction");
     };

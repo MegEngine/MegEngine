@@ -403,19 +403,19 @@ private:
         //! store all tensors that may be evicted
         std::unordered_set<TensorInfo*> candidates;
 
-        //! whether the warning message has been printed
-        bool warn_printed = false;
-
         bool is_bad_op(std::string op_name) {
             return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) != op_blacklist.end();
         }
 
         std::vector<std::string> op_blacklist = {"CollectiveComm", "InplaceAdd",
-                                "ParamPackSplit", "ParamPackConcat", "GaussianRNG"};
+                                "ParamPackSplit", "ParamPackConcat", "GaussianRNG", "UniformRNG",
+                                "GammaRNG", "PermutationRNG", "PoissonRNG", "BetaRNG"};
     } m_dtr;
 
     //! automatically evict an optimal tensor
-    void auto_evict();
+    bool auto_evict(size_t);
+
+    void alloc_tensor_with_evict(TensorPtr);
 
     // assert thread id when call get_xxx_state to avoid misuse
     ChannelState& get_channel_state();

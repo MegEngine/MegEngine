@@ -40,6 +40,19 @@ std::pair<size_t, size_t> MemAllocImplHelper::get_free_left_and_right(size_t beg
     }
     return {left_free, right_free};
 }
+
+size_t MemAllocImplHelper::get_max_block_size_available_unsafe() {
+    if (!m_free_blk_size.size()) {
+        return 0;
+    } else {
+        return m_free_blk_size.rbegin()->first.size;
+    }
+}
+
+size_t MemAllocImplHelper::get_max_block_size_available() {
+    MGB_LOCK_GUARD(m_mutex);
+    return get_max_block_size_available_unsafe();
+}
 #endif
 
 MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(

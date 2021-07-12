@@ -114,6 +114,7 @@ def disable():
     r"""
     Stop recording computing path of tensors and performing DTR policy.
     """
+    _set_defrag(False)
     _set_option("enable_dtr_auto_drop", 0)
     _set_option("enable_drop", 0)
     _set_option("record_computing_path", 0)

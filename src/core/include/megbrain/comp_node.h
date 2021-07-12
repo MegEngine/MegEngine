@@ -359,6 +359,10 @@ class CompNode {
         size_t get_used_memory() const {
             return m_impl->get_used_memory();
         }
+
+        size_t get_max_block_size_available() const {
+            return m_impl->get_max_block_size_available();
+        }
 #endif
 
         //! change to another stream on the same memory node
@@ -543,6 +547,9 @@ class CompNode {
                     return {x - x, y - y};
                 }
                 virtual size_t get_used_memory() {
+                    return 0;
+                }
+                virtual size_t get_max_block_size_available() {
                     return 0;
                 }
 #endif

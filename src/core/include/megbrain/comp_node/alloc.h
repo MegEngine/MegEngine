@@ -141,6 +141,10 @@ class MemAllocBase {
         virtual std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr, size_t end_ptr) {
             return {0, 0};
         }
+        
+        virtual size_t get_max_block_size_available() {
+            return 0;
+        }
 #endif
 
         virtual ~MemAllocBase() = default;
