@@ -64,6 +64,10 @@ using DecideDispatchMode = detail::OpMeth<
         decltype(OpDef::decide_dispatch_mode)>;
 using ApplyOnPhysicalTensor = detail::OpMeth<
         decltype(OpDef::apply_on_physical_tensor)>;
+using InferOutputMemDesc = detail::OpMeth<
+        decltype(OpDef::infer_output_mem_desc)>;
+using Execute = detail::OpMeth<
+        decltype(OpDef::execute)>;
 using ApplyOnDeviceTensorND = detail::OpMeth<
         decltype(OpDef::apply_on_device_tensornd)>;
 using ApplyOnVarNode = detail::OpMeth<
@@ -82,6 +86,8 @@ struct OpTrait {
     OpDefMaker make_from_op_node;
     DecideDispatchMode decide_dispatch_mode;
     ApplyOnPhysicalTensor apply_on_physical_tensor;
+    InferOutputMemDesc infer_output_mem_desc;
+    Execute execute;
     ApplyOnDeviceTensorND apply_on_device_tensornd;
     ApplyOnVarNode apply_on_var_node;
     InferOutputAttrsFallible infer_output_attrs_fallible;
@@ -100,6 +106,8 @@ struct OpTrait {
     cb(make_from_op_node) \
     cb(decide_dispatch_mode) \
     cb(apply_on_physical_tensor) \
+    cb(infer_output_mem_desc) \
+    cb(execute) \
     cb(apply_on_device_tensornd) \
     cb(apply_on_var_node) \
     cb(infer_output_attrs_fallible) \

@@ -79,6 +79,13 @@ OpTraitRegistry& OpTraitRegistry::fallback() {
             trait->apply_on_physical_tensor =
                     proxy_graph_detail::apply_on_physical_tensor;
         }
+        if (!trait->execute) {
+            trait->execute = proxy_graph_detail::execute;
+        }
+        if (!trait->infer_output_mem_desc) {
+            trait->infer_output_mem_desc =
+                    proxy_graph_detail::infer_output_mem_desc;
+        }
         if (!trait->infer_output_attrs_fallible) {
             trait->infer_output_attrs_fallible =
                     proxy_graph_detail::infer_output_attrs_fallible;

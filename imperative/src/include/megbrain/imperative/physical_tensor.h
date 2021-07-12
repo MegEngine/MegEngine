@@ -150,12 +150,192 @@ private:
     EventPtr m_value_ready = nullptr;
 };
 
+// Cache for small blobs
+// 1. A blob has to be seen twice (within a window) to be eligible for cache
+// 2. Cache eviction occurs when cache size reaches a threshold, in least frequently used order
+class ConstTensorCache {
+public:
+    struct Entry {
+        size_t hitcnt = 0;
+        std::unique_ptr<dt_byte[]> data;
+        size_t size;
+        BlobPtr blob;
+
+        Entry() = default;
+        Entry(const dt_byte* ptr, size_t size_, BlobPtr blob_)
+                : data(new dt_byte[size_]), size(size_), blob(blob_) {
+            memcpy(data.get(), ptr, size);
+        }
+
+        // does not check input
+        bool match(const HostTensorND& hv) {
+            return 0 == memcmp(data.get(), hv.raw_ptr(), hv.layout().span().high_byte);
+        }
+    };
+
+    using KV = std::pair<uint64_t, Entry>;
+
+    bool check(const HostTensorND& hv) {
+        auto&& layout = hv.layout();
+        auto&& span = layout.span();
+        return hv.format().is_default() && !hv.empty() &&
+            layout.is_contiguous() && span.low_byte == 0 &&
+            span.high_byte <= max_bytes;
+    }
+
+    // hash storage; does not check input
+    static uint64_t hash(const HostTensorND& hv) {
+        auto&& span = hv.layout().span();
+        return XXHash{}
+            .update(hv.raw_ptr(), span.high_byte)
+            .digest();
+    }
+
+    BlobPtr lookup(const HostTensorND& hv) {
+        if (!check(hv)) {
+            return {};
+        }
+        auto h = hash(hv);
+        MGB_LOCK_GUARD(mtx);
+        // lookup in g1
+        auto it = g1.find(h);
+        if (it != g1.end()) {
+            if (!it->second.match(hv)) {
+                mgb_log_warn("hash collision in const tensor cache");
+                return {};
+            }
+            it->second.hitcnt += 1;
+            return it->second.blob;
+        }
+        // lookup in g0
+        if (!g0.extract(h) && !g0b.extract(h)) {
+            maybe_collect_g0();
+            g0.emplace(h);
+            return {};
+        }
+        // add new entry to g1
+        maybe_collect_g1();
+        Entry entry(hv.raw_ptr(), hv.layout().span().high_byte, Tensor(hv).blob());
+        it = g1.emplace_hint(it, h, std::move(entry));
+        it->second.hitcnt += 1;
+        return it->second.blob;
+    }
+
+    void clear() {
+        MGB_LOCK_GUARD(mtx);
+        g0.clear();
+        g0b.clear();
+        g1.clear();
+    }
+
+    std::mutex mtx;
+    const size_t hwm = 1024, lwm = 512, max_bytes = TensorShape::MAX_NDIM * 8, window = 65536;
+
+private:
+    void maybe_collect_g0() {
+        if (g0.size() > window) {
+            std::swap(g0, g0b);
+            g0.clear();
+        }
+    }
+    void maybe_collect_g1() {
+        if (g1.size() < hwm) return;
+
+        tmp.clear();
+        for (auto&& kv : g1) {
+            tmp.emplace_back(kv.first, std::move(kv.second));
+        }
+        std::nth_element(tmp.begin(), tmp.begin() + lwm, tmp.end(), [](const KV& lhs, const KV& rhs) {
+                return lhs.second.hitcnt > rhs.second.hitcnt;
+            });
+        tmp.resize(lwm);
+        g1.clear();
+        for (auto&& kv : tmp) {
+            kv.second.hitcnt = 0;
+            g1.emplace(std::move(kv));
+        }
+    }
+
+    // g0: records blobs which have been seen at least once (within a window)
+    // g0b: backup of g0
+    // g1: records the most frequently used blobs which have been seen at least
+    // twice. When `g1.size() == hwm`, it will be refreshed and only the top
+    // `lhw` frequently used blobs will be kept.
+    std::unordered_set<uint64_t> g0, g0b;
+    std::unordered_map<uint64_t, Entry> g1;
+    std::vector<KV> tmp;
+
+public:
+    ConstTensorCache() {
+        g0.reserve(window), g0b.reserve(window);
+        g1.reserve(hwm), tmp.reserve(hwm);
+    }
+};
+
+struct MultiCNConstTensorCache : CompNodeDepedentObject {
+    std::mutex mtx;
+    CompNode::UnorderedMap<ConstTensorCache> cn2cache;
+
+    std::shared_ptr<void> on_comp_node_finalize() {
+        MGB_LOCK_GUARD(mtx);
+        cn2cache.clear();
+        return {};
+    }
+
+    BlobPtr lookup(const HostTensorND& hv) {
+        MGB_LOCK_GUARD(mtx);
+        return cn2cache[hv.comp_node()].lookup(hv);
+    }
+
+    static MultiCNConstTensorCache& inst() {
+        static MultiCNConstTensorCache sl_inst;
+        return sl_inst;
+    }
+};
+
 struct LogicalTensorDesc {
     TensorLayout layout;
     CompNode comp_node;
     DeviceTensorND value; // cpu:default
 };
 
+struct StorageIdentifier;
+struct MemoryDesc {
+    TensorLayout layout;
+    size_t offset;
+    CompNode cn;
+    std::shared_ptr<StorageIdentifier> id;
+};
+
+struct StorageIdentifier {
+    enum { INVALID, SYS_ALLOC, FROM_OTHER, DEVICE_PTR } tag;
+    union {
+        size_t id;
+        MemoryDesc* desc;
+    };
+    TensorPtr ptr;
+    StorageIdentifier() = default;
+    StorageIdentifier(size_t id): tag(SYS_ALLOC), id(id) {}
+    StorageIdentifier(const MemoryDesc* desc): tag(FROM_OTHER), desc(desc->id->desc) {}
+    StorageIdentifier(TensorPtr dev_ptr): tag(DEVICE_PTR), ptr(dev_ptr) {}
+
+    template<typename ...Args>
+    static std::shared_ptr<StorageIdentifier> make(Args&& ...args) {
+        return std::make_shared<StorageIdentifier>(std::forward<Args>(args)...);
+    }
+    bool is_sys_alloc() {
+        return tag == SYS_ALLOC;
+    }
+    bool is_from_other() {
+        return tag == FROM_OTHER;
+    }
+    bool is_device_ptr() {
+        return tag == DEVICE_PTR;
+    }
+    bool is_invalid() {
+        return tag == INVALID;
+    }
+};
 } // namespace imperative
 } // namespace mgb
 

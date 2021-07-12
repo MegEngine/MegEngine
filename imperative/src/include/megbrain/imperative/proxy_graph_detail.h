@@ -21,8 +21,18 @@ SmallVector<TensorPtr>
 apply_on_physical_tensor(const OpDef& def,
         SmallVector<TensorPtr> inputs);
 
+void execute(const OpDef& def,
+        SmallVector<TensorPtr> inputs,
+        SmallVector<TensorPtr> outputs,
+        SmallVector<TensorPtr> workspace);
+
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
+
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
+        const OpDef& def,
+        const SmallVector<TensorPtr>& inputs_tensors,
+        const SmallVector<MemoryDesc>& inputs_mems);
 
 void exec(const OpDef& def,
         const SmallVector<TensorPtr>& inputs,

@@ -101,6 +101,11 @@ private:
     void regenerate(TensorInfo* dest);
     void recompute(TensorInfo::ComputePath* path);
     void do_apply_op(const ApplyOp& cmd);
+    
+    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>> init_output_and_workspace(
+        const OpDef& def,
+        SmallVector<TensorPtr> inputs,
+        SmallVector<MemoryDesc> inputs_mem_desc);
 
     void dispatch_default_cpu(
         std::shared_ptr<OpDef> op,
@@ -139,6 +144,7 @@ private:
     uint64_t m_waitee_id = 0;
     std::exception_ptr m_worker_exc;
     std::function<void(std::string, std::string)> m_profile_dump_callback;
+    size_t m_storage_id = 0;
 
     bool m_closed = false;
 

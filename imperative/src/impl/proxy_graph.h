@@ -37,13 +37,19 @@ public:
     void invoke_op(
             const OpDef& opdef,
             const SmallVector<Tensor*>& inputs,
-            const SmallVector<Tensor*>& outputs);
+            const SmallVector<Tensor*>& outputs,
+            const SmallVector<Tensor*>& workspace);
 
     BackwardGraphResult make_backward_graph(
             const OpDef& opdef,
             const SmallVector<LogicalTensorDesc>& input_descs,
             const SmallVector<bool>& input_requires_grad,
             const SmallVector<bool>& output_has_grad);
+
+    std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
+            const OpDef& def,
+            const SmallVector<Tensor*>& inputs_tensors,
+            const SmallVector<MemoryDesc>& inputs_mems);
 
     /********************** Logical Tensor API **********************/
 
@@ -74,7 +80,8 @@ private:
     void cleanup();
 
     void init_output_tensor(
-            const SmallVector<Tensor*>& outputs);
+            const SmallVector<Tensor*>& outputs,
+            const SmallVector<Tensor*>& workspace);
 
     cg::OperatorNodeBase* get_proxy_opr(
             const OpDef& opdef,

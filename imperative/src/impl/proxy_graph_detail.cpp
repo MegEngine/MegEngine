@@ -43,10 +43,12 @@ infer_output_attrs(const OpDef& def,
 
 void exec(const OpDef& def,
         const SmallVector<TensorPtr>& inputs,
-        const SmallVector<TensorPtr>& outputs) {
+        const SmallVector<TensorPtr>& outputs,
+        const SmallVector<TensorPtr>& workspaces) {
     auto&& graph = ProxyGraph::get_default_graph();
     auto raw_inputs = to_raw_ptr_array(inputs),
-         raw_outputs = to_raw_ptr_array(outputs);
+         raw_outputs = to_raw_ptr_array(outputs),
+         raw_workspaces = to_raw_ptr_array(workspaces);
     CompNode::UnorderedSet used_cns;
     for (auto&& out: raw_outputs) {
         auto cn = out->comp_node();
@@ -59,7 +61,7 @@ void exec(const OpDef& def,
             }
         }
     }
-    graph->invoke_op(def, raw_inputs, raw_outputs);
+    graph->invoke_op(def, raw_inputs, raw_outputs, raw_workspaces);
     for (auto&& cn: used_cns) {
         for (auto&& in: inputs) {
             if (in->comp_node() != cn) {
@@ -77,12 +79,32 @@ apply_on_physical_tensor(const OpDef& def,
     for (size_t i = 0; i < outputs.size(); i++) {
         outputs[i] = Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
     }
-    exec(def, inputs, outputs);
+    exec(def, inputs, outputs, {});
     auto async_error = ProxyGraph::get_async_error();
     if (async_error) {
         throw *async_error;
     }
     return outputs;
+}
+
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
+    const OpDef& def,
+    const SmallVector<TensorPtr>& inputs_tensors,
+    const SmallVector<MemoryDesc>& inputs_mems) {
+    auto&& graph = ProxyGraph::get_default_graph();
+    return graph->infer_output_mem_desc(def, to_raw_ptr_array(inputs_tensors), inputs_mems);
+}
+
+void execute(const OpDef& def,
+        SmallVector<TensorPtr> inputs,
+        SmallVector<TensorPtr> outputs,
+        SmallVector<TensorPtr> workspace) {
+    exec(def, inputs, outputs, workspace);
+    auto async_error = ProxyGraph::get_async_error();
+    if (async_error) {
+        throw *async_error;
+    }
+    return;
 }
 
 // std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,

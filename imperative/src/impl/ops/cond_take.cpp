@@ -79,10 +79,24 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     }, false};
 }
 
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
+        const OpDef& def,
+        const SmallVector<TensorPtr>& inputs,
+        const SmallVector<MemoryDesc>& inputs_mems) {
+    return {{}, {}};
+}
+
+void execute(const OpDef& def, const SmallVector<TensorPtr>& inputs,
+          const SmallVector<TensorPtr>& outputs, const SmallVector<TensorPtr>& workspace) {
+    mgb_assert(0);
+}
+
 OP_TRAIT_REG(CondTake, CondTake, opr::CondTake)
     .apply_on_var_node(apply_on_var_node)
     .apply_on_physical_tensor(apply_on_physical_tensor)
     .infer_output_attrs_fallible(infer_output_attrs_fallible)
+    .infer_output_mem_desc(infer_output_mem_desc)
+    .execute(execute)
     .fallback();
 
 } // namespace

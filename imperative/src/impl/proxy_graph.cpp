@@ -522,9 +522,10 @@ SmallVector<LogicalTensorDesc> ProxyGraph::infer_output_attrs(
 
 void ProxyGraph::invoke_op(const OpDef& opdef,
         const SmallVector<Tensor*>& inputs,
-        const SmallVector<Tensor*>& outputs) {
+        const SmallVector<Tensor*>& outputs,
+        const SmallVector<Tensor*>& workspaces) {
     CUR_OPR_GUARD(get_proxy_opr(opdef, inputs));
-    init_output_tensor(outputs);
+    init_output_tensor(outputs, workspaces);
     for (auto oup : m_cur_opr->output()) {
         m_graph->add_used_comp_node(oup->comp_node());
     }
@@ -544,19 +545,30 @@ void ProxyGraph::cleanup() {
     m_cur_opr = nullptr;
 }
 
-void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs) {
+void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs, const SmallVector<Tensor*>& workspaces) {
     // get proxy opr
     auto proxy = m_cur_opr;
 
     do_shape_infer(true);
 
     size_t j = 0;
+    size_t k = 0;
     for (auto&& var : proxy->output()) {
         auto &&chk = var->m_mem_plan.reset_from_owner_var().chunk();
         if (var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-            // alloc workspace
-            TensorLayout layout{var->shape(), var->dtype(), var->format()};
-            var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(var->comp_node(), layout);
+            // workspace
+            if (workspaces.size()) {
+                mgb_assert(k < workspaces.size());
+                auto && layout = workspaces[k]->layout();
+                mgb_assert(var->comp_node() == workspaces[k]->comp_node() &&
+                            var->shape().eq_shape(layout) &&
+                            var->dtype() == layout.dtype);
+                var->m_dev_tensor = workspaces[k]->dev_tensor();
+                ++ k;
+            } else {
+                TensorLayout layout{var->shape(), var->dtype(), var->format()};
+                var->m_dev_tensor = BlobManager::inst()->alloc_workspace_with_defrag(var->comp_node(), layout);
+            }
         } else {
             mgb_assert(j < outputs.size());
             auto &&tensor = outputs[j];
@@ -570,6 +582,7 @@ void ProxyGraph::init_output_tensor(const SmallVector<Tensor*>& outputs) {
         chk.mem_alloc_status.set_from_owner_var();
     }
     mgb_assert(j == outputs.size());
+    mgb_assert(k == workspaces.size());
 
     // Memory forwarding was bypassed in megbrain with graph option
     // imerative_proxy_graph on, here we call mem_plan_fwd_in2out_readonly
@@ -621,6 +634,26 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> ProxyGraph::infer_output_attrs_
     }
     bool need_check = opr->same_type<opr::Reshape>();
     return {outputs, validated && !need_check};
+}
+
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> ProxyGraph::infer_output_mem_desc(
+        const OpDef& def,
+        const SmallVector<Tensor*>& inputs_tensors,
+        const SmallVector<MemoryDesc>& inputs_mems) {
+    auto opr = get_proxy_opr(def, inputs_tensors);
+    CUR_OPR_GUARD(opr);
+    do_shape_infer(true);
+    SmallVector<MemoryDesc> outputs;
+    SmallVector<MemoryDesc> workspaces;
+    size_t cur_id = 0;
+    for (auto&& i : opr->output()) {
+        if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
+            workspaces.push_back({{i->shape(), i->dtype(), i->format()}, 0, i->comp_node(), StorageIdentifier::make(++ cur_id)});
+        } else {
+            outputs.push_back({{i->shape(), i->dtype()}, 0, i->comp_node(), StorageIdentifier::make(++ cur_id)});
+        }
+    }
+    return {outputs, workspaces};
 }
 
 struct ProxyGraph::GradGraph {

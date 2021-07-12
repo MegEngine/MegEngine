@@ -331,6 +331,7 @@ struct _RNGOprInvoker<DNN_NR_INPUTS> {                                          
     }                                                                                                  \
 };
 
+
 #define _INST_RNG_MAKER(MGB_NR_INPUTS)                                                                 \
 template<>                                                                                             \
 struct _RNGOprMaker<MGB_NR_INPUTS> {                                                                   \
@@ -366,7 +367,7 @@ _INST_RNG_MAKER(2)
 
 template <typename Op>
 void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
-          const SmallVector<TensorPtr>& outputs) {
+          const SmallVector<TensorPtr>& outputs, const SmallVector<TensorPtr>& workspace) {
     auto&& rng = op.cast_final_safe<Op>();
  
     auto dest = outputs[0];
@@ -419,6 +420,18 @@ SmallVector<LogicalTensorDesc> infer_output_attrs(
 }
 
 template <typename Op>
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
+        const OpDef& def,
+        const SmallVector<TensorPtr>& inputs_tensors,
+        const SmallVector<MemoryDesc>& inputs_mems) {
+    auto &&dest = infer_output_attrs<Op>(def, inputs_tensors);
+    SmallVector<MemoryDesc> outputs = {{dest[0].layout, 0, dest[0].comp_node, StorageIdentifier::make(1)}};
+    
+    return {outputs, {}};    
+}
+
+
+template <typename Op>
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<TensorPtr> outputs;
@@ -427,8 +440,17 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     for (auto&& i : desc) {
         outputs.push_back(Tensor::make(i.layout, i.comp_node));
     }
-    exec<Op>(def, inputs, outputs);
+    exec<Op>(def, inputs, outputs, {});
     return outputs;
+}
+
+template <typename Op>
+void execute(
+        const OpDef& def,
+        SmallVector<TensorPtr> inputs,
+        SmallVector<TensorPtr> outputs,
+        SmallVector<TensorPtr> workspace) {
+    exec<Op>(def, inputs, outputs, {});
 }
 
 template<typename Op>
@@ -492,6 +514,8 @@ OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
     .apply_on_var_node(apply_on_var_node<NAME>) \
     .apply_on_physical_tensor(apply_on_physical_tensor<NAME>) \
     .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
+    .infer_output_mem_desc(infer_output_mem_desc<NAME>) \
+    .execute(execute<NAME>) \
     .fallback(); \
 } \
 

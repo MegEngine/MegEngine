@@ -45,6 +45,21 @@ SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
     return def.trait()->apply_on_physical_tensor(def, std::move(inputs));
 }
 
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> OpDef::infer_output_mem_desc(
+    const OpDef& def,
+    const SmallVector<TensorPtr>& inputs_tensors,
+    const SmallVector<MemoryDesc>& inputs_mems) {
+    return def.trait()->infer_output_mem_desc(def, inputs_tensors, inputs_mems);
+}
+
+void OpDef::execute(
+    const OpDef& def,
+    SmallVector<TensorPtr> inputs,
+    SmallVector<TensorPtr> outputs,
+    SmallVector<TensorPtr> workspace) {
+    def.trait()->execute(def, std::move(inputs), outputs, std::move(workspace));
+}
+
 void OpDef::apply_on_device_tensornd(
     const OpDef& def,
     const SmallVector<DeviceTensorND>& inputs,
