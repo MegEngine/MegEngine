@@ -55,6 +55,8 @@ GemmKey get_gemm_key_from_desc(const GemmDescription& desc) {
     key.layout_B = desc.B.layout;
     key.element_C = desc.C.element;
     key.layout_C = desc.C.layout;
+    key.element_accumulator =
+            desc.tile_description.math_instruction.element_accumulator;
 
     key.threadblock_shape_m = desc.tile_description.threadblock_shape.m();
     key.threadblock_shape_n = desc.tile_description.threadblock_shape.n();
@@ -75,6 +77,8 @@ GemmKey get_gemm_key_from_desc(const GemmDescription& desc) {
             desc.tile_description.math_instruction.instruction_shape.k();
 
     key.stages = desc.stages;
+    key.alignment_A = desc.A.alignment;
+    key.alignment_B = desc.B.alignment;
     key.split_k_mode = desc.split_k_mode;
 
     return key;

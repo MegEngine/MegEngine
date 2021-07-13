@@ -252,7 +252,8 @@ def GeneratesGemm(tile, data_type, layout_a, layout_b, layout_c, min_cc, align_a
   if tile.math_instruction.element_accumulator == DataType.s32:
     epilogues = [EpilogueFunctor.LinearCombinationClamp]
   else:
-    assert tile.math_instruction.element_accumulator == DataType.f32
+    assert tile.math_instruction.element_accumulator == DataType.f32 or \
+           tile.math_instruction.element_accumulator == DataType.f16
     epilogues = [EpilogueFunctor.LinearCombination]
 
   for epilogue in epilogues:
@@ -799,7 +800,22 @@ class EmitGemmSplitKParallelInstance:
       ${epilogue_vector_length},
       ${element_accumulator},
       ${element_epilogue}
-    >
+    >, 
+    cutlass::epilogue::thread::Convert<
+      ${element_accumulator}, 
+      ${epilogue_vector_length}, 
+      ${element_accumulator}
+    >, 
+    cutlass::reduction::thread::ReduceAdd<
+      ${element_accumulator}, 
+      ${element_accumulator}, 
+      ${epilogue_vector_length}
+    >, 
+    cutlass::gemm::threadblock::GemmSplitKHorizontalThreadblockSwizzle,
+    ${stages}, 
+    ${align_a}, 
+    ${align_b}, 
+    ${math_operation}
   >;
 """
   def emit(self, operation):
@@ -831,7 +847,10 @@ class EmitGemmSplitKParallelInstance:
       'epilogue_vector_length': str(epilogue_vector_length),
       'element_epilogue': str(DataTypeTag[operation.element_epilogue]),
       'epilogue_functor': EpilogueFunctorTag[operation.epilogue_functor],
-      'swizzling_functor': SwizzlingFunctorTag[operation.swizzling_functor],
+      'stages': str(operation.tile_description.stages), 
+      'math_operation': MathOperationTag[operation.tile_description.math_instruction.math_operation],
+      'align_a': str(operation.A.alignment), 
+      'align_b': str(operation.B.alignment), 
     }
 
     return SubstituteTemplate(self.template, values)

@@ -22,7 +22,7 @@ using namespace cuda;
 bool MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::is_available(
         const SizeArgs& args) const {
     auto&& param = args.opr->param();
-    int m = args.layout_c.shape[0], n = args.layout_c.shape[1],
+    int n = args.layout_c.shape[1],
         k = args.layout_a.shape[param.transposeA ? 0 : 1];
     bool available =
             args.opr->param().format == param::MatrixMul::Format::DEFAULT &&
@@ -32,8 +32,8 @@ bool MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::is_available(
     auto&& device_prop = cuda::current_device_prop();
     int y_grid_limit = device_prop.maxGridSize[1];
     // limit y grid
-    available &= ((m + m_algo_param.threadblock_m - 1) /
-                          m_algo_param.threadblock_m <=
+    available &= ((n + m_algo_param.threadblock_n - 1) /
+                          m_algo_param.threadblock_n <=
                   y_grid_limit);
     return available;
 }
@@ -47,7 +47,7 @@ size_t MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::get_workspace_in_bytes(
     return args.layout_c.dtype.size(m * n * split_k_slices);
 }
 
-void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
+void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::do_exec(
         const ExecArgs& args) const {
     int64_t lda = args.tensor_a.layout.stride[0],
             ldb = args.tensor_b.layout.stride[0],
@@ -72,12 +72,14 @@ void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
     auto layoutB = param.transposeB ? LayoutTypeID::kColumnMajor
                                     : LayoutTypeID::kRowMajor;
 
+    int alignment = min_alignment_requirement();
     GemmKey key{NumericTypeID::kF32,
                 layoutA,
                 NumericTypeID::kF32,
                 layoutB,
                 NumericTypeID::kF32,
                 LayoutTypeID::kRowMajor,
+                NumericTypeID::kF32, 
                 m_algo_param.threadblock_m,
                 m_algo_param.threadblock_n,
                 m_algo_param.threadblock_k,
@@ -87,7 +89,9 @@ void MatrixMulForwardImpl::AlgoFloat32SIMTSplitK::exec(
                 1,
                 1,
                 1,
-                2,
+                2, 
+                alignment, 
+                alignment, 
                 SplitKMode::kParallel};
 
     Operation const* op = Singleton::get().operation_table.find_op(key);

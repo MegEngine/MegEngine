@@ -21,6 +21,7 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
+#define MEGDNN_WITH_BENCHMARK 1
 #if CUDA_VERSION >= 9020
 namespace megdnn {
 namespace test {
@@ -215,6 +216,14 @@ std::vector<BenchArgs> get_feat_model_args() {
     return args;
 }
 
+std::vector<BenchArgs> get_f16_feat_model_args() {
+    std::vector<BenchArgs> args;
+    args.emplace_back(BenchArgs{128, 9216, 9216});
+    args.emplace_back(BenchArgs{128, 6400, 6400});
+    args.emplace_back(BenchArgs{128, 5184, 5184});
+    return args;
+}
+
 void benchmark_matrix_mul(
         Handle* handle, const std::vector<BenchArgs>& args, DType A_dtype,
         DType B_dtype, DType C_dtype, const char* algo = nullptr,
@@ -364,6 +373,82 @@ MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
 #undef cb
 #undef MEGDNN_FOREACH_CUTLASS_KERNEL
 
+#define MEGDNN_FOREACH_CUTLASS_KERNEL(cb)     \
+    cb(1, 256, 128, 32, 64, 64, 32, 8, 8, 4); \
+    cb(2, 128, 256, 32, 64, 64, 32, 8, 8, 4); \
+    cb(3, 128, 128, 32, 64, 64, 32, 8, 8, 4);
+
+#define cb(name, tbm, tbn, tbk, wm, wn, wk, im, in, ik)                     \
+    TEST_F(CUDA, CUTLASS_F16_884_GEMM_##name) {                             \
+        require_compute_capability(7, 0);                                   \
+        matrix_mul::check_matrix_mul<MatrixMulForward>(                     \
+                dtype::Float16(), dtype::Float16(), dtype::Float16(),       \
+                handle_cuda(),                                              \
+                "CUTLASS_FLOAT16_TENSOR_OP_h" #im #in #ik "_" #tbm "X" #tbn \
+                "X" #tbk "_" #wm "X" #wn "X" #wk,                           \
+                param::MatrixMul::Format::DEFAULT, 8, 1e-2,                 \
+                matrix_mul::get_matmul_args());                             \
+    }
+MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
+
+#undef cb
+
+#define cb(name, tbm, tbn, tbk, wm, wn, wk, im, in, ik)                    \
+    TEST_F(CUDA, CUTLASS_F16_884_GEMM_SPLIT_K_##name) {                    \
+        require_compute_capability(7, 0);                                  \
+        matrix_mul::check_matrix_mul<MatrixMulForward>(                    \
+                dtype::Float16(), dtype::Float16(), dtype::Float16(),      \
+                handle_cuda(),                                             \
+                "CUTLASS_FLOAT16_TENSOR_OP_SPLIT_K_h" #im #in #ik "_" #tbm \
+                "X" #tbn "X" #tbk "_" #wm "X" #wn "X" #wk,                 \
+                param::MatrixMul::Format::DEFAULT, 8, 1e-3,                \
+                matrix_mul::get_matmul_args_split_k(), true,               \
+                param::MatrixMul::ComputeMode::FLOAT32);                   \
+    }
+MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
+
+#undef cb
+
+#undef MEGDNN_FOREACH_CUTLASS_KERNEL
+
+#define MEGDNN_FOREACH_CUTLASS_KERNEL(cb)      \
+    cb(1, 256, 128, 32, 64, 64, 32, 16, 8, 8); \
+    cb(2, 128, 256, 32, 64, 64, 32, 16, 8, 8); \
+    cb(3, 128, 128, 32, 64, 64, 32, 16, 8, 8);
+
+#define cb(name, tbm, tbn, tbk, wm, wn, wk, im, in, ik)                     \
+    TEST_F(CUDA, CUTLASS_F16_1688_GEMM_##name) {                            \
+        require_compute_capability(7, 5);                                   \
+        matrix_mul::check_matrix_mul<MatrixMulForward>(                     \
+                dtype::Float16(), dtype::Float16(), dtype::Float16(),       \
+                handle_cuda(),                                              \
+                "CUTLASS_FLOAT16_TENSOR_OP_h" #im #in #ik "_" #tbm "X" #tbn \
+                "X" #tbk "_" #wm "X" #wn "X" #wk,                           \
+                param::MatrixMul::Format::DEFAULT, 8, 1e-2,                 \
+                matrix_mul::get_matmul_args(), true,                        \
+                param::MatrixMul::ComputeMode::FLOAT32);                    \
+    }
+MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
+
+#undef cb
+
+#define cb(name, tbm, tbn, tbk, wm, wn, wk, im, in, ik)                    \
+    TEST_F(CUDA, CUTLASS_F16_1688_GEMM_SPLIT_K_##name) {                   \
+        require_compute_capability(7, 5);                                  \
+        matrix_mul::check_matrix_mul<MatrixMulForward>(                    \
+                dtype::Float16(), dtype::Float16(), dtype::Float16(),      \
+                handle_cuda(),                                             \
+                "CUTLASS_FLOAT16_TENSOR_OP_SPLIT_K_h" #im #in #ik "_" #tbm \
+                "X" #tbn "X" #tbk "_" #wm "X" #wn "X" #wk,                 \
+                param::MatrixMul::Format::DEFAULT, 8, 1e-3,                \
+                matrix_mul::get_matmul_args_split_k());                    \
+    }
+MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
+
+#undef cb
+
+#undef MEGDNN_FOREACH_CUTLASS_KERNEL
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CUTLASS_MATMUL) {
     benchmark_matrix_mul(handle_cuda(), get_square_matmul_args(),
@@ -375,6 +460,12 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_MATMUL_FEAT) {
     benchmark_matrix_mul(handle_cuda(), get_feat_model_args(), dtype::Float32(),
                          dtype::Float32(), dtype::Float32(),
                          "CUTLASS_FLOAT32_SIMT");
+}
+
+TEST_F(CUDA, BENCHMARK_CUTLASS_F16_MATMUL_FEAT) {
+    benchmark_matrix_mul(handle_cuda(), get_f16_feat_model_args(),
+                         dtype::Float16(), dtype::Float16(), dtype::Float16(),
+                         "CUTLASS_FLOAT16_TENSOR_OP");
 }
 #endif
 }  // namespace test

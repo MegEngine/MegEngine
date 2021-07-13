@@ -69,7 +69,9 @@ void check_matrix_mul(
         const ExecutionPolicyAlgoName& algo = {"", {}},
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
         size_t nbase = 8, float eps = 1e-3, std::vector<TestArg>&& args = {},
-        bool force_deduce_dst = true);
+        bool force_deduce_dst = true,
+        param::MatrixMul::ComputeMode compute_mode =
+                param::MatrixMul::ComputeMode::DEFAULT);
 
 void check_matrix_mul(
         DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,

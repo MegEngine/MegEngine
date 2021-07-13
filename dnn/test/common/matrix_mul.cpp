@@ -184,7 +184,8 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
                                   const ExecutionPolicyAlgoName& algo,
                                   param::MatrixMul::Format format, size_t nbase,
                                   float eps, std::vector<TestArg>&& user_args,
-                                  bool force_deduce_dst) {
+                                  bool force_deduce_dst,
+                                  param::MatrixMul::ComputeMode compute_mode) {
     megdnn_assert(A_dtype.enumv() == B_dtype.enumv());
     Checker<Opr> checker(handle);
     checker.set_force_deduce_dst(force_deduce_dst);
@@ -261,6 +262,7 @@ void matrix_mul::check_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
         Param param;
         param.transposeA = arg.mask & 0x1;
         param.transposeB = arg.mask & 0x2;
+        param.compute_mode = compute_mode;
         param.format = format;
         checker.set_dtype(0, A_dtype)
                 .set_dtype(1, B_dtype)

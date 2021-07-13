@@ -41,11 +41,13 @@ public:
         CUDA_WMMA_UINT4X4X32,
         CUDA_CUBLASLT,
         CUDA_NAIVE,
-        CUDA_BFLOAT16, 
+        CUDA_BFLOAT16,
 #if CUDA_VERSION >= 9020
-        CUDA_FLOAT32_SIMT, 
-        CUDA_FLOAT32_SIMT_SPLIT_K, 
-        CUDA_FLOAT32_SIMT_GEMV_BATCHED_STRIDED, 
+        CUDA_FLOAT32_SIMT,
+        CUDA_FLOAT32_SIMT_SPLIT_K,
+        CUDA_FLOAT32_SIMT_GEMV_BATCHED_STRIDED,
+        CUDA_FLOAT16_TENSOR_OP,
+        CUDA_FLOAT16_TENSOR_OP_SPLIT_K,
 #endif
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
@@ -188,65 +190,83 @@ private:
 #endif
 
 #if CUDA_VERSION >= 9020
-class MatrixMulForwardImpl::AlgoFloat32SIMT final : public AlgoBase {
+class MatrixMulForwardImpl::AlgoCutlassMatrixMulBase : public AlgoBase {
 public:
     struct AlgoParam {
         int threadblock_m, threadblock_n, threadblock_k;
         int warp_m, warp_n, warp_k;
-        std::string to_string() {
-            return ssprintf("%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n,
-                            threadblock_k, warp_m, warp_n, warp_k);
-        }
+        int instruction_m, instruction_n, instruction_k;
+        AlgoParam(int threadblock_m_, int threadblock_n_, int threadblock_k_,
+                  int warp_m_, int warp_n_, int warp_k_, int instruction_m_ = 1,
+                  int instruction_n_ = 1, int instruction_k_ = 1)
+                : threadblock_m{threadblock_m_},
+                  threadblock_n{threadblock_n_},
+                  threadblock_k{threadblock_k_},
+                  warp_m{warp_m_},
+                  warp_n{warp_n_},
+                  warp_k{warp_k_},
+                  instruction_m{instruction_m_},
+                  instruction_n{instruction_n_},
+                  instruction_k{instruction_k_} {}
+        std::string to_string() const;
     };
-    AlgoFloat32SIMT(AlgoParam algo_param)
-            : m_algo_param{algo_param},
-              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_%s",
-                              m_algo_param.to_string().c_str())} {}
-    bool is_available(const SizeArgs& args) const override;
-    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
-    const char* name() const override { return m_name.c_str(); }
+    AlgoCutlassMatrixMulBase(AlgoParam algo_param) : m_algo_param{algo_param} {}
     void exec(const ExecArgs& args) const override;
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
-    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
-
     std::string param() const override {
         std::string ret;
         serialize_write_pod(m_algo_param, ret);
         return ret;
     }
 
-private:
+protected:
+    virtual int min_alignment_requirement() const = 0;
+    virtual void do_exec(const ExecArgs& args) const = 0;
+    std::pair<bool, TensorLayoutArray> construct_aligned_layouts(
+            const SizeArgs& args) const;
+    int max_alignment(const SizeArgs& args) const;
     AlgoParam m_algo_param;
+};
+
+class MatrixMulForwardImpl::AlgoFloat32SIMT final
+        : public AlgoCutlassMatrixMulBase {
+public:
+    AlgoFloat32SIMT(AlgoParam algo_param)
+            : AlgoCutlassMatrixMulBase{algo_param},
+              m_name{ssprintf("CUTLASS_FLOAT32_SIMT_%s",
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
+
+private:
+    void do_exec(const ExecArgs& args) const override;
+    int min_alignment_requirement() const override { return 1; }
     std::string m_name;
 };
 
-class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final : public AlgoBase {
+class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final
+        : public AlgoCutlassMatrixMulBase {
 public:
-    using AlgoParam = MatrixMulForwardImpl::AlgoFloat32SIMT::AlgoParam;
     AlgoFloat32SIMTSplitK(AlgoParam algo_param)
-            : m_algo_param{algo_param},
+            : AlgoCutlassMatrixMulBase{algo_param},
               m_name{ssprintf("CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
                               m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    void exec(const ExecArgs& args) const override;
     AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE |
                AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
 
-    std::string param() const override {
-        std::string ret;
-        serialize_write_pod(m_algo_param, ret);
-        return ret;
-    }
-
 private:
-    AlgoParam m_algo_param;
+    void do_exec(const ExecArgs& args) const override;
+    int min_alignment_requirement() const override { return 1; }
     std::string m_name;
 };
 
@@ -276,6 +296,56 @@ private:
     int m_threadblock_n;
     std::string m_name;
 };
+
+class MatrixMulForwardImpl::AlgoFloat16TensorOp final
+        : public AlgoCutlassMatrixMulBase {
+public:
+    AlgoFloat16TensorOp(AlgoParam algo_param)
+            : AlgoCutlassMatrixMulBase{algo_param},
+              m_name{ssprintf("CUTLASS_FLOAT16_TENSOR_OP_h%d%d%d_%s",
+                              m_algo_param.instruction_m,
+                              m_algo_param.instruction_n,
+                              m_algo_param.instruction_k,
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT16_TENSOR_OP)
+
+private:
+    void do_exec(const ExecArgs& args) const override;
+    int min_alignment_requirement() const override { return 2; }
+    std::string m_name;
+};
+
+class MatrixMulForwardImpl::AlgoFloat16TensorOpSplitK final
+        : public AlgoCutlassMatrixMulBase {
+public:
+    AlgoFloat16TensorOpSplitK(AlgoParam algo_param)
+            : AlgoCutlassMatrixMulBase{algo_param},
+              m_name{ssprintf("CUTLASS_FLOAT16_TENSOR_OP_SPLIT_K_h%d%d%d_%s",
+                              m_algo_param.instruction_m,
+                              m_algo_param.instruction_n,
+                              m_algo_param.instruction_k,
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE |
+               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT16_TENSOR_OP_SPLIT_K)
+
+private:
+    void do_exec(const ExecArgs& args) const override;
+    int min_alignment_requirement() const override { return 2; }
+    std::string m_name;
+};
+
 #endif
 
 class MatrixMulForwardImpl::AlgoPack : NonCopyableObj {
@@ -300,6 +370,8 @@ public:
     std::vector<AlgoFloat32SIMTSplitK> simt_float32_split_k;
     std::vector<AlgoFloat32SIMTGemvBatchedStrided>
             simt_float32_gemv_batched_strided;
+    std::vector<AlgoFloat16TensorOp> tensorop_float16;
+    std::vector<AlgoFloat16TensorOpSplitK> tensorop_float16_split_k;
 #endif
     std::vector<AlgoBase*> all_algos;
 

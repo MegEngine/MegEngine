@@ -42,9 +42,12 @@ public:
     class AlgoBFloat16;
 #endif
 #if CUDA_VERSION >= 9020
+    class AlgoCutlassMatrixMulBase;
     class AlgoFloat32SIMT;
     class AlgoFloat32SIMTSplitK;
     class AlgoFloat32SIMTGemvBatchedStrided;
+    class AlgoFloat16TensorOp;
+    class AlgoFloat16TensorOpSplitK;
 #endif
     class AlgoPack;
 

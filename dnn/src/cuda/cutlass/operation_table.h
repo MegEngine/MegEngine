@@ -77,6 +77,7 @@ struct GemmKey {
     LayoutTypeID layout_B;
     NumericTypeID element_C;
     LayoutTypeID layout_C;
+    NumericTypeID element_accumulator;
 
     int threadblock_shape_m;
     int threadblock_shape_n;
@@ -91,12 +92,15 @@ struct GemmKey {
     int instruction_shape_k;
 
     int stages;
+    int alignment_A;
+    int alignment_B;
     SplitKMode split_k_mode;
 
     inline bool operator==(GemmKey const& rhs) const {
         return (element_A == rhs.element_A) && (layout_A == rhs.layout_A) &&
                (element_B == rhs.element_B) && (layout_B == rhs.layout_B) &&
                (element_C == rhs.element_C) && (layout_C == rhs.layout_C) &&
+               (element_accumulator == rhs.element_accumulator) && 
                (threadblock_shape_m == rhs.threadblock_shape_m) &&
                (threadblock_shape_n == rhs.threadblock_shape_n) &&
                (threadblock_shape_k == rhs.threadblock_shape_k) &&
@@ -106,7 +110,9 @@ struct GemmKey {
                (instruction_shape_m == rhs.instruction_shape_m) &&
                (instruction_shape_n == rhs.instruction_shape_n) &&
                (instruction_shape_k == rhs.instruction_shape_k) &&
-               (stages == rhs.stages) && (split_k_mode == rhs.split_k_mode);
+               (stages == rhs.stages) && (alignment_A == rhs.alignment_A) &&
+               (alignment_B == rhs.alignment_B) &&
+               (split_k_mode == rhs.split_k_mode);
     }
 
     inline bool operator!=(GemmKey const& rhs) const { return !(*this == rhs); }
@@ -130,10 +136,13 @@ struct GemmKey {
                "\n    layout_B: " + to_string(layout_B) +
                "\n    element_C: " + to_string(element_C) +
                "\n    layout_C: " + to_string(layout_C) +
+               "\n    element_accumulator: " + to_string(element_accumulator) + 
                "\n    threadblock_shape: " + threadblock_shape_str +
                "\n    warp_shape: " + warp_shape_str +
                "\n    instruction_shape: " + instruction_shape_str +
                "\n    stages: " + std::to_string(stages) +
+               "\n    alignment_A: " + std::to_string(alignment_A) + 
+               "\n    alignment_B: " + std::to_string(alignment_B) + 
                "\n    split_k_mode: " + to_string(split_k_mode) + "\n}";
     }
 };
@@ -147,6 +156,8 @@ struct GemmKeyHasher {
                 .update(&key.layout_B, sizeof(key.layout_B))
                 .update(&key.element_C, sizeof(key.element_C))
                 .update(&key.layout_C, sizeof(key.layout_C))
+                .update(&key.element_accumulator,
+                        sizeof(key.element_accumulator))
                 .update(&key.threadblock_shape_m,
                         sizeof(key.threadblock_shape_m))
                 .update(&key.threadblock_shape_n,
@@ -157,6 +168,8 @@ struct GemmKeyHasher {
                 .update(&key.warp_shape_n, sizeof(key.warp_shape_n))
                 .update(&key.warp_shape_k, sizeof(key.warp_shape_k))
                 .update(&key.stages, sizeof(key.stages))
+                .update(&key.alignment_A, sizeof(key.alignment_A))
+                .update(&key.alignment_B, sizeof(key.alignment_B))
                 .update(&key.split_k_mode, sizeof(key.split_k_mode))
                 .digest();
     }

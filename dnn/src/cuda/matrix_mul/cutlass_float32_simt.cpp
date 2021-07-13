@@ -42,7 +42,8 @@ size_t MatrixMulForwardImpl::AlgoFloat32SIMT::get_workspace_in_bytes(
     return 0_z;
 }
 
-void MatrixMulForwardImpl::AlgoFloat32SIMT::exec(const ExecArgs& args) const {
+void MatrixMulForwardImpl::AlgoFloat32SIMT::do_exec(
+        const ExecArgs& args) const {
     int64_t lda = args.tensor_a.layout.stride[0],
             ldb = args.tensor_b.layout.stride[0],
             ldc = args.tensor_c.layout.stride[0];
@@ -65,12 +66,14 @@ void MatrixMulForwardImpl::AlgoFloat32SIMT::exec(const ExecArgs& args) const {
     auto layoutB = param.transposeB ? LayoutTypeID::kColumnMajor
                                     : LayoutTypeID::kRowMajor;
 
+    int alignment = min_alignment_requirement();
     GemmKey key{NumericTypeID::kF32,
                 layoutA,
                 NumericTypeID::kF32,
                 layoutB,
                 NumericTypeID::kF32,
                 LayoutTypeID::kRowMajor,
+                NumericTypeID::kF32, 
                 m_algo_param.threadblock_m,
                 m_algo_param.threadblock_n,
                 m_algo_param.threadblock_k,
@@ -79,8 +82,10 @@ void MatrixMulForwardImpl::AlgoFloat32SIMT::exec(const ExecArgs& args) const {
                 m_algo_param.warp_k,
                 1,
                 1,
-                1,
-                2,
+                1, 
+                2, 
+                alignment, 
+                alignment, 
                 SplitKMode::kNone};
 
     const Operation* op = Singleton::get().operation_table.find_op(key);

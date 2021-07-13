@@ -597,6 +597,131 @@ def GenerateGemv_Simt(args):
   return operations
 
 #
+def GeneratesGemm_TensorOp_1688(args):
+  layouts = [
+    (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.RowMajor), # nn 
+    (LayoutType.ColumnMajor, LayoutType.RowMajor, LayoutType.RowMajor),    # nt
+    (LayoutType.RowMajor, LayoutType.ColumnMajor, LayoutType.RowMajor),    # tn
+    (LayoutType.RowMajor, LayoutType.RowMajor, LayoutType.RowMajor),       # tt
+  ]
+ 
+  math_instructions = [
+    MathInstruction(                                  \
+      [16, 8, 8],                                     \
+      DataType.f16, DataType.f16, DataType.f32,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+    MathInstruction(                                  \
+      [16, 8, 8],                                     \
+      DataType.f16, DataType.f16, DataType.f16,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+  ]
+
+  min_cc = 75
+  max_cc = 1024
+
+  alignment_constraints = [8, 4, 2,
+                           #1
+                           ]
+
+  operations = []
+  for math_inst in math_instructions:
+    for layout in layouts:
+      for align in alignment_constraints:
+        tile_descriptions = [
+          TileDescription([256, 128, 32], 2, [4, 2, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 256, 32], 2, [2, 4, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+## comment some configuration to reduce compilation time and binary size
+#         TileDescription([ 64, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+#         TileDescription([128,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+#         TileDescription([ 64,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+        ]
+    
+        data_type = [
+          math_inst.element_a,
+          math_inst.element_b,
+          math_inst.element_a,
+          math_inst.element_accumulator,
+        ]
+        
+        for tile in tile_descriptions:
+          operations += GeneratesGemm(tile,       \
+                                      data_type,  \
+                                      layout[0],  \
+                                      layout[1],  \
+                                      layout[2],  \
+                                      min_cc,     \
+                                      align * 16, \
+                                      align * 16, \
+                                      align * 16)
+  return operations
+
+#
+def GeneratesGemm_TensorOp_884(args):
+  layouts = [
+    (LayoutType.ColumnMajor, LayoutType.ColumnMajor, LayoutType.RowMajor), # nn 
+    (LayoutType.ColumnMajor, LayoutType.RowMajor, LayoutType.RowMajor),    # nt
+    (LayoutType.RowMajor, LayoutType.ColumnMajor, LayoutType.RowMajor),    # tn
+    (LayoutType.RowMajor, LayoutType.RowMajor, LayoutType.RowMajor),       # tt
+  ]
+
+  math_instructions = [
+    MathInstruction(                                  \
+      [8, 8, 4],                                      \
+      DataType.f16, DataType.f16, DataType.f32,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+    MathInstruction(                                  \
+      [8, 8, 4],                                      \
+      DataType.f16, DataType.f16, DataType.f16,       \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add),
+  ]
+
+  min_cc = 70
+  max_cc = 75
+
+  alignment_constraints = [8, 4, 2,
+                           # 1
+                           ]
+
+  operations = []
+  for math_inst in math_instructions:
+    for layout in layouts:
+      for align in alignment_constraints:
+        tile_descriptions = [
+          TileDescription([256, 128, 32], 2, [4, 2, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 256, 32], 2, [2, 4, 1], math_inst, min_cc, max_cc),
+          TileDescription([128, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+## comment some configuration to reduce compilation time and binary size
+#         TileDescription([ 64, 128, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+#         TileDescription([128,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+#         TileDescription([ 64,  64, 32], 2, [2, 2, 1], math_inst, min_cc, max_cc),
+        ]
+  
+        data_type = [
+          math_inst.element_a,
+          math_inst.element_b,
+          math_inst.element_a,
+          math_inst.element_accumulator,
+        ]
+ 
+        for tile in tile_descriptions:
+          operations += GeneratesGemm(tile,       \
+                                      data_type,  \
+                                      layout[0],  \
+                                      layout[1],  \
+                                      layout[2],  \
+                                      min_cc,     \
+                                      align * 16, \
+                                      align * 16, \
+                                      align * 16)
+ 
+  return operations
+
+#
 def GenerateConv2dOperations(args):
   if args.type == "simt":
     return GenerateConv2d_Simt(args)
@@ -613,9 +738,14 @@ def GenerateDeconvOperations(args):
   return GenerateDeconv_Simt(args)
 
 def GenerateGemmOperations(args):
-  assert args.type == "simt", "operation gemm only support" \
-        "simt. (got:{})".format(args.type)
-  return GenerateGemm_Simt(args)
+  if args.type == "tensorop884":
+    return GeneratesGemm_TensorOp_884(args)
+  elif args.type == "tensorop1688":
+    return GeneratesGemm_TensorOp_1688(args)
+  else:
+    assert args.type == "simt", "operation gemm only support" \
+          "simt. (got:{})".format(args.type)
+    return GenerateGemm_Simt(args)
 
 def GenerateGemvOperations(args):
   assert args.type == "simt", "operation gemv only support" \
@@ -631,7 +761,7 @@ if __name__ == "__main__":
   parser.add_argument("--operations", type=str, choices=['gemm', 'gemv', 'conv2d', 'deconv'], 
                       required=True, help="Specifies the operation to generate (gemm, gemv, conv2d, deconv)")
   parser.add_argument("output", type=str, help="output directory for CUTLASS kernel files")
-  parser.add_argument("--type", type=str, choices=['simt', 'tensorop8816', 'tensorop8832'], 
+  parser.add_argument("--type", type=str, choices=['simt', 'tensorop8816', 'tensorop8832', 'tensorop884', 'tensorop1688'], 
                       default='simt', help="kernel type of CUTLASS kernel generator")
 
   gemv_wrapper_path = "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper_batched_gemv_strided.cuinl"

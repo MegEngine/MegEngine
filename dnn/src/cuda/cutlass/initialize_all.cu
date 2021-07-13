@@ -49,6 +49,8 @@ namespace library {
         (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)
 
 void initialize_all_gemm_simt_operations(Manifest& manifest);
+void initialize_all_gemm_tensorop884_operations(Manifest& manifest);
+void initialize_all_gemm_tensorop1688_operations(Manifest& manifest);
 void initialize_all_conv2d_simt_operations(Manifest& manifest);
 void initialize_all_conv2d_tensorop8816_operations(Manifest& manifest);
 void initialize_all_conv2d_tensorop8832_operations(Manifest& manifest);
@@ -56,6 +58,8 @@ void initialize_all_deconv_simt_operations(Manifest& manifest);
 
 void initialize_all(Manifest& manifest) {
     initialize_all_gemm_simt_operations(manifest);
+    initialize_all_gemm_tensorop884_operations(manifest);
+    initialize_all_gemm_tensorop1688_operations(manifest);
     initialize_all_conv2d_simt_operations(manifest);
     initialize_all_conv2d_tensorop8816_operations(manifest);
     initialize_all_conv2d_tensorop8832_operations(manifest);
