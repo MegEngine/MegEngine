@@ -16,6 +16,10 @@
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
 
+#if MGB_CUDA
+#include <cuda.h>
+#endif
+
 namespace mgb {
 namespace gopt {
 
@@ -427,11 +431,13 @@ namespace gopt {
             void apply(OptState& opt) const override;
     };
 
+#if CUDA_VERSION >= 10020
     class FoldingConvBiasDimshufflePass final : public Pass {
         public:
             const char* name() const override;
             void apply(OptState& opt) const override;
     };
+#endif
 
     /*!
      * \brief padding channel to enable fast int8/int4 support

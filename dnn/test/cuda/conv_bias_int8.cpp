@@ -1060,6 +1060,46 @@ TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_CHWN4_SMALL_CHANNEL) {
             param::ConvBias::Format::CHWN4);
 }
 
+TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_NCHW4_NCHW) {
+    CUBenchmarker<ConvBiasForward> benchmarker(handle_cuda());
+    size_t RUNS = 1000;
+    benchmarker.set_display(false).set_times(RUNS);
+
+    using namespace conv_bias;
+    UniformIntRNG int_rng{-3, 3};
+    UniformIntRNG bias_rng{-50, 50};
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NCHW4_NCHW;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+
+    benchmarker.set_before_exec_callback(
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+                    "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM"));
+
+    benchmarker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
+            .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+            .set_dtype(2, dtype::Float32())
+            .set_dtype(3, dtype::Float32())
+            .set_dtype(4, dtype::Float32())
+            .set_rng(0, &int_rng)
+            .set_rng(1, &int_rng)
+            .set_param(param);
+
+    auto run = [&](const TensorShapeArray& shapes) {
+        auto time_in_ms =
+                benchmarker.execs({shapes[0], shapes[1], shapes[2], {}, {}}) /
+                RUNS;
+
+        printf("src=%s, filter=%s, dst=%s, time=%.2f\n",
+               shapes[0].to_string().c_str(), shapes[1].to_string().c_str(),
+               shapes[2].to_string().c_str(), time_in_ms);
+    };
+
+    run({{16, 16, 224, 224, 4}, {32, 16, 3, 3, 4}, {1, 32, 1, 1}});
+    run({{16, 16, 92, 160, 4}, {32, 16, 3, 3, 4}, {1, 32, 1, 1}});
+    run({{16, 16, 46, 80, 4}, {32, 16, 3, 3, 4}, {1, 32, 1, 1}});
+}
+
 
 #if CUDA_VERSION >= 10020
 TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW32) {

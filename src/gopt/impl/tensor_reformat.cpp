@@ -3638,6 +3638,7 @@ void ShuffleShuffleRemovePass::apply(OptState& opt) const {
     MIDOUT_E
 }
 
+#if CUDA_VERSION >= 10020
 /* ==================== FoldingConvBiasDimshufflePass ================= */
 const char* FoldingConvBiasDimshufflePass::name() const {
     return mgb_cstr_log("folding conv bias dimshuffle pass");
@@ -4068,20 +4069,17 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         return true;
     };
     MGB_MARK_USED_VAR(try_conv_reformat_nchw322nchw4);
+    MGB_MARK_USED_VAR(try_conv_reformat_nchw42nchw32);
 
     auto on_opr = [&try_conv_dimshuffle_reshape_typecvt,
                    &try_conv_reformat_nchw42nchw32,
                    &try_conv_reformat_nchw42nhwc,
-#if CUDA_VERSION >= 10020
                    &try_conv_reformat_nchw322nchw4,
-#endif
                    &rewriter](OperatorNodeBase* opr) {
         if (!try_conv_dimshuffle_reshape_typecvt(opr) &&
             !try_conv_reformat_nchw42nchw32(opr) &&
             !try_conv_reformat_nchw42nhwc(opr)
-#if CUDA_VERSION >= 10020
             && !try_conv_reformat_nchw322nchw4(opr)
-#endif
         ) {
             rewriter.auto_replace_outputs(opr);
         }
@@ -4091,6 +4089,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
 
     MIDOUT_E
 }
+#endif
 
 /* ==================== PaddingChannelPass ================= */
 const char* PaddingChannelPass::name() const {

@@ -772,7 +772,9 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<RemoveRedundantTypeCvtPass>();
         add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass<FuseWarpPerspectiveDimshufflePass>();
+#if CUDA_VERSION >= 10020
         add_pass<FoldingConvBiasDimshufflePass>();
+#endif
     });
     cb(chwn4, {
         add_pass<FuseConvBiasNonlinPass>();
@@ -791,7 +793,9 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
         add_pass<RemoveRedundantTypeCvtPass>();
         add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass<FuseWarpPerspectiveDimshufflePass>();
+#if CUDA_VERSION >= 10020
         add_pass<FoldingConvBiasDimshufflePass>();
+#endif
     });
 
     cb(fuse_conv_bias_nonlinearity, { add_pass<FuseConvBiasNonlinPass>(); });
