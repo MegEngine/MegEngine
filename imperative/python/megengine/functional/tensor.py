@@ -183,6 +183,29 @@ def zeros_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
 def ones_like(inp: Union[Tensor, SymbolVar]) -> Union[Tensor, SymbolVar]:
     """
     Returns a ones tensor with the same shape as input tensor.
+
+    :param inp: input tensor.
+    :return: output ones tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        inp = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        out = F.ones_like(inp)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1 1 1]
+         [1 1 1]]
+
     """
     return full_like(inp, 1.0)
 
