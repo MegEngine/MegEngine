@@ -39,7 +39,7 @@ def _run_wrapped(
     machine_ranks: list,
 ):
     """Init distributed process group and run wrapped function."""
-    _check_device_initialized(device_type)
+    _check_device_initialized(device_type, dev)
     init_process_group(
         master_ip=master_ip,
         port=port,
