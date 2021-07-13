@@ -309,7 +309,7 @@ def optimize_for_inference(args, outputs):
         "enable_chwn4",
         "enable_fuse_conv_bias_nonlinearity",
         "enable_fuse_conv_bias_with_z",
-        "eaable_fuse_preprocess",
+        "enable_fuse_preprocess",
     ]
     kwargs = {}
     for k in args_list:

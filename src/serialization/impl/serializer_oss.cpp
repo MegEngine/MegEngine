@@ -723,15 +723,17 @@ GraphLoaderOSS::OprLoadContextImpl::load_tensor_shared() {
 Metadata GraphLoaderOSS::OprLoadContextImpl::load_metadata() {
     const auto* fbmeta = m_loader->m_graph->metadata();
     Metadata ret;
-    ret.is_valid = fbmeta->is_valid();
-    ret.graph_modified = fbmeta->graph_modified();
-    if (fbmeta->user_info()) {
-        ret.user_info = fbmeta->user_info()->str();
-        ret.has_user_info = true;
-    }
-    if (fbmeta->optimize_options()) {
-        ret.optimize_options = fbmeta->optimize_options();
-        ret.optimized_for_inference = true;
+    if (fbmeta) {
+        ret.is_valid = fbmeta->is_valid();
+        ret.graph_modified = fbmeta->graph_modified();
+        if (fbmeta->user_info()) {
+            ret.user_info = fbmeta->user_info()->str();
+            ret.has_user_info = true;
+        }
+        if (fbmeta->optimize_options()) {
+            ret.optimize_options = fbmeta->optimize_options();
+            ret.optimized_for_inference = true;
+        }
     }
     return ret;
 }
