@@ -4155,6 +4155,7 @@ TEST(TestGoptInference, WarpAndPreProcessCase1) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
 }
 
+#if CUDA_VERSION >= 10020
 TEST(TestGoptInference, FoldingConvDimshuffle) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
@@ -4307,7 +4308,6 @@ TEST(TestGoptInference, FoldingConvDimshuffleNCHW4NCHW32) {
     MGB_ASSERT_TENSOR_EQ(host_y_fuse, host_y_non_fuse);
 }
 
-#if CUDA_VERSION >= 10020
 TEST(TestGoptInference, FoldingConvDimshuffleNCHW32NCHW4) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
