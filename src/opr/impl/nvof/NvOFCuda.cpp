@@ -128,9 +128,32 @@ void NvOFCuda::DoExecute(const NV_OF_EXECUTE_INPUT_PARAMS& executeInParams,
     NVOF_API_CALL(m_NvOFAPI->GetAPI()->nvOFExecute(m_NvOFAPI->GetHandle(), &executeInParams, &executeOutParams));
 }
 
-void NvOFCuda::DoInit(const NV_OF_INIT_PARAMS& initParams)
-{
-    NVOF_API_CALL(m_NvOFAPI->GetAPI()->nvOFInit(m_NvOFAPI->GetHandle(), &initParams));
+void NvOFCuda::DoInit(const NV_OF_INIT_PARAMS& initParams) {
+    uint32_t minWidth = _QuerySupportCaps(NV_OF_CAPS_WIDTH_MIN);
+    uint32_t maxWidth = _QuerySupportCaps(NV_OF_CAPS_WIDTH_MAX);
+    uint32_t minHeight = _QuerySupportCaps(NV_OF_CAPS_HEIGHT_MIN);
+    uint32_t maxHeight = _QuerySupportCaps(NV_OF_CAPS_HEIGHT_MAX);
+    if (!(initParams.width <= maxWidth && initParams.width >= minWidth &&
+          initParams.height <= maxHeight && initParams.height >= minHeight)) {
+        mgb_throw(
+                MegBrainError,
+                "the input height must between [%d,%d] and width must between "
+                "[%d,%d]. your (h,w) is (%d,%d)\n",
+                minHeight, maxHeight, minWidth, maxWidth, initParams.height,
+                initParams.width);
+    }
+    NVOF_API_CALL(
+            m_NvOFAPI->GetAPI()->nvOFInit(m_NvOFAPI->GetHandle(), &initParams));
+}
+
+uint32_t NvOFCuda::_QuerySupportCaps(const NV_OF_CAPS& cap) {
+    uint32_t size = 0;
+    NVOF_API_CALL(m_NvOFAPI->GetAPI()->nvOFGetCaps(m_NvOFAPI->GetHandle(), cap,
+                                                   nullptr, &size));
+    std::unique_ptr<uint32_t[]> capsVal(new uint32_t[size]);
+    NVOF_API_CALL(m_NvOFAPI->GetAPI()->nvOFGetCaps(m_NvOFAPI->GetHandle(), cap,
+                                                   capsVal.get(), &size));
+    return capsVal[0];
 }
 
 NV_OF_CUDA_BUFFER_TYPE NvOFCuda::GetBufferType(NV_OF_BUFFER_USAGE usage)
@@ -140,7 +163,7 @@ NV_OF_CUDA_BUFFER_TYPE NvOFCuda::GetBufferType(NV_OF_BUFFER_USAGE usage)
     {
         bufferType = m_eInBufType;
     }
-    else if ((usage  == NV_OF_BUFFER_USAGE_OUTPUT) || 
+    else if ((usage  == NV_OF_BUFFER_USAGE_OUTPUT) ||
             (usage == NV_OF_BUFFER_USAGE_COST)   ||
             (usage == NV_OF_BUFFER_USAGE_HINT))
     {

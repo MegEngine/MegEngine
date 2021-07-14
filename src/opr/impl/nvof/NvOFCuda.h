@@ -89,7 +89,7 @@ private:
         uint32_t nHeight,
         NV_OF_BUFFER_FORMAT eInBufFmt,
         NV_OF_CUDA_BUFFER_TYPE eInBufType,
-        NV_OF_CUDA_BUFFER_TYPE eOutBufType, 
+        NV_OF_CUDA_BUFFER_TYPE eOutBufType,
         NV_OF_MODE eMode,
         NV_OF_PERF_LEVEL preset,
         CUstream inputStream = nullptr,
@@ -113,7 +113,7 @@ private:
     virtual void DoExecute(const NV_OF_EXECUTE_INPUT_PARAMS& executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS& executeOutParams) override;
 
     /**
-    *  @brief This function is used to allocate buffers used for optical flow estimation 
+    *  @brief This function is used to allocate buffers used for optical flow estimation
     *  using the cuda interface. This function is an override of pure virtual function
     *  NvOF::DoAllocBuffers().
     */
@@ -132,6 +132,13 @@ private:
     std::shared_ptr<NvOFCudaAPI> m_NvOFAPI;
     NV_OF_CUDA_BUFFER_TYPE   m_eInBufType;
     NV_OF_CUDA_BUFFER_TYPE   m_eOutBufType;
+
+    /**
+     *  @brief This function is used to query support params that is used for
+     * optical flow estimation using the cuda interface. This function can only
+     * be called within the private class
+     */
+    uint32_t _QuerySupportCaps(const NV_OF_CAPS& cap);
 };
 
 /*

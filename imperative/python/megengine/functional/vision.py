@@ -125,7 +125,7 @@ def correlation(
     :param stride1: (int (non-negative), optional, default=1) – stride1 quantize data1 globally
     :param stride2: (int (non-negative), optional, default=1) – stride2 quantize data2 within the neighborhood centered around data1
     :param pad_size: (int (non-negative), optional, default=0) – pad for Correlation
-    :param is_multiply: (boolean, optional, default=True) – operation type is either multiplication or absolute difference 
+    :param is_multiply: (boolean, optional, default=True) – operation type is either multiplication or absolute difference
 
     """
 
