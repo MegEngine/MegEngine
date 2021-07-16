@@ -84,6 +84,11 @@ public:
         auto&& dev_tensor = tensor.dev_tensor();
         var->m_comp_node = dev_tensor.comp_node();
         var->m_shape = dev_tensor.shape();
+        if (dev_tensor.empty()) {
+            auto layout = dev_tensor.layout();
+            layout.init_contiguous_stride();
+            dev_tensor.reset(dev_tensor.storage(), layout);
+        }
         var->m_dev_tensor = dev_tensor;
         var->m_mem_plan.reset_from_owner_var().chunk()
                 .mem_alloc_status.set_from_owner_var();

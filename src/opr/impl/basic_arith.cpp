@@ -1072,6 +1072,7 @@ class Reduce::KernScheduler {
             m_apply_side_effect;
         std::unique_ptr<megdnn::Elemwise> m_elemwise_trans_opr;
         std::unique_ptr<megdnn::TypeCvt> m_typecvt_opr;
+        std::unique_ptr<megdnn::Fill> m_fill_opr;
         DeviceTensorND m_side_affect_wkspc;
 };
 
@@ -1338,6 +1339,47 @@ void Reduce::KernScheduler::execute(
     }
 
     mgb_assert(!m_kern_param.empty());
+
+    // empty input
+    if (input.shape_valid() && input.empty()) {
+        auto mode = m_kern_param[0].kparam.mode;
+        if (!m_fill_opr) {
+            m_fill_opr = intl::get_megdnn_handle(dest.comp_node())->
+                create_operator<megdnn::Fill>();
+        }
+        std::string err_msg;
+        switch (mode) {
+            case Reduce::Mode::SUM:
+                if (!dest.empty()) {
+                    m_fill_opr->param() = 0;
+                    m_fill_opr->exec(dest.as_megdnn(), {});
+                }
+                break;
+            case Reduce::Mode::PRODUCT:
+                if (!dest.empty()) {
+                    m_fill_opr->param() = 1;
+                    m_fill_opr->exec(dest.as_megdnn(), {});
+                }
+                break;
+            case Reduce::Mode::MEAN:
+                err_msg = "mean"; break;
+            case Reduce::Mode::MIN:
+                err_msg = "min"; break;
+            case Reduce::Mode::MAX:
+                err_msg = "max"; break;
+            case Reduce::Mode::SUM_SQR:
+                err_msg = "sum_sqr"; break;
+            default:
+                mgb_throw(MegBrainError, "bad reduce mode");
+        }
+        if (!err_msg.empty()) {
+            mgb_throw(
+                MegBrainError,
+                "empty input is not allowed for reduce mode: %s",
+                err_msg.c_str());
+        }
+        return;
+    }
     mgb_assert(input.layout().is_contiguous() &&
             input.raw_ptr() == m_kern_param[0].input.raw_ptr &&
             dest.raw_ptr() == m_kern_param.back().output.raw_ptr);
@@ -1425,7 +1467,9 @@ Reduce::Reduce(VarNode *inp, VarNode *target_shape, const Param &param,
             mgb_throw(GraphError, "invalid param data_type: %d",
                       int(param.data_type));
     }
-    add_output(None)->dtype(out_dtype);
+    add_output(None)
+        ->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
+        .dtype(out_dtype);
     cg::add_workspace_output(this);
 
     add_equivalence_component<PODHash<Param>>(&m_param);
@@ -1701,6 +1745,13 @@ void Reduce::perform(
     dest.comp_node(opr.comp_node()).dtype(target_dtype).resize(target_shape);
     ksched.update_ptr(*input_contig, dest, workspace);
     ksched.execute(opr.get(), *input_contig, dest);
+}
+
+Reduce::NodeProp* Reduce::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 void Reduce::create_megdnn_opr() {

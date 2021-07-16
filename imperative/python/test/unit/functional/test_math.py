@@ -13,7 +13,7 @@ import pytest
 from utils import opr_test
 
 import megengine.functional as F
-from megengine import tensor
+from megengine import jit, tensor
 
 
 def common_test_reduce(opr, ref_opr):
@@ -204,3 +204,28 @@ def test_topk(descending, sorted, inp1d, kth_only):
         if not sorted:
             values = np_sort(values)
         np.testing.assert_equal(values, np_sort(data)[..., :k])
+
+
+@pytest.mark.parametrize("is_trace", [True, False])
+def test_reduce_on_empty_tensor(is_trace):
+    dtypes = [np.float32, np.int32, np.bool]
+    inputs = [
+        (np.random.random((0,)), None),
+        (np.random.random((3, 0, 2)), 1),
+        (np.random.random((10, 10, 0, 10)), 0),
+    ]
+
+    def run_test(fn, ref_fn, input, dtype, axis=None, symbolic=False):
+        if is_trace:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(tensor(input, dtype=dtype), axis=axis).numpy()
+            out_ref = ref_fn(input.astype(dtype), axis=axis)
+            np.testing.assert_equal(out, out_ref)
+
+    for dtype in dtypes:
+        for inp, axis in inputs:
+            run_test(F.sum, np.sum, inp, dtype, axis, True)
+            run_test(F.sum, np.sum, inp, dtype, axis, False)
+            run_test(F.prod, np.prod, inp, dtype, axis, True)
+            run_test(F.prod, np.prod, inp, dtype, axis, False)

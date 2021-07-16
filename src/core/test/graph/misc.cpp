@@ -1364,7 +1364,7 @@ TEST(TestGraph, EmptyShapeCheck) {
     using Param = opr::CondTake::Param;
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          y = opr::CondTake::make(x, x, {Param::Mode::GT})[0],
-         z = opr::reduce_sum(y, y.make_scalar(1));
+         z = opr::reduce_max(y, y.make_scalar(1));
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
     func->execute();
@@ -1377,7 +1377,7 @@ TEST(TestGraph, EmptyShapeCheck) {
                     func->execute();
                 } catch (const MegBrainError& exc) {
                     std::string msg{exc.what()};
-                    ASSERT_TRUE(msg.find("empty output var") !=
+                    ASSERT_TRUE(msg.find("empty input is not allowed") !=
                                 std::string::npos)
                             << "bad message " << msg;
                     throw;
@@ -2413,8 +2413,6 @@ TEST(TestMemReuse, ResetEmptyDevTensor) {
              y = opr::Reduce::make(x, {opr::Reduce::Mode::MAX, 0});
         HostTensorND host_y;
         auto func = g->compile({make_callback_copy(y, host_y)});
-        auto &&recv = x.node()->owner_graph()->var_receiver_in_current_comp_seq(x.node());
-        ASSERT_TRUE(!recv.is_empty_allowed());
         if (inp_shp.is_empty()) {
             ASSERT_ANY_THROW(func->execute().wait());
         } else {

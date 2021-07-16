@@ -900,4 +900,61 @@ TEST(TestBasicArithReduction, StaticInferValueDType) {
     run_test(F16, F16, ParamType::FLOAT_O16xC32);
 }
 
+TEST(TestBasicArithReduction, EmptyInput) {
+    using Param = opr::Reduce::Param;
+    using Mode = opr::Reduce::Mode;
+
+    auto check_allow_empty = [](const Param& param, const TensorShape& inpshp, double target_val) {
+        HostTensorGenerator<> gen;
+        auto graph = ComputingGraph::make();
+        auto host_x = gen(inpshp);
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Reduce::make(x, param, {});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute().wait();
+        if (!host_y.shape().is_empty()) {
+            size_t size = host_y.layout().total_nr_elems();
+
+#define cb(DType)                                        \
+    if (host_y.layout().dtype == DType()) {              \
+        using ctype = typename DTypeTrait<DType>::ctype; \
+        auto ptr = host_y.ptr<ctype>();                  \
+        ctype target = static_cast<ctype>(target_val);   \
+        for (size_t i = 0; i < size; ++i) {              \
+            ASSERT_TRUE(ptr[i] == target);               \
+        }                                                \
+    }
+    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+#undef cb
+
+        } else {
+            ASSERT_TRUE(host_y.empty());
+        }
+    };
+
+    auto check_forbid_empty = [](const Param& param, const TensorShape& inpshp) {
+        HostTensorGenerator<> gen;
+        auto graph = ComputingGraph::make();
+        auto host_x = gen(inpshp);
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             y = opr::Reduce::make(x, param, {});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        ASSERT_ANY_THROW(func->execute().wait());
+    };
+
+    check_allow_empty({Mode::SUM, 0, {}}, {0}, 0);
+    check_allow_empty({Mode::SUM, -1, {}}, {2, 0, 3}, 0);
+    check_allow_empty({Mode::SUM, 1, {}}, {2, 0, 3}, 0);
+    check_allow_empty({Mode::PRODUCT, 0, {}}, {0, 1, 2}, 1);
+    check_allow_empty({Mode::PRODUCT, 1, {}}, {0, 0, 0}, 1);
+    check_allow_empty({Mode::PRODUCT, 2, {}}, {0, 0, 0}, 1);
+
+    check_forbid_empty({Mode::MAX, 0, {}}, {0});
+    check_forbid_empty({Mode::MIN, -1, {}}, {0, 1, 2});
+    check_forbid_empty({Mode::MEAN, 0, {}}, {0, 0});
+    check_forbid_empty({Mode::SUM_SQR, 1, {}}, {2, 1, 0});
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
