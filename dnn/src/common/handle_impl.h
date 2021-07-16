@@ -216,7 +216,8 @@ private:
     cb(TQTBackward) \
     cb(CheckHasInf) \
     cb(LSQForward) \
-    cb(LSQBackward)
+    cb(LSQBackward) \
+    cb(Fill)
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;

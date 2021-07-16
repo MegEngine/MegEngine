@@ -1170,4 +1170,4 @@ Note: NCHW_NCHW4_WEIGHT will auto pad oc and ic, you should remove oc in later o
  add_fields('int32', 'qmin', '-2147483648').
  add_fields('int32', 'qmax', '2147483647')
  )
-
+pdef('Fill').add_fields('float32', 'value', '0')

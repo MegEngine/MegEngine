@@ -130,6 +130,7 @@ DEF(ChecksumForward, 1, true, false);
 DEF(CheckHasInf, 2, true, true);
 DEF(LSQForward, 5, true, true);
 DEF(LSQBackward, 7, true, false);
+DEF(Fill, 1, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

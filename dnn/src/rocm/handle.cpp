@@ -37,6 +37,7 @@
 #include "src/rocm/sleep/opr_impl.h"
 #include "src/rocm/batch_normalization/opr_impl.h"
 #include "src/rocm/param_pack/opr_impl.h"
+#include "src/rocm/fill/opr_impl.h"
 
 #include <miopen/version.h>
 #include <hip/hip_version.h>
@@ -176,6 +177,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(SleepForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ParamPackConcat);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(Fill);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

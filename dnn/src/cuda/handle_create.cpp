@@ -38,6 +38,7 @@
 #include "src/cuda/elemwise_multi_type/opr_impl.h"
 #include "src/cuda/eye/opr_impl.h"
 #include "src/cuda/fake_quant/opr_impl.h"
+#include "src/cuda/fill/opr_impl.h"
 #include "src/cuda/flip/opr_impl.h"
 #include "src/cuda/gaussian_blur/opr_impl.h"
 #include "src/cuda/group_local/opr_impl.h"
