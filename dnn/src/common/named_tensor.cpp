@@ -18,8 +18,9 @@ using namespace megdnn;
 /* ===================== Dimension ============================  */
 const Dimension::Name Dimension::NAME_ALL[] = {
         Dimension::Name::N, Dimension::Name::C, Dimension::Name::H,
-        Dimension::Name::W, Dimension::Name::K, Dimension::Name::R,
-        Dimension::Name::S, Dimension::Name::P, Dimension::Name::Q,
+        Dimension::Name::W, Dimension::Name::G, Dimension::Name::K,
+        Dimension::Name::R, Dimension::Name::S, Dimension::Name::P,
+        Dimension::Name::Q,
 };
 const int Dimension::NR_NAMES = sizeof(Dimension::NAME_ALL);
 Dimension::Dimension(const std::string& expr) {
@@ -91,6 +92,9 @@ bool Dimension::operator==(const Dimension& rhs) const {
 bool Dimension::operator<(const Dimension& rhs) const {
     if (m_name != rhs.m_name) {
         return static_cast<char>(m_name) < static_cast<char>(rhs.m_name);
+    }
+    if (m_stride == rhs.m_stride) {
+        return m_extent > rhs.m_extent;
     }
     return m_stride > rhs.m_stride;
 }

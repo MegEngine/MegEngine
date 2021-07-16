@@ -182,7 +182,6 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
     };
     std::sort(src_dims.begin(), src_dims.end(), compare);
     std::sort(dest_dims.begin(), dest_dims.end(), compare);
-
     auto src_iter = src_dims.begin();
     auto dest_iter = dest_dims.begin();
     for (; src_iter != src_dims.end() && dest_iter != dest_dims.end();) {
@@ -233,18 +232,14 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
     }
     UnderlyingBuilders builders;
     if (!m_src.eq_shape(i1)) {
-        builders.make_shape1 =
-                std::move(std::get<0>(MakeShapeEmitter(m_src, i1).emit()));
-        builders.reshape1 =
-                std::move(std::get<0>(ReshapeEmitter(m_src, i1).emit()));
+        builders.make_shape1 = std::get<0>(MakeShapeEmitter(m_src, i1).emit());
+        builders.reshape1 = std::get<0>(ReshapeEmitter(m_src, i1).emit());
     }
-    builders.dimshuffle =
-            std::move(std::get<0>(DimshuffleEmitter(permute).emit()));
+    builders.dimshuffle = std::get<0>(DimshuffleEmitter(permute).emit());
     if (!m_dest.eq_shape(i2)) {
         builders.make_shape2 =
-                std::move(std::get<0>(MakeShapeEmitter(m_src, m_dest).emit()));
-        builders.reshape2 =
-                std::move(std::get<0>(ReshapeEmitter(i2, m_dest).emit()));
+                std::get<0>(MakeShapeEmitter(m_src, m_dest).emit());
+        builders.reshape2 = std::get<0>(ReshapeEmitter(i2, m_dest).emit());
     }
     return builders;
 }

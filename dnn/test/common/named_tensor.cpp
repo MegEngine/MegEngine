@@ -21,7 +21,7 @@ using namespace megdnn;
 using megdnn::test::MegDNNError;
 
 TEST(NAMED_TENSOR, NAMED_TENSOR_SHAPE_BASIC) {
-    ASSERT_EQ(Dimension::NR_NAMES, 9);
+    ASSERT_EQ(Dimension::NR_NAMES, 10);
     Dimension dim0 = {"C"}, dim1 = {"C//32"}, dim2 = {"C//4"}, dim3 = {"C%32"},
               dim4 = {"C%4"}, dim5 = {"C//4%8"};
     ASSERT_TRUE(dim0 == dim1 * dim3);
