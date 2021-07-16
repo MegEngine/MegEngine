@@ -613,6 +613,10 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
             RET(EL2(H_SWISH_GRAD, (i0 + i1), og));
         case Mode::NOT:
             return nullptr;
+        case Mode::SILU:
+            RET(EL2(SILU_GRAD, i0, og));
+        case Mode::GELU:
+            RET(EL2(GELU_GRAD, i0, og));
 
         // binary
         case Mode::ABS_GRAD:

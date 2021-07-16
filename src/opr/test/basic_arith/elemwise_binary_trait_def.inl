@@ -64,6 +64,10 @@ DEF_TRAIT(FUSE_ADD_H_SWISH, do_fuse_add_h_swish(x, y))
 DEF_TRAIT(FAST_TANH_GRAD, do_fast_tanh_grad(x, y))
 DEF_TRAIT(ATAN2, std::atan2(x, y))
 DEF_TRAIT(H_SWISH_GRAD, do_h_swish_grad(x, y))
+DEF_TRAIT(SILU_GRAD, y*(1 + std::exp(-x) + x * std::exp(-x)) /
+                             (1 + std::exp(-x)) / (1 + std::exp(-x)))
+DEF_TRAIT(GELU_GRAD, do_gelu_grad(x, y))
+
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT
 

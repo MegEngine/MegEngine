@@ -69,6 +69,31 @@ namespace megdnn {
         return ((-48.f * x_pow2) / deno + 27.f + x_pow2) / (deno * 9.f) * dx;
     }
 
+    //! grad of silu
+    __device__ __host__ inline float silu_grad(float x, float dy) {
+        const float one = 1.0;
+        float sigmoid = one / (one + expf(-x));
+        return dy * sigmoid * (one + x * (one - sigmoid));
+    }
+
+    __device__ __host__ inline float normcdf(float x) {
+#if MEGDNN_CC_HOST
+        return 0.5f * (1.f + erff(x / sqrtf(2.f)));
+#else
+        //! use cuda build-in math
+        return ::normcdff(x);
+#endif
+    }
+
+    //! grad of gelu
+    __device__ __host__ inline float gelu_grad(float x, float dy) {
+        //! 1/ sqrt(2 * pi)
+        const float coeff = 0.3989422804014327f;
+        float phi = coeff * expf(-0.5f * x * x);
+        float normcdf_v = normcdf(x);
+        return dy * (normcdf_v + x * phi);
+    }
+
 #include "src/common/elemwise/each_mode.inl"
 
     template<megcorePlatform_t plat, uint32_t mode, typename dtype>
@@ -137,6 +162,8 @@ namespace megdnn {
     DEF_KERN_FLOAT(ERFC, erfcf(x));
     DEF_KERN_FLOAT(ERFCINV, erfcinvf(x));
     DEF_KERN_FLOAT(H_SWISH, x * min(max(x + 3, 0.f), 6.f) * (1.f / 6.f));
+    DEF_KERN_FLOAT(SILU, x / (expf(-x) + 1.f));
+    DEF_KERN_FLOAT(GELU, x * normcdf(x));
 
     // int only
     DEF_KERN(dt_bool, NOT, x ^ 1);
@@ -207,6 +234,8 @@ namespace megdnn {
                    x < -3.f ? (ctype)0.f : (ctype)(x > 3.f ? (ctype)y : (ctype)((2.f * x + 3.f) / 6.f * y)));
 
     DEF_KERN_FLOAT(FUSE_ADD_H_SWISH, fuse_add_hswish(x, y));
+    DEF_KERN_FLOAT(SILU_GRAD, silu_grad(x, y));
+    DEF_KERN_FLOAT(GELU_GRAD, gelu_grad(x, y));
 #undef KERN_SIG
 
     /* ================== ternary kernels ================== */

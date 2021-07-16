@@ -410,7 +410,11 @@ pdef('Elemwise').add_enum(
     Doc('NOT', 'unary: !x'),
     Doc('AND', 'binary: x && y'),
     Doc('OR', 'binary: x || y'),
-    Doc('XOR', 'binary: x ^ y')
+    Doc('XOR', 'binary: x ^ y'),
+    Doc('SILU', 'unary: x / (1 + exp(-x))'),
+    Doc('SILU_GRAD', 'binary: grad(x / (1 + exp(-x))'),
+    Doc('GELU', 'unary: x Phi(x)'),
+    Doc('GELU_GRAD', 'binary: grad(x Phi(x))'),
 )
 
 pdef('ElemwiseMultiType').add_enum(

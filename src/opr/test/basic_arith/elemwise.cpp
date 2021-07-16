@@ -131,6 +131,12 @@ namespace {
                                   std::numeric_limits<T>::digits));
     }
 
+    float do_gelu_grad(float x, float y) {
+        float phi = 1.f / sqrtf(2.0 * M_PI) * expf(-0.5f * x * x);
+        float normcdf_v = 0.5f * (1.f + erff(x / sqrtf(2.f)));
+        return y * (normcdf_v + x * phi);
+    }
+
     /* ======================= basic framework ======================= */
 
     template<typename ctype, bool stable_sign = false>
@@ -562,6 +568,9 @@ namespace {
             return false;
         }
     };
+
+    template<> struct CheckerConfig<SILU_GRAD>: public NoGradCheckerConfig {};
+    template<> struct CheckerConfig<GELU_GRAD>: public NoGradCheckerConfig {};
 
     /* ======================= ternary config ======================= */
     template<> struct CheckerConfig<COND_LEQ_MOV>:

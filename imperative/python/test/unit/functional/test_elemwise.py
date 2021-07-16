@@ -144,6 +144,13 @@ def test_hswish():
     np.testing.assert_almost_equal(y_np, y_mge, decimal=6)
 
 
+def test_silu():
+    x = np.array([-1.5, 0.0, 1.0, 1.5]).astype("float32")
+    y_np = x / (1 + np.exp(-x))
+    y_mge = F.silu(tensor(x)).numpy()
+    np.testing.assert_almost_equal(y_np, y_mge, decimal=6)
+
+
 def test_hsigmoid():
     np.random.seed(42)
     x = np.random.randn(100).astype("float32")

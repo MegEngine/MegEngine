@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional import leaky_relu, prelu, relu, sigmoid, softmax
+from ..functional import gelu, leaky_relu, prelu, relu, sigmoid, silu, softmax
 from ..tensor import Parameter
 from .module import Module
 
@@ -90,6 +90,74 @@ class Sigmoid(Module):
 
     def forward(self, inputs):
         return sigmoid(inputs)
+
+
+class SiLU(Module):
+    r"""
+    Applies the element-wise function:
+
+    .. math::
+        \text{SiLU}(x) = \frac{x}{1 + \exp(-x)}
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        silu = M.SiLU()
+        output = silu(data)
+        with np.printoptions(precision=6):
+            print(output.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [-0.238406 -0.268941  0.        0.731059  1.761594]
+
+    """
+
+    def forward(self, inputs):
+        return silu(inputs)
+
+
+class GELU(Module):
+    r"""
+    Applies the element-wise function:
+
+    .. math::
+        \text{GELU}(x) = x\Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine as mge
+        import megengine.module as M
+
+        data = mge.tensor(np.array([-2,-1,0,1,2,]).astype(np.float32))
+        gelu = M.GELU()
+        output = gelu(data)
+        with np.printoptions(precision=4):
+            print(output.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [-0.0455 -0.1587  0.      0.8413  1.9545]
+
+    """
+
+    def forward(self, inputs):
+        return gelu(inputs)
 
 
 class ReLU(Module):

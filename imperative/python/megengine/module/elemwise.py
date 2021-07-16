@@ -28,6 +28,8 @@ class Elemwise(Module):
         * "fuse_add_sigmoid": sigmoid(x + y)
         * "fuse_add_tanh": tanh(x + y)
         * "relu": x > 0 ? x : 0
+        * "silu": silu(x)
+        * "gelu": gelu(x)
         * "abs": x > 0 ? x : -x
         * "sigmoid": sigmoid(x)
         * "exp": exp(x)

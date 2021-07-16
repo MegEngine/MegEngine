@@ -56,6 +56,8 @@ DEF_TRAIT(ERFINV, do_erfinv(x))
 DEF_TRAIT(ERFC, std::erfc(x))
 DEF_TRAIT(ERFCINV, do_erfcinv(x))
 DEF_TRAIT(H_SWISH, do_h_swish(x))
+DEF_TRAIT(SILU, x / (1 + std::exp(-x)))
+DEF_TRAIT(GELU, x*(0.5f * (1.f + std::erf(x / std::sqrt(2.f)))))
 #undef _ALLOW_INT
 
 #undef _ALLOW_FLOAT

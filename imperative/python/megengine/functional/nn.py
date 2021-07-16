@@ -48,6 +48,7 @@ __all__ = [
     "deformable_psroi_pooling",
     "dropout",
     "embedding",
+    "gelu",
     "hsigmoid",
     "hswish",
     "indexing_one_hot",
@@ -67,6 +68,7 @@ __all__ = [
     "sigmoid",
     "sliding_window",
     "sliding_window_transpose",
+    "silu",
     "softmax",
     "softplus",
     "sync_batch_norm",
@@ -764,6 +766,25 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
     Refer to :class:`~.LeakyReLU` for more information.
     """
     return maximum(inp, 0) + negative_slope * minimum(inp, 0)
+
+
+def silu(x):
+    r"""
+    Applies the element-wise Sigmoid Linear Unit function, i.e. `x * sigmoid(x)`.
+    """
+    return _elwise(x, mode=Elemwise.Mode.SILU)
+
+
+def gelu(x):
+    r"""
+    Applies the element-wise function:
+
+    .. math::
+        \text{gelu}(x) = x\Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+    """
+    return _elwise(x, mode=Elemwise.Mode.GELU)
 
 
 def softplus(inp: Tensor) -> Tensor:
