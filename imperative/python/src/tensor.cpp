@@ -541,15 +541,9 @@ PyObject* TensorWrapper::detach() {
     PyObject* self = wrap_t::pycast(this);
     PyTypeObject* pytype = self->ob_type;
 
-    std::shared_ptr<Tensor> new_tensor;
-    if (m_tensor->m_handle.get()) {
-        new_tensor = std::make_shared<Tensor>(m_tensor->m_handle);
-    } else {
-        new_tensor = std::make_shared<Tensor>(m_tensor->m_var);
-    }
-    new_tensor->m_trace_info = m_tensor->m_trace_info;
-
-    new_tensor->m_flags = m_tensor->m_flags;
+    static std::shared_ptr<OpDef> op = std::shared_ptr<OpDef>(new FastpathCopy());
+    auto new_tensor = python::apply(op, m_tensor)[0];
+    new_tensor->m_grad_info_dict = {};
     auto ret = TensorWrapper::make(pytype, std::move(new_tensor));
     return ret.release().ptr();
 }
