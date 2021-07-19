@@ -89,7 +89,7 @@ class launcher:
         master_ip="localhost",
         port=0,
         device_type="xpu",
-        backend="auto",
+        backend="nccl",
     ):
         self.func = func
         self.n_gpus = n_gpus if n_gpus is not None else get_device_count(device_type)

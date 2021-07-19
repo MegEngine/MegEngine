@@ -104,7 +104,7 @@ class Group:
 WORLD = Group([])
 
 _devices = {"gpu", "cuda", "rocm"}
-_backends = {"nccl", "rccl", "ucx", "auto"}
+_backends = {"nccl", "rccl", "shm", "auto"}
 
 
 def init_process_group(
