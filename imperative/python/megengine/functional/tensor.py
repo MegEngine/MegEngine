@@ -208,6 +208,29 @@ def full_like(
 ) -> Union[Tensor, SymbolVar]:
     """
     Returns a tensor filled with given value with the same shape as input tensor.
+
+    :param inp: input tensor.
+    :param value: target value.
+    :return: output tensor.
+
+    Examples:
+    .. testcode::
+
+        import numpy as np
+        from megengine import tensor
+        import megengine.functional as F
+
+        inp = tensor(np.arange(1, 7, dtype=np.int32).reshape(2,3))
+        out = F.full_like(inp, 2)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[2 2 2]
+         [2 2 2]]
+
     """
     (x,) = Const(value, dtype=inp.dtype, device=inp.device)(inp)
     if inp.shape is ():
