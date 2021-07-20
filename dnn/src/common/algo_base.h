@@ -55,13 +55,11 @@ namespace megdnn {
  */
 template <typename AlgoBase>
 class AlgoConstructMixin {
-private:
-    std::vector<std::unique_ptr<AlgoBase>> m_refhold;
 protected:
+    std::vector<std::unique_ptr<AlgoBase>> m_refhold;
     typename AlgoBase::Mapper m_all_algos_map;
 
 public:
-
     //! construct the algo which described by desc, and return the instance
     AlgoBase* construct_and_get_algo(
             const detail::Algorithm::Info::Desc& desc) {
