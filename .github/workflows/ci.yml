@@ -6,8 +6,46 @@ on:
   pull_request:
   
 jobs:
+  check-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2.1.0
+      - run: yarn add @commitlint/config-conventional @commitlint/cli
+      - run: yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
+
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.1
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requires.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+      - name: Check format
+        run: |
+          ./ci/run_format_check.sh
+
   cpu-test:
     runs-on: self-hosted
+    needs: [check-commit, check-format]
     container:
       image: localhost:5000/megengine-ci:latest
     steps:
@@ -25,6 +63,7 @@ jobs:
         run: ./ci/run_cpp_test.sh cpu
   gpu-test:
     runs-on: self-hosted
+    needs: [check-commit, check-format]
     container:
       image: localhost:5000/megengine-ci:latest
       volumes:
