@@ -16,7 +16,11 @@ while getopts 'd' OPT; do
     esac
 done
 
+directories=(megengine test)
+if [[ -d examples ]]; then
+    directories+=(examples)
+fi
 # do not isort megengine/__init__.py file, caused we must
 # init library load path before load dependent lib in core
-isort $ISORT_ARG -j $(nproc) -rc megengine test examples -s megengine/__init__.py
-black $BLACK_ARG --target-version=py35 -- megengine test examples
+isort $ISORT_ARG -j $(nproc) -rc "${directories[@]}" -s megengine/__init__.py
+black $BLACK_ARG --target-version=py35 -- "${directories[@]}"
