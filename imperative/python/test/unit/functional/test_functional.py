@@ -1062,3 +1062,22 @@ def test_sliding_window_transpose():
         dilation=(dh, dw),
     )
     np.testing.assert_equal(gt_out, out.numpy())
+
+
+def test_pad():
+    src = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32)
+    dst = np.pad(src, ((2, 2), (2, 2)), "constant")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "CONSTANT")
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "constant", constant_values=3)
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "CONSTANT", constant_value=3)
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "edge")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "EDGE")
+    np.testing.assert_allclose(res, dst, atol=1e-5)
+
+    dst = np.pad(src, ((2, 2), (2, 2)), "reflect")
+    res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "REFLECT")
+    np.testing.assert_allclose(res, dst, atol=1e-5)

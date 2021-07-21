@@ -660,4 +660,12 @@ OP_TRAIT_REG(Cumsum, Cumsum).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace cumsum
 }  // namespace
 
+namespace padding {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Padding&>(def);
+    mgb_assert(inputs.size() == 1);
+    return opr::Padding::make(inputs[0], op.param());
+}
+OP_TRAIT_REG(Padding, Padding).apply_on_var_node(apply_on_var_node).fallback();
+} // namespace padding
 } // namespace mgb::imperative

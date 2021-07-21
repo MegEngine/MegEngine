@@ -1592,6 +1592,57 @@ def sliding_window_transpose(
     return output
 
 
+def pad(
+    src: Tensor,
+    pad_witdth: Tuple[Tuple[int, int], ...],
+    mode: str = "CONSTANT",
+    constant_value: float = 0.0,
+) -> Tensor:
+    """
+    pad
+    """
+    p_offsets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    assert mode in [
+        "constant",
+        "CONSTANT",
+        "edge",
+        "EDGE",
+        "replicate",
+        "REPLICATE",
+        "reflect",
+        "REFLECT",
+    ]
+
+    if mode.lower() == "edge":
+        mode = "replicate"
+
+    for i in range(0, len(pad_witdth)):
+        p_offsets[i * 2] = pad_witdth[i][0]
+        p_offsets[i * 2 + 1] = pad_witdth[i][1]
+
+    op = builtin.Padding(
+        front_offset_dim0=p_offsets[0],
+        front_offset_dim1=p_offsets[2],
+        front_offset_dim2=p_offsets[4],
+        front_offset_dim3=p_offsets[6],
+        front_offset_dim4=p_offsets[8],
+        front_offset_dim5=p_offsets[10],
+        front_offset_dim6=p_offsets[12],
+        back_offset_dim0=p_offsets[1],
+        back_offset_dim1=p_offsets[3],
+        back_offset_dim2=p_offsets[5],
+        back_offset_dim3=p_offsets[7],
+        back_offset_dim4=p_offsets[9],
+        back_offset_dim5=p_offsets[11],
+        back_offset_dim6=p_offsets[13],
+        padding_val=constant_value,
+        padding_mode=mode.upper(),
+    )
+    (output,) = apply(op, src)
+    return output
+
+
 interpolate = deprecated_func("1.3", "megengine.functional.vision", "interpolate", True)
 roi_pooling = deprecated_func("1.3", "megengine.functional.vision", "roi_pooling", True)
 roi_align = deprecated_func("1.3", "megengine.functional.vision", "roi_align", True)
