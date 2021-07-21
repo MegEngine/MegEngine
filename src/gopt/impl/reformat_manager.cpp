@@ -11,7 +11,6 @@
  */
 
 #include "megbrain/gopt/reformat_manager.h"
-#include <numeric>
 #include "megbrain/opr/tensor_manip.h"
 
 using namespace mgb;
@@ -65,6 +64,10 @@ NamedTensorShape tensor_formats_to_named_tensor_shape(TensorFormats format) {
             return {{"C//8"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}, {"C%8"}};
         case TensorFormats::KRSCk8:
             return {{"K//8"}, {"R"}, {"S"}, {"C"}, {"K%8"}};
+        case TensorFormats::KCRSc4:
+            return {{"K"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}};
+        case TensorFormats::GKCRSc4:
+            return {{"G"}, {"K"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}};
         case TensorFormats::KCRS:
             return {{"K"}, {"C"}, {"R"}, {"S"}};
         case TensorFormats::GKCRS:
@@ -130,70 +133,40 @@ bool ReformatManager::ReformatKey::Equal::operator()(
            lhs.attribute == rhs.attribute;
 }
 
-// =================== ReformatManager ====================*/
-#define FOREACH_FEATURE_TENSOR_FORMATS(cb)                                     \
-    cb(NCHW) cb(NHWC) cb(NCHWc4) cb(NCHWc8) cb(NCHWc32) cb(NCHWc64) cb(CHWNc4) \
-            cb(NHCWc4)
-#define FOREACH_WEIGHT_TENSOR_FORMATS(cb)                                     \
-    cb(KRSCk4) cb(KRSCk4c4) cb(KCRSk4c4) cb(KCRSc4k4) cb(KCRSc8k8) cb(KRSCk8) \
-            cb(GKRSCk4) cb(GKRSCk4c4) cb(GKCRSc4k4) cb(GKCRSk4c4)             \
-                    cb(GKCRSc8k8) cb(C11RSc4) cb(C11RSc8)
-ReformatManager::ReformatManager() {
-    static constexpr TensorFormats feature_tensor_formats[] = {
-#define cb(_fmt) TensorFormats::_fmt,
-            FOREACH_FEATURE_TENSOR_FORMATS(cb)
-#undef cb
-    };
-    static constexpr int nr_feature_tensor_formats =
-            sizeof(feature_tensor_formats) / sizeof(TensorFormats);
-    for (int i = 0; i < nr_feature_tensor_formats; ++i) {
-        for (int o = 0; o < nr_feature_tensor_formats; ++o) {
-            if (i == o)
-                continue;
-            NamedTensorShape input_shape = tensor_formats_to_named_tensor_shape(
-                    feature_tensor_formats[i]);
-            NamedTensorShape output_shape =
-                    tensor_formats_to_named_tensor_shape(
-                            feature_tensor_formats[o]);
-            auto impl = std::get<0>(
-                    ReformatEmitter{input_shape, output_shape}.emit());
-            m_cache.emplace(ReformatKey{feature_tensor_formats[i],
-                                        feature_tensor_formats[o]},
-                            impl);
-        }
+ReformatManager::ReformatKey&
+ReformatManager::ReformatKey::deduce_reformat_dtype_enum(const DType& dt) {
+    static const ThinHashSet<std::pair<TensorFormats, TensorFormats>> set = {
+            {TensorFormats::NCHW, TensorFormats::NCHWc64},
+            {TensorFormats::NCHWc64, TensorFormats::NCHW},
+            {TensorFormats::NCHW, TensorFormats::NHWC},
+            {TensorFormats::NHWC, TensorFormats::NCHW}};
+    if (set.count({input_format, output_format}) > 0 &&
+        (dt.enumv() == DTypeEnum::QuantizedS4 ||
+         dt.enumv() == DTypeEnum::Quantized4Asymm)) {
+        input_dtype = output_dtype = dt.enumv();
     }
-    static constexpr TensorFormats default_weight_tensor_formats =
-            TensorFormats::KCRS;
-    static constexpr TensorFormats default_group_conv_weight_tensor_formats =
-            TensorFormats::GKCRS;
-    static constexpr TensorFormats default_chan_conv_weight_tensor_formats =
-            TensorFormats::C11RS;
-    static constexpr TensorFormats weight_tensor_formats[] = {
-#define cb(_fmt) TensorFormats::_fmt,
-            FOREACH_WEIGHT_TENSOR_FORMATS(cb)
-#undef cb
-    };
-    static constexpr int nr_weight_tensor_formats =
-            sizeof(weight_tensor_formats) / sizeof(TensorFormats);
-    using Name = megdnn::Dimension::Name;
-    for (int o = 0; o < nr_weight_tensor_formats; ++o) {
-        NamedTensorShape output_shape =
-                tensor_formats_to_named_tensor_shape(weight_tensor_formats[o]);
-        TensorFormats input_format;
-        if (output_shape[0].name() == Name::G) {
-            input_format = default_group_conv_weight_tensor_formats;
-        } else if (output_shape[0].name() == Name::C) {
-            input_format = default_chan_conv_weight_tensor_formats;
-        } else {
-            mgb_assert(output_shape[0].name() == Name::K);
-            input_format = default_weight_tensor_formats;
-        }
-        NamedTensorShape input_shape =
-                tensor_formats_to_named_tensor_shape(input_format);
-        auto impl =
-                std::get<0>(ReformatEmitter{input_shape, output_shape}.emit());
-        m_cache.emplace(ReformatKey{input_format, weight_tensor_formats[o]},
-                        impl);
+    return *this;
+}
+
+// =================== ReformatManager ====================*/
+ReformatManager::ReformatManager() {
+    using Attribute = ReformatKey::Attribute;
+    {
+        auto i = TensorFormats::NCHWc4, o = TensorFormats::CHWNc4;
+        auto&& impl1 = [](const VarNodeArray& vars) {
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::NCHW4_CHWN4)
+                    .node();
+        };
+        m_cache.emplace(ReformatKey{i, o}, impl1);
+        auto&& impl2 = [](const VarNodeArray& vars) {
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::CHWN4_NCHW4)
+                    .node();
+        };
+        m_cache.emplace(ReformatKey{o, i}, impl2);
     }
     {
         auto i = TensorFormats::NCHW, o = TensorFormats::NCHWc4;
@@ -206,7 +179,7 @@ ReformatManager::ReformatManager() {
         m_cache.emplace(ReformatKey{i, o, Attribute::IC_SMALL}, impl);
     }
     {
-        auto i = TensorFormats::KCRS, o = TensorFormats::KCRSc4k4;
+        auto i = TensorFormats::KCRS, o = TensorFormats::KCRSc4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
                            vars[0],
@@ -238,7 +211,7 @@ ReformatManager::ReformatManager() {
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
                            vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NCHW64)
+                           megdnn::param::RelayoutFormat::Mode::NCHW64_NCHW)
                     .node();
         };
         m_cache.emplace(
@@ -272,7 +245,7 @@ ReformatManager::ReformatManager() {
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
                            vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NHWC)
+                           megdnn::param::RelayoutFormat::Mode::NHWC_NCHW)
                     .node();
         };
         m_cache.emplace(
@@ -371,14 +344,23 @@ ReformatManager::ReformatManager() {
                         impl);
     }
 }
-#undef FOREACH_FEATURE_TENSOR_FORMATS
-#undef FOREACH_WEIGHT_TENSOR_FORMATS
 
-const ReformatManager::ReformatImpl& ReformatManager::get(
+ReformatManager::ReformatImpl ReformatManager::get(
         const ReformatKey& key) const {
+    using Attribute = ReformatKey::Attribute;
     MGB_TRY {
-        auto&& impl = m_cache.at(key);
-        return impl;
+        auto find = m_cache.find(key);
+        if (find != m_cache.end()) {
+            auto rst = find->second;
+            return rst;
+        }
+        mgb_assert(key.attribute == Attribute::DEFAULT);
+        auto&& i = key.input_format;
+        auto&& o = key.output_format;
+        auto ishp = tensor_formats_to_named_tensor_shape(i);
+        auto oshp = tensor_formats_to_named_tensor_shape(o);
+        auto builder = std::get<0>(ReformatEmitter{ishp, oshp}.emit());
+        return builder;
     }
     MGB_CATCH(std::exception & exc, {
         mgb_log_error(
@@ -390,10 +372,7 @@ const ReformatManager::ReformatImpl& ReformatManager::get(
 }
 
 const ReformatManager& ReformatManager::instance() {
-    static ReformatManager* inst = nullptr;
-    if (inst == nullptr) {
-        inst = new ReformatManager();
-    }
-    return *inst;
+    static ReformatManager inst;
+    return inst;
 }
 // vim: syntax=cpp.doxygen

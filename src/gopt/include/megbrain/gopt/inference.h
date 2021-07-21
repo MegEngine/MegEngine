@@ -227,6 +227,7 @@ namespace gopt {
         VarReplaceCheckFlag m_var_replace_check_flag =
                 VarReplaceCheckFlag::CHECK_ALL;
         class RelayoutPlaceholder;
+        friend class ShuffleShuffleRemovePass;
 
     public:
         TensorReformatPass& set_var_replace_check_flag(VarReplaceCheckFlag flag) {

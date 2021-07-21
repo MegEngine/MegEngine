@@ -49,10 +49,14 @@ enum class TensorFormats : uint32_t {
 
     KRSCk8 = 21,  ///< [K/8, R, S, C, K%8]
 
+    // NCHW4
+    KCRSc4 = 22,   ///< [K, C/4, R, S, C%4]
+    GKCRSc4 = 23,  ///< [G, K, C/4, R, S, C%4]
+
     // default weight format
-    KCRS = 22,   ///< [K, C, R, S]
-    GKCRS = 23,  ///< [G, K, C, R, S]
-    C11RS = 24,  ///< [C, 1, 1, R, S]
+    KCRS = 24,   ///< [K, C, R, S]
+    GKCRS = 25,  ///< [G, K, C, R, S]
+    C11RS = 26,  ///< [C, 1, 1, R, S]
 };
 
 class ReformatManager : public NonCopyableObj {
@@ -60,16 +64,20 @@ class ReformatManager : public NonCopyableObj {
 
 public:
     using ReformatImpl = thin_function<VarNode*(const VarNodeArray&)>;
-    enum class Attribute : uint32_t {
-        DEFAULT = 0,
-        IMAGE2D = 1 << 0,
-        IC_SMALL = 1 << 1,
-    };
     struct ReformatKey {
+        enum class Attribute : uint32_t {
+            DEFAULT = 0,
+            IMAGE2D = 1 << 0,
+            IC_SMALL = 1 << 1,
+        };
         TensorFormats input_format, output_format;
         DTypeEnum input_dtype, output_dtype;
         Attribute attribute;
         std::string to_string() const;
+        ReformatKey()
+                : input_dtype{DTypeEnum::Float32},
+                  output_dtype{DTypeEnum::Float32},
+                  attribute{Attribute::DEFAULT} {}
         ReformatKey(TensorFormats input_format_, TensorFormats output_format_,
                     Attribute attribute_ = Attribute::DEFAULT,
                     DTypeEnum input_dtype_ = DTypeEnum::Float32,
@@ -86,11 +94,13 @@ public:
             bool operator()(const ReformatKey& lhs,
                             const ReformatKey& rhs) const;
         };
+        ReformatKey& deduce_reformat_dtype_enum(const DType& dt);
     };
     using ReformatCache =
             std::unordered_map<ReformatKey, ReformatImpl, ReformatKey::Hash,
                                ReformatKey::Equal>;
-    const ReformatImpl& get(const ReformatKey& key) const;
+    ReformatImpl get(const ReformatKey& key) const;
+    ReformatImpl get(ReformatKey&& key) const { return get(key); }
     static const ReformatManager& instance();
 
 private:

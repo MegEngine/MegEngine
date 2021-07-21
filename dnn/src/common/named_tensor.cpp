@@ -120,10 +120,6 @@ Dimension Dimension::operator/(const Dimension& rhs) const {
                   static_cast<char>(m_name), static_cast<char>(rhs.m_name));
     if (operator==(rhs))
         return Dimension(m_name, 1, 1);
-    megdnn_assert(
-            !(*this < rhs),
-            "Divisor must be smaller than dividend(dividend:%s, divisor:%s)",
-            to_string().c_str(), rhs.to_string().c_str());
     if (m_stride == rhs.m_stride) {
         if (m_extent == UNDETERMINED_EXTENT) {
             megdnn_assert(rhs.m_extent != UNDETERMINED_EXTENT,
