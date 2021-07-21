@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megbrain/imperative/ops/rng.h"
@@ -14,8 +15,8 @@
 #include "megbrain/graph/helper.h"
 #include "megbrain/opr/rand.h"
 
-#include "../op_trait.h"
 #include "../dnn_op_helper.h"
+#include "../op_trait.h"
 
 namespace mgb::imperative::rng {
 
@@ -259,13 +260,27 @@ struct OpMeth<BetaRNG> {
     }
 };
 
+template <>
+struct OpMeth<ShuffleRNG> {
+    using DnnOp = megdnn::ShuffleRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::ShuffleRNG;
+    static Param make_param(const ShuffleRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(handle_seed == rng.seed,
+                   "inconsistent rng seed: rng op: %lu handle: %lu",
+                   handle_seed, rng.seed);
+        return {handle_seed};
+    }
+};
+
 template <bool>
 struct _InferLayout;
 
 template <int nr_in>
 struct _RNGOprMaker;
 
-template <int nr_in>
+template <int nr_in, int nr_out>
 struct _RNGOprInvoker;
 
 template<>
@@ -316,50 +331,63 @@ struct _InferLayout<false>
         return inp.layout;
     }
 };
-                                   
-#define _INST_RNG_INVOLKER(DNN_NR_INPUTS)                                                              \
-template<>                                                                                             \
-struct _RNGOprInvoker<DNN_NR_INPUTS> {                                                                 \
-    template<typename Opr>                                                                             \
-    static void exec(Opr *dnn_op, const SmallVector<TensorPtr>& inputs,const TensorPtr& dest){         \
-        size_t wk_size = 0;                                                                            \
-        wk_size = dnn_op->get_workspace_in_bytes(_FOR_EACH_IN(->layout())dest->layout());              \
-        auto workspace = Blob::make(dest->comp_node(), wk_size);                                       \
-        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);                                 \
-        dnn_op->exec(_FOR_EACH_IN(->dev_tensor().as_megdnn())                                          \
-                                 dest->dev_tensor().as_megdnn(), dnn_wk);                              \
-    }                                                                                                  \
-};
 
+#define _INST_RNG_INVOLKER(DNN_NR_INPUTS, DNN_NR_OUTPUTS)                   \
+    template <>                                                             \
+    struct _RNGOprInvoker<DNN_NR_INPUTS, DNN_NR_OUTPUTS> {                  \
+        template <typename Opr>                                             \
+        static void exec(Opr* dnn_op, const SmallVector<TensorPtr>& inputs, \
+                         const SmallVector<TensorPtr>& outputs) {           \
+            size_t wk_size = 0;                                             \
+            wk_size = dnn_op->get_workspace_in_bytes(                       \
+                    _FOR_EACH_IN(->layout()) _FOR_EACH_OUT(->layout()));    \
+            auto workspace = Blob::make(outputs[0]->comp_node(), wk_size);  \
+            megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);  \
+            dnn_op->exec(_FOR_EACH_IN(->dev_tensor().as_megdnn())           \
+                                 _FOR_EACH_OUT(->dev_tensor().as_megdnn()), \
+                         dnn_wk);                                           \
+        }                                                                   \
+    };
 
-#define _INST_RNG_MAKER(MGB_NR_INPUTS)                                                                 \
-template<>                                                                                             \
-struct _RNGOprMaker<MGB_NR_INPUTS> {                                                                   \
-    template<typename Op>                                                                              \
-    static SymbolVar make(const VarNodeArray& inputs, const Op& rng){                                  \
-        auto param = OpMeth<Op>::make_param(rng);                                                      \
-        OperatorNodeConfig config;                                                                     \
-        if (rng.handle) {                                                                              \
-            config = {rng.make_name(), RNGDnnOpManager::get_comp_node(rng.handle)};                    \
-        } else {                                                                                       \
-            config = {rng.make_name()};                                                                \
-        }                                                                                              \
-        return OpMeth<Op>::OpNode::make(_FOR_EACH_IN() param, config);                                 \
-    }                                                                                                  \
-};
+#define _INST_RNG_MAKER(MGB_NR_INPUTS)                                     \
+    template <>                                                            \
+    struct _RNGOprMaker<MGB_NR_INPUTS> {                                   \
+        template <typename Op>                                             \
+        static auto make(const VarNodeArray& inputs, const Op& rng) {      \
+            auto param = OpMeth<Op>::make_param(rng);                      \
+            OperatorNodeConfig config;                                     \
+            if (rng.handle) {                                              \
+                config = {rng.make_name(),                                 \
+                          RNGDnnOpManager::get_comp_node(rng.handle)};     \
+            } else {                                                       \
+                config = {rng.make_name()};                                \
+            }                                                              \
+            return OpMeth<Op>::OpNode::make(_FOR_EACH_IN() param, config); \
+        }                                                                  \
+    };
 
-#define _FOR_EACH_IN(subfix)   
-_INST_RNG_INVOLKER(0)
+#define _FOR_EACH_IN(subfix)
+#define _FOR_EACH_OUT(subfix) outputs[0] subfix
+_INST_RNG_INVOLKER(0, 1)
+#undef _FOR_EACH_OUT
 #undef _FOR_EACH_IN
 
 #define _FOR_EACH_IN(subfix) inputs[0] subfix,
-_INST_RNG_INVOLKER(1)
+#define _FOR_EACH_OUT(subfix) outputs[0] subfix
+_INST_RNG_INVOLKER(1, 1)
+#undef _FOR_EACH_OUT
+
+#define _FOR_EACH_OUT(subfix) outputs[0] subfix, outputs[1] subfix
+_INST_RNG_INVOLKER(1, 2)
 _INST_RNG_MAKER(1)
+#undef _FOR_EACH_OUT
 #undef _FOR_EACH_IN
 
 #define _FOR_EACH_IN(subfix) inputs[0] subfix, inputs[1] subfix,
-_INST_RNG_INVOLKER(2)
+#define _FOR_EACH_OUT(subfix) outputs[0] subfix
+_INST_RNG_INVOLKER(2, 1)
 _INST_RNG_MAKER(2)
+#undef _FOR_EACH_OUT
 #undef _FOR_EACH_IN
 
 #undef _INST_RNG_INVOLKER
@@ -392,7 +420,9 @@ void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
             handle_seed, dnn_op->param().seed);
     }
     dnn_op->param() = OpMeth<Op>::make_param(rng);
-    _RNGOprInvoker<OpMeth<Op>::DnnOp::NR_INPUTS>::exec(dnn_op,inputs,dest);
+    _RNGOprInvoker<OpMeth<Op>::DnnOp::NR_INPUTS,
+                   OpMeth<Op>::DnnOp::NR_OUTPUTS>::exec(dnn_op, inputs,
+                                                        outputs);
 }
 
 template <typename Op>
@@ -420,24 +450,45 @@ SmallVector<LogicalTensorDesc> infer_output_attrs(
     return {dest};
 }
 
-template <typename Op>
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems) {
-    auto &&dest = infer_output_attrs<Op>(def, inputs_tensors);
-    SmallVector<MemoryDesc> outputs = {{dest[0].layout, 0, dest[0].comp_node, StorageIdentifier::make(1)}};
-    
-    return {outputs, {}};    
+template <>
+SmallVector<LogicalTensorDesc> infer_output_attrs<ShuffleRNG>(
+        const OpDef& op, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<LogicalTensorDesc> dests(2);
+    auto&& rng = op.cast_final_safe<ShuffleRNG>();
+    auto handle = rng.handle;
+    if (handle) {
+        dests[0].comp_node = RNGDnnOpManager::get_comp_node(handle);
+        dests[1].comp_node = RNGDnnOpManager::get_comp_node(handle);
+    } else {
+        dests[0].comp_node = inputs[0]->comp_node();
+        dests[1].comp_node = inputs[0]->comp_node();
+    }
+    dests[0].layout = TensorLayout(inputs[0]->layout());
+    dests[0].layout.dtype = inputs[0]->layout().dtype;
+    dests[1].layout =
+            TensorLayout(TensorShape({inputs[0]->layout()[0]}), dtype::Int32());
+    return dests;
 }
 
+template <typename Op>
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>>
+infer_output_mem_desc(const OpDef& def,
+                      const SmallVector<TensorPtr>& inputs_tensors,
+                      const SmallVector<MemoryDesc>& inputs_mems) {
+    auto&& dests = infer_output_attrs<Op>(def, inputs_tensors);
+    SmallVector<MemoryDesc> outputs;
+    for (size_t i = 0; i < dests.size(); ++i) {
+        outputs.push_back({dests[i].layout, 0, dests[i].comp_node,
+                           StorageIdentifier::make(i + 1)});
+    }
+    return {outputs, {}};
+}
 
 template <typename Op>
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<TensorPtr> outputs;
-    SmallVector<LogicalTensorDesc> desc; 
-    desc = infer_output_attrs<Op>(def, inputs);
+    SmallVector<LogicalTensorDesc> desc = infer_output_attrs<Op>(def, inputs);
     for (auto&& i : desc) {
         outputs.push_back(Tensor::make(i.layout, i.comp_node));
     }
@@ -454,10 +505,8 @@ void execute(
     exec<Op>(def, inputs, outputs, {});
 }
 
-template<typename Op>
-SymbolVar apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+template <typename Op, typename Output>
+Output apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     size_t nr_inp = inputs.size();
     constexpr size_t dnn_nr_inp = OpMeth<Op>::DnnOp::NR_INPUTS;
     auto&& rng = def.cast_final_safe<Op>();
@@ -487,7 +536,21 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
     return {{dest}, true};
 }
 
-} // anonymous namespace
+template <>
+std::tuple<SmallVector<LogicalTensorDesc>, bool>
+infer_output_attrs_fallible<ShuffleRNG>(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    SmallVector<LogicalTensorDesc> dests(2);
+    dests[0].comp_node = inputs[0].comp_node;
+    dests[0].layout = TensorLayout(inputs[0].layout);
+    dests[0].layout.dtype = inputs[0].layout.dtype;
+    dests[1].comp_node = inputs[0].comp_node;
+    dests[1].layout = TensorLayout(TensorShape({inputs[0].layout.shape[0]}),
+                                   dtype::Int32());
+    return {dests, true};
+}
+
+}  // anonymous namespace
 
 Handle new_handle(CompNode comp_node, uint64_t seed) {
     return RNGDnnOpManager::inst().new_handle(comp_node, seed);
@@ -509,23 +572,24 @@ CompNode get_rng_handle_compnode(Handle handle){
     return RNGDnnOpManager::get_comp_node(handle);
 }
 
-#define REG_RNG_OP(NAME)\
-namespace { \
-OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode) \
-    .apply_on_var_node(apply_on_var_node<NAME>) \
-    .apply_on_physical_tensor(apply_on_physical_tensor<NAME>) \
-    .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
-    .infer_output_mem_desc(infer_output_mem_desc<NAME>) \
-    .execute(execute<NAME>) \
-    .fallback(); \
-} \
+#define REG_RNG_OP(NAME, Output)                                            \
+    namespace {                                                             \
+    OP_TRAIT_REG(NAME, NAME, OpMeth<NAME>::OpNode)                          \
+            .apply_on_var_node(apply_on_var_node<NAME, Output>)             \
+            .apply_on_physical_tensor(apply_on_physical_tensor<NAME>)       \
+            .infer_output_attrs_fallible(infer_output_attrs_fallible<NAME>) \
+            .infer_output_mem_desc(infer_output_mem_desc<NAME>)             \
+            .execute(execute<NAME>)                                         \
+            .fallback();                                                    \
+    }
 
-REG_RNG_OP(UniformRNG)
-REG_RNG_OP(GaussianRNG)
-REG_RNG_OP(GammaRNG)
-REG_RNG_OP(PermutationRNG)
-REG_RNG_OP(PoissonRNG)
-REG_RNG_OP(BetaRNG)
+REG_RNG_OP(UniformRNG, SymbolVar)
+REG_RNG_OP(GaussianRNG, SymbolVar)
+REG_RNG_OP(GammaRNG, SymbolVar)
+REG_RNG_OP(PermutationRNG, SymbolVar)
+REG_RNG_OP(PoissonRNG, SymbolVar)
+REG_RNG_OP(BetaRNG, SymbolVar)
+REG_RNG_OP(ShuffleRNG, SymbolVarArray)
 #undef REG_RNG_OP
 
 }  // namespace mgb::imperative::rng

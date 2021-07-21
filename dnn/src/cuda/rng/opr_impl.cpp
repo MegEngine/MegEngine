@@ -9,11 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "./opr_impl.h"
+#include "./kernel.cuh"
 #include "src/common/utils.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
-#include "./opr_impl.h"
-#include "./kernel.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -259,6 +259,77 @@ void PermutationRNGImpl::exec(
 size_t PermutationRNGImpl::get_workspace_in_bytes(const TensorLayout &layout){
     size_t size = layout.total_nr_elems();
     return random::get_permutation_workspace_in_bytes(size);
+}
+
+ShuffleRNGForwardImpl::ShuffleRNGForwardImpl(Handle* handle)
+        : ShuffleRNGForward(handle),
+          m_seed(0),
+          m_offset(0),
+          m_stream(cuda_stream(handle)) {}
+
+void ShuffleRNGForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                                 _megdnn_tensor_out indices,
+                                 _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, indices.layout, workspace.size);
+    ensure_seed(m_param.seed);
+    auto wk = workspace.ptr<void>();
+    const auto len = indices.layout[0];
+    random::permutation_forward<dt_int32>(indices.ptr<dt_int32>(), wk, len,
+                                          m_seed, m_offset, m_stream);
+    size_t step = 0;
+    for (size_t i = 1; i < src.layout.ndim; ++i) {
+        step += src.layout[i];
+    }
+    if (step <= 0)
+        step = 1;
+    switch (src.layout.dtype.enumv()) {
+#define cb(DType)                                                             \
+    case DTypeTrait<DType>::enumv:                                            \
+        random::shuffle_forward<DTypeTrait<DType>::ctype>(                    \
+                src.ptr<DTypeTrait<DType>::ctype>(),                          \
+                dst.ptr<DTypeTrait<DType>::ctype>(), indices.ptr<dt_int32>(), \
+                len, step, m_stream);                                         \
+        break;
+        ARGSORT_FOREACH_CTYPE(cb)
+#undef cb
+                        default : megdnn_throw("bad dtype");
+    }
+    m_offset += 8;
+}
+
+size_t ShuffleRNGForwardImpl::get_workspace_in_bytes(
+        const TensorLayout&, const TensorLayout&,
+        const TensorLayout& indices) {
+    size_t size = indices.total_nr_elems();
+    return random::get_permutation_workspace_in_bytes(size);
+}
+
+ShuffleRNGBackwardImpl::ShuffleRNGBackwardImpl(Handle* handle)
+        : ShuffleRNGBackward(handle), m_stream(cuda_stream(handle)) {}
+
+void ShuffleRNGBackwardImpl::exec(_megdnn_tensor_in diff,
+                                  _megdnn_tensor_in indices,
+                                  _megdnn_tensor_out grad,
+                                  _megdnn_workspace workspace) {
+    const auto len = indices.layout[0];
+    auto step = 0;
+    for (size_t i = 1; i < diff.layout.ndim; ++i) {
+        step += diff.layout[i];
+    }
+    if (step <= 0)
+        step = 1;
+    switch (diff.layout.dtype.enumv()) {
+#define cb(DType)                                                              \
+    case DTypeTrait<DType>::enumv:                                             \
+        random::shuffle_backward<DTypeTrait<DType>::ctype>(                    \
+                diff.ptr<DTypeTrait<DType>::ctype>(), indices.ptr<dt_int32>(), \
+                grad.ptr<DTypeTrait<DType>::ctype>(), len, step, m_stream);    \
+        break;
+        ARGSORT_FOREACH_CTYPE(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+    }
 }
 
 // vim: syntax=cpp.doxygen

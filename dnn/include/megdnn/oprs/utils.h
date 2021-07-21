@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/internal/opr_header_prologue.h"
@@ -92,6 +93,42 @@ class PermutationRNG: public RNGBase {
     DEF_OPR_PARAM(PermutationRNG);
     protected:
         void check_exec(const TensorLayout &dst, size_t workspace_in_bytes);
+};
+
+class ShuffleRNGForward : public OperatorBase {
+    DEF_OPR_IMPL(ShuffleRNGForward, OperatorBase, 1, 2);
+    DEF_OPR_PARAM(ShuffleRNG);
+
+public:
+    virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                      _megdnn_tensor_out indices,
+                      _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& src, TensorLayout& dst,
+                       TensorLayout& indices);
+    virtual size_t get_workspace_in_bytes(const TensorLayout& src,
+                                          const TensorLayout& dst,
+                                          const TensorLayout& indices) = 0;
+
+protected:
+    void check_exec(const TensorLayout& src, const TensorLayout& dst,
+                    const TensorLayout& indices, size_t workspace_in_bytes);
+};
+using ShuffleRNG = ShuffleRNGForward;
+
+class ShuffleRNGBackward : public OperatorBase {
+    DEF_OPR_IMPL(ShuffleRNGBackward, OperatorBase, 2, 1);
+    DEF_OPR_PARAM(ShuffleRNG);
+
+public:
+    virtual void exec(_megdnn_tensor_in diff, _megdnn_tensor_in indices,
+                      _megdnn_tensor_out grad, _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(const TensorLayout& diff,
+                                          const TensorLayout& indices,
+                                          const TensorLayout& grad) = 0;
+
+protected:
+    void check_exec(const TensorLayout& diff, const TensorLayout& indices,
+                    const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
 /*!

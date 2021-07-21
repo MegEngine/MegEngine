@@ -6,12 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
-#include "src/naive/handle.h"
-#include "src/common/utils.h"
 #include "./opr_impl.h"
+#include "src/common/utils.h"
+#include "src/naive/handle.h"
 
 #include <cmath>
 
@@ -229,7 +230,29 @@ namespace {
         }
     }
 
-} // anonymous namespace
+    template <typename T>
+    void shuffle_fwd(const T* __restrict sptr, T* __restrict dptr,
+                    const dt_int32* iptr, const size_t len,
+                    const size_t step) MEGDNN_NOEXCEPT {
+        for (size_t i = 0; i < len; ++i) {
+            for (size_t j = 0; j < step; ++j) {
+                dptr[i * step + j] = sptr[iptr[i] * step + j];
+            }
+        }
+    }
+
+    template <typename T>
+    void shuffle_bwd(T* __restrict sptr, const T* __restrict dptr,
+                    const dt_int32* iptr, const size_t len,
+                    const size_t step) MEGDNN_NOEXCEPT {
+        for (size_t i = 0; i < len; ++i) {
+            for (size_t j = 0; j < step; ++j) {
+                sptr[iptr[i] * step + j] = dptr[i * step + j];
+            }
+        }
+    }
+
+}  // anonymous namespace
 
 uint64_t Splitmix64::operator() () {
     uint64_t z = (m_s += UINT64_C(0x9E3779B97F4A7C15));
@@ -394,5 +417,54 @@ void PermutationRNGImpl::exec(
     }
 }
 
-// vim: syntax=cpp.doxygen
+void ShuffleRNGForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+                                 _megdnn_tensor_out indices,
+                                 _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, indices.layout, workspace.size);
+    const auto len = indices.layout[0];
+    auto iptr = indices.ptr<dt_int32>();
+    auto prng = &m_rng.ensure_seed(m_param.seed);
+    fill_permutation<dt_int32>(prng, iptr, len);
+    auto step = 0;
+    for (size_t i = 1; i < src.layout.ndim; ++i) {
+        step += src.layout[i];
+    }
+    if (step <= 0)
+        step = 1;
 
+#define cb(DType)                                                             \
+    if (src.layout.dtype == DType()) {                                        \
+        using T = typename DTypeTrait<DType>::ctype;                          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(                                         \
+                shuffle_fwd<T>(src.ptr<T>(), dst.ptr<T>(), iptr, len, step)); \
+        return;                                                               \
+    }
+    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+#undef cb
+}
+
+void ShuffleRNGBackwardImpl::exec(_megdnn_tensor_in diff,
+                                  _megdnn_tensor_in indices,
+                                  _megdnn_tensor_out grad,
+                                  _megdnn_workspace workspace) {
+    check_exec(diff.layout, indices.layout, grad.layout, workspace.size);
+    const auto len = indices.layout[0];
+    auto iptr = indices.ptr<dt_int32>();
+    auto step = 0;
+    for (size_t i = 1; i < diff.layout.ndim; ++i) {
+        step += diff.layout[i];
+    }
+    if (step <= 0)
+        step = 1;
+#define cb(DType)                                                \
+    if (diff.layout.dtype == DType()) {                          \
+        using T = typename DTypeTrait<DType>::ctype;             \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(shuffle_bwd<T>(             \
+                grad.ptr<T>(), diff.ptr<T>(), iptr, len, step)); \
+        return;                                                  \
+    }
+    MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
+#undef cb
+}
+
+// vim: syntax=cpp.doxygen

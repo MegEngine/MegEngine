@@ -55,6 +55,42 @@ __global__ void permute_duplicate_keys_kernel(KeyType* keys, ValueType* indexs,
     }
 }
 
+template <typename T>
+__global__ void shuffle_fwd_kernel(uint32_t step, uint32_t src_size, const T* sptr, 
+                               T* dptr, const int* iptr) {
+    uint32_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx < src_size) {
+        uint32_t r = idx / step;
+        dptr[idx]=sptr[iptr[r] * step + idx % step];
+    }
+}
+template <typename T>
+void shuffle_forward(T* sptr, T* dptr, dt_int32* iptr,
+                     size_t len, size_t step, cudaStream_t stream) {
+    uint32_t src_size = len * step;
+    shuffle_fwd_kernel<<<DIVUP(src_size, 512), 512, 0, stream>>>(
+        step, src_size, sptr, dptr, iptr);
+    after_kernel_launch();
+}
+
+template <typename T>
+__global__ void shuffle_bwd_kernel(uint32_t step, uint32_t src_size, T* sptr, 
+                               T* dptr, const int* iptr) {
+    uint32_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx < src_size) {
+        uint32_t r = idx / step;
+        sptr[iptr[r] * step + idx % step]=dptr[idx];
+    }
+}
+template <typename T>
+void shuffle_backward(T* dptr, dt_int32* iptr, T* sptr,
+                      size_t len, size_t step, cudaStream_t stream) {
+    uint32_t src_size = len * step;
+    shuffle_bwd_kernel<<<DIVUP(src_size, 512), 512, 0, stream>>>(
+        step, src_size, sptr, dptr, iptr);
+    after_kernel_launch();
+}
+
 uint32_t get_permutation_bits(size_t N) {
     double uniq_rand_num_prob = 0.9;
     double thresh = std::log(uniq_rand_num_prob) * 12;
@@ -156,6 +192,14 @@ INST_PERMUTATION(dt_int16)
 INST_PERMUTATION(dt_float32)
 #undef INST_PERMUTATION
 
+#define INST_SHUFFLE(T)                                                 \
+    template void shuffle_forward<T>(T* sptr, T* dptr, dt_int32* iptr,\
+                            size_t len, size_t step, cudaStream_t stream);\
+    template void shuffle_backward(T* dptr, dt_int32* iptr, T* sptr,\
+                            size_t len, size_t step, cudaStream_t stream);
+
+    ARGSORT_FOREACH_CTYPE(INST_SHUFFLE)
+#undef INST_SHUFFLE
 }  // namespace random
 
 #define INST(_dtype)                                                    \

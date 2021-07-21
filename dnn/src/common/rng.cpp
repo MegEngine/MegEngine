@@ -15,6 +15,47 @@
 
 namespace megdnn {
 
+void ShuffleRNGForward::deduce_layout(const TensorLayout& src,
+                                      TensorLayout& dst,
+                                      TensorLayout& indices) {
+    dst = src;
+    indices = TensorLayout(TensorShape({src.shape[0]}), dtype::Int32());
+}
+void ShuffleRNGForward::check_exec(const TensorLayout& src,
+                                   const TensorLayout& dst,
+                                   const TensorLayout& indices,
+                                   size_t workspace_in_bytes) {
+    TensorLayout dst_expected, indices_expected;
+    megdnn_assert_contiguous(src);
+    deduce_layout(src, dst_expected, indices_expected);
+
+    megdnn_assert_eq_layout(dst_expected, dst);
+    megdnn_assert_eq_layout(indices_expected, indices);
+    megdnn_assert_contiguous(indices);
+    megdnn_assert(src.dtype == dst.dtype);
+    megdnn_assert(indices.dtype == dtype::Int32());
+
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(src, dst, indices);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+}
+
+void ShuffleRNGBackward::check_exec(const TensorLayout& diff,
+                                    const TensorLayout& indices,
+                                    const TensorLayout& grad,
+                                    size_t workspace_in_bytes) {
+    megdnn_assert(
+            diff.shape[0] == indices.shape[0] && diff.dtype == grad.dtype &&
+                    indices.dtype == dtype::Int32{} && diff.is_contiguous() &&
+                    indices.is_contiguous() && grad.is_contiguous(),
+            "invalid layouts: diff=%s indices=%s grad=%s",
+            diff.to_string().c_str(), indices.to_string().c_str(),
+            grad.to_string().c_str());
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(diff, indices, grad);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+}
+
 void PermutationRNG::check_exec(
         const TensorLayout &dst, size_t workspace_in_bytes) {
     megdnn_assert((dst.dtype == dtype::Float32() || 

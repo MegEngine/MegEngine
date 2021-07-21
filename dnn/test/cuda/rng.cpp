@@ -143,6 +143,60 @@ void run_permutation(Handle* handle) {
     }
 }
 
+template <typename T>
+void run_shuffle(Handle* handle, bool bwd_flag) {
+    using ctype = typename DTypeTrait<T>::ctype;
+    auto run = [&](TensorShape shape) {
+        auto opr = handle->create_operator<ShuffleRNGForward>();
+        TensorLayout srclay{shape, T()};
+        TensorLayout dstlay{shape, T()};
+        TensorLayout indexlay{TensorShape{shape[0]}, dtype::Int32()};
+        Tensor<dt_byte> workspace(
+                handle, {TensorShape{opr->get_workspace_in_bytes(srclay, dstlay,
+                                                                 indexlay)},
+                         dtype::Byte()});
+        SyncedTensor<ctype> src(handle, srclay);
+        SyncedTensor<ctype> dst(handle, dstlay);
+        SyncedTensor<DTypeTrait<dt_int32>::ctype> index(handle, indexlay);
+        auto sptr = src.ptr_mutable_host();
+        size_t size = src.layout().total_nr_elems();
+        for (size_t j = 0; j < size; ++j) {
+            sptr[j] = j;
+        }
+        opr->exec(src.tensornd_dev(), dst.tensornd_dev(), index.tensornd_dev(),
+                  {workspace.ptr(), workspace.layout().total_nr_elems()});
+
+        auto dptr = dst.ptr_mutable_host();
+        auto iptr = index.ptr_mutable_host();
+        size_t len = index.layout().total_nr_elems();
+        size_t step = size / len;
+        for (size_t i = 0; i < len; ++i) {
+            for (size_t j = 0; j < step; ++j) {
+                ASSERT_EQ(dptr[i * step + j], sptr[iptr[i] * step + j]);
+            }
+        }
+        if (bwd_flag) {
+            for (size_t j = 0; j < size; ++j) {
+                sptr[j] = 0;
+            }
+            auto oprbwd = handle->create_operator<ShuffleRNGBackward>();
+            oprbwd->exec(
+                    dst.tensornd_dev(), index.tensornd_dev(),
+                    src.tensornd_dev(),
+                    {workspace.ptr(), workspace.layout().total_nr_elems()});
+            auto sptr_bwd = src.ptr_mutable_host();
+            for (size_t i = 0; i < len; ++i) {
+                for (size_t j = 0; j < step; ++j) {
+                    ASSERT_EQ(dptr[i * step + j], sptr_bwd[iptr[i] * step + j]);
+                }
+            }
+        }
+    };
+
+    run({10});
+    run({6, 3});
+}
+
 }  // anonymous namespace
 
 TEST_F(CUDA, UNIFORM_RNG_F32) {
@@ -213,6 +267,30 @@ TEST_F(CUDA, PERMUTATION_RNG_INT32) {
 
 TEST_F(CUDA, PERMUTATION_RNG_INT16) {
     run_permutation<dtype::Int16>(handle_cuda());
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_F32) {
+    run_shuffle<dtype::Float32>(handle_cuda(), false);
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_INT32) {
+    run_shuffle<dtype::Int32>(handle_cuda(), false);
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_F16) {
+    run_shuffle<dtype::Float16>(handle_cuda(), false);
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_BWD_F32) {
+    run_shuffle<dtype::Float32>(handle_cuda(), true);
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_BWD_INT32) {
+    run_shuffle<dtype::Int32>(handle_cuda(), true);
+}
+
+TEST_F(CUDA, SHUFFLE_RNG_BWD_F16) {
+    run_shuffle<dtype::Float16>(handle_cuda(), true);
 }
 
 }  // namespace test

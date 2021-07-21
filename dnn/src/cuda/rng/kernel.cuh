@@ -253,6 +253,17 @@ void permutation_forward(ctype* dst, void* workspace, size_t size, uint64_t seed
 
 size_t get_permutation_workspace_in_bytes(size_t N);
 
+template<typename T>
+void shuffle_forward(T* sptr, T* dptr, dt_int32* iptr,
+                     size_t len, size_t step, cudaStream_t stream);
+
+template<typename T>
+void shuffle_backward(T* dptr, dt_int32* iptr, T* sptr,
+                     size_t len, size_t step, cudaStream_t stream);
+
+#define ARGSORT_FOREACH_CTYPE(cb) \
+        cb(float) cb(int32_t) DNN_INC_FLOAT16(cb(dt_float16))
+
 }  // namespace random
 }  // namespace cuda
 }  // namespace megdnn

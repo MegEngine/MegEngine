@@ -27,6 +27,7 @@ from ..core.ops.builtin import (
     GaussianRNG,
     PermutationRNG,
     PoissonRNG,
+    ShuffleRNG,
     UniformRNG,
 )
 from ..core.tensor import utils
@@ -41,6 +42,7 @@ __all__ = [
     "beta",
     "poisson",
     "permutation",
+    "shuffle",
 ]
 
 _rng = None
@@ -217,6 +219,13 @@ def _permutation(n: int, seed: int, device: str, handle: int, dtype: str) -> Ten
     shape = utils.astensor1d(size, _ref, dtype="int32", device=device)
     (output,) = apply(op, shape)
     return output
+
+
+def _shuffle(inp: Tensor, seed: int, handle: int) -> Tensor:
+    assert inp.size > 0, "size needs to be greater than 0"
+    op = ShuffleRNG(seed=seed, handle=handle)
+    output, _ = apply(op, inp)
+    inp._reset(output)
 
 
 class RNG:
@@ -581,6 +590,45 @@ class RNG:
             n=n, seed=_seed, device=self._device, handle=self._handle, dtype=dtype
         )
 
+    def shuffle(self, inp: Tensor):
+        r"""Modify a sequence in-place by shuffling its contents. 
+        This function only shuffles the Tensor along the first axis of a multi-dimensional Tensor.
+        The order of sub-Tensors is changed but their contents remains the same.
+
+        Args:
+            inp: input tensor.
+
+        Examples:
+
+            .. testcode::
+
+                import numpy as np
+                import megengine as mge
+                import megengine.random as rand
+
+                x = mge.tensor(np.arange(10))
+                rand.shuffle(x)
+                print(x.numpy())
+                y = mge.tensor(np.arange(18)).reshape(6,3)
+                rand.shuffle(y)
+                print(y.numpy())
+
+            Outputs:
+
+            .. testoutput::
+                :options: +SKIP
+
+                [7 9 3 0 8 2 4 5 6 1]
+                [[12. 13. 14.]
+                 [ 3.  4.  5.]
+                 [15. 16. 17.]
+                 [ 0.  1.  2.]
+                 [ 9. 10. 11.]
+                 [ 6.  7.  8.]]
+        """
+        _seed = self._seed() if callable(self._seed) else self._seed
+        _shuffle(inp=inp, seed=_seed, handle=self._handle)
+
     def __del__(self):
         if self._handle != 0:
             _delete_rng_handle(self._handle)
@@ -599,6 +647,7 @@ gamma = _default_handle.gamma
 beta = _default_handle.beta
 poisson = _default_handle.poisson
 permutation = _default_handle.permutation
+shuffle = _default_handle.shuffle
 
 
 def _random_seed_generator():

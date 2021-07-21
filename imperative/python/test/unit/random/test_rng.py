@@ -18,6 +18,7 @@ from megengine.core._imperative_rt.ops import (
     get_global_rng_seed,
     new_rng_handle,
 )
+from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import (
     BetaRNG,
     GammaRNG,
@@ -395,6 +396,45 @@ def test_PermutationRNG():
 
     assert sum_result(out, lambda x: x) < 500
     assert sum_result(out, np.sort) == 1000
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
+)
+def test_ShuffleRNG():
+    g = []
+
+    def cb(grad):
+        g.append(grad)
+
+    n, m = 6, 3
+    arr = np.arange(n * m)
+    out0 = Tensor(arr, dtype="float32")
+    grad = Grad().wrt(out0, callback=cb)
+    random.shuffle(out0)
+    grad(out0, F.ones_like(out0))
+    m1 = RNG(seed=111, device="xpu0")
+    m2 = RNG(seed=111, device="xpu1")
+    m3 = RNG(seed=222, device="xpu0")
+    out1 = Tensor(arr, dtype="float32", device="xpu0")
+    out2 = Tensor(arr, dtype="float32", device="xpu1")
+    out3 = Tensor(arr, dtype="float32", device="xpu0")
+    m1.shuffle(out1)
+    m2.shuffle(out2)
+    m3.shuffle(out3)
+
+    np.testing.assert_equal(out1.numpy(), out2.numpy())
+    assert out1.device == "xpu0" and out2.device == "xpu1"
+    assert not (out1.numpy() == out3.numpy()).all()
+
+    out = Tensor(arr, dtype="float32").reshape(n, m)
+    m1.shuffle(out)
+
+    out_shp = out.shape
+    if isinstance(out_shp, tuple):
+        assert out_shp == (n, m)
+    else:
+        assert all(out.shape.numpy() == np.array([n, m]))
 
 
 def test_seed():

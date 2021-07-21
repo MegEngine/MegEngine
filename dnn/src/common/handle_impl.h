@@ -165,6 +165,8 @@ private:
     cb(BetaRNG) \
     cb(PoissonRNG) \
     cb(PermutationRNG) \
+    cb(ShuffleRNGForward) \
+    cb(ShuffleRNGBackward) \
     cb(SeparableConvForward) \
     cb(SeparableFilterForward) \
     cb(BNForward) \

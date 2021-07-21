@@ -6,13 +6,31 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "megbrain/opr/rand.h"
 #include "megbrain/serialization/sereg.h"
 
 namespace mgb {
+
+namespace serialization {
+
+template <>
+struct OprMaker<opr::ShuffleRNG, 1> {
+    using Opr = opr::ShuffleRNG;
+    using Param = Opr::Param;
+    static cg::OperatorNodeBase* make(const Param& param,
+                                      const cg::VarNodeArray& inputs,
+                                      ComputingGraph& graph,
+                                      const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        auto out = Opr::make(inputs[0], param, config);
+        return out[0].node()->owner_opr();
+    }
+};
+}  // namespace serialization
 
 namespace opr {
 
@@ -24,9 +42,10 @@ MGB_SEREG_OPR(GammaRNG, 2);
 MGB_SEREG_OPR(PoissonRNG, 1);
 MGB_SEREG_OPR(PermutationRNG, 1);
 MGB_SEREG_OPR(BetaRNG, 2);
+MGB_SEREG_OPR(ShuffleRNG, 1);
+MGB_SEREG_OPR(ShuffleRNGBackward, 3);
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

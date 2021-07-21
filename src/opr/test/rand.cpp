@@ -333,6 +333,38 @@ TEST(TestOprRand, EmptyShape) {
 }
 
 
+TEST(TestOprRand, ShuffleForward) {
+    auto run = [&](TensorShape shape) {
+        std::shared_ptr<HostTensorND> src_host(new HostTensorND{
+                CompNode::load("xpux"), shape, dtype::Float32()});
+        auto sptr = src_host->ptr<dt_float32>();
+        auto size = shape.total_nr_elems();
+        for (size_t i = 0; i < size; ++i) {
+            sptr[i] = i;
+        }
+        auto graph = ComputingGraph::make();
+        auto src_sym = opr::Host2DeviceCopy::make(*graph, src_host);
+        auto rec = opr::ShuffleRNG::make(src_sym, {10});
+        HostTensorND host_y, host_index;
+        auto func = graph->compile({make_callback_copy(rec[0], host_y),
+                                    make_callback_copy(rec[1], host_index)});
+        func->execute();
+        auto dptr = host_y.ptr<dt_float32>();
+        auto iptr = host_index.ptr<dt_int32>();
+
+        size_t len = shape[0];
+        size_t step = size / len;
+        for (size_t i = 0; i < len; ++i) {
+            for (size_t j = 0; j < step; ++j) {
+                assert(dptr[i * step + j] == sptr[iptr[i] * step + j]);
+            }
+        }
+    };
+    run({10});
+    run({6, 3});
+    run({1, 1});
+}
+
 TEST(TestOprRand, UniformReprod) {
     static constexpr size_t SIZE = 123;
     auto graph = ComputingGraph::make();

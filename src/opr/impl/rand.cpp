@@ -192,6 +192,8 @@ template class RNGOprBase<::megdnn::GammaRNG>;
 template class RNGOprBase<::megdnn::PermutationRNG>;
 template class RNGOprBase<::megdnn::BetaRNG>;
 template class RNGOprBase<::megdnn::PoissonRNG>;
+template class RNGOprBase<::megdnn::ShuffleRNGForward>;
+template class RNGOprBase<::megdnn::ShuffleRNGBackward>;
 #if MGB_ENABLE_GRAD
 IMPL(GaussianRNG);
 IMPL(UniformRNG);
@@ -200,9 +202,87 @@ IMPL(PoissonRNG);
 IMPL(PermutationRNG);
 IMPL(BetaRNG);
 #endif
-}             
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
+
+/* ================= ShuffleRNGForward =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ShuffleRNGForward);
+
+ShuffleRNGForward::ShuffleRNGForward(VarNode* data, const Param& param,
+                                     const OperatorNodeConfig& config)
+        : Super({data->owner_graph(), config, "shuffle_rng", {data}}, param) {
+    add_input({data});
+    add_output(None)->dtype(data->dtype());
+    add_output(None)->dtype(dtype::Int32{});
+    cg::add_workspace_output(this);
+    add_equivalence_component<ScalarHash<void*>>(this);
 }
+
+SymbolVarArray ShuffleRNGForward::make(SymbolVar in_tensor, const Param& param,
+                                       const OperatorNodeConfig& config) {
+    auto node = in_tensor.node()->owner_graph()->insert_opr(
+            std::make_unique<ShuffleRNGForward>(in_tensor.node(), param,
+                                                config));
+    mgb_assert(node->output().size() == 3);
+    return {node->output(0), node->output(1)};
 }
+
+void ShuffleRNGForward::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+
+    mgr.register_shape_infer(output(0),
+                             ShapeInferDesc::make_identity(input(0)));
+
+    auto infer_oshp1 = [this](TensorShape& dest, const InpVal& iv) {
+        TensorLayout o0, o1;
+        m_dnn_opr->deduce_layout({iv.val[0].shape(), input(0)->dtype()}, o0,
+                                 o1);
+        dest = o1;
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(1),
+            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_oshp1});
+
+    auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        dest.shape[0] = m_dnn_opr->get_workspace_in_bytes(
+                {inp.val[0].shape(), input(0)->dtype()},
+                {output(0)->shape(), output(0)->dtype()},
+                {output(1)->shape(), output(1)->dtype()});
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(2),
+            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_wk});
+}
+
+void ShuffleRNGForward::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+};
+
+void ShuffleRNGForward::scn_do_execute() {
+    m_dnn_opr->exec(input(0)->dev_tensor().as_megdnn(),
+                    output(0)->dev_tensor().as_megdnn(),
+                    output(1)->dev_tensor().as_megdnn(),
+                    get_megdnn_workspace_from_var(output(2)));
+}
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(ShuffleRNGForward) {
+    mgb_assert(out_grad.size() == 3 && wrt_idx == 0 && !out_grad[2]);
+    if (!out_grad[0])
+        return nullptr;
+    return ShuffleRNGBackward::make(out_grad[0], opr.output(1), opr.input(0)).node();
+}
+#endif
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ShuffleRNGBackward);
+MEGDNN_OPR_INIT3(ShuffleRNGBackward, "shuffle_rng_bwd", 2, true)
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
 
