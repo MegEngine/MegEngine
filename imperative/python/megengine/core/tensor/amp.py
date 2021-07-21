@@ -17,7 +17,7 @@ def enabled(mod):
 
     Examples:
 
-    ..code-block::
+    .. code-block::
 
         import megengine as mge
         mge.amp.enabled = True
@@ -40,7 +40,7 @@ def high_prec_dtype(mod):
 
     Examples:
 
-    ..code-block::
+    .. code-block::
 
         import megengine as mge
         mge.amp.high_prec_dtype = "float32"
@@ -63,7 +63,7 @@ def low_prec_dtype(mod):
 
     Examples:
 
-    ..code-block::
+    .. code-block::
 
         import megengine as mge
         mge.amp.low_prec_dtype = "float16"

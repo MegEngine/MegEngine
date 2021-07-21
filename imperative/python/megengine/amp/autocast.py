@@ -15,14 +15,14 @@ class autocast:
     A class to control autocast mode for amp as a context manager or a decorator.
 
     :param enabled: Whether autocast mode is enabled.
-    :low_prec_dtype: Set amp autocast mode's lower precision dtype. It will change the
-    target dtype in tensor casting for better speed and memory. Default: float16.
-    :high_prec_dtype: Set amp autocast mode's higher precision dtype. It will change the
-    target dtype in tensor casting for better precision. Default: float32.
+    :param low_prec_dtype: Set amp autocast mode's lower precision dtype. It will change
+        the target dtype in tensor casting for better speed and memory. Default: float16.
+    :param high_prec_dtype: Set amp autocast mode's higher precision dtype. It will
+        change the target dtype in tensor casting for better precision. Default: float32.
 
     Examples:
 
-    ..code-block::
+    .. code-block::
 
         # used as decorator
         @autocast()

@@ -30,6 +30,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
     A tensor object represents a multidimensional, homogeneous array of fixed-size items.
 
     :param data: The value of returned Tensor.
+    :type data: Tensor, :class:`~.numpy.ndarray`, :class:`list` or python number.
     :param dtype: The dtype of returned Tensor. Uses data's dtype if not specified.
     :param device: The desired device of returned Tensor. Uses :func:`get_default_device` if not specified.
     :param is_const: Whether make it a ``ImutableTensor`` in tracing mode.
@@ -43,7 +44,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     def __new__(
         cls,
-        data: Union["Tensor", np.ndarray, list, "scalar"] = None,
+        data: Union["Tensor", np.ndarray, list, int, float] = None,
         dtype: np.dtype = None,
         device: str = None,
         is_const: bool = False,
@@ -76,7 +77,7 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     def __init__(
         self,
-        data: Union["Tensor", np.ndarray, list, "scalar"],
+        data: Union["Tensor", np.ndarray, list, int, float],
         dtype: np.dtype = None,
         device: str = None,
         is_const: bool = False,

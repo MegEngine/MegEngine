@@ -28,7 +28,7 @@ class QConfig(
     )
 ):
     r"""
-    A config class indicating how to do quantize toward :class:`~.QATModule`'s
+    A config class indicating how to do quantize toward :class:`~.QATModule` 's
     ``activation`` and ``weight``. See :meth:`~.QATModule.set_qconfig` for detail usage.
 
     :param weight_observer: interface to instantiate an :class:`~.Observer` indicating
