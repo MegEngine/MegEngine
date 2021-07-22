@@ -20,6 +20,8 @@ MegRay::DType mgb::opr::get_megray_dtype(megdnn::DType dtype) {
     switch(dtype.enumv()) {
         case DTypeEnum::Int8:
             return MegRay::DType::MEGRAY_INT8;
+        case DTypeEnum::Uint8:
+            return MegRay::DType::MEGRAY_UINT8;
         case DTypeEnum::Int32:
             return MegRay::DType::MEGRAY_INT32;
         case DTypeEnum::Float32:

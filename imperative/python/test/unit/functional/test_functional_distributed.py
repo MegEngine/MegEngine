@@ -32,10 +32,7 @@ from megengine.functional.distributed import (
 )
 
 
-@pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
-@pytest.mark.isolated_distributed
-def test_reduce_sum(shape):
+def run_reduce_sum(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -46,8 +43,8 @@ def test_reduce_sum(shape):
         else:
             assert output is None
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = x + y
     data = (x, y)
     expect = (z, None)
@@ -57,7 +54,18 @@ def test_reduce_sum(shape):
 @pytest.mark.require_ngpu(2)
 @pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_broadcast(shape):
+def test_reduce_sum_multishape(shape):
+    run_reduce_sum(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_reduce_sum_multidtype(dtype):
+    run_reduce_sum((8, 10), dtype)
+
+
+def run_broadcast(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -65,7 +73,7 @@ def test_broadcast(shape):
         output = broadcast(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
     y = x + 1
     data = (x, y)
     expect = (x, x)
@@ -73,9 +81,20 @@ def test_broadcast(shape):
 
 
 @pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(1,), (2, 3), (8, 10), (99, 77)], ids=str)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_gather(shape):
+def test_broadcast_multishape(shape):
+    run_broadcast(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_broadcast_multidtype(dtype):
+    run_broadcast((8, 10), dtype)
+
+
+def run_all_gather(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -83,8 +102,8 @@ def test_all_gather(shape):
         output = all_gather(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = np.concatenate((x, y))
     data = (x, y)
     expect = (z, z)
@@ -92,9 +111,20 @@ def test_all_gather(shape):
 
 
 @pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (88, 44)], ids=str)
+@pytest.mark.parametrize("shape", [(1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_reduce_scatter_sum(shape):
+def test_all_gather_multishape(shape):
+    run_all_gather(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_all_gather_multidtype(dtype):
+    run_all_gather((8, 10), dtype)
+
+
+def run_reduce_scatter_sum(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -102,8 +132,8 @@ def test_reduce_scatter_sum(shape):
         output = reduce_scatter_sum(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = x + y
     data = (x, y)
     expect = (z[: shape[0] // 2], z[shape[0] // 2 :])
@@ -111,9 +141,20 @@ def test_reduce_scatter_sum(shape):
 
 
 @pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (88, 44)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_sum(shape):
+def test_reduce_scatter_sum_multishape(shape):
+    run_reduce_scatter_sum(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_reduce_scatter_sum_multidtype(dtype):
+    run_reduce_scatter_sum((8, 10), dtype)
+
+
+def run_all_reduce_sum(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -121,8 +162,8 @@ def test_all_reduce_sum(shape):
         output = all_reduce_sum(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = x + y
     data = (x, y)
     expect = (z, z)
@@ -132,7 +173,18 @@ def test_all_reduce_sum(shape):
 @pytest.mark.require_ngpu(2)
 @pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_max(shape):
+def test_all_reduce_sum_multishape(shape):
+    run_all_reduce_sum(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_all_reduce_sum_multidtype(dtype):
+    run_all_reduce_sum((8, 10), dtype)
+
+
+def run_all_reduce_max(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -140,8 +192,8 @@ def test_all_reduce_max(shape):
         output = all_reduce_max(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = np.maximum(x, y)
     data = (x, y)
     expect = (z, z)
@@ -151,7 +203,18 @@ def test_all_reduce_max(shape):
 @pytest.mark.require_ngpu(2)
 @pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_reduce_min(shape):
+def test_all_reduce_max_multishape(shape):
+    run_all_reduce_max(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_all_reduce_max_multidtype(dtype):
+    run_all_reduce_max((8, 10), dtype)
+
+
+def run_all_reduce_min(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -159,8 +222,8 @@ def test_all_reduce_min(shape):
         output = all_reduce_min(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = np.minimum(x, y)
     data = (x, y)
     expect = (z, z)
@@ -168,9 +231,20 @@ def test_all_reduce_min(shape):
 
 
 @pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (99, 77)], ids=str)
+@pytest.mark.parametrize("shape", [(), (1,), (2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_gather(shape):
+def test_all_reduce_min_multishape(shape):
+    run_all_reduce_min(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_all_reduce_min_multidtype(dtype):
+    run_all_reduce_min((8, 10), dtype)
+
+
+def run_gather(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -181,8 +255,8 @@ def test_gather(shape):
         else:
             assert output is None
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     z = np.concatenate((x, y))
     data = (x, y)
     expect = (z, None)
@@ -190,9 +264,20 @@ def test_gather(shape):
 
 
 @pytest.mark.require_ngpu(2)
-@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (100, 77)], ids=str)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (99, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_scatter(shape):
+def test_gather_multishape(shape):
+    run_gather(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_gather_multidtype(dtype):
+    run_gather((8, 10), dtype)
+
+
+def run_scatter(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -200,7 +285,7 @@ def test_scatter(shape):
         output = scatter(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
     y = x + 1
     data = (x, y)
     expect = (x[: shape[0] // 2], x[shape[0] // 2 :])
@@ -210,7 +295,18 @@ def test_scatter(shape):
 @pytest.mark.require_ngpu(2)
 @pytest.mark.parametrize("shape", [(2, 3), (8, 10), (100, 77)], ids=str)
 @pytest.mark.isolated_distributed
-def test_all_to_all(shape):
+def test_scatter_multishape(shape):
+    run_scatter(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_scatter_multidtype(dtype):
+    run_scatter((8, 10), dtype)
+
+
+def run_all_to_all(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(data, expect):
         rank = dist.get_rank()
@@ -218,8 +314,8 @@ def test_all_to_all(shape):
         output = all_to_all(inp)
         assert np.allclose(output.numpy(), expect[rank])
 
-    x = np.random.random_sample(shape).astype("float32")
-    y = np.random.random_sample(shape).astype("float32")
+    x = np.random.random_sample(shape).astype(dtype)
+    y = np.random.random_sample(shape).astype(dtype)
     a = np.concatenate((x[: shape[0] // 2], y[: shape[0] // 2]))
     b = np.concatenate((x[shape[0] // 2 :], y[shape[0] // 2 :]))
     data = (x, y)
@@ -228,9 +324,20 @@ def test_all_to_all(shape):
 
 
 @pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("shape", [(2, 3), (8, 10), (100, 77)], ids=str)
 @pytest.mark.isolated_distributed
-@pytest.mark.parametrize("shape", [(), (1,), (4, 5)], ids=str)
-def test_io_remote(shape):
+def test_all_to_all_multishape(shape):
+    run_all_to_all(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+@pytest.mark.isolated_distributed
+def test_all_to_all_multidtype(dtype):
+    run_all_to_all((8, 10), dtype)
+
+
+def run_io_remote(shape, dtype):
     @dist.launcher(n_gpus=2)
     def worker(val, shape):
         rank = dist.get_rank()
@@ -243,8 +350,22 @@ def test_io_remote(shape):
             assert y.device == get_default_device()
             np.testing.assert_almost_equal(val, y.numpy())
 
-    val = np.random.random_sample(shape).astype("float32")
+    val = np.random.random_sample(shape).astype(dtype)
     worker(val, shape)
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize("shape", [(), (1,), (4, 5)], ids=str)
+def test_io_remote_multishape(shape):
+    run_io_remote(shape, "float32")
+
+
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
+@pytest.mark.parametrize("dtype", ["float32", "int32", "int8", "uint8"], ids=str)
+def test_io_remote_multidtype(dtype):
+    run_io_remote((8, 10), dtype)
 
 
 @pytest.mark.require_ngpu(2)
