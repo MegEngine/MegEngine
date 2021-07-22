@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 
@@ -19,8 +20,9 @@
 #include <cuda_runtime_api.h>
 #include <cusolverDn.h>
 #include "cuda.h"
-#include "src/cuda/cudnn_with_check.h"
 #include "cutlass/cutlass.h"
+#include "src/cuda/cudnn_with_check.h"
+#include "src/cuda/atomic_add.cuh"
 
 #define cuda_check(_x)                                       \
     do {                                                     \
@@ -240,67 +242,6 @@ struct CudaDTypeParamImpl<dt_qint4> : DTypeParamImpl<dt_qint4> {
 };
 
 #if MEGDNN_CC_CUDA
-template <typename T>
-static inline MEGDNN_DEVICE void atomic_add(T* address, T val);
-
-template <>
-MEGDNN_DEVICE void atomic_add(dt_float32* address, dt_float32 val) {
-    ::atomicAdd(reinterpret_cast<float*>(address), static_cast<float>(val));
-}
-
-// overload atomicAdd for half precision
-// Taken from:
-// https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomic.cuh
-template <>
-MEGDNN_DEVICE void atomic_add(dt_float16* address, dt_float16 val) {
-#if (__CUDA_ARCH__ < 700 || __CUDACC_VER_MAJOR__ <= 9)
-    unsigned int* address_as_ui = reinterpret_cast<unsigned int*>(
-            reinterpret_cast<char*>(address) -
-            (reinterpret_cast<size_t>(address) & 2));
-    unsigned int old = *address_as_ui;
-    unsigned int assumed;
-
-    do {
-        assumed = old;
-        unsigned short data = reinterpret_cast<size_t>(address) & 2
-                                      ? (old >> 16)
-                                      : (old & 0xffff);
-        dt_float16 hsum = *reinterpret_cast<dt_float16*>(&data);
-        hsum += val;
-        data = *reinterpret_cast<unsigned short*>(&hsum);
-        old = reinterpret_cast<size_t>(address) & 2
-                      ? (old & 0xffff) | (data << 16)
-                      : (old & 0xffff0000) | data;
-        old = ::atomicCAS(address_as_ui, assumed, old);
-    } while (assumed != old);
-#else
-    ::atomicAdd(reinterpret_cast<__half*>(address), static_cast<__half>(val));
-#endif
-}
-
-template <>
-MEGDNN_DEVICE void atomic_add(dt_bfloat16* address, dt_bfloat16 val) {
-    unsigned int* address_as_ui = reinterpret_cast<unsigned int*>(
-            reinterpret_cast<char*>(address) -
-            (reinterpret_cast<size_t>(address) & 2));
-    unsigned int old = *address_as_ui;
-    unsigned int assumed;
-
-    do {
-        assumed = old;
-        unsigned short data = reinterpret_cast<size_t>(address) & 2
-                                      ? (old >> 16)
-                                      : (old & 0xffff);
-        dt_bfloat16 hsum = *reinterpret_cast<dt_bfloat16*>(&data);
-        hsum += val;
-        data = *reinterpret_cast<unsigned short*>(&hsum);
-        old = reinterpret_cast<size_t>(address) & 2
-                      ? (old & 0xffff) | (data << 16)
-                      : (old & 0xffff0000) | data;
-        old = ::atomicCAS(address_as_ui, assumed, old);
-    } while (assumed != old);
-}
-
 static inline MEGDNN_DEVICE void dot_prod(int a, int b, int c, int& d) {
 #if __CUDA_ARCH__ >= 610
     // clang-format off
