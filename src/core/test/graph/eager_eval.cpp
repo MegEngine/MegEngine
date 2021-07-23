@@ -495,7 +495,7 @@ TEST_F(TestGraphEagerReeval, MemoryAlloc) {
         //                      |                     +--> 8 -> 8
         //                      |-----> x1(fwd) -> 8 -|
         // total usage : 63 + (16 after the first iteration)
-        // x might has iteration i's memory, but x0/x1 foward i-1's memory
+        // x might has iteration i's memory, but x0/x1 forward i-1's memory
         size_t length = reserve / (sizeof(dt_int32) * 5 * 16);
         auto host_x = std::make_shared<HostTensorND>(cn, dtype::Int32());
         HostTensorND host_val;
