@@ -96,9 +96,34 @@ def eye(N, M=None, *, dtype="float32", device: Optional[CompNode] = None) -> Ten
 
 
 def full(shape, value, dtype="float32", device=None) -> Tensor:
+    r"""
+    Creates a tensor of shape ``shape`` filled with ``value``.
+
+    :param shape: a list, tuple or integer defining the shape of the output tensor.
+    :param value: the value to fill the output tensor with.
+    :param dtype: the desired data type of the output tensor. Default: ``float32``.
+    :param device: the desired device of the output tensor. Default: if ``None``, use the default device(see ``megengine.get_default_device()``).
+    :return: output tensor.
+
+    Examples:
+
+    .. testcode::
+
+        import numpy as np
+        import megengine.functional as F
+
+        out = F.full([2,3], 1.5)
+        print(out.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[1.5 1.5 1.5]
+         [1.5 1.5 1.5]]
+
     """
-    Returns a tensor with given shape and value.
-    """
+
     if isinstance(shape, int):
         shape = (shape,)
     if device is None:
