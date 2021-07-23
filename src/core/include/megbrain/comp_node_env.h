@@ -19,8 +19,6 @@
 
 #include "megdnn/handle.h"
 
-
-
 #if MGB_CUDA
 #include <cuda_runtime.h>
 #include <cuda.h>
@@ -89,8 +87,6 @@
 #endif //MGB_ENABLE_LOGGING
 
 #endif // MGB_ATLAS
-
-
 
 #if MGB_ROCM
 #include "hcc_detail/hcc_defs_prologue.h"
@@ -196,7 +192,6 @@ namespace mgb {
                                   const char* file, const char* func, int line);
 #endif
 
-
 #if MGB_CUDA
 [[noreturn]] void _on_cuda_error(const char* expr, cudaError_t err,
                                  const char* file, const char* func, int line);
@@ -204,7 +199,6 @@ namespace mgb {
                                     const char* file, const char* func,
                                     int line);
 #endif
-
 
 #if MGB_ROCM
 [[noreturn]] void _on_hip_error(const char* expr, hipError_t err,
@@ -232,7 +226,6 @@ public:
         mgb_assert(0, "The CompNode set_affinity is not implement");
     }
 };
-
 using AtlasDispatcher = CPUDispatcher;
 
 /*!
@@ -328,7 +321,6 @@ public:
         }
 #endif
 
-
     }
 
     /*!
@@ -369,7 +361,6 @@ public:
     void init_cuda_async(int dev, CompNode comp_node,
                          const ContinuationCtx<cudaStream_t>& cont);
 #endif
-
 
 #if MGB_ATLAS
     struct AtlasEnv {
@@ -430,8 +421,6 @@ public:
     //! init this as a atlas env synchronously
     void init_atlas(CompNode comp_node, const AtlasEnv& env);
 #endif
-
-
 
 #if MGB_ROCM
     struct ROCmEnv {
@@ -547,7 +536,6 @@ private:
     CompNode m_comp_node;
     Property m_property;
     MemEventHandler m_mem_event_handler;
-
 #if MGB_CUDA
     CudaEnv m_cuda_env;
 #endif

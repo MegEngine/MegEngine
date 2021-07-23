@@ -494,7 +494,6 @@ std::vector<TestArg> get_int8_nchw44_args(size_t kernel_size, size_t pack_size,
     return args;
 }
 
-
 std::vector<TestArg> get_int8_nchw4_args_check_bounds(size_t kernel_size) {
     std::vector<TestArg> args;
     param::ConvBias cur_param;
@@ -529,7 +528,6 @@ std::vector<TestArg> get_int8_nchw4_args_check_bounds(size_t kernel_size) {
 
     return args;
 }
-
 
 std::vector<TestArg> get_int8_nchw4_args_small_batch(size_t kernel_size) {
     std::vector<TestArg> args;
@@ -974,7 +972,6 @@ void benchmark_winograd(const char* algo_name, Handle* handle, size_t kernel,
 }
 #endif  // MEGDNN_WITH_BENCHMARK
 
-
 std::vector<conv_bias::TestArg> get_conv_bias_args(
         std::vector<size_t> kernel, size_t stride, bool no_pad, bool no_bias,
         bool no_nonlinemode, bool quantized_nlmod, bool only_broadcast_bias) {
@@ -1187,7 +1184,6 @@ void check_conv_bias_preprocess(std::vector<conv_bias::TestArg> args,
                 {arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
-
 
 void checker_conv_bias_common(std::vector<conv_bias::TestArg> args, Handle* handle,
                        RNG* rng, float epsilon, DType type0, DType type1,

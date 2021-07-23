@@ -1145,7 +1145,6 @@ TEST(SmallVectorTest, SwapMoveOnly) {
         }
     }
 }
-
 }  // anonymous namespace
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

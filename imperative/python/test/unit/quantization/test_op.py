@@ -14,6 +14,7 @@ import megengine.functional as F
 from megengine.core.tensor import dtype
 from megengine.device import get_device_count
 from megengine.functional.elemwise import _elemwise_multi_type, _elwise
+from megengine.module.quantized.conv import ConvTranspose2d
 from megengine.quantization import QuantMode, create_qparams
 
 
@@ -168,3 +169,94 @@ def test_conv_bias():
 
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, False, "relu")
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")
+
+
+def test_conv_transpose2d():
+    rng = np.random.RandomState(seed=2021)
+
+    def test_func(
+        N,
+        IC,
+        IH,
+        IW,
+        OC,
+        KH,
+        KW,
+        SH,
+        SW,
+        PH,
+        PW,
+        DH,
+        DW,
+        groups=1,
+        has_bias=True,
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
+    ):
+        inp_scale = np.float32(rng.uniform(low=0.04, high=0.06))
+        weight_scale = np.float32(rng.uniform(low=0.04, high=0.06))
+        bias_scale = inp_scale * weight_scale
+        out_scale = np.float32(rng.uniform(low=0.04, high=0.06))
+
+        inp_dtype = dtype.qint8(inp_scale)
+        weight_dtype = dtype.qint8(weight_scale)
+        bias_dtype = dtype.qint32(bias_scale)
+        out_dtype = dtype.qint8(out_scale)
+
+        inp_fp32 = rng.uniform(low=-1, high=1, size=(N, IC, IH, IW)).astype(np.float32)
+        weight_fp32 = rng.uniform(low=-1, high=1, size=(IC, OC, KH, KW)).astype(
+            np.float32
+        )
+        bias_fp32 = rng.uniform(low=-1, high=1, size=(1, OC, 1, 1)).astype(np.float32)
+
+        inp_int8 = dtype.convert_to_qint8(inp_fp32, inp_dtype)
+        weight_int8 = dtype.convert_to_qint8(weight_fp32, weight_dtype)
+        bias_int32 = dtype.convert_to_qint32(bias_fp32, bias_dtype)
+
+        inp_int8 = mge.tensor(inp_int8, dtype=inp_dtype)
+        weight_int8 = mge.Parameter(weight_int8, dtype=weight_dtype)
+        bias_int32 = mge.Parameter(bias_int32, dtype=bias_dtype)
+
+        inp_fp32 = inp_int8.astype("float32")
+        weight_fp32 = weight_int8.astype("float32")
+        bias_fp32 = bias_int32.astype("float32")
+
+        expected = F.conv_transpose2d(
+            inp_fp32,
+            weight_fp32,
+            bias_fp32 if has_bias else None,
+            stride=(SH, SW),
+            padding=(PH, PW),
+            dilation=(DH, DW),
+            groups=groups,
+            conv_mode=conv_mode,
+            compute_mode=compute_mode,
+        )
+        expected = dtype.convert_to_qint8(expected.numpy(), out_dtype)
+        expected = dtype.convert_from_qint8(expected)
+
+        conv_transpose2d = ConvTranspose2d(
+            in_channels=IC,
+            out_channels=OC,
+            kernel_size=(KH, KW),
+            stride=(SH, SW),
+            padding=(PH, PW),
+            dilation=(DH, DW),
+            groups=groups,
+            bias=has_bias,
+            conv_mode=conv_mode,
+            compute_mode=compute_mode,
+            dtype=out_dtype,
+        )
+
+        conv_transpose2d.weight = mge.Parameter(weight_int8)
+        if has_bias:
+            conv_transpose2d.bias = mge.Parameter(bias_int32)
+        result = conv_transpose2d.forward(inp_int8).numpy()
+        result = dtype.convert_from_qint8(result)
+        np.testing.assert_allclose(result, expected, atol=out_scale)
+
+    test_func(1, 4, 1, 1, 4, 1, 1, 1, 1, 0, 0, 1, 1, 1, False)
+    test_func(2, 4, 3, 1, 8, 1, 1, 1, 1, 0, 0, 1, 1, 1, False)
+    test_func(4, 4, 16, 16, 8, 3, 3, 1, 1, 1, 1, 1, 1, 1, False)
+    test_func(32, 64, 36, 28, 16, 3, 2, 1, 3, 1, 0, 1, 1, 1, False)

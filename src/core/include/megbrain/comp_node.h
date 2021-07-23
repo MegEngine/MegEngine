@@ -508,7 +508,6 @@ class CompNode {
          */
         static bool enable_affinity_for_cpu(bool flag);
 
-
     protected:
         //! ImplBase with env(); defined in CompNodeEnv
         class Impl;

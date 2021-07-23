@@ -1912,7 +1912,6 @@ TEST_PASS(FuseConvBiasNonlinPass, Basic) {
     }
 }
 
-
 #if MGB_CUDA
 
 TEST(TestEnableTensorCore, SmallInputShape) {
@@ -4734,7 +4733,6 @@ TEST(TestGoptInference, PaddingChannelsWithWarpPerspective) {
     func2->execute();
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
-
 
 #endif
 

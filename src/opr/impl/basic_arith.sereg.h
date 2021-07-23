@@ -162,7 +162,6 @@ namespace opr {
     using ReduceV2 = opr::Reduce;
     MGB_SEREG_OPR(ReduceV2, 0);
 } // namespace opr
-
 using TypeCvtV2 = opr::TypeCvt;
 MGB_SEREG_OPR(TypeCvtV2, 1);
 

@@ -69,7 +69,6 @@ class PersistentCacheOnServer(_PersistentCache):
     def make_user_prefix(cls):
         return "mgbcache:{}".format(getpass.getuser())
 
-
     def _make_key(self, category, key):
         prefix_with_version = "{}:MGB{}".format(self._prefix, __version__)
         return b"@".join(
@@ -86,5 +85,3 @@ class PersistentCacheOnServer(_PersistentCache):
         key = self._make_key(category, key)
         self._prev_get_refkeep = conn.get(key)
         return self._prev_get_refkeep
-
-

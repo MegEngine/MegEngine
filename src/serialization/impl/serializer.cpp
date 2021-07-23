@@ -37,7 +37,6 @@ GraphLoader::shared_tensor_name_map() {
     }
     return ret;
 }
-
 std::unique_ptr<GraphLoader> make_fbs_loader(std::unique_ptr<InputFile> file);
 std::unique_ptr<GraphDumper> make_fbs_dumper(std::unique_ptr<OutputFile> file);
 bool is_fbs_file(InputFile& file);

@@ -192,7 +192,6 @@ function do_build() {
         #handle dlopen path
         install_name_tool -change @rpath/libmegengine_export.dylib @loader_path/lib/libmegengine_export.dylib _imperative_rt.so
 
-
         #copy megbrain_export lib
         DEPEND_LIB=${BUILD_DIR}/staging/megengine/core/lib/
         rm -rf ${DEPEND_LIB}
@@ -209,7 +208,6 @@ function do_build() {
         echo "comapt whl name: ${compat_whl_name}"
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
 
-
         cd ${SRC_DIR}
         echo ""
         echo "##############################################################################################"
@@ -220,11 +218,9 @@ function do_build() {
     done
 }
 
-
 function third_party_prepare() {
     echo "init third_party..."
     ${SRC_DIR}/third_party/prepare.sh
-
 
     if [[ -z ${ALREADY_INSTALL_MKL} ]]
     then

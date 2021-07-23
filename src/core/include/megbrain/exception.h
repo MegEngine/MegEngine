@@ -71,7 +71,6 @@
     })                                                                        \
     do {                                                                      \
     } while (0)
-
 namespace mgb {
 
 //! the most general MegBrain exception type; also base class for all megbrain
@@ -149,7 +148,6 @@ public:
     AtlasError(const std::string& msg);
 };
 
-
 class ROCmError final : public SystemError {
 public:
     /*!
@@ -224,7 +222,6 @@ public:
     using MegBrainError::MegBrainError;
 };
 
-
 }  // namespace mgb
 
 namespace mgb {
@@ -232,6 +229,5 @@ namespace mgb {
 bool has_uncaught_exception();
 
 }  // namespace mgb
-
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

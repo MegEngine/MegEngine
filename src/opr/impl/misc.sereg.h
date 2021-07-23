@@ -57,7 +57,6 @@ namespace serialization {
 
 } // namespace serialization
 
-
 namespace opr {
 
     MGB_SEREG_OPR(Argmax, 1);

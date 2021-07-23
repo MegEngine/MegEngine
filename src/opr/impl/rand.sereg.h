@@ -14,7 +14,6 @@
 
 namespace mgb {
 
-
 namespace opr {
 
 using UniformRNGV1 = opr::UniformRNG;

@@ -697,7 +697,6 @@ TEST_F(CUDA, CONV_BIAS_INT8_CHWN4_UNROLL_WIDTH_TENSORCORE_1x1_ALGO_2) {
             conv_bias::get_int8_chwn4_args_small_batch(1));
 }
 
-
 TEST_F(CUDA, FALLBACK_CONV_QS8) {
     require_compute_capability_eq(7, 5);
     Checker<ConvBiasForward> checker(handle_cuda());
@@ -1099,7 +1098,6 @@ TEST_F(CUDA, BENCHMARK_CONV_BIAS_INT8_NCHW4_NCHW) {
     run({{16, 16, 92, 160, 4}, {32, 16, 3, 3, 4}, {1, 32, 1, 1}});
     run({{16, 16, 46, 80, 4}, {32, 16, 3, 3, 4}, {1, 32, 1, 1}});
 }
-
 
 #if CUDA_VERSION >= 10020
 TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW32) {

@@ -10,7 +10,6 @@
  */
 #include "src/common/utils.h"
 
-
 namespace {
 
 template <bool is_xcorr, typename dtype>

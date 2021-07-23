@@ -486,8 +486,6 @@ def test_topk():
     check_pygraph_dump(fwd, [x], [top, indices])
 
 
-
-
 def test_random():
     @trace(symbolic=True, capture_as_const=True)
     def fwd():
@@ -721,8 +719,6 @@ def test_elemwise_multitype():
     y = Tensor(np.random.random(10) * 10, dtype=dtype.qint8(2.0))
     result = fwd(x, y)
     check_pygraph_dump(fwd, [x, y], [result])
-
-
 
 
 def test_cvtcolor():

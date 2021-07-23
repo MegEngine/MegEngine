@@ -93,7 +93,6 @@ void check_conv_bias(std::vector<megdnn::test::conv_bias::TestArg> args,
 void checker_conv_bias_int8x8x16(
         std::vector<megdnn::test::conv_bias::TestArg> args,
         megdnn::Handle* handle, const char* algo_name);
-
 void checker_conv_bias_common(std::vector<conv_bias::TestArg> args,
                               Handle* handle, RNG* rng, float epsilon,
                               DType type0, DType type1, DType type2,

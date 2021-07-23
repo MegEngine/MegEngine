@@ -139,3 +139,52 @@ def batch_conv_bias_activation(
     )
     (outputs,) = apply(op, inp, weight, bias)
     return outputs
+
+
+def conv_transpose2d(
+    inp: Tensor,
+    weight: Tensor,
+    bias: Tensor = None,
+    dtype=None,
+    stride: Union[int, Tuple[int, int]] = 1,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    groups: int = 1,
+    conv_mode="cross_correlation",
+    compute_mode="default",
+) -> Tensor:
+
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    assert compute_mode.lower() == "default" or compute_mode.name == "DEFAULT"
+
+    if groups != 1:
+        raise NotImplementedError(
+            "group quantized transposed conv2d is not supported yet."
+        )
+    if bias is not None:
+        raise NotImplementedError(
+            "bias of quantized transposed conv2d is not supported yet."
+        )
+
+    pad_h, pad_w = _pair(padding)
+    stride_h, stride_w = _pair_nonzero(stride)
+    dilate_h, dilate_w = _pair_nonzero(dilation)
+
+    # should be replaced by Op with bias such as ConvolutionBackwardDataBias
+    op = builtin.ConvolutionBackwardData(
+        stride_h=stride_h,
+        stride_w=stride_w,
+        pad_h=pad_h,
+        pad_w=pad_w,
+        dilate_h=dilate_h,
+        dilate_w=dilate_w,
+        strategy=get_execution_strategy(),
+        dtype=dtype,
+        compute_mode=compute_mode,
+        mode=conv_mode,
+    )
+    (output,) = apply(op, weight, inp)
+    return output

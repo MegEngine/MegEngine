@@ -445,7 +445,6 @@ class VarNodeMemManager {
 
         SyncableCounter m_cpu_async_release_barrier;
 
-
 #if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON  || MGB_ROCM
         //! release dynamic var on after compnode event finishes
         class AsyncVarReleaser;

@@ -75,7 +75,6 @@ TEST_F(FALLBACK, CONV_BIAS_FORWARD) {
                 .execs({src_shape, filter_shape, bias_shape, {}, {}})
                 .execs({src_shape, filter_shape, bias_shape_channel, {}, {}});
     }
-
 }
 
 std::vector<conv_bias::TestArg> get_conv_bias_args(
@@ -235,7 +234,6 @@ TEST_F(FALLBACK_MULTI_THREADS, CONV_BIAS_FORWARD_QUANTIZED) {
                       dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f),
                       "FALLBACK_NAIVE");
 }
-
 
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_CONVBIAS) {

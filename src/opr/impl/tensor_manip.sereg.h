@@ -120,7 +120,6 @@ namespace serialization {
 #endif
 } // namespace serialization
 
-
 namespace opr {
     MGB_SEREG_OPR(Broadcast, 2);
     MGB_SEREG_OPR(Dimshuffle, 1);

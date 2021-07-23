@@ -287,7 +287,6 @@ void ConvBiasForwardImpl::AlgoPack::fill_dp4a_algos() {
     int8_nchw4_dotprod.emplace_back(AlgoParam{16, 64, 8, 16, 64, 8, 2});
 }
 
-
 ConvBiasForwardImpl::AlgoBase*
 ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
         cudnnConvolutionFwdAlgo_t algo) {

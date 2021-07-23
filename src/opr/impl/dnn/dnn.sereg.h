@@ -613,7 +613,6 @@ MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
 }  // namespace opr
 
-
 }  // namespace mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

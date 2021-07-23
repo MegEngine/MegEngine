@@ -55,12 +55,10 @@ function patch_elf_depend_lib_mgb_mge() {
     patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_export.so
     handle_strip ${LIBS_DIR}/libmegengine_export.so
 
-
     # as some version of cudnn/trt libs have dlopen libs, so we can not use auditwheel
     # TODO: PR for auditwheel to support args for dlopen libs
     handle_copy_cuda_libs ${LIBS_DIR}
 }
-
 
 SRC_DIR=$(readlink -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
@@ -142,7 +140,6 @@ do
     mkdir -p staging
     cp -a imperative/python/{megengine,setup.py,requires.txt,requires-style.txt,requires-test.txt} staging/
 
-
     cd ${BUILD_DIR}/staging/megengine/core
     mkdir -p lib/ucx
     patch_elf_depend_lib_mgb_mge
@@ -157,7 +154,6 @@ do
     echo "org whl name: ${org_whl_name}"
     echo "comapt whl name: ${compat_whl_name}"
     mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}/${compat_whl_name}
-
 
     cd /home/output
     chown -R ${UID}.${UID} .

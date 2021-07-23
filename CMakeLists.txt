@@ -67,7 +67,6 @@ option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 
-
 if(MSVC OR WIN32)
     message(STATUS "windows force cudnn static link")
     set(MGE_WITH_CUDNN_SHARED OFF)
@@ -331,7 +330,6 @@ endif()
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${MGE_COMMON_LINKER_FLAGS}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${MGE_COMMON_LINKER_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${MGE_COMMON_LINKER_FLAGS}")
-
 
 if(NOT MGE_WITH_JIT)
     if(MGE_WITH_HALIDE)
@@ -728,14 +726,12 @@ if (MGE_WITH_ROCM)
     include(cmake/rocm.cmake)
 endif ()
 
-
 if(MGE_WITH_ATLAS)
     add_subdirectory(dnn/atlas-stub)
     list(APPEND MGE_ATLAS_LIBS atlas-stub)
     set(MGE_ATLAS_LIBS "${MGE_ATLAS_LIBS}")
     set(MGB_ATLAS ${MGE_WITH_ATLAS})
 endif()
-
 
 find_program(CCACHE_BIN ccache)
 if(CCACHE_BIN)
@@ -834,11 +830,9 @@ endif()
 set(MGB_CUDA ${MGE_WITH_CUDA})
 set(MEGDNN_WITH_CUDA ${MGE_WITH_CUDA})
 
-
 #ROCM
 set(MGB_ROCM ${MGE_WITH_ROCM})
 set(MEGDNN_WITH_ROCM ${MGE_WITH_ROCM})
-
 
 # CAMBRICON
 set(MGB_CAMBRICON ${MGE_WITH_CAMBRICON})
@@ -1029,7 +1023,6 @@ if(MGE_BUILD_SDK)
     add_subdirectory(sdk/load-and-run)
 endif()
 
-
 if(MGE_BUILD_IMPERATIVE_RT)
     add_subdirectory(imperative)
     message(STATUS "Enable imperative python wrapper runtime")
@@ -1117,4 +1110,3 @@ if(MGE_WITH_CUDA AND MGE_CUDA_USE_STATIC AND("${CUDNN_VERSION}" VERSION_GREATER 
     message(WARNING "Static link CUDNN8 with many sm is unworkable, please use -DMGE_WITH_CUDNN_SHARED=ON or -DMGE_WITH_LARGE_ARCHIVE=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_70,code=sm_70 arch=compute_75,code=sm_75\" ")
     message(WARNING "Static link CUDNN8 with many sm is unworkable, please use -DMGE_WITH_CUDNN_SHARED=ON or -DMGE_WITH_LARGE_ARCHIVE=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_70,code=sm_70 arch=compute_75,code=sm_75\" ")
 endif()
-

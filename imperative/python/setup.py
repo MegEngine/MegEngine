@@ -38,7 +38,6 @@ class build_ext(_build_ext):
             modpath = str(pathlib.Path(*modpath).resolve())
 
             copy_file(modpath, fullpath, verbose=self.verbose, dry_run=self.dry_run)
-
 package_name = 'MegEngine'
 
 v = {}
@@ -79,7 +78,6 @@ megengine_data += [
     for f in pathlib.Path('megengine', 'core', 'lib').glob('**/*')
 ]
 
-
 with open('requires.txt') as f:
     requires = f.read().splitlines()
 with open('requires-style.txt') as f:
@@ -108,8 +106,6 @@ setup_kwargs = dict(
     cmdclass={'build_ext': build_ext},
     scripts = ['./megengine/tools/mge'],
 )
-
-
 setup_kwargs.update(dict(
     classifiers=[
     'Development Status :: 3 - Alpha',

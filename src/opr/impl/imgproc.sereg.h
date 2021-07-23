@@ -196,7 +196,6 @@ using DctChannelSelectV1 = opr::DctChannelSelect;
 MGB_SEREG_OPR(DctChannelSelectV1, 0);
 }  // namespace opr
 
-
 }  // namespace mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -38,7 +38,6 @@ list(APPEND OPR_PARAM_DEFS_OUTS
 )
 list(APPEND OPR_PARAM_DEFS_INC ${OPR_PARAM_DEFS_OUT_DIR})
 
-
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/megdnn DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN "*.h")
 
 add_custom_target(_opr_param_defs DEPENDS ${OPR_PARAM_DEFS_OUTS})
@@ -55,7 +54,6 @@ endforeach()
 
 add_dependencies(opr_param_defs _opr_param_defs)
 install(TARGETS opr_param_defs EXPORT ${MGE_EXPORT_TARGETS})
-
 
 if(MGE_WITH_CUDA)
     add_library(cutlass INTERFACE)

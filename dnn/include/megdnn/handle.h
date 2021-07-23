@@ -90,7 +90,6 @@ class Handle {
         std::unique_ptr<opr> create_rocm_operator();
 #endif
 
-
         virtual ~Handle();
 
         /*!

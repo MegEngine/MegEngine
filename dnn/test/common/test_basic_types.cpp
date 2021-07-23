@@ -40,7 +40,6 @@ TensorLayout make_layout(std::initializer_list<size_t> shape,
 }
 
 } // anonymous namespace
-
 #if MEGDNN_64_BIT
 TEST(BASIC_TYPES, TOTAL_NR_ELEMS) {
     TensorShape shp{1u<<31, 1u<<31};
@@ -340,5 +339,4 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
                               LowbitsAlignedToBytesTensorFormat::make(4_z)),
                  MegDNNError);
 }
-
 // vim: syntax=cpp.doxygen

@@ -2401,7 +2401,6 @@ TEST(TestOprDNN, ConvolutionMultiCompNode) {
     worker0.join();
     worker1.join();
 }
-
 #endif
 
 }  // anonymous namespace

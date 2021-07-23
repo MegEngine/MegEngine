@@ -97,7 +97,6 @@ MGB_SEREG_OPR(SVD, 1);
 
 }  // namespace opr
 
-
 }  // namespace mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

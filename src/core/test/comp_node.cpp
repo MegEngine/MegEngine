@@ -40,7 +40,6 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu2:23"), make_lc(D::CPU, 2, 23));
     ASSERT_EQ(L::parse("cpu21:23"), make_lc(D::CPU, 21, 23));
 
-
     ASSERT_EQ(L::parse("rocmx"), make_lc(D::ROCM, -1, 0));
     ASSERT_EQ(L::parse("rocm2"), make_lc(D::ROCM, 2, 0));
     ASSERT_EQ(L::parse("rocm2:3"), make_lc(D::ROCM, 2, 3));
@@ -61,7 +60,6 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("multithread1:3"), make_lc(D::MULTITHREAD, 3, 1));
     ASSERT_EQ(L::parse("multithread:default:2"),
               make_lc(D::MULTITHREAD, L::DEVICE_MULTITHREAD_DEFAULT, 2));
-
 
     ASSERT_THROW(L::parse("apu"), MegBrainError);
     ASSERT_THROW(L::parse("fpgbx"), MegBrainError);
@@ -165,8 +163,6 @@ TEST(TestCompNode, Load) {
     auto atlas1 = CompNode::load("atlas1");
     ASSERT_NE(atlas0, atlas1);
 #endif
-
-
 }
 
 TEST(TestCompNode, FreeAfterFinalize) {
@@ -354,7 +350,6 @@ TEST(TestCompNodeAtlas, MemNode) {
     ASSERT_NE(cn00.mem_node(), cn1.mem_node());
 }
 #endif
-
 
 TEST(TestCompNodeCPU, PhysicalDispatch) {
     constexpr int ID = 0x2a6453e0;
@@ -754,7 +749,6 @@ TEST(TestCompNodeCambricon, P2PCopy) {
 #endif
 #endif // MGB_CAMBRICON
 
-
 #if MGB_ATLAS
 
 TEST(TestCompNodeAtlas, D2DCopy) {
@@ -779,7 +773,6 @@ TEST(TestCompNodeAtlas, D2DCopy) {
     run(cn);
 }
 #endif
-
 
 namespace {
 class CompNodeDepedentObjectInst final : public CompNodeDepedentObject {

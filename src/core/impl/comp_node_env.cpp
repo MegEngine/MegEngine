@@ -35,8 +35,6 @@
 #include "megcore_atlas.h"
 #endif
 
-
-
 using namespace mgb;
 
 /* =================== MegDNNHandle =================== */
@@ -101,7 +99,6 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
         init = true;
     }
 #endif
-
 
     if (env.property().type == CompNode::DeviceType::CPU) {
         megcoreCreateDeviceHandle(&m_dev_hdl, megcorePlatformCPU);
@@ -234,7 +231,6 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
 }
 #endif
 
-
 #if MGB_ATLAS
 
 void mgb::_on_atlas_error(const char* expr, int err, const char* file,
@@ -257,8 +253,6 @@ void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
                MegDNNHandle::get(*this).handle()->alignment_requirement());
 }
 #endif
-
-
 
 #if MGB_ROCM
 
@@ -381,7 +375,6 @@ void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {
             MegDNNHandle::get(*this).handle()->alignment_requirement();
 }
 
-
 #if MGB_CAMBRICON
 void CompNodeEnv::init_cnrt(int dev, CompNode comp_node,
                             const ContinuationCtx<cnrtQueue_t>& cont) {
@@ -446,7 +439,6 @@ void CompNodeEnv::fini() {
         MGB_ATLAS_CHECK(aclrtDestroyStream(m_atlas_env.stream));
     }
 #endif
-
 }
 
 #if MGB_ENABLE_COMP_NODE_ASYNC_INIT

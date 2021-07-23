@@ -22,7 +22,6 @@
 using namespace megdnn;
 using namespace test;
 
-
 TEST_F(CUDA, SLEEP) {
     auto opr = this->handle_cuda()->create_operator<megdnn::SleepForward>();
 
@@ -51,7 +50,6 @@ TEST_F(CUDA, SLEEP) {
         }
     }
 }
-
 
 
 // vim: syntax=cpp.doxygen

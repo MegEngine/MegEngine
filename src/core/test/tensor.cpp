@@ -340,7 +340,6 @@ TEST(TestTensor, ValueDump) {
     auto val = debug::dump_tensor(*gen({23, 45}), "test");
     debug::write_to_file(output_file("TestTensor.ValueDump.bin").c_str(), val);
 }
-
 template <class Src, class Dst>
 void run_negative_index_test() {
     constexpr size_t S0 = 200, S1 = 200;

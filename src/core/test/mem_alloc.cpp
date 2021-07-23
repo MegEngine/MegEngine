@@ -634,7 +634,6 @@ void test_gather_other(CompNode cn0, CompNode cn1) {
     opr::Sleep::sleep(cn1, 0.7);
     func->execute();
 }
-
 }  // namespace
 
 #if MGB_CUDA
@@ -667,6 +666,5 @@ TEST(TestCudaMemAlloc, FreeMem) {
     test_free_mem(loc0, loc1, policy.get(), reserve, restore);
 }
 #endif  // MGB_CUDA
-
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

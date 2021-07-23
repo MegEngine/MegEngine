@@ -70,7 +70,6 @@ then
     BUILD_WHL_CPU_ONLY="OFF"
 fi
 
-
 # config NVIDIA libs
 TRT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer.dll"
 CUDNN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda/bin/cudnn64_7.dll"
@@ -102,14 +101,11 @@ function copy_more_dll() {
     # empty.file to triger setup.py to create a null empty
     echo "empty" > ${CP_WHL_DST_IMP}/empty.file
 
-
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib to whl use...."
         depend_real_copy ${CP_WHL_DST_IMP}
-
     fi
 }
-
 BUILD_DIR=${SRC_DIR}/build_dir/host/build/
 
 # here we just treat cu file should not in the increment build file list
@@ -194,13 +190,11 @@ function do_build() {
         llvm-strip -s ${rt_file}
         mv ${rt_file} _imperative_rt.pyd
 
-
         copy_more_dll
         cd ${BUILD_DIR}/staging
         echo "call setup.py now"
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/
-
 
         echo ""
         echo "##############################################################################################"
@@ -214,7 +208,6 @@ function do_build() {
 function third_party_prepare() {
     echo "init third_party..."
     ${SRC_DIR}/third_party/prepare.sh
-
 
     if [[ -z ${ALREADY_INSTALL_MKL} ]]
     then

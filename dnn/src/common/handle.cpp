@@ -31,12 +31,9 @@
 #include "src/aarch64/handle.h"
 #endif
 
-
-
 #if MEGDNN_WITH_CUDA
 #include "src/cuda/handle.h"
 #endif
-
 
 #if MEGDNN_WITH_CAMBRICON
 #include "src/cambricon/handle.h"
@@ -127,7 +124,6 @@ std::unique_ptr<Handle> Handle::make(megcoreComputingHandle_t computing_handle,
     }
     return nullptr;
 }
-
 
 void Handle::set_destructor(const thin_function<void()>& d) {
     megdnn_assert(!m_destructor, "destructor can be set only once");

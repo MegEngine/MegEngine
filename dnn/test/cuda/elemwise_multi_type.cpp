@@ -32,7 +32,6 @@ TYPED_TEST(CUDA_ELEMWISE_MULTI_TYPE, run) {
     elemwise_multi_type::run_test<TypeParam>(this->handle_cuda());
 }
 
-
 using Mode = ElemwiseMultiType::Param::Mode;
 static void run_test(int arity, Checker<ElemwiseMultiType>& checker, Mode mode) {
     for (auto type : std::vector<std::pair<DType, DType>>{

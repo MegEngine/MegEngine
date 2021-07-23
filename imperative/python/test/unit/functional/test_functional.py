@@ -876,8 +876,6 @@ def test_nms_is_same():
     assert op3 != op4
 
 
-
-
 def test_argmxx_on_inf():
     def run_argmax():
         x = F.zeros((100, 100))

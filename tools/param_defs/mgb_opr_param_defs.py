@@ -63,7 +63,6 @@ pdef('PersistentOutputStorage').add_fields(
             'false')
  )
 
-
 (pdef('CollectiveComm', 'collective communication between multiple computing '
       'nodes on localhost')
  .add_enum(Doc('Mode', 'mode of collective communication'),

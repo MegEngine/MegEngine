@@ -137,10 +137,8 @@ if(MGE_WITH_CUDA)
     gen_cutlass_kimpl(conv2d tensorop8832)
     file(GLOB_RECURSE CUTLASS_SOURCES ${CUTLASS_GEN_DIR}/*.cu)
     list(APPEND SOURCES ${CUTLASS_SOURCES})
-
     list(APPEND SOURCES ${CUSOURCES})
 endif()
-
 
 if(MGE_WITH_CAMBRICON)
     file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
@@ -160,7 +158,6 @@ if(MGE_WITH_ATLAS)
     list(APPEND SOURCES ${SOURCES_})
     list(APPEND LIBMEGDNN_DEF -DMEGDNN_WITH_ATLAS=1)
 endif()
-
 
 add_definitions(${LIBMEGDNN_DEF})
 add_library(megdnn EXCLUDE_FROM_ALL OBJECT ${SOURCES})
@@ -185,7 +182,6 @@ if(MGE_WITH_ROCM)
         ${ROCRAND_LIBRARY_DIR}
         ${AMDOCL_LIBRARY_DIR})
 endif()
-
 
 if(${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64")
     if(MGE_ENABLE_CPUINFO)

@@ -34,7 +34,6 @@ if(MGE_WITH_CAMBRICON)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
-
 if(MGE_WITH_ATLAS)
     file(GLOB_RECURSE SOURCES_ atlas/*.cpp)
     list(APPEND SOURCES ${SOURCES_})
@@ -44,8 +43,6 @@ if (MGE_WITH_ROCM)
     file (GLOB_RECURSE SOURCES_ rocm/*.cpp)
     list (APPEND SOURCES ${SOURCES_})
 endif()
-
-
 
 add_executable(megdnn_test ${SOURCES})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")
@@ -59,7 +56,6 @@ endif()
 if(MGE_WITH_ATLAS)
     target_link_libraries(megdnn_test atlas-stub)
 endif()
-
 
 target_include_directories(megdnn_test
     PRIVATE

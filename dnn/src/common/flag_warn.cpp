@@ -15,5 +15,4 @@
  #pragma message "Mangling is disabled."
 #endif // MEGDNN_ENABLE_MANGLING
 
-
 // vim: syntax=cpp.doxygen

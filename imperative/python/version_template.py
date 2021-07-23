@@ -7,4 +7,3 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 __version__ = "1.6.0.dev"
-

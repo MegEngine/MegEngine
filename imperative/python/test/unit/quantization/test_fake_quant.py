@@ -92,8 +92,6 @@ def test_tqt():
     np.testing.assert_allclose(g_s.numpy(), g_s_np, rtol=5e-5, atol=5e-5)
 
 
-
-
 def _save_to(self, name="grad"):
     def callback(grad):
         setattr(self, name, grad)

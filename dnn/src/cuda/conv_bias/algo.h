@@ -1037,7 +1037,6 @@ private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
 };
 
-
 class ConvBiasForwardImpl::AlgoPack : NonCopyableObj {
 private:
     AlgoBase::Mapper m_all_algos_map;

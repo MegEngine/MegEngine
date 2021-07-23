@@ -67,7 +67,6 @@
 #define MGB_CUDA    1
 #endif
 
-
 // whether to include file/line location for assert message
 #ifndef MGB_ASSERT_LOC
 #define MGB_ASSERT_LOC          1
@@ -162,7 +161,6 @@
 #define MGB_JIT_HALIDE 0
 #endif
 
-
 #ifndef MEGDNN_WITH_CAMBRICON
 #define MEGDNN_WITH_CAMBRICON 0
 #endif
@@ -181,7 +179,6 @@
 #ifndef MGB_ENABLE_FASTRUN
 #define MGB_ENABLE_FASTRUN 1
 #endif
-
 
 /* ================= following are more finegrind controls ================= */
 

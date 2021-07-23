@@ -73,13 +73,10 @@ std::string CudaError::get_cuda_extra_info() {
 #endif
 }
 
-
 AtlasError::AtlasError(const std::string &msg):
     SystemError(msg)
 {
 }
-
-
 
 ROCmError::ROCmError(const std::string &msg):
     SystemError(msg)

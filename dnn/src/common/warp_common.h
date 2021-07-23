@@ -880,7 +880,6 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
                     for (; x1 <= bcols - 8; x1 += 8)
                         vst1q_u16(A + x1,
                                   vandq_u16(vld1q_u16(sA + x1), v_scale));
-
 #endif
                     for (; x1 < bcols; ++x1)
                         A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2 - 1));

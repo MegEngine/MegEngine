@@ -23,7 +23,6 @@
 #include "megbrain/graph/helper.h"
 #include "megbrain/opr/utility.h"
 
-
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/opr_replace.h"
 #endif
@@ -553,7 +552,6 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         tensorrt::transform_dest_vars_inplace(dest_vars, options().graph_opt);
     }
 #endif
-
 
 #if MGB_JIT
    if (std::abs(options().graph_opt_level) == 0 &&

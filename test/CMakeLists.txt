@@ -15,7 +15,6 @@ if (MGE_WITH_CUDA AND MGE_WITH_TRT)
     list(APPEND SOURCES ${SOURCES_})
 endif()
 
-
 add_executable(megbrain_test ${SOURCES})
 target_link_libraries(megbrain_test gtest gmock)
 target_link_libraries(megbrain_test megbrain megdnn ${MGE_CUDA_LIBS})

@@ -502,5 +502,4 @@ TEST(TestExternCOpr, Dedup) {
     ASSERT_EQ(0, MGBOprDescImpl<>::nr_inst);
 }
 
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

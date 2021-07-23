@@ -13,6 +13,7 @@ from megengine.module import (
     Conv2d,
     ConvBn2d,
     ConvRelu2d,
+    ConvTranspose2d,
     DequantStub,
     Module,
     QuantStub,
@@ -202,3 +203,40 @@ def test_quantize_batchmatmul_activation():
         infer_cg = cgtools.GraphInference(file)[0]
         dumped_outputs = list(infer_cg.run(inputs.numpy()).values())[0]
         np.testing.assert_allclose(quantize_outputs.numpy(), dumped_outputs, atol=1e-6)
+
+
+def test_qat_conv_transpose2d():
+    in_channels = 32
+    out_channels = 64
+    kernel_size = 3
+
+    class TestNet(Module):
+        def __init__(self, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.conv = ConvTranspose2d(
+                in_channels, out_channels, kernel_size, bias=bias
+            )
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.conv(out)
+            out = self.dequant(out)
+            return out
+
+    inputs = tensor(np.random.randn(4, in_channels, 32, 32).astype(np.float32))
+    for bias in [True, False]:
+        net = TestNet(bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())
+
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(normal_outputs.numpy(), qat_outputs.numpy())

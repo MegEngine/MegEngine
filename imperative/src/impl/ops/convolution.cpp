@@ -43,6 +43,11 @@ auto apply_on_var_node(
         const VarNodeArray& inputs) {
     auto&& conv = static_cast<const ConvolutionBackwardData&>(def);
     OperatorNodeConfig config{conv.make_name()};
+    DType output_dtype = conv.dtype;
+    if (output_dtype.valid()) {
+        config.output_dtype(output_dtype);
+    }
+
     if (inputs.size() == 2) {
         return opr::ConvolutionBackwardData::make(inputs[0], inputs[1], conv.param(), conv.policy(), config);
     } else {
