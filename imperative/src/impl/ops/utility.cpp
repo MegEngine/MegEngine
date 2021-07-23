@@ -31,8 +31,6 @@ OP_TRAIT_REG(FastpathCopy,FastpathCopy)
     .fallback();
 }} // fastpathcopy
 
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(FastpathCopy);
-
 namespace { namespace identity {
 auto apply_on_var_node(
         const OpDef& def,

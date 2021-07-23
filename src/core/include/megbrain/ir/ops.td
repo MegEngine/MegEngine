@@ -375,4 +375,6 @@ def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
 def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
 
+def FastpathCopy: MgbHashableOp<"FastpathCopy">;
+
 #endif // MGB_OPS
