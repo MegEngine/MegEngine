@@ -16,17 +16,37 @@
 namespace mgb {
 namespace gopt {
 
-struct InternalGraph {
-    ThinHashSet<VarNode*> m_internals;
-    ThinHashSet<VarNode*> m_inputs;
-    ThinHashSet<VarNode*> m_outputs;
+class GraphPartition {
+public:
+    using VarNodeSet = ThinHashSet<VarNode*>;
+    using OperatorNodeSet = ThinHashSet<cg::OperatorNodeBase*>;
+    class InputPlaceholder;
+
+    GraphPartition() = default;
+
+#if MGB_ENABLE_JSON
+    std::shared_ptr<json::Value> to_json() const;
+#endif
+
+    const OperatorNodeSet& opr_set() const { return m_opr_set; }
+    const VarNodeSet& input() const { return m_inputs; }
+    const VarNodeSet& output() const { return m_outputs; }
+    OperatorNodeSet& opr_set() { return m_opr_set; }
+    VarNodeSet& input() { return m_inputs; }
+    VarNodeSet& output() { return m_outputs; }
+
+private:
+    OperatorNodeSet m_opr_set;
+    VarNodeSet m_inputs;
+    VarNodeSet m_outputs;
+    std::pair<VarNodeArray, VarNodeArray> replace_graph_by_placeholder() const;
 };
 
 class SubGraphExtractor {
 public:
     using OprList = ThinHashSet<Typeinfo*>;
     SubGraphExtractor(OprList opr_list) : m_opr_list{opr_list} {};
-    std::vector<InternalGraph> extract(
+    std::vector<GraphPartition> extract(
             const SymbolVarArray& endpoint_vars) const;
 
 private:
