@@ -837,7 +837,7 @@ class trace:
                     h2v[h] = graph.make_const(
                         info.bound_data.numpy(),
                         dtype=info.dtype,
-                        device=info.device,
+                        device=dumped_device(info),
                         name=info.name,
                     )
                 continue
