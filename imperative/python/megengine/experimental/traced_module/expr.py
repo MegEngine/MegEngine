@@ -11,7 +11,7 @@ import builtins
 import collections
 import copy
 import inspect
-from typing import Callable, List
+from typing import Callable, Dict, List
 
 from ...core._imperative_rt import OpDef
 from ...core._imperative_rt.core2 import Tensor as RawTensor
@@ -29,10 +29,24 @@ class Expr:
     ``Expr`` represents the operations(i.e. CallMethod, CallFunction, Apply, GetAttr, Input, Constant) on ``Node``.
     """
 
+    __total_id = 0
     inputs = None  # type: List[Node]
     outputs = None  # type: List[Node]
     const_val = None  # type: List[Any]
     arg_def = None  # type: TreeDef
+    out_def = None  # type: TreeDef
+    _top_graph = None  # type: weakref.ReferenceType
+
+    def __init__(self) -> None:
+        self._id = Expr.__total_id
+        Expr.__total_id += 1
+        self._disable_remove = False
+
+    def enable_remove(self):
+        self._disable_remove = False
+
+    def disable_remove(self):
+        self._disable_remove = True
 
     def add_inputs(self, vals):
         if not isinstance(vals, collections.abc.Sequence):
@@ -70,6 +84,22 @@ class Expr:
         else:
             return inputs, {}
 
+    def _replace_nodes(self, repl_dict: Dict[Node, Node], nodes: List[Node]):
+        while repl_dict:
+            node, repl_node = repl_dict.popitem()
+            assert type(node) == type(repl_node)
+            assert node in nodes
+            index = nodes.index(node)
+            nodes[index] = repl_node
+            repl_node.users.append(self)
+            node.users.pop(self)
+
+    def replace_inputs(self, repl_dict: Dict[Node, Node]):
+        self._replace_nodes(repl_dict, self.inputs)
+
+    def replace_outputs(self, repl_dict: Dict[Node, Node]):
+        self._replace_nodes(repl_dict, self.outputs)
+
     @property
     def kwargs(self):
         _, kwargs = self.unflatten_args(self.inputs)
@@ -80,12 +110,19 @@ class Expr:
         args, _ = self.unflatten_args(self.inputs)
         return args
 
+    @property
+    def top_graph(self):
+        if self._top_graph:
+            return self._top_graph()
+        return None
+
 
 # expr: None (i.e. fake expression which is used to mark input)
 class Input(Expr):
     name = None
 
     def __init__(self, name=None, type=None):
+        super().__init__()
         self.inputs = []
         node_cls = type if type else Node
         self.outputs = [
@@ -100,7 +137,7 @@ class Input(Expr):
         return expr.outputs[0]
 
     def __repr__(self):
-        return "{} = Input({})".format(self.outputs[0], self.name)
+        return "%{}:  {} = Input({})".format(self._id, self.outputs[0], self.name)
 
 
 # expr: outputs = getattr(inputs[0], self.name)
@@ -108,6 +145,7 @@ class GetAttr(Expr):
     name = None
 
     def __init__(self, module, name, type=None):
+        super().__init__()
         assert isinstance(module, ModuleNode)
         self.inputs = [
             module,
@@ -130,14 +168,15 @@ class GetAttr(Expr):
         return (getattr(inputs[0], self.name),)
 
     def __repr__(self):
-        return '{} = GetAttr({}, "{}")'.format(
-            self.outputs[0], self.inputs[0], self.name
+        return '%{}:  {} = GetAttr({}, "{}")'.format(
+            self._id, self.outputs[0], self.inputs[0], self.name
         )
 
 
 # expr: outputs = inputs[0].__call__(*inputs[1:])
 class CallMethod(Expr):
     def __init__(self, node, method="__call__"):
+        super().__init__()
         if isinstance(node, type):
             assert issubclass(node, Tensor)
             cls = Parameter if issubclass(node, Parameter) else Tensor
@@ -178,6 +217,8 @@ class CallMethod(Expr):
         if inspect.ismethod(meth):
             args = args[1:]
         outputs = getattr(obj, self.method)(*args, **kwargs)
+        if self.method == "__setitem__":
+            outputs = obj
         if outputs is None:
             return outputs
         outputs, _ = tree_flatten(outputs, is_leaf=lambda x: isinstance(x, RawTensor))
@@ -186,8 +227,12 @@ class CallMethod(Expr):
     def __repr__(self):
         args = ", ".join(str(i) for i in self.args[1:])
         kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
-        return "{} = {}.{}({})".format(
-            ", ".join(str(i) for i in self.outputs),
+        outputs = self.outputs
+        if self.out_def:
+            outputs = self.out_def.unflatten(outputs)
+        return "%{}:  {}{}.{}({})".format(
+            self._id,
+            str(outputs) + " = " if outputs else "",
             self.args[0],
             self.method,
             ", ".join([args, kwargs]),
@@ -199,6 +244,7 @@ class Apply(Expr):
     opdef = None
 
     def __init__(self, opdef):
+        super().__init__()
         assert isinstance(opdef, OpDef)
         self.opdef = opdef
         self.inputs = []
@@ -213,7 +259,8 @@ class Apply(Expr):
         return apply(self.opdef, *inputs)
 
     def __repr__(self):
-        return "{} = {}({})".format(
+        return "%{}:  {} = {}({})".format(
+            self._id,
             ", ".join(str(i) for i in self.outputs),
             self.opdef,
             ", ".join(str(i) for i in self.inputs),
@@ -241,6 +288,7 @@ class Apply(Expr):
 
 class CallFunction(Expr):
     def __init__(self, func):
+        super().__init__()
         assert isinstance(func, Callable)
         self.func = func
         self.const_val = []
@@ -255,16 +303,20 @@ class CallFunction(Expr):
     def interpret(self, *inputs):
         args, kwargs = self.unflatten_args(inputs)
         outputs = self.func(*args, **kwargs)
-        outputs = (
-            outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,)
-        )
+        if outputs is None:
+            return outputs
+        outputs, _ = tree_flatten(outputs, is_leaf=lambda x: isinstance(x, RawTensor))
         return outputs
 
     def __repr__(self):
         args = ", ".join(str(i) for i in self.args)
         kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
-        return "{} = {}({})".format(
-            ", ".join(str(i) for i in self.outputs),
+        outputs = self.outputs
+        if self.out_def:
+            outputs = self.out_def.unflatten(outputs)
+        return "%{}:  {}{}({})".format(
+            self._id,
+            str(outputs) + " = " if outputs else "",
             self.func.__module__ + "." + self.func.__name__,
             ", ".join([args, kwargs]),
         )
@@ -277,6 +329,7 @@ class Constant(Expr):
     _constant_cache = {}
 
     def __init__(self, c):
+        super().__init__()
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
             assert module_tracer.is_builtin(c)
@@ -299,7 +352,9 @@ class Constant(Expr):
         return (self.value,)
 
     def __repr__(self):
-        return "{} = Constant({})".format(self.outputs[0], type(self.value))
+        return "%{}:  {} = Constant({})".format(
+            self._id, self.outputs[0], type(self.value)
+        )
 
     def __getstate__(self):
         state = self.__dict__.copy()

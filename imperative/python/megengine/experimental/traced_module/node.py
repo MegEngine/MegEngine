@@ -30,6 +30,7 @@ class Node:
     __total_id = 0
     _id = None
     _name = None
+    _top_graph = None  # type: weakref.ReferenceType
 
     def __init__(self, expr: "Expr", name: str = None):
         self.expr = expr
@@ -48,6 +49,12 @@ class Node:
         else:
             return "%{}".format(self._name)
 
+    @property
+    def top_graph(self):
+        if self._top_graph:
+            return self._top_graph()
+        return None
+
 
 class ModuleNode(Node):
     """
@@ -64,21 +71,28 @@ class ModuleNode(Node):
 
     def __init__(self, expr: "Expr", name: str = None):
         super().__init__(expr, name)
+        self.actual_mnode = []
 
     def __repr__(self):
         if self._name is None:
-            return "%{}({})".format(self._id, self.module_type.__name__)
+            return "%{}_({})".format(self._id, self.module_type.__name__)
         else:
-            return "%{}({})".format(self._name, self.module_type.__name__)
+            return "%{}_{}({})".format(self._id, self._name, self.module_type.__name__)
 
     def __getstate__(self):
-        d = self.__dict__
-        d.pop("_owner", None)
-        return d
+        return {
+            "expr": self.expr,
+            "users": self.users,
+            "_id": self._id,
+            "_name": self._name,
+            "module_type": self.module_type,
+        }
 
     @property
     def owner(self):
-        return self._owner()
+        if self._owner:
+            return self._owner()
+        return None
 
 
 class TensorNode(Node):
@@ -91,9 +105,9 @@ class TensorNode(Node):
 
     def __repr__(self):
         if self._name is None:
-            return "%{}(Tensor)".format(self._id)
+            return "%{}_(Tensor)".format(self._id)
         else:
-            return "%{}(Tensor)".format(self._name)
+            return "%{}_{}(Tensor)".format(self._id, self._name)
 
 
 class NodeMixin(abc.ABC):

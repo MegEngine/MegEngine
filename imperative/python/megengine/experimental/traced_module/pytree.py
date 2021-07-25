@@ -8,6 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 import collections
+from collections import OrderedDict
 from typing import Callable, NamedTuple
 
 import numpy as np
@@ -34,9 +35,25 @@ def _dict_unflatten(inps, aux_data):
     return dict(zip(aux_data, inps))
 
 
+def _ordereddict_flatten(inp):
+    aux_data = []
+    results = []
+    for key, value in inp.items():
+        results.append(value)
+        aux_data.append(key)
+    return results, tuple(aux_data)
+
+
+def _ordereddict_unflatten(inps, aux_data):
+    return OrderedDict(zip(aux_data, inps))
+
+
 register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
 register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: tuple(x))
 register_supported_type(dict, _dict_flatten, _dict_unflatten)
+register_supported_type(
+    collections.OrderedDict, _ordereddict_flatten, _ordereddict_unflatten
+)
 register_supported_type(
     slice,
     lambda x: ([x.start, x.stop, x.step], None),
@@ -98,6 +115,12 @@ class TreeDef:
                 ]
             )
         )
+
+    def __lt__(self, other):
+        return self.__hash__() < other.__hash__()
+
+    def __gt__(self, other):
+        return self.__hash__() > other.__hash__()
 
     def __eq__(self, other):
         return (

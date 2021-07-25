@@ -57,16 +57,16 @@ def _init_module():
 def test_search():
     traced_module, *_ = _init_block()
     graph = traced_module.graph
-    relu_expr = graph.get_call_function(F.relu).as_unique()
+    relu_expr = graph.get_function_by_type(F.relu).as_unique()
     assert isinstance(relu_expr, CallFunction) and relu_expr.func == F.relu
 
 
 def test_insert():
     traced_module, x, expect = _init_block()
     graph = traced_module.graph
-    relu_node = graph.get_call_function(F.relu).as_unique().outputs
-    neg_node = graph.insert_call_function(F.neg, relu_node)
-    graph.replace_node({relu_node[0]: neg_node[0]})
+    relu_node = graph.get_function_by_type(F.relu).as_unique().outputs
+    neg_node = graph.insert_function(lambda x: F.neg(x), *relu_node)
+    graph.replace_node({relu_node[0]: neg_node})
     graph.compile()
     np.testing.assert_allclose(expect - 1, 1 - traced_module(x), atol=1e-6)
 
@@ -74,7 +74,7 @@ def test_insert():
 def test_delete():
     traced_module, x, expect = _init_block()
     graph = traced_module.graph
-    relu_expr = graph.get_call_function(F.relu).as_unique()
+    relu_expr = graph.get_function_by_type(F.relu).as_unique()
     node = relu_expr.outputs
     repl_node = relu_expr.inputs
     graph.replace_node({node[0]: repl_node[0]})

@@ -13,6 +13,8 @@ from .traced_module import (
     cpp_apply_module_trace,
     register_as_builtin,
     trace_module,
+    wrap,
+    wrap_tensors,
 )
 
 _register_all_builtin_module()
