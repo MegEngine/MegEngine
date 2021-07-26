@@ -9,7 +9,7 @@
 # pylint: disable=too-many-lines
 from typing import Optional, Sequence, Tuple, Union
 
-from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.core2 import apply, dtype_promotion
 from ..core.ops import builtin
 from ..core.ops.builtin import BatchNorm, Elemwise
 from ..core.ops.special import Const
@@ -157,6 +157,12 @@ def conv1d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        dtype = dtype_promotion(inp, weight)
+        if inp.dtype != dtype:
+            inp = inp.astype(dtype)
+        if weight.dtype != dtype:
+            weight = weight.astype(dtype)
 
     inp = expand_dims(inp, 3)
     weight = expand_dims(weight, 3)
@@ -211,7 +217,7 @@ def conv2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, 
+    :param groups: number of groups into which the input and output channels are divided,
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
         and the shape of weight should be ``(groups, out_channel // groups,
@@ -234,6 +240,12 @@ def conv2d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        dtype = dtype_promotion(inp, weight)
+        if inp.dtype != dtype:
+            inp = inp.astype(dtype)
+        if weight.dtype != dtype:
+            weight = weight.astype(dtype)
 
     stride_h, stride_w = expand_hw(stride)
     pad_h, pad_w = expand_hw(padding)
@@ -297,6 +309,12 @@ def conv3d(
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
 
+    dtype = dtype_promotion(inp, weight)
+    if inp.dtype != dtype:
+        inp = inp.astype(dtype)
+    if weight.dtype != dtype:
+        weight = weight.astype(dtype)
+
     sparse_type = "dense" if groups == 1 else "group"
     op = builtin.Convolution3D(
         pad_d=pad[D],
@@ -341,7 +359,7 @@ def conv_transpose2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, 
+    :param groups: number of groups into which the input and output channels are divided,
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be ``(groups, in_channels // groups,
@@ -364,6 +382,12 @@ def conv_transpose2d(
     if amp._enabled:
         compute_mode = "float32"
         inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        dtype = dtype_promotion(inp, weight)
+        if inp.dtype != dtype:
+            inp = inp.astype(dtype)
+        if weight.dtype != dtype:
+            weight = weight.astype(dtype)
 
     if groups != 1:
         raise NotImplementedError("group transposed conv2d is not supported yet.")
@@ -413,7 +437,7 @@ def deformable_conv2d(
     :param padding: size of the paddings added to the input on both sides of its
         spatial dimensions. Only zero-padding is supported. Default: 0
     :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided, 
+    :param groups: number of groups into which the input and output channels are divided,
         so as to perform a ``grouped convolution``. When ``groups`` is not 1,
         ``in_channels`` and ``out_channels`` must be divisible by groups,
         and the shape of weight should be ``(groups, out_channel // groups,
@@ -482,6 +506,12 @@ def local_conv2d(
     pad_h, pad_w = expand_hw(padding)
     dilate_h, dilate_w = expand_hw(dilation)
 
+    dtype = dtype_promotion(inp, weight)
+    if inp.dtype != dtype:
+        inp = inp.astype(dtype)
+    if weight.dtype != dtype:
+        weight = weight.astype(dtype)
+
     op = builtin.GroupLocal(
         stride_h=stride_h,
         stride_w=stride_w,
@@ -507,7 +537,7 @@ def conv_transpose3d(
     dilation: Union[int, Tuple[int, int, int]] = 1,
 ) -> Tensor:
     """
-    3D transposed convolution operation. Only support the case that groups = 1 
+    3D transposed convolution operation. Only support the case that groups = 1
     and conv_mode = "cross_correlation".
 
     Refer to :class:`~.ConvTranspose3d` for more information.
@@ -526,6 +556,12 @@ def conv_transpose3d(
     pad = _triple(padding)
     stride = _triple_nonzero(stride)
     dilate = _triple_nonzero(dilation)
+
+    dtype = dtype_promotion(inp, weight)
+    if inp.dtype != dtype:
+        inp = inp.astype(dtype)
+    if weight.dtype != dtype:
+        weight = weight.astype(dtype)
 
     op = builtin.Convolution3DBackwardData(
         pad_d=pad[D],

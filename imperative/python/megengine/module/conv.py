@@ -269,11 +269,11 @@ class Conv2d(_ConvNd):
     output: :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})` where
 
     .. math::
-        \text{H}_{out} = \lfloor \frac{\text{H}_{in} + 2 * \text{padding[0]} - 
+        \text{H}_{out} = \lfloor \frac{\text{H}_{in} + 2 * \text{padding[0]} -
         \text{dilation[0]} * (\text{kernel_size[0]} - 1) - 1}{\text{stride[0]}} + 1 \rfloor
 
     .. math::
-        \text{W}_{out} = \lfloor \frac{\text{W}_{in} + 2 * \text{padding[1]} - 
+        \text{W}_{out} = \lfloor \frac{\text{W}_{in} + 2 * \text{padding[1]} -
         \text{dilation[1]} * (\text{kernel_size[1]} - 1) - 1}{\text{stride[1]}} + 1 \rfloor
 
     When `groups == in_channels` and `out_channels == K * in_channels`,
@@ -939,7 +939,7 @@ class ConvTranspose3d(_ConvNd):
         ichl = self.in_channels
         ochl = self.out_channels
         kt, kh, kw = self.kernel_size
-        return (ochl, ichl, kt, kh, kw)
+        return (ichl, ochl, kt, kh, kw)
 
     def _infer_bias_shape(self):
         # Assume format is NCTHW
