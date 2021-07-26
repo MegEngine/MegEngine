@@ -745,13 +745,20 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
      'dtype', Doc('dtype', 'data type of output value'),
      'DTypeEnum::Float32'))
 
-(pdef('UniformRNG').
+(pdef('UniformRNG', version=0, is_legacy=True).
+ add_fields('uint64', 'seed', 0))
+
+(pdef('UniformRNG', version=1).
  add_fields('uint64', 'seed', 0).
  add_fields(
      'dtype', Doc('dtype', 'The dtype of output Tensor. Only support Float32.'),
      'DTypeEnum::Float32'))
 
-(pdef('GaussianRNG').
+(pdef('GaussianRNG', version=0, is_legacy=True).
+ add_fields('uint64', 'seed', 0).
+ add_fields('float32', 'mean', 0, 'std', 1))
+
+(pdef('GaussianRNG', version=1).
  add_fields('uint64', 'seed', 0).
  add_fields('float32', 'mean', 0, 'std', 1).
  add_fields(

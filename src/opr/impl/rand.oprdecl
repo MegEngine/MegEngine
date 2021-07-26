@@ -1,12 +1,12 @@
 decl_opr('UniformRNG', pyname='_uniform_rng',
          inputs=['shape'],
          params='UniformRNG',
-         canonize_input_vars='canonize_shape_input')
+         canonize_input_vars='canonize_shape_input', version=1)
 
 decl_opr('GaussianRNG', pyname='_gaussian_rng',
          inputs=['shape'],
          params='GaussianRNG',
-         canonize_input_vars='canonize_shape_input')
+         canonize_input_vars='canonize_shape_input', version=1)
 
 inputs = [
     Doc('shape',

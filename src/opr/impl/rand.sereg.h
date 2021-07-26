@@ -13,18 +13,21 @@
 #include "megbrain/serialization/sereg.h"
 
 namespace mgb {
+
+
 namespace opr {
 
-    MGB_SEREG_OPR(UniformRNG, 1);
-    MGB_SEREG_OPR(GaussianRNG, 1);
-    MGB_SEREG_OPR(GammaRNG, 2);
-    MGB_SEREG_OPR(PoissonRNG, 1);
-    MGB_SEREG_OPR(PermutationRNG, 1);
-    MGB_SEREG_OPR(BetaRNG, 2);
+using UniformRNGV1 = opr::UniformRNG;
+MGB_SEREG_OPR(UniformRNGV1, 1);
+using GaussianRNGV1 = opr::GaussianRNG;
+MGB_SEREG_OPR(GaussianRNGV1, 1);
+MGB_SEREG_OPR(GammaRNG, 2);
+MGB_SEREG_OPR(PoissonRNG, 1);
+MGB_SEREG_OPR(PermutationRNG, 1);
+MGB_SEREG_OPR(BetaRNG, 2);
 
 } // namespace opr
 } // namespace mgb
-
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
 
