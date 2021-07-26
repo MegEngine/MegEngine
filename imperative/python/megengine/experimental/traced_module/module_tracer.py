@@ -184,6 +184,9 @@ class Patcher:
             if id(i) not in self.visited_frames_ids:
                 self.patch_function(i, j, self.wrap_fn)
 
+        for m in module_tracer._opaque_types:
+            self.auto_patch(getattr(getattr(m, "forward", m), "__globals__", {}))
+
     def patch_function(self, frame_dict, fn, wrap_fn):
         patched_fn = PatchedFn(frame_dict, fn)
         self.patched_fn_ids.add(id(patched_fn.origin_fn))

@@ -6,6 +6,8 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import abc
+import weakref
 from typing import Any, Dict, List, Tuple, Type
 
 import numpy
@@ -58,21 +60,25 @@ class ModuleNode(Node):
     """
 
     module_type = Module  # type: Type[Module]
-    attr_type_map = None  # type: Dict[str, Type[Any]]
-    argdef_graph_map = None  # type: Dict[Treedef, "InternalGraph"]
-    argdef_outdef_map = None  # type: Dict[Treedef, Treedef]
+    _owner = None  # type: weakref.ReferenceType
 
     def __init__(self, expr: "Expr", name: str = None):
         super().__init__(expr, name)
-        self.attr_type_map = {}
-        self.argdef_graph_map = {}
-        self.argdef_outdef_map = {}
 
     def __repr__(self):
         if self._name is None:
             return "%{}({})".format(self._id, self.module_type.__name__)
         else:
             return "%{}({})".format(self._name, self.module_type.__name__)
+
+    def __getstate__(self):
+        d = self.__dict__
+        d.pop("_owner", None)
+        return d
+
+    @property
+    def owner(self):
+        return self._owner()
 
 
 class TensorNode(Node):
@@ -90,8 +96,13 @@ class TensorNode(Node):
             return "%{}(Tensor)".format(self._name)
 
 
-class NodeMixin:
+class NodeMixin(abc.ABC):
     __node = None
+
+    @abc.abstractmethod
+    def _record_wrapped_nodes(self, node):
+        # record the nodes which had been bound to this NodeMixin
+        pass
 
     @classmethod
     def wrap(cls, value, node):
@@ -102,15 +113,20 @@ class NodeMixin:
                     node.shape = (
                         value._tuple_shape if isinstance(value, Tensor) else value.shape
                     )
+                if isinstance(value, NodeMixin):
+                    value._record_wrapped_nodes(node)
                 setattr(value, "_NodeMixin__node", node)
             else:
                 assert callable(node)
                 n = node()
+                assert isinstance(n, Node)
                 if isinstance(value, RawTensor):
                     n.dtype = value.dtype
                     n.shape = (
                         value._tuple_shape if isinstance(value, Tensor) else value.shape
                     )
+                if isinstance(value, NodeMixin):
+                    value._record_wrapped_nodes(n)
                 setattr(value, "_NodeMixin__node", n)
 
     @classmethod
@@ -122,6 +138,8 @@ class NodeMixin:
                 value._tuple_shape if isinstance(value, Tensor) else value.shape
             )
         setattr(value, "_NodeMixin__node", node)
+        if isinstance(value, NodeMixin):
+            value._record_wrapped_nodes(node)
 
     @classmethod
     def get(cls, value, *default):

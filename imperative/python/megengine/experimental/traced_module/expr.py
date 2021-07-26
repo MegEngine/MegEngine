@@ -9,6 +9,7 @@
 
 import builtins
 import collections
+import copy
 import inspect
 from typing import Callable, List
 
@@ -46,7 +47,7 @@ class Expr:
                 idx = len(self.inputs) + len(self.const_val)
                 self.const_val.append((idx, val))
 
-    def add_outputs(self, outputs, check_inplace=True):
+    def add_outputs(self, outputs):
         self.outputs = []
         if outputs is not None:
             if not isinstance(outputs, collections.Sequence):
@@ -54,10 +55,7 @@ class Expr:
 
             for i in outputs:
                 assert isinstance(i, RawTensor)
-                node = NodeMixin.get(i, None) if check_inplace else None
-                self.outputs.append(
-                    node if node else NodeMixin.get_wrapped_type(i)(self)
-                )
+                self.outputs.append(NodeMixin.get_wrapped_type(i)(self))
 
             for i, node in zip(outputs, self.outputs,):
                 NodeMixin.wrap_safe(i, node)
@@ -165,9 +163,12 @@ class CallMethod(Expr):
     def graph(self):
         if isinstance(self.inputs[0], ModuleNode):
             m_node = self.inputs[0]
-            if m_node.argdef_graph_map:
-                assert self.arg_def in m_node.argdef_graph_map
-                return m_node.argdef_graph_map[self.arg_def]
+            if (
+                hasattr(m_node.owner, "argdef_graph_map")
+                and m_node.owner.argdef_graph_map
+            ):
+                assert self.arg_def in m_node.owner.argdef_graph_map
+                return m_node.owner.argdef_graph_map[self.arg_def]
         return None
 
     def interpret(self, *inputs):

@@ -9,6 +9,7 @@
 import itertools
 
 import numpy as np
+import pytest
 
 import megengine as mge
 import megengine.autodiff as ad
