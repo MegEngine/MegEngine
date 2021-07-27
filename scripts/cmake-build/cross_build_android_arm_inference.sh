@@ -2,7 +2,7 @@
 set -e
 
 ARCHS=("arm64-v8a" "armeabi-v7a")
-BUILD_TYPE=Release
+BUILD_TYPE=RelWithDebInfo
 MGE_ARMV8_2_FEATURE_FP16=OFF
 MGE_DISABLE_FLOAT16=OFF
 ARCH=arm64-v8a

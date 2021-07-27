@@ -30,10 +30,12 @@ bool PoolingImpl::AlgoFp32ModexStridexNCHW44::usable(
     bool avaible = param.src_type.enumv() == DTypeEnum::Float32 &&
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
-                   fh == fw && sh == sw &&
-                   (fh == 2 || fh == 3 || fh == 4 || fh == 5) &&
-                   (sh == 1 || sh == 2);
-    return avaible;
+                   fh == fw && sh == sw;
+    bool size_ok = ((fh == 2 || fh == 3 || fh == 4 || fh == 5) &&
+                    (sh == 1 || sh == 2));
+    size_ok |= ((fh == 9 || fh == 13) && (sh == 1));
+
+    return avaible && size_ok;
 }
 
 void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
@@ -94,6 +96,15 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
             megdnn_assert(0, "invalid stride %d", sh); \
     }
 
+#define DISPATCH_STRIDE_1(filter)                        \
+    switch (sh) {                                      \
+        case 1:                                        \
+            DISPATCH_MODE(filter, 1);                  \
+            break;                                     \
+        default:                                       \
+            megdnn_assert(0, "invalid stride %d", sh); \
+    }
+
 #define DISPATCH_FILTER()                              \
     switch (fh) {                                      \
         case 2:                                        \
@@ -107,6 +118,12 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
             break;                                     \
         case 5:                                        \
             DISPATCH_STRIDE(5);                        \
+            break;                                     \
+        case 9:                                        \
+            DISPATCH_STRIDE_1(9);                      \
+            break;                                     \
+        case 13:                                       \
+            DISPATCH_STRIDE_1(13);                     \
             break;                                     \
         default:                                       \
             megdnn_assert(0, "invalid filter %d", fh); \

@@ -116,6 +116,31 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_NCHW44_FP32) {
         }
 }
 
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W9_w13_NCHW44)
+{
+    UniformIntRNG rng{-10, 10};
+    Checker<Pooling> checker(handle());
+    checker.set_rng(0, &rng);
+    // clang-format off
+    for (size_t ih: {20, 15})
+    for (size_t iw: {15, 20})
+    for (size_t kernel: {9, 13})
+    for (size_t pad: {4, 6})
+    for(auto mode: {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE})
+    if (kernel > pad)
+    {
+        param::Pooling param;
+        param.mode = mode;
+        param.format = param::Pooling::Format::NCHW44;
+        param.pad_h = pad;
+        param.pad_w = pad;
+        param.stride_h = param.stride_w = 1;
+        param.window_h = param.window_w = kernel ;
+        checker.set_param(param).exec(TensorShapeArray{{2, 8, ih, iw, 4}, {}});
+    }
+    // clang-format on
+}
+
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
 {
     UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};

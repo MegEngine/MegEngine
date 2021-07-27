@@ -124,4 +124,5 @@ __ai void load_helper_x(T& weight, T2 ptr, int oc_offset, XT... args) {
 }  // namespace
 }  // namespace megdnn
 #undef __ai
+
 // vim: syntax=cpp.doxygen
