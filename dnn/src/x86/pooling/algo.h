@@ -29,6 +29,7 @@ public:
         X86_MeanW2S2SSE3,
         X86_MaxW2S2SSE,
         X86_MaxW3S3SSE,
+        X86_MaxS1NCHW88AVX,
 #if MEGDNN_X86_WITH_MKL_DNN
         X86_MKLDNNNCHW,
         X86_MKLDNNNCHW88,
@@ -87,11 +88,11 @@ ALGO_IMPL(MeanW2S2AVX)
 ALGO_IMPL(MeanW2S2SSE3)
 ALGO_IMPL(MaxW2S2SSE)
 ALGO_IMPL(MaxW3S3SSE)
+ALGO_IMPL(MaxS1NCHW88AVX)
 #if MEGDNN_X86_WITH_MKL_DNN
 ALGO_IMPL(MKLDNNNCHW)
 ALGO_IMPL(MKLDNNNCHW88)
 #endif
-
 #undef ALGO_IMPL
 
 class PoolingImpl::AlgoFallback final : public AlgoBase {
@@ -118,6 +119,7 @@ private:
     AlgoMKLDNNNCHW algo_mkldnn_nchw;
     AlgoMKLDNNNCHW88 algo_mkldnn_nchw88;
 #endif
+    AlgoMaxS1NCHW88AVX algo_max_w13s1_nchw88_avx;
     AlgoFallback algo_fallback;
 
 public:

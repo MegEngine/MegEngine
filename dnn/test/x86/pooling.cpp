@@ -24,6 +24,70 @@ TEST_F(X86, POOLING) {
     }
 }
 
+TEST_F(X86, S1POOLING88) {
+    Checker<Pooling> checker(handle());
+    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH,
+                   size_t SW, size_t N, size_t C, size_t H, size_t W) {
+        Pooling::Param param;
+        param.format = param::Pooling::Format::NCHW88;
+        param.window_h = WH;
+        param.window_w = WW;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_w = SW;
+        param.stride_h = SH;
+        param.mode = param::Pooling::Mode::MAX;
+        checker.set_param(param);
+        checker.execs({{N, C, H, W, 8}, {}});
+    };
+
+    for (size_t wh = 10; wh < 15; ++wh) {
+        for (size_t ww = 10; ww < 15; ++ww) {
+            for (size_t n : {1, 2, 4}) {
+                for (size_t c : {1, 4}) {
+                    for (size_t h : {10, 13, 20}) {
+                        for (size_t w : {10, 13, 20}) {
+                            run(wh, ww, wh / 2, ww / 2, 1, 1, n, c, h, w);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_F(X86_MULTI_THREADS, S1POOLING88) {
+    Checker<Pooling> checker(handle());
+    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH,
+                   size_t SW, size_t N, size_t C, size_t H, size_t W) {
+        Pooling::Param param;
+        param.format = param::Pooling::Format::NCHW88;
+        param.window_h = WH;
+        param.window_w = WW;
+        param.pad_h = PH;
+        param.pad_w = PW;
+        param.stride_w = SW;
+        param.stride_h = SH;
+        param.mode = param::Pooling::Mode::MAX;
+        checker.set_param(param);
+        checker.execs({{N, C, H, W, 8}, {}});
+    };
+
+    for (size_t wh = 10; wh < 15; ++wh) {
+        for (size_t ww = 10; ww < 15; ++ww) {
+            for (size_t n : {1, 2, 4}) {
+                for (size_t c : {1, 4}) {
+                    for (size_t h : {10, 13, 20}) {
+                        for (size_t w : {10, 13, 20}) {
+                            run(wh, ww, wh / 2, ww / 2, 1, 1, n, c, h, w);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING88) {
     Checker<Pooling> checker(handle());
@@ -104,6 +168,42 @@ TEST_F(X86, BENCHMARK_POOLING) {
 TEST_F(X86_MULTI_THREADS, BENCHMARK_POOLING) {
     test_x86_megdnn_pooling(handle());
 }
+TEST_F(X86, BENCHMARK_POOLING_MAX_S1_NCHW88) {
+    constexpr size_t RUNS = 50;
+    auto x86_handle = handle();
+    Benchmarker<Pooling> benchmarker_pooling(x86_handle);
+    benchmarker_pooling.set_times(RUNS);
+    auto run = [&](uint32_t pad, uint32_t stride, uint32_t window_size,
+                   size_t in_number, size_t in_channel, size_t in_height,
+                   size_t in_width) {
+        auto opr = x86_handle->create_operator<Pooling>();
+        opr->param() = {param::Pooling::Mode::MAX,
+                        pad,
+                        pad,
+                        stride,
+                        stride,
+                        window_size,
+                        window_size};
+        opr->param().format = param::Pooling::Format::NCHW88;
+
+        TensorShape shape{in_number, in_channel / 8, in_height, in_width, 8};
+        TensorLayout dst_layout;
+        opr->deduce_layout({shape, dtype::Float32()}, dst_layout);
+        float computation =
+                dst_layout.total_nr_elems() * window_size * window_size * 1e-9;
+
+        auto pooling_used = benchmarker_pooling.set_param(opr->param())
+                                    .exec(TensorShapeArray{shape, {}}) /
+                            RUNS;
+        float through_put = computation / pooling_used * 1e3;
+        printf("profiling max pooling NCHW88 {%zu,%zu,%zu,%zu,8}\nuse time : "
+               "%f ms\nthrough_put : %f Gflops\n",
+               in_number, in_channel / 8, in_height, in_width, pooling_used,
+               through_put);
+    };
+    run(6, 1, 13, 1, 32 * 8, 20, 20);
+}
+
 #endif
 #if MEGDNN_X86_WITH_MKL_DNN
 TEST_F(X86, POOLING_INT8) {

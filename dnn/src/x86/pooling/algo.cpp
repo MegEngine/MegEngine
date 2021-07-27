@@ -20,6 +20,8 @@
 #include "src/x86/pooling/pooling_special_cases.h"
 #include "src/x86/utils.h"
 
+#include "src/x86/avx_helper.h"
+
 using namespace megdnn;
 using namespace x86;
 
@@ -65,6 +67,7 @@ PoolingImpl::AlgoPack::AlgoPack() {
     all_algos.push_back(&algo_mean_w2s2_sse3);
     all_algos.push_back(&algo_max_w2s2_sse);
     all_algos.push_back(&algo_max_w3s3_sse);
+    all_algos.push_back(&algo_max_w13s1_nchw88_avx);
 #if MEGDNN_X86_WITH_MKL_DNN
     all_algos.push_back(&algo_mkldnn_nchw);
     all_algos.push_back(&algo_mkldnn_nchw88);
@@ -363,3 +366,135 @@ void PoolingImpl::AlgoMKLDNNNCHW88::exec(const ExecArgs& args) const {
 }
 
 #endif
+
+namespace {
+MEGDNN_ATTRIBUTE_TARGET("avx")
+void max_pooling_s1_nchw88_avx_kern(const float* src, float* dst, int IH,
+                                    int IW, int OH, int OW, int PH, int PW,
+                                    int WH, int WW) {
+    static float min_float = -std::numeric_limits<float>::max();
+    static int VECSIZE = 8;
+
+    __m256 ymm[16];
+    const float* psrc = src;
+    float* pdst = dst;
+
+    //! deal all rows
+    for (int row = 0; row < IH; ++row) {
+        for (int j = 0; j < PW; ++j) {
+            ymm[j] = _mm256_set1_ps(min_float);
+        }
+        int col_end = WW - PW < IW ? WW - PW : IW;
+        for (int j = 0; j < col_end; ++j) {
+            ymm[j + PW] = _mm256_loadu_ps(psrc + j * VECSIZE);
+        }
+        for (int j = col_end + PW; j < WW; ++j) {
+            ymm[j] = _mm256_set1_ps(min_float);
+        }
+
+        int col_next = WW - PW;
+        for (int j = 0; j < OW; ++j) {
+            for (int i = WW - 2; i >= 0; --i) {
+                ymm[i] = _mm256_max_ps(ymm[i], ymm[i + 1]);
+            }
+            _mm256_storeu_ps(pdst, ymm[0]);
+            pdst += VECSIZE;
+            for (int i = 0; i < WW - 1; ++i) {
+                ymm[i] = ymm[i + 1];
+            }
+            if (col_next < IW) {
+                ymm[WW - 1] = _mm256_loadu_ps(psrc + col_next * VECSIZE);
+                col_next++;
+            } else {
+                ymm[WW - 1] = _mm256_set1_ps(min_float);
+            }
+        }
+        psrc += IW * VECSIZE;
+    }
+
+    //! deal all cols
+    float* src1 = dst;
+    for (int col = 0; col < OW; ++col) {
+        for (int j = 0; j < PH; ++j) {
+            ymm[j] = _mm256_set1_ps(min_float);
+        }
+        int row_end = WH - PH < IH ? WH - PH : IH;
+        for (int j = 0; j < row_end; ++j) {
+            ymm[j + PH] = _mm256_loadu_ps(src1 + j * OW * VECSIZE);
+        }
+        for (int j = row_end + PH; j < WH; ++j) {
+            ymm[j] = _mm256_set1_ps(min_float);
+        }
+
+        int row_next = WH - PH;
+        pdst = src1;
+        for (int j = 0; j < OH; ++j) {
+            for (int i = WH - 2; i >= 0; --i) {
+                ymm[i] = _mm256_max_ps(ymm[i], ymm[i + 1]);
+            }
+            _mm256_storeu_ps(pdst, ymm[0]);
+            pdst += OW * VECSIZE;
+            for (int i = 0; i < WH - 1; ++i) {
+                ymm[i] = ymm[i + 1];
+            }
+            if (row_next < IH) {
+                ymm[WH - 1] = _mm256_loadu_ps(src1 + row_next * OW * VECSIZE);
+                row_next++;
+            } else {
+                ymm[WH - 1] = _mm256_set1_ps(min_float);
+            }
+        }
+        src1 += VECSIZE;
+    }
+}
+}  // namespace
+
+bool PoolingImpl::AlgoMaxS1NCHW88AVX::is_available(const SizeArgs& args) const {
+    bool is_dtype_ok = args.layout_src.dtype == dtype::Float32();
+    bool is_mode_ok = args.opr->param().mode == Mode::MAX;
+    bool is_format_ok = args.opr->param().format == Param::Format::NCHW88;
+    bool is_shape_ok = args.opr->param().window_h >= 10 &&
+                       args.opr->param().window_h <= 15 &&
+                       args.opr->param().window_w >= 10 &&
+                       args.opr->param().window_w <= 15;
+    bool is_stride_ok =
+            args.opr->param().stride_h == 1 && args.opr->param().stride_w == 1;
+    //! this condition guarantee size of dst's memory is bigger enough because
+    //! dst's memory will be used as workspace to store intermediate result.
+    bool is_pad_ok =
+            args.opr->param().pad_h >= args.opr->param().window_h / 2 &&
+            args.opr->param().pad_w >= args.opr->param().window_w / 2;
+    bool is_ins_ok = is_supported(SIMDType::AVX);
+    return is_dtype_ok && is_mode_ok && is_format_ok && is_shape_ok &&
+           is_pad_ok && is_stride_ok && is_ins_ok;
+}
+
+void PoolingImpl::AlgoMaxS1NCHW88AVX::exec(const ExecArgs& args) const {
+    auto handle = args.handle;
+    size_t N = args.layout_src.shape[0];
+    static size_t VECSIZE = 8;
+    size_t PH = args.opr->param().pad_h;
+    size_t PW = args.opr->param().pad_w;
+    size_t WH = args.opr->param().window_h;
+    size_t WW = args.opr->param().window_w;
+    size_t IC = args.layout_src.shape[1];
+    size_t IH = args.layout_src.shape[2];
+    size_t IW = args.layout_src.shape[3];
+    size_t OH = args.layout_dst.shape[2];
+    size_t OW = args.layout_dst.shape[3];
+    float* src_ptr = reinterpret_cast<float*>(args.src_tensor->raw_ptr);
+    float* dst_ptr = reinterpret_cast<float*>(args.dst_tensor->raw_ptr);
+
+    auto run = [IC, src_ptr, dst_ptr, IH, IW, OH, OW, PH, PW, WH, WW](
+                       size_t index, size_t) {
+        size_t n = index / IC;
+        size_t c = index % IC;
+        float* src =
+                src_ptr + n * IH * IW * IC * VECSIZE + IH * IW * c * VECSIZE;
+        float* dst =
+                dst_ptr + n * OH * OW * IC * VECSIZE + OH * OW * c * VECSIZE;
+        max_pooling_s1_nchw88_avx_kern(src, dst, IH, IW, OH, OW, PH, PW, WH,
+                                       WW);
+    };
+    MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(handle, N * IC, run);
+}

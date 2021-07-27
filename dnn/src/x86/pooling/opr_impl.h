@@ -21,6 +21,7 @@ private:
     class AlgoMeanW2S2SSE3;
     class AlgoMaxW2S2SSE;
     class AlgoMaxW3S3SSE;
+    class AlgoMaxS1NCHW88AVX;
 #if MEGDNN_X86_WITH_MKL_DNN
     class AlgoMKLDNNNCHW;
     class AlgoMKLDNNNCHW88;
