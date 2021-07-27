@@ -26,6 +26,13 @@ TYPED_TEST(ARM_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }
 
+template <typename tag>
+class ARM_ELEMWISE_MULTI_THREADS : public ARM_COMMON_MULTI_THREADS {};
+TYPED_TEST_CASE(ARM_ELEMWISE_MULTI_THREADS, elemwise::test_types);
+TYPED_TEST(ARM_ELEMWISE_MULTI_THREADS, run) {
+    elemwise::run_test<TypeParam>(this->handle());
+}
+
 TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle());

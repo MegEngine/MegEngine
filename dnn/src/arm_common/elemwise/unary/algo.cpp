@@ -71,12 +71,19 @@ void ElemwiseImpl::AlgoUnary::exec(const KernParam& kern_param) const {
             thin_function<void(const _type*, _type*, DType, DType, size_t)> \
                     run = OpCallerUnary<_op<_type, _type>,                  \
                                         BcastType::VEC>::run;               \
-            MEGDNN_DISPATCH_CPU_KERN(                                       \
+            auto kernel = [nr_elems, nr_elems_per_thread, src0, dst_tensor, \
+                           run](size_t task_id, size_t) {                   \
+                size_t offset = task_id * nr_elems_per_thread;              \
+                size_t nr_elems_thread =                                    \
+                        std::min(nr_elems - offset, nr_elems_per_thread);   \
+                run(static_cast<const _type*>(src0.raw_ptr) + offset,       \
+                    static_cast<_type*>(dst_tensor.raw_ptr) + offset,       \
+                    src0.layout.dtype, dst_tensor.layout.dtype,             \
+                    nr_elems_thread);                                       \
+            };                                                              \
+            MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                          \
                     static_cast<naive::HandleImpl*>(kern_param.handle),     \
-                    run(static_cast<const _type*>(src0.raw_ptr),            \
-                        static_cast<_type*>(dst_tensor.raw_ptr),            \
-                        src0.layout.dtype, dst_tensor.layout.dtype,         \
-                        nr_elems));                                         \
+                    nr_threads, kernel);                                    \
         }                                                                   \
         MIDOUT_END();                                                       \
         return
@@ -86,7 +93,12 @@ void ElemwiseImpl::AlgoUnary::exec(const KernParam& kern_param) const {
     auto& src0 = elparam[0];
     auto& dst_tensor = *(kern_param.m_dst);
 
+    size_t nr_threads = static_cast<naive::HandleImpl*>(kern_param.handle)
+                                ->megcore_dispatcher()
+                                ->nr_threads();
+
     size_t nr_elems = src0.layout.total_nr_elems();
+    size_t nr_elems_per_thread = (nr_elems + nr_threads - 1) / nr_threads;
 
 #define DISPATCH_MODE_FLOAT(_case, _type, _type_midout_id)                    \
     switch (kern_param.mode) {                                                \
