@@ -32,11 +32,11 @@ git submodule update --init cutlass
 
 git submodule update --init cpuinfo
 
-name=`git config --get user.name`
+name=`git config --get user.name || true`
 if [ -z "$name" ]; then
     name="default"
 fi
-email=`git config --get user.email`
+email=`git config --get user.email || true`
 if [ -z "$email" ]; then
     email="default"
 fi
