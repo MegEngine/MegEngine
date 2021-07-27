@@ -142,14 +142,16 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
         for (int i = 0; i < ret_count; ++i) {
             if (algo_perf[i].memory > workspace_limit_in_bytes)
                 continue;
-            if ((positive_attr & AlgoAttribute::REPRODUCIBLE)) {
-                if (algo_perf[i].determinism == CUDNN_DETERMINISTIC) {
-                    return reinterpret_cast<AlgoBase*>(
+            if ((positive_attr & AlgoAttribute::REPRODUCIBLE) &&
+                (algo_perf[i].determinism != CUDNN_DETERMINISTIC)) {
+                continue;
+            }
+            AlgoBase* conv_bd_data_algo = reinterpret_cast<AlgoBase*>(
                             sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
-                }
-            } else {
-                return reinterpret_cast<AlgoBase*>(
-                        sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
+            if (conv_bd_data_algo->is_available_attribute(
+                        args, positive_attr, negative_attr,
+                        workspace_limit_in_bytes)) {
+                return conv_bd_data_algo;
             }
         }
         return nullptr;
@@ -269,14 +271,16 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
         for (int i = 0; i < ret_count; ++i) {
             if (algo_perf[i].memory > workspace_limit_in_bytes)
                 continue;
-            if ((positive_attr & AlgoAttribute::REPRODUCIBLE)) {
-                if (algo_perf[i].determinism == CUDNN_DETERMINISTIC) {
-                    return reinterpret_cast<AlgoBase*>(
-                            sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
-                }
-            } else {
-                return reinterpret_cast<AlgoBase*>(
-                        sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
+            if ((positive_attr & AlgoAttribute::REPRODUCIBLE) &&
+                (algo_perf[i].determinism != CUDNN_DETERMINISTIC)) {
+                continue;
+            }
+            AlgoBase* conv_bd_filter_algo = reinterpret_cast<AlgoBase*>(
+                    sm_algo_pack.cudnn_from_enum(algo_perf[i].algo));
+            if (conv_bd_filter_algo->is_available_attribute(
+                        args, positive_attr, negative_attr,
+                        workspace_limit_in_bytes)) {
+                return conv_bd_filter_algo;
             }
         }
         return nullptr;
