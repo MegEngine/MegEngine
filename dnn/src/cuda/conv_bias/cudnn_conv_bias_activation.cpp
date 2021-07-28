@@ -69,6 +69,12 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         return false;
     }
 
+    if (args.src_layout->dtype.enumv() == DTypeEnum::Float16 &&
+        args.dst_layout->dtype.enumv() == DTypeEnum::Float16 &&
+        param.format == param::ConvBias::Format::NHWC) {
+        return false;
+    }
+
     //! FIXME: conv kernel of cudnn for NCHW4_NCHW tensor format causes illegal
     //! memory access errors, so we have to disable this kernel here.
     if (param.format == param::ConvBias::Format::NCHW4_NCHW ||

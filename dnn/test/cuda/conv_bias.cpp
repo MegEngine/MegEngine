@@ -216,6 +216,41 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     }
 }
 
+TEST_F(CUDA, CONV_BIAS_FORWARD_FLOAT16) {
+    require_compute_capability(6, 1);
+
+    Checker<ConvBiasForward> checker(handle_cuda());
+    ConvBias::Param param;
+    param.format = ConvBias::Param::Format::NHWC;
+    param.nonlineMode = ConvBias::Param::NonlineMode::IDENTITY;
+
+    checker.set_epsilon(2e-2)
+            .set_dtype(0, dtype::Float16())
+            .set_dtype(1, dtype::Float16())
+            .set_dtype(2, dtype::Float16())
+            .set_dtype(3, dtype::Float16())
+            .set_dtype(4, dtype::Float16());
+    {
+        auto src_shape = TensorShape{20, 224, 224, 4};
+        auto filter_shape = TensorShape{24, 1, 1, 4};
+        auto bias_shape = TensorShape{1, 1, 1, 24};
+        checker.set_param(param).execs(
+                {src_shape, filter_shape, bias_shape, {}, {}});
+        param.compute_mode = ConvBias::Param::ComputeMode::FLOAT32;
+        checker.set_param(param).execs(
+                {src_shape, filter_shape, bias_shape, {}, {}});
+    }
+
+    {
+        param.sparse = ConvBias::Param::Sparse::GROUP;
+        auto src_shape = TensorShape{20, 224, 224, 16};
+        auto filter_shape = TensorShape{4, 4, 1, 1, 4};
+        auto bias_shape = TensorShape{1, 1, 1, 16};
+        checker.set_param(param).execs(
+                {src_shape, filter_shape, bias_shape, {}, {}});
+    }
+}
+
 TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
     //! not support NonlineMode::SIGMOID and NonlineMode::H_SWISH
     require_compute_capability(6, 1);

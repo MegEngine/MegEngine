@@ -151,14 +151,14 @@ bool is_cudnn_supported(const BiasForwardSizeArgs& args) {
     if (args.handle->is_tegra_k1())
         return false;
 
-    // TODO: We only support NCHW format now. It seems cuDNN provides support
-    // for NHWC as well.
-    if (args.filter_meta.format == param::Convolution::Format::NCHW4) {
+    if (args.filter_meta.format == param::Convolution::Format::NCHW4 ||
+        args.filter_meta.format == param::Convolution::Format::NCHW32) {
         if (args.dst_layout->dtype.enumv() != DTypeEnum::Int8 &&
             args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS8) {
             return false;
         }
-    } else if (args.filter_meta.format != param::Convolution::Format::NCHW) {
+    } else if (args.filter_meta.format != param::Convolution::Format::NCHW &&
+               args.filter_meta.format != param::Convolution::Format::NHWC) {
         return false;
     }
     auto& fm = args.filter_meta;
