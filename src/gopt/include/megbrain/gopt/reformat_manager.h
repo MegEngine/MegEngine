@@ -101,12 +101,21 @@ public:
                                ReformatKey::Equal>;
     ReformatImpl get(const ReformatKey& key) const;
     ReformatImpl get(ReformatKey&& key) const { return get(key); }
+    ReformatImpl auto_aligned_reformat_featrue(const VarNode* orig_var,
+                                               TensorFormats orig_format,
+                                               const ReformatKey& key) const;
+    struct AlignmentDesc {
+        megdnn::Dimension::Name name;
+        size_t alignment;
+    };
+    ReformatImpl auto_aligned_reformat_weight(
+            const VarNode* orig_var, const ReformatKey& key,
+            const AlignmentDesc& extra_alignment = {}) const;
     static const ReformatManager& instance();
 
 private:
     ReformatCache m_cache;
 };
-
 }  // namespace gopt
 }  // namespace mgb
 

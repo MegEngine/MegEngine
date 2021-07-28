@@ -77,6 +77,26 @@ private:
     };
     UnderlyingBuilders analyze() const;
 };
+
+class PaddingEmitter final : public Emitter {
+public:
+    PaddingEmitter(size_t const_extent, size_t axis)
+            : m_const_extent{const_extent}, m_axis{axis} {}
+    EmitResult emit() const override;
+
+private:
+    size_t m_const_extent, m_axis;
+};
+
+class SubtensorEmitter final : public Emitter {
+public:
+    SubtensorEmitter(size_t const_extent, size_t axis)
+            : m_const_extent{const_extent}, m_axis{axis} {}
+    EmitResult emit() const override;
+
+private:
+    size_t m_const_extent, m_axis;
+};
 }  // namespace gopt
 }  // namespace mgb
 

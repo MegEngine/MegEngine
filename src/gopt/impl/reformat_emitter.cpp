@@ -13,6 +13,7 @@
 #include "megbrain/gopt/reformat_emitter.h"
 #include <numeric>
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/io.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -243,4 +244,63 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
     }
     return builders;
 }
+
+/* ============== PaddingEmitter ================= */
+PaddingEmitter::EmitResult PaddingEmitter::emit() const {
+    auto&& const_extent = m_const_extent;
+    auto&& axis = m_axis;
+    auto builder = [const_extent, axis](const VarNodeArray& vars) {
+        auto i = vars[0];
+        auto padding_shp_var = vars[1];
+        TensorShape shape;
+        shape.ndim = i->shape().ndim;
+        for (size_t ax = 0; ax < shape.ndim; ++ax)
+            shape[ax] = 1;
+        shape[axis] = const_extent;
+        auto host_val =
+                std::make_shared<HostTensorND>(i->comp_node(), i->dtype());
+        host_val->resize(shape);
+        auto ptr = host_val->raw_ptr();
+        size_t size_bytes = TensorLayout{shape, i->dtype()}.span().dist_byte();
+        std::memset(ptr, 0, size_bytes);
+        auto padding =
+                opr::ImmutableTensor::make(*i->owner_graph(), *host_val);
+        padding = opr::Broadcast::make(padding, padding_shp_var);
+        auto o = opr::Concat::make({i, padding}, axis);
+        return o.node();
+    };
+    auto checker = [axis](const VarNodeArray& vars) {
+        mgb_assert(vars.size() == 2);
+        return vars[0]->shape().ndim > axis;
+    };
+    return std::make_tuple(builder, checker);
+}
+
+/* ============== SubtensorEmitter ================= */
+SubtensorEmitter::EmitResult SubtensorEmitter::emit() const {
+    auto&& const_extent = m_const_extent;
+    auto&& axis = m_axis;
+    auto builder = [const_extent, axis](const VarNodeArray& vars) {
+        auto i = vars[0];
+        auto x = SymbolVar(i);
+        auto cv = [&x](int v) { return x.make_scalar(v); };
+        using AIdx = opr::Subtensor::AxisIndexer;
+        std::vector<AIdx> index(i->shape().ndim);
+        for (size_t ax = 0; ax < index.size(); ++ax) {
+            if (ax == axis)
+                index[ax] =
+                        AIdx::make_interval(ax, None, cv(const_extent), None);
+            else
+                index[ax] = AIdx::make_interval(ax, None, None, cv(1));
+        }
+        auto o = opr::Subtensor::make(x, index);
+        return o.node();
+    };
+    auto checker = [axis](const VarNodeArray& vars) {
+        mgb_assert(vars.size() == 2);
+        return vars[0]->shape().ndim > axis;
+    };
+    return std::make_tuple(builder, checker);
+}
+
 // vim: syntax=cpp.doxygen
