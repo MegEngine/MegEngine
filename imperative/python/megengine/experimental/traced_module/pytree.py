@@ -13,13 +13,45 @@ from typing import Callable, NamedTuple
 
 import numpy as np
 
+from ...core._imperative_rt.common import CompNode
+from ...core._imperative_rt.core2 import Tensor as RawTensor
+from ...core._wrap import Device
+from ...core.tensor.dtype import QuantDtypeMeta
+from ...module import Module
+from ...quantization.utils import LSQParams, QParams, QuantMode
+from ...tensor import Parameter, Tensor
+from .node import ModuleNode, Node, NodeMixin, TensorNode
+
 SUPPORTED_TYPE = {}
+
+# if type(object) or obj in SUPPORTED_LEAF_TYPE, the object could be treated as leaf node of pytree
+SUPPORTED_LEAF_TYPE = {
+    RawTensor,
+    Tensor,
+    Parameter,
+    str,
+    int,
+    float,
+    bool,
+    QuantDtypeMeta,
+    CompNode,
+    Device,
+    type(None),
+    type(Ellipsis),
+    QuantMode,
+}
+
+# if isinstance(object, SUPPORTED_LEAF_CLS) or issubclass(obj, SUPPORTED_LEAF_CLS) is True, the object could be threated as leaf node of pytree
+SUPPORTED_LEAF_CLS = [Module, Node, NodeMixin, np.dtype, np.ndarray, np.number]
 
 NodeType = NamedTuple("NodeType", [("flatten", Callable), ("unflatten", Callable)])
 
 
-def register_supported_type(type, flatten, unflatten):
-    SUPPORTED_TYPE[type] = NodeType(flatten, unflatten)
+def register_supported_type(type, flatten=None, unflatten=None):
+    if flatten and unflatten:
+        SUPPORTED_TYPE[type] = NodeType(flatten, unflatten)
+    else:
+        SUPPORTED_LEAF_CLS.append(type)
 
 
 def _dict_flatten(inp):
@@ -48,6 +80,22 @@ def _ordereddict_unflatten(inps, aux_data):
     return OrderedDict(zip(aux_data, inps))
 
 
+def qparams_flatten(inp):
+    aux_data = []
+    results = []
+    for key in inp.__slots__:
+        aux_data.append(key)
+        results.append(getattr(inp, key, None))
+    return results, tuple(aux_data)
+
+
+def qparams_unflatten(inp, aux_data):
+    obj = QParams.__new__(QParams)
+    for k, v in zip(aux_data, inp):
+        setattr(obj, k, v)
+    return obj
+
+
 register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
 register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: tuple(x))
 register_supported_type(dict, _dict_flatten, _dict_unflatten)
@@ -60,15 +108,40 @@ register_supported_type(
     lambda x, aux_data: slice(x[0], x[1], x[2]),
 )
 
+register_supported_type(QParams, qparams_flatten, qparams_unflatten)
+
+
+def _is_leaf(obj):
+    if isinstance(obj, type):
+        return issubclass(obj, tuple(SUPPORTED_LEAF_CLS)) or obj in SUPPORTED_LEAF_TYPE
+    return (
+        isinstance(obj, tuple(SUPPORTED_LEAF_CLS)) or type(obj) in SUPPORTED_LEAF_TYPE
+    )
+
+
+def _leaf_type(node):
+    if isinstance(node, (RawTensor, TensorNode)):
+        return (Tensor, TensorNode)
+    elif isinstance(node, (NodeMixin, Module)):
+        return (Module, ModuleNode, NodeMixin)
+    else:
+        return type(node)
+
+
+def _is_const_leaf(node):
+    if isinstance(node, (RawTensor, NodeMixin, Module)):
+        return False
+    return True
+
 
 def tree_flatten(
     values,
-    leaf_type: Callable = lambda x: type(x),
-    is_leaf: Callable = lambda _: True,
-    is_const_leaf: Callable = lambda _: False,
+    leaf_type: Callable = _leaf_type,
+    is_leaf: Callable = _is_leaf,
+    is_const_leaf: Callable = _is_const_leaf,
 ):
     if type(values) not in SUPPORTED_TYPE:
-        assert is_leaf(values)
+        assert is_leaf(values), values
         node = LeafDef(leaf_type(values))
         if is_const_leaf(values):
             if isinstance(values, np.ndarray):

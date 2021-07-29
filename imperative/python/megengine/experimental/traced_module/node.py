@@ -15,7 +15,6 @@ import numpy
 from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...module import Module
 from ...tensor import Tensor
-from .pytree import TreeDef
 
 
 class Node:
@@ -102,12 +101,25 @@ class TensorNode(Node):
 
     shape = None  # type: Tuple[int]
     dtype = None  # type: numpy.dtype
+    qparam = None
+    device = None
 
     def __repr__(self):
         if self._name is None:
             return "%{}_(Tensor)".format(self._id)
         else:
             return "%{}_{}(Tensor)".format(self._id, self._name)
+
+    def __getstate__(self):
+        return {
+            "expr": self.expr,
+            "users": self.users,
+            "_id": self._id,
+            "qparam": self.qparam,
+            "shape": self.shape,
+            "dtype": self.dtype,
+            "device": self.device,
+        }
 
 
 class NodeMixin(abc.ABC):
@@ -119,14 +131,24 @@ class NodeMixin(abc.ABC):
         pass
 
     @classmethod
+    def _record_tensornode_property(cls, node, value):
+        assert isinstance(node, TensorNode)
+        assert isinstance(value, RawTensor)
+        if isinstance(value, RawTensor):
+            node.dtype = value.dtype
+            node.shape = (
+                value._tuple_shape if isinstance(value, Tensor) else value.shape
+            )
+            node.device = value.device
+            if hasattr(value, "_qparams") and value._qparams is not None:
+                node.qparams = value.qparams
+
+    @classmethod
     def wrap(cls, value, node):
         if isinstance(value, (NodeMixin, RawTensor)):
             if isinstance(node, Node):
                 if isinstance(value, RawTensor):
-                    node.dtype = value.dtype
-                    node.shape = (
-                        value._tuple_shape if isinstance(value, Tensor) else value.shape
-                    )
+                    cls._record_tensornode_property(node, value)
                 if isinstance(value, NodeMixin):
                     value._record_wrapped_nodes(node)
                 setattr(value, "_NodeMixin__node", node)
@@ -135,10 +157,7 @@ class NodeMixin(abc.ABC):
                 n = node()
                 assert isinstance(n, Node)
                 if isinstance(value, RawTensor):
-                    n.dtype = value.dtype
-                    n.shape = (
-                        value._tuple_shape if isinstance(value, Tensor) else value.shape
-                    )
+                    cls._record_tensornode_property(n, value)
                 if isinstance(value, NodeMixin):
                     value._record_wrapped_nodes(n)
                 setattr(value, "_NodeMixin__node", n)
@@ -147,10 +166,7 @@ class NodeMixin(abc.ABC):
     def wrap_safe(cls, value, node):
         assert isinstance(value, (NodeMixin, RawTensor))
         if isinstance(value, RawTensor):
-            node.dtype = value.dtype
-            node.shape = (
-                value._tuple_shape if isinstance(value, Tensor) else value.shape
-            )
+            cls._record_tensornode_property(node, value)
         setattr(value, "_NodeMixin__node", node)
         if isinstance(value, NodeMixin):
             value._record_wrapped_nodes(node)
