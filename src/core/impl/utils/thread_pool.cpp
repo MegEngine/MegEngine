@@ -20,6 +20,9 @@ ThreadPool::ThreadPool(size_t threads_num)
           m_main_affinity_flag{false},
           m_stop{false},
           m_active{false} {
+    if (threads_num < 1) {
+        m_nr_threads = 1;
+    }
     if (m_nr_threads > 1) {
         if (m_nr_threads > static_cast<uint32_t>(sys::get_cpu_count())) {
             mgb_log_debug(

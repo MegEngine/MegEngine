@@ -102,7 +102,7 @@ class CpuDispatchChecker final : MegcoreCPUDispatcher {
         std::vector<std::thread> m_workers;
 #endif
         //! Total number of threads, including main thread.
-        size_t m_nr_threads = 0;
+        size_t m_nr_threads = 1;
     };
 
     //! track number of CpuDispatchChecker instances to avoid leaking
