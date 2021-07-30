@@ -562,7 +562,7 @@ public:
             m_config->genetic_pool_size = psize;
         }
         if (auto env = MGB_GETENV("MGB_SUBLINEAR_MEMORY_LOWER_BOUND_MB")) {
-            m_config->lb_memory = std::stoi(env) * 1024 * 1024;
+            m_config->lb_memory_mb = std::stoi(env);
         }
     }
 
@@ -781,7 +781,7 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_genetic() {
 }
 
 void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_refine() {
-    size_t lower_bound = m_par_modifier->m_config->lb_memory;
+    size_t lower_bound = static_cast<size_t>(m_par_modifier->m_config->lb_memory_mb) << 20;
     if (m_min_bottleneck >= lower_bound)
         return;
     OprFootprint footprint;

@@ -476,7 +476,7 @@ void init_graph_rt(py::module m) {
         DEF_READWRITE(thresh_nr_try)
         DEF_READWRITE(genetic_nr_iter)
         DEF_READWRITE(genetic_pool_size)
-        DEF_READWRITE(lb_memory)
+        DEF_READWRITE(lb_memory_mb)
         DEF_READWRITE(num_worker);
 
 #undef CURRENT_CLASS

@@ -532,7 +532,7 @@ class trace:
         if self._sublinear_memory_config is not None:
             graph.options.enable_sublinear_memory_opt = True
             sublinear_config = graph.options.sublinear_mem_config
-            sublinear_config.lb_memory = self._sublinear_memory_config.lb_memory
+            sublinear_config.lb_memory_mb = self._sublinear_memory_config.lb_memory_mb
             sublinear_config.genetic_nr_iter = (
                 self._sublinear_memory_config.genetic_nr_iter
             )

@@ -443,7 +443,7 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                 int thresh_nr_try = 10;
                 int genetic_nr_iter = 0;
                 int genetic_pool_size = 20;
-                int lb_memory = 0;
+                int lb_memory_mb = 0;
                 int num_worker = sys::get_cpu_count() / 2;
             } sublinear_mem_config;
 
