@@ -27,6 +27,7 @@ __all__ = [
     "broadcast_to",
     "concat",
     "cond_take",
+    "cumsum",
     "expand_dims",
     "eye",
     "flatten",
@@ -1328,3 +1329,35 @@ def roll(
     if shp_bak is not None:
         out = out.reshape(shp_bak)
     return out
+
+
+def cumsum(inp: Tensor, axis: int):
+    """
+    Computes the cumulative sum of elements along given axis.
+
+    :param inp: input tensor.
+    :param axis: axis along which cumsum is performed.
+
+    Examples:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as F
+
+        x = tensor([[1, 2, 3], [4, 5, 6]], "int32")
+        y = F.cumsum(x, 1)
+        print(y.numpy())
+
+    Outputs:
+
+    .. testoutput::
+
+        [[ 1  3  6]
+         [ 4  9 15]]
+
+    """
+    assert isinstance(inp, Tensor), "input of cumsum must be type of Tensor"
+    assert axis >= 0 and axis < inp.ndim, "input axis {} out of bound".format(axis)
+    op = builtin.Cumsum(axis=axis, exclusive=False, reverse=False)
+    return apply(op, inp)[0]

@@ -673,4 +673,16 @@ OP_TRAIT_REG(SlidingWindowTranspose, SlidingWindowTranspose)
     .fallback();
 }} // sliding_window_transpose
 
+namespace {
+namespace cumsum {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Cumsum&>(def);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Cumsum::make(inputs[0], op.param(), config);
+}
+
+OP_TRAIT_REG(Cumsum, Cumsum).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace cumsum
+}  // namespace
+
 } // namespace mgb::imperative

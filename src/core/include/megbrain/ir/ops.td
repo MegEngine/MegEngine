@@ -377,4 +377,6 @@ def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 
+def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
+
 #endif // MGB_OPS
