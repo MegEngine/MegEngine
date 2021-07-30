@@ -309,7 +309,7 @@ inline auto apply(Subgraph graph, Tensor*const* args, size_t nargs) {
     for (size_t i = 0; i < nargs; ++i) {
         inputs.push_back(args[i]->shared_from_this());
     }
-    auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<std::shared_ptr<Tensor>> inputs) {
+    auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<std::shared_ptr<Tensor>> inputs, size_t) {
         return apply(op, std::move(inputs));
     };
     return graph.apply(inputs, apply_functor, &make_const);
@@ -317,7 +317,7 @@ inline auto apply(Subgraph graph, Tensor*const* args, size_t nargs) {
 
 template <typename T>
 auto apply(Subgraph graph, T&& tensors)
-        -> std::enable_if_t<std::is_same_v<decltype(tensors[0]), Tensor*>,
+        -> std::enable_if_t<std::is_same_v<std::decay_t<decltype(tensors[0])>, Tensor*>,
                             apply_result_t> {
     size_t nargs = tensors.size();
     Tensor* args[nargs];
