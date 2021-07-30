@@ -894,6 +894,47 @@ TEST(TestTensorManip, SubtensorIdxChange) {
     run(false);
 }
 
+TEST(TestTensorManip, SubtensorEmptyIO) {
+    using AIdx = opr::Subtensor::AxisIndexer;
+    using IndexDesc = std::vector<AIdx>;
+    using IndexDescCreater = thin_function<IndexDesc(SymbolVar)>;
+    HostTensorGenerator<> gen;
+    auto run = [&](const TensorShape& inp_shp, const TensorShape& out_shp, const IndexDescCreater& c) {
+        auto host_x = gen(inp_shp);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+        auto y = opr::Subtensor::make(x, c(x));
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(host_y.shape(), out_shp);
+        ASSERT_TRUE(host_y.empty());
+    };
+    // x.shape = {0}, x[:0]
+    run({0}, {0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, None, x.make_scalar(0), None)};
+    });
+    // x.shape = {100, 0}, x[0:-10:2]
+    run({100, 0}, {45, 0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(0), x.make_scalar(-10), x.make_scalar(2))};
+    });
+    // x.shape = {100, 0}, x[10:-10:2, 0:0]
+    run({100, 0}, {40, 0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(10), x.make_scalar(-10), x.make_scalar(2)),
+                AIdx::make_interval(1, x.make_scalar(0), x.make_scalar(0), None)};
+    });
+    // x.shape = {10, 0, 10}, x[5, 10:-10:-2]
+    run({10, 0, 10}, {0, 10}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_index(0, x.make_scalar(5)),
+                AIdx::make_interval(1, x.make_scalar(10), x.make_scalar(-10), x.make_scalar(2))};
+    });
+    // x.shape = {10}, x[100:]
+    run({10}, {0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(100), None, None)};
+    });
+}
+
 namespace {
 
 void test_subtensor_fwdonly(bool dyn_inp, bool dyn_idx) {

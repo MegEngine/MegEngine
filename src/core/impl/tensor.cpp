@@ -133,27 +133,42 @@ SubTensorSpec Slice::apply(TensorLayout layout, int axis) const {
             return "None";
         return std::to_string(v.val());
     };
-    auto mod_size = [size_ax](ptrdiff_t v) {
+    auto mod_size = [size_ax](ptrdiff_t v)->ptrdiff_t {
+        if (size_ax == 0) return 0;
         return v < 0 ? v + size_ax : v;
     };
     MGB_MARK_USED_VAR(tostr);
 
-#define CHECK(cond) \
-    mgb_assert(cond, \
-            "index out of bound: layout=%s; request begin=%s end=%s step=%s " \
-            "axis=%d", \
-            layout.to_string().c_str(), tostr(m_begin).c_str(), \
-            tostr(m_end).c_str(), tostr(m_step).c_str(), axis)
+#define CHECK(cond)                                                                 \
+    if (m_is_scalar_idx) {                                                          \
+        mgb_assert(cond,                                                            \
+                "index out of bound: layout=%s; request index=%s, axis=%d",         \
+                layout.to_string().c_str(), tostr(m_begin).c_str(), axis);          \
+    } else {                                                                        \
+        mgb_assert(cond,                                                            \
+                "index out of bound: layout=%s; request begin=%s end=%s step=%s "   \
+                "axis=%d",                                                          \
+                layout.to_string().c_str(), tostr(m_begin).c_str(),                 \
+                tostr(m_end).c_str(), tostr(m_step).c_str(), axis);                 \
+    }
 
     if (step > 0) {
         begin = mod_size(m_begin.val_with_default(0));
         end = mod_size(m_end.val_with_default(size_ax));
-        CHECK(begin >= 0 && end >= begin && end <= size_ax);
+        if (!m_is_scalar_idx) {
+            end = std::min(end, size_ax);
+            begin = std::min(begin, end);
+        }
+        CHECK(begin >= 0 && end >= begin && end <= size_ax)
     } else {
         begin = mod_size(m_begin.val_with_default(size_ax - 1));
         end = m_end.valid() ? mod_size(m_end.val()) : -1;
+        if (!m_is_scalar_idx) {
+            begin = std::min(begin, std::max<ptrdiff_t>(size_ax-1, 0));
+            end = std::min(end, begin);
+        }
         CHECK(step < 0 && begin >= 0 && end <= begin && begin < size_ax &&
-              end >= -1);
+              end >= -1)
     }
     auto step_abs = std::abs(step);
     layout.shape[axis] = (std::abs(end - begin) + step_abs - 1) / step_abs;

@@ -178,7 +178,9 @@ SubTensorSpec FancyIndexingHelper::do_make_sub_spec(
                 i.axis.get_raw(), axis);
         prev_axis = axis;
         Maybe<ptrdiff_t> begin, end, step;
+        bool is_scalar_idx = false;
         if (i.idx.node()) {
+            is_scalar_idx = true;
             if (!m_require_scalar_index) {
                 continue;
             }
@@ -195,7 +197,7 @@ SubTensorSpec FancyIndexingHelper::do_make_sub_spec(
                 step = next_iv();
         }
 
-        spec.merge_with(Slice(begin, end, step).apply(spec.layout(), axis));
+        spec.merge_with(Slice(begin, end, step, is_scalar_idx).apply(spec.layout(), axis));
     }
     mgb_assert(iv_iter == m_value_infer_result.end());
 

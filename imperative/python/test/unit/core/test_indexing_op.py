@@ -15,6 +15,7 @@ from utils import make_tensor
 import megengine
 import megengine.core.tensor.megbrain_graph as G
 import megengine.functional as F
+import megengine.jit as jit
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.ops import builtin
@@ -584,3 +585,26 @@ def test_advance_indexing_with_bool(test_varnode):
     np.testing.assert_equal(
         a[:, b, 0:2, [True, False]], aa[:, bb, 0:2, [True, False]].numpy()
     )
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_subtensor_on_empty_tensor(symbolic):
+    np_x = np.array([], dtype=np.float32).reshape(10, 0, 10)
+    mge_x = megengine.tensor(np_x)
+
+    def run_test(fn):
+        out_ref = fn(np_x)
+        if symbolic is not None:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for i in range(3):
+            out = fn(mge_x)
+            np.testing.assert_equal(out.numpy(), out_ref)
+
+    run_test(lambda x: x[0:1, :, :])
+    run_test(lambda x: x[1:100:2, :, :])
+    run_test(lambda x: x[-10:5:2, :, :])
+    run_test(lambda x: x[5:1:-1, :, :])
+    run_test(lambda x: x[3, 10:1:1, 5])
+    run_test(lambda x: x[3, 10:1:1, 5:-1])
+    run_test(lambda x: x[:100, :100, :100])
+    run_test(lambda x: x[100:200, 300:400, 500:600])

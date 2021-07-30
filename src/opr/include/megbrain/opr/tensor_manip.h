@@ -358,6 +358,7 @@ MGB_DEFINE_OPR_CLASS(Subtensor,
     void scn_do_execute() override;
     void mem_plan_fwd_in2out_readonly() override;
     void init_rt_force_dynamic_mem_alloc_imply_chain() override;
+    NodeProp* do_make_node_prop() const override;
 
     public:
         Subtensor(VarNode *inp, const IndexDesc &desc,

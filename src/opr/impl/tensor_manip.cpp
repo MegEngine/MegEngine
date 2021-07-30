@@ -660,7 +660,19 @@ MGB_IMPL_OPR_GRAD(AxisAddRemove) {
 
 /* f{{{ ======================= Subtensor ======================= */
 
-MGB_IMPL_FANCY_INDEXING_OPR_GET(Subtensor, "subtensor", true);
+Subtensor::Subtensor(VarNode *inp, const IndexDesc &desc,
+        const OperatorNodeConfig &config):
+    Super({inp->owner_graph(), config, "subtensor", {inp}},
+            inp, nullptr, desc, true) {
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+}
+
+SymbolVar Subtensor::make(SymbolVar inp, const IndexDesc &desc,
+        const OperatorNodeConfig &config) {
+    return inp.insert_single_output_opr<Subtensor>(inp.node(), desc, config);
+}
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Subtensor);
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Subtensor) {
@@ -720,6 +732,13 @@ void Subtensor::init_rt_force_dynamic_mem_alloc_imply_chain() {
     auto inp = input(0), out = output(0);
     inp->add_rt_force_dynamic_mem_alloc_imply_chain(out);
     out->add_rt_force_dynamic_mem_alloc_imply_chain(inp);
+}
+
+Subtensor::NodeProp* Subtensor::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 // f}}}

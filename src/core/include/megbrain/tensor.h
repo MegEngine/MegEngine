@@ -83,16 +83,20 @@ class SubTensorSpec {
 
 /*!
  * \brief slice along some axis; index as in Python, with negative indices
- *      supported
+ *      supported. Scalar index can also be represented as a Slice, where
+ *      m_begin = idx, m_end = idx+1 and m_step = 1. The flag m_is_scalar_idx
+ *      indicates whether the Slice comes from a scalar index.
  */
 class Slice {
     Maybe<ptrdiff_t> m_begin, m_end, m_step;
+    bool m_is_scalar_idx;
 
     public:
         Slice(Maybe<ptrdiff_t> begin = None,
                 Maybe<ptrdiff_t> end = None,
-                Maybe<ptrdiff_t> step = None):
-            m_begin{begin}, m_end{end}, m_step{step}
+                Maybe<ptrdiff_t> step = None,
+                bool is_scalar_idx = false):
+            m_begin{begin}, m_end{end}, m_step{step}, m_is_scalar_idx{is_scalar_idx}
         { }
 
         /*!
