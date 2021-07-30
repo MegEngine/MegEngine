@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [master, try-import]
+  pull_request:
+
+concurrency: 
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+  
+jobs:
+  cpu-test:
+    runs-on: self-hosted
+    container:
+      image: localhost:5000/megengine-ci:latest
+    steps:
+      - name: Checkout MegEngine
+        uses: actions/checkout@v2
+      - name: Checkout submodules
+        run: |
+          ./third_party/prepare.sh
+          ./third_party/install-mkl.sh
+      - name: Build MegEngine
+        run: ./ci/cmake.sh cpu
+      - name: Python test
+        run: ./ci/run_python_test.sh cpu
+      - name: C++ test
+        run: ./ci/run_cpp_test.sh cpu
+  gpu-test:
+    runs-on: self-hosted
+    container:
+      image: localhost:5000/megengine-ci:latest
+      volumes:
+        - /usr/local/cuda-10.1-libs:/usr/local/cuda-10.1-libs
+      options: --gpus all --shm-size 1g
+      env:
+        NCCL_LAUNCH_MODE: PARALLEL
+    steps:
+      - name: Checkout MegEngine
+        uses: actions/checkout@v2
+      - name: Checkout submodules
+        run: |
+          ./third_party/prepare.sh
+          ./third_party/install-mkl.sh
+      - name: Build MegEngine
+        run: ./ci/cmake.sh cuda
+      - name: Python test
+        run: ./ci/run_python_test.sh cuda
+      - name: C++ test
+        run: ./ci/run_cpp_test.sh cuda
+  auto-merge:
+    if: ${{ github.ref == 'refs/heads/try-import' }}
+    runs-on: ubuntu-latest
+    needs: [cpu-test, gpu-test]
+    steps:
+      - name: Checkout MegEngine
+        uses: actions/checkout@v2
+      - name: Merge with master
+        run: |
+          git config user.name "megvii-mge"
+          git config user.email "megengine@megvii.com"
+          git checkout master
+          git rebase try-import
+          git push
