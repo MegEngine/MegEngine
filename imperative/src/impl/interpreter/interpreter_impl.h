@@ -85,8 +85,12 @@ private:
     void detach_users(TensorInfo*);
 
     TensorInfo* put_impl(const HostTensorND& value, bool no_cache);
+    TensorInfo* put_impl(const DeviceTensorND& value, const HostTensorND& hvalue);
     void del_impl(Handle);
     void sync_impl();
+    SmallVector<Handle> apply_op_impl(
+            std::shared_ptr<OpDef> op,
+            const SmallVector<Handle>& inputs);
     TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
     void notify_tensor_unsafe(TensorInfo* info);
 
