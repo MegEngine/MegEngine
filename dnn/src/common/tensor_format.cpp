@@ -604,7 +604,7 @@ TensorLayout LowbitsAlignedTensorFormatBase::collapse_contiguous_spec(
 TensorFormat Image2DPack4TensorFormat::make_raw(
         size_t align_axis, size_t align_size_in_elements,
         Handle::HandleVendorType vendor_type) {
-    static std::mutex mtx;
+    static DNN_MUTEX mtx;
     static std::unordered_map<uint64_t,
                               std::unique_ptr<Image2DPack4TensorFormat>>
             cache;
@@ -641,7 +641,7 @@ TensorFormat Image2DPack4TensorFormat::change_axis(size_t axis) const {
 /* ===================== LowbitsitsAlignedToBytesTensorFormat
  * ===================== */
 TensorFormat LowbitsAlignedToBytesTensorFormat::make(size_t size_nbits) {
-    static std::mutex mtx;
+    static DNN_MUTEX mtx;
     static std::unordered_map<
             uint64_t, std::unique_ptr<LowbitsAlignedToBytesTensorFormat>>
             cache;

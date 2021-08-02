@@ -33,7 +33,7 @@ namespace {
     template<class Opr>
     class StaticInferOpr {
         intl::UniqPtrWithCN<Opr> m_opr;
-        std::mutex m_mtx;
+        MGB_MUTEX m_mtx;
 
         public:
             class Lock {
@@ -43,7 +43,9 @@ namespace {
                 explicit Lock(StaticInferOpr *owner):
                     m_owner{owner}
                 {
+#if !__DEPLOY_ON_XP_SP2__
                     m_owner->m_mtx.lock();
+#endif
                 }
 
                 public:
@@ -54,8 +56,10 @@ namespace {
                     }
 
                     ~Lock() {
+#if !__DEPLOY_ON_XP_SP2__
                         if (m_owner)
                             m_owner->m_mtx.unlock();
+#endif
                     }
 
                     Lock& operator = (const Lock &) = delete;

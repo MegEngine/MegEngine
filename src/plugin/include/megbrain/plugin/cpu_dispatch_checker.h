@@ -22,7 +22,7 @@ namespace mgb {
      * This is intended to find potential bugs in megdnn.
      */
     class CPUDispatchChecker final: public PluginBase {
-        std::mutex m_cn2nr_task_mtx,
+        MGB_MUTEX m_cn2nr_task_mtx,
             m_failed_oprs_mtx_storage,
             *m_failed_oprs_mtx = &m_failed_oprs_mtx_storage;
         CompNode::UnorderedMap<size_t> m_cn2nr_task;

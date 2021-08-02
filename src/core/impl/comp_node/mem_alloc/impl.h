@@ -73,7 +73,7 @@ class MemAllocImplHelper: virtual public MemAllocBase {
         //! map from address to size and size iter
         std::map<size_t, FreeBlockAddrInfo> m_free_blk_addr;
 
-        std::mutex m_mutex;
+        MGB_MUTEX m_mutex;
 
         struct BlkByAddrIter {
             decltype(m_free_blk_addr.begin()) aiter;

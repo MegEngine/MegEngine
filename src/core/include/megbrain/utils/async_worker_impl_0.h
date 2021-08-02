@@ -35,14 +35,20 @@ class AsyncWorkerSet final: public NonCopyableObj {
 };
 
 class FutureThreadPoolBase : public NonCopyableObj {
+#if !__DEPLOY_ON_XP_SP2__
     std::vector<std::thread::id> m_ids;
+#endif
     public:
         FutureThreadPoolBase(const Maybe<std::string>& = None) {}
 
+#if __DEPLOY_ON_XP_SP2__
+        size_t start(size_t concurrency) { return concurrency; }
+#else
         const std::vector<std::thread::id>& start(size_t concurrency) {
             m_ids.resize(concurrency, std::this_thread::get_id());
             return m_ids;
         }
+#endif
 
         void stop() {
         }

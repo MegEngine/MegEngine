@@ -731,7 +731,7 @@ class PersistentOutputStorage::StorageHolder final
                                      key.second);
         }
     };
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
     std::unordered_map<Key, DeviceTensorStorage, KeyHash> m_storage;
 
 public:

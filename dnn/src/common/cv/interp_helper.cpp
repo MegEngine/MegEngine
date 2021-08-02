@@ -145,7 +145,7 @@ init_inter_tab_1d(InterpolationMode imode, float* tab, int tabsz) {
 #if MEGDNN_X86
 DEF_FUN(const int16_t*) get_linear_ic4_table() {
     auto table_holder = &sm_tab_linear;
-    std::lock_guard<std::mutex> lg{table_holder->mtx};
+    MEGDNN_LOCK_GUARD(table_holder->mtx);
     float* tab = nullptr;
     short* itab = nullptr;
     MEGDNN_MARK_USED_VAR(tab);
@@ -175,7 +175,7 @@ DEF_FUN(const void*) get_table(InterpolationMode imode, bool fixpt) {
         default:
             megdnn_throw(("unsupported interpolation mode"));
     }
-    std::lock_guard<std::mutex> lg{table_holder->mtx};
+    MEGDNN_LOCK_GUARD(table_holder->mtx);
 
     float* tab = nullptr;
     short* itab = nullptr;

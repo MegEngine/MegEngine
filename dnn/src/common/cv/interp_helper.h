@@ -134,7 +134,7 @@ private:
     };
 
     struct TableHolderBase {
-        std::mutex mtx;
+        DNN_MUTEX mtx;
 
         //! get table pointer; return whether already init
         virtual bool get(float**, int16_t**) = 0;

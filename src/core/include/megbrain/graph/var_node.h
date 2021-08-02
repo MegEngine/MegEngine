@@ -222,7 +222,7 @@ class MemAllocPlan final: public json::Serializable, public NonCopyableObj {
     private:
         class ReadonlyFwdList {
             MemAllocPlan *m_prev = nullptr, *m_next = nullptr;
-            static std::mutex list_mutex;
+            static MGB_MUTEX list_mutex;
         public:
             MemAllocPlan* next() const { return m_next; }
             void reset();

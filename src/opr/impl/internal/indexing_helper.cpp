@@ -277,7 +277,7 @@ SubTensorSpec FancyIndexingHelper::fancy_indexing_make_sub_spec(
     mgb_assert(m_require_scalar_index || !fake_single_idx);
 
     static DeviceTensorND fake_val;
-    static std::mutex fake_val_mtx;
+    static MGB_MUTEX fake_val_mtx;
 
     if (mgb_unlikely(fake_val.empty())) {
         MGB_LOCK_GUARD(fake_val_mtx);

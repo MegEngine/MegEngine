@@ -60,10 +60,10 @@ T deserialize_pod(const std::string& data, size_t& offset) {
 ErrorHandler* ErrorHandler::sm_inst;
 
 ErrorHandler* ErrorHandler::inst() {
-    static std::mutex mtx;
+    static DNN_MUTEX mtx;
     static DefaultErrorHandler default_handler;
     if (megdnn_unlikely(!sm_inst)) {
-        std::lock_guard<std::mutex> lg{mtx};
+        MEGDNN_LOCK_GUARD(mtx);
         if (!sm_inst) {
             sm_inst = &default_handler;
         }

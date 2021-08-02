@@ -27,11 +27,13 @@ namespace sys {
     //! set name of caller thread
     void set_thread_name(const std::string &name);
 
+#if !__DEPLOY_ON_XP_SP2__
     /*!
      * \brief get name of of given thread
      * \param tid thread id, or None to for the caller thread
      */
     std::string get_thread_name(Maybe<std::thread::id> tid = None);
+#endif
 
     //! get number of CPU cores on this system
     int get_cpu_count();

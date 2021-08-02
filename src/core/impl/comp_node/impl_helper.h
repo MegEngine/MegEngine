@@ -49,7 +49,7 @@ namespace mgb {
      * been performed.
      */
     class CompNodeImplHelper::EventImplHelper: public Event {
-        std::mutex m_mtx;
+        MGB_MUTEX m_mtx;
 
         bool m_recorded = false, m_finished = false;
 

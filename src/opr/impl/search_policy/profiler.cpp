@@ -356,7 +356,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
             next_report_time = timer.get_secs() + 1;
         }
         using namespace std::literals;
+#if !__DEPLOY_ON_XP_SP2__
         std::this_thread::sleep_for(1000us);
+#endif
     }
     // release all free blocks owned by child process,
     // in order to avoid main process running out of memory

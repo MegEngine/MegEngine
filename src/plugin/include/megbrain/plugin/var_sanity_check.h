@@ -64,7 +64,7 @@ class VarSanityCheck final : public PluginBase {
 
     //! map from caller thread to workspace map
     ThinHashMap<std::thread::id, WorkspaceCache> m_workspace;
-    std::mutex m_workspace_mtx;
+    MGB_MUTEX m_workspace_mtx;
 
     ThinHashMap<VarNode*, ChecksumResult> m_var2chksum;
     /*! the ids of varnodes that have been modified by recv_opr
@@ -72,7 +72,7 @@ class VarSanityCheck final : public PluginBase {
      * cg::OperatorNodeBase::NodeProp::Flag:: FORCE_UPDATE_INPUT_VAR.
      */
     ThinHashSet<VarNode*> m_modified_vars;
-    std::mutex m_id2chksum_mtx;
+    MGB_MUTEX m_id2chksum_mtx;
 
     typedef void (VarSanityCheck::*input_checker_fn)(cg::OperatorNodeBase*,
                                                      VarNode*);

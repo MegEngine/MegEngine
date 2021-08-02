@@ -70,7 +70,7 @@ protected:
         MIDOUT_BEGIN(dnn_src_common_handle_impl, Opr, idx) {
             static_assert(idx < NR_HELPER_OPRS, "invalid idx");
             if (!self->m_helper_oprs[idx]) {
-                std::lock_guard<std::mutex> lg{self->m_helper_oprs_mtx};
+                MEGDNN_LOCK_GUARD(self->m_helper_oprs_mtx);
                 if (!self->m_helper_oprs[idx]) {
                     self->m_helper_oprs[idx] =
                             self->template create_operator<Opr>();
@@ -88,7 +88,7 @@ protected:
 
 private:
     std::array<std::unique_ptr<OperatorBase>, NR_HELPER_OPRS> m_helper_oprs;
-    std::mutex m_helper_oprs_mtx;
+    DNN_MUTEX m_helper_oprs_mtx;
 };
 
 }  // namespace megdnn

@@ -888,7 +888,7 @@ class LoopImpl::MutableStateSaver::Recorder final: public NonCopyableObj {
 
     //! mutex for m_saved_buckets, used between copy_bucket_to_host() and the
     //! async copy task in m_copy_threadpool
-    std::mutex m_saved_buckets_mtx;
+    MGB_MUTEX m_saved_buckets_mtx;
     //! see on_fwd_finish()
     TensorShape m_var_shape;
     bool m_enabled = false;

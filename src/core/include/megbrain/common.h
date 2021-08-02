@@ -205,6 +205,21 @@ void __log__(LogLevel level, const char *file, const char *func, int line,
 #define MGB_TOKENPASTE2(x, y) MGB_TOKENPASTE(x, y)
 #define MGB_LOCK_GUARD_CTOR(mtx) MGB_TOKENPASTE2(__lock_guard_, __LINE__)(mtx)
 
+#if __DEPLOY_ON_XP_SP2__
+//! refer to
+//! https://docs.microsoft.com/en-us/cpp/build/configuring-programs-for-windows-xp?view=msvc-160
+//! xp sp2 do not support vc runtime fully, casused by KERNEL32.dll do not
+//! implement some base apis for c++ std function, for example,
+//! std::mutex/std::thread/std::condition_variable as a workround, we will
+//! disable some MegEngine feature on xp sp2 env, for exampe, multi-thread etc!
+#define MGB_MUTEX size_t
+#define MGB_RECURSIVE_MUTEX size_t
+#define MGB_LOCK_GUARD(mtx) MGB_MARK_USED_VAR(mtx)
+#define MGB_LOCK_GUARD_UNIQUE(mtx) MGB_MARK_USED_VAR(mtx)
+#define MGB_LOCK_GUARD_SHARED(mtx) MGB_MARK_USED_VAR(MGB_MARK_USED_VAR)
+#else
+#define MGB_MUTEX std::mutex
+#define MGB_RECURSIVE_MUTEX std::recursive_mutex
 #define MGB_LOCK_GUARD(mtx) \
     std::lock_guard<decltype(mtx)> MGB_LOCK_GUARD_CTOR(mtx)
 
@@ -212,7 +227,8 @@ void __log__(LogLevel level, const char *file, const char *func, int line,
     std::unique_lock<decltype(mtx)> MGB_LOCK_GUARD_CTOR(mtx)
 
 #define MGB_LOCK_GUARD_SHARED(mtx) \
-	std::shared_lock<decltype(mtx)> MGB_LOCK_GUARD_CTOR(mtx)
+    std::shared_lock<decltype(mtx)> MGB_LOCK_GUARD_CTOR(mtx)
+#endif
 
 /*!
  * \brief printf-like std::string constructor

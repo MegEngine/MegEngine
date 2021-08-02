@@ -53,7 +53,7 @@ class SyncEventConnecter: public NonCopyableObj {
     using ReceiverMap = ThinHashMap<Typeinfo*, ReceiverList>;
 
     bool m_is_empty = true;
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
     //! map from type to receiver; use shared_ptr because it would be kept by
     //! handlers
     std::shared_ptr<ReceiverMap> m_receiver_map =

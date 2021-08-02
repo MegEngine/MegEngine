@@ -48,7 +48,11 @@ class ComputingGraphImpl::ComputingSequence::ExecContext {
     std::unique_ptr<CompNodeSeqRecorder> m_recorder;
 
     bool has_var_sanity_check() const {
+#if __DEPLOY_ON_XP_SP2__
+        return false;
+#else
         return static_cast<bool>(m_comp_seq->m_var_sanity_check);
+#endif
     }
 
     void try_reset_recorder() {
@@ -305,10 +309,12 @@ void ComputingGraphImpl::ComputingSequence::preprocess(ExecContext* ctx) {
             m_owner_graph->var_node_mem_manager().alloc_var_node_mem_static();
 
     bool first_exec = m_first_exec;
+#if !__DEPLOY_ON_XP_SP2__
     if (!first_exec) {
         // var sanity check only for first run
         m_var_sanity_check.reset();
     }
+#endif
 
     m_owner_graph->event().signal_inplace<event::CompSeqExecBeforeStart>(
             m_owner_graph, this, &ctx->m_cleanup_callback, &m_used_comp_node,
@@ -342,9 +348,13 @@ void ComputingGraphImpl::ComputingSequence::attach_to_graph() {
                 static_cast<ComputingSequence*>(gimpl->m_current_comp_seq);
         prev_seq->cleanup();
     }
+#if !__DEPLOY_ON_XP_SP2__
+    //! disable VarSanityCheck when __DEPLOY_ON_XP_SP2__=1. caused by
+    //! VarSanityCheck depends on std::thread
     if (gimpl->options().var_sanity_check_first_run) {
         m_var_sanity_check = std::make_unique<VarSanityCheck>(gimpl);
     }
+#endif
     gimpl->m_current_comp_seq = this;
 }
 
@@ -403,7 +413,9 @@ void ComputingGraphImpl::ComputingSequence::do_wait(bool explicit_user_wait) {
 }
 
 void ComputingGraphImpl::ComputingSequence::cleanup() {
+#if !__DEPLOY_ON_XP_SP2__
     m_var_sanity_check.reset();
+#endif
     if (has_uncaught_exception()) {
         mgb_log_warn(
                 "fallback to simple graph waiting in dtor due to uncaught "

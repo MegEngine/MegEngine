@@ -118,8 +118,17 @@
 #define megdnn_layout_msg(layout) \
     std::string(#layout "=" + (layout).to_string())
 
-#define MEGDNN_LOCK_GUARD(var) \
-    std::lock_guard<std::remove_cv_t<decltype(var)>> _lock_guard_##var { var }
+#if __DEPLOY_ON_XP_SP2__
+#define DNN_MUTEX size_t
+#define MEGDNN_LOCK_GUARD(var) MEGDNN_MARK_USED_VAR(var)
+#else
+#define DNN_MUTEX std::mutex
+#define DNN_TOKENPASTE(x, y) x##y
+#define DNN_TOKENPASTE2(x, y) DNN_TOKENPASTE(x, y)
+#define DNN_LOCK_GUARD_CTOR(mtx) DNN_TOKENPASTE2(__lock_guard_, __LINE__)(mtx)
+#define MEGDNN_LOCK_GUARD(mtx) \
+    std::lock_guard<decltype(mtx)> DNN_LOCK_GUARD_CTOR(mtx)
+#endif
 
 namespace megdnn {
 
@@ -487,7 +496,7 @@ struct _SafeMultipliesImplUnsigned : public std::binary_function<T, T, T> {
                 "implicit conversion disallowed in SafeMultiplies");
         megdnn_trap();
     }
-};
+};  // namespace megdnn
 
 template <>
 struct SafeMultiplies<size_t> : public _SafeMultipliesImplUnsigned<size_t> {};

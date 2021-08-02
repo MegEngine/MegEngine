@@ -50,7 +50,7 @@ namespace mgb {
         size_t m_cur_var_idx, m_nr_exec;
 
         VarNodeArray m_vars;
-        std::mutex m_var2val_mtx;
+        MGB_MUTEX m_var2val_mtx;
         ThinHashMap<VarNode*, std::shared_ptr<DeviceTensorND>> m_var2val;
         Checker m_checker;
 

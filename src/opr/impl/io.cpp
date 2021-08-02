@@ -377,7 +377,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(SharedDeviceTensorWithFormat);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ImmutableTensor);
 
 class ImmutableTensor::Value {
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
     DeviceTensorND m_dev, m_static_infer;
     std::string m_summary;
 
@@ -527,7 +527,7 @@ class ImmutableTensor::DevValueCache final: public UserDataContainer::UserData {
     std::unordered_map<TensorKey, Value, Hash> m_tensor2val;
     std::unordered_map<ScalarKey, Value, Hash> m_scalar2val;
 
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
 
     void setup_value(Value &dest, const HostTensorND &val) {
         dest.setup(m_comp_node, val);

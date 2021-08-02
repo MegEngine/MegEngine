@@ -122,7 +122,7 @@ class StaticInferManagerImpl final: public StaticInferManager {
         struct TagTraitContainer;
 
         ComputingGraph * const m_owner_graph;
-        std::recursive_mutex m_mtx;
+        MGB_RECURSIVE_MUTEX m_mtx;
 
         //! callbacks to be invoked in destructor
         ThinHashMap<void*, thin_function<void()>> m_dtor_callbacks;

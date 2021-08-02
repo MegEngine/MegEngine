@@ -32,7 +32,7 @@ namespace {
     std::atomic_flag
         g_default_cpu_initialized,
         g_exit_handler_registered[CompNode::NR_DEVICE_TYPE];
-    std::mutex g_device_map_mtx;
+    MGB_MUTEX g_device_map_mtx;
     ThinHashMap<CompNode::DeviceType, ThinHashMap<int, int>> g_device_map;
     CompNode::DeviceType g_unspec_locator_type;
 

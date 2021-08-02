@@ -125,9 +125,13 @@ void VarValueChecker::on_var_computed(VarNode *var) {
     }
 
     if (!m_init_val_dumped) {
+#if !__DEPLOY_ON_XP_SP2__
         m_var2val_mtx.lock();
-        auto &&val = m_var2val[var];
+#endif
+        auto&& val = m_var2val[var];
+#if !__DEPLOY_ON_XP_SP2__
         m_var2val_mtx.unlock();
+#endif
 
         mgb_assert(!val);
         val = std::make_shared<DeviceTensorND>();

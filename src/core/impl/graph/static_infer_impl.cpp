@@ -141,7 +141,11 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagConstShapeTrait final,
             TagTraitBase) //  {
     struct InferResultCache {
         Spinlock mtx;
+#if __DEPLOY_ON_XP_SP2__
+        ThinHashMap<size_t, InpElement> storage;
+#else
         ThinHashMap<std::thread::id, InpElement> storage;
+#endif
     };
     static TagTraitArray sm_empty_deps;
     static InferResultCache sm_result_cache;
@@ -167,7 +171,11 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagConstShapeTrait final,
             {
                 // thread_local not supported on ios; so we us a manual impl
                 MGB_LOCK_GUARD(sm_result_cache.mtx);
+#if __DEPLOY_ON_XP_SP2__
+                ret = &sm_result_cache.storage[0];
+#else
                 ret = &sm_result_cache.storage[std::this_thread::get_id()];
+#endif
             }
             ret->m_shape = &tag()->shape();
             return ret;

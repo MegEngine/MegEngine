@@ -60,7 +60,11 @@ class CpuCompNode::WorkerQueue final
             sys::set_cpu_affinity({m_locator.device});
 #endif
         }
+#if __DEPLOY_ON_XP_SP2__
+        __builtin_trap();
+#else
         sys::set_thread_name(m_locator.to_string());
+#endif
     }
 
     void on_sync_all_task_finish() override {
@@ -830,7 +834,9 @@ struct CpuCompNode::Pool {
         void operator()(CompNodeRecorderImpl* p) { p->~CompNodeRecorderImpl(); }
     };
 
+#if !__DEPLOY_ON_XP_SP2__
     std::recursive_mutex mtx;
+#endif
     // use global memory pool to ensuare object memory accessible even after
     // global finalize
     std::aligned_storage_t<sizeof(CompNodeRecorderImpl),
@@ -862,7 +868,9 @@ void CpuCompNode::foreach (thin_function<void(CompNode)> callback) {
     for (size_t i = 0;; ++i) {
         CompNode cur;
         {
+#if !__DEPLOY_ON_XP_SP2__
             MGB_LOCK_GUARD(sm_pool->mtx);
+#endif
             if (i >= sm_pool->nr_used_impl_storage)
                 return;
             cur = make_comp_node_from_impl(
@@ -909,7 +917,9 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
                        locator.device == Locator::DEVICE_MULTITHREAD_DEFAULT,
                "failed to load cpu for device:%d stream:%d", locator.device,
                locator.stream);
+#if !__DEPLOY_ON_XP_SP2__
     MGB_LOCK_GUARD(sm_pool->mtx);
+#endif
 
     // encode both device ID and type into a int
     mgb_assert(locator_logical.device >= -1 ||
@@ -967,7 +977,9 @@ void CpuCompNode::sync_all() {
     if (!sm_pool)
         return;
 
+#if !__DEPLOY_ON_XP_SP2__
     MGB_LOCK_GUARD(sm_pool->mtx);
+#endif
     for (auto&& i : sm_pool->locator2impl)
         i.second->sync();
     for (auto&& i : sm_pool->locator2impl_multi_thread)
@@ -1049,7 +1061,9 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
 
     auto waiter = [this, version]() {
         while (m_record_nr_finish.load(std::memory_order_acquire) < version) {
+#if !__DEPLOY_ON_XP_SP2__
             std::unique_lock<std::mutex> lk{m_dev_wait_mtx};
+#endif
             if (m_record_nr_finish.load(std::memory_order_acquire) >= version) {
                 break;
             }
@@ -1078,10 +1092,12 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::on_finish() {
     }
 
     m_record_nr_finish.fetch_add(1, std::memory_order_release);
+#if !__DEPLOY_ON_XP_SP2__
     if (m_dev_wait_nr_waiter.load(std::memory_order_acquire)) {
         MGB_LOCK_GUARD(m_dev_wait_mtx);
         m_dev_wait_cv.notify_all();
     }
+#endif
 }
 
 bool CpuCompNode::CpuDispatchableBase::EventImpl::do_finished() {
@@ -1100,11 +1116,15 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
 
     m_dev_wait_nr_waiter.fetch_add(1, std::memory_order_release);
     for (;;) {
+#if !__DEPLOY_ON_XP_SP2__
         std::unique_lock<std::mutex> lock{m_dev_wait_mtx};
+#endif
         if (finished()) {
             break;
         }
+#if !__DEPLOY_ON_XP_SP2__
         m_dev_wait_cv.wait(lock);
+#endif
     }
     m_dev_wait_nr_waiter.fetch_sub(1, std::memory_order_release);
 }

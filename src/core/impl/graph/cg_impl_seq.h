@@ -30,7 +30,9 @@ class ComputingGraphImpl::ComputingSequence final : public AsyncExecutable {
     size_t m_run_id = 0;
     size_t m_cg_event_version = 0;
     mutable Maybe<double> m_prev_exec_time;
+#if !__DEPLOY_ON_XP_SP2__
     std::unique_ptr<VarSanityCheck> m_var_sanity_check;
+#endif
     std::unique_ptr<CompNodeSeqRecorder> m_comp_node_seq_recorder;
 
     NormalExecEnv m_exec_env;
@@ -46,7 +48,7 @@ class ComputingGraphImpl::ComputingSequence final : public AsyncExecutable {
     class ExecContext;
 
     std::unique_ptr<MegBrainError> m_async_exc;
-    std::mutex m_async_exc_mutex;
+    MGB_MUTEX m_async_exc_mutex;
 
     /*!
      * \brief check whether recording comp seq is enabled

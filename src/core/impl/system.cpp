@@ -19,7 +19,13 @@ using namespace mgb;
 using namespace sys;
 
 int sys::get_cpu_count() {
+#if __DEPLOY_ON_XP_SP2__
+    //! when deploy on xp sp2, we only support single thread
+    //! so just return 1 even cpu number greater than 1
+    return 1;
+#else
     return std::max(std::thread::hardware_concurrency(), 1u);
+#endif
 }
 
 #if defined(WIN32)
@@ -153,9 +159,11 @@ bool sys::stderr_ansi_color() {
 void sys::set_thread_name(const std::string &) {
 }
 
+#if !__DEPLOY_ON_XP_SP2__
 std::string sys::get_thread_name(Maybe<std::thread::id>) {
     return "@";
 }
+#endif
 
 namespace {
     class FakeTimedFuncInvoker final: public TimedFuncInvoker {
@@ -254,6 +262,7 @@ void sys::set_thread_name(const std::string &name) {
 #endif
 }
 
+#if !__DEPLOY_ON_XP_SP2__
 std::string sys::get_thread_name(Maybe<std::thread::id> tid_) {
 #if MGB_ENABLE_DEBUG_UTIL
     MGB_LOCK_GUARD(thread_name_map_lock);
@@ -269,10 +278,11 @@ std::string sys::get_thread_name(Maybe<std::thread::id> tid_) {
     return "";
 #endif
 }
+#endif
 
 namespace {
 
-class TimedFuncInvokerImpl final: public TimedFuncInvoker {
+class TimedFuncInvokerImpl final : public TimedFuncInvoker {
     /*
      * server-client protocol:
      *
@@ -308,7 +318,7 @@ class TimedFuncInvokerImpl final: public TimedFuncInvoker {
 
     bool m_watcher_should_stop = false;
     std::condition_variable m_watcher_stop_cv;
-    std::mutex m_watcher_stop_mtx, m_global_mtx;
+    MGB_MUTEX m_watcher_stop_mtx, m_global_mtx;
 
     void clear_sock_fd() {
         if (m_peer_fd)
@@ -567,8 +577,10 @@ class TimedFuncInvokerImpl final: public TimedFuncInvoker {
         auto start = high_resolution_clock::now(),
              end = start + timeout_due;
         for (; ; ) {
+#if !__DEPLOY_ON_XP_SP2__
             std::unique_lock<std::mutex> lk(m_watcher_stop_mtx);
             m_watcher_stop_cv.wait_until(lk, end);
+#endif
 
             if (m_watcher_should_stop)
                 return false;
@@ -603,10 +615,9 @@ class TimedFuncInvokerImpl final: public TimedFuncInvoker {
             } MGB_CATCH(..., {});
             clear_sock_fd();
         }
-
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TimedFuncInvoker& TimedFuncInvoker::ins() {
     static TimedFuncInvokerImpl impl;

@@ -28,10 +28,10 @@ void check_dtype(const ModeTrait& trait, size_t i, const TensorLayout& src) {
 }  // anonymous namespace
 
 const ModeTrait& ModeTrait::from_mode(Mode mode) {
-    static std::mutex mtx;
+    static DNN_MUTEX mtx;
     static std::vector<ModeTrait> traits;
 
-    std::lock_guard<std::mutex> _lock(mtx);
+    MEGDNN_LOCK_GUARD(mtx);
 
     auto make_check_dtype_func = [](DType expected) {
         auto func = [expected](DType dtype) {

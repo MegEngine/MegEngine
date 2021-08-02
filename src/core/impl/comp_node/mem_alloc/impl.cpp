@@ -59,11 +59,15 @@ MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(
         size_t size, bool allow_from_parent, bool log_stat_on_error) {
 
     mgb_assert(size);
+#if !__DEPLOY_ON_XP_SP2__
     m_mutex.lock();
+#endif
 
     auto iter = m_free_blk_size.lower_bound(FreeBlock{MemAddr{0, 0}, size});
     if (iter == m_free_blk_size.end()) {
+#if !__DEPLOY_ON_XP_SP2__
         m_mutex.unlock();
+#endif
         if (!allow_from_parent) {
             if (log_stat_on_error) {
                 print_memory_state();
@@ -87,7 +91,9 @@ MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(
     if (remain)
         insert_free_unsafe({alloc_addr + size, remain});
 
+#if !__DEPLOY_ON_XP_SP2__
     m_mutex.unlock();
+#endif
     return alloc_addr;
 }
 
@@ -267,7 +273,9 @@ MemAllocImplHelper::MemAddr DevMemAllocImpl::alloc_from_parent(size_t size) {
             {
                 // sleep to wait for async dealloc
                 using namespace std::literals;
+#if !__DEPLOY_ON_XP_SP2__
                 std::this_thread::sleep_for(0.2s);
+#endif
             }
             get = gather_stream_free_blk_and_release_full();
             mgb_log("device %d: sync all device and try to "

@@ -38,7 +38,7 @@ const std::shared_ptr<Handle>& inplace_cpu_handle(int debug_level = 0);
  */
 template <int nr_opr = 1>
 class CpuOprDelegationStorage {
-    std::mutex m_mtx;
+    DNN_MUTEX m_mtx;
     std::shared_ptr<Handle> m_handle;
     std::unique_ptr<OperatorBase> m_oprs[nr_opr];
 

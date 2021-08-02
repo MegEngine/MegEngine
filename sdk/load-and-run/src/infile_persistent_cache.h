@@ -52,7 +52,7 @@ class InFilePersistentCache final : public PersistentCache {
     std::unordered_map<std::string, std::unordered_map<BlobStorage, BlobStorage,
                                                        BlobStorage::Hash>>
             m_cache;
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
 
     template <typename Input>
     void read_cache(Input& inp);

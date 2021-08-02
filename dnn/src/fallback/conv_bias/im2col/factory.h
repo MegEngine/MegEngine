@@ -110,7 +110,7 @@ struct StrategyHashParamEqual {
 };
 
 class StrategyDelegationStorage {
-    std::mutex m_mtx;
+    DNN_MUTEX m_mtx;
     std::unordered_map<StrategyHashParam, std::unique_ptr<StrategyBase>,
                        StrategyHashParamHash, StrategyHashParamEqual>
             map_strategys;

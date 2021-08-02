@@ -60,7 +60,7 @@ class TextOprIODump final : public OprIODumpBase {
     bool m_print_addr = true;
     std::shared_ptr<FILE> m_fout;
     size_t m_max_size = 5;
-    std::mutex m_mtx;
+    MGB_MUTEX m_mtx;
     std::unique_ptr<LazyValueRecorder> m_lazy_value;
 
     void dump_var(VarNode* var, bool lazy_sync) override;

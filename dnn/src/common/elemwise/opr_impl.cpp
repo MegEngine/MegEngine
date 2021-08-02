@@ -39,10 +39,10 @@ using Mode = param::Elemwise::Mode;
 using ModeTrait = ElemwiseForward::ModeTrait;
 
 const ModeTrait& ModeTrait::from_mode(Mode mode) {
-    static std::mutex mtx;
+    static DNN_MUTEX mtx;
     static std::vector<ModeTrait> traits;
 
-    std::lock_guard<std::mutex> _lock(mtx);
+    MEGDNN_LOCK_GUARD(mtx);
 
     if (traits.empty()) {
         auto get = [&](Mode m) -> ModeTrait& {

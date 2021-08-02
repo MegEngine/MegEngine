@@ -53,7 +53,7 @@ namespace {
         MGB_TYPEINFO_OBJ_DECL;
 
         public:
-            std::mutex mtx;
+            MGB_MUTEX mtx;
             CompNode::UnorderedMap<DeviceTensorStorage> cn2storage;
     };
     MGB_TYPEINFO_OBJ_IMPL(TempStorageContainer);

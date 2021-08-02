@@ -440,7 +440,7 @@ class VarNodeMemManager {
 
         ImpureMemPlanManager m_impure_mem_plan_mgr;
 
-        std::mutex m_dynamic_alloc_mtx;
+        MGB_MUTEX m_dynamic_alloc_mtx;
         const size_t* m_run_id_ptr = nullptr;
 
         SyncableCounter m_cpu_async_release_barrier;

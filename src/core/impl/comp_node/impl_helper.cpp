@@ -45,9 +45,17 @@ void CompNodeImplHelper::EventImplHelper::host_wait() {
         return;
     }
     if (sm_cpu_sync_level >= 1) {
+#if __DEPLOY_ON_XP_SP2__
+#if MGB_HAVE_THREAD
+        __builtin_trap();
+#else
+        return;
+#endif
+#else
         while (!finished()) {
             std::this_thread::yield();
         }
+#endif
         return;
     }
     mgb_assert(!sm_cpu_sync_level, "invalid cpu sync level: %d",
@@ -57,9 +65,17 @@ void CompNodeImplHelper::EventImplHelper::host_wait() {
 }
 
 void CompNodeImplHelper::EventImplHelper::host_wait_cv() {
+#if __DEPLOY_ON_XP_SP2__
+#if MGB_HAVE_THREAD
+    __builtin_trap();
+#else
+    return;
+#endif
+#else
     while (!finished()) {
         std::this_thread::yield();
     }
+#endif
 }
 
 double CompNodeImplHelper::EventImplHelper::elapsed_time_until(Event& end_) {

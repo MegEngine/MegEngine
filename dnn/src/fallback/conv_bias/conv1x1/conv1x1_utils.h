@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    std::mutex m_mtx;
+    DNN_MUTEX m_mtx;
     std::unordered_map<StrategyHashKey, std::unique_ptr<T>, StrategyHasher,
                        StrategyHashKeyEqual>
             m_map_strategies;

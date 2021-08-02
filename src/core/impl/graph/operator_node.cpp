@@ -713,7 +713,9 @@ void PostExecActions::perform() {
 
     for (auto&& i : m_items) {
         if (enable) {
+#if !__DEPLOY_ON_XP_SP2__
             VarSanityCheck::check_var_after_exec(i.var, *i.recv_info);
+#endif
 
             if (i.shape_sync_hdl)
                 i.shape_sync_hdl->sync_from_var();

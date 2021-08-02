@@ -20,7 +20,7 @@ using namespace cg;
 
 /* ===================== MemAllocPlan =====================  */
 
-std::mutex MemAllocPlan::ReadonlyFwdList::list_mutex;
+MGB_MUTEX MemAllocPlan::ReadonlyFwdList::list_mutex;
 
 void MemAllocPlan::ReadonlyFwdList::reset() {
     MGB_LOCK_GUARD(list_mutex);
