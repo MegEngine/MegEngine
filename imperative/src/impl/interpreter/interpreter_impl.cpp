@@ -18,6 +18,7 @@
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
+#include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/utils/to_string.h"
 
 #include "../blob_manager_impl.h"
@@ -97,6 +98,16 @@ ChannelImpl::ChannelState& ChannelImpl::get_channel_state() {
 ChannelImpl::WorkerState& ChannelImpl::get_worker_state() {
     assert_in_worker();
     return m_worker_state;
+}
+
+void ChannelImpl::WorkQueue::on_async_queue_worker_thread_start() {
+    sys::set_thread_name("worker");
+    m_owner->m_worker_state.tid = std::this_thread::get_id();
+    OpDef::set_allocator([&](CompNode device, size_t size) {
+        auto blob = Blob::make(device, size);
+        m_owner->alloc_tensor_with_evict(blob.get());
+        return blob->storage();
+    });
 }
 
 // Do not use m_xxx_state directly
@@ -649,7 +660,9 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     auto apply_on_physical_tensor = [&](auto&& self, const OpDef& def, SmallVector<TensorWithDesc> inputs) -> SmallVector<TensorWithDesc> {
         auto apply_functor = [&](std::shared_ptr<OpDef> op, SmallVector<TensorWithDesc> inputs, size_t nr_outputs) -> SmallVector<TensorWithDesc> {
             auto opname = op->trait()->make_name(*op);
+            imperative_log_profile_begin(opname.c_str());
             auto outputs = self(self, *op, inputs);
+            imperative_log_profile_end(opname.c_str());
             return outputs;
         };
         auto const_functor = [&](TensorPtr value) -> TensorWithDesc {
@@ -667,7 +680,6 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         }
         SmallVector<TensorPtr> input_tensors;
         SmallVector<MemoryDesc> input_descs;
-        // size_t next_mem_desc_id = 0;
         for (auto&& input: inputs) {
             input_tensors.push_back(input.tensor);
             input_descs.push_back(input.desc);
@@ -890,7 +902,7 @@ std::unordered_set<TensorInfo*> ChannelImpl::collect_valid_tensors() {
     return valid_tensors;
 }
 
-void ChannelImpl::alloc_tensor_with_evict(TensorPtr x) {
+void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
     auto reserve_size = [&](size_t size) {
         if (!m_dtr.comp_node.valid()) {
             return false;
@@ -902,15 +914,15 @@ void ChannelImpl::alloc_tensor_with_evict(TensorPtr x) {
         return true;
     };
     auto pre_level = set_log_level(LogLevel::NO_LOG);
-    reserve_size(x->blob()->size());
-    MGB_TRY { BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size()); }
+    reserve_size(x->size());
+    MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
     MGB_CATCH(MemAllocError&, {
         bool suc = false;
         while (!suc) {
             if (!auto_evict(1)) {
                 break;
             }
-            MGB_TRY { BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size()); }
+            MGB_TRY { BlobManager::inst()->alloc_direct(x, x->size()); }
             MGB_CATCH(MemAllocError&, { continue; });
             suc = true;
         }
@@ -919,7 +931,7 @@ void ChannelImpl::alloc_tensor_with_evict(TensorPtr x) {
             mgb_log_warn("reallocating all cuda memory to alleviate fragmentation, the performance may be affected");
             set_log_level(LogLevel::NO_LOG);
             BlobManager::inst()->defrag(x->comp_node());
-            BlobManager::inst()->alloc_direct(x->blob().get(), x->blob()->size());
+            BlobManager::inst()->alloc_direct(x, x->size());
         }
     });
     set_log_level(pre_level);
@@ -949,7 +961,7 @@ std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPt
             if (desc[i].id->is_sys_alloc()) {
                 tensors.push_back(Tensor::make(desc[i].layout, desc[i].cn));
                 if (state.options.enable_dtr_auto_drop && !desc[i].layout.is_empty()) {
-                    alloc_tensor_with_evict(tensors.back());
+                    alloc_tensor_with_evict(tensors.back()->blob().get());
                 }
             } else if (desc[i].id->is_from_other()) {
                 for (size_t j = 0; j < inputs_mem_desc.size();j ++) {

@@ -155,6 +155,17 @@ const std::string OpDef::make_name() const {
     return m_scope + "." + trait()->make_name(*this);
 }
 
+static thread_local OpDef::allocator_t local_allocator;
+
+void OpDef::set_allocator(allocator_t allocator) {
+    mgb_assert(!local_allocator, "allocator has been set before");
+    local_allocator = allocator;
+}
+
+DeviceTensorStorage::RawStorage OpDef::allocate(CompNode device, size_t size) const {
+    return local_allocator(device, size);
+}
+
 std::string Subgraph::repr() const {
     std::ostringstream buf;
     buf << "(";

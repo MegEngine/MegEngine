@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/imperative/op_def.h"
+#include "megbrain/imperative/graph_cache.h"
 
 #include "megbrain/utils/hash.h"
 
@@ -32,6 +33,56 @@ struct GenericPyOp final : OpDefImplBase<GenericPyOp> {
         return obj.equal(rhs.cast_final<GenericPyOp>().obj);
     }
 
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
+struct ShapeInfer final : OpDefImplBase<ShapeInfer> {
+    std::shared_ptr<OpDef> op;
+    SmallVector<CompNode> devices;
+    SmallVector<DType> dtypes;
+    EncodedSubraph graph;
+    ShapeInfer() = default;
+    ShapeInfer(std::shared_ptr<OpDef> op, SmallVector<CompNode> devices,
+               SmallVector<DType> dtypes)
+            : op{op}, devices{devices}, dtypes{dtypes}{}
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
+struct SubgraphOp final: OpDefImplBase<SubgraphOp> {
+    std::string name;
+    Subgraph graph;
+    SmallVector<bool> output_grad_mask;
+    std::shared_ptr<Hashable> graph_key;
+    SubgraphOp() = default;
+    SubgraphOp(std::string name, Subgraph graph, SmallVector<bool> output_grad_mask={}, std::shared_ptr<Hashable> key=nullptr)
+        : name{name}, graph{graph}, output_grad_mask{output_grad_mask}, graph_key{std::move(key)}{
+            if (this->output_grad_mask.empty()) {
+                this->output_grad_mask.resize(graph.outputs.size(), true);
+            }
+        }
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
+struct BackwardOpKey final: Hashable, OpMethArgs<SmallVector<bool>, SmallVector<bool>> {
+public:
+    using OpMethArgs<SmallVector<bool>, SmallVector<bool>>::OpMethArgs;
+    size_t hash() const override {
+        return OpMethArgs<SmallVector<bool>, SmallVector<bool>>::hash();
+    }
+protected:
+    bool is_same_st(const Hashable& rhs) const override {
+        return OpMethArgs<SmallVector<bool>, SmallVector<bool>>::
+                operator==(rhs.cast_final_safe<BackwardOpKey>());
+    }
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
+struct CompiledOp final: OpDefImplBase<CompiledOp> {
+    std::shared_ptr<OpDef> op;
+    int gopt_level;
+    CompiledOp() = default;
+    CompiledOp(std::shared_ptr<OpDef> op, int gopt_level = 2)
+        : op{op}, gopt_level{gopt_level}{}
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 };
 

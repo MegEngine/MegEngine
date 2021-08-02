@@ -36,6 +36,7 @@ class OpDef : public Hashable,
     mutable const OpTrait* m_trait = nullptr;
     std::string m_scope;
 public:
+    using allocator_t = std::function<DeviceTensorStorage::RawStorage(CompNode, size_t)>;
     virtual ~OpDef() = default;
 
     static std::shared_ptr<OpDef> make_from_op_node(
@@ -112,6 +113,9 @@ public:
     virtual size_t hash() const;
 
     virtual bool is_same_st(const Hashable&) const;
+
+    static void set_allocator(allocator_t allocator);
+    DeviceTensorStorage::RawStorage allocate(CompNode, size_t) const;
 };
 
 template<typename T>

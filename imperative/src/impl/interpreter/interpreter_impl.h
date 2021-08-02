@@ -164,10 +164,7 @@ private:
         void process_one_task(IdentifiedCommand& icmd) {
             m_owner->process_one_task(icmd);
         }
-        void on_async_queue_worker_thread_start() override {
-            sys::set_thread_name("worker");
-            m_owner->m_worker_state.tid = std::this_thread::get_id();
-        }
+        void on_async_queue_worker_thread_start() override;
     private:
         ChannelImpl* m_owner;
     } m_worker;
@@ -419,7 +416,7 @@ private:
     //! automatically evict an optimal tensor
     bool auto_evict(size_t);
 
-    void alloc_tensor_with_evict(TensorPtr);
+    void alloc_tensor_with_evict(Blob*);
 
     // assert thread id when call get_xxx_state to avoid misuse
     ChannelState& get_channel_state();
