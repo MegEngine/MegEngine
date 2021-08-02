@@ -117,31 +117,6 @@ OP_TRAIT_REG(TopK, TopK).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
-namespace reduce {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& reduce = static_cast<const Reduce&>(def);
-    OperatorNodeConfig config{reduce.make_name()};
-    if (inputs.size() > 1) {
-        return opr::Reduce::make(inputs[0], reduce.param(), inputs[1], config);
-    } else {
-        return opr::Reduce::make(inputs[0], reduce.param(),
-                                 (cg::VarNode*)nullptr, config);
-    }
-}
-
-std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node_) {
-    auto* node = &node_->cast_final_safe<opr::Reduce>();
-    return Reduce::make(node->param());
-}
-
-OP_TRAIT_REG(Reduce, Reduce, opr::Reduce)
-        .make_from_op_node(make_from_op_node)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
-}  // namespace reduce
-}  // namespace
-
-namespace {
 namespace adaptive_pooling {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& pool = static_cast<const AdaptivePooling&>(def);
