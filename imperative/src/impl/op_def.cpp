@@ -100,6 +100,19 @@ std::vector<std::pair<const char*, std::string>> OpDef::props(
     return def.trait()->props(def);
 }
 
+EncodedSubraph OpDef::make_forward_graph(
+    const OpDef& def,
+    const SmallVector<LogicalTensorDesc>& inputs){
+    using ForwardGraphCache = OpMethResultCache<EncodedSubraph, SmallVector<bool>, SmallVector<bool>>;
+    thread_local ForwardGraphCache cache;
+    decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs};
+    auto iter = cache.find(cache_key);
+    if (iter == cache.end()) {
+        iter = cache.insert({cache_key, def.trait()->make_forward_graph(def, inputs)}).first;
+    }
+    return iter->second;
+}
+
 std::string OpDef::to_string() const {
     std::string builder = trait()->make_name(*this) + "{";
     for (auto&& [name, value]: props(*this)) {

@@ -16,6 +16,7 @@
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/proxy_graph_detail.h"
+#include "megbrain/imperative/subgraph_detail.h"
 #include "megbrain/tensor.h"
 
 #include "./op_trait.h"
@@ -38,24 +39,45 @@ StaticData& static_data() {
     return data;
 }
 
-void OpMethFallback::impl(ApplyOnPhysicalTensor& func,
+void OpMethFallbackByProxyGraph::impl(ApplyOnPhysicalTensor& func,
                           op_meth_tag::ApplyOnPhysicalTensor) {
     func.Base::operator=(proxy_graph_detail::apply_on_physical_tensor);
 }
-void OpMethFallback::impl(Execute& func, op_meth_tag::Execute) {
+void OpMethFallbackByProxyGraph::impl(Execute& func, op_meth_tag::Execute) {
     func.Base::operator=(proxy_graph_detail::execute);
 }
-void OpMethFallback::impl(InferOutputMemDesc& func,
+void OpMethFallbackByProxyGraph::impl(InferOutputMemDesc& func,
                           op_meth_tag::InferOutputMemDesc) {
     func.Base::operator=(proxy_graph_detail::infer_output_mem_desc);
 }
-void OpMethFallback::impl(InferOutputAttrsFallible& func,
+void OpMethFallbackByProxyGraph::impl(InferOutputAttrsFallible& func,
                           op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(proxy_graph_detail::infer_output_attrs_fallible);
 }
-void OpMethFallback::impl(GradMaker& func, op_meth_tag::GradMaker) {
+void OpMethFallbackByProxyGraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
     func.Base::operator=(proxy_graph_detail::make_backward_graph);
 }
+
+void OpMethFallbackFromSubgraph::impl(ApplyOnPhysicalTensor& func,
+                          op_meth_tag::ApplyOnPhysicalTensor) {
+    func.Base::operator=(subgraph_detail::apply_on_physical_tensor);
+}
+void OpMethFallbackFromSubgraph::impl(InferOutputMemDesc& func,
+                          op_meth_tag::InferOutputMemDesc) {
+    func.Base::operator=(subgraph_detail::infer_output_mem_desc);
+}
+void OpMethFallbackFromSubgraph::impl(ApplyOnVarNode& func,
+                          op_meth_tag::ApplyOnVarNode) {
+    func.Base::operator=(subgraph_detail::apply_on_var_node);
+}
+void OpMethFallbackFromSubgraph::impl(InferOutputAttrsFallible& func,
+                          op_meth_tag::InferOutputAttrsFallible) {
+    func.Base::operator=(subgraph_detail::infer_output_attrs_fallible);
+}
+void OpMethFallbackFromSubgraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
+    func.Base::operator=(subgraph_detail::make_backward_graph);
+}
+
 void OpMethFallback::impl(DecideDispatchMode& func,
                           op_meth_tag::DecideDispatchMode) {
     static auto decide_dispatch_mode =
@@ -99,16 +121,20 @@ void OpTrait::for_each_trait(thin_function<void(OpTrait&)> visitor){
 }
 
 OpTraitRegistry& OpTraitRegistry::fallback() {
-    if (trait->apply_on_var_node) {
-        // fallback to proxy graph impl
-        trait->apply_on_physical_tensor.allow_fallback = true;
-        trait->execute.allow_fallback = true;
-        trait->infer_output_mem_desc.allow_fallback = true;
-        trait->infer_output_attrs_fallible.allow_fallback = true;
-        trait->make_backward_graph.allow_fallback = true;
+    using Mode = detail::OpMethFallbackMode;
+    uint64_t mode = Mode::None;
+    if (trait->make_forward_graph) {
+        mode |= Mode::FromSubgraph;
     }
-    trait->decide_dispatch_mode.allow_fallback = true;
-    trait->make_name.allow_fallback = true;
+    if (trait->apply_on_var_node) {
+        mode |= Mode::ByProxyGraph;
+    }
+    mode |= Mode::Default;
+#define SET_FALLBACK_MODE(meth) \
+    trait->meth.fallback_mode = mode;
+    FOR_EACH_OP_METH(SET_FALLBACK_MODE)
+#undef SET_FALLBACK_MODE
+
     return *this;
 }
 

@@ -95,9 +95,18 @@ OpMethType(IsSame,
 
 OpMethType(MakeNameFunc,
            std::string(const OpDef&));
+
+OpMethType(GraphMaker,
+           decltype(OpDef::make_forward_graph));
 // clang-format on
 
 namespace detail {
+
+struct OpMethImplBase {
+    template <typename Tag, typename RType, typename... Args>
+    static void impl(thin_function<RType(Args...)>& func, Tag) {}
+};
+
 struct OpMethNotImpl {
     template <typename Tag, typename RType, typename... Args>
     static void impl(thin_function<RType(Args...)>& func, Tag) {
@@ -106,8 +115,15 @@ struct OpMethNotImpl {
         };
     }
 };
-struct OpMethFallback : public OpMethNotImpl {
-    using OpMethNotImpl::impl;
+
+struct OpMethFallback: OpMethImplBase {
+    using OpMethImplBase::impl;
+    static void impl(DecideDispatchMode& func, op_meth_tag::DecideDispatchMode);
+    static void impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc);
+};
+
+struct OpMethFallbackByProxyGraph: OpMethImplBase {
+    using OpMethImplBase::impl;
     static void impl(ApplyOnPhysicalTensor& func,
                      op_meth_tag::ApplyOnPhysicalTensor);
     static void impl(Execute& func, op_meth_tag::Execute);
@@ -115,18 +131,48 @@ struct OpMethFallback : public OpMethNotImpl {
     static void impl(InferOutputAttrsFallible& func,
                      op_meth_tag::InferOutputAttrsFallible);
     static void impl(GradMaker& func, op_meth_tag::GradMaker);
-    static void impl(DecideDispatchMode& func, op_meth_tag::DecideDispatchMode);
-    static void impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc);
 };
+
+struct OpMethFallbackFromSubgraph: OpMethImplBase {
+    using OpMethImplBase::impl;
+    static void impl(ApplyOnPhysicalTensor& func,
+                     op_meth_tag::ApplyOnPhysicalTensor);
+    static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
+    static void impl(ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode);
+    static void impl(InferOutputAttrsFallible& func,
+                     op_meth_tag::InferOutputAttrsFallible);
+    static void impl(GradMaker& func, op_meth_tag::GradMaker);
+};
+
+struct OpMethFallbackMode {
+    static constexpr uint64_t None = 0;
+    static constexpr uint64_t Default = 1;
+    static constexpr uint64_t ByProxyGraph = 2;
+    static constexpr uint64_t FromSubgraph = 4;
+};
+
 template <typename Tag, typename RType, typename... Args>
 struct OpMeth<Tag, RType(Args...)> : public thin_function<RType(Args...)> {
     using Base = thin_function<RType(Args...)>;
-    OpMeth() : Base{}, allow_fallback(false){};
+    OpMeth() : Base{}{};
     explicit OpMeth(const Base& base) { this->Base::operator=(base); }
     using Base::operator bool;
     RType operator()(Args... args) const {
-        if (!this->Base::operator bool()) {
-            if (allow_fallback) {
+        uint64_t mode_mask = ~uint64_t(0);
+        auto match_mode = [&](uint64_t mode){
+            if ((fallback_mode & mode_mask) & mode) {
+                mode_mask &= ~mode;
+                return true;
+            }
+            return false;
+        };
+        while (!this->Base::operator bool()) {
+            using Mode = OpMethFallbackMode;
+            if (match_mode(Mode::FromSubgraph)) {
+                OpMethFallbackFromSubgraph::impl(*const_cast<OpMeth*>(this), Tag{});
+            } else if (match_mode(Mode::ByProxyGraph)) {
+                OpMethFallbackByProxyGraph::impl(*const_cast<OpMeth*>(this), Tag{});
+            } else if (match_mode(Mode::Default)) {
                 OpMethFallback::impl(*const_cast<OpMeth*>(this), Tag{});
             } else {
                 OpMethNotImpl::impl(*const_cast<OpMeth*>(this), Tag{});
@@ -134,7 +180,7 @@ struct OpMeth<Tag, RType(Args...)> : public thin_function<RType(Args...)> {
         }
         return this->Base::operator()(std::forward<Args>(args)...);
     }
-    bool allow_fallback = false;
+    uint64_t fallback_mode = OpMethFallbackMode::None;
 };
 }  // namespace detail
 
@@ -153,6 +199,7 @@ struct OpTrait {
     HashFunc hash;
     IsSame is_same_st;
     MakeNameFunc make_name;
+    GraphMaker make_forward_graph;
     OpTrait(const char* name);
     static OpTrait* find_by_name(const char* name);
     static OpTrait* find_by_typeinfo(Typeinfo* type);
@@ -173,7 +220,9 @@ struct OpTrait {
     cb(props)                       \
     cb(hash)                        \
     cb(is_same_st)                  \
-    cb(make_name)
+    cb(make_name)                   \
+    cb(make_forward_graph)          \
+
 // clang-format on
 
 struct OpTraitRegistry {

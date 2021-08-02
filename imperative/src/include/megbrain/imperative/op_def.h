@@ -13,6 +13,7 @@
 
 #include "megbrain/graph.h"
 #include "megbrain/imperative/physical_tensor.h"
+#include "megbrain/imperative/subgraph.h"
 #include "megbrain/imperative/utils/to_string.h"
 #include "megbrain/imperative/subgraph.h"
 
@@ -93,6 +94,10 @@ public:
 
     static std::vector<std::pair<const char*, std::string>> props(
         const OpDef& def);
+
+    static EncodedSubraph make_forward_graph(
+        const OpDef& def,
+        const SmallVector<LogicalTensorDesc>& inputs);
 
     const OpTrait* trait() const;
 
