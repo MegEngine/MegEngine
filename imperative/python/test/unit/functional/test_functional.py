@@ -79,7 +79,7 @@ def test_matinv():
     opr_test(
         cases,
         F.matinv,
-        compare_fn=lambda x, y: np.testing.assert_allclose(x.numpy(), y, rtol=1e-5),
+        compare_fn=lambda x, y: np.testing.assert_allclose(x.numpy(), y, rtol=1e-4),
         ref_fn=np.linalg.inv,
     )
 
