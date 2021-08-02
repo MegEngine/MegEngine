@@ -161,7 +161,7 @@ function prepare_env_for_windows_build() {
     fi
     echo $VS_PATH
 
-    # only use cmake/clang-cl/Ninja install from Visual Studio, if not, may build failed
+    # only use cmake/Ninja install from Visual Studio, if not, may build failed
     # some user env may install cmake/clang-cl/Ninja at windows-git-bash env, so we put Visual Studio
     # path at the head of PATH, and check the valid
     echo "check cmake install..."
@@ -176,14 +176,22 @@ function prepare_env_for_windows_build() {
     fi
 
     echo "check clang-cl install..."
-    export PATH=$VS_PATH/VC/Tools/Llvm/bin/:$PATH
-    which clang-cl
+    # llvm install by Visual Studio have some issue, eg, link crash on large project, so we
+    # use official LLVM download from https://releases.llvm.org/download.html
+    if [[ -z ${LLVM_PATH} ]];then
+        echo "can not find LLVM_PATH env, pls export you LLVM install dir to LLVM_PATH"
+        echo "examle for export LLVM_12_0_1"
+        echo "export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1"
+        exit -1
+    fi
+    echo ${LLVM_PATH}
+    export PATH=${LLVM_PATH}/bin/:$PATH
     clang_loc=`which clang-cl`
     if [[ $clang_loc =~ "Visual" ]]; then
-        echo "clang-cl valid ..."
-    else
-        echo "clang-cl Invalid: ..."
+        echo "clang-cl Invalid: we do not support use LLVM installed by Visual Studio"
         windows_env_err
+    else
+        echo "clang-cl valid ..."
     fi
 
     echo "check Ninja install..."

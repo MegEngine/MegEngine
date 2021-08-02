@@ -24,17 +24,16 @@
 	* install to default dir:  /c/Program\ Files/Git
 2: install visual studio 2019 Enterprise (Windows GUI)
 	* download install exe from https://visualstudio.microsoft.com
-	* choose "c++ develop" -> choose cmake/MSVC/clang/cmake/windows-sdk when install
+	* choose "c++ develop" -> choose cmake/MSVC/cmake/windows-sdk when install
 	* NOTICE: windows sdk version >=14.28.29910 do not compat with CUDA 10.1, please
 		choose version < 14.28.29910
 	* then install choosed components
-	* after install visual studio 2019 Enterprise, time to replace lld-link.exe
-		caused by visual studio 2019 lld-link.exe have crash issue
-		download office exe from https://releases.llvm.org/download.html
-		install to default: C:\Program Files\LLVM
-		cd "/c/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Tools/Llvm/bin"
-		cp /c/Program\ Files/LLVM/bin/lld-link.exe lld-link.exe
-3: install python3 (Windows GUI)
+3: install LLVM from https://releases.llvm.org/download.html (Windows GUI)
+    * llvm install by Visual Studio have some issue, eg, link crash on large project, please use official version
+    * download install exe from https://releases.llvm.org/download.html
+	* our ci use LLVM 12.0.1, if u install other version, please modify LLVM_PATH
+    * install 12.0.1 to /c/Program\ Files/LLVM_12_0_1
+4: install python3 (Windows GUI)
 	* download python 64-bit install exe (we support python3.5-python3.8 now)
 	     https://www.python.org/ftp/python/3.5.4/python-3.5.4-amd64.exe
 	     https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe
@@ -52,21 +51,21 @@
 		python3.exe -m pip install --upgrade pip
 		python3.exe -m pip install -r imperative/python/requires.txt
 		python3.exe -m pip install -r imperative/python/requires-test.txt
-4: install cuda components (Windows GUI)
+5: install cuda components (Windows GUI)
 	* now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows
 	* install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
 	* install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
 	* install TensorRT6.0 to C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5
-5: edit system env variables (Windows GUI)
+6: edit system env variables (Windows GUI)
 	* create new key: "VS_PATH", value: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
+	* create new key: "LLVM_PATH", value: "C:\Program Files\LLVM_12_0_1"
 	* append "Path" env value
         C:\Program Files\Git\cmd
 		C:\Users\build\mge_whl_python_env\3.8.3
 		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin
 		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\libnvvp
 		C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin
-		C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\lib\clang\11.0.0\lib\windows
-		C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\lib\clang\11.0.0\lib\windows
+		C:\Program Files\LLVM_12_0_1\lib\clang\12.0.1\lib\windows
 ```
 
 ### Linux host build

@@ -12,5 +12,10 @@ install (TARGETS load_and_run EXPORT ${MGE_EXPORT_TARGETS} RUNTIME DESTINATION $
 
 if(MGE_WITH_TEST)
     add_executable(json_loader_test test/json_loader_test.cpp src/json_loader.h src/json_loader.cpp)
-    target_link_libraries (json_loader_test megengine)
+    # Windows does not support implicitly importing data members from DLL.
+    if (WIN32)
+        target_link_libraries (json_loader_test megbrain megdnn ${MGE_CUDA_LIBS})
+    else()
+        target_link_libraries (json_loader_test megengine)
+    endif()
 endif()

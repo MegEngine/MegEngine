@@ -16,8 +16,10 @@ function err_env() {
 function append_path_env_and_check() {
     echo  "export vs2019 install path"
     export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
+    echo  "export LLVM install path"
+    export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1
     # for llvm-strip
-    export PATH=$VS_PATH/VC/Tools/Llvm/bin/:$PATH
+    export PATH=${LLVM_PATH}/bin/:$PATH
 }
 
 append_path_env_and_check
