@@ -85,7 +85,14 @@ EncodedSubraph OpDef::make_backward_graph(
     const SmallVector<LogicalTensorDesc>& inputs,
     const SmallVector<bool>& input_requires_grad,
     const SmallVector<bool>& output_has_grad) {
-    return def.trait()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
+    using BackwardGraphCache = OpMethResultCache<EncodedSubraph, SmallVector<bool>, SmallVector<bool>>;
+    thread_local BackwardGraphCache cache;
+    decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs, {input_requires_grad, output_has_grad}};
+    auto iter = cache.find(cache_key);
+    if (iter == cache.end()) {
+        iter = cache.insert({cache_key, def.trait()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad)}).first;
+    }
+    return iter->second;
 }
 
 std::vector<std::pair<const char*, std::string>> OpDef::props(
@@ -94,7 +101,7 @@ std::vector<std::pair<const char*, std::string>> OpDef::props(
 }
 
 std::string OpDef::to_string() const {
-    std::string builder = "{";
+    std::string builder = trait()->make_name(*this) + "{";
     for (auto&& [name, value]: props(*this)) {
         builder += name;
         builder += ": ";
@@ -170,7 +177,7 @@ std::string Subgraph::repr() const {
         if (auto* p = op->try_cast_final<OprAttr>()) {
             buf << p->type;
         } else {
-            buf << op->dyn_typeinfo()->name;
+            buf << op->make_name();
         }
         for (size_t i : ins) {
             buf << " ";
@@ -194,6 +201,26 @@ std::string Subgraph::repr() const {
     }
     buf << "\n}\n";
     return buf.str();
+}
+
+bool Subgraph::is_single() const {
+    if (exprs.size() != 1) {
+        return false;
+    }
+    auto& expr = exprs.at(0);
+    return expr.inputs == inputs && expr.outputs == outputs;
+}
+
+std::shared_ptr<OpDef> Subgraph::as_single() const {
+    if (is_single()) {
+        return exprs.at(0).op;
+    } else {
+        return nullptr;
+    }
+}
+
+bool Subgraph::operator==(const Subgraph& rhs) const {
+    mgb_assert(false, "Not Implemented");
 }
 
 } // namespace imperative

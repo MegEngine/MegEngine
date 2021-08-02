@@ -52,7 +52,7 @@ std::string get_default_device() {
 }
 
 void init_common(py::module m) {
-    auto&& PyCompNode = py::class_<CompNode>(m, "CompNode")
+    auto PyCompNode = py::class_<CompNode>(m, "CompNode")
         .def(py::init())
         .def(py::init(py::overload_cast<const std::string&>(&CompNode::load)))
         .def_property_readonly("logical_name", [](const CompNode& cn) {

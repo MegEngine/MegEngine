@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/imperative/op_def.h"
+#include "megbrain/imperative/graph_cache.h"
 
 namespace mgb {
 namespace imperative {

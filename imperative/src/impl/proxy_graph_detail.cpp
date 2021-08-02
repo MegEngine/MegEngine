@@ -113,49 +113,12 @@ void execute(const OpDef& def,
 //     return graph->infer_output_attrs_fallible(def, inputs);
 // }
 
-namespace {
-
-size_t get_backward_graph_hash_key(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs,
-        const SmallVector<bool>& input_requires_grad,
-        const SmallVector<bool>& output_has_grad) {
-    XXHash state;
-    size_t length = 0, data[3 + 2 * inputs.size()];
-    data[length ++] = def.hash();
-    for (auto &&i : inputs) {
-        data[length ++] = mgb::hash(i.layout.dtype.handle());
-        data[length ++] = mgb::hash(i.comp_node);
-    }
-    data[length ++] = mgb::hash(input_requires_grad);
-    data[length ++] = mgb::hash(output_has_grad);
-    mgb_assert(length == 3 + 2 * inputs.size());
-    state.update(data, length * sizeof(size_t));
-    return state.digest();
-}
-
-struct BackwardGraphCache : std::unordered_map<size_t, EncodedSubraph>, CompNodeDepedentObject {
-    std::shared_ptr<void> on_comp_node_finalize() override {
-        clear();
-        return {};
-    }
-} backward_graph_cache;
-
-} // anonymous namespace
-
 EncodedSubraph
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
-    auto hash_key = get_backward_graph_hash_key(def, inputs, input_requires_grad, output_has_grad);
-    auto&& iter = backward_graph_cache.find(hash_key);
-    if (iter != backward_graph_cache.end()) {
-        return iter->second;
-    }
-    auto&& graph = ProxyGraph::get_default_graph();
-    auto res = graph->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
-    backward_graph_cache.emplace(hash_key, res);
-    return res;
+    return ProxyGraph::get_default_graph()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
 }
 
 } // namespace proxy_graph_detail

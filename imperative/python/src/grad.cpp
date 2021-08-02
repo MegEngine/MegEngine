@@ -34,53 +34,36 @@ struct GradSlotWeakPtr {
     size_t idx;
 };
 
-struct BackwardGraphCache : std::unordered_map<uint64_t, std::shared_ptr<OptimizedBackwardGraphResult>>, CompNodeDepedentObject {
-    std::shared_ptr<void> on_comp_node_finalize() override {
-        clear();
-        return {};
-    }
-} backward_graph_cache;
-
 std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
         ApplyContext& ctx, const apply_result_t& outputs) {
     // hash
-    static_assert(alignof(size_t) % alignof(bool) == 0);
-    size_t buf_size = (1 + ctx.nargs * 2) * sizeof(size_t) + ctx.nargs * sizeof(bool);
-    alignas(alignof(size_t)) std::byte buf[buf_size];
-    size_t* size_t_ptr = reinterpret_cast<size_t*>(buf);
-    bool* bool_ptr = reinterpret_cast<bool*>(size_t_ptr + (1 + ctx.nargs * 2));
-    bool* bool_ptr0 = bool_ptr;
-    *(size_t_ptr++) = ctx.op->hash();
+    using OptimizedBackwardGraphCache = OpMethResultCache<std::shared_ptr<OptimizedBackwardGraphResult>, SmallVector<bool>>;
+    thread_local OptimizedBackwardGraphCache cache;
+    decltype(cache)::key_t cache_key{ctx.op};
+    SmallVector<LogicalTensorDesc>& input_descs = cache_key.inputs;
+    SmallVector<bool>& input_requires_grad = std::get<0>(cache_key.extras);
+    input_descs.resize(ctx.nargs);
+    input_requires_grad.resize(ctx.nargs);
     for (size_t i = 0; i < ctx.nargs; ++i) {
-        *(size_t_ptr++) = mgb::hash(ctx.args[i]->dtype().handle());
-        *(size_t_ptr++) = mgb::hash(ctx.args[i]->comp_node());
-        *(bool_ptr++) = !ctx.args[i]->m_grad_info_dict.empty();
+        input_descs[i].layout.dtype = ctx.args[i]->dtype();
+        input_descs[i].comp_node = ctx.args[i]->comp_node();
+        input_requires_grad[i] = python::input_requires_grad(ctx, i);
     }
-    mgb_assert(bool_ptr0 == reinterpret_cast<bool*>(size_t_ptr) &&
-               bool_ptr == reinterpret_cast<bool*>(buf + buf_size));
-    uint64_t key = XXHash{}.update(buf, buf_size).digest();
 
-    auto&& iter = backward_graph_cache.find(key);
-    if (iter != backward_graph_cache.end()) {
+    auto iter = cache.find(cache_key);
+    if (iter != cache.end()) {
         return iter->second;
     }
 
     // slow path
-    SmallVector<LogicalTensorDesc> inputs(ctx.nargs);
-    SmallVector<bool> input_requires_grad(ctx.nargs, false);
     SmallVector<bool> output_has_grad(outputs.size(), true);
-    for (size_t i = 0; i < ctx.nargs; ++i) {
-        inputs[i].comp_node = ctx.args[i]->comp_node();
-        inputs[i].layout.dtype = ctx.args[i]->dtype();
-        input_requires_grad[i] = python::input_requires_grad(ctx, i);
-    }
     std::shared_ptr<OptimizedBackwardGraphResult> ret;
     auto bg = OpDef::make_backward_graph(
-            *ctx.op, inputs, input_requires_grad, output_has_grad);
+            *ctx.op, input_descs, input_requires_grad, output_has_grad);
     if (!bg.graph.empty()) {
         ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
     }
-    backward_graph_cache.emplace(key, ret);
+    cache.emplace(cache_key, ret);
     return ret;
 }
 
