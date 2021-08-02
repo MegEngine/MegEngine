@@ -80,7 +80,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> OpDef::infer_output_attrs_falli
     return def.trait()->infer_output_attrs_fallible(def, inputs);
 }
 
-BackwardGraphResult OpDef::make_backward_graph(
+EncodedSubraph OpDef::make_backward_graph(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs,
     const SmallVector<bool>& input_requires_grad,

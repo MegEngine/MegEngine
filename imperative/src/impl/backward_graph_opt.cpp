@@ -16,19 +16,19 @@
 using namespace mgb;
 using namespace imperative;
 
-OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const BackwardGraphResult& src)
-        : input_has_grad(src.input_has_grad) {
-    if (src.backward.exprs.size() <= 1) {
+OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const EncodedSubraph& src)
+        : input_has_grad(src.output_mask) {
+    if (src.graph.exprs.size() <= 1) {
         // backward graph only contains a single op
-        backward = src.backward;
-        save_for_backward = src.save_for_backward;
+        backward = src.graph;
+        save_for_backward = src.input_mask;
         return;
     }
-    save_for_backward.resize(src.save_for_backward.size(), false);
+    save_for_backward.resize(src.input_mask.size(), false);
 
-    auto&& graph = src.backward;
-    auto&& mask = src.save_for_backward;
-    size_t input_size = src.input_has_grad.size();
+    auto&& graph = src.graph;
+    auto&& mask = src.input_mask;
+    size_t input_size = src.output_mask.size();
     size_t output_size = (mask.size() - input_size) / 2;
     mgb_assert(input_size + output_size * 2 == mask.size());
 

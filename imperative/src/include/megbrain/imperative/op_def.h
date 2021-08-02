@@ -29,12 +29,6 @@ enum DispatchMode {
 
 using SharedOp = std::shared_ptr<OpDef>;
 
-struct BackwardGraphResult {
-    Subgraph backward;
-    SmallVector<bool> save_for_backward;
-    SmallVector<bool> input_has_grad;
-};
-
 class OpDef : public Hashable,
               public NonCopyableObj,
               public std::enable_shared_from_this<OpDef> {
@@ -91,7 +85,7 @@ public:
         const SmallVector<TensorPtr>& inputs_tensors,
         const SmallVector<MemoryDesc>& inputs_mems);
 
-    static BackwardGraphResult make_backward_graph(
+    static EncodedSubraph make_backward_graph(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

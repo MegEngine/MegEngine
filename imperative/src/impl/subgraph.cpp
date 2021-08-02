@@ -101,5 +101,26 @@ void Subgraph::replace_vars(
     }
 }
 
+std::string EncodedSubraph::repr() const {
+    std::string buffer;
+    buffer.push_back('|');
+    for (size_t i = 0; i < input_mask.size(); ++i) {
+        buffer.push_back(input_mask[i] ? '#' : ' ');
+    }
+    buffer.push_back('|');
+    buffer.push_back('\n');
+    buffer.append(graph.repr());
+    buffer.push_back('|');
+    for (size_t i = 0; i < output_mask.size(); ++i) {
+        buffer.push_back(output_mask[i] ? '#' : ' ');
+    }
+    buffer.push_back('|');
+    return buffer;
+}
+
+size_t EncodedSubraph::hash() const {
+    return std::hash<std::string>{}(repr());
+}
+
 }  // namespace imperative
 }  // namespace mgb

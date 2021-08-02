@@ -668,14 +668,14 @@ struct ProxyGraph::GradGraph {
     cg::VarNode* grad;
 };
 
-BackwardGraphResult
+EncodedSubraph
 ProxyGraph::make_backward_graph(
         const OpDef& opdef,
         const SmallVector<LogicalTensorDesc>& input_descs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
     ThinHashMap<VarNode*, size_t> var2idx;
-    auto push = [&var2idx, cnt=0](VarNode* var) mutable {
+    auto push = [&var2idx, cnt=1](VarNode* var) mutable { //cnt is always greater non zero
         auto&& ret = var2idx.emplace(var, cnt ++);
         mgb_assert(ret.second, "var %s has been already inserted", var->cname());
         return ret.first->second;
@@ -702,8 +702,8 @@ ProxyGraph::make_backward_graph(
     }
     auto* gfunc = cg::lookup_grad_func(fwd->dyn_typeinfo());
 
-    BackwardGraphResult result;
-    auto&& igraph = result.backward;
+    EncodedSubraph result;
+    auto&& igraph = result.graph;
 
     size_t nr_backward_graph_inputs = 0;
     auto gen_expr = [this, &var2idx, &igraph, &push, &fwd,
@@ -735,7 +735,7 @@ ProxyGraph::make_backward_graph(
     // set backward graph outputs
     cg::DepOprIter iter{gen_expr};
     iter.set_visited(fwd);
-    result.input_has_grad.resize(inputs.size());
+    result.output_mask.resize(inputs.size());
 
     VarNodeArray output_grads_with_unused_var;
     {
@@ -760,6 +760,7 @@ ProxyGraph::make_backward_graph(
         if (grad_results.valid()) {
             grad = grad_results.val()[i];
         } else {
+            mgb_assert(gfunc, "could not find grad function");
             auto res = (*gfunc)(fwd, i, output_grads_with_unused_var);
             if (res.from_single()) {
                 grad = res.single();
@@ -776,9 +777,9 @@ ProxyGraph::make_backward_graph(
                        fwd->dyn_typeinfo()->name, i);
             iter.add(grad);
             igraph.outputs.push_back(var2idx.at(grad));
-            result.input_has_grad[i] = true;
+            result.output_mask[i] = true;
         } else {
-            result.input_has_grad[i] = false;
+            result.output_mask[i] = false;
         }
     }
     if (igraph.outputs.empty()) {
@@ -787,15 +788,15 @@ ProxyGraph::make_backward_graph(
 
     // set backward graph inputs
     igraph.inputs.reserve(nr_backward_graph_inputs);
-    result.save_for_backward.reserve(nr_backward_graph_inputs);
+    result.input_mask.reserve(nr_backward_graph_inputs);
     auto write_inputs = [&igraph, &var2idx, &result](const VarNodeArray& vars) {
         for (auto&& i: vars) {
             auto&& iter = var2idx.find(i);
             if (iter != var2idx.end()) {
                 igraph.inputs.push_back(iter->second);
-                result.save_for_backward.push_back(true);
+                result.input_mask.push_back(true);
             } else {
-                result.save_for_backward.push_back(false);
+                result.input_mask.push_back(false);
             }
         }
     };

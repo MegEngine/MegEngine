@@ -96,5 +96,185 @@ struct Subgraph {
     bool operator==(const Subgraph& rhs) const;
 };
 
+struct EncodedSubraph {
+    Subgraph graph;
+    SmallVector<bool> input_mask;
+    SmallVector<bool> output_mask;
+
+    template <typename TContainer>
+    TContainer encode_inputs(TContainer inputs) const {
+        TContainer encoded_inputs;
+        size_t index = 0;
+        for (auto&& input : inputs) {
+            mgb_assert(index < input_mask.size(), "index out of range");
+            if (input_mask[index++]) {
+                encoded_inputs.push_back(input);
+            }
+        }
+        mgb_assert(index == input_mask.size(), "mask size mismatch");
+        return encoded_inputs;
+    }
+
+    template <typename TContainer>
+    TContainer encode_outputs(TContainer outputs) const {
+        TContainer encoded_outputs;
+        size_t index = 0;
+        for (auto&& output : outputs) {
+            mgb_assert(index < output_mask.size(), "index out of range");
+            if (output_mask[index++]) {
+                encoded_outputs.push_back(output);
+            }
+        }
+        mgb_assert(index == output_mask.size(), "mask size mismatch");
+        return encoded_outputs;
+    }
+
+    template <typename TContainer>
+    TContainer decode_outputs(TContainer outputs) const {
+        TContainer decoded_outputs;
+        size_t index = 0;
+        for (size_t i = 0; i < output_mask.size(); i++) {
+            mgb_assert(index < output_mask.size(), "index out of range");
+            if (output_mask[i]) {
+                decoded_outputs.push_back(outputs[index++]);
+            } else {
+                decoded_outputs.emplace_back();
+            }
+        }
+        mgb_assert(decoded_outputs.size() == output_mask.size(),
+                   "mask size mismatch");
+        return decoded_outputs;
+    }
+
+    static EncodedSubraph make(Subgraph graph) {
+        EncodedSubraph result;
+        result.input_mask = graph.gen_input_mask();
+        result.output_mask = graph.gen_output_mask();
+        graph.inputs = result.encode_inputs(graph.inputs);
+        graph.outputs = result.encode_outputs(graph.outputs);
+        result.graph = graph;
+        return result;
+    }
+
+    static EncodedSubraph make_single(
+            std::shared_ptr<OpDef> op,
+            SmallVector<bool> input_mask,
+            SmallVector<bool> output_mask) {
+        EncodedSubraph result;
+        result.input_mask = input_mask;
+        result.output_mask = output_mask;
+        Subgraph::var_t last_var = 0;
+        for (auto&& mask: input_mask) {
+            if (mask) {
+                result.graph.inputs.push_back(++last_var);
+            }
+        }
+        for (auto&& mask: output_mask) {
+            if (mask) {
+                result.graph.outputs.push_back(++last_var);
+            }
+        }
+        result.graph.exprs = {Subgraph::expr_t{op, result.graph.inputs, result.graph.outputs}};
+        return result;
+    }
+
+    template <typename T, typename F, typename C>
+    SmallVector<T> apply(SmallVector<T> input_vars, F&& f, C&& c) const {
+        auto encoded_inputs = encode_inputs(input_vars);
+        auto encoded_outputs = graph.apply(encoded_inputs, std::forward<F>(f),
+                                           std::forward<C>(c));
+        return decode_outputs(encoded_outputs);
+    }
+
+    std::string repr() const;
+    size_t hash() const;
+};
+
+template <typename T>
+class GradContext {
+public:
+    using var_t = T;
+    using vars_t = SmallVector<var_t>;
+    using expr_t = Expr<T>;
+private:
+    std::unordered_map<var_t, var_t> m_grads;
+    std::unordered_set<var_t> m_vars_require_grad;
+    std::function<var_t(var_t, var_t)> m_accumulator;
+    std::vector<expr_t> m_exprs;
+public:
+    GradContext(std::function<var_t(var_t, var_t)> accumulator): m_accumulator{std::move(accumulator)}{}
+    SmallVector<bool> get_require_grads(vars_t dests) {
+        SmallVector<bool> mask;
+        for (auto&& dest: dests) {
+            mask.push_back(bool(m_vars_require_grad.count(dest)));
+        }
+        return mask;
+    }
+    SmallVector<bool> get_has_grads(vars_t dests) {
+        SmallVector<bool> mask;
+        for (auto&& dest: dests) {
+            mask.push_back(bool(m_grads.count(dest)));
+        }
+        return mask;
+    }
+    void mark_require_grads(vars_t dests) {
+        for (auto&& dest: dests) {
+            m_vars_require_grad.insert(dest);
+        }
+    }
+    var_t accumulate_grad(var_t dest, var_t grad) {
+        if (!m_grads.count(dest)) {
+            return m_grads[dest] = grad;
+        } else {
+            return m_grads[dest] = m_accumulator(m_grads[dest], grad);
+        }
+    }
+    void record_expr(std::shared_ptr<OpDef> op, vars_t inputs, vars_t outputs) {
+        bool require_grad = false;
+        for (auto&& input: inputs) {
+            if (m_vars_require_grad.count(input)) {
+                require_grad = true;
+                break;
+            }
+        }
+        if (require_grad) {
+            m_exprs.push_back({op, inputs, outputs});
+            mark_require_grads(outputs);
+        }
+    }
+    template <typename TFunctor>
+    void backward(vars_t outputs, vars_t output_grads, TFunctor functor) {
+        size_t nr_outputs = outputs.size();
+        for (size_t i = 0; i < nr_outputs; ++i) {
+            m_grads[outputs[i]] = output_grads[i];
+        }
+        auto exprs = m_exprs;
+        std::reverse(exprs.begin(), exprs.end());
+        for (const expr_t& expr: exprs) {
+            size_t nr_inputs = expr.inputs.size();
+            vars_t input_grads = functor(expr, get_grads(expr.outputs));
+            mgb_assert(input_grads.size() == nr_inputs, "input size mismatch");
+            for (size_t i = 0; i < nr_inputs; ++i) {
+                if (input_grads[i] && m_vars_require_grad.count(expr.inputs[i])) {
+                    accumulate_grad(expr.inputs[i], input_grads[i]);
+                }
+            }
+        }
+    }
+    var_t get_grad(var_t dest) {
+        if (m_grads.count(dest)) {
+            return m_grads.at(dest);
+        }
+        return 0;
+    }
+    vars_t get_grads(vars_t dests) {
+        vars_t grads;
+        for (auto&& dest: dests) {
+            grads.push_back(get_grad(dest));
+        }
+        return grads;
+    }
+};
+
 }  // namespace imperative
 }  // namespace mgb

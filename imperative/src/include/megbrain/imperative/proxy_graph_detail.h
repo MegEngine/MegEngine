@@ -38,7 +38,7 @@ void exec(const OpDef& def,
         const SmallVector<TensorPtr>& inputs,
         const SmallVector<TensorPtr>& outputs);
 
-BackwardGraphResult
+EncodedSubraph
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

@@ -37,7 +37,7 @@ void init_imperative_rt(py::module m) {
             const SmallVector<bool>& input_requires_grad,
             const SmallVector<bool>& output_has_grad){
         auto result = OpDef::make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
-        return std::make_tuple("backward_graph", result.save_for_backward, result.input_has_grad);
+        return std::make_tuple("backward_graph", result.input_mask, result.output_mask);
     };
     m.def("make_backward_graph", make_backward_graph);
 }

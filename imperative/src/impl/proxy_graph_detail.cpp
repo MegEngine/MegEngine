@@ -133,7 +133,7 @@ size_t get_backward_graph_hash_key(const OpDef& def,
     return state.digest();
 }
 
-struct BackwardGraphCache : std::unordered_map<size_t, BackwardGraphResult>, CompNodeDepedentObject {
+struct BackwardGraphCache : std::unordered_map<size_t, EncodedSubraph>, CompNodeDepedentObject {
     std::shared_ptr<void> on_comp_node_finalize() override {
         clear();
         return {};
@@ -142,7 +142,7 @@ struct BackwardGraphCache : std::unordered_map<size_t, BackwardGraphResult>, Com
 
 } // anonymous namespace
 
-BackwardGraphResult
+EncodedSubraph
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

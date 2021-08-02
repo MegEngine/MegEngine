@@ -77,7 +77,7 @@ std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
     std::shared_ptr<OptimizedBackwardGraphResult> ret;
     auto bg = OpDef::make_backward_graph(
             *ctx.op, inputs, input_requires_grad, output_has_grad);
-    if (!bg.backward.empty()) {
+    if (!bg.graph.empty()) {
         ret = std::make_shared<OptimizedBackwardGraphResult>(bg);
     }
     backward_graph_cache.emplace(key, ret);
