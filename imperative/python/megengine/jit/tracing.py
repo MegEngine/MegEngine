@@ -66,7 +66,7 @@ def is_tracing():
 @contextlib.contextmanager
 def exclude_from_trace():
     global skip_tracing
-    if skip_tracing:
+    if skip_tracing or (active_trace is None):
         yield
         return
     try:

@@ -13,6 +13,7 @@ import numpy as np
 
 from .._imperative_rt import make_const
 from .._imperative_rt.core2 import SymbolVar, Tensor, apply, dtype_promotion, get_device
+from .._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from .._wrap import as_device
 from ..ops import builtin
 from ..ops.special import Const
@@ -219,3 +220,49 @@ def _normalize_axis(
             )
         return axis
     raise
+
+
+def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
+    if device.physical_name.startswith("cpu"):
+        gopt_level = None  # disable jit and compile
+
+    binary_ops = {
+        "+": builtin.Elemwise(mode="add"),
+        "-": builtin.Elemwise(mode="sub"),
+        "*": builtin.Elemwise(mode="mul"),
+        "/": builtin.Elemwise(mode="true_div"),
+        "//": builtin.Elemwise(mode="floor_div"),
+        "**": builtin.Elemwise(mode="pow"),
+        "√": builtin.Elemwise(mode="expm1"),
+        "max": builtin.Elemwise(mode="max"),
+        "additive": builtin.Elemwise(mode="add"),
+    }
+
+    unary_ops = {
+        "-": builtin.Elemwise(mode="negate"),
+    }
+
+    def decorator(func):
+        builder = _SubgraphBuilder(name)
+
+        def apply_expr(op, *args):
+            if isinstance(op, str):
+                if len(args) == 2:
+                    op = binary_ops[op]
+                elif len(args) == 1:
+                    op = unary_ops[op]
+            return builder.apply(op, args, 1)[0]
+
+        def apply_const(value, dtype=dtype, device=device):
+            return builder.apply_const(value, dtype, device)
+
+        inputs = [builder.input() for _ in range(nr_inputs)]
+        outputs, outputs_has_grad = func(inputs, apply_expr, apply_const)
+        builder.outputs(outputs)
+        builder.outputs_has_grad(outputs_has_grad)
+        if gopt_level is None:
+            return builder.get()
+        else:
+            return builder.compile(gopt_level)
+
+    return decorator

@@ -15,6 +15,7 @@
 
 #include "megbrain/common.h"
 #include "megbrain/imperative.h"
+#include "megbrain/imperative/graph_builder.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/utility.h"
@@ -477,4 +478,50 @@ void init_ops(py::module m) {
     m.def("set_global_rng_seed", &rng::set_global_rng_seed);
     m.def("get_global_rng_seed", &rng::get_global_rng_seed);
     m.def("get_rng_handle_compnode", &rng::get_rng_handle_compnode);
+
+    struct PySubgraphBuilder {
+        explicit PySubgraphBuilder(std::string name) : name{name}{}
+        std::string name;
+        Subgraph graph;
+        mgb::SmallVector<bool> output_grad_mask;
+        Subgraph::var_t next_var = 1;
+    };
+
+    py::class_<PySubgraphBuilder>(m, "SubgraphBuilder")
+        .def(py::init<std::string>())
+        .def("input", [](PySubgraphBuilder& self){
+            auto var = self.next_var++;
+            self.graph.inputs.push_back(var);
+            return var;
+        })
+        .def("apply", [](PySubgraphBuilder& self, std::shared_ptr<OpDef> op, Subgraph::vars_t inputs, size_t nr_outputs){
+            Subgraph::vars_t outputs;
+            for (size_t i = 0; i < nr_outputs; ++i) {
+                outputs.push_back(self.next_var++);
+            }
+            self.graph.exprs.push_back({op, inputs, outputs});
+            return outputs;
+        })
+        .def("apply_const", [](PySubgraphBuilder& self, py::object value, mgb::DType dtype, mgb::CompNode cn){
+            auto var = self.next_var++;
+            mgb::HostTensorND hvalue(cn);
+            npy::np2tensor(value.cast<py::array>().ptr(), npy::Meth::copy_into(&hvalue), dtype);
+            self.graph.constants.push_back({var, Tensor::make(hvalue)});
+            return var;
+        })
+        .def("outputs", [](PySubgraphBuilder& self, Subgraph::vars_t outputs){
+            self.graph.outputs = outputs;
+            self.output_grad_mask.resize(outputs.size(), true);
+        })
+        .def("outputs_has_grad", [](PySubgraphBuilder& self, mgb::SmallVector<bool> outputs_has_grad){
+            mgb_assert(self.graph.outputs.size() == self.output_grad_mask.size());
+            self.output_grad_mask = outputs_has_grad;
+        })
+        .def("get", [](PySubgraphBuilder& self){
+            return (std::shared_ptr<OpDef>)SubgraphOp::make(self.name, self.graph, self.output_grad_mask);
+        })
+        .def("compile", [](PySubgraphBuilder& self, int gopt_level){
+            auto op = SubgraphOp::make(self.name, self.graph, self.output_grad_mask);
+            return (std::shared_ptr<OpDef>)CompiledOp::make(op, gopt_level);
+        });
 }

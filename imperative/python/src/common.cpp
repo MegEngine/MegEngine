@@ -58,6 +58,9 @@ void init_common(py::module m) {
         .def_property_readonly("logical_name", [](const CompNode& cn) {
             return cn.to_string_logical();
         })
+        .def_property_readonly("physical_name", [](const CompNode& cn) {
+            return cn.to_string();
+        })
         .def_property_readonly("get_mem_status_bytes", [](const CompNode& cn) {
             return cn.get_mem_status_bytes();
         })
@@ -70,6 +73,7 @@ void init_common(py::module m) {
                     cn.to_string_physical().c_str(),
                     cn.to_string_logical().c_str());
         })
+        .def("__hash__", [](CompNode cn){ return mgb::hash(cn); })
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)
         .def_static("_get_device_count", &CompNode::get_device_count,
