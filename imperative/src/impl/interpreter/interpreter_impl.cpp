@@ -135,7 +135,7 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
     return info;
 }
 
-Handle ChannelImpl::put(const DeviceTensorND& data) {
+Handle ChannelImpl::put(const DeviceTensorND& data, const HostTensorND& hvalue) {
     MGB_LOCK_GUARD(m_spin);
     auto& state = get_channel_state();
     mgb_assert(check_available(), "Channel already closed");
@@ -144,7 +144,7 @@ Handle ChannelImpl::put(const DeviceTensorND& data) {
     RECORD_EVENT(TensorCommandEvent, info->id, TensorCommandEvent::Put);
     init(info, {data.layout(), data.comp_node()});
     info->mem_desc.id = StorageIdentifier::make(++m_storage_id);
-    info->ptr = Tensor::make(data);
+    info->ptr = Tensor::make(data, hvalue);
     RECORD_EVENT(TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node, data.raw_ptr());
     info->status = TensorInfo::Produced;
     RECORD_EVENT(TensorCommandFinishEvent, info->id, TensorCommandFinishEvent::Put);

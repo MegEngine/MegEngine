@@ -42,7 +42,7 @@ struct ChannelImpl : Interpreter::Channel {
     ~ChannelImpl() override;
 
     Handle put(const HostTensorND& value, bool no_cache) override;
-    Handle put(const DeviceTensorND& value) override;
+    Handle put(const DeviceTensorND& value, const HostTensorND& hvalue) override;
 
     void del(Handle) override;
     void swap_in(Handle) override;

@@ -44,7 +44,7 @@ PyObject *cpp_apply_backward_varnode;
 
 std::shared_ptr<Tensor> make_const(imperative::TensorPtr value) {
     if (!(ApplyContext::global_enable & Tensor::Flags::TRACE)) {
-        return std::make_shared<Tensor>(interpreter_for_py->put(value->dev_tensor()));
+        return std::make_shared<Tensor>(interpreter_for_py->put(value->dev_tensor(), value->get_value()));
     }
     py::tuple tup(6);
     auto data = value->get_value();
@@ -248,7 +248,7 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
                 // for DeviceTensorND
                 if (strstr(arg0->ob_type->tp_name, "DeviceTensorND")) {
                     auto dv = py::handle(arg0).cast<DeviceTensorND>();
-                    interpreter::Interpreter::Handle handle = interpreter_for_py->put(dv);
+                    interpreter::Interpreter::Handle handle = interpreter_for_py->put(dv, {});
                     m_tensor = std::make_shared<Tensor>(handle);
                 } else {
                     throw py::type_error("single argument is not tensor, varnode or devicetensor");
@@ -346,7 +346,6 @@ REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(trace_mixin_info)
 SET_GET_NAME(user_custom_name)
 SET_GET_NAME(automatic_name)
 #undef SET_GET_NAME
-
 
 PyObject* TensorWrapper::handle() {
     return py::cast(m_tensor->m_handle).release().ptr();
@@ -532,7 +531,7 @@ PyObject* TensorWrapper::_dev_tensor(){
 
         // set m_handle to make it a real tensor
         auto py_dev_tensor = py::reinterpret_borrow<py::object>(dev_tensor);
-        auto sh = interpreter_for_py->put(py_dev_tensor.cast<DeviceTensorND>());
+        auto sh = interpreter_for_py->put(py_dev_tensor.cast<DeviceTensorND>(), {});
         m_tensor->m_handle = std::move(SharedHandle(sh));
 
         // compiled info is useless after m_handle is set
