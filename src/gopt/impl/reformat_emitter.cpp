@@ -247,16 +247,36 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
 
 /* ============== PaddingEmitter ================= */
 PaddingEmitter::EmitResult PaddingEmitter::emit() const {
+    auto&& padshp = m_padshp;
     auto&& const_extent = m_const_extent;
     auto&& axis = m_axis;
-    auto builder = [const_extent, axis](const VarNodeArray& vars) {
+    auto builder = [padshp, const_extent, axis](const VarNodeArray& vars) {
         auto i = vars[0];
         auto padding_shp_var = vars[1];
         TensorShape shape;
         shape.ndim = i->shape().ndim;
         for (size_t ax = 0; ax < shape.ndim; ++ax)
             shape[ax] = 1;
-        shape[axis] = const_extent;
+        // avoid making a scalar lowbit tensor
+        if (!i->dtype().is_low_bit() || const_extent != 1)
+            shape[axis] = const_extent;
+        else {
+            size_t const_axis = 0;
+            size_t new_const_extent = const_extent;
+            for (size_t i = 0; i < padshp.ndim; ++i) {
+                const auto& dim = padshp[i];
+                if (dim.extent() != Dimension::UNDETERMINED_EXTENT &&
+                    dim.extent() != 1) {
+                    new_const_extent = dim.extent();
+                    const_axis = i;
+                    break;
+                }
+            }
+            mgb_assert(new_const_extent != 1,
+                       "cannot make an scalar lowbit tensor(got:%s)",
+                       i->dtype().name());
+            shape[const_axis] = new_const_extent;
+        }
         auto host_val =
                 std::make_shared<HostTensorND>(i->comp_node(), i->dtype());
         host_val->resize(shape);

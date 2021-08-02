@@ -80,11 +80,13 @@ private:
 
 class PaddingEmitter final : public Emitter {
 public:
-    PaddingEmitter(size_t const_extent, size_t axis)
-            : m_const_extent{const_extent}, m_axis{axis} {}
+    PaddingEmitter(const megdnn::NamedTensorShape& padshp, size_t const_extent,
+                   size_t axis)
+            : m_padshp{padshp}, m_const_extent{const_extent}, m_axis{axis} {}
     EmitResult emit() const override;
 
 private:
+    megdnn::NamedTensorShape m_padshp;
     size_t m_const_extent, m_axis;
 };
 

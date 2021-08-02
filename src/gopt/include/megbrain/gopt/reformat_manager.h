@@ -17,6 +17,11 @@
 namespace mgb {
 namespace gopt {
 
+enum class TensorType : uint32_t {
+    FEATURE = 0,
+    WEIGHT = 1,
+};
+
 enum class TensorFormats : uint32_t {
     // input tensor formats
     NCHW = 0,     ///< [N, C, H, W]
@@ -116,6 +121,15 @@ public:
 private:
     ReformatCache m_cache;
 };
+
+TensorShape make_aligned_tensor_shape(const VarNode* var,
+                                      TensorFormats orig_formats,
+                                      TensorFormats target_formats);
+
+TensorShape make_aligned_weight_shape(const VarNode* var,
+                                      TensorFormats orig_formats,
+                                      TensorFormats target_formats,
+                                      TensorFormats extra_formats);
 }  // namespace gopt
 }  // namespace mgb
 

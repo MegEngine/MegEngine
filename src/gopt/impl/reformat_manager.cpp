@@ -13,6 +13,7 @@
 #include "megbrain/gopt/reformat_manager.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/utils/arith_helper.h"
+#include "./utils.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -31,68 +32,6 @@ int gcd(const int& p, const int& q) {
         }
     }
     return x;
-}
-
-NamedTensorShape tensor_formats_to_named_tensor_shape(TensorFormats format) {
-    switch (format) {
-        case TensorFormats::NCHW:
-            return {{"N"}, {"C"}, {"H"}, {"W"}};
-        case TensorFormats::NHWC:
-            return {{"N"}, {"H"}, {"W"}, {"C"}};
-        case TensorFormats::NCHWc4:
-            return {{"N"}, {"C//4"}, {"H"}, {"W"}, {"C%4"}};
-        case TensorFormats::NCHWc8:
-            return {{"N"}, {"C//8"}, {"H"}, {"W"}, {"C%8"}};
-        case TensorFormats::NCHWc32:
-            return {{"N"}, {"C//32"}, {"H"}, {"W"}, {"C%32"}};
-        case TensorFormats::NCHWc64:
-            return {{"N"}, {"C//64"}, {"H"}, {"W"}, {"C%64"}};
-        case TensorFormats::CHWNc4:
-            return {{"C//4"}, {"H"}, {"W"}, {"N"}, {"C%4"}};
-        case TensorFormats::NHCWc4:
-            return {{"N"}, {"H"}, {"C//4"}, {"W"}, {"C%4"}};
-        case TensorFormats::KRSCk4:
-            return {{"K//4"}, {"R"}, {"S"}, {"C"}, {"K%4"}};
-        case TensorFormats::GKRSCk4:
-            return {{"G"}, {"K//4"}, {"R"}, {"S"}, {"C"}, {"K%4"}};
-        case TensorFormats::C1RSc4:
-            return {{"C//4"}, {"C%1"}, {"R"}, {"S"}, {"C%4"}};
-        case TensorFormats::KRSCk4c4:
-            return {{"K//4"}, {"R"}, {"S"}, {"C//4"}, {"K%4"}, {"C%4"}};
-        case TensorFormats::GKRSCk4c4:
-            return {{"G"}, {"K//4"}, {"R"}, {"S"}, {"C//4"}, {"K%4"}, {"C%4"}};
-        case TensorFormats::KCRSk4c4:
-            return {{"K//4"}, {"C//4"}, {"R"}, {"S"}, {"K%4"}, {"C%4"}};
-        case TensorFormats::GKCRSk4c4:
-            return {{"G"}, {"K//4"}, {"C//4"}, {"R"}, {"S"}, {"K%4"}, {"C%4"}};
-        case TensorFormats::KCRSc4k4:
-            return {{"K//4"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}, {"K%4"}};
-        case TensorFormats::GKCRSc4k4:
-            return {{"G"}, {"K//4"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}, {"K%4"}};
-        case TensorFormats::C11RSc4:
-            return {{"C//4"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}, {"C%4"}};
-        case TensorFormats::KCRSc8k8:
-            return {{"K//8"}, {"C//8"}, {"R"}, {"S"}, {"C%8"}, {"K%8"}};
-        case TensorFormats::GKCRSc8k8:
-            return {{"G"}, {"K//8"}, {"C//8"}, {"R"}, {"S"}, {"C%8"}, {"K%8"}};
-        case TensorFormats::C11RSc8:
-            return {{"C//8"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}, {"C%8"}};
-        case TensorFormats::KRSCk8:
-            return {{"K//8"}, {"R"}, {"S"}, {"C"}, {"K%8"}};
-        case TensorFormats::KCRSc4:
-            return {{"K"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}};
-        case TensorFormats::GKCRSc4:
-            return {{"G"}, {"K"}, {"C//4"}, {"R"}, {"S"}, {"C%4"}};
-        case TensorFormats::KCRS:
-            return {{"K"}, {"C"}, {"R"}, {"S"}};
-        case TensorFormats::GKCRS:
-            return {{"G"}, {"K"}, {"C"}, {"R"}, {"S"}};
-        case TensorFormats::C11RS:
-            return {{"C"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}};
-        default:
-            mgb_throw(AssertionError, "invalid tensor formats(%u)",
-                      static_cast<uint32_t>(format));
-    }
 }
 };  // namespace
 
@@ -393,8 +332,10 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             tensor_formats_to_named_tensor_shape(key.input_format);
     NamedTensorShape output_shape =
             tensor_formats_to_named_tensor_shape(key.output_format);
-    size_t input_alignment, output_alignment;
-    size_t input_channel_idx, output_channel_idx;
+    size_t input_alignment = 0;
+    size_t output_alignment = 0;
+    size_t input_channel_idx = input_shape.ndim,
+           output_channel_idx = input_shape.ndim;
     for (size_t i = 0; i < input_shape.ndim; ++i) {
         if (input_shape[i].name() == Dimension::Name::C &&
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -411,6 +352,15 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             break;
         }
     }
+    mgb_assert(input_channel_idx < input_shape.ndim &&
+                       output_channel_idx < input_shape.ndim,
+               "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
+               input_channel_idx, output_channel_idx,
+               input_shape.to_string().c_str());
+    mgb_assert(input_alignment > 0 && output_alignment > 0,
+               "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
+               input_alignment, output_alignment,
+               input_shape.to_string().c_str());
     NamedTensorShape orig_shape =
             tensor_formats_to_named_tensor_shape(orig_format);
     size_t orig_channel = 0;
@@ -448,8 +398,9 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             auto make_shape = std::get<0>(
                     MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({x});
-            auto padding = std::get<0>(
-                    PaddingEmitter{const_extent, input_channel_idx}.emit());
+            auto padding = std::get<0>(PaddingEmitter{
+                    padding_shape, const_extent, input_channel_idx}
+                                               .emit());
             cur = padding({cur, padding_shp_var});
         }
         cur = ReformatManager::instance().get(key)({cur});
@@ -469,9 +420,10 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
         const VarNode* orig_var, const ReformatKey& key,
         const AlignmentDesc& extra_alignment) const {
     size_t in_channels = 0, out_channels = 0;
-    size_t input_channel_idx, output_channel_idx;
-    Dimension::Name out_channel_name;
+    Dimension::Name out_channel_name = Dimension::Name::C;
     auto input_shape = tensor_formats_to_named_tensor_shape(key.input_format);
+    size_t input_channel_idx = input_shape.ndim,
+           output_channel_idx = input_shape.ndim;
     for (size_t i = 0; i < input_shape.ndim; ++i) {
         if (input_shape[i].name() == Dimension::Name::C &&
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -491,7 +443,15 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
                        input_shape.to_string().c_str());
         }
     }
-    size_t in_channel_alignment, out_channel_alignment = 1;
+    mgb_assert(out_channel_name == Dimension::Name::K ||
+                       out_channel_name == Dimension::Name::N,
+               "invalid out channel(shp:%s)", input_shape.to_string().c_str());
+    mgb_assert(input_channel_idx < input_shape.ndim &&
+                       output_channel_idx < input_shape.ndim,
+               "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
+               input_channel_idx, output_channel_idx,
+               input_shape.to_string().c_str());
+    size_t in_channel_alignment = 0, out_channel_alignment = 0;
     auto output_shape = tensor_formats_to_named_tensor_shape(key.output_format);
     for (size_t i = 0; i < output_shape.ndim; ++i) {
         if (output_shape[i].name() == Dimension::Name::C &&
@@ -502,6 +462,10 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
             out_channel_alignment = output_shape[i].stride();
         }
     }
+    mgb_assert(in_channel_alignment > 0 && out_channel_alignment > 0,
+               "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
+               in_channel_alignment, out_channel_alignment,
+               output_shape.to_string().c_str());
     size_t aligned_in_channel =
             divup(in_channels, in_channel_alignment) * in_channel_alignment;
     if (extra_alignment.name == out_channel_name) {
@@ -526,8 +490,9 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
             auto make_shape = std::get<0>(
                     MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({x});
-            auto padding = std::get<0>(
-                    PaddingEmitter{const_extent, input_channel_idx}.emit());
+            auto padding = std::get<0>(PaddingEmitter{
+                    padding_shape, const_extent, input_channel_idx}
+                                               .emit());
             cur = padding({cur, padding_shp_var});
         }
         if (aligned_out_channel > out_channels) {
@@ -540,8 +505,9 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
             auto make_shape = std::get<0>(
                     MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({cur});
-            auto padding = std::get<0>(
-                    PaddingEmitter{const_extent, output_channel_idx}.emit());
+            auto padding = std::get<0>(PaddingEmitter{
+                    padding_shape, const_extent, output_channel_idx}
+                                               .emit());
             cur = padding({cur, padding_shp_var});
         }
         cur = ReformatManager::instance().get(key)({cur});
@@ -554,4 +520,81 @@ const ReformatManager& ReformatManager::instance() {
     static ReformatManager inst;
     return inst;
 }
+
+TensorShape mgb::gopt::make_aligned_tensor_shape(const VarNode* var,
+                                                 TensorFormats orig_formats,
+                                                 TensorFormats target_formats) {
+    using Dimension = megdnn::Dimension;
+    static constexpr uint32_t UNDETERMINED_EXTENT =
+            Dimension::UNDETERMINED_EXTENT;
+    auto orig_shape = tensor_formats_to_named_tensor_shape(orig_formats);
+    auto target_shape = tensor_formats_to_named_tensor_shape(target_formats);
+
+    TensorShape oshp = var->shape();
+    mgb_assert(oshp.is_scalar() || oshp.ndim == orig_shape.ndim,
+               "orig shape of var node is not compatible with tensor "
+               "formats(var:%s;shp:%s;fmt:%s)",
+               var->cname(), oshp.to_string().c_str(),
+               orig_shape.to_string().c_str());
+    if (oshp.is_scalar()) return oshp;
+    TensorShape tshp;
+    ThinHashMap<Dimension::Name, int> name2dominant;
+    for (size_t i = 0; i < orig_shape.ndim; ++i) {
+        auto name = orig_shape[i].name();
+        if (orig_shape[i].extent() == UNDETERMINED_EXTENT) {
+            auto insert = name2dominant.insert(std::make_pair(name, i));
+            mgb_assert(insert.second);
+        }
+    }
+
+    tshp.ndim = target_shape.ndim;
+    for (size_t i = 0; i < target_shape.ndim; ++i) {
+        auto name = target_shape[i].name();
+        if (target_shape[i].extent() == UNDETERMINED_EXTENT) {
+            int idx = name2dominant.at(name);
+            bool mul = orig_shape[idx] < target_shape[i];
+            size_t factor = mul ? (target_shape[i] / orig_shape[idx]).extent()
+                                : (orig_shape[idx] / target_shape[i]).extent();
+            if (mul)
+                tshp[i] = oshp[idx] * factor;
+            else
+                tshp[i] = divup(oshp[idx], factor);
+        } else {
+            tshp[i] = target_shape[i].extent();
+        }
+    }
+    return tshp;
+}
+
+TensorShape mgb::gopt::make_aligned_weight_shape(const VarNode* var,
+                                                 TensorFormats orig_formats,
+                                                 TensorFormats target_formats,
+                                                 TensorFormats extra_formats) {
+    auto tshp = make_aligned_tensor_shape(var, orig_formats, target_formats);
+    auto extra_shape = tensor_formats_to_named_tensor_shape(extra_formats);
+    using Dimension = megdnn::Dimension;
+    static constexpr uint32_t UNDETERMINED_EXTENT =
+            Dimension::UNDETERMINED_EXTENT;
+    size_t out_channel_alignment = 1;
+    for (size_t i = 0; i < extra_shape.ndim; ++i) {
+        auto name = extra_shape[i].name();
+        if (name == Dimension::Name::C &&
+            extra_shape[i].extent() == UNDETERMINED_EXTENT) {
+            out_channel_alignment = extra_shape[i].stride();
+        }
+    }
+
+    auto target_shape = tensor_formats_to_named_tensor_shape(target_formats);
+    for (size_t i = 0; i < target_shape.ndim; ++i) {
+        auto name = target_shape[i].name();
+        if ((name == Dimension::Name::K || name == Dimension::Name::N) &&
+            target_shape[i].extent() == UNDETERMINED_EXTENT) {
+            size_t out_channels = tshp[i] * target_shape[i].stride();
+            tshp[i] = divup(out_channels, out_channel_alignment) *
+                      out_channel_alignment / target_shape[i].stride();
+        }
+    }
+    return tshp;
+}
+
 // vim: syntax=cpp.doxygen

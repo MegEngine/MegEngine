@@ -20,6 +20,7 @@ class GraphPartition {
 public:
     using VarNodeSet = ThinHashSet<VarNode*>;
     using OperatorNodeSet = ThinHashSet<cg::OperatorNodeBase*>;
+
     class InputPlaceholder;
 
     GraphPartition() = default;
@@ -45,13 +46,13 @@ private:
 class SubGraphExtractor {
 public:
     using OprList = ThinHashSet<Typeinfo*>;
-    SubGraphExtractor(OprList opr_list) : m_opr_list{opr_list} {};
+    SubGraphExtractor(const OprList& opr_list) : m_opr_list{opr_list} {};
     std::vector<GraphPartition> extract(
             const SymbolVarArray& endpoint_vars) const;
 
 private:
     class Impl;
-    OprList m_opr_list;
+    const OprList& m_opr_list;
 };
 
 }  // namespace gopt

@@ -134,6 +134,13 @@ void armv7::RelayoutForwardImpl::exec(_megdnn_tensor_in src0,
     TensorND src = src0, dst = dst0;
     check_layout_and_canonize(src.layout, dst.layout);
 
+    // FIXME: optimize for lowbit cases
+    if (src.layout.dtype.enumv() == DTypeEnum::QuantizedS4 ||
+        src.layout.dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        fallback::RelayoutForwardImpl::exec(src0, dst0, src_handle);
+        return;
+    }
+
     relayout::TransposeParam trans_param;
     bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param);
     if (trans && trans_param.c == 1 && src0.layout.dtype.size() == 1) {
