@@ -518,6 +518,10 @@ cg::OperatorNodeBase* ExternCOprRunner::load(OprLoadContext& ctx,
     if (auto trans = iter->second.second) {
         desc = trans(desc);
     }
+
+    mgb_throw_if(nullptr == desc, MegBrainError,
+                 "loader create desc returns nullptr");
+
     return make_from_desc(dump_name, inputs, desc, config);
 }
 
