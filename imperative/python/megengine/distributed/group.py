@@ -94,7 +94,7 @@ class Group:
             return self.is_single_machine_cache
         assert _sd is not None, "please call init_process_group first"
         for rank in self.proc_ranks:
-            if rank not in _sd.machine_ranks:
+            if _sd.machine_ranks is None or rank not in _sd.machine_ranks:
                 self.is_single_machine_cache = False
                 return False
         self.is_single_machine_cache = True
