@@ -1,0 +1,10 @@
+test/resource/input_data.npy filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/shufflenet.mge filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/shufflenet_crypt_aes.mge filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/test_packed_model.lite filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/test_packed_model_rc4.lite filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/output_data.npy filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/model.mgb filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/liveness_rgb_nosub128.rknn filter=lfs diff=lfs merge=lfs -text
+third_party/librknn_api filter=lfs diff=lfs merge=lfs -text
+test/resource/lite/model_atlas.mgb filter=lfs diff=lfs merge=lfs -text

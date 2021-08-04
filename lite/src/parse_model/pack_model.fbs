@@ -1,0 +1,28 @@
+namespace model_parse;
+
+table ModelHeader {
+    name:string;
+    info_decryption_method:string;
+    info_parse_method:string;
+    model_decryption_method:string;
+}
+
+table ModelInfo {
+    data:[ubyte];
+}
+
+table ModelData {
+    data:[ubyte];
+}
+
+table Model {
+    header:ModelHeader;
+    info:ModelInfo;
+    data:ModelData;
+}
+
+table PackModel {
+    models:[Model];
+}
+
+root_type PackModel;

@@ -209,6 +209,35 @@ function do_build() {
         echo "comapt whl name: ${compat_whl_name}"
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
 
+        # handle megenginelite
+        cd ${BUILD_DIR}
+        rm -rf lite_staging
+        mkdir -p lite_staging/megenginelite
+        cp ${SRC_DIR}/lite/pylite/megenginelite/* lite_staging/megenginelite/
+        cp ${SRC_DIR}/lite/pylite/setup.py lite_staging/
+        cp ${SRC_DIR}/lite/pylite/requires.txt lite_staging/
+        VER_FILE=${SRC_DIR}/imperative/python/megengine/version.py
+        if [ -f ${VER_FILE} ];then
+            cp ${VER_FILE} lite_staging/megenginelite
+        else
+            echo "ERROR: can not find version file"
+            exit -1
+        fi
+        mkdir -p ${BUILD_DIR}/lite_staging/megenginelite/libs
+        LITE_LIB=${BUILD_DIR}/lite_staging/megenginelite/libs/liblite_shared.dylib
+        cp ${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/lite/liblite_shared.dylib ${LITE_LIB}
+        llvm-strip -s ${LITE_LIB}
+
+        cd ${BUILD_DIR}/lite_staging/
+        ${PYTHON_DIR}/bin/python3 setup.py bdist_wheel
+        cd ${BUILD_DIR}/lite_staging/dist/
+        org_whl_name=`ls Meg*.whl`
+        index=`awk -v a="${org_whl_name}" -v b="-macosx" 'BEGIN{print index(a,b)}'`
+        compat_whl_name=`echo ${org_whl_name} |cut -b -$index`macosx_10_14_x86_64.whl
+        echo "megenginelite org whl name: ${org_whl_name}"
+        echo "megenginelite comapt whl name: ${compat_whl_name}"
+        cp ${BUILD_DIR}/lite_staging/dist/Meg*.whl ${MACOS_WHL_HOME}/${compat_whl_name}
+
         cd ${SRC_DIR}
         echo ""
         echo "##############################################################################################"
