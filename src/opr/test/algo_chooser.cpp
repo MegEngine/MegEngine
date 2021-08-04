@@ -296,6 +296,55 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeBatchedMatrixMul) {
             {TensorShape{4, 6, 8}, TensorShape{4, 8, 4}});
 }
 
+template <typename MgbOpr>
+void test_no_profiling_on_shape_change(const TensorShapeArray& inps0,
+                                       const TensorShapeArray& inps1) {
+    using Policy = typename MgbOpr::ExecutionPolicy;
+
+    int nr_set = 0;
+    auto on_get = [](const std::string&, const void*, size_t, const void*,
+                     size_t) {};
+    auto on_set = [&nr_set](const std::string&, const void*, size_t,
+                            const void*, size_t) { nr_set++; };
+    PersistentCacheHook cache_hook{on_get, on_set};
+
+    auto cn = CompNode::load("xpu0");
+    auto run = [&cn](const TensorShapeArray& shapes) {
+        auto graph = ComputingGraph::make();
+        graph->options().no_profiling_on_shape_change = true;
+
+        HostTensorGenerator<> gen;
+        auto host_a = gen(shapes[0], cn);
+        auto host_b = gen(shapes[1], cn);
+        HostTensorND host_out;
+        auto a = opr::Host2DeviceCopy::make(*graph, host_a),
+             b = opr::Host2DeviceCopy::make(*graph, host_b);
+
+        Policy policy;
+        policy.strategy = Policy::Strategy::PROFILE;
+        auto out = MgbOpr::make(a, b, {}, policy, {});
+
+        std::unique_ptr<cg::AsyncExecutable> func = graph->compile({{out, {}}});
+        func->execute();
+    };
+
+    run(inps0);
+    int nr = nr_set;
+    ASSERT_GT(nr, 0);
+    run(inps1);
+    ASSERT_EQ(nr, nr_set);
+}
+
+TEST(TestOprDNN, FastrunNoProfilingOnShapeChange) {
+    REQUIRE_GPU(1);
+
+    test_no_profiling_on_shape_change<opr::Convolution>(
+            {{12, 3, 36, 36}, {4, 3, 3, 3}}, {{32, 3, 28, 28}, {4, 3, 3, 3}});
+
+    test_no_profiling_on_shape_change<opr::MatrixMul>({{20, 30}, {30, 40}},
+                                                      {{30, 40}, {40, 60}});
+}
+
 #endif // MGB_ENABLE_FASTRUN
 #endif // MGB_CUDA
 

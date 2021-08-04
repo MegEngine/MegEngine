@@ -916,11 +916,12 @@ TEST(TestOprBlas, MatrixMulExePolicy) {
     graph->options().no_profiling_on_shape_change = true;
     auto func = graph->compile({make_callback_copy(matmul, host_y)});
     func->execute();
-    ASSERT_EQ(nr_get, 0);
+    ASSERT_GT(nr_get, 0);
+    int nr = nr_get;
     graph->options().no_profiling_on_shape_change = false;
     func = graph->compile({make_callback_copy(matmul, host_y)});
     func->execute();
-    ASSERT_GT(nr_get, 0);
+    ASSERT_GT(nr_get, nr);
 }
 #endif
 
