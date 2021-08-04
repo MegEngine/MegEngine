@@ -385,21 +385,27 @@ void ComputingGraphImpl::ComputingSequence::do_wait(bool explicit_user_wait) {
         }
     }
 
-    for (auto cn : m_used_comp_node) {
-        m_event_end.at(cn)->host_wait();
+    bool sync_device = m_owner_graph->options().comp_seq_sync_device;
+
+    if (sync_device) {
+        for (auto cn : m_used_comp_node) {
+            m_event_end.at(cn)->host_wait();
+        }
     }
     m_wait_finished = true;
 #if MGB_NEED_MEGDNN_ASYNC_ERROR
     // FIXME: It CAN NOT work well if more than one ComputingSequnces has been
     // executed on the same compnode and got AsyncError concurrently, because
     // only the first async error on each comp_node would be recorded.
-    for (auto&& cn : m_used_comp_node) {
-        auto error = cn.check_async_error();
-        if (error) {
-            static_cast<const OperatorNodeExcExtraInfo*>(error->extra_info())
-                    ->opr()
-                    ->owner_graph()
-                    ->record_async_error(std::move(error));
+    if (sync_device) {
+        for (auto&& cn : m_used_comp_node) {
+            auto error = cn.check_async_error();
+            if (error) {
+                static_cast<const OperatorNodeExcExtraInfo*>(error->extra_info())
+                        ->opr()
+                        ->owner_graph()
+                        ->record_async_error(std::move(error));
+            }
         }
     }
 #endif

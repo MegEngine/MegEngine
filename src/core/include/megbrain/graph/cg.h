@@ -520,6 +520,9 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
              */
             bool no_force_inplace = false;
 
+            //! whether to sync comp_node when waiting computing sequence
+            bool comp_seq_sync_device = true;
+
             //! add extra deps for the comp seq if a specific var is dependent
             ThinHashMap<VarNode*, VarNodeArray> extra_vardeps;
 

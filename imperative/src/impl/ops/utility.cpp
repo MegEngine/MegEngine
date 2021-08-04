@@ -288,6 +288,7 @@ ComputingGraphHolder& get_computing_graph(std::shared_ptr<OpDef> compiled_op, Sm
         cg_holder.graph->options().async_exec_level = 0;
         cg_holder.graph->options().graph_opt_level = compiled_op->cast_final_safe<CompiledOp>().gopt_level;
         cg_holder.graph->options().enable_var_mem_defragment = false;
+        cg_holder.graph->options().comp_seq_sync_device = false;
         cg_holder.graph->set_device_memory_allocator(cg_holder.allocator);
         // cg_holder.graph->options().graph_opt.jit = 2;
         VarNodeArray input_vars;
