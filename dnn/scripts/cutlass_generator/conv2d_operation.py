@@ -531,9 +531,10 @@ void initialize_${configuration_name}(Manifest &manifest) {
 ###################################################################################################
 
 class EmitConvSingleKernelWrapper():
-  def __init__(self, kernel_path, operation):
+  def __init__(self, kernel_path, operation, short_path=False):
     self.kernel_path = kernel_path
     self.operation = operation
+    self.short_path = short_path
 
     if self.operation.conv_kind == ConvKind.Fprop:
       self.instance_emitter = EmitConv2dInstance()
@@ -582,7 +583,11 @@ void initialize_${operation_name}(Manifest &manifest) {
 
   #
   def __enter__(self):
-    self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
+    if self.short_path:
+      self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % GlobalCnt.cnt)
+      GlobalCnt.cnt += 1
+    else:
+      self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name())
     self.kernel_file = open(self.kernel_path, "w")
     self.kernel_file.write(self.header_template)
     return self

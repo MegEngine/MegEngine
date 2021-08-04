@@ -8,6 +8,7 @@ import enum
 import os.path
 import shutil
 import argparse
+import platform
 
 from library import *
 from manifest import *
@@ -634,7 +635,7 @@ if __name__ == "__main__":
                       default='simt', help="kernel type of CUTLASS kernel generator")
 
   gemv_wrapper_path = "src/cuda/matrix_mul/cutlass_matrix_mul_wrapper_batched_gemv_strided.cuinl"
-
+  short_path = (platform.system() == "Windows" or platform.system().find('NT') >= 0) and ('true'!= os.getenv("CUTLASS_WITH_LONG_PATH", default='False').lower())
   args = parser.parse_args()
 
   if args.operations == "gemm":
@@ -648,15 +649,15 @@ if __name__ == "__main__":
   
   if args.operations == "conv2d" or args.operations == "deconv":
     for operation in operations:
-      with EmitConvSingleKernelWrapper(args.output, operation) as emitter:
+      with EmitConvSingleKernelWrapper(args.output, operation, short_path) as emitter:
         emitter.emit()
   elif args.operations == "gemm":
     for operation in operations:
-      with EmitGemmSingleKernelWrapper(args.output, operation) as emitter:
+      with EmitGemmSingleKernelWrapper(args.output, operation, short_path) as emitter:
         emitter.emit()
   elif args.operations == "gemv":
     for operation in operations:
-      with EmitGemvSingleKernelWrapper(args.output, operation, gemv_wrapper_path) as emitter:
+      with EmitGemvSingleKernelWrapper(args.output, operation, gemv_wrapper_path, short_path) as emitter:
         emitter.emit()
 
   if args.operations != "gemv":

@@ -612,3 +612,6 @@ class TensorDescription:
     self.complex_transform = complex_transform
 
 ###################################################################################################
+
+class GlobalCnt:
+  cnt = 0
