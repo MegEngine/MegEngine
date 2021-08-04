@@ -7,6 +7,10 @@ if (MGE_WITH_TEST)
     if(LITE_BUILD_WITH_MGE)
         # lite_test will depends megbrain interface
         target_link_libraries(lite_test megbrain)
+        if (MGE_WITH_ROCM)
+            # FIXME: hip obj can not find cpp obj only through lite_static
+            target_link_libraries(lite_test megdnn)
+        endif ()
     endif()
 
     if(UNIX)

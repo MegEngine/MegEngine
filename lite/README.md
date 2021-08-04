@@ -3,76 +3,7 @@
 It is a lite warper of MegEngine, to enable MegEngine easy to be integrated in 
 user's SDK
 
-## bazel build 
-
-目前支持内部 bazel 和 CMake 编译，支持 C++/C, Python 接口，
-下面是 bazel 中 lite_shared 目标的编译，可以作为其他目标的编译的参考，
-该编译依赖内部 bazel 编译以及 megvii3。
-
-### 配置编译环境
-
-需要使用 megvii3 workspace 来完成 bazel 的编译
-
-#### Clone megvii3 安装 bazel
-
-```bash
-    git clone git@git-core.megvii-inc.com:brain-sdk/megvii3.git
-    ./utils/bazel/get_bazel.sh
-```
-
-#### Clone megbrain
-```
-    git submodule update brain/megbrain brain/midout
-```
-
-### 编译 x86 CUDA 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared --cpu="k8" \
-        --compiler="gcc7_cuda10" -c opt
-```
-
-### 编译 x86 CPU 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared --cpu="k8" \
-        --compiler="gcc9" -c opt
-```
-
-### 编译 arm OpenCL 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared_shared --cpu=android_aarch64 \
-        -c opt --define enable_opencl=1  --define enable_opencl_search=1
-```
-### 编译 arm opencl lite_examples
-bazel-3.0.0-megvii2 build //brain/megbrain/lite:lite_shared_examples \
---cpu=android_aarch64 --define enable_opencl=1  --define enable_opencl_search=1
-####如何运行snpe_loder 的lite_exampes 请查看下面的wiki
-https://wiki.megvii-inc.com/pages/viewpage.action?pageId=268786906
-
-### 编译 armv7 CPU 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared --cpu=android_armv7 \
-        -c opt
-```
-
-### 编译 arm64 CPU 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared --cpu=android_aarch64 \
-        -c opt
-```
-
-### 编译 arm64 CPU v8.2 版本
-
-```bash
-    ./bazel build //brain/megbrain/lite:lite_shared --cpu=android_aarch64 \
-       --copt -march=armv8.2-a+fp16+dotprod  -c opt
-```
-
-## 同时支持cmake构建
+## 支持cmake构建
 cmake构建参考scripts/cmake-build/BUILD_README.md,下面example表示同时支持编译megengine
 和RKNPU后端且打开OpenCL的release模式
 ```bash
@@ -234,18 +165,4 @@ Lite 中提供自定义的方式，用户可以自定义自己 Info 部分的类
     ```bash
     aes_encrypt.sh  xxx.mdl  xxx_encrypted.mdl \
         000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
-    ```
-
-* rc4_encypt.cpp 可以被编译成为一个 rc4 加密的工具，这个工具可以通过
-  制定的 key 或者默认的 key 加密制定的文件，支持 rc4 方法和
-  simple_fast_rc4 两种方法，支持自定义 key。
-    * bazel 编译 x86 命令为：
-    ```bash
-    bazel build //brain/megbrain/lite:rc4_encryptor \
-        --cpu='k8' --compiler='gcc9'
-    ```
-    * 加密文件，具体用法见 help
-    ```bash
-    rc4_encryptor encrypt_predefined_rc4 \
-        to_be_encrypt.file encrypted.file
     ```
