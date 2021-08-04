@@ -1142,7 +1142,7 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW4_DET_FIRST) {
 }
 
 #endif
-}
+}  // namespace conv
 }  // namespace test
 }  // namespace megdnn
 
