@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#if !__DEPLOY_ON_XP_SP2__
 #include "megbrain/plugin/var_sanity_check.h"
 #include "megbrain/comp_node_env.h"
 #include "megbrain/graph/event.h"
@@ -363,5 +364,6 @@ void VarSanityCheck::setup_input_checker(bool add_debug_log,
         env.dispatch_on_comp_node(cn, callback);
     }
 }
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

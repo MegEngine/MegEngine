@@ -66,6 +66,60 @@ option(MGE_WITH_MKLDNN "Enable Intel MKL_DNN support," ON)
 option(MGE_WITH_ROCM "Enable ROCM support" OFF)
 option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
+if(MSVC OR WIN32)
+    option(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP "Enable deploy inference on Windows xp" OFF)
+    # special MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2 for Windows XP sp2(32bit)
+    # internal behavior:
+    # 1: will force define MGB_HAVE_THREAD=0, which means only support single thread
+    # 2: some Feature will be disable, eg: MGB_ENABLE_JSON and var sanity check, do
+    #    not too many care this!!, if you want to use this Feature to 'DEBUG', you can
+    #    run same model at NON-XP-SP2 env, eg Win7 or XP-SP3(build without MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+    # 3: we only support MegEngine(load_and_run) and MegEngineLite API work on XP SP2
+    #    some debug utils, eg, megbrain_test/megdnn_test not support run, most caused by gtest src code
+    # sdk caller:
+    # 1: as we remove mutex, when you use MSVC self API eg CreateThread to start several MegEngine instances
+    #    in the same progress, please call MegEngine API(init/run) as serial as possible, also please
+    #    do not use std::thread std::mutex/std::this_thread_id at SDK caller side!!!
+    # check dll/exe can deploy on Windows XP sp2 or not:
+    #    please checkout scripts/misc/check_windows_xp_sp2_deploy.py
+    option(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2 "Enable deploy inference on Windows xp sp2" OFF)
+
+    # PE file linked by LLVM lld can not run at Windows XP env, so we force use link.exe
+    # which always locate in Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/bin/*/*/link.exe
+    if(${MGE_ARCH} STREQUAL "i386")
+        set(CMAKE_LINKER "link.exe")
+        message(STATUS "Force use MSVS link when build for i386")
+    endif()
+    if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP OR MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+        if(NOT ${MGE_ARCH} STREQUAL "i386")
+            message(FATAL_ERROR "only support 32bit when build for Windows xp")
+        endif()
+
+        if(NOT MGE_INFERENCE_ONLY)
+            message(FATAL_ERROR "only support inference when build for Windows xp")
+        endif()
+
+        if(MGE_WITH_CUDA)
+            message(FATAL_ERROR "do not support CUDA when build for Windows xp")
+        endif()
+
+        # Windows XP sp3 have thread issue, Workround for it
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_WIN32_WINNT=0x0501 /Zc:threadSafeInit-")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D_WIN32_WINNT=0x0501 /Zc:threadSafeInit-")
+        # for Windows XP type
+        add_link_options("/SUBSYSTEM:CONSOLE,5.01")
+        # some old lib(for example mkl for xp) use legacy stdio, so we force link legacy_stdio_definitions
+        add_link_options("/DEFAULTLIB:legacy_stdio_definitions.lib")
+
+        if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__DEPLOY_ON_XP_SP2__=1")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__DEPLOY_ON_XP_SP2__=1")
+        endif()
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_WIN32_WINNT=0x0601")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D_WIN32_WINNT=0x0601")
+    endif()
+endif()
 
 if(MSVC OR WIN32)
     message(STATUS "windows force cudnn static link")
@@ -263,7 +317,7 @@ if(MSVC OR WIN32)
     set(WIN_FLAGS "${WIN_FLAGS} -Wno-error=zero-as-null-pointer-constant -Wno-error=implicit-int-conversion")
     set(WIN_FLAGS "${WIN_FLAGS} -Wno-error=float-conversion -Wno-error=shadow-field -Wno-error=covered-switch-default")
     set(WIN_FLAGS "${WIN_FLAGS} -Wno-error=deprecated  -Wno-error=documentation  -Wno-error=unreachable-code-break")
-    set(WIN_FLAGS "${WIN_FLAGS} /DWIN32 -Wno-macro-redefined /D_WIN32_WINNT=0x0601 /wd4819")
+    set(WIN_FLAGS "${WIN_FLAGS} /DWIN32 -Wno-macro-redefined /wd4819")
     set(WIN_FLAGS "${WIN_FLAGS} /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /DNOGDI /D_USE_MATH_DEFINES /bigobj")
     set(WIN_FLAGS "${WIN_FLAGS} /Zm500 /EHs /wd4351 /wd4291 /wd4250 /wd4996 /wd4819 -Wno-inconsistent-dllimport")
 
@@ -675,7 +729,7 @@ if(MGE_WITH_CUDA)
 endif()
 
 ###########please add_subdirectory from here###############
-if((${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64") AND NOT APPLE)
+if((${MGE_ARCH} STREQUAL "x86_64" OR ${MGE_ARCH} STREQUAL "i386" OR ${MGE_ARCH} STREQUAL "armv7" OR ${MGE_ARCH} STREQUAL "aarch64") AND NOT APPLE AND NOT MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
     option(MGE_ENABLE_CPUINFO "Build cpuinfo library for check runtime." ON)
     if(MGE_ENABLE_CPUINFO)
         message(STATUS "Enable cpuinfo runtime check and little kernel optimize.")
@@ -821,6 +875,14 @@ if(CMAKE_THREAD_LIBS_INIT OR CMAKE_USE_WIN32_THREADS_INIT OR ANDROID)
     set(MGB_HAVE_THREAD 1)
 endif()
 
+if(MSVC OR WIN32)
+    if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+        message(STATUS "disable MGB_HAVE_THREAD/MGB_ENABLE_JSON when DEPLOY ON XP SP2")
+        set(MGB_HAVE_THREAD 0)
+        set(MGB_ENABLE_JSON 0)
+    endif()
+endif()
+
 if(MGE_WITH_TEST)
     # use intra-op multi threads
     set(MEGDNN_ENABLE_MULTI_THREADS 1)
@@ -849,6 +911,13 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWith
 else()
     set(MGB_ASSERT_LOC 0)
     set(MGB_ENABLE_DEBUG_UTIL 0)
+endif()
+
+if(MSVC OR WIN32)
+    if(${MGE_ARCH} STREQUAL "i386")
+        set(MGB_ENABLE_DEBUG_UTIL 0)
+        message(STATUS "disable MGB_ENABLE_DEBUG_UTIL at Windows i386 build")
+    endif()
 endif()
 
 # TensorRT

@@ -36,6 +36,7 @@ struct TaskElem {
     size_t nr_parallelism;
 };
 
+#if MGB_HAVE_THREAD
 /**
  * \brief Worker and related flag
  */
@@ -53,7 +54,6 @@ public:
     bool affinity_flag{false};
 };
 
-#if MGB_HAVE_THREAD
 /**
  * \brief ThreadPool execute the task in multi-threads(nr_threads>1) mode , it
  * will fallback to single-thread mode if nr_thread is 1.

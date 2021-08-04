@@ -4,6 +4,7 @@ find_path(MKL_ROOT_DIR
     ${PROJECT_SOURCE_DIR}/third_party/mkl/${MGE_ARCH}
     ${PROJECT_SOURCE_DIR}/third_party/mkl/${MGE_ARCH}/Library
     ${PROJECT_SOURCE_DIR}/third_party/mkl/x86_32/Library
+    ${PROJECT_SOURCE_DIR}/third_party/mkl/x86_32
     $ENV{MKLDIR}
     /opt/intel/mkl/*/
     /opt/intel/cmkl/*/

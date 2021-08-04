@@ -11,6 +11,7 @@
 
 #pragma once
 
+#if !__DEPLOY_ON_XP_SP2__
 #include "megbrain/exception.h"
 #include "megbrain/graph.h"
 #include "megbrain/plugin/base.h"
@@ -106,5 +107,6 @@ public:
             VarNode* var, const ComputingGraph::VarReceiverInfo& recv);
 };
 }  // namespace mgb
+#endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -129,6 +129,11 @@ Windows shell env(bash from windows-git), infact if you can use git command on W
 ```
 bash.exe ./third_party/prepare.sh
 bash.exe ./third_party/install-mkl.sh
+if you are use github MegEngine and build for Windows XP, please
+	1: donwload mkl for xp from: http://registrationcenter-download.intel.com/akdlm/irc_nas/4617/w_mkl_11.1.4.237.exe
+	2: install exe, then from install dir:
+		2a: cp include file to third_party/mkl/x86_32/include/
+		2b: cp lib file to third_party/mkl/x86_32/lib/
 ```
 
 # How to build
@@ -137,6 +142,10 @@ bash.exe ./third_party/install-mkl.sh
 * command:
 ```
 1: host build just use scripts:scripts/cmake-build/host_build.sh
+    1a: build for Windows for XP (sp3): (dbg) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP=ON" ./scripts/cmake-build/host_build.sh -m -d
+                                        (opt) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP=ON" ./scripts/cmake-build/host_build.sh -m
+    2a: build for Windows for XP (sp2): (dbg) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2=ON" ./scripts/cmake-build/host_build.sh -m -d
+                                        (opt) EXTRA_CMAKE_ARGS="-DMGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2=ON" ./scripts/cmake-build/host_build.sh -m
 2: cross build to ARM-Android: scripts/cmake-build/cross_build_android_arm_inference.sh
 3: cross build to ARM-Linux:   scripts/cmake-build/cross_build_linux_arm_inference.sh
 4: cross build to IOS:         scripts/cmake-build/cross_build_ios_arm_inference.sh
