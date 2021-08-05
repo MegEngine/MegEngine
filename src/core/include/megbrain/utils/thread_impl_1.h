@@ -264,6 +264,13 @@ namespace mgb {
                 return m_synchronizer.check_finished();
             }
 
+            void update_max_items(ptrdiff_t max_items) {
+                if (max_items >= 0) {
+                    // -1 / 2 == 0
+                    m_block_quota = (max_items - 1) / BLOCK_SIZE + 1;
+                }
+            }
+
         protected:
             ~AsyncQueueSC() noexcept = default;
 

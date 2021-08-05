@@ -157,10 +157,19 @@ private:
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
         // this won't affect throughput when python interpreter is sending enough task,
         // but will significantly save CPU time when waiting for task, e.g. wait for data input
-        // limit pending tasks to 1000000
+        // limit pending tasks to 10000
         WorkQueue(ChannelImpl* owner)
-                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0, 1000000), m_owner(owner) {
+                : AsyncQueueSC<IdentifiedCommand, WorkQueue>(0, 10000), m_owner(owner) {
             sys::set_thread_name("interpreter");
+            if (const char* env_val = MGB_GETENV("MEGENGINE_ASYNC_QUEUE_SIZE")) {
+                int len = strlen(env_val);
+                for (int i = 0; i < len; i ++) {
+                    mgb_assert(env_val[i] >= '0' && env_val[i] <= '9', "async queue size should be an integer");
+                }
+                size_t val;
+                sscanf(env_val, "%zu", &val);
+                update_max_items(val);
+            }
         }
         void process_one_task(IdentifiedCommand& icmd) {
             m_owner->process_one_task(icmd);
