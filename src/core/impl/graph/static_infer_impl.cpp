@@ -354,7 +354,7 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagShapeTrait final,
 MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagValueTrait final,
         TagTraitMutableBase) // {
 
-    bool m_warn_printed = false;
+    bool m_log_printed = false;
 
     //!< used for detection src value change
     TensorLayout m_prev_layout;
@@ -749,13 +749,13 @@ StaticInferManagerImpl::TagValueTrait::update_value() {
 
     auto span = m_cur_value.layout().span();
     if (span.dist_elem() >= INFER_VALUE_SIZE_THRESH_FOR_WARNING &&
-            !m_warn_printed) {
-        mgb_log_warn(
+            !m_log_printed) {
+        mgb_log_debug(
                 "compute static_infer_value() for %s: "
                 "span dist too large (%zu)",
                 cg::dump_var_info({tag()}).c_str(),
                 span.dist_byte());
-        m_warn_printed = true;
+        m_log_printed = true;
     }
 
     // check value change for src nodes and small mid nodes
