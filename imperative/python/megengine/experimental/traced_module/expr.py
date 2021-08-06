@@ -11,6 +11,7 @@ import builtins
 import collections
 import copy
 import inspect
+import re
 from typing import Callable, Dict, List
 
 from ...core._imperative_rt import OpDef
@@ -21,7 +22,24 @@ from ...module import Module
 from ...tensor import Parameter, Tensor
 from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
-from .pytree import TreeDef, tree_flatten
+from .pytree import ArgsIndex, TreeDef, tree_flatten
+
+
+def rstrip(s: str, __chars: str):
+    __chars = re.escape(__chars)
+    s = re.sub(r"^(?P<left>.*?)(?:%s)+$" % __chars, "\g<left>", s)
+    return s
+
+
+def lstrip(s: str, __chars: str):
+    __chars = re.escape(__chars)
+    s = re.sub(r"^(?:%s)+(?P<right>.*)$" % __chars, "\g<right>", s)
+    return s
+
+
+def strip(s: str, __chars: str):
+    s = lstrip(rstrip(s, __chars), __chars)
+    return s
 
 
 class Expr:
@@ -67,9 +85,29 @@ class Expr:
             if not isinstance(outputs, collections.Sequence):
                 outputs = (outputs,)
 
+            name = None
+            if isinstance(self, CallMethod):
+                name = self.inputs[0]._name
+                assert name is not None
+                name = rstrip(name, "_out")
+                if self.method == "__call__":
+                    name += "_out"
+                else:
+                    strip_method = strip(self.method, "_")
+                    name = "%s_out" % strip_method
+            elif isinstance(self, CallFunction):
+                name = self.func.__name__ + "_out"
+            elif isinstance(self, Apply):
+                name = str(self.opdef).lower() + "_out"
+
             for i in outputs:
                 assert isinstance(i, RawTensor)
-                self.outputs.append(NodeMixin.get_wrapped_type(i)(self))
+                o_name = (
+                    active_module_tracer().current_scope()._create_unique_name(name)
+                )
+                self.outputs.append(
+                    NodeMixin.get_wrapped_type(i)(expr=self, name=o_name)
+                )
 
             for i, node in zip(outputs, self.outputs,):
                 NodeMixin.wrap_safe(i, node)
@@ -133,11 +171,16 @@ class Input(Expr):
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
-        active_module_tracer().current_scope().add_input(expr.outputs[0])
+        oup_node = expr.outputs[0]
+        name = (
+            active_module_tracer().current_scope()._create_unique_name(oup_node._name)
+        )
+        oup_node._name = name
+        active_module_tracer().current_scope().add_input(oup_node)
         return expr.outputs[0]
 
     def __repr__(self):
-        return "%{}:  {} = Input({})".format(self._id, self.outputs[0], self.name)
+        return "%{}:\t{} = Input({})".format(self._id, self.outputs[0], self.name)
 
 
 # expr: outputs = getattr(inputs[0], self.name)
@@ -154,22 +197,31 @@ class GetAttr(Expr):
         self.name = name
         node_cls = type if type else Node
         self.outputs = [
-            node_cls(self),
+            node_cls(self, name=name),
         ]
 
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
+        module = expr.inputs[0]
+        oup_name = expr.name
+        while module._name != "self":
+            oup_name = module._name + "_" + oup_name
+            module = module.expr.inputs[0]
+        oup_name = active_module_tracer().current_scope()._create_unique_name(oup_name)
+        expr.outputs[0]._name = oup_name
         active_module_tracer().current_scope().insert(expr)
-        expr.outputs[0]._name = expr.name
         return expr.outputs[0]
 
     def interpret(self, *inputs):
         return (getattr(inputs[0], self.name),)
 
     def __repr__(self):
-        return '%{}:  {} = GetAttr({}, "{}")'.format(
-            self._id, self.outputs[0], self.inputs[0], self.name
+        out_type = "Tensor"
+        if isinstance(self.outputs[0], ModuleNode):
+            out_type = self.outputs[0].module_type.__name__
+        return '%{}:\t{} = getattr({}, "{}") -> ({})'.format(
+            self._id, self.outputs[0], self.inputs[0], self.name, out_type
         )
 
 
@@ -230,11 +282,14 @@ class CallMethod(Expr):
         outputs = self.outputs
         if self.out_def:
             outputs = self.out_def.unflatten(outputs)
-        return "%{}:  {}{}.{}({})".format(
+        method = ".%s" % self.method
+        if method == ".__call__":
+            method = ""
+        return "%{}:\t{}{}{}({})".format(
             self._id,
             str(outputs) + " = " if outputs else "",
             self.args[0],
-            self.method,
+            method,
             ", ".join([args, kwargs]),
         )
 
@@ -259,7 +314,7 @@ class Apply(Expr):
         return apply(self.opdef, *inputs)
 
     def __repr__(self):
-        return "%{}:  {} = {}({})".format(
+        return "%{}:\t{} = {}({})".format(
             self._id,
             ", ".join(str(i) for i in self.outputs),
             self.opdef,
@@ -314,10 +369,10 @@ class CallFunction(Expr):
         outputs = self.outputs
         if self.out_def:
             outputs = self.out_def.unflatten(outputs)
-        return "%{}:  {}{}({})".format(
+        return "%{}:\t{}{}({})".format(
             self._id,
             str(outputs) + " = " if outputs else "",
-            self.func.__module__ + "." + self.func.__name__,
+            self.func.__module__.rsplit(".")[-1] + "." + self.func.__name__,
             ", ".join([args, kwargs]),
         )
 
@@ -328,21 +383,25 @@ class Constant(Expr):
     # TODO: constant cache to reduce the size of dumped model
     _constant_cache = {}
 
-    def __init__(self, c):
+    def __init__(self, c, name=None):
         super().__init__()
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
             assert module_tracer.is_builtin(c)
         self.value = c
+        self.name = name
         self.inputs = []
         node_cls = NodeMixin.get_wrapped_type(c)
         self.outputs = [
-            node_cls(self),
+            node_cls(self, name=name),
         ]
 
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
+        name = "const_module" if isinstance(expr.value, Module) else "const_tensor"
+        name = active_module_tracer().current_scope()._create_unique_name(name)
+        expr.outputs[0]._name = name
         active_module_tracer().current_scope().insert(expr)
         return expr.outputs[0]
 
@@ -352,8 +411,14 @@ class Constant(Expr):
         return (self.value,)
 
     def __repr__(self):
-        return "%{}:  {} = Constant({})".format(
-            self._id, self.outputs[0], type(self.value)
+        name = self.name
+        if name is None:
+            name = type(self.value)
+        node_type = "Module"
+        if isinstance(self.outputs[0], TensorNode):
+            node_type = "Tensor"
+        return "%{}:\t{} = Constant({}) -> ({})".format(
+            self._id, self.outputs[0], name, node_type
         )
 
     def __getstate__(self):

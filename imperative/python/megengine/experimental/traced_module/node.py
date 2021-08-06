@@ -28,8 +28,9 @@ class Node:
     expr = None
     __total_id = 0
     _id = None
-    _name = None
     _top_graph = None  # type: weakref.ReferenceType
+    _name = None
+    _format_spec = ""
 
     def __init__(self, expr: "Expr", name: str = None):
         self.expr = expr
@@ -43,16 +44,47 @@ class Node:
         Node.__total_id = max(Node.__total_id, self._id) + 1
 
     def __repr__(self):
-        if self._name is None:
-            return "%{}".format(self._id)
+        format_spec = Node._format_spec
+        return self.__format__(format_spec)
+
+    def __format__(self, format_spec: str) -> str:
+        if format_spec == "" or format_spec is None:
+            format_spec = Node._format_spec
+        name = self._name
+        if name is None:
+            name = ""
+        if format_spec in ["i", "p", "ip", "pi"]:
+            if "p" in format_spec:
+                graph = self.top_graph
+                prefix_name = ""
+                if graph is not None:
+                    prefix_name = graph._name
+                    if graph._prefix_name:
+                        prefix_name = "{}_{}".format(
+                            graph._prefix_name, prefix_name.lstrip("_")
+                        )
+                if name:
+                    name = "_" + name.lstrip("_")
+                name = "{}{}".format(prefix_name, name)
+            if "i" in format_spec:
+                if name:
+                    name = "_" + name.lstrip("_")
+                name = "%{}{}".format(self._id, name)
+            return name
         else:
-            return "%{}".format(self._name)
+            return name if name else ("%d" % self._id)
 
     @property
     def top_graph(self):
         if self._top_graph:
             return self._top_graph()
         return None
+
+    @classmethod
+    def set_format_spec(cls, str):
+        old_format_spec = cls._format_spec
+        cls._format_spec = str
+        return old_format_spec
 
 
 class ModuleNode(Node):
@@ -71,12 +103,6 @@ class ModuleNode(Node):
     def __init__(self, expr: "Expr", name: str = None):
         super().__init__(expr, name)
         self.actual_mnode = []
-
-    def __repr__(self):
-        if self._name is None:
-            return "%{}_({})".format(self._id, self.module_type.__name__)
-        else:
-            return "%{}_{}({})".format(self._id, self._name, self.module_type.__name__)
 
     def __getstate__(self):
         return {
@@ -104,12 +130,6 @@ class TensorNode(Node):
     qparam = None
     device = None
 
-    def __repr__(self):
-        if self._name is None:
-            return "%{}_(Tensor)".format(self._id)
-        else:
-            return "%{}_{}(Tensor)".format(self._id, self._name)
-
     def __getstate__(self):
         return {
             "expr": self.expr,
@@ -119,6 +139,7 @@ class TensorNode(Node):
             "shape": self.shape,
             "dtype": self.dtype,
             "device": self.device,
+            "_name": self._name,
         }
 
 

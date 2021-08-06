@@ -22,6 +22,16 @@ from ...quantization.utils import LSQParams, QParams, QuantMode
 from ...tensor import Parameter, Tensor
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 
+
+class ArgsIndex:
+    def __init__(self, index=0, name="") -> None:
+        self.index = index
+        self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
+
+
 SUPPORTED_TYPE = {}
 
 # if type(object) or obj in SUPPORTED_LEAF_TYPE, the object could be treated as leaf node of pytree
@@ -39,6 +49,7 @@ SUPPORTED_LEAF_TYPE = {
     type(None),
     type(Ellipsis),
     QuantMode,
+    ArgsIndex,
 }
 
 # if isinstance(object, SUPPORTED_LEAF_CLS) or issubclass(obj, SUPPORTED_LEAF_CLS) is True, the object could be threated as leaf node of pytree
@@ -121,11 +132,11 @@ def _is_leaf(obj):
 
 def _leaf_type(node):
     if isinstance(node, (RawTensor, TensorNode)):
-        return (Tensor, TensorNode)
+        return (Tensor, TensorNode, ArgsIndex)
     elif isinstance(node, (NodeMixin, Module)):
-        return (Module, ModuleNode, NodeMixin)
+        return (Module, ModuleNode, NodeMixin, ArgsIndex)
     else:
-        return type(node)
+        return (type(node), ArgsIndex)
 
 
 def _is_const_leaf(node):
