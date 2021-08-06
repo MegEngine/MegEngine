@@ -84,6 +84,7 @@ DEF_DUR_EVENT(OpOutput, {
 DEF_DUR_EVENT(OpExecute, {
     uint64_t op_id;
     SmallVector<CompNode> device_list;
+    std::string reason;
 });
 
 DEF_DUR_EVENT(KernelLaunch, {

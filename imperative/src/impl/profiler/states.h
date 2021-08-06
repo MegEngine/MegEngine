@@ -62,8 +62,13 @@ struct ProfileOperatorState {
     CompNode device;
     Trace trace;
 
-    profiler::HostTime execute_begin;
-    profiler::HostTime execute_end;
+    struct Execution {
+        std::string reason;
+        profiler::HostTime begin;
+        profiler::HostTime end;
+    };
+
+    SmallVector<Execution> executions;
 
     nlohmann::json detail() {
         nlohmann::json args;
@@ -285,7 +290,7 @@ public:
                 op.outputs = event.outputs;
                 op.trace = event.trace;
                 for (auto&& output: event.outputs) {
-                    m_tensors.at(output).source = op.id;
+                    m_tensors[output].source = op.id;
                 }
             } else if constexpr (std::is_same_v<T, TensorDeclareEvent>) {
                 auto& tensor = m_tensors[event.tensor_id];
@@ -293,7 +298,7 @@ public:
                 tensor.id = event.tensor_id;
                 tensor.name = event.name;
             } else if constexpr (std::is_same_v<T, TensorProduceEvent>) {
-                auto& tensor = m_tensors.at(event.tensor_id);
+                auto& tensor = m_tensors[event.tensor_id];
                 if (!m_device_tid_table.count(event.device)) {
                     m_device_tid_table[event.device] = {m_device_tid_table.size() + m_host_tid_table.size()};
                 }
@@ -308,15 +313,24 @@ public:
             using T = std::decay_t<decltype(event)>;
             // update current_op/tensor
             if constexpr (is_op_event<T>::value) {
-                current_op = &m_operators.at(event.op_id);
+                current_op = &m_operators[event.op_id];
+                if (current_op->id == 0) {
+                    current_op->id = event.op_id;
+                    current_op->name = "UnknownOperator";
+                }
             } else if constexpr (is_tensor_event<T>::value) {
-                mgb_assert(m_tensors.count(event.tensor_id) != 0, "tensor not found");
-                current_tensor = &m_tensors.at(event.tensor_id);
+                current_tensor = &m_tensors[event.tensor_id];
+                if (current_tensor->id == 0) {
+                    current_tensor->id = event.tensor_id;
+                    current_tensor->name = "UnknownTensor";
+                }
             }
             if constexpr (std::is_same_v<T, OpExecuteEvent>) {
-                current_op->execute_begin = current->time;
+                current_op->executions.emplace_back();
+                current_op->executions.back().reason = event.reason;
+                current_op->executions.back().begin = current->time;
             } else if constexpr (std::is_same_v<T, OpExecuteFinishEvent>) {
-                current_op->execute_end = current->time;
+                current_op->executions.back().end = current->time;
             }
             // update counters
             if constexpr (std::is_same_v<T, OpDispatchEvent>) {
@@ -337,6 +351,12 @@ public:
                 }
             } else if constexpr (std::is_same_v<T, WorkerExceptionEvent>) {
                 inc_counter("nr_exception", 1);
+            } else if constexpr (std::is_same_v<T, KernelLaunchFinishEvent>) {
+                auto& execution = current_op->executions.back();
+                if (execution.reason == "dtr") {
+                    auto overhead = to_device_time(current->time, event.device) - to_device_time(execution.begin, event.device);
+                    inc_counter("dtr_overhead_us", std::chrono::duration_cast<std::chrono::microseconds>(overhead).count());
+                }
             }
             // visit_event_impl
             self.visit_event(event);

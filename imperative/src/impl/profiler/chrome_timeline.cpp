@@ -200,13 +200,13 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
 
     ChromeTraceEvent& new_host_event(std::string name, char ph) {
         return trace_events.new_event().name(name).ph(ph).pid(pid).tid(to_tid(current->tid)).ts(since_start(current->time));
-    };
+    }
 
     ChromeTraceEvent& new_device_event(std::string name, char ph, CompNode device) {
         using namespace std::literals::chrono_literals;
         auto time = since_start(to_device_time(current->time, device));
         return trace_events.new_event().name(name).ph(ph).pid(pid).tid(to_tid(device)).ts(time);
-    };
+    }
 
     const char* to_cstr(TensorCommandKind kind) {
         switch(kind) {
@@ -241,14 +241,12 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
             new_host_event("OpDispatch", 'E').args(current_op->detail());
         } else if constexpr (std::is_same_v<TEvent, OpExecuteEvent>) {
             mgb_assert(event.op_id != 0);
-            current_op->execute_begin = current->time;
             new_host_event(current_op->name, 'B');
             new_host_event(pid_str, 't')
                     .cat("OpDispatch")
                     .id(current_op->id)
                     .scope(pid_str);
         } else if constexpr (std::is_same_v<TEvent, OpExecuteFinishEvent>) {
-            current_op->execute_end = current->time;
             new_host_event(current_op->name, 'E')
                     .args(current_op->detail());
         } else if constexpr (std::is_same_v<TEvent, KernelLaunchEvent>) {

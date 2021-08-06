@@ -616,7 +616,7 @@ void ChannelImpl::release_tensor(TensorInfo* dest) {
 void ChannelImpl::regenerate(TensorInfo* dest) {
     if (dest->evict_type == EvictType::DROP) {
         auto &&path = dest->producer;
-        m_apply_stack.push({ApplyOp{path->id, path->op, path->inputs, path->outputs, {}}, 0, dest});
+        m_apply_stack.push({ApplyOp{path->id, path->op, path->inputs, path->outputs, {}}, 0, dest, "dtr"});
         if (!m_applying) flush_apply_stack();
     } else if (dest->evict_type == EvictType::SWAP) {
         MGB_RECORD_EVENT(TensorCommandEvent, dest->id, TensorCommandKind::ReGen);
@@ -625,7 +625,7 @@ void ChannelImpl::regenerate(TensorInfo* dest) {
     }
 }
 
-void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
+void ChannelImpl::do_apply_op(const ApplyOp& cmd, std::string reason) {
     using namespace ranges;
     using namespace ranges::views;
     auto& state = get_worker_state();
@@ -689,7 +689,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         }
         return outputs;
     };
-    MGB_RECORD_EVENT(OpExecuteEvent, apply_id);
+    MGB_RECORD_EVENT(OpExecuteEvent, apply_id, {}, reason);
     // Begin profiling operator
     SmallVector<std::pair<CompNode, uint64_t>> kernels;
     if (profiling_device) {
@@ -769,7 +769,7 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         }
         m_dtr.unpin(cmd.inputs);
     }
-    MGB_RECORD_EVENT(OpExecuteFinishEvent, apply_id);
+    MGB_RECORD_EVENT(OpExecuteFinishEvent, apply_id, {}, reason);
     // End profiling operator
 }
 
@@ -777,7 +777,7 @@ void ChannelImpl::flush_apply_stack() {
     m_applying = true;
     auto& state = get_worker_state();
     while (!m_apply_stack.empty()) {
-        auto& [cmd, idx, recomp] = m_apply_stack.top(); // cmd.inputs[0~idx-1] is in memory
+        auto& [cmd, idx, recomp, reason] = m_apply_stack.top(); // cmd.inputs[0~idx-1] is in memory
         if (idx == 0) {
             if (state.options.enable_dtr_auto_drop) {
                 m_dtr.pin(cmd.inputs);
@@ -801,10 +801,9 @@ void ChannelImpl::flush_apply_stack() {
         }
         if (regen) continue;
         // the required input tensors are already in memory
-        auto cmd_backup = cmd;
-        auto recomp_backup = recomp;
+        auto [cmd_backup, recomp_backup, reason_backup] = std::make_tuple(cmd, recomp, reason);
         m_apply_stack.pop();
-        do_apply_op(cmd_backup);
+        do_apply_op(cmd_backup, reason_backup);
         if (recomp_backup) {
             MGB_RECORD_EVENT(TensorCommandFinishEvent, recomp_backup->id, TensorCommandKind::ReGen);
             for (auto o : cmd_backup.outputs) {
@@ -829,6 +828,7 @@ bool ChannelImpl::auto_evict(size_t force_num) {
         sample_on_device(m_dtr.comp_node, false);
         auto best = m_dtr.find_best_tensor(state.options.enable_dtr_sqrt_sampling && !force_num);
         if (!best) {
+            MGB_RECORD_EVENT(AutoEvictFinishEvent);
             break;
         }
         if (best->ptr.unique() && best->ptr->blob().unique()) {
@@ -947,7 +947,9 @@ void ChannelImpl::alloc_tensor_with_evict(Blob* x) {
             set_log_level(pre_level);
             mgb_log_warn("reallocating all cuda memory to alleviate fragmentation, the performance may be affected");
             set_log_level(LogLevel::NO_LOG);
+            imperative_log_profile_begin("defrag");
             BlobManager::inst()->defrag(x->comp_node());
+            imperative_log_profile_end("defrag");
             BlobManager::inst()->alloc_direct(x, x->size());
         }
     });
@@ -1025,7 +1027,7 @@ void ChannelImpl::process_one_task(Command& icmd) {
                         return;
                     }
                 }
-                m_apply_stack.push({cmd, 0, nullptr});
+                m_apply_stack.push({cmd, 0, nullptr, "cmd"});
                 flush_apply_stack();
                 for (size_t i = 0; i < cmd.outputs.size(); ++i) {
                     auto output = cmd.outputs[i];
