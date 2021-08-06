@@ -18,6 +18,7 @@
 namespace mgb::imperative {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GenericPyOp);
+OP_TRAIT_REG(GenericPyOp, GenericPyOp).fallback();
 
 namespace { namespace fastpathcopy {
     auto apply_on_var_node(

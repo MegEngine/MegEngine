@@ -123,6 +123,11 @@ class Function(ops.PyOpBase):
 
             This method should return a tuple of Tensor or a single Tensor representing the output
             of the function.
+
+        .. note::
+
+            positional arguments should all be Tensor
+
         """
         raise NotImplementedError
 

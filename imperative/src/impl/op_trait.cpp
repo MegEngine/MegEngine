@@ -98,6 +98,12 @@ OpTraitRegistry& OpTraitRegistry::fallback() {
     if (!trait->decide_dispatch_mode) {
         trait->decide_dispatch_mode = fallback_decide_dispatch_mode;
     }
+    if (!trait->make_name) {
+        static auto make_name = [](const OpDef& def) -> std::string {
+            return def.trait()->name;
+        };
+        trait->make_name = make_name;
+    }
     return *this;
 }
 
