@@ -218,6 +218,22 @@ protected:
         return m_device_tid_table.at(device);
     }
 
+    SmallVector<std::thread::id> host_threads() {
+        SmallVector<std::thread::id> host_threads;
+        for (auto&& [host, _]: m_host_tid_table) {
+            host_threads.push_back(host);
+        }
+        return host_threads;
+    }
+
+    SmallVector<CompNode> devices() {
+        SmallVector<CompNode> devices;
+        for (auto&& [device, _]: m_device_tid_table) {
+            devices.push_back(device);
+        }
+        return devices;
+    }
+
     void inc_counter(const char* key, int64_t delta) {
         if (!m_counter_table.count(key)) {
             m_counter_table[key] = 0;

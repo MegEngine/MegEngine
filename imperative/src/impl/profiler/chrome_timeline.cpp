@@ -350,8 +350,14 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
             new_host_event("StopProfile", 'E');
         } else if constexpr (std::is_same_v<TEvent, CustomEvent>) {
             new_host_event(event.title, 'B');
+            if (event.device.valid()) {
+                new_device_event(event.title, 'B', event.device);
+            }
         } else if constexpr (std::is_same_v<TEvent, CustomFinishEvent>) {
             new_host_event(event.title, 'E');
+            if (event.device.valid()) {
+                new_device_event(event.title, 'E', event.device);
+            }
         } else if constexpr (std::is_same_v<TEvent, AutoEvictEvent>) {
             new_host_event("AutoEvict", 'B');
         } else if constexpr (std::is_same_v<TEvent, AutoEvictFinishEvent>) {
@@ -378,12 +384,21 @@ struct ChromeTimelineEventVisitor: EventVisitor<ChromeTimelineEventVisitor> {
     }
 
     void name_threads(Profiler::thread_dict_t thread_dict) {
-        for (auto&& [tid, tname]: thread_dict) {
+        for (auto&& host: host_threads()) {
+            if (thread_dict.count(host)) {
+                trace_events.new_event()
+                        .name("thread_name")
+                        .pid('M')
+                        .tid(to_tid(host))
+                        .arg("name", thread_dict.at(host));
+            }
+        }
+        for (auto&& device: devices()) {
             trace_events.new_event()
                     .name("thread_name")
                     .pid('M')
-                    .tid(to_tid(tid))
-                    .arg("name", tname);
+                    .tid(to_tid(device))
+                    .arg("name", device.to_string_logical());
         }
     }
 };

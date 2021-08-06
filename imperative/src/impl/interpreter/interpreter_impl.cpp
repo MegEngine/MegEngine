@@ -78,6 +78,20 @@ void imperative_log_profile(const char* message){
     imperative_log_profile_end(message);
 }
 
+SYMBOL_EXPORT
+void imperative_log_profile_begin(const char* message, const char* device) {
+    auto comp_node = CompNode::load(device);
+    MGB_RECORD_EVENT(CustomEvent, std::string{message}, {}, comp_node);
+    MGB_RECORD_EVENT(RecordDeviceEvent, EventPool::with_timer().alloc_shared(comp_node));
+}
+
+SYMBOL_EXPORT
+void imperative_log_profile_end(const char* message, const char* device) {
+    auto comp_node = CompNode::load(device);
+    MGB_RECORD_EVENT(RecordDeviceEvent, EventPool::with_timer().alloc_shared(comp_node));
+    MGB_RECORD_EVENT(CustomFinishEvent, std::string{message}, {}, comp_node);
+}
+
 }
 
 std::thread::id ChannelImpl::get_worker_tid() {

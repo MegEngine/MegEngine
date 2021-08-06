@@ -179,6 +179,7 @@ DEF_DUR_EVENT(AutoEvict, {});
 DEF_DUR_EVENT(Custom, {
     std::string title;
     std::string content;
+    CompNode device;
 });
 
 DEF_EVENT(RecordDevice, {
