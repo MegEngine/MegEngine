@@ -116,7 +116,9 @@ void ResizeImpl::kern_fallback_nhwc(const KernParam<ctype>& kern_param) {
 void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                       _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-    if (param().format == param::Resize::Format::NCHW4) {
+    if (param().format == param::Resize::Format::NCHW4 ||
+        (param().format == param::Resize::Format::NCHW &&
+         param().imode == param::Resize::InterpolationMode::NEAREST)) {
         naive::ResizeImpl::exec(src, dst, workspace);
         return;
     }

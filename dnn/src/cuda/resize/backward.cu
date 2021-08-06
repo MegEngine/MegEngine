@@ -17,9 +17,9 @@ namespace megdnn {
 namespace cuda {
 namespace resize {
 
-__global__ void resize_bwd_kernel(const float* hidden, float* dst, int N, int C,
-                                  int IH, int IW, int OH, int OW, float scale_h,
-                                  float scale_w) {
+__global__ void resize_bwd_linear_kernel(const float* hidden, float* dst, int N,
+                                         int C, int IH, int IW, int OH, int OW,
+                                         float scale_h, float scale_w) {
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
@@ -51,8 +51,30 @@ __global__ void resize_bwd_kernel(const float* hidden, float* dst, int N, int C,
     }
 }
 
-void backward_data_proxy(const float* diff, float* grad, int N, int C, int IH,
-                         int IW, int OH, int OW, cudaStream_t stream) {
+__global__ void resize_bwd_nearest_kernel(const float* hidden, float* dst,
+                                          int N, int C, int IH, int IW, int OH,
+                                          int OW, float scale_h,
+                                          float scale_w) {
+    int n = blockIdx.z;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    hidden += n * C * OH * OW;
+    dst += n * C * IH * IW;
+    if (ow < OW && oh < OH) {
+        int ih = get_nearest_src(scale_h, IH, oh);
+        int iw = get_nearest_src(scale_w, IW, ow);
+
+        for (int c = 0; c < C; ++c) {
+            atomicAdd(dst + ih * IW + iw,
+                      hidden[oh * OW + ow]);
+            hidden += OH * OW;
+            dst += IH * IW;
+        }
+    }
+}
+void backward_data_proxy(InterpolationMode imode, const float* diff,
+                         float* grad, int N, int C, int IH, int IW, int OH,
+                         int OW, cudaStream_t stream) {
     const int BY = 16, BX = 32;
     {
         dim3 threads(BX, BY);
@@ -61,8 +83,14 @@ void backward_data_proxy(const float* diff, float* grad, int N, int C, int IH,
                                    stream));
         float scale_h = static_cast<float>(OH) / IH;
         float scale_w = static_cast<float>(OW) / IW;
-        resize_bwd_kernel<<<blocks, threads, 0, stream>>>(
-                diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+        if(imode == InterpolationMode::INTER_LINEAR) {
+            resize_bwd_linear_kernel<<<blocks, threads, 0, stream>>>(
+                    diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+        }
+        else if (imode == InterpolationMode::INTER_NEAREST) {
+            resize_bwd_nearest_kernel<<<blocks, threads, 0, stream>>>(
+                    diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+        }
     }
     after_kernel_launch();
 }

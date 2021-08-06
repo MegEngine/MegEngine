@@ -47,6 +47,9 @@ private:
     void kern_naive(const KernParam<ctype>& kern_param);
 
     template <typename ctype>
+    void kern_nchw_nearest(const KernParam<ctype>& kern_param);
+
+    template <typename ctype>
     void kern_naive_nhwc(const KernParam<ctype>& kern_param);
 
     template <typename ctype>

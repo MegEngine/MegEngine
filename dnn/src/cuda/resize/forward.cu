@@ -32,9 +32,10 @@ struct DirectSrcVisitor {
 };
 
 template <typename ctype, typename SrcVisitor, typename OutputConverter>
-__global__ void kern_general(SrcVisitor src, ctype* __restrict dst, int C,
-                             int IH, int IW, int OH, int OW, int S_IN, int S_IC,
-                             int S_IH, int S_IW, float scale_h, float scale_w) {
+__global__ void kern_general_linear(SrcVisitor src, ctype* __restrict dst,
+                                    int C, int IH, int IW, int OH, int OW,
+                                    int S_IN, int S_IC, int S_IH, int S_IW,
+                                    float scale_h, float scale_w) {
     OutputConverter output_converter;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
@@ -57,6 +58,31 @@ __global__ void kern_general(SrcVisitor src, ctype* __restrict dst, int C,
                     sptr[ih0 * S_IH + iw1 * S_IW] * alphaw * (1.0f - alphah) +
                     sptr[ih1 * S_IH + iw0 * S_IW] * (1.0f - alphaw) * alphah +
                     sptr[ih1 * S_IH + iw1 * S_IW] * alphaw * alphah);
+
+            sptr += S_IC;
+            dst += OH * OW;
+        }
+    }
+}
+
+template <typename ctype, typename SrcVisitor, typename OutputConverter>
+__global__ void kern_general_nearest(SrcVisitor src, ctype* __restrict dst,
+                                     int C, int IH, int IW, int OH, int OW,
+                                     int S_IN, int S_IC, int S_IH, int S_IW,
+                                     float scale_h, float scale_w) {
+    OutputConverter output_converter;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    const ctype* __restrict sptr = src.get(blockIdx.z, S_IN);
+    dst += blockIdx.z * C * OH * OW;
+
+    if (ow < OW && oh < OH) {
+        int ih = get_nearest_src(scale_h, IH, oh);
+        int iw = get_nearest_src(scale_w, IW, ow);
+
+        for (int c = 0; c < C; ++c) {
+            dst[oh * OW + ow] = output_converter(
+                    sptr[ih * S_IH + iw * S_IW]);
 
             sptr += S_IC;
             dst += OH * OW;
@@ -94,9 +120,10 @@ __global__ void kern_general_nhwc(SrcVisitor src, ctype* __restrict dst, int C,
 }
 
 template <typename ctype, typename SrcVisitor>
-void dispatch_with_visitor(bool is_nhwc, SrcVisitor src, ctype* dst, int N,
-                           int C, int IH, int IW, int OH, int OW, int S_IN,
-                           int S_IC, int S_IH, int S_IW, cudaStream_t stream) {
+void dispatch_with_visitor(bool is_nhwc, InterpolationMode imode,
+                           SrcVisitor src, ctype* dst, int N, int C, int IH,
+                           int IW, int OH, int OW, int S_IN, int S_IC, int S_IH,
+                           int S_IW, cudaStream_t stream) {
     const int BY = 16, BX = 32;
 
     const int max_batch_size = 65535;
@@ -113,10 +140,19 @@ void dispatch_with_visitor(bool is_nhwc, SrcVisitor src, ctype* dst, int N,
                     <<<blocks, threads, 0, stream>>>(src, dst, C, IH, IW, OH,
                                                      OW, scale_h, scale_w);
         } else {
-            kern_general<ctype, SrcVisitor, rounding::RoundingConverter<ctype>>
-                    <<<blocks, threads, 0, stream>>>(src, dst, C, IH, IW, OH,
-                                                     OW, S_IN, S_IC, S_IH, S_IW,
-                                                     scale_h, scale_w);
+            if (imode == InterpolationMode::INTER_LINEAR) {
+                kern_general_linear<ctype, SrcVisitor,
+                                    rounding::RoundingConverter<ctype>>
+                        <<<blocks, threads, 0, stream>>>(
+                                src, dst, C, IH, IW, OH, OW, S_IN, S_IC, S_IH,
+                                S_IW, scale_h, scale_w);
+            } else if (imode == InterpolationMode::INTER_NEAREST) {
+                kern_general_nearest<ctype, SrcVisitor,
+                                     rounding::RoundingConverter<ctype>>
+                        <<<blocks, threads, 0, stream>>>(
+                                src, dst, C, IH, IW, OH, OW, S_IN, S_IC, S_IH,
+                                S_IW, scale_h, scale_w);
+            }
         }
         N -= curr_batch_size;
         src.move_batch(curr_batch_size, C * IH * IW);
@@ -194,13 +230,14 @@ namespace cuda {
 namespace resize {
 
 template <typename ctype>
-void forward_proxy(bool is_nhwc, const ctype* src, ctype* dst, int N, int C,
-                   int IH, int IW, int OH, int OW, int S_IN, int S_IC, int S_IH,
-                   int S_IW, cudaStream_t stream) {
+void forward_proxy(bool is_nhwc, InterpolationMode imode, const ctype* src,
+                   ctype* dst, int N, int C, int IH, int IW, int OH, int OW,
+                   int S_IN, int S_IC, int S_IH, int S_IW,
+                   cudaStream_t stream) {
     DirectSrcVisitor<ctype> visitor;
     visitor.ptr = src;
-    dispatch_with_visitor(is_nhwc, visitor, dst, N, C, IH, IW, OH, OW, S_IN,
-                          S_IC, S_IH, S_IW, stream);
+    dispatch_with_visitor(is_nhwc, imode, visitor, dst, N, C, IH, IW, OH, OW,
+                          S_IN, S_IC, S_IH, S_IW, stream);
     after_kernel_launch();
 }
 
@@ -214,7 +251,7 @@ void forward_proxy_nchw4(const ctype* src, ctype* dst, int N, int C, int IH,
 }
 
 #define INST(ctype)                                                        \
-    template void forward_proxy(bool, const ctype*, ctype*, int, int, int, \
+    template void forward_proxy(bool, InterpolationMode, const ctype*, ctype*, int, int, int, \
                                 int, int, int, int, int, int, int,         \
                                 cudaStream_t);
 INST(float)

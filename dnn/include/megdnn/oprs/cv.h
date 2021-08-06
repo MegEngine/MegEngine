@@ -198,6 +198,9 @@ public:
 protected:
     //! get origin coord
     std::pair<float, int> get_origin_coord(float scale, int size, int idx);
+    //! get nearest index in src
+    int get_nearest_src(float scale, int size, int idx);
+
     void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);
 };
 

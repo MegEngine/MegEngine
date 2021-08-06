@@ -30,8 +30,9 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
     size_t max_batch_size = max_batch_x_channel / C;
     while (N > 0) {
         size_t curr_batch_size = N > max_batch_size ? max_batch_size : N;
-        resize::backward_data_proxy(diff_ptr, grad_ptr, curr_batch_size, C, IH,
-                                    IW, OH, OW, stream);
+        resize::backward_data_proxy(resize::get_imode(param().imode), diff_ptr,
+                                    grad_ptr, curr_batch_size, C, IH, IW, OH,
+                                    OW, stream);
 
         if (N <= max_batch_size) {
             break;

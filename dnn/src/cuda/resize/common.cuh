@@ -28,6 +28,10 @@ __device__ inline void get_origin_coord(float scale, int size, int idx,
     }
 }
 
+__device__ inline int get_nearest_src(float scale, int size, int idx) {
+    return min(static_cast<int>(idx / scale), size - 1);
+}
+
 }  // namespace resize
 }  // namespace cuda
 }  // namespace megdnn

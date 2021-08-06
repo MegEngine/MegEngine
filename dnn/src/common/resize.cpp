@@ -6,9 +6,11 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
+#include "megdnn/handle.h"
 #include "megdnn/oprs.h"
 
 #include "src/common/utils.h"
@@ -26,8 +28,9 @@ void ResizeBase::check_layout_fwd(const TensorLayout& src,
                   errmsg().c_str());
     if (param().format == Param::Format::NCHW) {
         megdnn_assert(dst.shape[1] == src.shape[1], "%s", errmsg().c_str());
-        megdnn_assert(param().imode ==
-                      param::Resize::InterpolationMode::INTER_LINEAR);
+        auto imode = param().imode;
+        megdnn_assert(imode == param::Resize::InterpolationMode::INTER_LINEAR ||
+                      imode == param::Resize::InterpolationMode::NEAREST);
     } else if (param().format == Param::Format::NHWC) {
         megdnn_assert(dst.shape[3] == src.shape[3], "%s", errmsg().c_str());
     } else if (param().format == Param::Format::NCHW4) {
@@ -79,6 +82,9 @@ std::pair<float, int> ResizeBase::get_origin_coord(float scale, int size,
     return {alpha, origin_idx};
 }
 
+int ResizeBase::get_nearest_src(float scale, int size, int idx) {
+    return std::min(static_cast<int>(idx / scale), size - 1);
+}
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

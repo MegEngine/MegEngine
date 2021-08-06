@@ -18,6 +18,8 @@ namespace megdnn {
 namespace test {
 namespace resize {
 
+using IMode = param::Resize::InterpolationMode;
+
 struct TestArg {
     param::Resize param;
     TensorShape src;
@@ -62,17 +64,18 @@ static void set_nchw_args(std::vector<TestArg>& args) {
     args.emplace_back(param, TensorShape{1, 2, 6, 8}, TensorShape{1, 2, 3, 4});
 }
 
-static inline std::vector<TestArg> get_args() {
+static inline std::vector<TestArg> get_args(IMode imode = IMode::INTER_LINEAR) {
     std::vector<TestArg> args;
     set_nchw_args(args);
 
+    if(imode == IMode::INTER_LINEAR) {
     //! test NHWC with ch != 1 or ch != 3
-    param::Resize param;
-    param.format = param::Resize::Format::NHWC;
-    param.imode = param::Resize::InterpolationMode::LINEAR;
-    args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 4, 6, 4});
-    args.emplace_back(param, TensorShape{2, 4, 6, 4}, TensorShape{2, 2, 3, 4});
-
+        param::Resize param;
+        param.format = param::Resize::Format::NHWC;
+        param.imode = imode;
+        args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 4, 6, 4});
+        args.emplace_back(param, TensorShape{2, 4, 6, 4}, TensorShape{2, 2, 3, 4});
+    }
     return args;
 }
 

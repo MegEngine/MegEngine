@@ -522,29 +522,13 @@ def interpolate(
         if align_corners is None:
             align_corners = False
 
-    if (
-        size is not None
-        and scale_factor is None
-        and not align_corners
-        and mode == "bilinear"
-        and inp.ndim in [4, 5]
-    ):
-        # fastpath for interpolate
-        op = builtin.Resize(imode="linear", format="NCHW")
-        shape = astensor1d(size, inp, dtype="int32", device=inp.device)
-        (result,) = apply(op, inp, shape)
-        return result
-
     if mode == "linear":
         inp = expand_dims(inp, 3)
 
     if inp.ndim != 4:
         raise ValueError("shape of input tensor must correspond to the operartion mode")
 
-    if size is None:
-        if scale_factor is None:
-            raise ValueError("scale_factor must not be None when size is None")
-
+    def get_dsize(scale_factor):
         if isinstance(scale_factor, (float, int)):
             scale_factor = float(scale_factor)
             if mode == "linear":
@@ -572,6 +556,13 @@ def interpolate(
             for i in range(2)
         )
         dsize = concat([dsize[0], dsize[1]], axis=0)
+        return dsize
+
+    if size is None:
+        if scale_factor is None:
+            raise ValueError("scale_factor must not be None when size is None")
+        dsize = get_dsize(scale_factor)
+
     else:
         if scale_factor is not None:
             raise ValueError("scale_factor must be None when size is provided")
@@ -582,6 +573,15 @@ def interpolate(
             if mode == "linear":
                 raise ValueError("under linear mode, size can only be single value")
         dsize = size
+
+    if not align_corners and mode in ("bilinear", "nearest") and inp.ndim in [4, 5]:
+        # fastpath for interpolate
+        op = builtin.Resize(
+            imode="linear" if mode == "bilinear" else "nearest", format="NCHW"
+        )
+        shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
+        (result,) = apply(op, inp, shape)
+        return result
 
     oh, ow = dsize[0], dsize[1]
     ih, iw = inp.shape[2], inp.shape[3]
@@ -630,15 +630,10 @@ def interpolate(
         if mode == "linear":
             ret = reshape(ret, ret.shape[0:3])
     else:
-        # only NHWC format support "cubic" and "nearest" mode
+        # only NHWC format support "cubic" mode
+        assert mode == "bicubic"
         inp = transpose(inp, (0, 2, 3, 1))
-        ret = warp_perspective(
-            inp,
-            weight,
-            dsize,
-            format="NHWC",
-            interp_mode="cubic" if mode == "bicubic" else mode,
-        )
+        ret = warp_perspective(inp, weight, dsize, format="NHWC", interp_mode="cubic",)
         ret = transpose(ret, (0, 3, 1, 2))
     return ret
 

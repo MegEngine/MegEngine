@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/common/cv/common.h"
+#include "src/common/cv/enums.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/resize/common.h"
 #include "src/cuda/resize/helper.h"
@@ -146,19 +147,23 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                                     C, IH, IW, OH, OW, stream);
         return;
     }
-    megdnn_assert(param().imode == Param::InterpolationMode::LINEAR,
+    megdnn_assert(param().imode == Param::InterpolationMode::LINEAR ||
+                          param().imode == Param::InterpolationMode::NEAREST,
                   "unsupported interpolation mode for NCHW format");
 
     if (src.layout.dtype == dtype::Float32{}) {
-        resize::forward_proxy(is_nhwc, src.ptr<dt_float32>(),
-                              dst.ptr<dt_float32>(), src.layout[0], C, IH, IW,
-                              OH, OW, S_IN, S_IC, S_IH, S_IW, stream);
+        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
+                              src.ptr<dt_float32>(), dst.ptr<dt_float32>(),
+                              src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
+                              S_IH, S_IW, stream);
     } else if (src.layout.dtype == dtype::Uint8()) {
-        resize::forward_proxy(is_nhwc, src.ptr<dt_uint8>(), dst.ptr<dt_uint8>(),
+        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
+                              src.ptr<dt_uint8>(), dst.ptr<dt_uint8>(),
                               src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
                               S_IH, S_IW, stream);
     } else if (src.layout.dtype == dtype::Int8()) {
-        resize::forward_proxy(is_nhwc, src.ptr<dt_int8>(), dst.ptr<dt_int8>(),
+        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
+                              src.ptr<dt_int8>(), dst.ptr<dt_int8>(),
                               src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
                               S_IH, S_IW, stream);
     } else {

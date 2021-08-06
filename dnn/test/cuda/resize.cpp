@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "test/common/resize.h"
+#include "src/common/cv/enums.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/cuda/fixture.h"
@@ -42,30 +43,33 @@ TEST_F(CUDA, RESIZE_CV) {
 
 TEST_F(CUDA, RESIZE_FORWARD) {
     using namespace resize;
-    std::vector<TestArg> args = get_args();
-    Checker<Resize> checker(handle_cuda());
+    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    for (auto imode : modes) {
+        std::vector<TestArg> args = get_args(imode);
+        Checker<Resize> checker(handle_cuda());
 
-    for (auto&& arg : args) {
-        checker.set_param(arg.param)
-                .set_dtype(0, dtype::Uint8())
-                .set_dtype(1, dtype::Uint8())
-                .execs({arg.src, arg.dst});
-    }
+        for (auto&& arg : args) {
+            checker.set_param(arg.param)
+                    .set_dtype(0, dtype::Uint8())
+                    .set_dtype(1, dtype::Uint8())
+                    .execs({arg.src, arg.dst});
+        }
 
-    for (auto&& arg : args) {
-        checker.set_param(arg.param)
-                .set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32())
-                .set_epsilon(1e-3)
-                .execs({arg.src, arg.dst});
-    }
+        for (auto&& arg : args) {
+            checker.set_param(arg.param)
+                    .set_dtype(0, dtype::Float32())
+                    .set_dtype(1, dtype::Float32())
+                    .set_epsilon(1e-3)
+                    .execs({arg.src, arg.dst});
+        }
 
-    for (auto&& arg : args) {
-        checker.set_param(arg.param)
-                .set_dtype(0, dtype::Int8())
-                .set_dtype(1, dtype::Int8())
-                .set_epsilon(1e-3)
-                .execs({arg.src, arg.dst});
+        for (auto&& arg : args) {
+            checker.set_param(arg.param)
+                    .set_dtype(0, dtype::Int8())
+                    .set_dtype(1, dtype::Int8())
+                    .set_epsilon(1e-3)
+                    .execs({arg.src, arg.dst});
+        }
     }
 }
 
@@ -84,42 +88,48 @@ TEST_F(CUDA, RESIZE_NCHW4) {
 }
 
 TEST_F(CUDA, RESIZE_NCHW_WITH_STRIDE) {
-    param::Resize param;
-    param.format = param::Resize::Format::NCHW;
-    param.imode = param::Resize::InterpolationMode::LINEAR;
-    Checker<Resize> checker(handle_cuda());
-    checker.set_epsilon(1 + 1e-3)
-           .set_param(param);
+    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    for (auto imode : modes) {
+        param::Resize param;
+        param.format = param::Resize::Format::NCHW;
+        param.imode = imode;
+        Checker<Resize> checker(handle_cuda());
+        checker.set_epsilon(1 + 1e-3)
+            .set_param(param);
 
-    auto run = [&](TensorShape src_shape, std::vector<ptrdiff_t> src_layout,
-                   TensorShape dst_shape, DType dtype) {
-        checker.set_dtype(0, dtype)
-               .set_dtype(1, dtype)
-               .execl({{src_shape, src_layout, dtype}, {dst_shape, dtype}});
-    };
+        auto run = [&](TensorShape src_shape, std::vector<ptrdiff_t> src_layout,
+                       TensorShape dst_shape, DType dtype) {
+            checker.set_dtype(0, dtype)
+                   .set_dtype(1, dtype)
+                   .execl({{src_shape, src_layout, dtype}, {dst_shape, dtype}});
+        };
 
-    for (DType& dtype : std::vector<DType>{dtype::Float32(), dtype::Uint8(),
-                                           dtype::Int8()}) {
-        run({2, 3, 4, 4}, {256, 32, 8, 1}, {2, 3, 3, 3}, dtype);
-        run({1, 3, 4, 3}, {105, 35, 7, 2}, {1, 3, 5, 5}, dtype);
-        run({1, 3, 40, 40}, {25600, 3200, 80, 1}, {1, 3, 30, 30}, dtype);
-        run({2, 3, 4, 4}, {-256, 32, -8, 1}, {2, 3, 3, 3}, dtype);
-        run({2, 3, 4, 4}, {256, -32, 8, -1}, {2, 3, 3, 3}, dtype);
-        run({2, 3, 4, 4}, {-256, -32, -8, -1}, {2, 3, 3, 3}, dtype);
+        for (DType& dtype : std::vector<DType>{dtype::Float32(), dtype::Uint8(),
+                                               dtype::Int8()}) {
+            run({2, 3, 4, 4}, {256, 32, 8, 1}, {2, 3, 3, 3}, dtype);
+            run({1, 3, 4, 3}, {105, 35, 7, 2}, {1, 3, 5, 5}, dtype);
+            run({1, 3, 40, 40}, {25600, 3200, 80, 1}, {1, 3, 30, 30}, dtype);
+            run({2, 3, 4, 4}, {-256, 32, -8, 1}, {2, 3, 3, 3}, dtype);
+            run({2, 3, 4, 4}, {256, -32, 8, -1}, {2, 3, 3, 3}, dtype);
+            run({2, 3, 4, 4}, {-256, -32, -8, -1}, {2, 3, 3, 3}, dtype);
+        }
     }
 }
 
 TEST_F(CUDA, RESIZE_BACKWARD) {
-    Checker<ResizeBackward> checker(handle_cuda());
-    param::Resize param;
-    param.format = param::Resize::Format::NCHW;
-    param.imode = param::Resize::InterpolationMode::LINEAR;
-    checker.set_param(param);
+    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    for (auto imode : modes) {
+        Checker<ResizeBackward> checker(handle_cuda());
+        param::Resize param;
+        param.format = param::Resize::Format::NCHW;
+        param.imode = imode;
+        checker.set_param(param);
 
-    checker.execs({{2, 3, 4, 5}, {2, 3, 8, 9}});
-    checker.execs({{2, 5, 8, 9}, {2, 5, 4, 5}});
-    checker.execs({{2, 5, 8, 5}, {2, 5, 4, 9}});
-    checker.execs({{2, 5, 4, 9}, {2, 5, 8, 5}});
+        checker.execs({{2, 3, 4, 5}, {2, 3, 8, 9}});
+        checker.execs({{2, 5, 8, 9}, {2, 5, 4, 5}});
+        checker.execs({{2, 5, 8, 5}, {2, 5, 4, 9}});
+        checker.execs({{2, 5, 4, 9}, {2, 5, 8, 5}});
+    }
 }
 
 #if MEGDNN_WITH_BENCHMARK
