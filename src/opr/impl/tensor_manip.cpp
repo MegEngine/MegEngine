@@ -819,10 +819,36 @@ void ModifySubtensorImplHelper::init_output_static_infer_desc() {
 
 /* f{{{ ======================= SetSubtensor ======================= */
 
-MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(SetSubtensor, "set_subtensor", true);
+SetSubtensor::SetSubtensor(VarNode *inp, VarNode *value, const IndexDesc &desc,
+        const OperatorNodeConfig &config,
+        const InputTensorReplacer &input_tensor_replacer):
+    Super({inp->owner_graph(), config, "set_subtensor", {inp, value}},
+            inp, value, desc, true, input_tensor_replacer) {
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+}
+
+SymbolVar SetSubtensor::make(SymbolVar inp, SymbolVar value, const IndexDesc &desc,
+        const OperatorNodeConfig &config,
+        const InputTensorReplacer &input_tensor_replacer) {
+    return inp.insert_single_output_opr<SetSubtensor>(
+            inp.node(), value.node(), desc, config, input_tensor_replacer);
+}
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(SetSubtensor);
 
 void SetSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
-    sub.copy_from_fixlayout(val);
+    if (!val.layout().is_empty()) {
+        sub.copy_from_fixlayout(val);
+    }
+}
+
+SetSubtensor::NodeProp* SetSubtensor::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD

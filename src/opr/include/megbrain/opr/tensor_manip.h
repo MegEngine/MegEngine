@@ -374,6 +374,7 @@ MGB_DEFINE_OPR_CLASS(Subtensor,
 MGB_DEFINE_OPR_CLASS(SetSubtensor, intl::ModifySubtensorImplHelper) // {
 
     void modify(DeviceTensorND &sub, const DeviceTensorND &val) override;
+    NodeProp* do_make_node_prop() const override;
 
     public:
         MGB_DECL_FANCY_INDEXING_OPR_MODIFY(SetSubtensor);

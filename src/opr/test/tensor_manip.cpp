@@ -935,6 +935,48 @@ TEST(TestTensorManip, SubtensorEmptyIO) {
     });
 }
 
+TEST(TestTensorManip, SetSubtensorEmptyIO) {
+    using AIdx = opr::SetSubtensor::AxisIndexer;
+    using IndexDesc = std::vector<AIdx>;
+    using IndexDescCreater = thin_function<IndexDesc(SymbolVar)>;
+    HostTensorGenerator<> gen;
+    auto run = [&](const TensorShape& inp_shp, const TensorShape& val_shp, const IndexDescCreater& c) {
+        auto host_x = gen(inp_shp),
+             host_v = gen(val_shp);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x),
+             v = opr::Host2DeviceCopy::make(*graph, host_v);
+
+        auto y = opr::SetSubtensor::make(x, v, c(x));
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(host_y.shape(), inp_shp);
+    };
+    // x.shape = {0}, v.shape = {0}, x[:0] = v
+    run({0}, {0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, None, x.make_scalar(0), None)};
+    });
+    // x.shape = {100, 0}, v.shape = {45, 0}, x[0:-10:2] = v
+    run({100, 0}, {45, 0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(0), x.make_scalar(-10), x.make_scalar(2))};
+    });
+    // x.shape = {100, 0}, v.shape = {40, 0}, x[10:-10:2, 0:0] = v
+    run({100, 0}, {40, 0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(10), x.make_scalar(-10), x.make_scalar(2)),
+                AIdx::make_interval(1, x.make_scalar(0), x.make_scalar(0), None)};
+    });
+    // x.shape = {10, 0, 10}, v.shape = {0, 10}, x[5, 10:-10:-2] = v
+    run({10, 0, 10}, {0, 10}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_index(0, x.make_scalar(5)),
+                AIdx::make_interval(1, x.make_scalar(10), x.make_scalar(-10), x.make_scalar(2))};
+    });
+    // x.shape = {10}, v.shape = {0}, x[100:] = v
+    run({10}, {0}, [&](SymbolVar x)->IndexDesc {
+        return {AIdx::make_interval(0, x.make_scalar(100), None, None)};
+    });
+}
+
 namespace {
 
 void test_subtensor_fwdonly(bool dyn_inp, bool dyn_idx) {

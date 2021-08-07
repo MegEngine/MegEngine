@@ -134,6 +134,11 @@ Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
 }
 
 TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
+    if (value.empty()) {
+        auto layout = value.layout();
+        layout.init_contiguous_stride();
+        const_cast<HostTensorND&>(value).reset(value.storage(), layout);
+    }
     auto info = alloc();
     init(info, {value.layout(), value.comp_node(), value.proxy_to_default_cpu()});
     info->mem_desc.id = StorageIdentifier::make(++m_storage_id);
