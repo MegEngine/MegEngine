@@ -767,6 +767,19 @@ def matinv(inp: Tensor) -> Tensor:
     return result
 
 
+class _Hashable:
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __hash__(self) -> int:
+        return hash(str(self.value))
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, _Hashable):
+            return False
+        return self.value == o.value
+
+
 @lru_cache(maxsize=None)
 def _get_extentedMatrixMulOp(
     device, dtype, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy,
@@ -833,7 +846,7 @@ def _get_extentedMatrixMulOp(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=strategy,
+            strategy=strategy.value,
         )
         result = f(op, inp1, inp2)
         result_shape = f(GetVarShape(), result)
@@ -954,7 +967,7 @@ def _get_extentedBatchedMatrixMulOp(
             transposeB=transpose_b,
             compute_mode=compute_mode,
             format=format,
-            strategy=strategy,
+            strategy=strategy.value,
         )
         result = f(op, inp1, inp2)
 
@@ -1051,9 +1064,9 @@ def matmul(
             transpose_b,
             compute_mode,
             format,
-            strategy=get_execution_strategy(),
+            strategy=_Hashable(get_execution_strategy()),
         )
-        (result,) = apply(extentedMatrixMulOp, inp1, inp2)
+        (result,) = apply(extentedMatrixMulOp(), inp1, inp2)
         return result
     else:  # dispath to BatchedMatrixMul
         extentedBatchedMatrixMulOp = _get_extentedBatchedMatrixMulOp(
@@ -1065,9 +1078,9 @@ def matmul(
             transpose_b,
             compute_mode,
             format,
-            strategy=get_execution_strategy(),
+            strategy=_Hashable(get_execution_strategy()),
         )
-        (result,) = apply(extentedBatchedMatrixMulOp, inp1, inp2)
+        (result,) = apply(extentedBatchedMatrixMulOp(), inp1, inp2)
         return result
 
 

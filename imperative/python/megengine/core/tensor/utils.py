@@ -227,19 +227,19 @@ def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
         gopt_level = None  # disable jit and compile
 
     binary_ops = {
-        "+": builtin.Elemwise(mode="add"),
-        "-": builtin.Elemwise(mode="sub"),
-        "*": builtin.Elemwise(mode="mul"),
-        "/": builtin.Elemwise(mode="true_div"),
-        "//": builtin.Elemwise(mode="floor_div"),
-        "**": builtin.Elemwise(mode="pow"),
-        "√": builtin.Elemwise(mode="expm1"),
-        "max": builtin.Elemwise(mode="max"),
-        "additive": builtin.Elemwise(mode="add"),
+        "+": lambda: builtin.Elemwise(mode="add"),
+        "-": lambda: builtin.Elemwise(mode="sub"),
+        "*": lambda: builtin.Elemwise(mode="mul"),
+        "/": lambda: builtin.Elemwise(mode="true_div"),
+        "//": lambda: builtin.Elemwise(mode="floor_div"),
+        "**": lambda: builtin.Elemwise(mode="pow"),
+        "√": lambda: builtin.Elemwise(mode="expm1"),
+        "max": lambda: builtin.Elemwise(mode="max"),
+        "additive": lambda: builtin.Elemwise(mode="add"),
     }
 
     unary_ops = {
-        "-": builtin.Elemwise(mode="negate"),
+        "-": lambda: builtin.Elemwise(mode="negate"),
     }
 
     def decorator(func):
@@ -248,9 +248,9 @@ def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
         def apply_expr(op, *args):
             if isinstance(op, str):
                 if len(args) == 2:
-                    op = binary_ops[op]
+                    op = binary_ops[op]()
                 elif len(args) == 1:
-                    op = unary_ops[op]
+                    op = unary_ops[op]()
             return builder.apply(op, args, 1)[0]
 
         def apply_const(value, dtype=dtype, device=device):
@@ -261,8 +261,8 @@ def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
         builder.outputs(outputs)
         builder.outputs_has_grad(outputs_has_grad)
         if gopt_level is None:
-            return builder.get()
+            return lambda: builder.get()
         else:
-            return builder.compile(gopt_level)
+            return lambda: builder.compile(gopt_level)
 
     return decorator

@@ -181,7 +181,7 @@ OP_TRAIT_REG(Identity, Identity)
 namespace { namespace subgraph {
 
 EncodedSubraph make_forward_graph(const OpDef& def, SmallVector<LogicalTensorDesc> inputs) {
-    return EncodedSubraph::make(def.cast_final_safe<SubgraphOp>().graph);
+    return EncodedSubraph::make(*def.cast_final_safe<SubgraphOp>().graph);
 }
 
 EncodedSubraph make_backward_graph(
@@ -197,16 +197,19 @@ EncodedSubraph make_backward_graph(
         }
     }
     auto bgraph = subgraph_detail::make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
-    return EncodedSubraph::make_single(SubgraphOp::make(op.name+"Grad", bgraph.graph), bgraph.input_mask, bgraph.output_mask);
+    return EncodedSubraph::make_single(
+            SubgraphOp::make(op.name + "Grad",
+                             std::make_shared<Subgraph>(bgraph.graph)),
+            bgraph.input_mask, bgraph.output_mask);
 }
 
 std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
     auto& op = def.cast_final_safe<SubgraphOp>();
     return {
         {"name", op.name},
-        {"inputs", mgb::imperative::to_string(op.graph.inputs)},
-        {"exprs", mgb::imperative::to_string(op.graph.exprs)},
-        {"outputs", mgb::imperative::to_string(op.graph.outputs)},
+        {"inputs", mgb::imperative::to_string(op.graph->inputs)},
+        {"exprs", mgb::imperative::to_string(op.graph->exprs)},
+        {"outputs", mgb::imperative::to_string(op.graph->outputs)},
     };
 }
 
@@ -222,7 +225,7 @@ std::string make_name(const OpDef& def) {
 auto hash(const OpDef& def) {
     auto& op = def.cast_final_safe<SubgraphOp>();
     if (!op.graph_key) {
-        return (size_t)reinterpret_cast<uintptr_t>(&op.graph);
+        return (size_t)reinterpret_cast<uintptr_t>(op.graph.get());
     }
     return op.graph_key->hash();
 }
@@ -238,7 +241,7 @@ auto is_same_st(const OpDef& def, const OpDef& another) {
     if (has_graph_key) {
         graph_same = rhs.graph_key && lhs.graph_key->is_same(*rhs.graph_key);
     } else {
-        graph_same = !rhs.graph_key && &lhs.graph == &rhs.graph;
+        graph_same = !rhs.graph_key && lhs.graph.get() == rhs.graph.get();
     }
     return graph_same;
 }
@@ -354,7 +357,9 @@ auto apply_on_physical_tensor(
 auto apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs) {
-    return OpDef::apply_on_var_node(*def.cast_final_safe<CompiledOp>().op, inputs);
+    auto& op = def.cast_final_safe<CompiledOp>();
+    op.op->set_scope(op.scope());
+    return OpDef::apply_on_var_node(*op.op, inputs);
 }
 
 auto infer_output_attrs_fallible(
@@ -397,7 +402,9 @@ EncodedSubraph make_backward_graph(
     if (backward_graph.graph.is_single()) {
         bgraph_op = backward_graph.graph.as_single();
     } else {
-        bgraph_op = SubgraphOp::make(name+"Grad", backward_graph.graph, grad_outputs_has_grad, key);
+        bgraph_op = SubgraphOp::make(
+                name + "Grad", std::make_shared<Subgraph>(backward_graph.graph),
+                grad_outputs_has_grad, key);
     }
     auto compiled_op = CompiledOp::make(bgraph_op, op.gopt_level);
     auto encoded_graph = EncodedSubraph::make_single(compiled_op, backward_graph.input_mask, backward_graph.output_mask);
@@ -430,6 +437,8 @@ OP_TRAIT_REG(CompiledOp, CompiledOp)
     .is_same_st(is_same_st)
     .fallback();
 }}
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(UniqueKey);
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SubgraphOp);
 

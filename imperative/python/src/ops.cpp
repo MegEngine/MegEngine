@@ -482,9 +482,15 @@ void init_ops(py::module m) {
     struct PySubgraphBuilder {
         explicit PySubgraphBuilder(std::string name) : name{name}{}
         std::string name;
-        Subgraph graph;
+        std::shared_ptr<Subgraph> graph_storage = std::make_shared<Subgraph>();
+        std::shared_ptr<UniqueKey> graph_key = std::make_shared<UniqueKey>();
+        Subgraph& graph = *graph_storage;
         mgb::SmallVector<bool> output_grad_mask;
         Subgraph::var_t next_var = 1;
+
+        std::shared_ptr<OpDef> build() const {
+            return SubgraphOp::make(name, graph_storage, output_grad_mask, graph_key);
+        }
     };
 
     py::class_<PySubgraphBuilder>(m, "SubgraphBuilder")
@@ -518,10 +524,9 @@ void init_ops(py::module m) {
             self.output_grad_mask = outputs_has_grad;
         })
         .def("get", [](PySubgraphBuilder& self){
-            return (std::shared_ptr<OpDef>)SubgraphOp::make(self.name, self.graph, self.output_grad_mask);
+            return (std::shared_ptr<OpDef>)self.build();
         })
         .def("compile", [](PySubgraphBuilder& self, int gopt_level){
-            auto op = SubgraphOp::make(self.name, self.graph, self.output_grad_mask);
-            return (std::shared_ptr<OpDef>)CompiledOp::make(op, gopt_level);
+            return (std::shared_ptr<OpDef>)CompiledOp::make(self.build(), gopt_level);
         });
 }

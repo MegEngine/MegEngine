@@ -28,7 +28,8 @@ VarNodeArray apply_on_var_node(
     for (auto&& input: inputs) {
         input_descs.push_back({TensorLayout{input->dtype()}, input->comp_node()});
     }
-    auto apply_functor = [](const std::shared_ptr<OpDef>& op, const VarNodeArray& inputs, size_t nr_outputs){
+    auto apply_functor = [&](const std::shared_ptr<OpDef>& op, const VarNodeArray& inputs, size_t nr_outputs){
+        op->set_scope(def.scope());
         return OpDef::apply_on_var_node(*op, inputs);
     };
     auto const_functor = [&](const TensorPtr& value) {

@@ -1328,7 +1328,7 @@ def sync_batch_norm(
         syncbn_split_stats,
     ) = _get_sync_bn_ops(_device, _dtype, eps_mode, _ndim, _channels)
 
-    reduce_shape, reduce_size, channel_x1s, channel_x2s = apply(syncbn_stage0, inp)
+    reduce_shape, reduce_size, channel_x1s, channel_x2s = apply(syncbn_stage0(), inp)
 
     eps = convert_single_value(eps, dtype=inp.dtype, device=inp.device)
 
@@ -1338,19 +1338,28 @@ def sync_batch_norm(
     if training:
         if is_distributed():
             # reduce all nodes' data to calculate mean and variance
-            (stat,) = apply(syncbn_concat_stats, reduce_size, channel_x1s, channel_x2s)
+            (stat,) = apply(
+                syncbn_concat_stats(), reduce_size, channel_x1s, channel_x2s
+            )
             stat = all_reduce_sum(stat, group)
-            reduce_size, channel_x1s, channel_x2s = apply(syncbn_split_stats, stat)
+            reduce_size, channel_x1s, channel_x2s = apply(syncbn_split_stats(), stat)
 
         outvar, channel_mean, *_ = apply(
-            syncbn_stage1, inp, reduce_size, channel_x1s, channel_x2s, eps, weight, bias
+            syncbn_stage1(),
+            inp,
+            reduce_size,
+            channel_x1s,
+            channel_x2s,
+            eps,
+            weight,
+            bias,
         )
     else:
         assert running_var is not None and running_mean is not None
         channel_mean = running_mean
         channel_var = running_var
         outvar, *_ = apply(
-            syncbn_stage1_inference, inp, channel_mean, channel_var, eps, weight, bias
+            syncbn_stage1_inference(), inp, channel_mean, channel_var, eps, weight, bias
         )
 
     # outvar = output * weight + bias
@@ -1362,7 +1371,7 @@ def sync_batch_norm(
     if training and running_var is not None and running_mean is not None:
         momentum = convert_single_value(momentum, dtype=inp.dtype, device=inp.device)
         running_mean[...], running_var[...] = apply(
-            syncbn_stage2,
+            syncbn_stage2(),
             running_mean,
             running_var,
             momentum,

@@ -48,16 +48,28 @@ struct ShapeInfer final : OpDefImplBase<ShapeInfer> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 };
 
+struct UniqueKey final: Hashable {
+public:
+    size_t hash() const override {
+        return reinterpret_cast<uintptr_t>(this);
+    }
+protected:
+    bool is_same_st(const Hashable& rhs) const override {
+        return this == &rhs.cast_final_safe<UniqueKey>();
+    }
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
 struct SubgraphOp final: OpDefImplBase<SubgraphOp> {
     std::string name;
-    Subgraph graph;
+    std::shared_ptr<Subgraph> graph;
     SmallVector<bool> output_grad_mask;
     std::shared_ptr<Hashable> graph_key;
     SubgraphOp() = default;
-    SubgraphOp(std::string name, Subgraph graph, SmallVector<bool> output_grad_mask={}, std::shared_ptr<Hashable> key=nullptr)
+    SubgraphOp(std::string name, std::shared_ptr<Subgraph> graph, SmallVector<bool> output_grad_mask={}, std::shared_ptr<Hashable> key=nullptr)
         : name{name}, graph{graph}, output_grad_mask{output_grad_mask}, graph_key{std::move(key)}{
             if (this->output_grad_mask.empty()) {
-                this->output_grad_mask.resize(graph.outputs.size(), true);
+                this->output_grad_mask.resize(graph->outputs.size(), true);
             }
         }
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
