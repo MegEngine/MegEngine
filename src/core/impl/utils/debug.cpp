@@ -194,7 +194,14 @@ class InitCaller {
 
     InitCaller() {
 #ifndef WIN32
-        SigHandlerInit::init_for_segv();
+        if (MGB_GETENV("MGB_REGISTER_SEGV_HANDLER")) {
+            mgb_log_warn(
+                    "env config MGB_REGISTER_SEGV_HANDLER, which means "
+                    "megbrain will catch crash SEGV signal, if you do not want "
+                    "to megbrain do this, do unset MGB_REGISTER_SEGV_HANDLER "
+                    "and rerun");
+            SigHandlerInit::init_for_segv();
+        }
 #endif
 #if MGB_CUDA
         CudaCheckOnFork::init();
