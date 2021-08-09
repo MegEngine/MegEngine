@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "megbrain_build_config.h"
+
 #if MGB_ENABLE_GETENV
 #define MGB_GETENV  ::std::getenv
 #else
