@@ -62,3 +62,22 @@ jobs:
           git checkout -b master origin/master
           git rebase try-import
           git push
+  send-dingding:
+    runs-on: ubuntu-latest
+    needs: [cpu-test, gpu-test]
+    if: ${{ always() && github.ref == 'refs/heads/try-import' && (needs.cpu-test.result == 'failure' || needs.gpu-test.result == 'failure' ) }}
+    steps:
+      - name: run
+        uses: zcong1993/actions-ding@master
+        with:
+          dingToken: ${{ secrets.DINGDING_TOKEN }}
+          body: |
+            {
+              "msgtype": "link",
+              "link": {
+                  "text": "Workflow ${{ github.run_id }} Failed",
+                  "title": "Action Alert",
+                  "picUrl": "",
+                  "messageUrl": "https://github.com/MegEngine/MegEngine/actions/runs/${{ github.run_id }}"
+              }
+            }
