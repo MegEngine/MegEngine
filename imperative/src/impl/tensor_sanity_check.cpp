@@ -80,26 +80,30 @@ void TensorSanityCheck::enable() {
     OpTrait::for_each_trait([this](OpTrait& trait) {
         auto backup = std::make_unique<ApplyOnPhysicalTensor>(
             std::move(trait.apply_on_physical_tensor));
-        trait.apply_on_physical_tensor = [this, backup = backup.get()] (
-                const OpDef& def, const SmallVector<TensorPtr>& inputs) {
-            for (auto&& i: inputs) {
-                if (!m_checker->check(i)) {
-                    mgb_throw(TensorChecksumCalc::Error,
-                            "tensor modified before exec %s", print_op(def).c_str());
-                }
-            }
-            auto output = (*backup)(def, inputs);
-            for (auto&& i: output) {
-                mgb_assert(m_checker->check(i));
-            }
-            for (auto&& i: inputs) {
-                if (!m_checker->check(i)) {
-                    mgb_throw(TensorChecksumCalc::Error,
-                            "tensor modified after exec %s", print_op(def).c_str());
-                }
-            }
-            return output;
-        };
+        trait.apply_on_physical_tensor = ApplyOnPhysicalTensor(
+                [this, backup = backup.get()](
+                        const OpDef& def,
+                        const SmallVector<TensorPtr>& inputs) {
+                    for (auto&& i : inputs) {
+                        if (!m_checker->check(i)) {
+                            mgb_throw(TensorChecksumCalc::Error,
+                                      "tensor modified before exec %s",
+                                      print_op(def).c_str());
+                        }
+                    }
+                    auto output = (*backup)(def, inputs);
+                    for (auto&& i : output) {
+                        mgb_assert(m_checker->check(i));
+                    }
+                    for (auto&& i : inputs) {
+                        if (!m_checker->check(i)) {
+                            mgb_throw(TensorChecksumCalc::Error,
+                                      "tensor modified after exec %s",
+                                      print_op(def).c_str());
+                        }
+                    }
+                    return output;
+                });
         m_checker->hook_list.push_back({&trait, std::move(backup)});
     });
 }

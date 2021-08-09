@@ -38,6 +38,38 @@ StaticData& static_data() {
     return data;
 }
 
+void OpMethFallback::impl(ApplyOnPhysicalTensor& func,
+                          op_meth_tag::ApplyOnPhysicalTensor) {
+    func.Base::operator=(proxy_graph_detail::apply_on_physical_tensor);
+}
+void OpMethFallback::impl(Execute& func, op_meth_tag::Execute) {
+    func.Base::operator=(proxy_graph_detail::execute);
+}
+void OpMethFallback::impl(InferOutputMemDesc& func,
+                          op_meth_tag::InferOutputMemDesc) {
+    func.Base::operator=(proxy_graph_detail::infer_output_mem_desc);
+}
+void OpMethFallback::impl(InferOutputAttrsFallible& func,
+                          op_meth_tag::InferOutputAttrsFallible) {
+    func.Base::operator=(proxy_graph_detail::infer_output_attrs_fallible);
+}
+void OpMethFallback::impl(GradMaker& func, op_meth_tag::GradMaker) {
+    func.Base::operator=(proxy_graph_detail::make_backward_graph);
+}
+void OpMethFallback::impl(DecideDispatchMode& func,
+                          op_meth_tag::DecideDispatchMode) {
+    static auto decide_dispatch_mode =
+            [](const OpDef&, const SmallVector<LogicalTensorDesc>&) {
+                return DispatchMode::KERNEL;
+            };
+    func.Base::operator=(decide_dispatch_mode);
+}
+void OpMethFallback::impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc) {
+    static auto make_name = [](const OpDef& def) -> std::string {
+        return def.trait()->name;
+    };
+    func.Base::operator=(make_name);
+}
 } // detail
 
 OpTrait::OpTrait(const char* name_): name(name_) {}
@@ -66,44 +98,17 @@ void OpTrait::for_each_trait(thin_function<void(OpTrait&)> visitor){
     }
 }
 
-DispatchMode fallback_decide_dispatch_mode(
-    const OpDef& def,
-    const SmallVector<LogicalTensorDesc>& inputs) {
-    return KERNEL;
-}
-
 OpTraitRegistry& OpTraitRegistry::fallback() {
     if (trait->apply_on_var_node) {
         // fallback to proxy graph impl
-        if (!trait->apply_on_physical_tensor) {
-            trait->apply_on_physical_tensor =
-                    proxy_graph_detail::apply_on_physical_tensor;
-        }
-        if (!trait->execute) {
-            trait->execute = proxy_graph_detail::execute;
-        }
-        if (!trait->infer_output_mem_desc) {
-            trait->infer_output_mem_desc =
-                    proxy_graph_detail::infer_output_mem_desc;
-        }
-        if (!trait->infer_output_attrs_fallible) {
-            trait->infer_output_attrs_fallible =
-                    proxy_graph_detail::infer_output_attrs_fallible;
-        }
-        if (!trait->make_backward_graph) {
-            trait->make_backward_graph =
-                    proxy_graph_detail::make_backward_graph;
-        }
+        trait->apply_on_physical_tensor.allow_fallback = true;
+        trait->execute.allow_fallback = true;
+        trait->infer_output_mem_desc.allow_fallback = true;
+        trait->infer_output_attrs_fallible.allow_fallback = true;
+        trait->make_backward_graph.allow_fallback = true;
     }
-    if (!trait->decide_dispatch_mode) {
-        trait->decide_dispatch_mode = fallback_decide_dispatch_mode;
-    }
-    if (!trait->make_name) {
-        static auto make_name = [](const OpDef& def) -> std::string {
-            return def.trait()->name;
-        };
-        trait->make_name = make_name;
-    }
+    trait->decide_dispatch_mode.allow_fallback = true;
+    trait->make_name.allow_fallback = true;
     return *this;
 }
 
