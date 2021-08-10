@@ -171,6 +171,10 @@ def test_conv_bias():
     run(10, 36, 8, 46, 26, 2, 2, 2, 1, 1, 2, True, "relu")
 
 
+@pytest.mark.skipif(
+    get_device_count("gpu") > 0,
+    reason="does not support int8 when gpu compute capability less than 6.1",
+)
 def test_conv_transpose2d():
     rng = np.random.RandomState(seed=2021)
 
