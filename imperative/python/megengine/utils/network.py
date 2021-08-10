@@ -399,6 +399,7 @@ class Network:
                     var.owner = repl_dict[opr]
                     var.__dict__.update(repl_dict[opr].outputs[ind].__dict__)
                     var.var = repl_dict[opr].outputs[ind].var
+                repl_dict[opr].outputs = opr.outputs
         self._compile()
 
     def get_opr_by_type(self, oprcls, unique=True):
