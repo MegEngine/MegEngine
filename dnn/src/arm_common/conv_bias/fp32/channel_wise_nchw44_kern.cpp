@@ -303,10 +303,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
     float32x4_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     size_t oh_start = PH;
@@ -418,10 +416,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
     float32x4_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     size_t oh_start = PH;
@@ -562,10 +558,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     size_t oh_start = PH;
@@ -723,10 +717,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
     float32x4_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     size_t oh_start = (PH + 1) / 2;
@@ -789,10 +781,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
     float32x4_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     size_t oh_start = (PH + 1) / 2;
@@ -914,10 +904,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
     Op op;
-    float32x4_t init;
-    if (bias_mode == BiasMode::NO_BIAS) {
-        init = vdupq_n_f32(0.f);
-    } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
+    float32x4_t init = vdupq_n_f32(0.f);
+    if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f32(bias);
     }
     constexpr size_t stride = 2;

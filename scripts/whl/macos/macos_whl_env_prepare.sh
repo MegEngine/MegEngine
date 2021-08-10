@@ -20,7 +20,7 @@ function try_install_brew() {
 }
 
 function install_brew_package() {
-    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm git-lfs ninja"
+    BREW_PACKAGE="openssl readline sqlite3 xz gdbm zlib pyenv wget swig coreutils llvm git-lfs ninja bzip2"
     for pak in ${BREW_PACKAGE}
     do
         echo "###### do command: brew install ${pak}"
@@ -55,8 +55,19 @@ function install_python_package() {
         if [ -e /Users/${USER}/.pyenv/versions/${pak} ];then
             echo "FOUND install /Users/${USER}/.pyenv/versions/${pak} strip it..."
         else
-            env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
+            os_ver=$(sw_vers -productVersion | awk '{print int($0)}')
+            if [ $a -lt 11 ];then
+                env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${pak}
+            else
+                PYTHON_CONFIGURE_OPTS="--enable-shared" \
+                CFLAGS="-I$(brew --prefix openssl)/include -I$(brew --prefix bzip2)/include \
+                -I$(brew --prefix readline)/include -I$(xcrun --show-sdk-path)/usr/include" \
+                LDFLAGS="-L$(brew --prefix openssl)/lib -L$(brew --prefix readline)/lib -L$(brew --prefix zlib)/lib -L$(brew --prefix bzip2)/lib" \
+                pyenv install --patch ${pak} < <(curl -sSL https://github.com/python/cpython/commit/8ea6353.patch\?full_index\=1)
+            fi
         fi
+        echo "###### do command: /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install --upgrade pip"
+        /Users/${USER}/.pyenv/versions/${pak}/bin/python3 -m pip install --upgrade pip
         echo "###### do command: /Users/$USER/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/imperative/python/requires.txt"
         /Users/$USER/.pyenv/versions/${pak}/bin/python3 -m pip install -r ${SRC_DIR}/imperative/python/requires.txt
     done
