@@ -8,6 +8,7 @@
 import copy
 
 import numpy as np
+import pytest
 
 import megengine.autodiff as ad
 import megengine.functional as F
@@ -303,3 +304,17 @@ def test_zero_grad():
     np.testing.assert_almost_equal(
         net.a.numpy(), np.array([1.0 - 4.0], dtype=np.float32),
     )
+
+
+def test_throw_on_non_tensor_argument():
+    class NonTensorArg(Function):
+        def forward(self, inp, c):
+            return inp + c
+
+        def backward(self, grad):
+            return grad
+
+    x = tensor(np.array([2.33], dtype=np.float32))
+    func = NonTensorArg()
+    with pytest.raises(TypeError, match=r"op .* expect type Tensor as inputs"):
+        func(x, 1)

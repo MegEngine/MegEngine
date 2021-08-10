@@ -108,7 +108,7 @@ struct OpMethNotImpl {
 struct OpMethFallback : public OpMethNotImpl {
     using OpMethNotImpl::impl;
     static void impl(ApplyOnPhysicalTensor& func,
-                                         op_meth_tag::ApplyOnPhysicalTensor);
+                     op_meth_tag::ApplyOnPhysicalTensor);
     static void impl(Execute& func, op_meth_tag::Execute);
     static void impl(InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc);
     static void impl(InferOutputAttrsFallible& func,
@@ -120,9 +120,9 @@ struct OpMethFallback : public OpMethNotImpl {
 template <typename Tag, typename RType, typename... Args>
 struct OpMeth<Tag, RType(Args...)> : public thin_function<RType(Args...)> {
     using Base = thin_function<RType(Args...)>;
-    using Base::operator bool;
     OpMeth() : Base{}, allow_fallback(false){};
     explicit OpMeth(const Base& base) { this->Base::operator=(base); }
+    using Base::operator bool;
     RType operator()(Args... args) const {
         if (!this->Base::operator bool()) {
             if (allow_fallback) {
