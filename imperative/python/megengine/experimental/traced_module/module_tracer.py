@@ -84,6 +84,34 @@ BUILTIN_ARRAY_METHOD = [
     "__setitem__",
 ]
 
+BUILTIN_TENSOR_WRAP_METHOD = [
+    "T",
+    "to",
+    "size",
+    "shape",
+    "detach",
+    "device",
+    "dtype",
+    "grad",
+    "item",
+    "name",
+    "ndim",
+    "numpy",
+    "qparams",
+    "set_value",
+    "reset_zero",
+    "requires_grad",
+    "_reset",
+    "_isscalar",
+    "_setscalar",
+    "_tuple_shape",
+    "_unsetscalar",
+]
+
+
+def get_tensor_wrapable_method():
+    return BUILTIN_TENSOR_WRAP_METHOD + BUILTIN_ARRAY_METHOD
+
 
 def active_module_tracer():
     return _active_module_tracer
@@ -101,9 +129,10 @@ class module_tracer:
 
     _active_scopes = None
 
-    def __init__(self, wrap_fn):
+    def __init__(self, wrap_fn, id2name):
         self._active_scopes = []
         self.patcher = Patcher(wrap_fn)
+        self.id2name = id2name
 
     @classmethod
     def register_as_builtin(cls, mod):
@@ -127,6 +156,10 @@ class module_tracer:
         return None
 
 
+class NotExist:
+    pass
+
+
 class PatchedFn:
     frame_dict = None
     name = None
@@ -138,14 +171,17 @@ class PatchedFn:
         self.origin_fn = (
             self.frame_dict[name]
             if isinstance(frame_dict, collections.abc.Mapping)
-            else getattr(frame_dict, name)
+            else getattr(frame_dict, name, NotExist)
         )
 
     def set_func(self, func):
         if isinstance(self.frame_dict, collections.abc.Mapping):
             self.frame_dict[self.name] = func
         else:
-            setattr(self.frame_dict, self.name, func)
+            if func is not NotExist:
+                setattr(self.frame_dict, self.name, func)
+            else:
+                delattr(self.frame_dict, self.name)
 
 
 class Patcher:

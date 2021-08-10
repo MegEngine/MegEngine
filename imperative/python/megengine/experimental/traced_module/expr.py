@@ -33,17 +33,6 @@ def rstrip(s: str, __chars: str):
     return s
 
 
-def lstrip(s: str, __chars: str):
-    __chars = re.escape(__chars)
-    s = re.sub(r"^(?:%s)+(?P<right>.*)$" % __chars, "\g<right>", s)
-    return s
-
-
-def strip(s: str, __chars: str):
-    s = lstrip(rstrip(s, __chars), __chars)
-    return s
-
-
 class Expr:
     """
     ``Expr`` represents the operations(i.e. CallMethod, CallFunction, Apply, GetAttr, Input, Constant) on ``Node``.
@@ -89,27 +78,40 @@ class Expr:
                 outputs = (outputs,)
 
             name = None
+            orig_name = None
             if isinstance(self, CallMethod):
                 name = self.inputs[0]._name
-                assert name is not None
+                orig_name = self.inputs[0]._orig_name
+                assert isinstance(name, str), "The name of ({}) must be a str".format(
+                    self.inputs[0]
+                )
+                assert isinstance(
+                    orig_name, str
+                ), "The orig_name of ({}) must be a str".format(self.inputs[0])
                 name = rstrip(name, "_out")
                 if self.method == "__call__":
                     name += "_out"
+                    orig_name += "_out"
                 else:
-                    strip_method = strip(self.method, "_")
+                    strip_method = self.method.strip("_")
                     name = "%s_out" % strip_method
+                    orig_name = name
             elif isinstance(self, CallFunction):
                 name = self.func.__name__ + "_out"
             elif isinstance(self, Apply):
                 name = str(self.opdef).lower() + "_out"
 
             for i in outputs:
-                assert isinstance(i, RawTensor)
+                assert isinstance(i, RawTensor), "The output must be a Tensor"
                 o_name = (
                     active_module_tracer().current_scope()._create_unique_name(name)
                 )
                 self.outputs.append(
-                    NodeMixin.get_wrapped_type(i)(expr=self, name=o_name)
+                    NodeMixin.get_wrapped_type(i)(
+                        expr=self,
+                        name=o_name,
+                        orig_name=orig_name if orig_name else o_name,
+                    )
                 )
 
             for i, node in zip(outputs, self.outputs,):
@@ -125,21 +127,26 @@ class Expr:
         else:
             return inputs, {}
 
-    def _replace_nodes(self, repl_dict: Dict[Node, Node], nodes: List[Node]):
+    def replace_inputs(self, repl_dict: Dict[Node, Node]):
         while repl_dict:
             node, repl_node = repl_dict.popitem()
             assert type(node) == type(repl_node)
-            assert node in nodes
-            index = nodes.index(node)
-            nodes[index] = repl_node
+            assert node in self.inputs, "({}) is not in the ({})".format(node, self)
+            assert (
+                repl_node.top_graph == node.top_graph
+            ), "({}) and ({}) are not in the same graph".format(node, repl_node)
+            graph = self.top_graph
+            repl_expr_idx = graph._exprs.index(repl_node.expr)
+            self_idx = graph._exprs.index(self)
+            assert (
+                repl_expr_idx < self_idx
+            ), "({}) must be generated before ({})".format(repl_node, self)
+            idx = self.inputs.index(node)
+            self.inputs[idx] = repl_node
+            user_idx = node.users.index(self)
+            assert user_idx >= 0
+            node.users.pop(user_idx)
             repl_node.users.append(self)
-            node.users.pop(self)
-
-    def replace_inputs(self, repl_dict: Dict[Node, Node]):
-        self._replace_nodes(repl_dict, self.inputs)
-
-    def replace_outputs(self, repl_dict: Dict[Node, Node]):
-        self._replace_nodes(repl_dict, self.outputs)
 
     @property
     def kwargs(self):
@@ -159,7 +166,8 @@ class Expr:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop("_top_graph", None)
+        if "_top_graph" in state:
+            state.pop("_top_graph")
         return state
 
 
@@ -167,12 +175,14 @@ class Expr:
 class Input(Expr):
     name = None
 
-    def __init__(self, name=None, type=None):
+    def __init__(self, name=None, type=None, orig_name=None):
         super().__init__()
         self.inputs = []
         node_cls = type if type else Node
+        if orig_name is None:
+            orig_name = name
         self.outputs = [
-            node_cls(self, name=name),
+            node_cls(self, name=name, orig_name=orig_name),
         ]
         self.name = name
 
@@ -184,7 +194,7 @@ class Input(Expr):
             active_module_tracer().current_scope()._create_unique_name(oup_node._name)
         )
         oup_node._name = name
-        active_module_tracer().current_scope().add_input(oup_node)
+        active_module_tracer().current_scope()._add_input(oup_node)
         return expr.outputs[0]
 
     def __repr__(self):
@@ -195,7 +205,7 @@ class Input(Expr):
 class GetAttr(Expr):
     name = None
 
-    def __init__(self, module, name, type=None):
+    def __init__(self, module, name, type=None, orig_name=None):
         super().__init__()
         assert isinstance(module, ModuleNode)
         self.inputs = [
@@ -205,7 +215,7 @@ class GetAttr(Expr):
         self.name = name
         node_cls = type if type else Node
         self.outputs = [
-            node_cls(self, name=name),
+            node_cls(self, name=name, orig_name=orig_name),
         ]
 
     @classmethod
@@ -218,7 +228,7 @@ class GetAttr(Expr):
             module = module.expr.inputs[0]
         oup_name = active_module_tracer().current_scope()._create_unique_name(oup_name)
         expr.outputs[0]._name = oup_name
-        active_module_tracer().current_scope().insert(expr)
+        active_module_tracer().current_scope()._insert(expr)
         return expr.outputs[0]
 
     def interpret(self, *inputs):
@@ -255,7 +265,7 @@ class CallMethod(Expr):
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
-        active_module_tracer().current_scope().insert(expr)
+        active_module_tracer().current_scope()._insert(expr)
         return expr
 
     @property
@@ -315,7 +325,7 @@ class Apply(Expr):
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
-        active_module_tracer().current_scope().insert(expr)
+        active_module_tracer().current_scope()._insert(expr)
         return expr
 
     def interpret(self, *inputs):
@@ -382,7 +392,7 @@ class CallFunction(Expr):
     @classmethod
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
-        active_module_tracer().current_scope().insert(expr)
+        active_module_tracer().current_scope()._insert(expr)
         return expr
 
     def interpret(self, *inputs):
@@ -423,7 +433,7 @@ class Constant(Expr):
         self.inputs = []
         node_cls = NodeMixin.get_wrapped_type(c)
         self.outputs = [
-            node_cls(self, name=name),
+            node_cls(self, name=name, orig_name=name),
         ]
         self.outputs[0]._name = name if name else "const_" + str(self._id)
 
@@ -431,9 +441,23 @@ class Constant(Expr):
     def make(cls, *args, **kwargs):
         expr = cls(*args, **kwargs)
         name = "const_module" if isinstance(expr.value, Module) else "const_tensor"
-        name = active_module_tracer().current_scope()._create_unique_name(name)
+        full_name = name
+        if (
+            isinstance(expr.value, RawTensor)
+            and id(expr.value) in active_module_tracer().id2name
+        ):
+            full_name = active_module_tracer().id2name[id(expr.value)]
+            scope_name = active_module_tracer().current_scope()._module_name
+            if full_name and scope_name:
+                full_name = ("self." + full_name)[len(scope_name) + 1 :]
+            else:
+                full_name = name
+        else:
+            full_name = name
+        name = active_module_tracer().current_scope()._create_unique_name(full_name)
         expr.outputs[0]._name = name
-        active_module_tracer().current_scope().insert(expr)
+        expr.outputs[0]._orig_name = full_name
+        active_module_tracer().current_scope()._insert(expr)
         return expr.outputs[0]
 
     def interpret(self, *inputs):
@@ -453,7 +477,9 @@ class Constant(Expr):
         )
 
     def __getstate__(self):
-        state = super().__getstate__()
+        state = self.__dict__.copy()
+        if "_top_graph" in state:
+            state.pop("_top_graph")
         if isinstance(self.value, RawTensor):
             state["value"] = Tensor(self.value)
         return state

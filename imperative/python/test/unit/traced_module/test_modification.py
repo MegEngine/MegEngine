@@ -64,9 +64,10 @@ def test_search():
 def test_insert():
     traced_module, x, expect = _init_block()
     graph = traced_module.graph
-    relu_node = graph.get_function_by_type(F.relu).as_unique().outputs
-    neg_node = graph.insert_function(lambda x: F.neg(x), *relu_node)
-    graph.replace_node({relu_node[0]: neg_node})
+    relu_out = graph.get_function_by_type(F.relu).as_unique().outputs[0]
+    with graph.insert_exprs():
+        neg_out = F.neg(relu_out)
+    graph.replace_node({relu_out: neg_out})
     graph.compile()
     np.testing.assert_allclose(expect - 1, 1 - traced_module(x), atol=1e-6)
 

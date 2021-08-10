@@ -14,7 +14,6 @@ from .traced_module import (
     register_as_builtin,
     trace_module,
     wrap,
-    wrap_tensors,
 )
 
 _register_all_builtin_module()

@@ -133,7 +133,7 @@ def _is_leaf(obj):
 def _leaf_type(node):
     if isinstance(node, (RawTensor, TensorNode)):
         return (Tensor, TensorNode, ArgsIndex)
-    elif isinstance(node, (NodeMixin, Module)):
+    elif isinstance(node, (NodeMixin, Module, ModuleNode)):
         return (Module, ModuleNode, NodeMixin, ArgsIndex)
     else:
         return (type(node), ArgsIndex)

@@ -30,14 +30,17 @@ class Node:
     _id = None
     _top_graph = None  # type: weakref.ReferenceType
     _name = None
+    _orig_name = None
     _format_spec = ""
 
-    def __init__(self, expr: "Expr", name: str = None):
+    def __init__(self, expr: "Expr", name: str = None, orig_name: str = None):
         self.expr = expr
         self.users = []  # List[Expr]
         self._id = Node.__total_id
         Node.__total_id += 1
         self._name = name
+        self._orig_name = orig_name
+        self.actual_node = []  # type: List[Node]
 
     def __setstate__(self, d):
         self.__dict__ = d
@@ -48,7 +51,7 @@ class Node:
         return self.__format__(format_spec)
 
     def __format__(self, format_spec: str) -> str:
-        if format_spec == "" or format_spec is None:
+        if not format_spec:
             format_spec = Node._format_spec
         name = self._name
         if name is None:
@@ -100,9 +103,8 @@ class ModuleNode(Node):
     module_type = Module  # type: Type[Module]
     _owner = None  # type: weakref.ReferenceType
 
-    def __init__(self, expr: "Expr", name: str = None):
-        super().__init__(expr, name)
-        self.actual_mnode = []
+    def __init__(self, expr: "Expr", name: str = None, orig_name: str = None):
+        super().__init__(expr, name, orig_name)
 
     def __getstate__(self):
         return {
@@ -110,6 +112,7 @@ class ModuleNode(Node):
             "users": self.users,
             "_id": self._id,
             "_name": self._name,
+            "_orig_name": self._orig_name,
             "module_type": self.module_type,
         }
 
@@ -125,22 +128,66 @@ class TensorNode(Node):
     ``TensorNode`` represents the Tensor objects.
     """
 
-    shape = None  # type: Tuple[int]
-    dtype = None  # type: numpy.dtype
-    qparams = None
-    device = None
+    _shape = None  # type: Tuple[int]
+    _dtype = None  # type: numpy.dtype
+    _qparams = None
+    _device = None
+    _value = None  # type: Tensor
 
     def __getstate__(self):
         return {
             "expr": self.expr,
             "users": self.users,
             "_id": self._id,
-            "qparams": self.qparams,
-            "shape": self.shape,
-            "dtype": self.dtype,
-            "device": self.device,
+            "_qparams": self._qparams,
+            "_shape": self._shape,
+            "_dtype": self._dtype,
+            "_device": self._device,
             "_name": self._name,
+            "_orig_name": self._orig_name,
         }
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, shape):
+        self._shape = shape
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, dtype):
+        self._dtype = dtype
+
+    @property
+    def device(self):
+        return self._device
+
+    @device.setter
+    def device(self, device):
+        self._device = device
+
+    @property
+    def qparams(self):
+        return self._qparams
+
+    @qparams.setter
+    def qparams(self, qparams):
+        self._qparams = qparams
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if isinstance(value, RawTensor) and NodeMixin.get(value, None) is not None:
+            setattr(value, "_NodeMixin__node", None)
+        self._value = value
 
 
 class NodeMixin(abc.ABC):
@@ -156,13 +203,13 @@ class NodeMixin(abc.ABC):
         assert isinstance(node, TensorNode)
         assert isinstance(value, RawTensor)
         if isinstance(value, RawTensor):
-            node.dtype = value.dtype
-            node.shape = (
+            node._dtype = value.dtype
+            node._shape = (
                 value._tuple_shape if isinstance(value, Tensor) else value.shape
             )
-            node.device = value.device
+            node._device = value.device
             if hasattr(value, "_qparams") and value._qparams is not None:
-                node.qparams = value.qparams
+                node._qparams = value.qparams
 
     @classmethod
     def wrap(cls, value, node):
