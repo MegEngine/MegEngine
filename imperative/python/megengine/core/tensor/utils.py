@@ -242,16 +242,32 @@ def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
         "-": lambda: builtin.Elemwise(mode="negate"),
     }
 
+    ternary_ops = {
+        "fma3": lambda: builtin.Elemwise(mode="FUSE_MUL_ADD3"),
+    }
+
+    quaternary_ops = {"fma4": lambda: builtin.Elemwise(mode="FUSE_MUL_ADD4")}
+
     def decorator(func):
         builder = _SubgraphBuilder(name)
 
-        def apply_expr(op, *args):
+        def apply_expr(op, *args, nr_out=None):
             if isinstance(op, str):
                 if len(args) == 2:
                     op = binary_ops[op]()
                 elif len(args) == 1:
                     op = unary_ops[op]()
-            return builder.apply(op, args, 1)[0]
+                elif len(args) == 3:
+                    op = ternary_ops[op]()
+                elif len(args) == 4:
+                    op = quaternary_ops[op]()
+            results = builder.apply(op, args, 1 if nr_out is None else nr_out)
+            if nr_out is None:
+                assert len(results) == 1
+                return results[0]
+            else:
+                assert len(results) == nr_out
+                return results
 
         def apply_const(value, dtype=dtype, device=device):
             return builder.apply_const(value, dtype, device)

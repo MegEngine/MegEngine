@@ -784,7 +784,7 @@ class _Hashable:
 def _get_extentedMatrixMulOp(
     device, dtype, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy,
 ):
-    @subgraph("extentedMatrixMulOp", dtype, device, 2, gopt_level=3)
+    @subgraph("extentedMatrixMulOp", dtype, device, 2, gopt_level=2)
     def extentedMatrixMulOp(inputs, f, c):
         assert len(inputs) == 2
         inp1, inp2 = inputs
@@ -884,7 +884,7 @@ def _get_extentedMatrixMulOp(
 def _get_extentedBatchedMatrixMulOp(
     device, dtype, dim1, dim2, transpose_a, transpose_b, compute_mode, format, strategy,
 ):
-    @subgraph("extentedBatchedMatrixMulOp", dtype, device, 2, gopt_level=3)
+    @subgraph("extentedBatchedMatrixMulOp", dtype, device, 2, gopt_level=2)
     def extentedBatchedMatrixMulOp(inputs, f, c):
         assert len(inputs) == 2
         inp1, inp2 = inputs
