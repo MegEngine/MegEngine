@@ -119,8 +119,8 @@ public:
         m_description.threadblock_swizzle = ThreadblockSwizzleMap<
                 typename Operator::ThreadblockSwizzle>::kId;
 
-        m_description.need_load_from_const_mem =
-                Operator::kNeedLoadFromConstMem;
+        m_description.special_optimization =
+                Operator::kSpecialOpt;
         m_description.gemm_mode = Operator::kGemmMode;
         m_description.without_shared_load = Operator::kWithoutSharedLoad;
     }

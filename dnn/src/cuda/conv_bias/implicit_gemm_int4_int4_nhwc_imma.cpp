@@ -68,13 +68,27 @@ ConvBiasForwardImpl::AlgoInt4Int4NHWCIMMAImplicitGemm::get_constants(
                   args.filter_layout->dtype.param<dtype::QuantizedS4>().scale,
           bias_scale =
                   args.bias_layout->dtype.param<dtype::QuantizedS32>().scale,
-          dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
+          dst_scale;
+
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
+        dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
+    } else {  // DTypeEnum::QuantizedS8
+        megdnn_assert(args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS8);
+        dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS8>().scale;
+    }
 
     float alpha = src_scale * filter_scale / dst_scale,
           beta = bias_scale / dst_scale, gamma = 0.f, delta = 0.f, theta = 0.f;
 
     if (args.z_layout->ndim > 0) {
-        float z_scale = args.z_layout->dtype.param<dtype::QuantizedS4>().scale;
+        float z_scale;
+        if (args.z_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
+            z_scale = args.z_layout->dtype.param<dtype::QuantizedS4>().scale;
+        } else {  // DTypeEnum::QuantizedS8
+            megdnn_assert(args.z_layout->dtype.enumv() ==
+                          DTypeEnum::QuantizedS8);
+            z_scale = args.z_layout->dtype.param<dtype::QuantizedS8>().scale;
+        }
         gamma = z_scale / dst_scale;
     }
 

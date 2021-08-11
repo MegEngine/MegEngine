@@ -102,9 +102,7 @@ std::vector<BenchArgs> get_det_first_bench_args(size_t batch) {
     args.emplace_back(BenchArgs{batch, 16, 384, 640, 16, 3, 1});
     args.emplace_back(BenchArgs{batch, 16, 384, 640, 32, 3, 2});
     args.emplace_back(BenchArgs{batch, 32, 184, 320, 32, 3, 1});
-    args.emplace_back(BenchArgs{batch, 32, 384, 640, 64, 3, 2});
     args.emplace_back(BenchArgs{batch, 32, 184, 320, 32, 1, 1});
-    args.emplace_back(BenchArgs{batch, 32, 384, 640, 64, 1, 2});
     return args;
 }
 
@@ -333,6 +331,9 @@ void benchmark_target_algo_with_cudnn_tsc(
                             .reshape({shape[0], shape[1] / 4, 4, shape[2],
                                       shape[3]})
                             .dimshuffle({1, 3, 4, 0, 2}));
+        } else if (format == Format::NHWC) {
+            ret = static_cast<TensorShape>(
+                    TensorLayout{shape, dtype}.dimshuffle({0, 2, 3, 1}));
         }
         return ret;
     };
@@ -362,6 +363,9 @@ void benchmark_target_algo_with_cudnn_tsc(
         // skip testcase which cannot enable nchw4/chwn4 tensorcore
         if ((format == Format::CHWN4 || format == Format::NCHW4) &&
             (arg.ci % 16 != 0))
+            continue;
+        // skip testcase which cannot enable nhwc tensorcore
+        if ((format == Format::NHWC) && (arg.ci % 4 != 0 || arg.co % 4 != 0))
             continue;
         Format format_cudnn = arg.ci % 32 == 0 && arg.co % 32 == 0
                                       ? Format::NCHW32

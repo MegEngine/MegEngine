@@ -140,6 +140,11 @@ LayoutPack get_layout_pack(const param::ConvBias::Format format,
                     LayoutTypeID::kTensorNC64HW64};
         case Format::NHWC:
             switch (access_type) {
+                case 4:
+                    return {LayoutTypeID::kTensorNHWC,
+                            LayoutTypeID::kTensorNC4HW4,
+                            LayoutTypeID::kTensorNHWC,
+                            LayoutTypeID::kTensorNHWC};
                 case 8:
                     return {LayoutTypeID::kTensorNHWC,
                             LayoutTypeID::kTensorNC8HW8,
@@ -192,12 +197,18 @@ EpilogueType get_epilogue_type(const param::ConvBias::NonlineMode mode,
 const Operation*
 ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_conv_op(
         const SizeArgs& args, ConvOperator conv_op, ConvType conv_type,
-        bool load_from_const, bool without_shared_load) const {
-    using Format = param::ConvBias::Format;
+        bool use_conv_filter_unity_opt, bool without_shared_load) const {
     auto&& param = args.opr->param();
     auto layouts = get_layout_pack(param.format, m_algo_param.access_size);
-    auto epilogue_type = get_epilogue_type(param.nonlineMode,
-                                           param.format != Format::NCHW4_NCHW);
+    auto epilogue_type = get_epilogue_type(
+            param.nonlineMode,
+            args.dst_layout->dtype.enumv() != DTypeEnum::Float32);
+
+    cutlass::conv::SpecialOptimizeDesc special_optimization =
+            (use_conv_filter_unity_opt)
+                    ? cutlass::conv::SpecialOptimizeDesc::CONV_FILTER_UNITY
+                    : cutlass::conv::SpecialOptimizeDesc::NONE;
+
     ConvolutionKey key{convert_conv_op(conv_op),
                        convert_dtype(args.src_layout->dtype.enumv()),
                        layouts.src,
@@ -219,7 +230,7 @@ ConvBiasForwardImpl::AlgoCutlassConvolutionBase::get_cutlass_conv_op(
                        m_algo_param.instruction_k,
                        epilogue_type,
                        m_algo_param.stage,
-                       load_from_const,
+                       special_optimization,
                        without_shared_load};
 
     return Singleton::get().operation_table.find_op(key);

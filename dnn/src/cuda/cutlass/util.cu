@@ -1569,6 +1569,35 @@ char const* to_string(MathOperationID math_op, bool pretty) {
 static struct {
     char const* text;
     char const* pretty;
+    conv::SpecialOptimizeDesc enumerant;
+} SpecialOptimizeDesc_enumerants[] = {
+        {"none_special_opt", "NoneSpecialOpt", conv::SpecialOptimizeDesc::NONE},
+        {"conv_filter_unity", "ConvFilterUnity",
+         conv::SpecialOptimizeDesc::CONV_FILTER_UNITY},
+        {"deconv_double_upsampling", "DeconvDoubleUpsampling",
+         conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING},
+};
+
+/// Converts an SpecialOptimizeDesc enumerant to a string
+char const* to_string(conv::SpecialOptimizeDesc special_opt, bool pretty) {
+    for (auto const& possible : SpecialOptimizeDesc_enumerants) {
+        if (special_opt == possible.enumerant) {
+            if (pretty) {
+                return possible.pretty;
+            } else {
+                return possible.text;
+            }
+        }
+    }
+
+    return pretty ? "Invalid" : "invalid";
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+static struct {
+    char const* text;
+    char const* pretty;
     conv::ImplicitGemmMode enumerant;
 } ImplicitGemmMode_enumerants[] = {
         {"gemm_nt", "GemmNT", conv::ImplicitGemmMode::GEMM_NT},

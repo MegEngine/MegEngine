@@ -275,6 +275,7 @@ public:
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
+    const void* get_available_op(const SizeArgs& args) const;
     AlgoParam m_algo_param;
     std::string m_name;
 };
@@ -295,6 +296,7 @@ public:
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
+    const void* get_available_op(const SizeArgs& args) const;
 };
 
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {

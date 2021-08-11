@@ -211,7 +211,7 @@ struct ConvolutionKey {
 
     epilogue::EpilogueType epilogue_type;
     int stages;
-    bool need_load_from_const_mem;
+    conv::SpecialOptimizeDesc special_optimization;
     bool without_shared_load;
 
     inline bool operator==(ConvolutionKey const& rhs) const {
@@ -234,7 +234,7 @@ struct ConvolutionKey {
                (instruction_shape_n == rhs.instruction_shape_n) &&
                (instruction_shape_k == rhs.instruction_shape_k) &&
                (epilogue_type == rhs.epilogue_type) && (stages == rhs.stages) &&
-               (need_load_from_const_mem == rhs.need_load_from_const_mem) &&
+               (special_optimization == rhs.special_optimization) &&
                (without_shared_load == rhs.without_shared_load);
     }
 
@@ -270,8 +270,8 @@ struct ConvolutionKey {
                "\n    instruction_shape: " + instruction_shape_str +
                "\n    epilogue_type: " + to_string(epilogue_type) +
                "\n    stages: " + std::to_string(stages) +
-               "\n    need_load_from_const_mem: " +
-               to_string(need_load_from_const_mem) +
+               "\n    special_optimization: " +
+               to_string(special_optimization) +
                "\n    without_shared_load: " + to_string(without_shared_load) +
                "\n}";
     }
@@ -308,8 +308,8 @@ struct ConvolutionKeyHasher {
                         sizeof(key.instruction_shape_k))
                 .update(&key.epilogue_type, sizeof(key.epilogue_type))
                 .update(&key.stages, sizeof(key.stages))
-                .update(&key.need_load_from_const_mem,
-                        sizeof(key.need_load_from_const_mem))
+                .update(&key.special_optimization,
+                        sizeof(key.special_optimization))
                 .update(&key.without_shared_load,
                         sizeof(key.without_shared_load))
                 .digest();

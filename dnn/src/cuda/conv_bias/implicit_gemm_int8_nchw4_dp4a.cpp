@@ -98,7 +98,14 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     // FIXME: too large filter size is not supported now
     size_t kMaxFilterPixels = 848 / (2 * m_algo_param.warp_k / 4) - 2;
     available &= fh * fw <= kMaxFilterPixels;
-    ;
+
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
+    bool without_shared_load = false;
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
+    available &= (op != nullptr);
+
     return available;
 }
 
@@ -213,12 +220,12 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         }
     }
     float threshold = 0.f;
-    bool load_from_const = !(fh == 1 && fw == 1);
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
     bool without_shared_load = false;
 
-    const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
-                                         ConvType::kConvolution,
-                                         load_from_const, without_shared_load);
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
             op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr,

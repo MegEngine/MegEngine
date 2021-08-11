@@ -72,6 +72,7 @@ public:
         CUDA_IMPLICIT_GEMM_REORDER_FILTER_CHWN4_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_UNROLL_WIDTH_CHWN4_IMMA_INT8,
         CUDA_IMPLICIT_GEMM_IMMA_NCHW32_INT8,
+        CUDA_IMPLICIT_GEMM_IMMA_NHWC_INT8,
         CUDA_IMPLICIT_GEMM_IMMA_NCHW64_INT4_INT4,
         CUDA_IMPLICIT_GEMM_IMMA_NCHW64_UINT4_INT4,
         CUDA_IMPLICIT_GEMM_IMMA_NHWC_INT4_INT4,
@@ -524,6 +525,7 @@ public:
  * +
  * +--- AlgoInt8NCHW4DotProdImplicitGemm
  * +--- AlgoInt8NCHW32IMMAImplicitGemm
+ * +--- AlgoInt8NHWCIMMAImplicitGemm
  * +
  * +--- AlgoInt4NCHW64IMMAImplicitGemmBase
  * +----+--- AlgoInt4Int4NCHW64IMMAImplicitGemm
@@ -582,7 +584,7 @@ public:
     // operation (cutlass kernel) from the global OperationTable
     const cutlass::library::Operation* get_cutlass_conv_op(
             const SizeArgs& args, ConvOperator conv_op, ConvType conv_type,
-            bool load_from_const, bool without_shared_load) const;
+            bool use_conv_filter_unity_opt, bool without_shared_load) const;
 
     // execute the cutlass kernel found by get_cutlass_conv_op. we give
     // subclasses full freedom to decide where and how these arguments are
@@ -825,6 +827,47 @@ public:
 private:
     WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
                                          const SizeArgs& args) const;
+
+    std::string m_name;
+};
+
+class ConvBiasForwardImpl::AlgoInt8NHWCIMMAImplicitGemm final
+        : public AlgoCutlassConvolutionBase {
+public:
+    AlgoInt8NHWCIMMAImplicitGemm(AlgoParam algo_param)
+            : AlgoCutlassConvolutionBase(algo_param) {
+        m_name = ConvBias::algo_name<ConvBias::DirectParam>(
+                ssprintf("INT8_NHWC_IMMA_IMPLICIT_GEMM_%s",
+                         to_string(m_algo_param).c_str()),
+                ConvBias::DirectParam{});
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    static std::string to_string(AlgoParam algo_param);
+    size_t get_preprocess_workspace_in_bytes(
+            const SizeArgs& args) const override;
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const SizeArgs& args) const override;
+    void exec_preprocess(const ExecArgs& args) const override;
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_IMMA_NHWC_INT8)
+
+    std::string param() const override {
+        std::string ret;
+        serialize_write_pod(m_algo_param, ret);
+        return ret;
+    }
+
+private:
+    std::tuple<float, float, float, float, float> get_constants(
+            const ExecArgs& args) const;
+
+    void reorder_filter(const ExecArgs& args, int interleaved,
+                        void* reordered_filter) const;
 
     std::string m_name;
 };
@@ -1087,6 +1130,7 @@ public:
 #endif
 #if CUDA_VERSION >= 10020
     std::vector<AlgoInt8NCHW32IMMAImplicitGemm> int8_nchw32_imma;
+    std::vector<AlgoInt8NHWCIMMAImplicitGemm> int8_nhwc_imma;
     std::vector<AlgoInt4Int4NCHW64IMMAImplicitGemm> int4_int4_nchw64_imma;
     std::vector<AlgoUInt4Int4NCHW64IMMAImplicitGemm> uint4_int4_nchw64_imma;
     std::vector<AlgoInt4Int4NHWCIMMAImplicitGemm> int4_int4_nhwc_imma;

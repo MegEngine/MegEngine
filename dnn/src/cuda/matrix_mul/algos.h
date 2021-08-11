@@ -235,6 +235,7 @@ public:
               m_name{ssprintf("CUTLASS_FLOAT32_SIMT_%s",
                               m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
+
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     AlgoAttribute attribute() const override {
@@ -260,6 +261,7 @@ private:
     void do_exec(const ExecArgs& args) const override;
     int min_alignment_requirement() const override { return 1; }
     std::string m_name;
+    const void* get_available_op(const SizeArgs& args) const;
 };
 
 class MatrixMulForwardImpl::AlgoFloat32SIMTSplitK final
@@ -270,6 +272,7 @@ public:
               m_name{ssprintf("CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
                               m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
+    
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     AlgoAttribute attribute() const override {
@@ -297,6 +300,7 @@ private:
     void do_exec(const ExecArgs& args) const override;
     int min_alignment_requirement() const override { return 1; }
     std::string m_name;
+    const void* get_available_op(const SizeArgs& args) const;
 };
 
 class MatrixMulForwardImpl::AlgoFloat32SIMTGemvBatchedStrided final

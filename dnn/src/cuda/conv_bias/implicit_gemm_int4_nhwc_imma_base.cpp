@@ -56,8 +56,11 @@ bool ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::is_available(
 
     if (args.src_layout->dtype.enumv() != src_dtype() ||
         args.filter_layout->dtype.enumv() != DTypeEnum::QuantizedS4 ||
-        args.bias_layout->dtype.enumv() != DTypeEnum::QuantizedS32 ||
-        args.dst_layout->dtype.enumv() != src_dtype())
+        args.bias_layout->dtype.enumv() != DTypeEnum::QuantizedS32)
+        return false;
+
+    if (!(args.dst_layout->dtype.enumv() == src_dtype() ||
+          args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS8))
         return false;
 
     // uint4 do not support H_SWISH activition
@@ -81,6 +84,16 @@ bool ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::is_available(
     // co should be aligned with 8, and ci should be aligned with
     // algo_param.access_size
     if ((co % 8 != 0) || (ci % m_algo_param.access_size != 0))
+        return false;
+
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
+    bool without_shared_load = ((co % m_algo_param.threadblock_n == 0) &&
+                                (m_algo_param.threadblock_n == 32 ||
+                                 m_algo_param.threadblock_n == 64));
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
+    if (op == nullptr)
         return false;
 
     return true;
@@ -117,26 +130,31 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::exec(
     float dst_scale = 0.f;
     float threshold = 0.f;
     uint8_t src_zero = 0;
-    bool load_from_const = !(fh == 1 && fw == 1);
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
 
     bool without_shared_load = ((co % m_algo_param.threadblock_n == 0) &&
                                 (m_algo_param.threadblock_n == 32 ||
                                  m_algo_param.threadblock_n == 64));
 
+    if (args.src_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        src_zero = args.src_layout->dtype.param<dtype::Quantized4Asymm>()
+                           .zero_point;
+    }
+
     if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
         dst_scale =
                 args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
-        src_zero = args.src_layout->dtype.param<dtype::Quantized4Asymm>()
-                           .zero_point;
-    } else {  // DTypeEnum::QuantizedS4
+    } else if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
         dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS4>().scale;
+    } else {  // DTypeEnum::QuantizedS8
+        dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS8>().scale;
     }
 
     cudaStream_t stream = cuda_stream(args.opr->handle());
 
     const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
                                          ConvType::kConvolution,
-                                         load_from_const, without_shared_load);
+                                         use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr,
                             z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi,
@@ -166,29 +184,18 @@ void ConvBiasForwardImpl::AlgoInt4NHWCIMMAImplicitGemmBase::reorder_filter(
     cudaStream_t stream = cuda_stream(args.opr->handle());
 
     // reformat filter from nhwc to ncxhwx and reorder oc
-    // use trans_oc threadblock_n must be 32 or 64
+    // use trans_oc threadblock_n must be 32 or 64 and src dtype == dest dtype
     bool trans_oc = ((co % m_algo_param.threadblock_n == 0) &&
                      (m_algo_param.threadblock_n == 32 ||
                       m_algo_param.threadblock_n == 64));
-    uint32_t oc_iterleave = (m_algo_param.threadblock_n == 64) ? 64 : 32;
+    uint32_t oc_iterleaved = (m_algo_param.threadblock_n == 64) ? 64 : 32;
 
-    if (iterleaved == 8) {
-        cutlass_wrapper::reorder_nhwc_imma_filter<4, 32>(
-                reinterpret_cast<int8_t*>(reordered_filter),
-                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
-                fh, fw, trans_oc, oc_iterleave, stream);
-    } else if (iterleaved == 16) {
-        cutlass_wrapper::reorder_nhwc_imma_filter<4, 64>(
-                reinterpret_cast<int8_t*>(reordered_filter),
-                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
-                fh, fw, trans_oc, oc_iterleave, stream);
-    } else {
-        megdnn_assert(iterleaved == 32);
-        cutlass_wrapper::reorder_nhwc_imma_filter<4, 128>(
-                reinterpret_cast<int8_t*>(reordered_filter),
-                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
-                fh, fw, trans_oc, oc_iterleave, stream);
-    }
+    uint32_t alignbits = iterleaved * 4;
+
+    cutlass_wrapper::reorder_nhwc_imma_filter<4>(
+            reinterpret_cast<int8_t*>(reordered_filter),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh,
+            fw, trans_oc, alignbits, oc_iterleaved, stream);
 }
 #endif
 

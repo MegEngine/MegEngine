@@ -327,7 +327,6 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW4_DP4A) {
     all_params.emplace_back(AlgoParam{16, 128, 16, 16, 64, 16, 2});
     all_params.emplace_back(AlgoParam{16, 128, 16, 16, 128, 16, 1});
     all_params.emplace_back(AlgoParam{32, 128, 32, 32, 64, 32, 2});
-    all_params.emplace_back(AlgoParam{64, 128, 32, 64, 32, 32, 2});
 
     for (auto algo_param : all_params) {
         Checker<ConvolutionBackwardData> checker(handle_cuda());

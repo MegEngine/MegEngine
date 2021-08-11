@@ -207,6 +207,10 @@ char const* to_string(bool val, bool pretty = false);
 /// Converts a MathOperationID enumerant to a string
 char const* to_string(MathOperationID math_op, bool pretty = false);
 
+/// Converts a SpecialOptimizeDesc enumerant to a string
+char const* to_string(conv::SpecialOptimizeDesc special_opt,
+                      bool pretty = false);
+
 /// Converts an ImplicitGemmMode enumerant to a string
 char const* to_string(conv::ImplicitGemmMode mode, bool pretty = false);
 

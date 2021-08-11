@@ -76,6 +76,14 @@ bool ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::is_available(
     if (fh * fw > kMaxFilterPixels)
         return false;
 
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
+    bool without_shared_load = true;
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
+    if (op == nullptr)
+        return false;
+
     return true;
 }
 
@@ -110,7 +118,7 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
     float dst_scale = 0.f;
     float threshold = 0.f;
     uint8_t src_zero = 0;
-    bool load_from_const = !(fh == 1 && fw == 1);
+    bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
     bool without_shared_load = true;
 
     if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
@@ -126,7 +134,7 @@ void ConvBiasForwardImpl::AlgoInt4NCHW64IMMAImplicitGemmBase::exec(
 
     const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
                                          ConvType::kConvolution,
-                                         load_from_const, without_shared_load);
+                                         use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(op, args.src_tensor->raw_ptr, filter_ptr, bias_ptr,
                             z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi,

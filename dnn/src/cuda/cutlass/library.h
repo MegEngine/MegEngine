@@ -487,7 +487,7 @@ struct ConvolutionDescription : public OperationDescription {
 
     ThreadblockSwizzleID threadblock_swizzle;
 
-    bool need_load_from_const_mem;
+    conv::SpecialOptimizeDesc special_optimization;
     conv::ImplicitGemmMode gemm_mode;
     bool without_shared_load;
 };

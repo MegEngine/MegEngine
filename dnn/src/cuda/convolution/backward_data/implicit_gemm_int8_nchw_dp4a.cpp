@@ -19,6 +19,44 @@
 using namespace megdnn;
 using namespace cuda;
 
+const void*
+ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::get_available_op(
+        const SizeArgs& args) const {
+    using namespace cutlass::library;
+    auto&& fm = args.filter_meta;
+    size_t sh = fm.stride[0], sw = fm.stride[1];
+    cutlass::conv::SpecialOptimizeDesc special_optimization =
+            (sh == 2 && sw == 2) ? cutlass::conv::SpecialOptimizeDesc::
+                                           DECONV_DOUBLE_UPSAMPLING
+                                 : cutlass::conv::SpecialOptimizeDesc::NONE;
+    // only use 16x64x8_16x64x8_2stages impl
+    ConvolutionKey key{
+            cutlass::conv::Operator::kDgrad,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorK4RSC4,
+            NumericTypeID::kS8,
+            LayoutTypeID::kTensorNC4HW4,
+            NumericTypeID::kS32,
+            LayoutTypeID::kTensorNC4HW4,
+            cutlass::conv::ConvType::kConvolution,
+            16,
+            64,
+            8,
+            16,
+            64,
+            8,
+            1,
+            1,
+            4,
+            cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
+            2,
+            special_optimization,
+            false};
+    return (void*)Singleton::get().operation_table.find_op(key);
+}
+
 bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::is_available(
         const SizeArgs& args) const {
     auto&& fm = args.filter_meta;
@@ -52,6 +90,9 @@ bool ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::is_available(
     available &= (fm.dilation[0] == 1 && fm.dilation[1] == 1);
     // FIXME: too large filter size is not supported now
     available &= fm.spatial[0] * fm.spatial[1] <= (848 / (2 * 8 / 4) - 2);
+
+    available &= (get_available_op(args) != nullptr);
+
     // only support sm_61 or later, platform should have fast native int8
     // support
     available &= is_compute_capability_required(6, 1);
@@ -138,33 +179,7 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHWDotProdImplicitGemm::exec(
 
     using namespace cutlass::library;
 
-    // only use 16x64x8_16x64x8_2stages impl
-    ConvolutionKey key{
-            cutlass::conv::Operator::kDgrad,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorNC4HW4,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorK4RSC4,
-            NumericTypeID::kS8,
-            LayoutTypeID::kTensorNC4HW4,
-            NumericTypeID::kS32,
-            LayoutTypeID::kTensorNC4HW4,
-            cutlass::conv::ConvType::kConvolution,
-            16,
-            64,
-            8,
-            16,
-            64,
-            8,
-            1,
-            1,
-            4,
-            cutlass::epilogue::EpilogueType::kBiasAddLinearCombinationClamp,
-            2,
-            true,
-            false};
-
-    const Operation* op = Singleton::get().operation_table.find_op(key);
+    const Operation* op = (const Operation*)get_available_op(args);
 
     // gcc prints warnings when size_t values are implicitly narrowed to int
     cutlass::conv::Conv2dProblemSize problem_size{

@@ -102,22 +102,41 @@ ConvBiasForwardImpl::AlgoUInt4Int4NHWCIMMAImplicitGemm::get_constants(
                   args.filter_layout->dtype.param<dtype::QuantizedS4>().scale,
           bias_scale =
                   args.bias_layout->dtype.param<dtype::QuantizedS32>().scale,
-          dst_scale =
-                  args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
+          dst_scale;
 
-    uint8_t dst_zero =
-            args.dst_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
+    uint8_t dst_zero = 0;
+
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        dst_scale =
+                args.dst_layout->dtype.param<dtype::Quantized4Asymm>().scale;
+
+        dst_zero = args.dst_layout->dtype.param<dtype::Quantized4Asymm>()
+                           .zero_point;
+    } else {  // DTypeEnum::QuantizedS8
+        megdnn_assert(args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS8);
+        dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS8>().scale;
+    }
+
     float alpha = src_scale * filter_scale / dst_scale,
           beta = bias_scale / dst_scale, gamma = 0.f, delta = 0.f,
           theta = dst_zero;
 
     if (args.z_layout->ndim > 0) {
-        float z_scale =
-                args.z_layout->dtype.param<dtype::Quantized4Asymm>().scale;
-        gamma = z_scale / dst_scale;
-        uint8_t z_zero =
-                args.z_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
-        delta = -z_zero * gamma;
+        float z_scale;
+        if (args.z_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+            z_scale =
+                    args.z_layout->dtype.param<dtype::Quantized4Asymm>().scale;
+            uint8_t z_zero =
+                    args.z_layout->dtype.param<dtype::Quantized4Asymm>()
+                            .zero_point;
+            gamma = z_scale / dst_scale;
+            delta = -z_zero * gamma;
+        } else {  // DTypeEnum::QuantizedS8
+            megdnn_assert(args.z_layout->dtype.enumv() ==
+                          DTypeEnum::QuantizedS8);
+            z_scale = args.z_layout->dtype.param<dtype::QuantizedS8>().scale;
+            gamma = z_scale / dst_scale;
+        }
     }
 
     // identity epilogue has no theta:

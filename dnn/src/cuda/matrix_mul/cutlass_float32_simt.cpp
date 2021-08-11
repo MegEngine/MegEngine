@@ -19,6 +19,39 @@
 using namespace megdnn;
 using namespace cuda;
 
+const void* MatrixMulForwardImpl::AlgoFloat32SIMT::get_available_op(
+        const SizeArgs& args) const {
+    using namespace cutlass::library;
+    auto&& param = args.opr->param();
+    auto layoutA = param.transposeA ? LayoutTypeID::kColumnMajor
+                                    : LayoutTypeID::kRowMajor;
+    auto layoutB = param.transposeB ? LayoutTypeID::kColumnMajor
+                                    : LayoutTypeID::kRowMajor;
+
+    int alignment = min_alignment_requirement();
+    GemmKey key{NumericTypeID::kF32,
+                layoutA,
+                NumericTypeID::kF32,
+                layoutB,
+                NumericTypeID::kF32,
+                LayoutTypeID::kRowMajor,
+                NumericTypeID::kF32,
+                m_algo_param.threadblock_m,
+                m_algo_param.threadblock_n,
+                m_algo_param.threadblock_k,
+                m_algo_param.warp_m,
+                m_algo_param.warp_n,
+                m_algo_param.warp_k,
+                1,
+                1,
+                1,
+                2,
+                alignment,
+                alignment,
+                SplitKMode::kNone};
+    return (void*)Singleton::get().operation_table.find_op(key);
+}
+
 bool MatrixMulForwardImpl::AlgoFloat32SIMT::is_available(
         const SizeArgs& args) const {
     bool available =
@@ -33,6 +66,8 @@ bool MatrixMulForwardImpl::AlgoFloat32SIMT::is_available(
     available &= ((n + m_algo_param.threadblock_n - 1) /
                           m_algo_param.threadblock_n <=
                   y_grid_limit);
+
+    available &= (get_available_op(args) != nullptr);
 
     return available;
 }
@@ -61,34 +96,7 @@ void MatrixMulForwardImpl::AlgoFloat32SIMT::do_exec(
 
     using namespace cutlass::library;
 
-    auto layoutA = param.transposeA ? LayoutTypeID::kColumnMajor
-                                    : LayoutTypeID::kRowMajor;
-    auto layoutB = param.transposeB ? LayoutTypeID::kColumnMajor
-                                    : LayoutTypeID::kRowMajor;
-
-    int alignment = min_alignment_requirement();
-    GemmKey key{NumericTypeID::kF32,
-                layoutA,
-                NumericTypeID::kF32,
-                layoutB,
-                NumericTypeID::kF32,
-                LayoutTypeID::kRowMajor,
-                NumericTypeID::kF32, 
-                m_algo_param.threadblock_m,
-                m_algo_param.threadblock_n,
-                m_algo_param.threadblock_k,
-                m_algo_param.warp_m,
-                m_algo_param.warp_n,
-                m_algo_param.warp_k,
-                1,
-                1,
-                1, 
-                2, 
-                alignment, 
-                alignment, 
-                SplitKMode::kNone};
-
-    const Operation* op = Singleton::get().operation_table.find_op(key);
+    const Operation* op = (const Operation*)get_available_op(args);
 
     GemmArguments gemm_args{problem_size,
                             args.tensor_a.raw_ptr,

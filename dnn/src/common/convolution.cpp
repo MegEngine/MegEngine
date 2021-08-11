@@ -553,7 +553,10 @@ void ConvolutionBase<Parameter>::check_or_deduce_dtype_fwd(DType src,
                 dst.valid() && (dst.enumv() == src.enumv() ||
                                 ((dst.enumv() == DTypeEnum::QuantizedS4 ||
                                   dst.enumv() == DTypeEnum::Quantized4Asymm) &&
-                                 src.enumv() == DTypeEnum::QuantizedS8));
+                                 src.enumv() == DTypeEnum::QuantizedS8) ||
+                                ((src.enumv() == DTypeEnum::QuantizedS4 ||
+                                  src.enumv() == DTypeEnum::Quantized4Asymm) &&
+                                 dst.enumv() == DTypeEnum::QuantizedS8));
         if (cond_dst) {
             supported_dst_dtype.push_back(dst);
         }

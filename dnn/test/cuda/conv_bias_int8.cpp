@@ -882,6 +882,125 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_IMMA) {
             ConvBias::DirectParam{});
     check(algo);
 }
+
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NHWC) {
+    require_compute_capability(7, 5);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    auto check = [&checker](const std::string& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-8, 8};
+        UniformIntRNG bias_rng{-50, 50};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &bias_rng)
+                .set_rng(3, &rng)
+                .set_dtype(0, dtype::QuantizedS8{1.2f})
+                .set_dtype(1, dtype::QuantizedS8{1.3f})
+                .set_dtype(2, dtype::QuantizedS32{1.2f * 1.3f})
+                .set_dtype(3, dtype::QuantizedS8{19.990229f})
+                .set_dtype(4, dtype::QuantizedS8{19.990228f})
+                .set_epsilon(1e-3);
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 1;
+        param.format = param::ConvBias::Format::NHWC;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {32, 3, 3, 16}, {1, 1, 1, 32}, {}, {}});
+        param.pad_h = param.pad_w = 0;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {16, 1, 1, 16}, {1, 1, 1, 16}, {}, {}});
+    };
+    std::string algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_64X16X32_64X16X32_2_16",
+            ConvBias::DirectParam{});
+    check(algo);
+    algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_128X32X32_64X32X32_1_16",
+            ConvBias::DirectParam{});
+    check(algo);
+}
+
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NHWC_UINT4_WEIGHT_PREPROCESS) {
+    require_compute_capability(7, 5);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
+            handle_cuda());
+    auto check = [&checker](const std::string& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-8, 8};
+        UniformIntRNG bias_rng{-50, 50};
+        UniformIntRNG rng_u4{0, 15};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &bias_rng)
+                .set_rng(3, &rng_u4)
+                .set_dtype(0, dtype::QuantizedS8{0.2f})
+                .set_dtype(1, dtype::QuantizedS8{0.3f})
+                .set_dtype(2, dtype::QuantizedS32{0.2f * 0.3f})
+                .set_dtype(3, dtype::Quantized4Asymm{0.5f, 8})
+                .set_dtype(4, dtype::Quantized4Asymm{0.5f, 4})
+                .set_epsilon(1 + 1e-3);
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 1;
+        param.format = param::ConvBias::Format::NHWC;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {32, 3, 3, 16}, {1, 1, 1, 32}, {}, {}});
+        param.pad_h = param.pad_w = 0;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {16, 1, 1, 16}, {1, 1, 1, 16}, {}, {}});
+    };
+    std::string algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_64X16X32_64X16X32_2_16",
+            ConvBias::DirectParam{});
+    check(algo);
+    algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_128X32X32_64X32X32_1_16",
+            ConvBias::DirectParam{});
+    check(algo);
+}
+
+TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NHWC_FLOAT) {
+    require_compute_capability(7, 5);
+    Checker<ConvBiasForward> checker(handle_cuda());
+    auto check = [&checker](const std::string& algo) {
+        checker.set_before_exec_callback(
+                conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo.c_str()));
+        UniformIntRNG rng{-8, 8};
+        UniformFloatRNG float_rng{-50, 50};
+        checker.set_rng(0, &rng)
+                .set_rng(1, &rng)
+                .set_rng(2, &float_rng)
+                .set_rng(3, &float_rng)
+                .set_dtype(0, dtype::QuantizedS8(1.9980618f))
+                .set_dtype(1, dtype::QuantizedS8(1.9980927f))
+                .set_dtype(2, dtype::Float32())
+                .set_dtype(3, dtype::Float32())
+                .set_dtype(4, dtype::Float32());
+        param::ConvBias param;
+        param.pad_h = param.pad_w = 1;
+        param.stride_h = param.stride_w = 1;
+        param.format = param::ConvBias::Format::NHWC;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {32, 3, 3, 16}, {1, 1, 1, 32}, {}, {}});
+        param.pad_h = param.pad_w = 0;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        checker.set_param(param).execs(
+                {{16, 7, 7, 16}, {16, 1, 1, 16}, {1, 1, 1, 16}, {}, {}});
+    };
+    std::string algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_64X16X32_64X16X32_2_16",
+            ConvBias::DirectParam{});
+    check(algo);
+    algo = ConvBias::algo_name<ConvBias::DirectParam>(
+            "INT8_NHWC_IMMA_IMPLICIT_GEMM_128X32X32_64X32X32_1_16",
+            ConvBias::DirectParam{});
+    check(algo);
+}
+
 #endif
 
 TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW4_NCHW) {
@@ -969,7 +1088,7 @@ TEST_F(CUDA, CUTLASS_CONV_BIAS_INT8_NCHW32_NCHW4) {
     checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<
                                      ConvBiasForward>(
             ConvBias::algo_name<ConvBias::DirectParam>(
-                    "INT8_NCHW32_IMMA_IMPLICIT_GEMM_128X128X64_64X64X64_2",
+                    "INT8_NCHW32_IMMA_IMPLICIT_GEMM_32X128X32_32X64X32_1",
                     ConvBias::DirectParam{})
                     .c_str()));
     checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
@@ -1108,6 +1227,16 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NCHW32) {
             dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.0f},
             "DIRECT:INT8_NCHW32_IMMA_IMPLICIT_GEMM",
             param::ConvBias::Format::NCHW32);
+}
+
+TEST_F(CUDA, BENCHMARK_CUTLASS_CONV_BIAS_INT8_NHWC) {
+    require_compute_capability(7, 5);
+    benchmark_target_algo_with_cudnn_tsc(
+            handle_cuda(), get_det_first_bench_args(16),
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.0f},
+            "DIRECT:INT8_NHWC_IMMA_IMPLICIT_GEMM",
+            param::ConvBias::Format::NHWC);
 }
 #endif
 

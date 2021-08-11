@@ -562,6 +562,24 @@ StrideSupportNames = {
   StrideSupport.Unity: 'unity_stride',
 }
 
+class SpecialOptimizeDesc(enum.Enum):
+  NoneSpecialOpt = enum_auto()
+  ConvFilterUnity = enum_auto()
+  DeconvDoubleUpsampling = enum_auto()
+
+SpecialOptimizeDescNames = {
+  SpecialOptimizeDesc.NoneSpecialOpt: 'none',
+  SpecialOptimizeDesc.ConvFilterUnity: 'conv_filter_unity',
+  SpecialOptimizeDesc.DeconvDoubleUpsampling: 'deconv_double_upsampling',
+}
+
+SpecialOptimizeDescTag = {
+  SpecialOptimizeDesc.NoneSpecialOpt: 'cutlass::conv::SpecialOptimizeDesc::NONE',
+  SpecialOptimizeDesc.ConvFilterUnity: 'cutlass::conv::SpecialOptimizeDesc::CONV_FILTER_UNITY',
+  SpecialOptimizeDesc.DeconvDoubleUpsampling: 'cutlass::conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING',
+}
+
+
 class ImplicitGemmMode(enum.Enum):
   GemmNT = enum_auto()
   GemmTN = enum_auto()

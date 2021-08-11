@@ -144,28 +144,48 @@ void megdnn::cuda::cutlass_wrapper::reorder_ncxhwx_imma_filter(
                                                    IC, FH, FW, trans_oc);
     after_kernel_launch();
 }
-
-template <uint32_t size_bits, uint32_t alignbits>
+template <uint32_t size_bits>
 void megdnn::cuda::cutlass_wrapper::reorder_nhwc_imma_filter(
         int8_t* dst_filter, const int8_t* src_filter, uint32_t OC, uint32_t IC,
-        uint32_t FH, uint32_t FW, bool trans_oc, uint32_t oc_interleaved,
-        cudaStream_t stream) {
-    static constexpr uint32_t elements_per_access = alignbits / size_bits;
-    uint32_t nr_threads =
-            query_blocksize_for_kernel(reinterpret_cast<const void*>(
-                    reorder_nhwc_imma_filter_kernel<size_bits, alignbits, 32>));
+        uint32_t FH, uint32_t FW, bool trans_oc, uint32_t alignbits,
+        uint32_t interleaved, cudaStream_t stream) {
+    const uint32_t elements_per_access = alignbits / size_bits;
+
+    void (*kern)(int8_t* __restrict__, const int8_t* __restrict__, uint32_t,
+                 uint32_t, uint32_t, uint32_t, bool);
+    kern = nullptr;
+
+    auto get_kern = [&kern](const uint32_t alignbits,
+                            const uint32_t interleaved) {
+#define DISPATCH_KERNEL(alignbits_, interleaved_)                     \
+    if (alignbits == alignbits_ && interleaved == interleaved_) {     \
+        kern = reorder_nhwc_imma_filter_kernel<size_bits, alignbits_, \
+                                               interleaved_>;         \
+        return;                                                       \
+    }
+        DISPATCH_KERNEL(128, 16);
+        DISPATCH_KERNEL(64, 16);
+        DISPATCH_KERNEL(32, 16);
+        DISPATCH_KERNEL(128, 32);
+        DISPATCH_KERNEL(64, 32);
+        DISPATCH_KERNEL(32, 32);
+        DISPATCH_KERNEL(128, 64);
+        DISPATCH_KERNEL(64, 64);
+        DISPATCH_KERNEL(32, 64);
+
+#undef DISPATCH_KERNEL
+    };
+
+    get_kern(alignbits, interleaved);
+
+    uint32_t nr_threads = query_blocksize_for_kernel(kern);
     uint32_t vthreads = DIVUP(OC * IC * FH * FW, elements_per_access);
     nr_threads = std::min(nr_threads, vthreads);
     uint32_t nr_blocks = DIVUP(vthreads, nr_threads);
-    if (oc_interleaved == 32) {
-        reorder_nhwc_imma_filter_kernel<size_bits, alignbits, 32>
-                <<<nr_blocks, nr_threads, 0, stream>>>(
-                        dst_filter, src_filter, OC, IC, FH, FW, trans_oc);
-    } else {
-        reorder_nhwc_imma_filter_kernel<size_bits, alignbits, 64>
-                <<<nr_blocks, nr_threads, 0, stream>>>(
-                        dst_filter, src_filter, OC, IC, FH, FW, trans_oc);
-    }
+
+    kern<<<nr_blocks, nr_threads, 0, stream>>>(dst_filter, src_filter, OC, IC,
+                                               FH, FW, trans_oc);
+
     after_kernel_launch();
 }
 
@@ -180,15 +200,14 @@ INST(8, 32)
 INST(4, 64)
 #undef INST
 
-#define INST(_size_bits, _alignbits)                                       \
-    template void megdnn::cuda::cutlass_wrapper::reorder_nhwc_imma_filter< \
-            _size_bits, _alignbits>(                                       \
-            int8_t * dst_filter, const int8_t* src_filter, uint32_t OC,    \
-            uint32_t IC, uint32_t FH, uint32_t FW, bool trans_oc,          \
-            uint32_t oc_interleaved, cudaStream_t stream);
-INST(4, 32)
-INST(4, 64)
-INST(4, 128)
+#define INST(_size_bits)                                                 \
+    template void                                                        \
+    megdnn::cuda::cutlass_wrapper::reorder_nhwc_imma_filter<_size_bits>( \
+            int8_t * dst_filter, const int8_t* src_filter, uint32_t OC,  \
+            uint32_t IC, uint32_t FH, uint32_t FW, bool trans_oc,        \
+            uint32_t alignbits, uint32_t interleaved, cudaStream_t stream);
+INST(4)
+INST(8)
 #undef INST
 
 // vim: syntax=cuda.doxygen
