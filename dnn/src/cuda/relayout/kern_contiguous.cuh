@@ -232,7 +232,7 @@ DEFINE_CONTIG_RECEIVER(7, cb_header, cb_dispatch, m_param[1].layout)
             typedef OpCallerBinaryContiguous<PVis0, PVis1> Caller;
             size_t size = m_param.size;
             int grid_size, block_size;
-            if (m_contiguous_size > 32) {
+            if (m_contiguous_size >= 32) {
                 void (*fptr)(Caller, uint32_t, uint32_t, uint32_t, uint32_t);
                 fptr = cuda_last_contiguous_large_kern<Caller>;
                 safe_size_in_kern(size);

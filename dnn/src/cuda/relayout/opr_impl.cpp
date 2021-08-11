@@ -176,7 +176,8 @@ bool RelayoutForwardImpl::Param::try_copy_last_contig() {
             !has_negative_stride(lsrc) && !has_negative_stride(ldst)) {
         size_t contiguous_size =
             gcd(lsrc.shape[lsrc.ndim - 1], ldst.shape[ldst.ndim - 1]);
-        if (contiguous_size > 1) {
+        // FIXME: disable copy_last_contiguous when contiguous_size < 32 due to performance issue
+        if (contiguous_size >= 32) {
             copy_last_contiguous(m_dst, m_src, contiguous_size,
                                  m_opr->stream());
             return true;
