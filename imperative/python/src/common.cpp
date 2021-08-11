@@ -185,6 +185,8 @@ void init_common(py::module m) {
     m.def("set_prealloc_config", &CompNode::set_prealloc_config, 
         "specifies how to pre-allocate from raw dev allocator");
 
+    m.def("get_cuda_compute_capability", &CompNode::get_compute_capability);
+
     m.def("what_is_xpu", []{
         return CompNode::Locator::parse("xpux").to_physical().type;
     });

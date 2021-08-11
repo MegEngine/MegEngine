@@ -298,6 +298,10 @@ class CompNode {
         static void set_prealloc_config(size_t alignment, size_t min_req,
                                         size_t max_overhead, double growth_factor,
                                         DeviceType device_type);
+        /*!
+         * \brief get compute capability of the specified device
+         */
+        static size_t get_compute_capability(int dev, DeviceType device_type);
 
         /* =================== synchronization ======================== */
 

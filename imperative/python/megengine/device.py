@@ -11,6 +11,9 @@ import re
 from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
+from .core._imperative_rt.common import (
+    get_cuda_compute_capability as _get_cuda_compute_capability,
+)
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
 
@@ -20,6 +23,7 @@ __all__ = [
     "get_default_device",
     "set_default_device",
     "get_mem_status_bytes",
+    "get_cuda_compute_capability",
     "set_prealloc_config",
     "DeviceType",
 ]
@@ -124,6 +128,15 @@ def get_mem_status_bytes(device: Optional[str] = None):
         device = get_default_device()
     tot, free = CompNode(device).get_mem_status_bytes
     return tot, free
+
+
+def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int:
+    r"""
+    Get compute capability of the specified device.
+
+    It returns a version number, or `SM version`.
+    """
+    return _get_cuda_compute_capability(device, device_type)
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))

@@ -444,6 +444,16 @@ void CompNode::set_prealloc_config(
     };
 }
 
+size_t CompNode::get_compute_capability(int dev, DeviceType device_type) {
+    switch (device_type) {
+        case DeviceType::CUDA:
+            return CudaCompNode::get_compute_capability(dev);
+        default:
+            mgb_log_warn("unsupport device type for get_compute_capability");
+            return 0;
+    };
+}
+
 void* CompNode::alloc_device(size_t size) const {
     auto ret = m_impl->alloc_device(size);
     static_cast<Impl*>(m_impl)->env().on_mem_event(size, true, ret);

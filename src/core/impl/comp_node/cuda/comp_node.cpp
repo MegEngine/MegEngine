@@ -202,6 +202,8 @@ class CudaCompNode::CompNodeImpl final : public CompNode::Impl {
     //! enable peer copy from dev0 to dev1
     static void enable_peer_access(int dev0, int dev1);
 
+    static size_t get_compute_capability(int dev);
+
     static void static_free_device(ImplBase* self, void* ptr) {
         static_cast<CompNodeImpl*>(self)->free_device(ptr);
     }
@@ -709,9 +711,10 @@ void CudaCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
 namespace {
 
 #ifndef __unix__
-CUresult get_device_count_forksafe(int* pcnt) {
+template<typename Func, typename... Args>
+CUresult call_cuda_forksafe(Func func, Args... args) {
     cuInit(0);
-    return cuDeviceGetCount(pcnt);
+    return func(args...);
 }
 #else
 struct RAIICloseFD : NonCopyableObj {
@@ -727,8 +730,9 @@ struct RAIICloseFD : NonCopyableObj {
     }
 };
 // an implementation that does not call cuInit
-CUresult get_device_count_forksafe(int* pcnt) {
-    auto err = cuDeviceGetCount(pcnt);
+template<typename Func, typename Val, typename... Args>
+CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
+    auto err = func(val, args...);
     if (err != CUDA_ERROR_NOT_INITIALIZED) return err;
     // cuInit not called, call it in child process
     int fd[2];
@@ -743,11 +747,11 @@ CUresult get_device_count_forksafe(int* pcnt) {
         do {
             err = cuInit(0);
             if (err != CUDA_SUCCESS) break;
-            err = cuDeviceGetCount(pcnt);
+            err = func(val, args...);
         } while (0);
         auto sz = write(fdw, &err, sizeof(err));
         if (sz == sizeof(err) && err == CUDA_SUCCESS) {
-            sz = write(fdw, pcnt, sizeof(*pcnt));
+            sz = write(fdw, val, sizeof(*val));
         }
         fdw_guard.close();
         std::quick_exit(0);
@@ -756,12 +760,12 @@ CUresult get_device_count_forksafe(int* pcnt) {
     auto sz = read(fdr, &err, sizeof(err));
     mgb_assert(sz == sizeof(err), "failed to read error code from child");
     if (err == CUDA_SUCCESS) {
-        sz = read(fdr, pcnt, sizeof(*pcnt));
-        mgb_assert(sz == sizeof(*pcnt), "failed to read device count from child");
+        sz = read(fdr, val, sizeof(*val));
+        mgb_assert(sz == sizeof(*val), "failed to read value from child");
         return err;
     }
     // try again, maybe another thread called cuInit while we fork
-    auto err2 = cuDeviceGetCount(pcnt);
+    auto err2 = func(val, args...);
     if (err2 == CUDA_SUCCESS) return err2;
     if (err2 == CUDA_ERROR_NOT_INITIALIZED) return err;
     return err2;
@@ -783,7 +787,7 @@ bool CudaCompNode::available() {
     MGB_LOCK_GUARD(mtx);
     if (result == -1) {
         int ndev = -1;
-        auto err = get_device_count_forksafe(&ndev);
+        auto err = call_cuda_forksafe(cuDeviceGetCount, &ndev);
         result = err == CUDA_SUCCESS && ndev > 0;
         if (!result) {
             mgb_log_warn("cuda unavailable: %s(%d) ndev=%d",
@@ -934,7 +938,7 @@ size_t CudaCompNode::get_device_count(bool warn) {
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (cnt == -1) {
-        auto err = get_device_count_forksafe(&cnt);
+        auto err = call_cuda_forksafe(cuDeviceGetCount, &cnt);
         if (err != CUDA_SUCCESS) {
             if (warn)
                 mgb_log_error("cudaGetDeviceCount failed: %s (err %d)",
@@ -970,6 +974,27 @@ void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req,
     }
 }
 
+size_t CudaCompNode::get_compute_capability(int dev) {
+    size_t cnt = get_device_count();
+    if (dev < 0 || dev >= static_cast<int>(cnt)) {
+        mgb_log_error("request gpu %d out of valid range [0, %lu)", dev, cnt);
+        return 0;
+    }
+    static Spinlock mtx_com;
+    MGB_LOCK_GUARD(mtx_com);
+    int pmajor;
+    int pminor;
+    auto err = call_cuda_forksafe(cuDeviceGetAttribute, &pmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev);
+    if (err != CUDA_SUCCESS) {
+        return 0;
+    }
+    auto err2 = call_cuda_forksafe(cuDeviceGetAttribute, &pminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, dev);
+    if (err2 != CUDA_SUCCESS) {
+        return 0;
+    }
+    return pmajor * 10 + pminor;
+}
+
 #else
 
 bool CudaCompNode::available() {
@@ -989,6 +1014,10 @@ void CudaCompNode::sync_all() {}
 void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req,
                                        size_t max_overhead,
                                        double growth_factor) {}
+
+size_t CudaCompNode::get_compute_capability(int dev) {
+    return 0;
+}
 
 #undef err
 
