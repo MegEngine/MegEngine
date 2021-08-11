@@ -1304,6 +1304,8 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
 
     """
     assert 0 <= drop_prob < 1
+    if drop_prob == 0:
+        return inp
     rv = uniform(size=inp.shape)
     mask = rv > drop_prob
     inp *= mask.astype(inp.dtype)
