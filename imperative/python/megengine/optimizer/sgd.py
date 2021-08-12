@@ -43,6 +43,7 @@ class SGD(Optimizer):
 
         defaults = dict(lr=lr, momentum=momentum, weight_decay=weight_decay)
         super().__init__(params, defaults)
+        self._disable_type_convert = True
 
     def _create_state(self, param_group):
         if param_group["momentum"] != 0.0:

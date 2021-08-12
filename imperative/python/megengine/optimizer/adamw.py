@@ -47,6 +47,7 @@ class AdamW(Optimizer):
 
         defaults = dict(lr=lr, weight_decay=weight_decay, betas=betas, eps=eps)
         super().__init__(params, defaults)
+        self._disable_type_convert = True
 
     def _create_state(self, param_group):
         for param in param_group["params"]:

@@ -48,6 +48,7 @@ class Adagrad(Optimizer):
 
         defaults = dict(lr=lr, lr_decay=lr_decay, eps=eps, weight_decay=weight_decay)
         super().__init__(params, defaults)
+        self._disable_type_convert = True
 
     def _create_state(self, param_group):
         for param in param_group["params"]:
