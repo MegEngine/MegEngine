@@ -17,12 +17,14 @@ from typing import Callable, Dict, List
 from ...core._imperative_rt import OpDef
 from ...core._imperative_rt.core2 import Tensor as RawTensor
 from ...core._imperative_rt.core2 import apply, set_module_tracing, unset_module_tracing
+from ...core.ops.builtin import FakeQuant
 from ...core.ops.special import Const
 from ...module import Module
 from ...tensor import Parameter, Tensor
 from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
-from .pytree import ArgsIndex, TreeDef, tree_flatten
+from .pytree import ArgsIndex, TreeDef, _is_const_leaf, _is_leaf, tree_flatten
+from .serialization import get_opdef_state, load_opdef_from_state
 
 
 def rstrip(s: str, __chars: str):
@@ -76,6 +78,7 @@ class Expr:
                 node.users.append(self)
             else:
                 assert node is None
+                assert _is_leaf(val) and _is_const_leaf(val)
                 idx = len(self.inputs) + len(self.const_val)
                 self.const_val.append((idx, val))
 
@@ -153,6 +156,11 @@ class Expr:
         if self._top_graph:
             return self._top_graph()
         return None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state.pop("_top_graph", None)
+        return state
 
 
 # expr: None (i.e. fake expression which is used to mark input)
@@ -321,14 +329,36 @@ class Apply(Expr):
             ", ".join(str(i) for i in self.inputs),
         )
 
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["opdef"] = get_opdef_state(state["opdef"])
+        return state
+
+    def __setstate__(self, state):
+        state["opdef"] = load_opdef_from_state(state["opdef"])
+        for k, v in state.items():
+            setattr(self, k, v)
+
     @classmethod
     def apply_module_trace_hook(cls, opdef, *inputs):
         for i in inputs:
             node = NodeMixin.get(i, None)
             if node is None:  # capture as constant
                 NodeMixin.wrap_safe(i, Constant.make(i))
-        apply_node = cls.make(opdef)
-        apply_node.add_inputs(inputs)
+
+        if isinstance(opdef, FakeQuant):
+            inp_nodes = [NodeMixin.get(inputs[0])]
+            for i in inputs[1:]:
+                node = Constant.make(i)
+                inp_nodes.append(node)
+            apply_node = cls.make(opdef)
+            for n in inp_nodes:
+                n.users.append(apply_node)
+            apply_node.inputs = inp_nodes
+        else:
+            apply_node = cls.make(opdef)
+            apply_node.add_inputs(inputs)
+
         assert not apply_node.const_val
 
         unset_module_tracing()
@@ -387,7 +417,7 @@ class Constant(Expr):
         super().__init__()
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
-            assert module_tracer.is_builtin(c)
+            assert module_tracer.is_builtin(c) or c.is_qat
         self.value = c
         self.name = name
         self.inputs = []
@@ -395,6 +425,7 @@ class Constant(Expr):
         self.outputs = [
             node_cls(self, name=name),
         ]
+        self.outputs[0]._name = name if name else "const_" + str(self._id)
 
     @classmethod
     def make(cls, *args, **kwargs):
@@ -422,7 +453,7 @@ class Constant(Expr):
         )
 
     def __getstate__(self):
-        state = self.__dict__.copy()
+        state = super().__getstate__()
         if isinstance(self.value, RawTensor):
             state["value"] = Tensor(self.value)
         return state

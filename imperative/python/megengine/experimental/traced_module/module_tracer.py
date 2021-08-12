@@ -12,6 +12,7 @@ from ... import Tensor
 from ... import functional as F
 from ...core.tensor.array_method import ArrayMethodMixin
 from ...module import Module
+from ...module.qat import QATModule
 
 _active_module_tracer = None
 
@@ -68,7 +69,7 @@ BUILTIN_ARRAY_METHOD = [
     "__iand__",
     "__ior__",
     "__ixor__",
-    "T",
+    "transpose",
     "astype",
     "reshape",
     "_broadcast",
@@ -180,6 +181,7 @@ class Patcher:
             self.patch_method(ArrayMethodMixin, meth, self.wrap_fn)
         self.patch_method(Tensor, "detach", self.wrap_fn)
         self.patch_method(Tensor, "__new__", self.wrap_fn)
+        self.patch_method(QATModule, "_apply_fakequant_with_observer", self.wrap_fn)
         for i, j in self._builtin_functions:
             if id(i) not in self.visited_frames_ids:
                 self.patch_function(i, j, self.wrap_fn)

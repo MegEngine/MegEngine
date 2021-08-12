@@ -155,10 +155,7 @@ def tree_flatten(
         assert is_leaf(values), values
         node = LeafDef(leaf_type(values))
         if is_const_leaf(values):
-            if isinstance(values, np.ndarray):
-                node.const_val = str(values)
-            else:
-                node.const_val = values
+            node.const_val = values
         return [values,], node
 
     rst = []
@@ -232,9 +229,13 @@ class LeafDef(TreeDef):
         return leaves[0]
 
     def __eq__(self, other):
+        if isinstance(self.const_val, np.ndarray):
+            return self.type == other.type and (self.const_val == other.const_val).all()
         return self.type == other.type and self.const_val == other.const_val
 
     def __hash__(self):
+        if isinstance(self.const_val, np.ndarray):
+            return hash(tuple([self.type, str(self.const_val)]))
         return hash(tuple([self.type, self.const_val]))
 
     def __repr__(self):

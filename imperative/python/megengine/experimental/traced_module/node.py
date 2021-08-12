@@ -127,7 +127,7 @@ class TensorNode(Node):
 
     shape = None  # type: Tuple[int]
     dtype = None  # type: numpy.dtype
-    qparam = None
+    qparams = None
     device = None
 
     def __getstate__(self):
@@ -135,7 +135,7 @@ class TensorNode(Node):
             "expr": self.expr,
             "users": self.users,
             "_id": self._id,
-            "qparam": self.qparam,
+            "qparams": self.qparams,
             "shape": self.shape,
             "dtype": self.dtype,
             "device": self.device,
