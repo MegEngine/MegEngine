@@ -31,6 +31,7 @@ public:
 
     class AlgoBase;
     class AlgoCuBlas;
+    class AlgoConv1X1CUDNN;
 #if CUDA_VERSION >= 10000
     class AlgoUInt4x4x32WMMA;
 #endif

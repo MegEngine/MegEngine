@@ -6,14 +6,15 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
-
 #include "./algos.h"
-#include "src/cuda/utils.h"
-#include "src/common/algo_base.h"
-
 #include <cuda.h>
+#include "src/common/algo_base.h"
+#include "src/cuda/conv_bias/algo.h"
+#include "src/cuda/conv_bias/opr_impl.h"
+#include "src/cuda/utils.h"
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
 #endif
@@ -52,7 +53,20 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     }
 #endif
 #endif
+
     all_algos.push_back(&naive);
+
+    std::vector<cudnnConvolutionFwdAlgo_t> cudnn_conv_enum;
+    for (auto&& algo : CudnnAlgoPack::conv_fwd_algos()) {
+        cudnn_conv_enum.push_back(algo.first);
+    }
+
+    for (auto&& algo : cudnn_conv_enum) {
+        conv1x1.push_back(AlgoConv1X1CUDNN(algo));
+    }
+    for (size_t i = 0; i < conv1x1.size(); ++i) {
+        all_algos.push_back(&conv1x1[i]);
+    }
 
     for (auto&& algo : all_algos) {
         m_all_algos_map.emplace(algo->info().desc, algo);

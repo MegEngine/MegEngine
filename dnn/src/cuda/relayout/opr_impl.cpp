@@ -8,7 +8,6 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-
 #include "src/cuda/relayout/kern.cuh"
 #include "src/cuda/relayout/kern_contiguous.cuh"
 #include "src/cuda/relayout/kern_transpose.cuh"

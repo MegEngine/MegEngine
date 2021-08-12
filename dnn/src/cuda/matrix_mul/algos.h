@@ -11,19 +11,19 @@
  */
 
 #pragma once
-#include "megdnn/oprs.h"
-#include "src/common/utils.h"
-#include "src/cuda/matrix_mul/opr_impl.h"
-#include "src/common/algo_base.h"
-#include "src/common/metahelper.h"
-
-#include <unordered_map>
 #include <cuda.h>
 #include <memory>
+#include <unordered_map>
+#include "megdnn/oprs.h"
+#include "src/common/algo_base.h"
+#include "src/common/metahelper.h"
+#include "src/common/utils.h"
+#include "src/cuda/conv_bias/algo.h"
+#include "src/cuda/conv_bias/opr_impl.h"
+#include "src/cuda/matrix_mul/opr_impl.h"
 #if CUDA_VERSION >= 10010
 #include <cublasLt.h>
 #endif
-
 namespace megdnn {
 namespace cuda {
 
@@ -42,6 +42,7 @@ public:
         CUDA_CUBLASLT,
         CUDA_NAIVE,
         CUDA_BFLOAT16,
+        CUDA_CONV1X1_CUDNN,
 #if CUDA_VERSION >= 9020
         CUDA_FLOAT32_SIMT,
         CUDA_FLOAT32_SIMT_SPLIT_K,
@@ -189,6 +190,38 @@ private:
 };
 #endif
 
+class MatrixMulForwardImpl::AlgoConv1X1CUDNN final : public AlgoBase {
+public:
+    AlgoConv1X1CUDNN(cudnnConvolutionFwdAlgo_t algo_enum) {
+        m_impl = std::make_unique<ConvBiasForwardImpl::AlgoCUDNNConv>(
+                ConvBiasForwardImpl::AlgoCUDNNConv(algo_enum));
+        std::string algoname(m_impl.get()->name());
+        m_name = "MATMUL_CONV1X1:" + algoname;
+    }
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    void exec(const ExecArgs& args) const override;
+    AlgoAttribute attribute() const override {
+        auto ret = AlgoAttribute::DEFAULT;
+#define cb(attr)                                     \
+    if (m_impl.get()->contain_attribute_all(attr)) { \
+        ret |= attr;                                 \
+    }
+        MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb)
+#undef cb
+        if (m_impl.get()->contain_attribute_all(AlgoAttribute::REPRODUCIBLE)) {
+            ret |= AlgoAttribute::REPRODUCIBLE;
+        }
+        return ret;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_CONV1X1_CUDNN)
+private:
+    std::unique_ptr<ConvBiasForwardImpl::AlgoCUDNNConv> m_impl;
+    std::string m_name;
+    WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
+};
+
 #if CUDA_VERSION >= 9020
 class MatrixMulForwardImpl::AlgoCutlassMatrixMulBase : public AlgoBase {
 public:
@@ -244,7 +277,8 @@ public:
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
     std::string param() const override {
         std::string ret;
-        // FIXME: algo param compatible with old version, to avoid fastrun cache error
+        // FIXME: algo param compatible with old version, to avoid fastrun cache
+        // error
         struct AlgoParam_ {
             int threadblock_m, threadblock_n, threadblock_k;
             int warp_m, warp_n, warp_k;
@@ -272,7 +306,7 @@ public:
               m_name{ssprintf("CUTLASS_FLOAT32_SIMT_SPLIT_K_%s",
                               m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
-    
+
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
     AlgoAttribute attribute() const override {
@@ -409,6 +443,7 @@ public:
     std::vector<AlgoFloat16TensorOpSplitK> tensorop_float16_split_k;
 #endif
 #endif
+    std::vector<AlgoConv1X1CUDNN> conv1x1;
     std::vector<AlgoBase*> all_algos;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }

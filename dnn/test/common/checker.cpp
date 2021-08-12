@@ -14,7 +14,6 @@
 #include "megdnn/tensor_format.h"
 #include "test/common/tensor.h"
 #include "test/common/timer.h"
-
 using namespace megdnn;
 using namespace test;
 
@@ -51,7 +50,7 @@ namespace {
             ++ it0;
             ++ it1;
         }
-
+        
         float error_avg = error_sum / nr_elem;
         if (error_avg > maxerr_avg) {
             return ::testing::AssertionFailure()

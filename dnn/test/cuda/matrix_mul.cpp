@@ -6,13 +6,14 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "test/cuda/fixture.h"
 
+#include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
-#include "test/common/benchmarker.h"
 
 #include "src/cuda/utils.h"
 #if defined(cuda_check)
@@ -62,7 +63,7 @@ TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32) {
     checker.set_param(param);
     checker.set_dtype(0, dtype::Quantized4Asymm(1.3f, (uint8_t)3));
     checker.set_dtype(1, dtype::Quantized4Asymm(1.3f, (uint8_t)3));
-    checker.set_dtype(2, dtype::QuantizedS32(1.3f*1.3f));
+    checker.set_dtype(2, dtype::QuantizedS32(1.3f * 1.3f));
     checker.exec({{256, 256}, {256, 256}, {256, 256}});
     auto args = matrix_mul::get_matmul_args();
     for (auto arg : args) {
@@ -91,12 +92,12 @@ TEST_F(CUDA, BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
     bencher.set_dtype(2, dtype::QuantizedS32(1.0f));
     for (size_t m : {256, 1024, 4096, 10240, 40960}) {
         for (size_t n : {256, 1024, 4096}) {
-            for (size_t k :{512, 1024, 2048}) {
+            for (size_t k : {512, 1024, 2048}) {
                 bencher.set_times(400);
                 auto time_in_ms = bencher.exec({{m, k}, {n, k}, {m, n}}) / 400;
                 auto gflps = 2.0 * m * k * n / (time_in_ms * 1e-3) * 1e-12;
-                printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n",
-                        m, k, n, time_in_ms, gflps);
+                printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n", m,
+                       k, n, time_in_ms, gflps);
             }
         }
     }
@@ -217,9 +218,7 @@ TEST_F(CUDA, MATRIX_MUL_FLOAT_NAIVE) {
                     .set_dtype(0, stype)
                     .set_dtype(1, stype)
                     .set_dtype(2, dtype)
-                    .set_epsilon(dtype == dtype::Float16()
-                                         ? 5e-2
-                                         : 5e-3)
+                    .set_epsilon(dtype == dtype::Float16() ? 5e-2 : 5e-3)
                     .execs({A, B, {}});
         }
     }
@@ -232,6 +231,7 @@ TEST_F(CUDA, MATRIX_MUL) {
     }
     Checker<MatrixMul> checker(handle_cuda());
     using Param = MatrixMul::Param;
+
     size_t m = 12, n = 16, k = 20;
 
     bool is_int_available = cuda::is_compute_capability_required(6, 1);
@@ -281,7 +281,7 @@ TEST_F(CUDA, MATRIX_MUL) {
 
     // general tests
     auto args = matrix_mul::get_matmul_args();
-    for (auto arg: args) {
+    for (auto arg : args) {
         auto m = arg.m, n = arg.n, k = arg.k;
         auto mask = arg.mask;
         Param param;
@@ -320,8 +320,7 @@ TEST_F(CUDA, MATRIX_MUL) {
     }
 }
 
-TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
-{
+TEST_F(CUDA, MATRIX_MUL_CUBLASLT) {
     require_compute_capability(7, 5);
     NormalRNG normal_rng;
     Checker<MatrixMul> checker(handle_cuda());
@@ -333,7 +332,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
     size_t m = 32, n = 32, k = 32;
     // test Int8 matmul
     {
-        DType dtype=dtype::Int32();
+        DType dtype = dtype::Int32();
         Param param;
         param.transposeA = false;
         param.transposeB = false;
@@ -341,16 +340,16 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
         TensorShape A, B;
         A = TensorShape{m, k};
         B = TensorShape{k, n};
-        checker.set_param(param).
-            set_dtype(0, stype).
-            set_dtype(1, stype).
-            set_dtype(2, dtype).
-            set_epsilon(dtype == dtype::Float16() ? 5e-2 : 5e-3).
-            execs({A, B, {}});
+        checker.set_param(param)
+                .set_dtype(0, stype)
+                .set_dtype(1, stype)
+                .set_dtype(2, dtype)
+                .set_epsilon(dtype == dtype::Float16() ? 5e-2 : 5e-3)
+                .execs({A, B, {}});
     }
     // test float-point matmul
-    for (DType dtype: std::array<DType, 2>{
-            {dtype::Float32(), dtype::Float16()}}) {
+    for (DType dtype :
+         std::array<DType, 2>{{dtype::Float32(), dtype::Float16()}}) {
         for (unsigned mask = 0; mask < 4; ++mask) {
             Param param;
             param.transposeA = mask & 1;
@@ -365,17 +364,17 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT)
                 B = TensorShape{n, k};
             else
                 B = TensorShape{k, n};
-            checker.set_param(param).
-                set_dtype(0, stype).
-                set_dtype(1, stype).
-                set_dtype(2, dtype).
-                set_epsilon(dtype == dtype::Float16() ? 5e-2 : 8e-3).
-                execs({A, B, {}});
+            checker.set_param(param)
+                    .set_dtype(0, stype)
+                    .set_dtype(1, stype)
+                    .set_dtype(2, dtype)
+                    .set_epsilon(dtype == dtype::Float16() ? 5e-2 : 8e-3)
+                    .execs({A, B, {}});
         }
     }
     // general tests
     auto args = matrix_mul::get_matmul_args();
-    for (auto arg: args) {
+    for (auto arg : args) {
         auto m = arg.m, n = arg.n, k = arg.k;
         auto mask = arg.mask;
         Param param;
@@ -418,7 +417,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_SPECIAL_CASE) {
     size_t m = 12, n = 16, k = 20;
     Checker<MatrixMul> checker(handle_cuda());
     checker.set_before_exec_callback(
-        AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+            AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
 
     using Param = MatrixMul::Param;
 
@@ -426,7 +425,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_SPECIAL_CASE) {
     DType stype = dtype::Float32();
     DType dtype = dtype::Float32();
     TensorShape A, B;
-    param.transposeA=param.transposeB=1;
+    param.transposeA = param.transposeB = 1;
     if (param.transposeA)
         A = TensorShape{k, m};
     else
@@ -435,43 +434,43 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_SPECIAL_CASE) {
         B = TensorShape{n, k};
     else
         B = TensorShape{k, n};
-    checker.set_param(param).
-        set_dtype(0, stype).
-        set_dtype(1, stype).
-        set_dtype(2, dtype).
-        set_epsilon(dtype == dtype::Float16() ? 5e-1 : 5e-2).
-        execs({A, B, {}});
+    checker.set_param(param)
+            .set_dtype(0, stype)
+            .set_dtype(1, stype)
+            .set_dtype(2, dtype)
+            .set_epsilon(dtype == dtype::Float16() ? 5e-1 : 5e-2)
+            .execs({A, B, {}});
 }
 TEST_F(CUDA, MATRIX_MUL_CUBLASLT_INT8) {
     require_compute_capability(7, 5);
     NormalRNG normal_rng;
     Checker<MatrixMul> checker(handle_cuda());
     checker.set_rng(0, &normal_rng)
-           .set_rng(1, &normal_rng)
-           .set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+            .set_rng(1, &normal_rng)
+            .set_before_exec_callback(
+                    AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
     using Param = MatrixMul::Param;
 
-    //size_t m = 32, n = 32, k = 32;
+    // size_t m = 32, n = 32, k = 32;
     // test Int8 matmul
-    for (size_t m=8; m<=64; m+=4)
-    for (size_t n=8; n<=64; n+=4)
-    for (size_t k=8; k<=64; k+=4)
-    {
-        DType dtype=dtype::Int32();
-        Param param;
-        param.transposeA = false;
-        param.transposeB = false;
-        DType stype = dtype == dtype::Int32() ? dtype::Int8() : dtype;
-        TensorShape A, B;
-        A = TensorShape{m, k};
-        B = TensorShape{k, n};
-        checker.set_param(param).
-            set_dtype(0, stype).
-            set_dtype(1, stype).
-            set_dtype(2, dtype).
-            set_epsilon(dtype == dtype::Float16() ? 5e-2 : 5e-3).
-            execs({A, B, {}});
-    }
+    for (size_t m = 8; m <= 64; m += 4)
+        for (size_t n = 8; n <= 64; n += 4)
+            for (size_t k = 8; k <= 64; k += 4) {
+                DType dtype = dtype::Int32();
+                Param param;
+                param.transposeA = false;
+                param.transposeB = false;
+                DType stype = dtype == dtype::Int32() ? dtype::Int8() : dtype;
+                TensorShape A, B;
+                A = TensorShape{m, k};
+                B = TensorShape{k, n};
+                checker.set_param(param)
+                        .set_dtype(0, stype)
+                        .set_dtype(1, stype)
+                        .set_dtype(2, dtype)
+                        .set_epsilon(dtype == dtype::Float16() ? 5e-2 : 5e-3)
+                        .execs({A, B, {}});
+            }
 }
 TEST_F(CUDA, MATRIX_MUL_CUBLASLT_F32) {
     require_compute_capability(7, 5);
@@ -501,6 +500,94 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_F32) {
             .set_dtype(2, dtype)
             .execs({A, B, {}});
 }
-} // namespace test
-} // namespace megdnn
+
+TEST_F(CUDA, MATRIX_MUL_CUDNN_F32_uncont) {
+    Checker<MatrixMul> checker(handle_cuda());
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    using Param = MatrixMul::Param;
+    size_t m = 100, n = 100, k = 100;
+    Param param;
+    param.transposeA = 1;
+    param.transposeB = 1;
+    TensorLayout A{{m, k}, {128, 1}, dtype::Float32()},
+            B{{k, n}, {128, 1}, dtype::Float32()}, C{{m, n}, dtype::Float32()};
+    DType stype = dtype::Float32();
+    DType dtype = dtype::Float32();
+    checker.set_param(param)
+            .set_dtype(0, stype)
+            .set_dtype(1, stype)
+            .set_dtype(2, dtype)
+            .execl({A, B, {}});
+}
+
+TEST_F(CUDA, MATRIX_MUL_CUDNN_F32) {
+    Checker<MatrixMul> checker(handle_cuda());
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    using Param = MatrixMul::Param;
+    for (size_t m = 8; m <= 64; m += 4) {
+        for (size_t n = 8; n <= 64; n += 4) {
+            for (size_t k = 8; k <= 64; k += 4) {
+                for (unsigned mask = 0; mask < 4; ++mask) {
+                    Param param;
+                    param.transposeA = mask & 1;
+                    param.transposeB = mask & 2;
+                    DType stype = dtype::Float32();
+                    DType dtype = dtype::Float32();
+                    TensorShape A, B;
+                    if (param.transposeA)
+                        A = TensorShape{k, m};
+                    else
+                        A = TensorShape{m, k};
+                    if (param.transposeB)
+                        B = TensorShape{n, k};
+                    else
+                        B = TensorShape{k, n};
+                    checker.set_param(param)
+                            .set_dtype(0, stype)
+                            .set_dtype(1, stype)
+                            .set_dtype(2, dtype)
+                            .execs({A, B, {}});
+                }
+            }
+        }
+    }
+}
+TEST_F(CUDA, MATRIX_MUL_CUDNN_F16) {
+    Checker<MatrixMul> checker(handle_cuda());
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    using Param = MatrixMul::Param;
+    for (size_t m = 8; m <= 64; m += 4) {
+        for (size_t n = 8; n <= 64; n += 4) {
+            for (size_t k = 8; k <= 64; k += 4) {
+                for (unsigned mask = 0; mask < 4; ++mask) {
+                    Param param;
+                    param.transposeA = mask & 1;
+                    param.transposeB = mask & 2;
+                    DType stype = dtype::Float16();
+                    DType dtype = dtype::Float16();
+                    TensorShape A, B;
+                    if (param.transposeA)
+                        A = TensorShape{k, m};
+                    else
+                        A = TensorShape{m, k};
+                    if (param.transposeB)
+                        B = TensorShape{n, k};
+                    else
+                        B = TensorShape{k, n};
+                    checker.set_param(param)
+                            .set_dtype(0, stype)
+                            .set_dtype(1, stype)
+                            .set_dtype(2, dtype)
+                            .set_epsilon(6e-2)
+                            .execs({A, B, {}});
+                }
+            }
+        }
+    }
+}
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen
