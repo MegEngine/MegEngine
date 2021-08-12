@@ -224,12 +224,12 @@ R"__usage__(
     be used on arm of armv7 and arm64, support data tyep of float32, qint8 and int8x8x16.
 )__usage__"
 R"__usage__(
-  --enable-nhw88
+  --enable-nchw88
     Execute operators with kernels implemented in MegDNN with NCHW88 tensor format. This can only
     be used on x86 with data type float.
 )__usage__"
 R"__usage__(
-  --enable-nhw44-dot
+  --enable-nchw44-dot
     Execute operators with kernels implemented in MegDNN with NCHW44-DOT tensor format. This Can
     only be used on arm32 and arm64 with dot-product supported, and only support qint8 model
 )__usage__"
