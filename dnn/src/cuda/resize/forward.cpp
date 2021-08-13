@@ -147,9 +147,11 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                                     C, IH, IW, OH, OW, stream);
         return;
     }
-    megdnn_assert(param().imode == Param::InterpolationMode::LINEAR ||
-                          param().imode == Param::InterpolationMode::NEAREST,
-                  "unsupported interpolation mode for NCHW format");
+    megdnn_assert(
+            param().imode == Param::InterpolationMode::LINEAR ||
+                    param().imode == Param::InterpolationMode::NEAREST ||
+                    param().imode == Param::InterpolationMode::INTER_CUBIC,
+            "unsupported interpolation mode for NCHW format");
 
     if (src.layout.dtype == dtype::Float32{}) {
         resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),

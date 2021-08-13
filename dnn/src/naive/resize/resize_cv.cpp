@@ -68,6 +68,7 @@
 #include "src/common/cv/helper.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
+#include "src/common/resize.cuh"
 
 MIDOUT_DECL(megdnn_naive_resizecv_imode)
 MIDOUT_DECL(megdnn_naive_resizecv_dtype)
@@ -75,6 +76,7 @@ MIDOUT_DECL(megdnn_naive_resizecv_dtype)
 using namespace megdnn;
 using namespace naive;
 using namespace megcv;
+using namespace megdnn::resize;
 
 namespace {
 
@@ -383,14 +385,6 @@ using ResizeAreaFunc = void (*)(const Mat<T>& src, Mat<T>& dst,
                                 const DecimateAlpha* ytab, int ytab_size,
                                 const int* yofs);
 
-static inline void interpolate_cubic(float x, float* coeffs) {
-    const float A = -0.75f;
-
-    coeffs[0] = ((A * (x + 1) - 5 * A) * (x + 1) + 8 * A) * (x + 1) - 4 * A;
-    coeffs[1] = ((A + 2) * x - (A + 3)) * x * x + 1;
-    coeffs[2] = ((A + 2) * (1 - x) - (A + 3)) * (1 - x) * (1 - x) + 1;
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
-}
 static inline void interpolate_lanczos4(float x, float* coeffs) {
     static const double s45 = 0.70710678118654752440084436210485;
     static const double cs[][2] = {{1, 0},  {-s45, -s45}, {0, 1},  {s45, -s45},

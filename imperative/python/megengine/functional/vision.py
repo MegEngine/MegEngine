@@ -574,19 +574,25 @@ def interpolate(
                 raise ValueError("under linear mode, size can only be single value")
         dsize = size
 
-    if not align_corners and mode in ("bilinear", "nearest") and inp.ndim in [4, 5]:
+    if not align_corners:
         # fastpath for interpolate
-        op = builtin.Resize(
-            imode="linear" if mode == "bilinear" else "nearest", format="NCHW"
-        )
+        mode_map = {
+            "linear": "linear",
+            "bilinear": "linear",
+            "nearest": "nearest",
+            "bicubic": "cubic",
+        }
+
+        op = builtin.Resize(imode=mode_map[mode], format="NCHW")
         shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
-        (result,) = apply(op, inp, shape)
-        return result
-
-    oh, ow = dsize[0], dsize[1]
-    ih, iw = inp.shape[2], inp.shape[3]
-
-    if align_corners:
+        (ret,) = apply(op, inp, shape)
+    else:
+        assert mode in [
+            "linear",
+            "bilinear",
+        ], "align_corners only support linear or bilinear mode"
+        oh, ow = dsize[0], dsize[1]
+        ih, iw = inp.shape[2], inp.shape[3]
         hscale = (ih - 1.0) / (oh - 1.0)
         wscale = 1.0 * iw / ow
         if mode != "linear":
@@ -607,34 +613,11 @@ def interpolate(
             axis=0,
         ).reshape(1, 3, 3)
         weight = broadcast_to(weight, (inp.shape[0], 3, 3))
-    else:
-        hscale = 1.0 * ih / oh
-        wscale = 1.0 * iw / ow
-        row0 = concat(
-            [wscale, Tensor(0, dtype="float32", device=inp.device), 0.5 * wscale - 0.5],
-            axis=0,
-        ).reshape(1, 3)
-        row1 = concat(
-            [Tensor(0, dtype="float32", device=inp.device), hscale, 0.5 * hscale - 0.5],
-            axis=0,
-        ).reshape(1, 3)
-        weight = concat(
-            [row0, row1, Tensor([[0, 0, 1]], dtype="float32", device=inp.device)],
-            axis=0,
-        ).reshape(1, 3, 3)
-        weight = broadcast_to(weight, (inp.shape[0], 3, 3))
 
-    weight = weight.astype("float32")
-    if mode in ["linear", "bilinear"]:
         ret = warp_perspective(inp, weight, dsize, interp_mode="linear")
-        if mode == "linear":
-            ret = reshape(ret, ret.shape[0:3])
-    else:
-        # only NHWC format support "cubic" mode
-        assert mode == "bicubic"
-        inp = transpose(inp, (0, 2, 3, 1))
-        ret = warp_perspective(inp, weight, dsize, format="NHWC", interp_mode="cubic",)
-        ret = transpose(ret, (0, 3, 1, 2))
+
+    if mode == "linear":
+        ret = reshape(ret, ret.shape[0:3])
     return ret
 
 

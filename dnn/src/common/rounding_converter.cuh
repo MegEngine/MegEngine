@@ -71,7 +71,10 @@ struct RoundingConverter<uint8_t> {
     __host__ __device__ __forceinline__ uint8_t operator()(float x) const {
 #if MEGDNN_CC_HOST
         using std::round;
+        using std::max;
+        using std::min;
 #endif
+        x = min(255.0f, max(0.0f, x));  //! FIXME!!! check other places
         return static_cast<uint8_t>(round(x));
     }
 };

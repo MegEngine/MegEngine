@@ -118,7 +118,7 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
     check_exec(src.layout, dst.layout, workspace.size);
     if (param().format == param::Resize::Format::NCHW4 ||
         (param().format == param::Resize::Format::NCHW &&
-         param().imode == param::Resize::InterpolationMode::NEAREST)) {
+         param().imode != param::Resize::InterpolationMode::INTER_LINEAR)) {
         naive::ResizeImpl::exec(src, dst, workspace);
         return;
     }

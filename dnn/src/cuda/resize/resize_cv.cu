@@ -59,12 +59,14 @@
  * ---------------------------------------------------------------------------
  */
 #include "src/cuda/cv/kernel_common.cuh"
+#include "src/common/resize.cuh"
 #include "src/cuda/resize/resize_cv.cuh"
 #include "src/cuda/utils.cuh"
 
 using namespace megdnn;
 using namespace cuda;
 using namespace megcv;
+using megdnn::resize::interpolate_cubic;
 
 namespace {
 
@@ -126,7 +128,7 @@ __global__ void precompute_cubic_coef_f32(float* dst, float scale,
 
     fr -= sr[tid];
     float coef[4];
-    interpolate_cubic_coefs(fr, coef);
+    interpolate_cubic(fr, coef);
 #pragma unroll
     for (int j = 0, index = 0; j < 4; j++, index += size) {
         dst[tid + index] = coef[j];
@@ -144,7 +146,7 @@ __global__ void precompute_cubic_coef_u8(short* dst, float scale, size_t size) {
 
     fr -= sr[tid];
     float coef[4];
-    interpolate_cubic_coefs(fr, coef);
+    interpolate_cubic(fr, coef);
 #pragma unroll
     for (int j = 0, index = 0; j < 4; j++, index += size) {
         dst[tid + index] = (short)(coef[j] * ONE);
@@ -406,7 +408,7 @@ __global__ void resize_cubic_32f_kernel_vector(
         int sc = floor(fc);
         fc -= sc;
         float coef_col[4];
-        interpolate_cubic_coefs(fc, coef_col);
+        interpolate_cubic(fc, coef_col);
 
         for (int i = 0; i < ELEMENTS_PER_THREADS; i++) {
             if (dr >= dst_rows)
@@ -415,7 +417,7 @@ __global__ void resize_cubic_32f_kernel_vector(
             int sr = floor(fr);
             fr -= sr;
             float coef_row[4];
-            interpolate_cubic_coefs(fr, coef_row);
+            interpolate_cubic(fr, coef_row);
             float dst_data[CH] = {0};
 #pragma unroll
             for (int offset_r = 0; offset_r < 4; ++offset_r) {
@@ -459,7 +461,7 @@ __global__ void resize_cubic_8u_kernel_vector(
         short icoef_col[4] = {0};
 
         float coef_col[4];
-        interpolate_cubic_coefs(fc, coef_col);
+        interpolate_cubic(fc, coef_col);
 #pragma unroll
         for (int i = 0; i < 4; i++) {
             icoef_col[i] = (short)(coef_col[i] * ONE);
@@ -473,7 +475,7 @@ __global__ void resize_cubic_8u_kernel_vector(
             fr -= sr;
             short icoef_row[4];
             float coef_row[4];
-            interpolate_cubic_coefs(fr, coef_row);
+            interpolate_cubic(fr, coef_row);
 #pragma unroll
             for (int i = 0; i < 4; i++) {
                 icoef_row[i] = (short)(coef_row[i] * ONE);

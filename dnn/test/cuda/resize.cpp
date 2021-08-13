@@ -43,7 +43,7 @@ TEST_F(CUDA, RESIZE_CV) {
 
 TEST_F(CUDA, RESIZE_FORWARD) {
     using namespace resize;
-    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    IMode modes[] = {IMode::INTER_LINEAR, IMode::NEAREST, IMode::INTER_CUBIC};
     for (auto imode : modes) {
         std::vector<TestArg> args = get_args(imode);
         Checker<Resize> checker(handle_cuda());
@@ -88,7 +88,7 @@ TEST_F(CUDA, RESIZE_NCHW4) {
 }
 
 TEST_F(CUDA, RESIZE_NCHW_WITH_STRIDE) {
-    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    IMode modes[] = {IMode::INTER_LINEAR, IMode::NEAREST, IMode::INTER_CUBIC};
     for (auto imode : modes) {
         param::Resize param;
         param.format = param::Resize::Format::NCHW;
@@ -117,7 +117,7 @@ TEST_F(CUDA, RESIZE_NCHW_WITH_STRIDE) {
 }
 
 TEST_F(CUDA, RESIZE_BACKWARD) {
-    IMode modes[2] = {IMode::INTER_LINEAR, IMode::NEAREST};
+    IMode modes[] = {IMode::INTER_LINEAR, IMode::NEAREST, IMode::INTER_CUBIC};
     for (auto imode : modes) {
         Checker<ResizeBackward> checker(handle_cuda());
         param::Resize param;

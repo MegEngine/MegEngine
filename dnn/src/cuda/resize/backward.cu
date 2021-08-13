@@ -12,6 +12,10 @@
 #include "src/cuda/resize/common.h"
 
 #include "src/cuda/utils.cuh"
+#include "src/cuda/cv/kernel_common.cuh"
+
+using megdnn::resize::interpolate_cubic;
+using megdnn::megcv::saturate;
 
 namespace megdnn {
 namespace cuda {
@@ -72,6 +76,42 @@ __global__ void resize_bwd_nearest_kernel(const float* hidden, float* dst,
         }
     }
 }
+
+__global__ void resize_bwd_cubic_kernel(const float* hidden, float* dst, int N,
+                                        int C, int IH, int IW, int OH, int OW,
+                                        float scale_h, float scale_w) {
+    int n = blockIdx.z;
+    int ow = blockIdx.x * blockDim.x + threadIdx.x;
+    int oh = blockIdx.y * blockDim.y + threadIdx.y;
+    hidden += n * C * OH * OW;
+    dst += n * C * IH * IW;
+    if (ow < OW && oh < OH) {
+        float alphah, alphaw;
+        int ih0, iw0;
+        get_origin_coord(scale_h, IH, oh, alphah, ih0, true);
+        get_origin_coord(scale_w, IW, ow, alphaw, iw0, true);
+        ih0--;
+        iw0--;
+        float h_coeff[4], w_coeff[4];
+        interpolate_cubic(alphah, h_coeff);
+        interpolate_cubic(alphaw, w_coeff);
+        for (int c = 0; c < C; ++c) {
+            constexpr int ksize = 4;
+            for (int kh = 0; kh < ksize; kh++) {
+                int ih = saturate(ih0 + kh, 0, IH - 1);
+                for (int kw = 0; kw < ksize; kw++) {
+                    int iw = saturate(iw0 + kw, 0, IW - 1);
+                    atomicAdd(dst + ih * IW + iw,
+                              hidden[oh * OW + ow] * h_coeff[kh] * w_coeff[kw]);
+                }
+            }
+
+            hidden += OH * OW;
+            dst += IH * IW;
+        }
+    }
+}
+
 void backward_data_proxy(InterpolationMode imode, const float* diff,
                          float* grad, int N, int C, int IH, int IW, int OH,
                          int OW, cudaStream_t stream) {
@@ -83,13 +123,26 @@ void backward_data_proxy(InterpolationMode imode, const float* diff,
                                    stream));
         float scale_h = static_cast<float>(OH) / IH;
         float scale_w = static_cast<float>(OW) / IW;
-        if(imode == InterpolationMode::INTER_LINEAR) {
-            resize_bwd_linear_kernel<<<blocks, threads, 0, stream>>>(
-                    diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
-        }
-        else if (imode == InterpolationMode::INTER_NEAREST) {
-            resize_bwd_nearest_kernel<<<blocks, threads, 0, stream>>>(
-                    diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+        switch (imode) {
+            case InterpolationMode::INTER_LINEAR: {
+                resize_bwd_linear_kernel<<<blocks, threads, 0, stream>>>(
+                        diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+                break;
+            }
+            case InterpolationMode::INTER_NEAREST: {
+                resize_bwd_nearest_kernel<<<blocks, threads, 0, stream>>>(
+                        diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+                break;
+            }
+            case InterpolationMode::INTER_CUBIC: {
+                resize_bwd_cubic_kernel<<<blocks, threads, 0, stream>>>(
+                        diff, grad, N, C, IH, IW, OH, OW, scale_h, scale_w);
+                break;
+            }
+            default: {
+                megdnn_throw("unsupported interpolation mode");
+                break;
+            }
         }
     }
     after_kernel_launch();

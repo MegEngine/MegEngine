@@ -11,6 +11,7 @@
  */
 
 #include "megdnn/handle.h"
+#include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
 
 #include "src/common/utils.h"
@@ -29,8 +30,9 @@ void ResizeBase::check_layout_fwd(const TensorLayout& src,
     if (param().format == Param::Format::NCHW) {
         megdnn_assert(dst.shape[1] == src.shape[1], "%s", errmsg().c_str());
         auto imode = param().imode;
-        megdnn_assert(imode == param::Resize::InterpolationMode::INTER_LINEAR ||
-                      imode == param::Resize::InterpolationMode::NEAREST);
+        using IMode = param::Resize::InterpolationMode;
+        megdnn_assert(imode == IMode::INTER_LINEAR || imode == IMode::NEAREST ||
+                      imode == IMode::INTER_CUBIC);
     } else if (param().format == Param::Format::NHWC) {
         megdnn_assert(dst.shape[3] == src.shape[3], "%s", errmsg().c_str());
     } else if (param().format == Param::Format::NCHW4) {
@@ -66,19 +68,20 @@ void ResizeBackward::check_exec(const TensorLayout& diff,
 }
 
 std::pair<float, int> ResizeBase::get_origin_coord(float scale, int size,
-                                                   int idx) {
+                                                   int idx, bool cubic) {
     //! copy from resize_cv.cpp
     float alpha = (idx + 0.5f) / scale - 0.5f;
     int origin_idx = static_cast<int>(floor(alpha));
     alpha -= origin_idx;
-    if (origin_idx < 0) {
-        origin_idx = 0;
-        alpha = 0;
-    } else if (origin_idx + 1 >= size) {
-        origin_idx = size - 2;
-        alpha = 1;
+    if (!cubic) {
+        if (origin_idx < 0) {
+            origin_idx = 0;
+            alpha = 0;
+        } else if (origin_idx + 1 >= size) {
+            origin_idx = size - 2;
+            alpha = 1;
+        }
     }
-
     return {alpha, origin_idx};
 }
 

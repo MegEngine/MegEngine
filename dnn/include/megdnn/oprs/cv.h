@@ -197,7 +197,7 @@ public:
 
 protected:
     //! get origin coord
-    std::pair<float, int> get_origin_coord(float scale, int size, int idx);
+    std::pair<float, int> get_origin_coord(float scale, int size, int idx, bool cubic=false);
     //! get nearest index in src
     int get_nearest_src(float scale, int size, int idx);
 

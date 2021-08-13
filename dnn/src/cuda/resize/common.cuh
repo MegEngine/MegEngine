@@ -15,16 +15,19 @@ namespace cuda {
 namespace resize {
 
 __device__ inline void get_origin_coord(float scale, int size, int idx,
-                                        float& alpha, int& origin_idx) {
+                                        float& alpha, int& origin_idx,
+                                        bool cubic = false) {
     alpha = (idx + 0.5f) / scale - 0.5f;
     origin_idx = static_cast<int>(floor(alpha));
     alpha -= origin_idx;
-    if (origin_idx < 0) {
-        origin_idx = 0;
-        alpha = 0;
-    } else if (origin_idx + 1 >= size) {
-        origin_idx = size - 2;
-        alpha = 1;
+    if (!cubic) {
+        if (origin_idx < 0) {
+            origin_idx = 0;
+            alpha = 0;
+        } else if (origin_idx + 1 >= size) {
+            origin_idx = size - 2;
+            alpha = 1;
+        }
     }
 }
 
