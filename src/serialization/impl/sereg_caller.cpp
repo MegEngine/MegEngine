@@ -29,6 +29,7 @@ namespace mgb{void call_sereg(){}}
 #include "../../opr/impl/tensor_gen.sereg.h"
 #include "../../opr/impl/tensor_manip.sereg.h"
 #include "../../opr/impl/utility.sereg.h"
+#include "../../opr/impl/custom_opnode.sereg.h"
 #if MGB_ENABLE_TENSOR_RT
 #include "../../tensorrt/impl/tensorrt_opr.sereg.h"
 #endif
