@@ -626,7 +626,7 @@ class Module(metaclass=ABCMeta):
         for k, v in _expand_structure(name, value):
             if not v._name:
                 v._name = k
-            else:
+            elif v._name != k:
                 logger.warning(
                     "try setting the submodule `{}` to a new attribute `{}`, its name `{}` will remain unchanged".format(
                         v._name, k, v._name
