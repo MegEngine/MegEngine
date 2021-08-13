@@ -2,7 +2,7 @@ if(MGE_WITH_JIT_MLIR)
     add_subdirectory(jit/include/megbrain/jit/mlir/ir)
 endif()
 
-file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp opr/impl/nvof/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
+file(GLOB_RECURSE SOURCES core/impl/*.cpp gopt/impl/*.cpp opr/impl/*.cpp opr/impl/nvof/*.cpp plugin/impl/*.cpp serialization/impl/*.cpp custom/impl/*.cpp core/impl/*.inl gopt/impl/*.inl opr/impl/*.inl plugin/impl/*.inl serialization/impl/*.inl)
 
 if(MGE_WITH_JIT)
     file(GLOB_RECURSE SOURCES_ jit/impl/*.cpp jit/impl/*.inl)
@@ -22,7 +22,7 @@ if(MGE_WITH_DISTRIBUTED)
     list(APPEND SOURCES ${GRPC_SRCS})
 endif()
 
-set(MGB_INC ${PROJECT_BINARY_DIR}/genfiles ${CMAKE_CURRENT_LIST_DIR}/core/include ${CMAKE_CURRENT_LIST_DIR}/gopt/include ${CMAKE_CURRENT_LIST_DIR}/opr/include ${CMAKE_CURRENT_LIST_DIR}/plugin/include ${CMAKE_CURRENT_LIST_DIR}/serialization/include)
+set(MGB_INC ${PROJECT_BINARY_DIR}/genfiles ${CMAKE_CURRENT_LIST_DIR}/core/include ${CMAKE_CURRENT_LIST_DIR}/gopt/include ${CMAKE_CURRENT_LIST_DIR}/opr/include ${CMAKE_CURRENT_LIST_DIR}/plugin/include ${CMAKE_CURRENT_LIST_DIR}/serialization/include ${CMAKE_CURRENT_LIST_DIR}/custom/include)
 
 if(MGE_WITH_JIT)
     list(APPEND MGB_INC ${CMAKE_CURRENT_LIST_DIR}/jit/include)
