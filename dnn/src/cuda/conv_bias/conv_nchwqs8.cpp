@@ -134,13 +134,6 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
 
     auto config = prepare_sub_opr(args);
 
-    AlgoBase::SizeArgs sub_args{
-            static_cast<ConvBiasForwardImpl*>(config.second.get()),
-            config.first[0],
-            config.first[1],
-            config.first[2],
-            config.first[3],
-            config.first[4]};
     bool is_relayout_ok = true;
     if (args.dst_layout->dtype.enumv() != DTypeEnum::Float32) {
         is_relayout_ok = relayout_format::RelayoutFormatFast::usable(
@@ -148,7 +141,11 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
             RelayoutFormat::Param::Mode::NCHW4_NCHW);
     }
 
-    return is_relayout_ok && has_available_algo<ConvBiasForwardImpl>(sub_args);
+    return is_relayout_ok &&
+           has_available_algo<ConvBiasForwardImpl>(
+                   static_cast<ConvBiasForwardImpl*>(config.second.get()),
+                   config.first[0], config.first[1], config.first[2],
+                   config.first[3], config.first[4]);
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoFallbackNCHWQS8::get_workspace_bundle(

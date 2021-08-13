@@ -24,5 +24,24 @@
 #define setenv(name,value,overwrite) _putenv_s(name,value)
 #endif
 
+namespace megdnn {
+
+/*!
+ * \brief whether there is an algorithm from algo_pack() that is available for
+ * current size
+ */
+template <class Opr, typename... Args>
+bool has_available_algo(Opr* opr, Args&&... args) {
+    const typename Opr::AlgoBase::SizeArgs size_args(
+            opr, std::forward<Args>(args)...);
+    for (auto i : Opr::algo_pack().all_algos) {
+        if (i->is_available(size_args)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

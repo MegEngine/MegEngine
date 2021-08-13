@@ -73,11 +73,10 @@ bool Convolution3DBackwardDataImpl::AlgoGroupConvGeneral::is_available(
     }
 
     auto config = prepare_sub_opr(args);
-    AlgoBase::SizeArgs sub_args{
-            static_cast<Convolution3DBackwardDataImpl*>(config.second.get()),
-            config.first[0], config.first[1], config.first[2]};
 
-    return has_available_algo<Convolution3DBackwardDataImpl>(sub_args);
+    return has_available_algo<Convolution3DBackwardDataImpl>(
+            static_cast<Convolution3DBackwardDataImpl*>(config.second.get()),
+            config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle

@@ -80,11 +80,10 @@ bool Convolution3DForwardImpl::AlgoGroupConvGeneral::is_available(
     }
 
     auto config = prepare_sub_opr(args);
-    AlgoBase::SizeArgs sub_args{
-            static_cast<Convolution3DForwardImpl*>(config.second.get()),
-            config.first[0], config.first[1], config.first[2]};
 
-    return has_available_algo<Convolution3DForwardImpl>(sub_args);
+    return has_available_algo<Convolution3DForwardImpl>(
+            static_cast<Convolution3DForwardImpl*>(config.second.get()),
+            config.first[0], config.first[1], config.first[2]);
 }
 
 WorkspaceBundle

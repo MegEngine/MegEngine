@@ -107,16 +107,12 @@ bool ConvBiasForwardImpl::AlgoGroupConvGeneral::is_available(
     auto conv_args = args;
     conv_args.dst_layout = &dst_layout;
     auto config = prepare_sub_opr(conv_args);
-    AlgoBase::SizeArgs sub_args{
-            static_cast<ConvBiasForwardImpl*>(config.second.get()),
-            config.first[0],
-            config.first[1],
-            config.first[2],
-            config.first[3],
-            config.first[4]};
 
-    bool ret = has_available_algo<ConvBiasForwardImpl>(sub_args);
-    return  ret;
+    bool ret = has_available_algo<ConvBiasForwardImpl>(
+            static_cast<ConvBiasForwardImpl*>(config.second.get()),
+            config.first[0], config.first[1], config.first[2], config.first[3],
+            config.first[4]);
+    return ret;
 }
 
 WorkspaceBundle ConvBiasForwardImpl::AlgoGroupConvGeneral::get_workspace_bundle(

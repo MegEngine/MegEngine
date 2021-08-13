@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "megdnn/common.h"
 #include "utils.h"
 
 namespace megdnn {
@@ -72,21 +73,6 @@ std::vector<typename Opr::Algorithm*> get_all_algorithms(
     megdnn_assert(!ret.empty(), "no algorithm for %s",
                   args.to_string().c_str());
     return ret;
-}
-
-/*!
- * \brief whether there is an algorithm from algo_pack() that is available for
- * current size
- */
-template <class Opr>
-bool has_available_algo(
-        const typename Opr::AlgoBase::SizeArgs& args) {
-    for (auto i : Opr::algo_pack().all_algos) {
-        if (i->is_available(args)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 /*!
