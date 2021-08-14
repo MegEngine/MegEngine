@@ -400,6 +400,68 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16_STR1) {
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
 }
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_F16_NCHW88) {
+    constexpr size_t RUNS = 50;
+
+    std::string algo_name = "F16_CHANNEL_WISE_NCHW88";
+    printf("Benchmarker F16_CHANNEL_WISE_NCHW88 algo\n");
+    std::vector<DType> data_type = {dtype::Float16(), dtype::Float16(),
+                                    dtype::Float16(), dtype::Float16()};
+
+    auto bench_case = [&](size_t N, size_t IC, size_t H, size_t W, size_t FS,
+                          size_t P, size_t S) {
+        param::ConvBias param;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        param.pad_h = P;
+        param.pad_w = P;
+        param.stride_h = S;
+        param.stride_w = S;
+        param.sparse = param::ConvBias::Sparse::GROUP;
+        param.format = param::ConvBias::Format::NCHW88;
+
+        size_t group = IC;
+        size_t OC = IC;
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W, 8},
+                {group, 1, 1, FS, FS, 8},
+                {1, OC, 1, 1, 8},
+                {},
+                {N, OC, (H + 2 * P - FS) / S + 1, (W + 2 * P - FS) / S + 1, 8}};
+        TensorShape dst{N, OC, (H + 2 * P - FS) / S + 1,
+                        (W + 2 * P - FS) / S + 1, 8};
+        float computations =
+                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        std::vector<std::pair<SmallVector<TensorShape>, float>> shape_arg = {
+                std::make_pair(shapes, computations)};
+
+        benchmark_impl(param, shape_arg, algo_name, RUNS, {4, {4, 5, 6, 7}},
+                       {1, {7}}, data_type);
+    };
+
+    bench_case(1, 64, 100, 100, 5, 2, 1);
+    bench_case(1, 64, 56, 56, 5, 2, 1);
+    bench_case(1, 64, 28, 28, 5, 2, 1);
+    bench_case(1, 64, 100, 100, 5, 2, 2);
+    bench_case(1, 64, 56, 56, 5, 2, 2);
+    bench_case(1, 64, 28, 28, 5, 2, 2);
+
+    bench_case(1, 64, 100, 100, 3, 1, 1);
+    bench_case(1, 64, 56, 56, 3, 1, 1);
+    bench_case(1, 64, 28, 28, 3, 1, 1);
+    bench_case(1, 64, 100, 100, 3, 1, 2);
+    bench_case(1, 64, 56, 56, 3, 1, 2);
+    bench_case(1, 64, 28, 28, 3, 1, 2);
+
+    bench_case(1, 64, 100, 100, 2, 0, 1);
+    bench_case(1, 64, 56, 56, 2, 0, 1);
+    bench_case(1, 64, 28, 28, 2, 0, 1);
+    bench_case(1, 64, 100, 100, 2, 0, 2);
+    bench_case(1, 64, 56, 56, 2, 0, 2);
+    bench_case(1, 64, 28, 28, 2, 0, 2);
+}
+
 #endif
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_DIRECT_INT8x8x16) {

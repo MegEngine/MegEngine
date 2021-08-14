@@ -96,6 +96,7 @@ private:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     class AlgoF16Direct;
     class AlgoF16DirectStride1;
+    class AlgoF16ChannelWiseNCHW88;
 #endif
 
     class AlgoPack;

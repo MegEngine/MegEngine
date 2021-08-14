@@ -148,6 +148,81 @@ std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
     return args;
 }
 
+std::vector<conv_bias::TestArg> get_nchw88_channel_wise_args(
+        std::vector<size_t> kernel, size_t stride, bool no_bias,
+        bool no_nonlinemode, bool no_full_bias) {
+    using namespace conv_bias;
+    using Param = param::ConvBias;
+    using NLMode = param::ConvBias::NonlineMode;
+    std::vector<TestArg> args;
+
+    auto pack = [&](size_t n, size_t group, size_t w, size_t h, size_t kernel,
+                    size_t stride, NLMode nlmode, bool pad) {
+        Param param;
+        param.stride_h = stride;
+        param.stride_w = stride;
+        if (pad) {
+            param.pad_h = kernel / 2;
+            param.pad_w = kernel / 2;
+        } else {
+            param.pad_h = 0;
+            param.pad_w = 0;
+        }
+        param.nonlineMode = nlmode;
+        param.format = param::ConvBias::Format::NCHW88;
+        param.sparse = param::ConvBias::Sparse::GROUP;
+
+        args.emplace_back(param, TensorShape{n, group, h, w, 8},
+                          TensorShape{group, 1, 1, kernel, kernel, 8},
+                          TensorShape{});
+        if (!no_bias) {
+            args.emplace_back(param, TensorShape{n, group, h, w, 8},
+                              TensorShape{group, 1, 1, kernel, kernel, 8},
+                              TensorShape{1, group, 1, 1, 8});
+        }
+        if (!no_full_bias) {
+            args.emplace_back(
+                    param, TensorShape{n, group, h, w, 8},
+                    TensorShape{group, 1, 1, kernel, kernel, 8},
+                    TensorShape{n, group,
+                                (h + 2 * param.pad_w - kernel) / stride + 1,
+                                (w + 2 * param.pad_w - kernel) / stride + 1,
+                                8});
+        }
+    };
+
+    std::vector<NLMode> nonlinemode = {NLMode::IDENTITY};
+    if (!no_nonlinemode) {
+        nonlinemode.emplace_back(NLMode::RELU);
+        nonlinemode.emplace_back(NLMode::H_SWISH);
+    }
+    for (size_t n : {1, 2}) {
+        for (auto nlmode : nonlinemode) {
+            for (bool pad : {true}) {
+                for (size_t group : {1, 2, 4, 7, 8, 128}) {
+                    for (size_t size : {4, 6, 7, 9, 15, 40}) {
+                        for (size_t kern : kernel) {
+                            pack(n, group, size, size, kern, stride, nlmode,
+                                 pad);
+                        }
+                    }
+                }
+            }
+            for (bool pad : {false}) {
+                for (size_t group : {1, 2, 7, 128}) {
+                    for (size_t size : {7, 9, 15, 40}) {
+                        for (size_t kern : kernel) {
+                            pack(n, group, size, size, kern, stride, nlmode,
+                                 pad);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return args;
+}
+
 void checker_conv_bias_qint8x8x8(std::vector<conv_bias::TestArg> args,
                                  Handle* handle, const char* algo_name) {
     Checker<ConvBias> checker(handle);
@@ -316,6 +391,26 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_STR1) {
     NormalRNG rng(1);
     checker_conv_bias_f16(get_conv_bias_args({2, 3, 5}, 1, false, false, false),
                           handle(), rng, "F16STRD1", 0.03);
+}
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP16_NCHW88_1) {
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            get_nchw88_channel_wise_args({2, 3}, 1, false, false, false),
+            handle(), rng, "F16_CHANNEL_WISE_NCHW88", 0.03);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE1_FP16_NCHW88_2) {
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            get_nchw88_channel_wise_args({5}, 1, false, false, false), handle(),
+            rng, "F16_CHANNEL_WISE_NCHW88", 0.03);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP16_NCHW88) {
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            get_nchw88_channel_wise_args({2, 3, 5}, 2, false, false, false),
+            handle(), rng, "F16_CHANNEL_WISE_NCHW88", 0.03);
 }
 #endif
 

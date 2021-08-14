@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -107,7 +108,7 @@ public:
     virtual SmallVector<NCBKern> dispatch_kerns(
             const NCBKernSizeParam& param) const override;
 
-    ConvAlgoTypePack get_algo_type() const override{
+    ConvAlgoTypePack get_algo_type() const override {
         return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
     }
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_FP16)
@@ -130,6 +131,26 @@ public:
         return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
     }
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_DIRECT_STRD1_FP16)
+};
+
+class ConvBiasImpl::AlgoF16ChannelWiseNCHW88 final : public AlgoBase {
+    SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
+
+public:
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    const char* name() const override { return "F16_CHANNEL_WISE_NCHW88"; }
+    bool usable(const NCBKernSizeParam& param,
+                AlgoSelectionStrategy algo_selection_strategy) const override;
+
+    size_t get_workspace(const NCBKernSizeParam& param) const override;
+    virtual SmallVector<NCBKern> dispatch_kerns(
+            const NCBKernSizeParam& param) const override;
+    ConvAlgoTypePack get_algo_type() const override {
+        return {AlgoDataType::FLOAT16, AlgoCategory::DIRECT};
+    }
+    MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_CHWNWISE_NCHW88_F16)
 };
 
 }  // namespace arm_common
