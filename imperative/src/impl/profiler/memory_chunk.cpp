@@ -125,6 +125,7 @@ struct MemoryFlow {
     }
 
     XMLWriter to_svg() const {
+        using namespace std::chrono_literals;
         XMLWriter writer;
         auto&& [addr_begin, addr_end] = address_range();
         auto&& [time_begin, time_end] = time_range();
@@ -135,15 +136,15 @@ struct MemoryFlow {
         auto svg = writer.element("svg");
         svg.attr("xmlns", std::string{"http://www.w3.org/2000/svg"});
         svg.attr("xmlns:tag", std::string{"https://megengine.org.cn"});
-        double time_scale = 1e5;
+        auto time_scale = 100us;
         double addr_scale = 1e6;
-        svg.attr("width", (time_end-time_begin).count()/time_scale);
+        svg.attr("width", (time_end-time_begin)/time_scale);
         svg.attr("height", (addr_end-addr_begin)/addr_scale);
         {
             auto rect = writer.element("rect");
             rect.attr("x", 0);
             rect.attr("y", 0);
-            rect.attr("width", (time_end-time_begin).count()/time_scale);
+            rect.attr("width", (time_end-time_begin)/time_scale);
             rect.attr("height", (addr_end-addr_begin)/addr_scale);
             rect.attr("fill", std::string{"blue"});
         }
@@ -198,8 +199,8 @@ struct MemoryFlow {
         for (auto&& [id, chunk]: chunks) {
             MGB_MARK_USED_VAR(id);
             if (chunk.empty()) continue;
-            double left = (chunk.time[0]-time_begin).count()/time_scale;
-            double right = (chunk.time[1]-time_begin).count()/time_scale;
+            double left = (chunk.time[0]-time_begin)/time_scale;
+            double right = (chunk.time[1]-time_begin)/time_scale;
             double top = (chunk.address[0]-addr_begin)/addr_scale;
             double bottom = (chunk.address[1]-addr_begin)/addr_scale;
             double duration = (chunk.time[1] - chunk.time[0]).count();

@@ -34,11 +34,11 @@ namespace imperative {
 
 namespace profiler {
 
-using HostTime = std::chrono::time_point<std::chrono::system_clock>;
+using HostTime = std::chrono::system_clock::time_point;
 
-using Duration = std::chrono::nanoseconds;
+using Duration = std::chrono::system_clock::duration;
 
-using RealDuration = std::chrono::duration<double, std::nano>;
+using RealDuration = std::chrono::duration<Duration::rep, Duration::period>;
 
 using Time = HostTime;
 
