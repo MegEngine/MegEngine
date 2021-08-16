@@ -18,6 +18,7 @@ from zipfile import ZipFile
 import requests
 from tqdm import tqdm
 
+from megengine import __version__
 from megengine.utils.http_download import (
     CHUNK_SIZE,
     HTTP_CONNECTION_TIMEOUT,
@@ -129,7 +130,9 @@ class GitSSHFetcher(RepoFetcherBase):
         repo_dir_raw = "{}_{}_{}".format(
             repo_owner, repo_name, normalized_branch_info
         ) + ("_{}".format(commit) if commit else "")
-        repo_dir = cls._gen_repo_dir(repo_dir_raw)
+        repo_dir = (
+            "_".join(__version__.split(".")) + "_" + cls._gen_repo_dir(repo_dir_raw)
+        )
         git_url = "git@{}:{}/{}.git".format(git_host, repo_owner, repo_name)
 
         if use_cache and os.path.exists(repo_dir):  # use cache
@@ -242,7 +245,9 @@ class GitHTTPSFetcher(RepoFetcherBase):
         repo_dir_raw = "{}_{}_{}".format(
             repo_owner, repo_name, normalized_branch_info
         ) + ("_{}".format(commit) if commit else "")
-        repo_dir = cls._gen_repo_dir(repo_dir_raw)
+        repo_dir = (
+            "_".join(__version__.split(".")) + "_" + cls._gen_repo_dir(repo_dir_raw)
+        )
         archive_url = cls._git_archive_link(
             git_host, repo_owner, repo_name, branch_info, commit
         )
