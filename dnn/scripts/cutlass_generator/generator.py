@@ -217,6 +217,9 @@ def GenerateConv2d_TensorOp_8816(args):
   min_cc = 75
   max_cc = 1024
 
+  cuda_major = 10
+  cuda_minor = 2
+
   for math_inst in math_instructions:
     for layout in layouts:
       for dst_type, dst_layout in zip(dst_types, dst_layouts):
@@ -234,7 +237,7 @@ def GenerateConv2d_TensorOp_8816(args):
           ] 
           operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
-                                     False, ImplicitGemmMode.GemmTN, True) 
+                                     False, ImplicitGemmMode.GemmTN, True, cuda_major, cuda_minor) 
         else:
           assert dst_layout == LayoutType.TensorNC4HW4
           tile_descriptions = [
@@ -250,7 +253,7 @@ def GenerateConv2d_TensorOp_8816(args):
           ]
           operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
-                                     False) 
+                                     False, ImplicitGemmMode.GemmNT, False, cuda_major, cuda_minor) 
         
   return operations
 
@@ -281,6 +284,9 @@ def GenerateConv2d_TensorOp_8832(args):
   min_cc = 75
   max_cc = 1024
 
+  cuda_major = 10
+  cuda_minor = 2
+
   for math_inst in math_instructions:
     for layout in layouts:
       for dst_layout in dst_layouts:
@@ -293,7 +299,7 @@ def GenerateConv2d_TensorOp_8832(args):
         ] 
         operations += GenerateConv2d(ConvKind.Fprop, tile_descriptions, layout[0], layout[1], 
                                      dst_layout, dst_type, min_cc, 128, 128, 64,  
-                                     False, ImplicitGemmMode.GemmTN, True)
+                                     False, ImplicitGemmMode.GemmTN, True, cuda_major, cuda_minor)
 
   layouts_nhwc = [
     (LayoutType.TensorNHWC, LayoutType.TensorNC8HW8, 32), 
@@ -316,12 +322,12 @@ def GenerateConv2d_TensorOp_8832(args):
           for tile in tile_descriptions:
             operations += GenerateConv2d(ConvKind.Fprop, [tile], layout[0], layout[1], 
                                       dst_layout, dst_type, min_cc, layout[2], layout[2], 32, 
-                                      False, ImplicitGemmMode.GemmTN, False)
+                                      False, ImplicitGemmMode.GemmTN, False, cuda_major, cuda_minor)
             if tile.threadblock_shape[1] == 32 or tile.threadblock_shape[1] == 64:
               dst_align = 32 if tile.threadblock_shape[1] == 32 else 64
               operations += GenerateConv2d(ConvKind.Fprop, [tile], layout[0], layout[1], 
                                       dst_layout, dst_type, min_cc, layout[2], layout[2], dst_align, 
-                                      False, ImplicitGemmMode.GemmTN, True)
+                                      False, ImplicitGemmMode.GemmTN, True, cuda_major, cuda_minor)
 
   return operations
 
@@ -624,6 +630,8 @@ def GeneratesGemm_TensorOp_1688(args):
   alignment_constraints = [8, 4, 2,
                            #1
                            ]
+  cuda_major = 10
+  cuda_minor = 2
 
   operations = []
   for math_inst in math_instructions:
@@ -655,7 +663,9 @@ def GeneratesGemm_TensorOp_1688(args):
                                       min_cc,     \
                                       align * 16, \
                                       align * 16, \
-                                      align * 16)
+                                      align * 16, \
+                                      cuda_major, \
+                                      cuda_minor)
   return operations
 
 #
@@ -686,6 +696,8 @@ def GeneratesGemm_TensorOp_884(args):
   alignment_constraints = [8, 4, 2,
                            # 1
                            ]
+  cuda_major = 10
+  cuda_minor = 2
 
   operations = []
   for math_inst in math_instructions:
@@ -717,7 +729,9 @@ def GeneratesGemm_TensorOp_884(args):
                                       min_cc,     \
                                       align * 16, \
                                       align * 16, \
-                                      align * 16)
+                                      align * 16, \
+                                      cuda_major, \
+                                      cuda_minor)
  
   return operations
 

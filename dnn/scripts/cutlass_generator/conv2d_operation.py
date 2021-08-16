@@ -19,7 +19,8 @@ class Conv2dOperation:
   #
   def __init__(self, conv_kind, conv_type, arch, tile_description, src, flt, bias, dst, element_epilogue, \
     epilogue_functor = EpilogueFunctor.LinearCombination, swizzling_functor = SwizzlingFunctor.Identity4, \
-    need_load_from_const = True, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False):
+    need_load_from_const = True, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False, \
+    required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
 
     self.operation_kind = OperationKind.Conv2d
     self.conv_kind = conv_kind
@@ -36,6 +37,9 @@ class Conv2dOperation:
     self.need_load_from_const = need_load_from_const  
     self.implicit_gemm_mode = implicit_gemm_mode
     self.without_shared_load = without_shared_load
+    self.required_cuda_ver_major = required_cuda_ver_major
+    self.required_cuda_ver_minor = required_cuda_ver_minor
+
   #
   def accumulator_type(self):
     accum = self.tile_description.math_instruction.element_accumulator
@@ -320,7 +324,8 @@ using Deconvolution =
 
 #
 def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_layout, dst_type, min_cc, src_align = 32, flt_align = 32, dst_align = 128, \
-  skip_unity_kernel = False, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False):
+  skip_unity_kernel = False, implicit_gemm_mode = ImplicitGemmMode.GemmNT, without_shared_load = False, required_cuda_ver_major = 9, \
+  required_cuda_ver_minor = 2):
   operations = []
 
   element_epilogue = DataType.f32 
@@ -407,10 +412,10 @@ def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_lay
       bias = TensorDescription(bias_type, dst_layout, max(1, int(32 / DataTypeSize[bias_type])))
       dst = TensorDescription(dst_type, dst_layout, int(dst_align / DataTypeSize[dst_type])) 
 
-      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, True, implicit_gemm_mode, without_shared_load)
+      new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, True, implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
       operations.append(new_operation)
       if not skip_unity_kernel:
-        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, False, implicit_gemm_mode, without_shared_load)
+        new_operation = Conv2dOperation(conv_kind, ConvType.Convolution, min_cc, tile, src, flt, bias, dst, element_epilogue, epilogue, swizzling_functor, False, implicit_gemm_mode, without_shared_load, required_cuda_ver_major, required_cuda_ver_minor)
         operations.append(new_operation)
   return operations
 
@@ -545,7 +550,7 @@ class EmitConvSingleKernelWrapper():
       self.convolution_name = "Deconvolution"
 
     self.header_template = """
-#if !MEGDNN_TEGRA_X1
+#if __CUDACC_VER_MAJOR__ > ${required_cuda_ver_major} || (__CUDACC_VER_MAJOR__ == ${required_cuda_ver_major} && __CUDACC_VER_MINOR__ >= ${required_cuda_ver_minor})
 // ignore warning of cutlass
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -589,14 +594,17 @@ void initialize_${operation_name}(Manifest &manifest) {
     else:
       self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name())
     self.kernel_file = open(self.kernel_path, "w")
-    self.kernel_file.write(self.header_template)
+    self.kernel_file.write(SubstituteTemplate(self.header_template, {
+      'required_cuda_ver_major': str(self.operation.required_cuda_ver_major),
+      'required_cuda_ver_minor': str(self.operation.required_cuda_ver_minor),
+    }))
     return self
 
   #
   def emit(self):
     self.kernel_file.write(SubstituteTemplate(self.instance_template, {
       'operation_instance': self.instance_emitter.emit(self.operation),
-      }))
+    }))
 
     # emit manifest helper
     manifest = SubstituteTemplate(self.manifest_template, {

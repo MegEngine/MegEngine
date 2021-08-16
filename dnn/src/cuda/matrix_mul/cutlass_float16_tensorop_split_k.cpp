@@ -2,7 +2,7 @@
  * \file dnn/src/cuda/matrix_mul/cutlass_float16_tensorop_split_k.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -15,14 +15,14 @@
 #include "src/cuda/matrix_mul/algos.h"
 #include "src/cuda/utils.h"
 
-#if CUDA_VERSION >= 9020
+#if CUDA_VERSION >= 10020
 using namespace megdnn;
 using namespace cuda;
 
 bool MatrixMulForwardImpl::AlgoFloat16TensorOpSplitK::is_available(
         const SizeArgs& args) const {
     auto&& param = args.opr->param();
-    int n = args.layout_c.shape[1],
+    int m = args.layout_c.shape[0], n = args.layout_c.shape[1],
         k = args.layout_a.shape[param.transposeA ? 0 : 1];
     bool available =
             args.opr->param().format == param::MatrixMul::Format::DEFAULT &&
@@ -32,8 +32,8 @@ bool MatrixMulForwardImpl::AlgoFloat16TensorOpSplitK::is_available(
     auto&& device_prop = cuda::current_device_prop();
     int y_grid_limit = device_prop.maxGridSize[1];
     // limit y grid
-    available &= ((n + m_algo_param.threadblock_n - 1) /
-                          m_algo_param.threadblock_n <=
+    available &= ((m + m_algo_param.threadblock_m - 1) /
+                          m_algo_param.threadblock_m <=
                   y_grid_limit);
     if (m_algo_param.instruction_m == 8 && m_algo_param.instruction_n == 8 &&
         m_algo_param.instruction_k == 4) {

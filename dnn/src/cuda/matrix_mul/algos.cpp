@@ -43,12 +43,14 @@ MatrixMulForwardImpl::AlgoPack::AlgoPack() {
     for (auto&& algo : simt_float32_gemv_batched_strided) {
         all_algos.push_back(&algo);
     }
+#if CUDA_VERSION >= 10020
     for (auto&& algo : tensorop_float16) {
         all_algos.push_back(&algo);
     }
     for (auto&& algo : tensorop_float16_split_k) {
         all_algos.push_back(&algo);
     }
+#endif
 #endif
     all_algos.push_back(&naive);
 
@@ -107,7 +109,9 @@ void MatrixMulForwardImpl::AlgoPack::fill_cutlass_algos() {
 #define cb(...)                                            \
     tensorop_float16.emplace_back(AlgoParam{__VA_ARGS__}); \
     tensorop_float16_split_k.emplace_back(AlgoParam{__VA_ARGS__});
+#if CUDA_VERSION >= 10020
     FOREACH_CUTLASS_MATMUL_F16_SHAPES(cb)
+#endif
 #undef cb
 #undef FOREACH_CUTLASS_MATMUL_F16_SHAPES
 }

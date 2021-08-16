@@ -21,7 +21,6 @@
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
 
-#define MEGDNN_WITH_BENCHMARK 1
 #if CUDA_VERSION >= 9020
 namespace megdnn {
 namespace test {
@@ -373,6 +372,7 @@ MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
 #undef cb
 #undef MEGDNN_FOREACH_CUTLASS_KERNEL
 
+#if CUDA_VERSION >= 10020
 #define MEGDNN_FOREACH_CUTLASS_KERNEL(cb)     \
     cb(1, 256, 128, 32, 64, 64, 32, 8, 8, 4); \
     cb(2, 128, 256, 32, 64, 64, 32, 8, 8, 4); \
@@ -448,6 +448,7 @@ MEGDNN_FOREACH_CUTLASS_KERNEL(cb)
 #undef cb
 
 #undef MEGDNN_FOREACH_CUTLASS_KERNEL
+#endif
 
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_CUTLASS_MATMUL) {
@@ -462,11 +463,13 @@ TEST_F(CUDA, BENCHMARK_CUTLASS_MATMUL_FEAT) {
                          "CUTLASS_FLOAT32_SIMT");
 }
 
+#if CUDA_VERSION >= 10020
 TEST_F(CUDA, BENCHMARK_CUTLASS_F16_MATMUL_FEAT) {
     benchmark_matrix_mul(handle_cuda(), get_f16_feat_model_args(),
                          dtype::Float16(), dtype::Float16(), dtype::Float16(),
                          "CUTLASS_FLOAT16_TENSOR_OP");
 }
+#endif
 #endif
 }  // namespace test
 }  // namespace megdnn

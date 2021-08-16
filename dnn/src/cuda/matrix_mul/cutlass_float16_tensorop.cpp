@@ -2,7 +2,7 @@
  * \file dnn/src/cuda/matrix_mul/cutlass_float16_tensorop.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
- * Copyright (c) 2014-2020 Megvii Inc. All rights reserved.
+ * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -15,7 +15,7 @@
 #include "src/cuda/matrix_mul/algos.h"
 #include "src/cuda/utils.h"
 
-#if CUDA_VERSION >= 9020
+#if CUDA_VERSION >= 10020
 using namespace megdnn;
 using namespace cuda;
 

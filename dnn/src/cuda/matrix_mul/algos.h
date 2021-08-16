@@ -241,6 +241,20 @@ public:
         return AlgoAttribute::REPRODUCIBLE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT)
+    std::string param() const override {
+        std::string ret;
+        // FIXME: algo param compatible with old version, to avoid fastrun cache error
+        struct AlgoParam_ {
+            int threadblock_m, threadblock_n, threadblock_k;
+            int warp_m, warp_n, warp_k;
+        };
+        AlgoParam_ algo_param{
+                m_algo_param.threadblock_m, m_algo_param.threadblock_n,
+                m_algo_param.threadblock_k, m_algo_param.warp_m,
+                m_algo_param.warp_n,        m_algo_param.warp_k};
+        serialize_write_pod(algo_param, ret);
+        return ret;
+    }
 
 private:
     void do_exec(const ExecArgs& args) const override;
@@ -263,6 +277,21 @@ public:
                AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
     MEGDNN_DECL_ALGO_TYPE(CUDA_FLOAT32_SIMT_SPLIT_K)
+    std::string param() const override {
+        std::string ret;
+        // FIXME: algo param compatible with old version, to avoid fastrun cache
+        // error
+        struct AlgoParam_ {
+            int threadblock_m, threadblock_n, threadblock_k;
+            int warp_m, warp_n, warp_k;
+        };
+        AlgoParam_ algo_param{
+                m_algo_param.threadblock_m, m_algo_param.threadblock_n,
+                m_algo_param.threadblock_k, m_algo_param.warp_m,
+                m_algo_param.warp_n,        m_algo_param.warp_k};
+        serialize_write_pod(algo_param, ret);
+        return ret;
+    }
 
 private:
     void do_exec(const ExecArgs& args) const override;
@@ -297,6 +326,7 @@ private:
     std::string m_name;
 };
 
+#if CUDA_VERSION >= 10020
 class MatrixMulForwardImpl::AlgoFloat16TensorOp final
         : public AlgoCutlassMatrixMulBase {
 public:
@@ -345,7 +375,7 @@ private:
     int min_alignment_requirement() const override { return 2; }
     std::string m_name;
 };
-
+#endif
 #endif
 
 class MatrixMulForwardImpl::AlgoPack : NonCopyableObj {
@@ -370,8 +400,10 @@ public:
     std::vector<AlgoFloat32SIMTSplitK> simt_float32_split_k;
     std::vector<AlgoFloat32SIMTGemvBatchedStrided>
             simt_float32_gemv_batched_strided;
+#if CUDA_VERSION >= 10020
     std::vector<AlgoFloat16TensorOp> tensorop_float16;
     std::vector<AlgoFloat16TensorOpSplitK> tensorop_float16_split_k;
+#endif
 #endif
     std::vector<AlgoBase*> all_algos;
 

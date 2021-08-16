@@ -23,7 +23,8 @@ from library import *
 class GemmOperation:
   #
   def __init__(self, gemm_kind, arch, tile_description, A, B, C, element_epilogue, \
-      epilogue_functor = EpilogueFunctor.LinearCombination, swizzling_functor = SwizzlingFunctor.Identity8):
+      epilogue_functor = EpilogueFunctor.LinearCombination, swizzling_functor = SwizzlingFunctor.Identity8, \
+      required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
 
     self.operation_kind = OperationKind.Gemm
     self.arch = arch
@@ -35,6 +36,9 @@ class GemmOperation:
     self.element_epilogue = element_epilogue
     self.epilogue_functor = epilogue_functor
     self.swizzling_functor = swizzling_functor
+    self.required_cuda_ver_major = required_cuda_ver_major
+    self.required_cuda_ver_minor = required_cuda_ver_minor
+
 
   #
   def is_complex(self):
@@ -161,7 +165,8 @@ class GemmOperation:
 #
 class GemvBatchedStridedOperation:
   #
-  def __init__(self, gemm_kind, arch, math_inst, threadblock_shape, thread_shape, A, B, C):
+  def __init__(self, gemm_kind, arch, math_inst, threadblock_shape, thread_shape, A, B, C, \
+      required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
 
     self.operation_kind = OperationKind.Gemm
     self.arch = arch
@@ -172,6 +177,8 @@ class GemvBatchedStridedOperation:
     self.A = A
     self.B = B
     self.C = C
+    self.required_cuda_ver_major = required_cuda_ver_major
+    self.required_cuda_ver_minor = required_cuda_ver_minor
 
   #
   def accumulator_type(self):
@@ -243,7 +250,7 @@ class GemvBatchedStridedOperation:
     return self.procedural_name()
 
 #
-def GeneratesGemm(tile, data_type, layout_a, layout_b, layout_c, min_cc, align_a = 32, align_b = 32, align_c = 32):
+def GeneratesGemm(tile, data_type, layout_a, layout_b, layout_c, min_cc, align_a = 32, align_b = 32, align_c = 32, required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
   operations = []
   swizzling_functor = SwizzlingFunctor.Identity1
 
@@ -261,20 +268,23 @@ def GeneratesGemm(tile, data_type, layout_a, layout_b, layout_c, min_cc, align_a
     B = TensorDescription(element_b, layout_b, int(align_b//DataTypeSize[element_b]))
     C = TensorDescription(element_c, layout_c, int(align_c//DataTypeSize[element_c]))
     operations.append(GemmOperation(GemmKind.Gemm, min_cc, tile, A, B, C, \
-                                element_epilogue, epilogue, swizzling_functor))
+                                element_epilogue, epilogue, swizzling_functor, \
+                                required_cuda_ver_major, required_cuda_ver_minor))
     operations.append(GemmOperation(GemmKind.SplitKParallel, min_cc, tile, A, B, C, \
-                                element_epilogue, epilogue, swizzling_functor))
+                                element_epilogue, epilogue, swizzling_functor, \
+                                required_cuda_ver_major, required_cuda_ver_minor))
   return operations
 
 def GeneratesGemv(math_inst, threadblock_shape, thread_shape, data_type, layout_a, layout_b, layout_c, min_cc, \
-                  align_a = 32, align_b = 32, align_c = 32):
+                  align_a = 32, align_b = 32, align_c = 32, \
+                  required_cuda_ver_major = 9, required_cuda_ver_minor = 2):
   element_a, element_b, element_c, element_epilogue = data_type
 
   A = TensorDescription(element_a, layout_a, int(align_a//DataTypeSize[element_a]))
   B = TensorDescription(element_b, layout_b, int(align_b//DataTypeSize[element_b]))
   C = TensorDescription(element_c, layout_c, int(align_c//DataTypeSize[element_c]))
   return GemvBatchedStridedOperation(GemmKind.GemvBatchedStrided, min_cc, math_inst, threadblock_shape, thread_shape, \
-                                     A, B, C)
+                                     A, B, C, required_cuda_ver_major, required_cuda_ver_minor)
 
 ###################################################################################################
 #
@@ -1025,7 +1035,7 @@ class EmitGemmSingleKernelWrapper:
     self.instance_emitter = instance_emitters[self.operation.gemm_kind]
 
     self.header_template = """
-#if __CUDACC_VER_MAJOR__ > 9 || (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)                 
+#if __CUDACC_VER_MAJOR__ > ${required_cuda_ver_major} || (__CUDACC_VER_MAJOR__ == ${required_cuda_ver_major} && __CUDACC_VER_MINOR__ >= ${required_cuda_ver_minor})                 
 // ignore warning of cutlass
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -1065,7 +1075,10 @@ void initialize_${operation_name}(Manifest &manifest) {
   def __enter__(self):
     self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
     self.kernel_file = open(self.kernel_path, "w")
-    self.kernel_file.write(self.header_template)
+    self.kernel_file.write(SubstituteTemplate(self.header_template, {
+      'required_cuda_ver_major': str(self.operation.required_cuda_ver_major),
+      'required_cuda_ver_minor': str(self.operation.required_cuda_ver_minor),
+    }))
     return self
 
   #
@@ -1109,7 +1122,7 @@ template void megdnn::cuda::cutlass_wrapper::
     self.instance_emitter = EmitGemvBatchedStridedInstance()
 
     self.header_template = """
-#if __CUDACC_VER_MAJOR__ > 9 || (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)
+#if __CUDACC_VER_MAJOR__ > ${required_cuda_ver_major} || (__CUDACC_VER_MAJOR__ == ${required_cuda_ver_major} && __CUDACC_VER_MINOR__ >= ${required_cuda_ver_minor})
 // ignore warning of cutlass
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -1136,7 +1149,9 @@ ${operation_instance}
     self.kernel_file = open(self.kernel_path, "w")
     self.kernel_file.write(SubstituteTemplate(self.header_template, {
       'wrapper_path': self.wrapper_path,
-      }))
+      'required_cuda_ver_major': str(self.operation.required_cuda_ver_major),
+      'required_cuda_ver_minor': str(self.operation.required_cuda_ver_minor),
+     }))
     return self
 
   #
