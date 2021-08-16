@@ -66,7 +66,9 @@ void init_common(py::module m) {
         .def_static("_get_default_device", &get_default_device)
         .def("__str__", &CompNode::to_string_logical)
         .def("__repr__", [](const CompNode& cn) {
-            return py::str("\"" + cn.to_string() + "\" from \"" + cn.to_string_logical() + "\"");
+            return mgb::ssprintf("CompNode(\"%s\" from \"%s\")",
+                    cn.to_string_physical().c_str(),
+                    cn.to_string_logical().c_str());
         })
         .def_static("_sync_all", &CompNode::sync_all)
         .def(py::self == py::self)

@@ -368,8 +368,15 @@ class CompNode {
         //! change to another stream on the same memory node
         CompNode change_stream(int dest_stream) const;
 
-        //! get string representation of physical device
+        //! get string representation
         std::string to_string() const {
+            return m_impl ? mgb::ssprintf("CompNode(\"%s\" from \"%s\")",
+                    to_string_physical().c_str(),
+                    to_string_logical().c_str()) : "invalid";
+        }
+
+        //! get string representation of physical device
+        std::string to_string_physical() const {
             return m_impl ? m_impl->locator().to_string() : "invalid";
         }
 
