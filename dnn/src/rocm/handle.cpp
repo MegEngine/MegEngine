@@ -24,6 +24,7 @@
 #include "src/rocm/pooling/opr_impl.h"
 #include "src/rocm/reduce/opr_impl.h"
 #include "src/rocm/type_cvt/opr_impl.h"
+#include "src/rocm/topk/opr_impl.h"
 #include "src/rocm/add_update/opr_impl.h"
 #include "src/rocm/matrix_mul/opr_impl.h"
 #include "src/rocm/batched_matrix_mul/opr_impl.h"
@@ -161,6 +162,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(TopK);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(AddUpdateForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MatrixMulForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedMatrixMulForward);
