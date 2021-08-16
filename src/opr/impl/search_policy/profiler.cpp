@@ -222,7 +222,8 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     mgb_assert(miopen_algo_search_enabled, "MIOpen algo search not enabled");
 #endif
     auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
+    CompNode cn =
+            CompNode::load(param.comp_node_physical, param.comp_node_logical);
     auto megdnn_opr = intl::create_megdnn_opr<Opr>(cn);
     std::array<TensorLayout, arity> layouts;
 
@@ -395,7 +396,8 @@ void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
     megcore::enableMIOpenAlgoSearch(true);
 #endif
     auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn = CompNode::load(param.comp_node_loc, param.comp_node_loc);
+    CompNode cn =
+            CompNode::load(param.comp_node_physical, param.comp_node_logical);
     // wait for cuda init, so its time does not get accounted in timeout
     cn.sync();
     MIDOUT_E

@@ -853,7 +853,8 @@ AlgoChooser<Opr>::AlgoChooserHelper::profile_single_algo(
                    src.to_string().c_str());
         param.dtypes[i] = src.dtype.enumv();
     }
-    param.comp_node_loc = m_cn.locator();
+    param.comp_node_physical = m_cn.locator();
+    param.comp_node_logical = m_cn.locator_logical();
     mgb_assert(param.shapes.size() == m_fastrun_layouts.size());
     for (size_t i = 0; i < param.shapes.size(); ++i)
         param.shapes[i] = m_fastrun_layouts[i];

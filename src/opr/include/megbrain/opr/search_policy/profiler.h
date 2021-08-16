@@ -122,7 +122,7 @@ public:
         ExecutionPolicyBlob execution_policy;
         size_t workspace;
         megdnn::DTypeEnum dtypes[arity];
-        CompNode::Locator comp_node_loc;
+        CompNode::Locator comp_node_physical, comp_node_logical;
         TensorShapeArray shapes;
         typename Opr::Param opr_param;
         bool allow_weight_preprocess;
