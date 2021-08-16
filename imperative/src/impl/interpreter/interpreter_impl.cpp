@@ -615,13 +615,15 @@ void ChannelImpl::release_tensor(TensorInfo* dest) {
 }
 
 void ChannelImpl::regenerate(TensorInfo* dest) {
-    RECORD_EVENT(TensorCommandEvent, dest->id, TensorCommandEvent::ReGen);
     if (dest->evict_type == EvictType::DROP) {
-        recompute(dest->producer);
+        auto &&path = dest->producer;
+        m_apply_stack.push({ApplyOp{path->id, path->op, path->inputs, path->outputs, {}}, 0, dest});
+        if (!m_applying) flush_apply_stack();
     } else if (dest->evict_type == EvictType::SWAP) {
+        RECORD_EVENT(TensorCommandEvent, dest->id, TensorCommandEvent::ReGen);
         produce_tensor(dest, Tensor::make(dest->h_value));
+        RECORD_EVENT(TensorCommandFinishEvent, dest->id, TensorCommandFinishEvent::ReGen);
     }
-    RECORD_EVENT(TensorCommandFinishEvent, dest->id, TensorCommandFinishEvent::ReGen);
 }
 
 void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
@@ -635,17 +637,6 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
         MemoryDesc desc;
     };
     SmallVector<TensorWithDesc> inputs;
-    // SmallVector<TensorPtr> tensor_inputs;
-    if (state.options.enable_dtr_auto_drop) {
-        m_dtr.pin(cmd.inputs); 
-    }
-    for (auto i : cmd.inputs) {
-        if (!i->ptr && i->evict_type != EvictType::NONE) {
-            regenerate(i);
-        }
-        m_dtr.update_used_time(i);
-    }
-    // tensor_inputs.reserve(cmd.inputs.size());
     inputs.reserve(cmd.inputs.size());
     // refcnt == 1, owners: [TensorInfo::ptr]
     for (auto i : cmd.inputs) {
@@ -781,20 +772,48 @@ void ChannelImpl::do_apply_op(const ApplyOp& cmd) {
     // End profiling operator
 }
         
-void ChannelImpl::recompute(TensorInfo::ComputePath* path) {
+void ChannelImpl::flush_apply_stack() {
+    m_applying = true;
     auto& state = get_worker_state();
-    do_apply_op(ApplyOp{path->id, path->op, path->inputs, path->outputs, {}});
-    for (size_t i = 0;i < path->outputs.size();i ++) {
-        auto&& o = path->outputs[i];
-        if (o) {
-            o->recompute_times ++;
-            if (!o->ptr) {
-                if (state.options.enable_dtr_auto_drop) {
+    while (!m_apply_stack.empty()) {
+        auto& [cmd, idx, recomp] = m_apply_stack.top(); // cmd.inputs[0~idx-1] is in memory
+        if (idx == 0) {
+            if (state.options.enable_dtr_auto_drop) {
+                m_dtr.pin(cmd.inputs);
+            }
+            if (recomp) {
+                RECORD_EVENT(TensorCommandEvent, recomp->id, TensorCommandEvent::ReGen);
+            }
+        }
+        bool regen = false;
+        for (size_t i = idx; i < cmd.inputs.size(); i ++) {
+            auto&& p = cmd.inputs[i];
+            if (state.options.enable_dtr_auto_drop) {
+                m_dtr.update_used_time(p);
+            }
+            if (!p->ptr && p->evict_type != EvictType::NONE) {
+                idx = i + 1;
+                regenerate(p); // add ApplyOp to the stack
+                regen = true;
+                break;
+            }
+        }
+        if (regen) continue;
+        // the required input tensors are already in memory
+        auto cmd_backup = cmd;
+        auto recomp_backup = recomp;
+        m_apply_stack.pop();
+        do_apply_op(cmd_backup);
+        if (recomp_backup) {
+            RECORD_EVENT(TensorCommandFinishEvent, recomp_backup->id, TensorCommandFinishEvent::ReGen);
+            for (auto o : cmd_backup.outputs) {
+                if (o) {
                     m_dtr.update_dsu_after_recompute(o);
                 }
             }
         }
     }
+    m_applying = false;
 }
 
 bool ChannelImpl::auto_evict(size_t force_num) {
@@ -997,7 +1016,8 @@ void ChannelImpl::process_one_task(IdentifiedCommand& icmd) {
                 RECORD_EVENT(TensorCommandFinishEvent, cmd.dest->id, TensorCommandFinishEvent::Put);
                 sample_on_device(cmd.dest->desc.comp_node, false);
             } else if constexpr (std::is_same_v<T, ApplyOp>) {
-                do_apply_op(cmd);
+                m_apply_stack.push({cmd, 0, nullptr});
+                flush_apply_stack();
                 for (size_t i = 0; i < cmd.outputs.size(); ++i) {
                     auto output = cmd.outputs[i];
                     if (output == nullptr) {

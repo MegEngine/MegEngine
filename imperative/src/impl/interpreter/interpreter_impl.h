@@ -14,10 +14,10 @@
 #include <deque>
 #include <future>
 #include <list>
+#include <stack>
 #include <thread>
 #include <unordered_set>
 #include <variant>
-
 #include "megbrain/comp_node.h"
 #include "megbrain/utils/mempool.h"
 #include "megbrain/imperative/interpreter.h"
@@ -103,8 +103,8 @@ private:
     void release_tensor(TensorInfo* dest);
 
     void regenerate(TensorInfo* dest);
-    void recompute(TensorInfo::ComputePath* path);
     void do_apply_op(const ApplyOp& cmd);
+    void flush_apply_stack();
     
     std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>> init_output_and_workspace(
         const OpDef& def,
@@ -149,7 +149,8 @@ private:
     std::exception_ptr m_worker_exc;
     std::function<void(std::string, std::string)> m_profile_dump_callback;
     size_t m_storage_id = 0;
-
+    std::stack<std::tuple<ApplyOp, size_t, TensorInfo*>> m_apply_stack;
+    bool m_applying = false;
     bool m_closed = false;
 
     struct WorkQueue : AsyncQueueSC<IdentifiedCommand, WorkQueue> {
