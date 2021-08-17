@@ -222,45 +222,40 @@ def _normalize_axis(
     raise
 
 
+_opr_map = {
+    ("-", 1): builtin.Elemwise(mode="negate"),
+    ("fma3", 3): builtin.Elemwise(mode="FUSE_MUL_ADD3"),
+    ("fma4", 4): builtin.Elemwise(mode="FUSE_MUL_ADD4"),
+}
+
+for name, mode in [
+    ("+", "add"),
+    ("-", "sub"),
+    ("*", "mul"),
+    ("/", "true_div"),
+    ("//", "floor_div"),
+    ("**", "pow"),
+    ("max", "max"),
+    ("additive", "add"),
+]:
+    _opr_map[(name, 2)] = builtin.Elemwise(mode=mode)
+
+
 def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
     if device.physical_name.startswith("cpu"):
         gopt_level = None  # disable jit and compile
 
-    binary_ops = {
-        "+": lambda: builtin.Elemwise(mode="add"),
-        "-": lambda: builtin.Elemwise(mode="sub"),
-        "*": lambda: builtin.Elemwise(mode="mul"),
-        "/": lambda: builtin.Elemwise(mode="true_div"),
-        "//": lambda: builtin.Elemwise(mode="floor_div"),
-        "**": lambda: builtin.Elemwise(mode="pow"),
-        "√": lambda: builtin.Elemwise(mode="expm1"),
-        "max": lambda: builtin.Elemwise(mode="max"),
-        "additive": lambda: builtin.Elemwise(mode="add"),
-    }
-
-    unary_ops = {
-        "-": lambda: builtin.Elemwise(mode="negate"),
-    }
-
-    ternary_ops = {
-        "fma3": lambda: builtin.Elemwise(mode="FUSE_MUL_ADD3"),
-    }
-
-    quaternary_ops = {"fma4": lambda: builtin.Elemwise(mode="FUSE_MUL_ADD4")}
+    def as_op(op, nargs):
+        if isinstance(op, str):
+            assert (op, nargs) in _opr_map, "unknown operator"
+            op = _opr_map[(op, nargs)]
+        return op
 
     def decorator(func):
         builder = _SubgraphBuilder(name)
 
         def apply_expr(op, *args, nr_out=None):
-            if isinstance(op, str):
-                if len(args) == 2:
-                    op = binary_ops[op]()
-                elif len(args) == 1:
-                    op = unary_ops[op]()
-                elif len(args) == 3:
-                    op = ternary_ops[op]()
-                elif len(args) == 4:
-                    op = quaternary_ops[op]()
+            op = as_op(op, len(args))
             results = builder.apply(op, args, 1 if nr_out is None else nr_out)
             if nr_out is None:
                 assert len(results) == 1
@@ -280,5 +275,42 @@ def subgraph(name, dtype, device, nr_inputs, gopt_level=None):
             return lambda: builder.get()
         else:
             return lambda: builder.compile(gopt_level)
+
+    return decorator
+
+
+def interpret_subgraph(func, dtype, device):
+    def as_op(op, nargs):
+        if isinstance(op, str) and (op, nargs) in _opr_map:
+            op = _opr_map[(op, nargs)]
+        return op
+
+    def decorated_func(*args):
+        def apply_expr(op, *args, nr_out=None):
+            op = as_op(op, len(args))
+            results = apply(op, *args)
+            if nr_out is None:
+                assert len(results) == 1
+                return results[0]
+            else:
+                assert len(results) == nr_out
+                return results
+
+        def apply_const(value, dtype=dtype, device=device):
+            return Const(value, dtype=dtype, device=device)()[0]
+
+        outputs, outputs_has_grad = func(args, apply_expr, apply_const)
+        return outputs
+
+    return decorated_func
+
+
+def subgraph_fn(name, dtype, device, nr_inputs, gopt_level=None, interpret=False):
+    def decorator(func):
+        if not interpret:
+            op = subgraph(name, dtype, device, nr_inputs, gopt_level=gopt_level)(func)
+            return lambda *args: apply(op(), *args)
+        else:
+            return interpret_subgraph(func, dtype, device)
 
     return decorator

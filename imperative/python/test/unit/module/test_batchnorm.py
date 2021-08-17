@@ -15,6 +15,7 @@ import pytest
 import megengine as mge
 import megengine.distributed as dist
 from megengine import Tensor
+from megengine.autodiff.grad_manager import GradManager
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.module import BatchNorm1d, BatchNorm2d, SyncBatchNorm
 
@@ -337,3 +338,33 @@ def test_syncbn2d_no_stats():
         yv_expect = (xv - mean) / sd
 
         _assert_allclose(yv.numpy(), yv_expect)
+
+
+def test_syncbn2d_grad():
+    nr_chan = 8
+    data_shape = (3, nr_chan, 16, 16)
+    syncbn = SyncBatchNorm(8, track_running_stats=False)
+    bn = BatchNorm2d(8, track_running_stats=False)
+    for i in range(4):
+        if i == 2:
+            syncbn.training = False
+            bn.training = False
+        inp = Tensor(np.random.normal(loc=2.3, size=data_shape).astype(np.float32))
+        diff = Tensor(np.random.normal(size=data_shape).astype(np.float32))
+
+        with GradManager().attach(inp) as gm:
+            oup = syncbn(inp)
+            gm.backward(oup, diff)
+
+        grad = inp.grad
+        inp.grad = None
+
+        with GradManager().attach(inp) as gm:
+            oup_expect = bn(inp)
+            gm.backward(oup_expect, diff)
+
+        grad_expect = inp.grad
+        inp.grad = None
+
+        _assert_allclose(oup.numpy(), oup_expect.numpy())
+        _assert_allclose(grad.numpy(), grad_expect.numpy())
