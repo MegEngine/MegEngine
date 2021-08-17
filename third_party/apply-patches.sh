@@ -3,12 +3,12 @@ set -e
 
 function apply_cpuinfo_patches() {
     if [ -d "./cpuinfo" ]; then
-        cp ./patches/0001-fix-arm-linux-fix-some-build-warnings-and-errors.patch cpuinfo/
+        cp ./patches/cpuinfo-multi-commits.patch cpuinfo/
         pushd cpuinfo >/dev/null
         git config user.name "$1"
         git config user.email "$2"
-        git am 0001-fix-arm-linux-fix-some-build-warnings-and-errors.patch
-        rm 0001-fix-arm-linux-fix-some-build-warnings-and-errors.patch
+        git am cpuinfo-multi-commits.patch
+        rm cpuinfo-multi-commits.patch
         popd >/dev/null
     else
         echo "cpuinfo not exist, can not apply patches."

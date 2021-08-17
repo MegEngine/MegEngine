@@ -1,7 +1,58 @@
-From 541633ca7734f4c58e4f1832171ff0fd141f547e Mon Sep 17 00:00:00 2001
+From 20b885be9c76232f4d25ae9fe6c685861736a747 Mon Sep 17 00:00:00 2001
+From: liyuzhong <liyuzhong@megvii.com>
+Date: Thu, 9 Jul 2020 14:59:55 +0800
+Subject: [PATCH 1/2] fix(arm/linux): fix unused var for cross compile error
+
+---
+ src/arm/linux/chipset.c | 1 +
+ src/arm/linux/cpuinfo.c | 1 +
+ src/linux/processors.c  | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/src/arm/linux/chipset.c b/src/arm/linux/chipset.c
+index e36283c..8631f64 100644
+--- a/src/arm/linux/chipset.c
++++ b/src/arm/linux/chipset.c
+@@ -2402,6 +2402,7 @@ struct cpuinfo_arm_chipset cpuinfo_arm_linux_decode_chipset_from_proc_cpuinfo_ha
+ 
+ 		#endif
+ 
++		(void)max_cpu_freq_max;
+ 		/* Check Telechips TCC signature */
+ 		if (match_tcc(hardware, hardware_end, &chipset)) {
+ 			cpuinfo_log_debug(
+diff --git a/src/arm/linux/cpuinfo.c b/src/arm/linux/cpuinfo.c
+index 90e1631..ad89729 100644
+--- a/src/arm/linux/cpuinfo.c
++++ b/src/arm/linux/cpuinfo.c
+@@ -671,6 +671,7 @@ static bool parse_line(
+ 	if (line_start == line_end) {
+ 		return true;
+ 	}
++	(void)line_number;
+ 
+ 	/* Search for ':' on the line. */
+ 	const char* separator = line_start;
+diff --git a/src/linux/processors.c b/src/linux/processors.c
+index aedba74..4904e2a 100644
+--- a/src/linux/processors.c
++++ b/src/linux/processors.c
+@@ -217,6 +217,7 @@ bool cpuinfo_linux_get_processor_package_id(uint32_t processor, uint32_t package
+ 
+ static bool max_processor_number_parser(uint32_t processor_list_start, uint32_t processor_list_end, void* context) {
+ 	uint32_t* processor_number_ptr = (uint32_t*) context;
++	(void)processor_list_start;
+ 	const uint32_t processor_list_last = processor_list_end - 1;
+ 	if (*processor_number_ptr < processor_list_last) {
+ 		*processor_number_ptr = processor_list_last;
+-- 
+2.17.1
+
+
+From a0f9f754b804e129f6e11f87047f3d586607a4ef Mon Sep 17 00:00:00 2001
 From: chenqiyou <chenqiyou@megvii.com>
 Date: Fri, 16 Jul 2021 19:10:40 +0800
-Subject: [PATCH] fix(cpuinfo): fix cpuinfo build and sensitive word
+Subject: [PATCH 2/2] fix(cpuinfo): fix cpuinfo build and sensitive word
 
 ---
  src/arm/linux/chipset.c  | 32 ++++++++++++++++++++++++++++++--
@@ -288,5 +339,5 @@ index 4904e2a..a1d4693 100644
  	} else {
  		for (const char* char_ptr = parsed_end; char_ptr != text_end; char_ptr++) {
 -- 
-2.25.1
+2.17.1
 
