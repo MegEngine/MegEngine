@@ -10,7 +10,6 @@ import os.path
 import shutil
 from typing import Tuple, List
 
-from lazy_file import LazyFile
 from library import *
 
 ###################################################################################################
@@ -584,7 +583,7 @@ void initialize_${operation_name}(Manifest &manifest) {
   #
   def __enter__(self):
     self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
-    self.kernel_file = LazyFile(self.kernel_path)
+    self.kernel_file = open(self.kernel_path, "w")
     self.kernel_file.write(self.header_template)
     return self
 
