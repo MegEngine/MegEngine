@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #include "src/naive/batch_normalization/opr_impl.h"
 
@@ -219,13 +220,14 @@ void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
                          _megdnn_tensor_inout variance,
                          _megdnn_tensor_out batch_mean,
                          _megdnn_tensor_out batch_inv_variance,
-                         _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+                         _megdnn_tensor_out, _megdnn_tensor_out dst,
+                         _megdnn_workspace workspace) {
     check_exec(src.layout, bn_scale.layout, bn_bias.layout, mean.layout,
                variance.layout, batch_mean.layout, batch_inv_variance.layout,
                dst.layout, workspace.size);
 
     DNN_INC_FLOAT16(if (src.layout.dtype == dtype::Float16() &&
-                           bn_scale.layout.dtype == dtype::Float32()) {
+                        bn_scale.layout.dtype == dtype::Float32()) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(({
             using T0 = typename DTypeTrait<dtype::Float16>::ctype;
             using T1 = typename DTypeTrait<dtype::Float32>::ctype;
@@ -263,7 +265,7 @@ WorkspaceBundle BNBackwardImpl::get_workspace_bundle(size_t x_size,
 size_t BNBackwardImpl::get_workspace_in_bytes(
         const TensorLayout& x, const TensorLayout&, const TensorLayout&,
         const TensorLayout&, const TensorLayout& bn_scale, const TensorLayout&,
-        const TensorLayout&, const TensorLayout&) {
+        const TensorLayout&, const TensorLayout&, const TensorLayout&) {
     auto x_size = x.total_nr_elems(), param_size = bn_scale.total_nr_elems();
     return get_workspace_bundle(x_size, param_size).total_size_in_bytes();
 }
@@ -271,7 +273,7 @@ size_t BNBackwardImpl::get_workspace_in_bytes(
 void BNBackwardImpl::exec(_megdnn_tensor_in x_in, _megdnn_tensor_in dy_in,
                           _megdnn_tensor_in saved_batch_mean,
                           _megdnn_tensor_in saved_batch_inv_variance,
-                          _megdnn_tensor_in bn_scale,
+                          _megdnn_tensor_in bn_scale, _megdnn_tensor_in,
                           _megdnn_tensor_out d_bn_scale,
                           _megdnn_tensor_out d_bn_bias,
                           _megdnn_tensor_out dx_out,
@@ -286,7 +288,7 @@ void BNBackwardImpl::exec(_megdnn_tensor_in x_in, _megdnn_tensor_in dy_in,
                                          workspace.raw_ptr);
 
     DNN_INC_FLOAT16(if (x_in.layout.dtype == dtype::Float16() &&
-                           bn_scale.layout.dtype == dtype::Float32()) {
+                        bn_scale.layout.dtype == dtype::Float32()) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(({
             using T0 = typename DTypeTrait<dtype::Float16>::ctype;
             using T1 = typename DTypeTrait<dtype::Float32>::ctype;

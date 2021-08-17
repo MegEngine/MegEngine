@@ -682,7 +682,8 @@ public:
      * http://deeplearning.net/software/theano/library/tensor/nnet/neighbours.html
      *
      * \f$ dst_{n, c, oh, ow, wh, ww} = src_{n, c, ih+wh, iw+fw}\f$,
-     * where \f$ ih=-pad_h+oh*stride_h+(wh-1)*(dilation_h-1), iw=-pad_w+ow*stride_w+(ww-1)*(dilation_w-1)\f$.
+     * where \f$ ih=-pad_h+oh*stride_h+(wh-1)*(dilation_h-1),
+     * iw=-pad_w+ow*stride_w+(ww-1)*(dilation_w-1)\f$.
      */
     virtual void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                       _megdnn_workspace workspace) = 0;
@@ -724,7 +725,8 @@ protected:
 };
 
 class SlidingWindowTransposeForward : public SlidingWindowTransposeBase {
-    DEF_OPR_IMPL(SlidingWindowTransposeForward, SlidingWindowTransposeBase, 1, 1);
+    DEF_OPR_IMPL(SlidingWindowTransposeForward, SlidingWindowTransposeBase, 1,
+                 1);
 
 public:
     /**
@@ -744,7 +746,8 @@ protected:
 using SlidingWindowTranspose = SlidingWindowTransposeForward;
 
 class SlidingWindowTransposeBackward : public SlidingWindowTransposeBase {
-    DEF_OPR_IMPL(SlidingWindowTransposeBackward, SlidingWindowTransposeBase, 1, 1);
+    DEF_OPR_IMPL(SlidingWindowTransposeBackward, SlidingWindowTransposeBase, 1,
+                 1);
 
 public:
     /**
@@ -975,7 +978,7 @@ protected:
 };
 
 class BNForward : public BNBase {
-    DEF_OPR_IMPL(BNForward, BNBase, 6, 5);
+    DEF_OPR_IMPL(BNForward, BNBase, 6, 6);
 
 public:
     /**
@@ -986,10 +989,11 @@ public:
      * \param[out] dst (n, c, h, w)
      * \param[out] mean (see m_param.ParamDim) Global mean.
      * \param[out] variance (see m_param.ParamDim) Global variance.
-     * \Param[out] batch_mean (see m_param.ParamDim)
+     * \param[out] batch_mean (see m_param.ParamDim)
      *   Optionally cached intermediate mean from forward pass
-     * \Param[out] batch_inv_variance (see m_param.ParamDim)
+     * \param[out] batch_inv_variance (see m_param.ParamDim)
      *   Optionally cached intermediate variance from forward pass
+     * \param[out] reserve (see cudnnBatchNormalizationForwardTrainingEx)
      * src and dst must have the same shape.
      * src and dst must be contiguous.
      */
@@ -998,17 +1002,20 @@ public:
                       _megdnn_tensor_inout variance,
                       _megdnn_tensor_out batch_mean,
                       _megdnn_tensor_out batch_inv_variance,
-                      _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
-    void deduce_layout(const TensorLayout& src, TensorLayout& bn_scale,
-                       TensorLayout& bn_bias, TensorLayout& mean,
+                      _megdnn_tensor_out reserve, _megdnn_tensor_out dst,
+                      _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& src, const TensorLayout& bn_scale,
+                       const TensorLayout& bn_bias, TensorLayout& mean,
                        TensorLayout& variance, TensorLayout& batch_mean,
-                       TensorLayout& batch_inv_variance, TensorLayout& dst);
+                       TensorLayout& batch_inv_variance, TensorLayout& reserve,
+                       TensorLayout& dst);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& src, const TensorLayout& bn_scale,
             const TensorLayout& bn_bias, const TensorLayout& mean,
             const TensorLayout& variance, const TensorLayout& batch_mean,
-            const TensorLayout& batch_inv_variance,
+            const TensorLayout& batch_inv_variance, const TensorLayout& reserve,
             const TensorLayout& dst) = 0;
+    virtual size_t get_reserve_in_bytes(const TensorLayout& src) = 0;
 
 protected:
     void check_exec(const TensorLayout& src, const TensorLayout& bn_scale,
@@ -1016,12 +1023,13 @@ protected:
                     const TensorLayout& variance,
                     const TensorLayout& batch_mean,
                     const TensorLayout& batch_inv_variance,
-                    const TensorLayout& dst, size_t workspace_in_bytes);
+                    const TensorLayout& dst, size_t workspace_in_bytes,
+                    size_t reserve_in_bytes = 0);
 };
 using BN = BNForward;
 
 class BNBackward : public BNBase {
-    DEF_OPR_IMPL(BNBackward, BNBase, 5, 3);
+    DEF_OPR_IMPL(BNBackward, BNBase, 6, 3);
 
 public:
     /**
@@ -1035,19 +1043,23 @@ public:
         Calculated in the forwardpropagation.
      * \param[in] saved_batch_variance of the input batch.
         Calculated in the forwardpropagation.
+     * \param[in] reserve (see cudnnBatchNormalizationBackwardEx)
      */
     virtual void exec(_megdnn_tensor_in x, _megdnn_tensor_in dy,
                       _megdnn_tensor_in saved_batch_mean,
                       _megdnn_tensor_in saved_batch_variance,
-                      _megdnn_tensor_in bn_scale, _megdnn_tensor_out d_bn_scale,
+                      _megdnn_tensor_in bn_scale, _megdnn_tensor_in reserve,
+                      _megdnn_tensor_out d_bn_scale,
                       _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx,
                       _megdnn_workspace workspace) = 0;
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& x, const TensorLayout& dy,
             const TensorLayout& saved_batch_mean,
             const TensorLayout& saved_batch_variance,
-            const TensorLayout& bn_scale, const TensorLayout& d_bn_scale,
-            const TensorLayout& d_bn_bias, const TensorLayout& dx) = 0;
+            const TensorLayout& bn_scale, const TensorLayout& reserve,
+            const TensorLayout& d_bn_scale, const TensorLayout& d_bn_bias,
+            const TensorLayout& dx) = 0;
+    virtual size_t get_reserve_in_bytes(const TensorLayout& src) = 0;
 
 protected:
     void check_exec(const TensorLayout& x, const TensorLayout& dy,
@@ -1056,7 +1068,7 @@ protected:
                     const TensorLayout& bn_scale,
                     const TensorLayout& d_bn_scale,
                     const TensorLayout& d_bn_bias, const TensorLayout& dx,
-                    size_t workspace_in_bytes);
+                    size_t workspace_in_bytes, size_t reserve_in_bytes = 0);
 };
 
 class LRNBase : public OperatorBase {
