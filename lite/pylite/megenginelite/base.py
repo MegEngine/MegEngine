@@ -15,7 +15,7 @@ import sys
 from ctypes import *
 
 if sys.platform == "win32":
-    lib_path = os.path.join(os.path.dirname(__file__), "libs")
+    lib_path = os.path.join(os.path.dirname(__file__), "../megengine/core/lib")
     dll_paths = list(filter(os.path.exists, [lib_path,]))
     assert len(dll_paths) > 0
 

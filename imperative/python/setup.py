@@ -78,6 +78,16 @@ megengine_data += [
     for f in pathlib.Path('megengine', 'core', 'lib').glob('**/*')
 ]
 
+megenginelite_data = [
+    str(f.relative_to('megenginelite'))
+    for f in pathlib.Path('megenginelite').glob('**/*')
+]
+
+if platform.system() == 'Windows':
+    megenginelite_data.remove('libs\\liblite_shared_whl.pyd')
+else:
+    megenginelite_data.remove('libs/liblite_shared_whl.so')
+
 with open('requires.txt') as f:
     requires = f.read().splitlines()
 with open('requires-style.txt') as f:
@@ -86,6 +96,7 @@ with open('requires-test.txt') as f:
     requires_test = f.read().splitlines()
 
 prebuild_modules=[PrecompiledExtesion('megengine.core._imperative_rt')]
+prebuild_modules.append(PrecompiledExtesion('megenginelite.libs.liblite_shared_whl'))
 setup_kwargs = dict(
     name=package_name,
     version=__version__,
@@ -96,6 +107,7 @@ setup_kwargs = dict(
     packages=packages,
     package_data={
         'megengine': megengine_data,
+        'megenginelite': megenginelite_data,
     },
     ext_modules=prebuild_modules,
     install_requires=requires,

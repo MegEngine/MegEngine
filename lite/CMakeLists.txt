@@ -75,12 +75,30 @@ if(ANDROID)
     target_link_libraries(lite_shared PRIVATE log)
 endif()
 
+# define a shared lib for whl
+add_library(lite_shared_whl SHARED $<TARGET_OBJECTS:lite_static>)
+if(LITE_BUILD_WITH_MGE)
+    if (MSVC OR WIN32 OR IOS)
+        # TODO: this will lead whl size increase on Windows, caused by
+        # Windows does not support implicitly importing data members from DLL.
+        target_link_libraries(lite_shared_whl PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
+    else()
+        target_link_libraries(lite_shared_whl PRIVATE megengine_export)
+    endif()
+endif()
+if(ANDROID)
+    target_link_libraries(lite_shared_whl PRIVATE log)
+endif()
+
+
 if(LITE_BUILD_WITH_MGE AND LITE_WITH_CUDA AND NOT WIN32)
     # FXIME third_party cpp redis do not support build with clang-cl
     target_include_directories(lite_static PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
     target_include_directories(lite_static PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
     target_include_directories(lite_shared PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
     target_include_directories(lite_shared PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
+    target_include_directories(lite_shared_whl PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
+    target_include_directories(lite_shared_whl PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
 endif()
 set(LITE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/lite/src/version_lite.ld CACHE INTERNAL "Path to linker version script")
 add_custom_target(_lite_version_ld SOURCES ${LITE_VERSION_SCRIPT})
@@ -92,6 +110,8 @@ endif()
 if (UNIX AND NOT APPLE)
     target_link_options(lite_shared PRIVATE -Wl,--version-script=${LITE_VERSION_SCRIPT})
     set_target_properties(lite_shared PROPERTIES LINK_DEPENDS ${LITE_VERSION_SCRIPT})
+    target_link_options(lite_shared_whl PRIVATE -Wl,--version-script=${LITE_VERSION_SCRIPT})
+    set_target_properties(lite_shared_whl PROPERTIES LINK_DEPENDS ${LITE_VERSION_SCRIPT})
 endif()
 
 # config install

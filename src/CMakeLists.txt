@@ -202,17 +202,15 @@ set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 # depends on megdnn/megbrain target, refs to sdk/load-and-run/CMakeLists.txt
 # depends on megengine lite_share or lite_static
 if(NOT WIN32)
-    if(MGE_BUILD_IMPERATIVE_RT
-            )
-        message(VERBOSE "create a export SHARED lib for python use")
-        add_library(megengine_export SHARED)
-        target_link_libraries(megengine_export PUBLIC megbrain megdnn)
-        target_link_libraries(megengine_export PRIVATE ${MGE_CUDA_LIBS})
-        if (MGE_WITH_DISTRIBUTED)
-            message(VERBOSE "megengine_export configured to link megray")
-            target_link_libraries(megengine_export PUBLIC megray)
-        endif()
+    message(VERBOSE "create a export SHARED lib for python use")
+    add_library(megengine_export SHARED)
+    target_link_libraries(megengine_export PUBLIC megbrain megdnn)
+    target_link_libraries(megengine_export PRIVATE ${MGE_CUDA_LIBS})
+    if (MGE_WITH_DISTRIBUTED)
+        message(VERBOSE "megengine_export configured to link megray")
+        target_link_libraries(megengine_export PUBLIC megray)
     endif()
+
     # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
     add_library(megengine)
     target_link_libraries(megengine PRIVATE ${MGE_CUDA_LIBS})

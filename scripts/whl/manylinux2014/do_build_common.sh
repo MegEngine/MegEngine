@@ -60,6 +60,17 @@ function patch_elf_depend_lib_mgb_mge() {
     handle_copy_cuda_libs ${LIBS_DIR}
 }
 
+function patch_elf_depend_lib_megenginelite() {
+    echo "handle common depend lib for megenginelite"
+    LIBS_DIR=${BUILD_DIR}/staging/megenginelite/libs
+    mkdir -p ${LIBS_DIR}
+
+    cp ${BUILD_DIR}/lite/liblite_shared_whl.so ${LIBS_DIR}/
+    patchelf --remove-rpath ${LIBS_DIR}/liblite_shared_whl.so
+    patchelf --force-rpath --set-rpath '$ORIGIN/../../megengine/core/lib' ${LIBS_DIR}/liblite_shared_whl.so
+    handle_strip ${LIBS_DIR}/liblite_shared_whl.so
+}
+
 SRC_DIR=$(readlink -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
@@ -144,6 +155,12 @@ do
     mkdir -p lib/ucx
     patch_elf_depend_lib_mgb_mge
 
+    # handle megenginelite
+    cd ${BUILD_DIR}
+    mkdir -p staging/megenginelite
+    cp ${SRC_DIR}/lite/pylite/megenginelite/* staging/megenginelite/
+    patch_elf_depend_lib_megenginelite
+
     cd ${BUILD_DIR}/staging/
     ${PYTHON_DIR}/bin/python setup.py bdist_wheel
     cd /home/output
@@ -153,33 +170,6 @@ do
     compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2014/'`
     echo "org whl name: ${org_whl_name}"
     echo "comapt whl name: ${compat_whl_name}"
-    mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}/${compat_whl_name}
-
-    # handle megenginelite
-    cd ${BUILD_DIR}
-    rm -rf lite_staging
-    mkdir -p lite_staging/megenginelite
-    cp ${SRC_DIR}/lite/pylite/megenginelite/* lite_staging/megenginelite/
-    cp ${SRC_DIR}/lite/pylite/setup.py lite_staging/
-    cp ${SRC_DIR}/lite/pylite/requires.txt lite_staging/
-    VER_FILE=${SRC_DIR}/imperative/python/megengine/version.py
-    if [ -f ${VER_FILE} ];then
-        cp ${VER_FILE} lite_staging/megenginelite
-    else
-        echo "ERROR: can not find version file"
-        exit -1
-    fi
-    patch_elf_depend_lib_megenginelite
-
-    cd ${BUILD_DIR}/lite_staging/
-    ${PYTHON_DIR}/bin/python setup.py bdist_wheel
-    cd /home/output
-    mkdir -p ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}
-    cd ${BUILD_DIR}/lite_staging/dist/
-    org_whl_name=`ls Meg*${ver}*.whl`
-    compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2014/'`
-    echo "megenginelite org whl name: ${org_whl_name}"
-    echo "megenginelite comapt whl name: ${compat_whl_name}"
     mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}/${compat_whl_name}
 
     cd /home/output

@@ -108,13 +108,7 @@ function copy_more_dll() {
 }
 
 function lite_copy_more_dll() {
-    # for python whl real use
-    echo "config megenginelite core lib dir"
-    CP_WHL_DST_IMP=${BUILD_DIR}/lite_staging/megenginelite/libs
-
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
-        echo "copy nvidia lib to whl use...."
-        depend_real_copy ${CP_WHL_DST_IMP}
         if [ ${IN_CI} = "true" ]; then
             echo "copy lib for lite for ci test"
             IMP_TEST_DST=${SRC_DIR}/build_dir/host/build/lite/test/
@@ -208,36 +202,22 @@ function do_build() {
         mv ${rt_file} _imperative_rt.pyd
 
         copy_more_dll
+
+        # handle megenginelite
+        cd ${BUILD_DIR}
+        mkdir -p staging/megenginelite
+        cp ${SRC_DIR}/lite/pylite/megenginelite/* staging/megenginelite/
+        LITE_CORE_LIB_DIR=${BUILD_DIR}/staging/megenginelite/libs/
+        mkdir -p ${LITE_CORE_LIB_DIR}
+        cd ${LITE_CORE_LIB_DIR}
+        cp ${BUILD_DIR}/lite/lite_shared_whl.dll liblite_shared_whl.pyd
+        llvm-strip -s liblite_shared_whl.pyd
+        lite_copy_more_dll
+
         cd ${BUILD_DIR}/staging
         echo "call setup.py now"
         ${PYTHON_DIR}/python3 setup.py bdist_wheel
         cp ${BUILD_DIR}/staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/
-
-        # handle megenginelite
-        cd ${BUILD_DIR}
-        rm -rf lite_staging
-        mkdir -p lite_staging/megenginelite
-        cp ${SRC_DIR}/lite/pylite/megenginelite/* lite_staging/megenginelite/
-        cp ${SRC_DIR}/lite/pylite/setup.py lite_staging/
-        cp ${SRC_DIR}/lite/pylite/requires.txt lite_staging/
-        VER_FILE=${SRC_DIR}/imperative/python/megengine/version.py
-        if [ -f ${VER_FILE} ];then
-            cp ${VER_FILE} lite_staging/megenginelite
-        else
-            echo "ERROR: can not find version file"
-            exit -1
-        fi
-
-        LITE_CORE_LIB_DIR=${BUILD_DIR}/lite_staging/megenginelite/libs/
-        mkdir -p ${LITE_CORE_LIB_DIR}
-        cd ${LITE_CORE_LIB_DIR}
-        cp ${BUILD_DIR}/lite/lite_shared.dll liblite_shared.dll
-        llvm-strip -s liblite_shared.dll
-        lite_copy_more_dll
-
-        cd ${BUILD_DIR}/lite_staging/
-        ${PYTHON_DIR}/python3 setup.py bdist_wheel
-        cp ${BUILD_DIR}/lite_staging/dist/Meg*.whl ${WINDOWS_WHL_HOME}/
 
         echo ""
         echo "##############################################################################################"
