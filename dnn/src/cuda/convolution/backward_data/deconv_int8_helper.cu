@@ -11,6 +11,7 @@
  */
 
 #include "src/cuda/convolution/backward_data/deconv_int8_helper.cuh"
+#include "src/cuda/transpose_utils.cuh"
 
 using namespace megdnn;
 using namespace cuda;
@@ -21,7 +22,6 @@ using namespace deconv;
 
 namespace {
 
-//
 __global__ void reorder_filter_nc4hw4_to_n4hwc4_kernel(
         int8_t* __restrict__ dst, const int8_t* __restrict__ src, uint32_t OC,
         uint32_t IC, uint32_t FHFW) {
@@ -30,32 +30,55 @@ __global__ void reorder_filter_nc4hw4_to_n4hwc4_kernel(
     const int32_t fhfw = blockIdx.x * BLOCKSIZE_Y + threadIdx.x;
 
     if (fhfw < FHFW && icb < IC / 4) {
-        int src0 = *reinterpret_cast<const int*>(
-                src + (ocb * 4 + 0) * IC * FHFW + (icb * FHFW + fhfw) * 4);
-        int src1 = *reinterpret_cast<const int*>(
-                src + (ocb * 4 + 1) * IC * FHFW + (icb * FHFW + fhfw) * 4);
-        int src2 = *reinterpret_cast<const int*>(
-                src + (ocb * 4 + 2) * IC * FHFW + (icb * FHFW + fhfw) * 4);
-        int src3 = *reinterpret_cast<const int*>(
-                src + (ocb * 4 + 3) * IC * FHFW + (icb * FHFW + fhfw) * 4);
-        // transpose 4x4
-        int dst01_lo = __byte_perm(src0, src1, 0x5140);
-        int dst01_hi = __byte_perm(src0, src1, 0x7362);
-        int dst23_lo = __byte_perm(src2, src3, 0x5140);
-        int dst23_hi = __byte_perm(src2, src3, 0x7362);
-        int dst0 = __byte_perm(dst01_lo, dst23_lo, 0x5410);
-        int dst1 = __byte_perm(dst01_lo, dst23_lo, 0x7632);
-        int dst2 = __byte_perm(dst01_hi, dst23_hi, 0x5410);
-        int dst3 = __byte_perm(dst01_hi, dst23_hi, 0x7632);
+        int src_value[4], dst_value[4];
+#pragma unroll
+        for (int i = 0; i < 4; i++) {
+            src_value[i] = *reinterpret_cast<const int*>(
+                    src + (ocb * 4 + i) * IC * FHFW + (icb * FHFW + fhfw) * 4);
+        }
 
-        *reinterpret_cast<int*>(
-                dst + (ocb * FHFW * IC + fhfw * IC + icb * 4 + 0) * 4) = dst0;
-        *reinterpret_cast<int*>(
-                dst + (ocb * FHFW * IC + fhfw * IC + icb * 4 + 1) * 4) = dst1;
-        *reinterpret_cast<int*>(
-                dst + (ocb * FHFW * IC + fhfw * IC + icb * 4 + 2) * 4) = dst2;
-        *reinterpret_cast<int*>(
-                dst + (ocb * FHFW * IC + fhfw * IC + icb * 4 + 3) * 4) = dst3;
+        // transpose 4x4
+        transpose_int8_interleavedx4<4, int>(src_value, dst_value);
+
+#pragma unroll
+        for (int i = 0; i < 4; i++) {
+            *reinterpret_cast<int*>(
+                    dst + (ocb * FHFW * IC + fhfw * IC + icb * 4 + i) * 4) =
+                    dst_value[i];
+        }
+    }
+}
+
+template <uint32_t interleaved, typename vec_type>
+__global__ void reorder_filter_nhwc_to_cnxhwx_kernel(
+        int8_t* __restrict__ dst, const int8_t* __restrict__ src, uint32_t OC,
+        uint32_t IC, uint32_t FHFW) {
+    uint32_t lane = threadIdx.x + blockIdx.x * blockDim.x;
+    const int32_t ocb = lane / (FHFW * IC / 4);
+    const int32_t fhfw_icb = lane % (FHFW * IC / 4);
+    const int32_t fhfw = fhfw_icb / (IC / 4);
+    const int32_t icb = fhfw_icb % (IC / 4);
+
+    if (ocb < OC / interleaved && fhfw < FHFW) {
+        int src_value[interleaved];
+        vec_type dst_value[4];
+
+#pragma unroll
+        for (int i = 0; i < interleaved; i++) {
+            src_value[i] = *reinterpret_cast<const int*>(
+                    src + (ocb * interleaved + i) * FHFW * IC + fhfw * IC +
+                    icb * 4);
+        }
+
+        transpose_int8_interleavedx4<interleaved, vec_type>(src_value,
+                                                            dst_value);
+
+#pragma unroll
+        for (int i = 0; i < 4; i++) {
+            *reinterpret_cast<vec_type*>(dst + (icb * 4 + i) * FHFW * OC +
+                                         (ocb * FHFW + fhfw) * interleaved) =
+                    dst_value[i];
+        }
     }
 }
 
@@ -70,6 +93,29 @@ void megdnn::cuda::deconv::reorder_filter_nc4hw4_to_n4hwc4(
 
     reorder_filter_nc4hw4_to_n4hwc4_kernel<<<blocks, threads, 0, stream>>>(
             dst, src, OC, IC, FH * FW);
+    after_kernel_launch();
+}
+
+void megdnn::cuda::deconv::reorder_filter_nhwc_to_cnxhwx(
+        int8_t* dst, const int8_t* src, uint32_t OC, uint32_t IC, uint32_t FH,
+        uint32_t FW, uint32_t interleaved, cudaStream_t stream) {
+    int32_t vthreads = OC / interleaved * IC / 4 * FH * FW;
+    int32_t nr_threads = std::min(256, vthreads);
+    int32_t nr_blocks = DIVUP(vthreads, nr_threads);
+
+    if (interleaved == 4) {
+        reorder_filter_nhwc_to_cnxhwx_kernel<4, int>
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
+                                                       FH * FW);
+    } else if (interleaved == 8) {
+        reorder_filter_nhwc_to_cnxhwx_kernel<8, int2>
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
+                                                       FH * FW);
+    } else {
+        reorder_filter_nhwc_to_cnxhwx_kernel<16, int4>
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
+                                                       FH * FW);
+    }
     after_kernel_launch();
 }
 

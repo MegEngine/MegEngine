@@ -100,6 +100,9 @@ enum class LayoutTypeID {
     kTensorNC64HW64,
     kTensorC64RSK64,
     kTensorK4RSC4,
+    kTensorCK4RS4,
+    kTensorCK8RS8,
+    kTensorCK16RS16,
     kInvalid
 };
 
@@ -225,6 +228,7 @@ enum class ThreadblockSwizzleID {
     kConvolutionFpropNCxHWx,
     kConvolutionFpropTrans,
     kConvolutionDgradNCxHWx,
+    kConvolutionDgradTrans,
     kInvalid
 };
 

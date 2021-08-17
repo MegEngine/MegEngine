@@ -337,7 +337,10 @@ def GenerateConv2d(conv_kind, tile_descriptions, src_layout, flt_layout, dst_lay
     else:
       swizzling_functor = SwizzlingFunctor.ConvFpropNCxHWx
   else:
-    swizzling_functor = SwizzlingFunctor.ConvDgradNCxHWx
+    if implicit_gemm_mode == ImplicitGemmMode.GemmTN:
+      swizzling_functor = SwizzlingFunctor.ConvDgradTrans
+    else:
+      swizzling_functor = SwizzlingFunctor.ConvDgradNCxHWx
 
   # skip rule
   def filter_tile_with_layout(tile: TileDescription, layout: LayoutType) -> bool:

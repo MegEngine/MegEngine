@@ -40,7 +40,8 @@ public:
         CUDA_BFLOAT16,
         CUDA_GROUP_CONV_GENERAL,
         CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8,
-        CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8
+        CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8,
+        CUDA_IMPLICIT_GEMM_NHWC_IMMA_INT8
     };
     using Mapper = std::unordered_map<AlgorithmDesc, AlgoBase*>;
 
@@ -299,11 +300,53 @@ private:
     const void* get_available_op(const SizeArgs& args) const;
 };
 
+class ConvolutionBackwardDataImpl::AlgoInt8NHWCIMMAImplicitGemm final
+        : public AlgoBase {
+public:
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int stage;
+        int access_size;
+        std::string to_string() {
+            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage_%d", threadblock_m,
+                            threadblock_n, threadblock_k, warp_m, warp_n,
+                            warp_k, stage, access_size);
+        }
+    };
+    AlgoInt8NHWCIMMAImplicitGemm(AlgoParam algo_param)
+            : m_algo_param{algo_param},
+              m_name{ssprintf("INT8_NHWC_IMMA_IMPLICIT_GEMM%s",
+                              m_algo_param.to_string().c_str())} {}
+    bool is_available(const SizeArgs& args) const override;
+    size_t get_workspace_in_bytes(const SizeArgs& args) const override;
+    void exec(const ExecArgs& args) const override;
+    const char* name() const override { return m_name.c_str(); }
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE;
+    }
+    MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NHWC_IMMA_INT8)
+private:
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
+                                         const SizeArgs& args) const;
+    const void* get_available_op(const SizeArgs& args) const;
+    void reorder_filter(const ExecArgs& args, const int iterleaved,
+                        int8_t* reordered_filter) const;
+    AlgoParam m_algo_param;
+    std::string m_name;
+};
+
 class ConvolutionBackwardDataImpl::AlgoPack : NonCopyableObj {
     // defined in cudnn.cpp
     void fill_cudnn_algos();
     // defined in implicit_gemm_int8_nchw4_dp4a.cpp
     void fill_int8_dp4a_algos();
+    // defined in implicit_gemm_int8_nhwc_imma.cpp
+    void fill_int8_imma_algos();
 
     AlgoBase::Mapper m_all_algos_map;
 
@@ -318,6 +361,7 @@ public:
     AlgoGroupConvGeneral group;
     std::vector<AlgoInt8NCHW4DotProdImplicitGemm> int8_nchw4_dotprod;
     AlgoInt8NCHWDotProdImplicitGemm int8_nchw_dotprod;
+    std::vector<AlgoInt8NHWCIMMAImplicitGemm> int8_nhwc_imma;
 
     std::vector<AlgoBase*>
             //! all algorithms

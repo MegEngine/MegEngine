@@ -386,6 +386,69 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NCHW_DP4A) {
     }
 }
 
+#if CUDA_VERSION >= 10020
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_INT8_NHWC_IMMA) {
+    if (!cuda::is_compute_capability_required(7, 5)) {
+        printf("Skip CUDA.CONVOLUTION_BACKWARD_DATA_INT8_NHWC_IMMA test as "
+               "current device doesn't support\n");
+        return;
+    }
+
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_int8_nhwc_conv_bwd_data();
+
+    struct AlgoParam {
+        int threadblock_m;
+        int threadblock_n;
+        int threadblock_k;
+        int warp_m;
+        int warp_n;
+        int warp_k;
+        int stage;
+        int access_size;
+        std::string to_string() {
+            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage_%d", threadblock_m,
+                            threadblock_n, threadblock_k, warp_m, warp_n,
+                            warp_k, stage, access_size);
+        }
+    };
+
+    std::vector<AlgoParam> all_params;
+
+    all_params.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 2, 4});
+    all_params.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 2, 8});
+    all_params.emplace_back(AlgoParam{64, 16, 32, 64, 16, 32, 2, 16});
+    all_params.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 1, 4});
+    all_params.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 1, 8});
+    all_params.emplace_back(AlgoParam{128, 32, 32, 64, 32, 32, 1, 16});
+
+    for (auto algo_param : all_params) {
+        Checker<ConvolutionBackwardData> checker(handle_cuda());
+        std::string algo_name(ssprintf("INT8_NHWC_IMMA_IMPLICIT_GEMM%s",
+                                       algo_param.to_string().c_str()));
+        checker.set_before_exec_callback(
+                AlgoChecker<ConvolutionBackwardData>(algo_name.c_str()));
+
+        checker.set_epsilon(1 + 1e-3).set_max_avg_error(1e-1);
+
+        for (auto&& arg : args) {
+            UniformIntRNG rng(-3, 3);
+            auto src = TensorLayout(arg.src, dtype::QuantizedS8{1.2f});
+            auto filter = TensorLayout(arg.filter, dtype::QuantizedS8{1.3f});
+            TensorLayout dst;
+            dst.dtype = dtype::QuantizedS8{1.2f};
+            {
+                auto opr = handle_cuda()->create_operator<Convolution>();
+                opr->param() = arg.param;
+                opr->deduce_layout(src, filter, dst);
+            }
+            checker.set_rng(0, &rng).set_rng(1, &rng).set_param(arg.param).exec(
+                    TensorLayoutArray{filter, dst, src});
+        }
+    }
+}
+#endif
+
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FAILED_CUDNN7_5) {
     // BRAIN-481 failed on architectures 7.0, remove the following if statement,
     // when cudnn fixed the problem.

@@ -445,6 +445,53 @@ def GenerateDeconv_Simt(args):
                                      use_special_optimization) 
   return operations
 
+def GenerateDeconv_TensorOp_8816(args):
+  operations = []
+
+  layouts = [
+    (LayoutType.TensorNHWC, LayoutType.TensorCK4RS4, 32), 
+    (LayoutType.TensorNHWC, LayoutType.TensorCK8RS8, 64), 
+    (LayoutType.TensorNHWC, LayoutType.TensorCK16RS16, 128), 
+  ]
+    
+  math_instructions = [
+    MathInstruction(                                  \
+      [8, 8, 16],                                     \
+      DataType.s8, DataType.s8, DataType.s32,         \
+      OpcodeClass.TensorOp,                           \
+      MathOperation.multiply_add_saturate),
+  ]
+
+  dst_layouts = [
+      LayoutType.TensorNHWC, 
+  ]
+
+  dst_types = [
+      DataType.s8, 
+  ]
+
+  use_special_optimization = SpecialOptimizeDesc.DeconvDoubleUpsampling
+
+  min_cc = 75
+  max_cc = 1024
+
+  cuda_major = 10
+  cuda_minor = 2
+
+  for math_inst in math_instructions:
+    for layout in layouts:
+      for dst_type, dst_layout in zip(dst_types, dst_layouts):
+        tile_descriptions = [
+          TileDescription([128, 32, 32], 1, [2, 1, 1], math_inst, min_cc, max_cc),
+          TileDescription([64, 16, 32], 2, [1, 1, 1], math_inst, min_cc, max_cc),
+        ]
+        for tile in tile_descriptions:
+          dst_align = 32 if tile.threadblock_shape[1] == 16 else 64
+          operations += GenerateConv2d(ConvKind.Dgrad, [tile], layout[0], layout[1], dst_layout, dst_type, 
+                                      min_cc, layout[2], layout[2], dst_align, use_special_optimization, 
+                                      ImplicitGemmMode.GemmTN, False, cuda_major, cuda_minor) 
+  return operations
+
 ################################################################################
 # parameters
 # Edge - for tiles, the edges represent the length of one side
@@ -820,9 +867,12 @@ def GenerateConv2dOperations(args):
     return GenerateConv2d_TensorOp_8832(args)
 
 def GenerateDeconvOperations(args):
-  assert args.type == "simt", "operation deconv only support" \
-        "simt. (got:{})".format(args.type)
-  return GenerateDeconv_Simt(args)
+  if args.type == "simt":
+    return GenerateDeconv_Simt(args)
+  else: 
+    assert args.type == "tensorop8816", "operation deconv only support" \
+          "simt and tensorop8816. (got:{})".format(args.type)
+    return GenerateDeconv_TensorOp_8816(args)
 
 def GenerateGemmOperations(args):
   if args.type == "tensorop884":

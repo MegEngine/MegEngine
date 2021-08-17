@@ -340,6 +340,21 @@ struct LayoutMap<cutlass::layout::TensorKxRSCx<4>> {
     static LayoutTypeID const kId = LayoutTypeID::kTensorK4RSC4;
 };
 
+template <>
+struct LayoutMap<cutlass::layout::TensorCKxRSx<4>> {
+    static LayoutTypeID const kId = LayoutTypeID::kTensorCK4RS4;
+};
+
+template <>
+struct LayoutMap<cutlass::layout::TensorCKxRSx<8>> {
+    static LayoutTypeID const kId = LayoutTypeID::kTensorCK8RS8;
+};
+
+template <>
+struct LayoutMap<cutlass::layout::TensorCKxRSx<16>> {
+    static LayoutTypeID const kId = LayoutTypeID::kTensorCK16RS16;
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -554,6 +569,13 @@ struct ThreadblockSwizzleMap<
         conv::threadblock::ConvolutionDgradNCxHWxThreadblockSwizzle> {
     static ThreadblockSwizzleID const kId =
             ThreadblockSwizzleID::kConvolutionDgradNCxHWx;
+};
+
+template <>
+struct ThreadblockSwizzleMap<
+        conv::threadblock::ConvolutionDgradTransThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId =
+            ThreadblockSwizzleID::kConvolutionDgradTrans;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -36,6 +36,12 @@ ConvolutionBackwardDataImpl::AlgoPack::AlgoPack() {
         int8_algos.push_back(&algo);
     }
 
+    fill_int8_imma_algos();
+    for (auto&& algo : int8_nhwc_imma) {
+        all_algos.push_back(&algo);
+        int8_algos.push_back(&algo);
+    }
+
     int8_algos.push_back(&int8_nchw_dotprod);
     all_algos.push_back(&int8_nchw_dotprod);
 

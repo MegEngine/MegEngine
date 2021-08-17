@@ -533,7 +533,10 @@ static struct {
                       {LayoutTypeID::kTensorC16RSK16, "c16rsk16"},
                       {LayoutTypeID::kTensorC32RSK32, "c32rsk32"},
                       {LayoutTypeID::kTensorC64RSK64, "c64rsk64"},
-                      {LayoutTypeID::kTensorK4RSC4, "k4rsC4"},
+                      {LayoutTypeID::kTensorK4RSC4, "k4rsc4"},
+                      {LayoutTypeID::kTensorCK4RS4, "ck4rs4"},
+                      {LayoutTypeID::kTensorCK8RS8, "ck8rs8"},
+                      {LayoutTypeID::kTensorCK16RS16, "ck16rs16"},
                       {LayoutTypeID::kUnknown, "*"},
                       {LayoutTypeID::kInvalid, nullptr}};
 
@@ -1499,6 +1502,8 @@ static struct {
          ThreadblockSwizzleID::kConvolutionFpropTrans},
         {"convolution_dgrad_ncxhwx", "ConvolutionDgradNCxHWxThreadblockSwizzle",
          ThreadblockSwizzleID::kConvolutionDgradNCxHWx},
+        {"convolution_dgrad_ncxhwx", "ConvolutionDgradTransThreadblockSwizzle",
+         ThreadblockSwizzleID::kConvolutionDgradTrans},
 };
 
 /// Converts a ThreadblockSwizzleID enumerant to a string
