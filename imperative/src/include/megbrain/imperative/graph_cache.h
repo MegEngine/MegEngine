@@ -18,6 +18,7 @@
 namespace mgb {
 namespace imperative {
 
+//NOTE: only input dtype and comp_node used for hashing, shapes are ignored
 template <typename... TExtraArgs>
 struct OpMethArgs {
     std::shared_ptr<OpDef> op;
