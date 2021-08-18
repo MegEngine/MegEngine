@@ -33,6 +33,7 @@
 #include "src/rocm/powc/opr_impl.h"
 #include "src/rocm/indexing_multi_axis_vec/opr_impl.h"
 #include "src/rocm/linspace/opr_impl.h"
+#include "src/rocm/argsort/opr_impl.h"
 #include "src/rocm/argmxx/opr_impl.h"
 #include "src/rocm/sleep/opr_impl.h"
 #include "src/rocm/batch_normalization/opr_impl.h"
@@ -148,6 +149,8 @@ bool HandleImpl::check_cross_dev_copy_constraint(const TensorLayout& src) {
     return src.is_contiguous() || src.stride[src.ndim - 1] == 1;
 }
 
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgsortForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgsortBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardFilter);
