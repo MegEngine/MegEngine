@@ -132,11 +132,11 @@ namespace intl {
 
         void init_output_static_infer_desc() override final;
         void scn_do_execute() override final;
-        NodeProp* do_make_node_prop() const override;
         void add_input_layout_constraint() override final;
 
-        protected:
-            using Super::Super;
+    protected:
+        using Super::Super;
+        NodeProp* do_make_node_prop() const override;
     };
 } // namespace intl
 
@@ -158,6 +158,7 @@ public:
 MGB_DEFINE_OPR_CLASS(IndexingSetMultiAxisVec,
         intl::IndexingModifyMultiAxisVecHelper<megdnn::IndexingSetMultiAxisVec>
         ) // {
+        NodeProp* do_make_node_prop() const override;
 
     public:
         MGB_DECL_FANCY_INDEXING_OPR_MODIFY(IndexingSetMultiAxisVec);

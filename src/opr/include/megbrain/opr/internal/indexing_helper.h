@@ -241,13 +241,15 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(_opr)
             const OperatorNodeConfig &config = {}, \
             const InputTensorReplacer &input_tensor_replacer = {})
 
-#define MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(_opr, _name, _require_scalar_index) \
+#define MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(_opr, _name, _require_scalar_index, \
+    ctor_body...) \
 _opr::_opr(VarNode *inp, VarNode *value, const IndexDesc &desc, \
         const OperatorNodeConfig &config, \
         const InputTensorReplacer &input_tensor_replacer): \
     Super({inp->owner_graph(), config, _name, {inp, value}}, \
             inp, value, desc, _require_scalar_index, input_tensor_replacer) \
 { \
+    ctor_body; \
 } \
 SymbolVar _opr::make(SymbolVar inp, SymbolVar value, const IndexDesc &desc, \
         const OperatorNodeConfig &config, \
