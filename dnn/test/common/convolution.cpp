@@ -284,6 +284,16 @@ std::vector<TestArg> convolution::get_args_cudnn_5_1_failures() {
     return args;
 }
 
+std::vector<TestArg> convolution::get_args_cudnn_5_1_backward() {
+    std::vector<TestArg> args;
+    args.emplace_back(
+            param::Convolution{param::Convolution::Mode::CROSS_CORRELATION, 2,
+                               2, 2, 2},
+            TensorShape{2, 8, 18, 18}, TensorShape{8, 8, 2, 2});
+
+    return args;
+}
+
 std::vector<TestArg> convolution::get_args_x86_winograd_algorithm() {
     std::vector<TestArg> args;
     for (size_t ic_size : {8, 16}) {

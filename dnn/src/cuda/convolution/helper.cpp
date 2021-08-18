@@ -33,7 +33,8 @@ bool convolution::is_cudnn_supported(const ForwardSizeArgs &args) {
                 args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS8) {
             return false;
         }
-    } else if (args.filter_meta.format != param::Convolution::Format::NCHW) {
+    } else if (args.filter_meta.format != param::Convolution::Format::NCHW &&
+               args.filter_meta.format != param::Convolution::Format::NHWC) {
         return false;
     }
     auto& fm = args.filter_meta;

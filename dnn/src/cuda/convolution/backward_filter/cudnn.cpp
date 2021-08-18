@@ -14,6 +14,7 @@
 #include "src/cuda/utils.h"
 #include "src/cuda/cudnn_wrapper.h"
 #include "src/cuda/convolution/helper.h"
+#include "src/cuda/conv_bias/helper.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -31,7 +32,14 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
     auto& cudnn = args.handle->cudnn();
     CUDNNBwdFilterDescs D;
 
-    if (!is_cudnn_supported(args.as_fwd_args()))
+    TensorLayout bias_layout, z_layout;
+    conv_bias::CanonizedFilterMeta meta;
+    meta.copy_from(args.grad_filter_meta);
+    conv_bias::BiasForwardSizeArgs bias_args{args.handle,
+        args.src_layout, args.grad_layout, &bias_layout,
+        &z_layout, meta, args.diff_layout, param::ConvBias::NonlineMode::IDENTITY,
+    };
+    if (!conv_bias::is_cudnn_supported(bias_args))
         return false;
 
     args.init_desc(D);

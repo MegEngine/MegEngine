@@ -40,6 +40,7 @@ std::vector<TestArg> get_args_x86_direct_case_2();
 std::vector<TestArg> get_args_fallback_templated_impl();
 std::vector<TestArg> get_args_fallback_non_templated_impl();
 std::vector<TestArg> get_args_cudnn_5_1_failures();
+std::vector<TestArg> get_args_cudnn_5_1_backward();
 std::vector<TestArg> get_args_x86_winograd_algorithm();
 std::vector<TestArg> get_args_BRAIN_481();
 std::vector<TestArg> get_args();

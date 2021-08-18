@@ -238,6 +238,87 @@ TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA) {
     }
 }
 
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_FP16_CUDNN7_5) {
+    // algo CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 with
+    // TensorCore operations produces incorrect result.
+    // Maybe nvidia has fixed this issue
+    // There is a test using incorrect case:
+    // inp={2x8x18x18}, kern={8x8x2x2}, pad_h=pad_w=2, stride_h=stride_w=2,
+    // dtype=float16
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_cudnn_5_1_backward();
+    Checker<ConvolutionBackwardData> checker(handle_cuda());
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        float scale =
+                128.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        scale = std::max(scale, 1.f);
+        UniformFloatRNG rng(scale, 2 * scale);
+        arg.param.format = param::Convolution::Format::NHWC;
+        arg.src = cvt_src_or_dst_nchw2nhwc(arg.src);
+        arg.filter = cvt_filter_nchw2nhwc(arg.filter);
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst;
+        {
+            auto opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = arg.param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        src.dtype = dst.dtype = filter.dtype = dtype::Float16();
+        arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+        checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-2)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        arg.param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
+        checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-2)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+    }
+}
+
+TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_NHWC) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_args_cuda_conv_bwd_data();
+    Checker<ConvolutionBackwardData> checker(handle_cuda());
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        float scale =
+                64.f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        arg.param.format = param::Convolution::Format::NHWC;
+        arg.src = cvt_src_or_dst_nchw2nhwc(arg.src);
+        arg.filter = cvt_filter_nchw2nhwc(arg.filter);
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst;
+        {
+            auto opr = handle_cuda()->create_operator<Convolution>();
+            opr->param() = arg.param;
+            opr->deduce_layout(src, filter, dst);
+        }
+        src.dtype = dst.dtype = filter.dtype = dtype::Float16();
+        arg.param.compute_mode = param::Convolution::ComputeMode::FLOAT32;
+        checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-2)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        arg.param.compute_mode = param::Convolution::ComputeMode::DEFAULT;
+        checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-2)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{filter, dst, src});
+    }
+}
+
 TEST_F(CUDA, CONVOLUTION_BACKWARD_DATA_CUDNN) {
     if (cuda::is_compute_capability_required(7, 0))
         return;
