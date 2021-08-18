@@ -15,8 +15,6 @@ if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | ${SORT} -V | 
     echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
     exit -1
 fi
-
-log "Start downloading git submodules"
 git submodule sync
 git submodule update -f --init midout
 git submodule update -f --init intel-mkl-dnn
@@ -53,5 +51,3 @@ pushd MegRay/third_party >/dev/null
     git submodule update -f --init gdrcopy
     git submodule update -f --init ucx
 popd >/dev/null
-
-log "Finished downloading git submodules"
