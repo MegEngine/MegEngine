@@ -45,25 +45,30 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
 
     auto&& inp = inputs[0];
     auto&& msk = inputs[1];
+    SmallVector<TensorPtr> out;
     mgb_assert(inp->layout().eq_shape(msk->layout()),
                "input shape does not match mask shape");
     mgb_assert(msk->get_value().dtype().enumv() == DTypeEnum::Bool,
                "mask dtype must be bool");
-    DnnOprCaller<megdnn::CondTake> dnn_op(inp->comp_node());
-    dnn_op.op->param().val = 1;
-
-    TensorLayout m_layout({dnn_op.op->get_workspace_in_bytes(inp->layout())},
-                           dtype::Byte());
-
-    auto dnn_workspace = dnn_op.create_workspace(m_layout);
     MegDNNDynOutMallocImpl<2> policy{inp->comp_node()};
+    if (inp->layout().is_empty()) {
+        // empty tensor
+        policy.alloc_output(0, inp->layout().dtype, {0}, nullptr);
+        policy.alloc_output(1, dtype::Int32(), {0}, nullptr);
+    } else {
+        DnnOprCaller<megdnn::CondTake> dnn_op(inp->comp_node());
+        dnn_op.op->param().val = 1;
 
-    dnn_op.op->exec(inp->dev_tensor().as_megdnn(),
-                  msk->dev_tensor().as_megdnn(),
-                  dnn_workspace,
-                  &policy);
+        TensorLayout m_layout({dnn_op.op->get_workspace_in_bytes(inp->layout())},
+                            dtype::Byte());
 
-    SmallVector<TensorPtr> out;
+        auto dnn_workspace = dnn_op.create_workspace(m_layout);
+
+        dnn_op.op->exec(inp->dev_tensor().as_megdnn(),
+                    msk->dev_tensor().as_megdnn(),
+                    dnn_workspace,
+                    &policy);
+    }
     out.push_back(policy.at(0));
     out.push_back(policy.at(1));
     return out;

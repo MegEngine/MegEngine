@@ -256,20 +256,25 @@ TEST(TestOprMisc, CondTake) {
         run(mki({100}));
 }
 
-TEST(TestOprMisc, CondTakeEmptyOut) {
+TEST(TestOprMisc, CondTakeEmptyIO) {
     using Param = opr::CondTake::Param;
     HostTensorGenerator<> gen;
-    auto host_x = gen({1});
-    host_x->ptr<float>()[0] = 1;
-    auto graph = ComputingGraph::make();
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    auto out = opr::CondTake::make(x, x, {Param::Mode::LT});
-    HostTensorND host_out0, host_out1;
-    auto func = graph->compile({make_callback_copy(out[0], host_out0),
-            make_callback_copy(out[1], host_out1)});
-    func->execute();
-    ASSERT_EQ(TensorShape{0}, host_out0.shape());
-    ASSERT_EQ(TensorShape{0}, host_out1.shape());
+    auto check = [&](const TensorShape& shp) {
+        auto host_x = gen(shp);
+        auto graph = ComputingGraph::make();
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+        auto y = x + 1;
+        auto out = opr::CondTake::make(x, y, {Param::Mode::EQ});
+        HostTensorND host_out0, host_out1;
+        auto func = graph->compile({make_callback_copy(out[0], host_out0),
+                make_callback_copy(out[1], host_out1)});
+        func->execute();
+        ASSERT_EQ(TensorShape{0}, host_out0.shape());
+        ASSERT_EQ(TensorShape{0}, host_out1.shape());
+    };
+    check({1});
+    check({0});
+    check({1, 0});
 }
 
 TEST(TestOprMisc, TopKValueOnly) {

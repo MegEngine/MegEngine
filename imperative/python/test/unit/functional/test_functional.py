@@ -18,6 +18,7 @@ import megengine.amp as amp
 import megengine.core.ops.builtin as builtin
 import megengine.core.tensor.dtype as dtype
 import megengine.functional as F
+import megengine.jit as jit
 from megengine import Parameter, Tensor, is_cuda_available, tensor
 from megengine.core._trace_option import use_symbolic_shape
 from megengine.core.autodiff.grad import Grad
@@ -857,6 +858,35 @@ def test_condtake():
     val, idx = F.cond_take(yy, xx)
     np.testing.assert_equal(val.numpy(), x[y])
     np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
+
+
+# @pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_condtake(is_symbolic=None):
+    shapes = [
+        (3, 3, 3),
+        (0,),
+        (3, 0, 3),
+    ]
+
+    def fn(mask, data):
+        return F.cond_take(mask, data)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
+    for shp in shapes:
+        x_np = np.random.randn(*shp).astype("float32")
+        mask_np = x_np > 0
+        x = tensor(x_np)
+        mask = tensor(mask_np)
+        ref_out = x_np[mask_np]
+        ref_idx = mask_np.flatten().nonzero()[0]
+        for i in range(3):
+            out, idx = fn(mask, x)
+            np.testing.assert_equal(out.numpy(), ref_out)
+            np.testing.assert_equal(idx.numpy(), ref_idx)
+            if is_symbolic is None:
+                break
 
 
 def test_condtake_is_same():

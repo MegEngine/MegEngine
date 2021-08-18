@@ -264,6 +264,15 @@ CondTake::CondTake(VarNode *data, VarNode *mask,
     }
 }
 
+CondTake::NodeProp* CondTake::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
+}
+
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondTake) {
     mgb_assert(out_grad.size() == 3 && !out_grad[2]);
@@ -305,11 +314,21 @@ void CondTake::add_input_layout_constraint() {
 }
 
 void CondTake::scn_do_execute() {
+    auto&& data = input(0)->dev_tensor();
+    auto&& mask = input(1)->dev_tensor();
     intl::MegDNNDynOutMallocImpl dyn_malloc{this, comp_node()};
-    megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
-                       input(1)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output().back()),
-                       &dyn_malloc);
+    if (data.layout().is_empty()) {
+        mgb_assert(data.layout().eq_shape(mask.layout()),
+                "CondTake shape differs: data=%s mask=%s",
+                data.layout().TensorShape::to_string().c_str(),
+                mask.layout().TensorShape::to_string().c_str());
+        dyn_malloc.alloc_output(0, data.layout().dtype, {0}, nullptr);
+        dyn_malloc.alloc_output(1, dtype::Int32(), {0}, nullptr);
+    } else {
+        megdnn_opr()->exec(data.as_megdnn(), mask.as_megdnn(),
+                        intl::get_megdnn_workspace_from_var(output().back()),
+                        &dyn_malloc);
+    }
 }
 
 /* ================= TopK =================  */

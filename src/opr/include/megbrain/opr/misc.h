@@ -151,6 +151,7 @@ MGB_DEFINE_OPR_CLASS(CondTake, intl::CondTakeBase) // {
     void init_output_static_infer_desc() override;
     void scn_do_execute() override;
     void add_input_layout_constraint() override;
+    NodeProp* do_make_node_prop() const override;
 
     public:
         CondTake(VarNode *data, VarNode *mask,
