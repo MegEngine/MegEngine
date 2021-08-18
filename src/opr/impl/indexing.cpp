@@ -292,8 +292,6 @@ cg::OperatorNodeBase::NodeProp*
 IndexingMultiAxisVecBase<Opr>::do_make_node_prop() const {
     auto prop = Super::do_make_node_prop();
     using DT = NodeProp::DepType;
-    // TODO: should also allow input shape is empty if any
-    // indexer's shape is empty
     prop->add_dep_type_existing_var(input(0), DT::VALUE_ALLOW_EMPTY);
     for (auto i: m_input2idxonly_axis_indexer) {
         if (i) {

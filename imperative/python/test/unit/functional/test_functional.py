@@ -860,8 +860,8 @@ def test_condtake():
     np.testing.assert_equal(idx.numpy(), np.where(y.reshape(-1))[0])
 
 
-# @pytest.mark.parametrize("is_symbolic", [None, False, True])
-def test_condtake(is_symbolic=None):
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_condtake(is_symbolic):
     shapes = [
         (3, 3, 3),
         (0,),
