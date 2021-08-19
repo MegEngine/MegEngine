@@ -22,6 +22,7 @@
 #include "src/rocm/elemwise/opr_impl.h"
 #include "src/rocm/eye/opr_impl.h"
 #include "src/rocm/pooling/opr_impl.h"
+#include "src/rocm/adaptive_pooling/opr_impl.h"
 #include "src/rocm/reduce/opr_impl.h"
 #include "src/rocm/type_cvt/opr_impl.h"
 #include "src/rocm/topk/opr_impl.h"
@@ -160,6 +161,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(Eye);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ChecksumForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePoolingForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePoolingBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(TopK);
