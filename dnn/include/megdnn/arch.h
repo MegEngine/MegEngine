@@ -140,6 +140,16 @@
  #define MEGDNN_DEVICE
 #endif
 
+#if MEGDNN_CC_CUDA
+ #define MEGDNN_FORCE_INLINE __forceinline__
+#else
+#if __GNUC__ || __has_attribute(always_inline)
+ #define MEGDNN_FORCE_INLINE inline __attribute__((always_inline))
+#else
+ #define MEGDNN_FORCE_INLINE inline
+#endif
+#endif
+
 #if defined(_MSC_VER) || defined(WIN32)
  #define ATTR_ALIGNED(v) __declspec(align(v))
 #else

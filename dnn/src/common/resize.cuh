@@ -13,18 +13,10 @@
 
 #include "megdnn/arch.h"
 
-#if MEGDNN_CC_HOST && !defined(__host__)
-#if __GNUC__ || __has_attribute(always_inline)
-#define __forceinline__ inline __attribute__((always_inline))
-#else
-#define __forceinline__ inline
-#endif
-#endif
-
 namespace megdnn {
 namespace resize {
 
-MEGDNN_HOST MEGDNN_DEVICE __forceinline__ void interpolate_cubic(
+MEGDNN_HOST MEGDNN_DEVICE MEGDNN_FORCE_INLINE void interpolate_cubic(
         float x, float* coeffs) {
     const float A = -0.75f;
 
