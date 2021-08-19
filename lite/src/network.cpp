@@ -40,10 +40,6 @@ Network::Network(const Config& config, const NetworkIO& network_io) {
         m_impl = call_func<NetworkImplDft,
                            std::unique_ptr<lite::Network::NetworkImplBase>>(
                 "create_network");
-    } else if (config.backend == LiteBackend::LITE_RK_NPU) {
-        m_impl = call_func<NetworkImplRK,
-                           std::unique_ptr<lite::Network::NetworkImplBase>>(
-                "create_network");
     }
     m_impl->set_config(config);
     m_impl->set_io(network_io);
@@ -56,10 +52,6 @@ Network::Network(const NetworkIO& network_io, const Config& config) {
     m_network_io = network_io;
     if (config.backend == LiteBackend::LITE_DEFAULT) {
         m_impl = call_func<NetworkImplDft,
-                           std::unique_ptr<lite::Network::NetworkImplBase>>(
-                "create_network");
-    } else if (config.backend == LiteBackend::LITE_RK_NPU) {
-        m_impl = call_func<NetworkImplRK,
                            std::unique_ptr<lite::Network::NetworkImplBase>>(
                 "create_network");
     }
@@ -104,11 +96,6 @@ void Network::prase_model(std::shared_ptr<void> model_data, size_t size) {
         if (m_config.backend == LiteBackend::LITE_DEFAULT &&
             m_impl->get_backend_type() != LiteBackend::LITE_DEFAULT) {
             m_impl.reset(try_call_func<NetworkImplDft,
-                                       lite::Network::NetworkImplBase*>(
-                    "parse_model"));
-        } else if (m_config.backend == LiteBackend::LITE_RK_NPU &&
-                   m_impl->get_backend_type() != LiteBackend::LITE_RK_NPU) {
-            m_impl.reset(try_call_func<NetworkImplRK,
                                        lite::Network::NetworkImplBase*>(
                     "parse_model"));
         }

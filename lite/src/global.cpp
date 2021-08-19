@@ -24,14 +24,10 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/serialization/extern_c_opr.h"
 #include "megbrain/version.h"
-#include "megcore_opencl.h"
 #include "mge/algo_cache/file_cache.h"
 #include "mge/common.h"
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/tensorrt_engine_cache.h"
-#endif
-#if LITE_WITH_CUDA
-#include "mge/algo_cache/redis_cache.h"
 #endif
 #endif
 
@@ -183,7 +179,7 @@ void lite::set_persistent_cache(const std::string& cache_path,
 void lite::dump_persistent_cache(const std::string& cache_path) {
     LITE_LOCK_GUARD(cache_control.cache_mutex);
     LITE_ASSERT(cache_control.cache_type == "file",
-                "now cache type is redis, it can't be dumped.");
+                "now cache type not correct, it can't be dumped.");
     static_cast<InFilePersistentCache&>(mgb::PersistentCache::inst())
             .dump_cache(cache_path.c_str());
 }

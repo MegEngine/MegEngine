@@ -63,9 +63,6 @@ bool default_parse_info(
         if (info["backend"] == "MGE") {
             config.backend = LiteBackend::LITE_DEFAULT;
         }
-        if (info["backend"] == "RK") {
-            config.backend = LiteBackend::LITE_RK_NPU;
-        }
     }
 
     auto get_device_type = [](std::string type) -> LiteDeviceType {
@@ -73,8 +70,6 @@ bool default_parse_info(
             return LiteDeviceType::LITE_CPU;
         if (type == "CUDA")
             return LiteDeviceType::LITE_CUDA;
-        if (type == "OPENCL")
-            return LiteDeviceType::LITE_OPENCL;
         if (type == "ATLAS")
             return LiteDeviceType::LITE_ATLAS;
         if (type == "NPU")

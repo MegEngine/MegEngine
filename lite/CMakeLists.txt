@@ -33,15 +33,6 @@ endif()
 # It defines macros needed by lite
 configure_file(src/lite_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-# begin config lite
-if(LITE_BUILD_WITH_MGE AND LITE_WITH_CUDA AND NOT WIN32)
-    # FXIME third_party cpp redis do not support build with clang-cl
-    file(GLOB_RECURSE SOURCES_CPP_REDIS ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/sources/*.cpp)
-    list(APPEND SOURCES_LITE ${SOURCES_CPP_REDIS})
-    file(GLOB_RECURSE SOURCES_TACOPIE ${PROJECT_SOURCE_DIR}/third_party/tacopie/sources/*.cpp)
-    list(APPEND SOURCES_LITE ${SOURCES_TACOPIE})
-endif()
 add_library(lite_static STATIC ${SOURCES_LITE})
 add_dependencies(lite_static lite_fbs_generate)
 include_directories($<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/genfiles>)
@@ -88,17 +79,6 @@ if(LITE_BUILD_WITH_MGE)
 endif()
 if(ANDROID)
     target_link_libraries(lite_shared_whl PRIVATE log)
-endif()
-
-
-if(LITE_BUILD_WITH_MGE AND LITE_WITH_CUDA AND NOT WIN32)
-    # FXIME third_party cpp redis do not support build with clang-cl
-    target_include_directories(lite_static PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
-    target_include_directories(lite_static PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
-    target_include_directories(lite_shared PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
-    target_include_directories(lite_shared PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
-    target_include_directories(lite_shared_whl PRIVATE ${PROJECT_SOURCE_DIR}/third_party/cpp_redis/includes)
-    target_include_directories(lite_shared_whl PRIVATE ${PROJECT_SOURCE_DIR}/third_party/tacopie/includes)
 endif()
 set(LITE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/lite/src/version_lite.ld CACHE INTERNAL "Path to linker version script")
 add_custom_target(_lite_version_ld SOURCES ${LITE_VERSION_SCRIPT})
