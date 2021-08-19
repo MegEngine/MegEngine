@@ -19,6 +19,8 @@ from ..version import __version__
 
 
 class _FakeRedisConn:
+    cache_file = None
+
     def __init__(self):
         try:
             from ..hub.hub import _get_megengine_home
@@ -27,8 +29,8 @@ class _FakeRedisConn:
                 os.path.join(_get_megengine_home(), "persistent_cache")
             )
             os.makedirs(cache_dir, exist_ok=True)
-            cache_file = os.path.join(cache_dir, "cache")
-            self._dict = shelve.open(cache_file)
+            self.cache_file = os.path.join(cache_dir, "cache")
+            self._dict = shelve.open(self.cache_file)
             self._is_shelve = True
         except:
             self._dict = {}
