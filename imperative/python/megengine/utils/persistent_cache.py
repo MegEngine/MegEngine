@@ -20,21 +20,27 @@ from ..version import __version__
 
 class _FakeRedisConn:
     cache_file = None
+    _is_shelve = False
+    _dict = {}
 
     def __init__(self):
-        try:
-            from ..hub.hub import _get_megengine_home
-
-            cache_dir = os.path.expanduser(
-                os.path.join(_get_megengine_home(), "persistent_cache")
-            )
-            os.makedirs(cache_dir, exist_ok=True)
-            self.cache_file = os.path.join(cache_dir, "cache")
-            self._dict = shelve.open(self.cache_file)
-            self._is_shelve = True
-        except:
+        if os.getenv("MGE_FASTRUN_CACHE_TYPE") == "MEMORY":
             self._dict = {}
             self._is_shelve = False
+        else:
+            try:
+                from ..hub.hub import _get_megengine_home
+
+                cache_dir = os.path.expanduser(
+                    os.path.join(_get_megengine_home(), "persistent_cache")
+                )
+                os.makedirs(cache_dir, exist_ok=True)
+                self.cache_file = os.path.join(cache_dir, "cache")
+                self._dict = shelve.open(self.cache_file)
+                self._is_shelve = True
+            except:
+                self._dict = {}
+                self._is_shelve = False
 
     def get(self, key):
         if self._is_shelve and isinstance(key, bytes):
@@ -47,6 +53,10 @@ class _FakeRedisConn:
             key = key.decode("utf-8")
 
         self._dict[key] = val
+
+    def clear(self):
+        print("{} cache item in {} deleted".format(len(self._dict), self.cache_file))
+        self._dict.clear()
 
     def __del__(self):
         if self._is_shelve:
@@ -87,3 +97,8 @@ class PersistentCacheOnServer(_PersistentCache):
         key = self._make_key(category, key)
         self._prev_get_refkeep = conn.get(key)
         return self._prev_get_refkeep
+
+    def clean(self):
+        conn = self._conn
+        if isinstance(conn, _FakeRedisConn):
+            conn.clear()
