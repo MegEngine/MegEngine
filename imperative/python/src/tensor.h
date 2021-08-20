@@ -96,6 +96,7 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
         static constexpr flags_t SCALAR = 1;
         static constexpr flags_t GRAD = 1 << 1;
         static constexpr flags_t TRACE = 1 << 2;
+        static constexpr flags_t MODULE_TRACE = 1 << 3;
     };
 
     flags_t m_flags = 0;
@@ -106,6 +107,7 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     std::string user_custom_name;
     std::string automatic_name;
     cg::VarNode* m_var;
+    pybind11::object m_module_trace_info;
 
     using Handle = interpreter::Interpreter::Handle;
 
@@ -158,10 +160,10 @@ struct TensorWrapper {
     using wrap_t = pyext17::wrap<TensorWrapper>;
     friend wrap_t;
 
-    inline static TensorWrapper* cast(PyObject* op) {return reinterpret_cast<wrap_t*>(op)->inst();}
-    inline static TensorWrapper* try_cast(PyObject* op) {
-        if (!wrap_t::type().isinstance(op)) return nullptr;
-        return cast(op);
+    inline static TensorWrapper* cast(PyObject* obj) {return reinterpret_cast<wrap_t*>(obj)->inst();}
+    inline static TensorWrapper* try_cast(PyObject* obj) {
+        if (!wrap_t::type().isinstance(obj)) return nullptr;
+        return cast(obj);
     }
     inline ObjectPtr<TensorWrapper, pybind11::handle> self() {return wrap_t::pycast(this);}
 
@@ -206,6 +208,8 @@ struct TensorWrapper {
     void set_compiled_info(PyObject *);
     PyObject* trace_mixin_info();
     void set_trace_mixin_info(PyObject *);
+    PyObject* module_trace_info();
+    void set_module_trace_info(PyObject *);
     PyObject* user_custom_name();
     void set_user_custom_name(PyObject *);
     PyObject* automatic_name();
@@ -331,6 +335,7 @@ void init_tensor(pybind11::module);
 
 extern PyObject *cpp_apply_with_tracing;
 extern PyObject *cpp_apply_backward_varnode;
+extern PyObject *cpp_apply_module_trace;
 
 } // namespace mgb::imperative::python
 

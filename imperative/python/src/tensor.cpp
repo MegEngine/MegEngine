@@ -20,6 +20,7 @@
 #include "./tensor.h"
 #include "./grad.h"
 #include "./trace.h"
+#include "./module_trace.h"
 #include "./common.h"
 #include "./numpy_dtypes.h"
 #include "./graph_rt.h"
@@ -41,6 +42,7 @@ interpreter::Interpreter::Channel* interpreter_for_py;
 
 PyObject *cpp_apply_with_tracing, *cpp_apply_const_with_tracing;
 PyObject *cpp_apply_backward_varnode;
+PyObject *cpp_apply_module_trace;
 
 std::shared_ptr<Tensor> make_const(imperative::TensorPtr value) {
     if (!(ApplyContext::global_enable & Tensor::Flags::TRACE)) {
@@ -70,6 +72,7 @@ std::shared_ptr<Tensor> make_const(imperative::TensorPtr value) {
 REGISTE_APPLY_FUNC(cpp_apply_with_tracing)
 REGISTE_APPLY_FUNC(cpp_apply_const_with_tracing)
 REGISTE_APPLY_FUNC(cpp_apply_backward_varnode)
+REGISTE_APPLY_FUNC(cpp_apply_module_trace)
 
 #undef REGISTE_APPLY_FUNC
 
@@ -78,6 +81,14 @@ Tensor::flags_t ApplyContext::global_enable = 0;
 
 void set_tracing() { ApplyContext::global_enable |= Tensor::Flags::TRACE; }
 void unset_tracing() { ApplyContext::global_enable &= ~Tensor::Flags::TRACE; }
+
+void set_module_tracing() { ApplyContext::global_enable |= Tensor::Flags::MODULE_TRACE; }
+void unset_module_tracing() { ApplyContext::global_enable &= ~Tensor::Flags::MODULE_TRACE; }
+bool is_tracing_module() {
+    return ApplyContext::global_enable & Tensor::Flags::MODULE_TRACE;
+}
+
+
 
 bool skip_tracing = false;
 
@@ -116,6 +127,11 @@ apply_result_t apply(ApplyContext& ctx) {
         }
         return ret;
     }
+
+    if (flags & Tensor::Flags::MODULE_TRACE) {
+        return apply_module_trace(ctx);
+    }
+
 
     if (flags & Tensor::Flags::TRACE) {
         return apply_trace(ctx);
@@ -310,6 +326,21 @@ REGISTE_TENSORWRAPPER_FUNC(bool, recording)
 
 #undef REGISTE_TENSORWRAPPER_FUNC
 
+PyObject* TensorWrapper::module_trace_info() {
+    if (!m_tensor->m_module_trace_info.ptr()) {
+        PyErr_SetString(PyExc_AttributeError,
+                        "Has no attribute named \'_NodeMixin__node\', please "
+                        "set it first");
+        return nullptr;
+    }
+    return m_tensor->m_module_trace_info.inc_ref().ptr();
+}
+
+void TensorWrapper::set_module_trace_info(PyObject* obj) {
+    m_tensor->m_module_trace_info = py::reinterpret_borrow<py::object>(obj);
+}
+
+
 
 #define REGISTE_TENSORWRAPPER_PYOBJECT_FUNC(member)                                 \
         PyObject* TensorWrapper::member() {                                         \
@@ -495,7 +526,9 @@ void TensorWrapper::reset(PyObject* tensor) {
     }
     std::string user_custom_name = m_tensor->user_custom_name;
     std::string automatic_name = m_tensor->automatic_name;
+    auto module_trace_info = m_tensor->m_module_trace_info;
     m_tensor = t->m_tensor;
+    m_tensor->m_module_trace_info = module_trace_info;
     m_tensor->user_custom_name = user_custom_name;
     m_tensor->automatic_name = automatic_name;
 }
@@ -856,6 +889,7 @@ void init_tensor(py::module m) {
         .def_getset<&TensorWrapper::trace_mixin_info, &TensorWrapper::set_trace_mixin_info>("_trace_mixin_info")
         .def_getset<&TensorWrapper::user_custom_name, &TensorWrapper::set_user_custom_name>("c_name")
         .def_getset<&TensorWrapper::automatic_name, &TensorWrapper::set_automatic_name>("_name")
+        .def_getset<&TensorWrapper::module_trace_info, &TensorWrapper::set_module_trace_info>("_NodeMixin__node")
         .finalize();
     if (!tensor_type) throw py::error_already_set();
     py::setattr(m, "Tensor", tensor_type);
@@ -998,7 +1032,7 @@ void init_tensor(py::module m) {
     m.def("set_cpp_apply_with_tracing", &set_cpp_apply_with_tracing);
     m.def("set_cpp_apply_const_with_tracing", &set_cpp_apply_const_with_tracing);
     m.def("set_cpp_apply_backward_varnode", &set_cpp_apply_backward_varnode);
-
+    m.def("set_cpp_apply_module_trace", &set_cpp_apply_module_trace);
     m.attr("skip_tracing") = &skip_tracing;
 
     py::class_<SharedHandle>(m, "SharedHandle")
@@ -1016,6 +1050,9 @@ void init_tensor(py::module m) {
     m.def("set_allow_higher_order_directive", [](bool value){
         GradKey::allow_higher_order_directive = value;
     });
+    m.def("set_module_tracing", &set_module_tracing);
+    m.def("unset_module_tracing", &unset_module_tracing);
+    m.def("is_tracing_module", &is_tracing_module);
 }
 
 #undef MGE_PY_INTERFACE

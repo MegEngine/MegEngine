@@ -34,6 +34,7 @@ private:
     void emit_class();
     void emit_py_init();
     void emit_py_getsetters();
+    void emit_py_methods();
     Initproc emit_initproc();
 
     MgbOp& op;
@@ -133,9 +134,16 @@ void $0(PyTypeObject& py_type) {
 
     if (firstOccur) {
         os << tgfmt(R"(
+    static PyMethodDef tp_methods[] = {
+        {const_cast<char*>("dump"), (PyCFunction)$enumTpl<$opClass::$enumClass>::py_dump, METH_NOARGS, NULL},
+        {NULL}  /* Sentinel */
+        };
+    )", &ctx);
+        os << tgfmt(R"(
     static PyType_Slot slots[] = {
         {Py_tp_repr, (void*)$enumTpl<$opClass::$enumClass>::py_repr},
         {Py_tp_richcompare, (void*)$enumTpl<$opClass::$enumClass>::tp_richcompare},
+        {Py_tp_methods, tp_methods},
 )", &ctx);
         if (attr->getEnumCombinedFlag()) {
             // only bit combined enum could new instance because bitwise operation,
@@ -212,17 +220,62 @@ Initproc OpDefEmitter::emit() {
     emit_class();
     emit_py_init();
     emit_py_getsetters();
+    emit_py_methods();
     return emit_initproc();
 }
 
 void OpDefEmitter::emit_class() {
+    auto&& className = op.getCppClassName();
+    std::string method_defs;
+    std::vector<std::string> body;
+
+    llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
+        body.push_back(formatv(R"(
+            {{"{0}", serialization<decltype(opdef.{0})>::dump(opdef.{0})})"
+            , attr.name));
+    });
+    method_defs += formatv(R"(
+    static PyObject* getstate(PyObject* self, PyObject*) {{
+        auto& opdef = reinterpret_cast<PyOp({0})*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {{
+            {1}
+        };
+        return py::cast(state).release().ptr();
+    })", className, llvm::join(body, ","));
+
+        body.clear();
+    llvm::for_each(op.getMgbAttributes(), [&](auto&& attr) {
+        body.push_back(formatv(R"(
+        {{
+        auto&& iter = state.find("{0}");
+        if (iter != state.end()) {
+            opdef.{0} = serialization<decltype(opdef.{0})>::load(iter->second);
+        }
+        })", attr.name));
+    });
+
+    method_defs += formatv(R"(
+    static PyObject* setstate(PyObject* self, PyObject* args) {{
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp({0})*>(self)->inst();
+        static_cast<void>(opdef);
+        {1}
+        Py_RETURN_NONE;
+    })", className, llvm::join(body, "\n"));
+
+
     os << tgfmt(R"(
 PyOpDefBegin($_self) // {
     static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    $0
     static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
 // };
 PyOpDefEnd($_self)
-)", &ctx);
+)", &ctx, method_defs);
 }
 
 void OpDefEmitter::emit_py_init() {
@@ -302,6 +355,33 @@ PyGetSetDef PyOp($_self)::py_getsetters[] = {
 )", &ctx, llvm::join(llvm::map_range(op.getMgbAttributes(), f), "\n    "));
 }
 
+void OpDefEmitter::emit_py_methods(){
+
+     // generate methods
+    std::string method_defs;
+    std::vector<std::string> method_items;
+    {
+        auto&& className = op.getCppClassName();
+        // generate getstate
+        method_items.push_back(formatv(
+            "{{const_cast<char*>(\"__getstate__\"), PyOp({0})::getstate, METH_NOARGS, \"{0} getstate\"},",
+            className));
+
+        // generate setstate
+        method_items.push_back(formatv(
+            "{{const_cast<char*>(\"__setstate__\"), PyOp({0})::setstate, METH_VARARGS, \"{0} setstate\"},",
+            className));
+    }
+   
+
+    os << tgfmt(R"(
+    PyMethodDef PyOp($_self)::tp_methods[] = {
+        $0
+        {NULL}  /* Sentinel */
+    };
+    )", &ctx, llvm::join(method_items, "\n    "));
+}
+
 Initproc OpDefEmitter::emit_initproc() {
     std::string initproc = formatv("_init_py_{0}", op.getCppClassName());
     std::string subclass_init_call;
@@ -321,6 +401,7 @@ void $0(py::module m) {
     py_type.tp_dealloc = py_dealloc_generic<py_op>;
     py_type.tp_new = py_new_generic<py_op>;
     py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
     py_type.tp_getset = py_op::py_getsetters;
     mgb_assert(PyType_Ready(&py_type) >= 0);
     $1

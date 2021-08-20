@@ -88,6 +88,19 @@ PyObject* py_new_generic(PyTypeObject* type, PyObject*, PyObject*) {
     return obj;
 }
 
+template<typename T, typename SNIFAE=void>
+struct serialization {
+    static T load(py::object obj) {
+        return py::cast<T>(obj);
+    }
+    template<typename U,
+        typename = std::enable_if_t<std::is_same_v<T, std::decay_t<U>>>>
+    static py::object dump(U&& t) {
+        return py::cast(std::forward<U>(t));
+    }
+};
+
+
 template<typename T>
 void py_dealloc_generic(PyObject* obj) {
     reinterpret_cast<T*>(obj)->op.reset();
@@ -127,6 +140,13 @@ struct PyOpDef {
     static PyGetSetDef py_getsetters[];
     static Py_hash_t tp_hash(PyObject *obj);
     static PyObject* tp_richcompare(PyObject *self, PyObject *other, int op);
+    static PyObject* py_repr(PyObject* self) {
+        return py::cast(
+                       reinterpret_cast<PyOpDef*>(self)->op->make_name())
+                .release()
+                .ptr();
+    }
+
 };
 PyTypeObject PyOpType(OpDef);
 std::unordered_map<mgb::Typeinfo*, PyTypeObject*> PyOp(OpDef)::ctype2pytype;
@@ -191,6 +211,13 @@ struct EnumWrapper {
             std::string(name) + "." + reinterpret_cast<EnumWrapper*>(self)->to_string())
                 .release().ptr();
     }
+
+    static PyObject* py_dump(PyObject* self) {
+        return py::cast(reinterpret_cast<EnumWrapper*>(self)->to_string())
+                .release()
+                .ptr();
+    }
+
     static PyObject* tp_richcompare(PyObject *self, PyObject *other, int op) {
         if (op == Py_EQ || op == Py_NE) {
             T lhs, rhs;
@@ -279,6 +306,19 @@ struct BitCombinedEnumWrapper {
                 reinterpret_cast<BitCombinedEnumWrapper*>(self)->to_string())
                         .release().ptr();
     }
+
+    static PyObject* py_dump(PyObject* self) {
+        std::vector<std::string> result;
+        auto value = reinterpret_cast<BitCombinedEnumWrapper*>(self)->value;
+        uint32_t value_int = static_cast<uint32_t>(value);
+        for (uint32_t i = 0; i < 32; i++) {
+            if (value_int >> i & 1) {
+                result.push_back(members[i]);
+            }
+        }
+        return py::tuple(py::cast(result)).release().ptr();
+    }
+
     static PyObject* py_or(PyObject* self, PyObject* other) {
         if(!(self->ob_type == other->ob_type)){
             return PyErr_Format(
@@ -326,6 +366,24 @@ struct BitCombinedEnumWrapper {
                 return false;
             }
         }
+        if (py::isinstance<py::tuple>(src)) {
+            auto params = py::cast<std::vector<std::string>>(src); 
+            bool first = true;
+            for (auto s : params){
+                auto&& iter = mem2value.find(normalize_enum(s));
+                if (iter != mem2value.end()) {
+                    if (first) {
+                        value = iter->second;
+                        first = false;
+                    } else {
+                        value |= iter->second;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            return true;
+        }
         if (py::isinstance<py::int_>(obj)) {
             auto v = py::cast<std::underlying_type_t<T>>(src);
             if(v > EnumTrait<T>::max) {
@@ -351,6 +409,25 @@ struct BitCombinedEnumWrapper {
     }
 };
 
+template<typename T>
+struct serialization<T,
+        std::enable_if_t<std::is_enum_v<std::decay_t<T>>>> {
+    static T load(py::object obj) {
+        auto caster = pybind11::detail::type_caster<T>();
+        if (caster.load(obj, true)) {
+            return caster;
+        } else {
+                PyErr_SetString(PyExc_RuntimeError,
+                 "load faild \n");
+                return caster;
+        }
+    }
+    static py::object dump(T t) {
+        return py::cast(t).attr("dump")();
+    }
+};
+
+
 void _init_py_op_def(py::module m) {
     using py_op = PyOp(OpDef);
     auto& py_type = PyOpType(OpDef);
@@ -363,6 +440,7 @@ void _init_py_op_def(py::module m) {
     py_type.tp_hash = PyOp(OpDef)::tp_hash;
     py_type.tp_richcompare = PyOp(OpDef)::tp_richcompare;
     py_type.tp_getset = py_op::py_getsetters;
+    py_type.tp_repr = py_op::py_repr;
     mgb_assert(PyType_Ready(&py_type) >= 0);
     m.add_object("OpDef", reinterpret_cast<PyObject*>(&py_type));
 }

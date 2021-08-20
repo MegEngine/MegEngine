@@ -451,18 +451,11 @@ public:
     template<typename... Args>
     static PyObject* cnew(Args&&... args) {
         auto* pytype = type().operator->();
-        auto* self = pytype->tp_alloc(pytype, 0);
-        auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
-        if constexpr (has_vectorcall && tp_vectorcall::valid) {
-            reinterpret_cast<wrap_t*>(self)->vectorcall_slot = &tp_vectorcall::template impl<>;
-        }
-        new(inst) T(std::forward<Args>(args)...);
-        return self;
+        return cnew_with_type(pytype, std::forward<Args>(args)...);
     }
 
     template<typename... Args>
     static PyObject* cnew_with_type(PyTypeObject* pytype, Args&&... args) {
-        
         auto* self = pytype->tp_alloc(pytype, 0);
         auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
         if constexpr (has_vectorcall && tp_vectorcall::valid) {

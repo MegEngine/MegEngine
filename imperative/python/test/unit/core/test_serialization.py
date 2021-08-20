@@ -14,6 +14,11 @@ import numpy as np
 
 import megengine as mge
 from megengine import Parameter, Tensor
+from megengine.core.ops import builtin
+from megengine.experimental.traced_module.serialization import (
+    get_opdef_state,
+    load_opdef_from_state,
+)
 
 
 def test_tensor_serialization():
@@ -86,3 +91,25 @@ def test_compatibility():
 
     test_old_tensor("tensor_v1_1.mge")
     test_old_tensor("tensor_v1_2.mge")
+
+
+def test_opdef_serialization():
+    with TemporaryFile() as f:
+        x = builtin.Elemwise(mode="Add")
+        pickle.dump(get_opdef_state(x), f)
+        f.seek(0)
+        load_x = load_opdef_from_state(pickle.load(f))
+        assert x == load_x
+
+    with TemporaryFile() as f:
+        x = builtin.Convolution(stride_h=9, compute_mode="float32")
+        x.strategy = (
+            builtin.Convolution.Strategy.PROFILE
+            | builtin.Convolution.Strategy.HEURISTIC
+            | builtin.Convolution.Strategy.REPRODUCIBLE
+        )
+        pickle.dump(get_opdef_state(x), f)
+        f.seek(0)
+        load_x = load_opdef_from_state(pickle.load(f))
+        assert x.strategy == load_x.strategy
+        assert x == load_x
