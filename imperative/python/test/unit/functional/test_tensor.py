@@ -119,7 +119,7 @@ def test_stack(is_varnode):
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])
-def test_split(is_varnode):
+def test_split_basic(is_varnode):
     if is_varnode:
         network = Network()
         saved_symbolic_shape = set_symbolic_shape(False)
@@ -150,13 +150,46 @@ def test_split(is_varnode):
         pass
 
     try:
-        F.split(inp, [3, 3, 5], axis=3)
+        F.split(inp, [3, 2, 5], axis=3)
         assert False
     except ValueError as e:
-        assert str(e) == "Invalid nsplits_or_secions: [3, 3, 5]"
+        assert str(e) == "Invalid nsplits_or_secions: [3, 2, 5]"
 
     if is_varnode:
         set_symbolic_shape(saved_symbolic_shape)
+
+
+@pytest.mark.parametrize("symbolic", [None, False, True])
+def test_split(symbolic):
+    inp1 = np.random.random((3, 4, 5, 6)).astype(np.float32)
+    inp2 = np.random.random((0, 4, 5, 6)).astype(np.float32)
+
+    def ref(inp, nsplits_or_sections, axis):
+        return np.split(inp, nsplits_or_sections, axis)
+
+    def func(inp, nsplits_or_sections, axis):
+        return F.split(inp, nsplits_or_sections, axis)
+
+    cases = [
+        (inp1, 2, 3),
+        (inp1, [3], 3),
+        (inp1, [3, 3, 5], 3),
+        (inp2, 2, 3),
+        (inp2, [3], 3),
+        (inp2, [3, 3, 5], 3),
+    ]
+
+    for case in cases:
+        if symbolic is None:
+            fn = func
+        else:
+            fn = trace(symbolic=symbolic)(func)
+        for i in range(3 if symbolic is not None else 1):
+            ref_out = ref(*case)
+            out = fn(tensor(case[0]), case[1], case[2])
+            assert len(ref_out) == len(out)
+            for idx in range(len(ref_out)):
+                np.testing.assert_equal(ref_out[idx], out[idx].numpy())
 
 
 @pytest.mark.parametrize("is_varnode", [True, False])

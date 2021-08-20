@@ -20,7 +20,7 @@ from ..core.tensor.array_method import _broadcast, _remove_axis
 from ..core.tensor.utils import astensor1d, convert_inputs, get_device
 from ..device import get_default_device
 from ..tensor import Tensor
-from .elemwise import ceil, floor_div
+from .elemwise import ceil
 
 __all__ = [
     "arange",
@@ -442,10 +442,10 @@ def split(inp, nsplits_or_sections, axis=0):
 
     Ntotal = inp.shape[axis]
 
-    try:
+    if isinstance(nsplits_or_sections, Sequence):
         Nsections = len(nsplits_or_sections) + 1
         is_array = True
-    except TypeError:
+    else:
         Nsections = int(nsplits_or_sections)
         is_array = False
 
@@ -465,27 +465,19 @@ def split(inp, nsplits_or_sections, axis=0):
                     Ntotal, axis, Nsections
                 )
             )
+        partitions = []
+        for i in range(Nsections):
+            section_size = (Ntotal + Nsections - i - 1) // Nsections
+            partitions.append(section_size)
 
-        func = (
-            floor_div
-            if isinstance(Nsections, (SymbolVar, Tensor))
-            else lambda x, y: x // y
-        )
-        div_points = [0] + [
-            func(Ntotal + Nsections - i - 1, Nsections) for i in range(Nsections)
-        ]
-        for i in range(2, Nsections + 1):
-            div_points[i] = div_points[i - 1] + div_points[i]
-
-    sub_tensors = []
-    for i in range(Nsections):
-        l = div_points[i]
-        r = div_points[i + 1]
-        slices = tuple(
-            [slice(None)] * axis + [slice(l, r)] + [slice(None)] * (ndim - axis - 1)
-        )
-        sub_tensors.append(inp[slices])
-    return sub_tensors
+    partitions = [
+        part
+        if isinstance(part, (SymbolVar, Tensor))
+        else Const(part, dtype="int32", device=inp.device)(inp)[0]
+        for part in partitions
+    ]
+    op = builtin.Split(axis=axis)
+    return apply(op, inp, *partitions)
 
 
 def _get_idx(index, axis):

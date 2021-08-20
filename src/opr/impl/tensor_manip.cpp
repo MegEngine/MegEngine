@@ -987,7 +987,8 @@ Split::Split(VarNode *inp, const Options &opt, const OperatorNodeConfig &config)
     }
 
     for (size_t i = 0; i < m_opt.nr_part; ++ i)
-        add_output(ssprintf("o%zd", i))->dtype(inp->dtype());
+        add_output(ssprintf("o%zd", i))->dtype(inp->dtype())
+                .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 
     m_output_spec.resize(m_opt.nr_part);
 }
@@ -1060,10 +1061,6 @@ bool Split::infer_shape(size_t out_idx, TensorShape &dest,
         size_t size = 0;
         for (size_t i = 0; i < m_opt.nr_part; ++ i) {
             auto p = partition[i];
-            mgb_assert(p,
-                    "got zero partition size at part %zu, tot_size=%zu",
-                    i, ishp.shape[axis]);
-
             size += p;
 
             auto &&cur = m_output_spec[i].shape;
@@ -1126,6 +1123,7 @@ cg::OperatorNodeBase::NodeProp* Split::do_make_node_prop() const {
     auto rst = OperatorNodeBase::do_make_node_prop();
     rst->add_flag(NodeProp::Flag::CROSS_COMP_NODE_MEMORY);
     outshape_by_symvar_reset_node_dep_type(rst);
+    rst->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return rst;
 }
 
@@ -1141,6 +1139,10 @@ void Split::do_execute(ExecEnv &env) {
             auto &&in = input(0)->dev_tensor();
             auto &&out = output(idx)->dev_tensor();
             auto &&spec = m_output_spec.at(idx);
+            if (out.layout().is_empty()) {
+                mgb_assert(spec.subspec.layout().is_empty());
+                return;
+            }
             owner_graph()->event().signal_inplace<cg::event::BeforeKernel>(
                     this, out.comp_node());
             if (spec.mem_fwd_success) {
