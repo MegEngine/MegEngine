@@ -450,12 +450,14 @@ def split(inp, nsplits_or_sections, axis=0):
         is_array = False
 
     if is_array:
+        partitions = []
         div_points = [0] + list(nsplits_or_sections) + [Ntotal]
         for i in range(1, len(div_points)):
-            if div_points[i - 1] >= div_points[i]:
+            if div_points[i - 1] > div_points[i]:
                 raise ValueError(
                     "Invalid nsplits_or_secions: {}".format(nsplits_or_sections)
                 )
+            partitions.append(div_points[i] - div_points[i - 1])
     else:  # scalar
         if Nsections <= 0:
             raise ValueError("Number sections must be larger than 0")

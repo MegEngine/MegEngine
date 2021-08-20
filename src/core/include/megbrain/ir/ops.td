@@ -383,4 +383,10 @@ def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 
 def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
 
+def Split: MgbHashableOp<"Split", [EmptyParam]> {
+  let extraArguments = (ins
+    MgbI32Attr:$axis
+  );
+}
+
 #endif // MGB_OPS
