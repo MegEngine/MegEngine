@@ -65,7 +65,12 @@ jobs:
       - name: Build MegEngine
         run: ./ci/cmake.sh cpu
       - name: Python test
-        run: ./ci/run_python_test.sh cpu
+        run: |
+          rm -rf imperative/python/megenginelite/
+          cp -rf lite/pylite/megenginelite/ imperative/python/
+          mkdir -p imperative/python/megenginelite/libs
+          cp /tmp/build/cpu/lite/liblite_shared_whl.so imperative/python/megenginelite/libs/liblite_shared_whl.so
+          ./ci/run_python_test.sh cpu
       - name: C++ test
         run: ./ci/run_cpp_test.sh cpu
   gpu-test:
@@ -88,7 +93,12 @@ jobs:
       - name: Build MegEngine
         run: ./ci/cmake.sh cuda
       - name: Python test
-        run: ./ci/run_python_test.sh cuda
+        run: |
+          rm -rf imperative/python/megenginelite/
+          cp -rf lite/pylite/megenginelite/ imperative/python/
+          mkdir -p imperative/python/megenginelite/libs
+          cp /tmp/build/cuda/lite/liblite_shared_whl.so imperative/python/megenginelite/libs/liblite_shared_whl.so
+          ./ci/run_python_test.sh cuda
       - name: C++ test
         run: ./ci/run_cpp_test.sh cuda
   auto-merge:
