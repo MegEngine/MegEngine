@@ -250,13 +250,9 @@ CanonizedFilterMeta DeformableConvBackwardData::check_exec(
     megdnn_assert_eq_dtype(im, mask_grad);
 
     // check layout
-    megdnn_assert(im.shape == im_grad.shape, "invalid im_grad shape: %s",
-                  megdnn_layout_msg(im_grad).c_str());
-    megdnn_assert(offset.shape == offset_grad.shape,
-                  "invalid offset_grad shape: %s",
-                  megdnn_layout_msg(offset_grad).c_str());
-    megdnn_assert(mask.shape == mask_grad.shape, "invalid mask_grad shape: %s",
-                  megdnn_layout_msg(mask_grad).c_str());
+    megdnn_assert_eq_shape(im, im_grad);
+    megdnn_assert_eq_shape(offset, offset_grad);
+    megdnn_assert_eq_shape(mask, mask_grad);
 
     auto ret = make_canonized_filter_meta(im.ndim, filter, offset);
     auto required_workspace_in_bytes =

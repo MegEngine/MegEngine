@@ -15,6 +15,7 @@
 #include "src/naive/convolution/helper.h"
 
 #include <cstring>
+#include "megdnn/heuristic_cache.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 
@@ -56,6 +57,14 @@ size_t BatchConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& flt,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) {
+    TensorLayoutArray layouts{src, flt, bias, z, dst};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(), &this->param(),
+                            sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
     return get_workspace_bundle(nullptr, src, flt, bias, z, dst)
             .total_size_in_bytes();
 }

@@ -36,8 +36,7 @@ size_t Fwd::get_workspace_in_bytes(const TensorLayout& im,
                                    const TensorLayout& offset,
                                    const TensorLayout& mask,
                                    const TensorLayout& dst) {
-    auto algo = get_algorithm(this, im, filter, offset, mask, dst);
-    return algo->get_workspace_in_bytes({this, im, filter, offset, mask, dst});
+    return get_dnn_workspace(this, im, filter, offset, mask, dst);
 }
 
 std::vector<AlgoFwd*> Fwd::get_all_algorithms(const TensorLayout& /* im */,
@@ -96,13 +95,13 @@ const char* Fwd::get_algorithm_set_name() const {
 void Fwd::exec(_megdnn_tensor_in im, _megdnn_tensor_in filter,
                _megdnn_tensor_in offset, _megdnn_tensor_in mask,
                _megdnn_tensor_out out, _megdnn_workspace workspace) {
+    check_exec(im.layout, filter.layout, offset.layout, mask.layout, out.layout,
+               workspace.size);
     auto algo = get_algorithm(this, im.layout, filter.layout, offset.layout,
                               mask.layout, out.layout);
 
     AlgoBase::ExecArgs args(this, im, filter, offset, mask, out, workspace);
-
-    algo->check_workspace(args, workspace).exec(args);
-    return;
+    algo->exec(args);
 }
 
 /* ============== BwdFlt Implementation ============== */
@@ -152,21 +151,23 @@ AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
 size_t BwdFlt::get_workspace_in_bytes(
         const TensorLayout& im, const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& filter_grad) {
-    auto algo = get_algorithm(this, im, offset, mask, out_grad, filter_grad);
-    return algo->get_workspace_in_bytes({this, im, offset, mask, out_grad, filter_grad});
+    return get_dnn_workspace(this, im, offset, mask, out_grad, filter_grad);
 }
 
 const char* BwdFlt::get_algorithm_set_name() const {
     return "DEFORMABLE_CONV_BWD_FILTER_CUDA";
 };
 
-void BwdFlt::exec(_megdnn_tensor_in im, _megdnn_tensor_in offset, _megdnn_tensor_in mask,
-               _megdnn_tensor_in out_grad, _megdnn_tensor_out filter_grad,
-               _megdnn_workspace workspace) {
-    AlgoBase::ExecArgs args(this, im, offset, mask, out_grad, filter_grad, workspace);
-    auto algo = get_algorithm(this, im.layout, offset.layout, mask.layout, out_grad.layout,
-                              filter_grad.layout);
-    algo->check_workspace(args, workspace).exec(args);
+void BwdFlt::exec(_megdnn_tensor_in im, _megdnn_tensor_in offset,
+                  _megdnn_tensor_in mask, _megdnn_tensor_in out_grad,
+                  _megdnn_tensor_out filter_grad, _megdnn_workspace workspace) {
+    check_exec(im.layout, offset.layout, mask.layout, out_grad.layout,
+               filter_grad.layout, workspace.size);
+    AlgoBase::ExecArgs args(this, im, offset, mask, out_grad, filter_grad,
+                            workspace);
+    auto algo = get_algorithm(this, im.layout, offset.layout, mask.layout,
+                              out_grad.layout, filter_grad.layout);
+    algo->exec(args);
 }
 
 /* ============== BwdData Implementation ============== */
@@ -222,10 +223,8 @@ size_t BwdData::get_workspace_in_bytes(
         const TensorLayout& offset, const TensorLayout& mask,
         const TensorLayout& out_grad, const TensorLayout& im_grad,
         const TensorLayout& offset_grad, const TensorLayout& mask_grad) {
-    auto algo = get_algorithm(this, im, filter, offset, mask, out_grad, 
-                              im_grad, offset_grad, mask_grad);
-    return algo->get_workspace_in_bytes({this, im, filter, offset, mask, out_grad, 
-                                         im_grad, offset_grad, mask_grad});
+    return get_dnn_workspace(this, im, filter, offset, mask, out_grad, im_grad,
+                             offset_grad, mask_grad);
 }
 
 const char* BwdData::get_algorithm_set_name() const {
@@ -233,16 +232,19 @@ const char* BwdData::get_algorithm_set_name() const {
 };
 
 void BwdData::exec(_megdnn_tensor_in im, _megdnn_tensor_in filter,
-               _megdnn_tensor_in offset, _megdnn_tensor_in mask,
-               _megdnn_tensor_in out_grad, _megdnn_tensor_out im_grad,
-               _megdnn_tensor_out offset_grad, _megdnn_tensor_out mask_grad,
-               _megdnn_workspace workspace) {
+                   _megdnn_tensor_in offset, _megdnn_tensor_in mask,
+                   _megdnn_tensor_in out_grad, _megdnn_tensor_out im_grad,
+                   _megdnn_tensor_out offset_grad, _megdnn_tensor_out mask_grad,
+                   _megdnn_workspace workspace) {
+    check_exec(im.layout, filter.layout, offset.layout, mask.layout,
+               out_grad.layout, im_grad.layout, offset_grad.layout,
+               mask_grad.layout, workspace.size);
     AlgoBase::ExecArgs args(this, im, filter, offset, mask, out_grad, im_grad,
                             offset_grad, mask_grad, workspace);
     auto algo = get_algorithm(this, im.layout, filter.layout, offset.layout,
                               mask.layout, out_grad.layout, im_grad.layout,
                               offset_grad.layout, mask_grad.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 // vim: syntax=cpp.doxygen

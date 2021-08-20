@@ -24,6 +24,7 @@
 
 //! TODO: here has to be know some megdnn::opr when there is produced midout.h
 //! fix it if there is another graceful way.
+#include "megdnn/heuristic_cache.h"
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
 #include "megdnn/oprs/base.h"
@@ -1156,6 +1157,15 @@ template <typename Opr>
 size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
                                     Opr* megdnn_opr, const MGBOpr* mgb_opr,
                                     bool allow_weight_preprocess) {
+    HeuristicCache::Key cache_key(
+            megdnn_opr->handle(), megdnn_opr->get_opr_type(), layouts.data(),
+            layouts.size(), &megdnn_opr->param(), sizeof(megdnn_opr->param()));
+    auto rst = HeuristicCache::instance().get(cache_key);
+    if (rst.policy.algo.valid()) {
+        megdnn_opr->execution_policy() = rst.policy;
+        return rst.workspace;
+    }
+
     if (WorkspaceLimitGetter::is_prealloc_run(mgb_opr->owner_graph())) {
         return 0;
     }
@@ -1192,6 +1202,11 @@ size_t AlgoChooser<Opr>::setup_algo(const FixedTensorLayouts& layouts,
     mgb_log_debug("%s", ret.c_str());
 
     megdnn_opr->execution_policy() = policy;
+
+    if (mgb_opr->execution_policy().strategy & ExecutionStrategy::HEURISTIC) {
+        HeuristicCache::Result cache_result{policy, workspace};
+        HeuristicCache::instance().put(cache_key, cache_result);
+    }
     return workspace;
 }
 

@@ -101,6 +101,15 @@ PoolingImpl::PoolingKernParam PoolingImpl::make_pooling_kern_param(
 
 size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
                                            const TensorLayout& dst) {
+    TensorLayoutArray layouts{src, dst};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(), &this->param(),
+                            sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
     auto param = make_pooling_kern_szie_param(this, src, dst);
     auto algo = get_algorithm(this, src, dst);
     if (!is_fallback_algo(algo)) {

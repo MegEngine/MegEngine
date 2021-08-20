@@ -19,8 +19,7 @@ namespace rocm {
 
 size_t PoolingForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                               const TensorLayout& dst) {
-    AlgoBase::SizeArgs args(this, src, dst);
-    return get_algorithm(this, src, dst)->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, dst);
 }
 
 const char* PoolingForwardImpl::get_algorithm_set_name() const {
@@ -69,9 +68,7 @@ size_t PoolingBackwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                 const TensorLayout& dst,
                 const TensorLayout& diff,
                 const TensorLayout& grad) {
-    AlgoBase::SizeArgs args(this, src, dst, diff, grad);
-    return get_algorithm(this, src, dst, diff, grad)
-            ->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, dst, diff, grad);
 };
 
 const char* PoolingBackwardImpl::get_algorithm_set_name() const {

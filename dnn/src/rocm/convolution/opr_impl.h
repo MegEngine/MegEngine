@@ -24,7 +24,7 @@ public:
               const PreprocessedFilter* preprocessed_filter,
               _megdnn_workspace workspace) override;
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& src, const CanonizedFilterMeta& filter,
+            const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst, size_t workspace_limit_in_bytes,
             const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) {
@@ -95,7 +95,7 @@ public:
     void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
     AlgorithmInfo get_algorithm_info_heuristic(
-            const CanonizedFilterMeta& filter, const TensorLayout& diff,
+            const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad, size_t workspace_limit_in_bytes,
             const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) {
@@ -145,7 +145,7 @@ public:
               _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& src, const TensorLayout& diff,
-            const CanonizedFilterMeta& grad, size_t workspace_limit_in_bytes,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
             const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) {
         return get_algorithm_heuristic(src, diff, grad,

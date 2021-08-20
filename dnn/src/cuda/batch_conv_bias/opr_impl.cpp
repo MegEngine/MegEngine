@@ -56,9 +56,7 @@ size_t BatchConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst) {
-    AlgoBase::SizeArgs args(this, src, filter, bias, z, dst);
-    return get_algorithm(this, src, filter, bias, z, dst)
-            ->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, filter, bias, z, dst);
 }
 
 void BatchConvBiasForwardImpl::exec(_megdnn_tensor_in src,
@@ -66,10 +64,12 @@ void BatchConvBiasForwardImpl::exec(_megdnn_tensor_in src,
                                     _megdnn_tensor_in bias, _megdnn_tensor_in z,
                                     _megdnn_tensor_out dst,
                                     _megdnn_workspace workspace) {
+    check_exec(src.layout, filter.layout, bias.layout, z.layout, dst.layout,
+               workspace.size);
     AlgoBase::ExecArgs args(this, src, filter, bias, z, dst, workspace);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
                               z.layout, dst.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 const char* BatchConvBiasForwardImpl::get_algorithm_set_name() const {

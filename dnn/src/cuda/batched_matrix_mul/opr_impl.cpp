@@ -33,13 +33,12 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
     AlgoBase::ExecArgs args(this, A, B, C, workspace);
     check_exec(A.layout, B.layout, C.layout, workspace.size);
     auto&& algo = megdnn::get_algorithm(this, A.layout, B.layout, C.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 size_t BatchedMatrixMulForwardImpl::get_workspace_in_bytes(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
-    AlgoBase::SizeArgs args(this, A, B, C);
-    return megdnn::get_algorithm(this, A, B, C)->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, A, B, C);
 }
 
 std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(

@@ -42,6 +42,10 @@ public:
                                           const TensorLayout& B,
                                           const TensorLayout& C) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::BATCHED_MATRIX_MUL_FORWARD;
+    }
+
 protected:
     void check_exec(const TensorLayout& A, const TensorLayout& B,
                     const TensorLayout& C, size_t workspace_in_bytes);
@@ -76,6 +80,11 @@ public:
                                           const TensorLayout& C) = 0;
 
     static size_t pack_size (const Param::Format format);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::MATRIX_MUL_FORWARD;
+    }
+
 protected:
     void check_exec(const TensorLayout& A, const TensorLayout& B,
                     const TensorLayout& C, size_t workspace_in_bytes);

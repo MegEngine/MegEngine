@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -17,9 +18,27 @@
 #include <vector>
 
 #include "megdnn/common.h"
+#include "megdnn/heuristic_cache.h"
 #include "utils.h"
 
 namespace megdnn {
+
+template <class Opr, typename... Args>
+size_t get_dnn_workspace(Opr* opr, Args&&... args) {
+    TensorLayoutArray layouts{{args...}};
+    HeuristicCache::Key key{opr->handle(), opr->get_opr_type(),
+                            layouts.data(), layouts.size(), &opr->param(),
+                            sizeof(opr->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
+    typename Opr::AlgoBase::SizeArgs size_args(opr,
+                                               std::forward<Args>(args)...);
+    return get_algorithm(opr, std::forward<Args>(args)...)
+            ->get_workspace_in_bytes(size_args);
+}
 
 /*!
  * \brief get user-configured algorithm, or heuristic algorithm
@@ -31,9 +50,20 @@ typename Opr::AlgoBase* get_algorithm(Opr* opr, Args&&... args) {
     if (set.valid()) {
         ret = set;
     } else {
-        ret = opr->get_algorithm_info_heuristic(
-                std::forward<Args>(args)..., std::numeric_limits<size_t>::max(),
-                AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT).desc;
+        TensorLayoutArray layouts{{args...}};
+        HeuristicCache::Key key{opr->handle(), opr->get_opr_type(),
+                                layouts.data(), layouts.size(), &opr->param(),
+                                sizeof(opr->param())};
+        auto rst = HeuristicCache::instance().get(key);
+        if (rst.policy.algo.valid()) {
+            ret = rst.policy.algo;
+        } else {
+            ret = opr->get_algorithm_info_heuristic(
+                             std::forward<Args>(args)...,
+                             std::numeric_limits<size_t>::max(),
+                             AlgoAttribute::DEFAULT, AlgoAttribute::DEFAULT)
+                          .desc;
+        }
     }
     return static_cast<typename Opr::AlgoBase*>(
             opr->get_algorithm_from_desc(ret));

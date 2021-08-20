@@ -36,7 +36,7 @@ void ConvBiasForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
                             preprocessed_filter);
     auto algo = get_algorithm(this, src.layout, filter.layout, bias.layout,
                               z.layout, dst.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 };
 
 std::vector<ConvBiasForward::Algorithm*>
@@ -228,6 +228,15 @@ size_t ConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& bias, const TensorLayout& z,
         const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
+    TensorLayoutArray layouts{src, filter, bias, z, dst};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(), &this->param(),
+                            sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
     AlgoBase::SizeArgs args{
             this, src, filter, bias, z, dst, preprocessed_filter};
     return get_algorithm(this, src, filter, bias, z, dst)

@@ -275,6 +275,10 @@ public:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_FORWARD;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(
             const TensorLayout& src, const TensorLayout& filter,
@@ -309,6 +313,10 @@ public:
     void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
                        TensorLayout& grad);
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_BACKWARD_DATA;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& filter,
                                    const TensorLayout& diff,
@@ -337,6 +345,10 @@ public:
     virtual size_t get_workspace_in_bytes(const TensorLayout& src,
                                           const TensorLayout& diff,
                                           const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& src,
@@ -504,6 +516,10 @@ public:
             const ConvolutionBase<param::Convolution>::CanonizedFilterMeta& fm,
             const ConvBiasForward::BiasMode bias_mode,
             const param::ConvBias::NonlineMode nonline_mode);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVBIAS_FORWARD;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(
@@ -775,6 +791,10 @@ public:
     virtual size_t get_workspace_in_bytes(const TensorLayout& src,
                                           const TensorLayout& dst) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::POOLING_FORWARD;
+    }
+
 protected:
     void check_exec(const TensorLayout& src, const TensorLayout& dst,
                     size_t workspace_in_bytes);
@@ -800,6 +820,10 @@ public:
                                           const TensorLayout& dst,
                                           const TensorLayout& diff,
                                           const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::POOLING_BACKWARD;
+    }
 
 protected:
     void check_exec(const TensorLayout& src, const TensorLayout& dst,
@@ -1216,6 +1240,10 @@ public:
                                           const TensorLayout& filter,
                                           const TensorLayout& dst) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_FORWARD;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& src,
                                    const TensorLayout& filter,
@@ -1244,6 +1272,10 @@ public:
     void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
                        TensorLayout& grad);
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_BACKWARD_DATA;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& filter,
                                    const TensorLayout& diff,
@@ -1267,6 +1299,10 @@ public:
     virtual size_t get_workspace_in_bytes(const TensorLayout& src,
                                           const TensorLayout& diff,
                                           const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::CONVOLUTION3D_BACKWARD_FILTER;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& src,
@@ -1308,6 +1344,10 @@ public:
                                           const TensorLayout& filter,
                                           const TensorLayout& dst) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_FORWARD;
+    }
+
 protected:
     void check_exec(const TensorLayout& src, const TensorLayout& filter,
                     const TensorLayout& dst, size_t workspace_in_bytes);
@@ -1334,6 +1374,10 @@ public:
     void deduce_layout(const TensorLayout& filter, const TensorLayout& diff,
                        TensorLayout& grad);
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_BACKWARD_DATA;
+    }
+
 protected:
     void check_exec(const TensorLayout& filter, const TensorLayout& diff,
                     const TensorLayout& grad, size_t workspace_in_bytes);
@@ -1357,6 +1401,10 @@ public:
     virtual size_t get_workspace_in_bytes(const TensorLayout& src,
                                           const TensorLayout& diff,
                                           const TensorLayout& grad) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::LOCAL_SHARE_BACKWARD_FILTER;
+    }
 
 protected:
     void check_exec(const TensorLayout& src, const TensorLayout& diff,
@@ -1479,6 +1527,10 @@ public:
                                           const TensorLayout& mask,
                                           const TensorLayout& dst) = 0;
 
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_FORWARD;
+    }
+
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& im,
                                    const TensorLayout& filter,
@@ -1519,6 +1571,10 @@ public:
     void deduce_layout(const TensorLayout& im, const TensorLayout& offset,
                        const TensorLayout& mask, const TensorLayout& out_grad,
                        TensorLayout& filter_grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_BACKWARD_FILTER;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& im,
@@ -1565,6 +1621,10 @@ public:
                        const TensorLayout& offset, const TensorLayout& mask,
                        const TensorLayout& out_grad, TensorLayout& im_grad,
                        TensorLayout& offset_grad, TensorLayout& mask_grad);
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::DEFORMABLE_CONV_BACKWARD_DATA;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(
@@ -1676,6 +1736,10 @@ public:
                                           const TensorLayout& bias,
                                           const TensorLayout& z,
                                           const TensorLayout& dst) = 0;
+
+    static Algorithm::OprType get_opr_type() {
+        return Algorithm::OprType::BATCH_CONV_FORWARD;
+    }
 
 protected:
     CanonizedFilterMeta check_exec(const TensorLayout& src,

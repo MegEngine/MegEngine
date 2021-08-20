@@ -111,18 +111,17 @@ Convolution3DForwardImpl::get_all_algorithms(const TensorLayout& src,
 size_t Convolution3DForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) {
-    AlgoBase::SizeArgs args(this, src, filter, dst);
-    return get_algorithm(this, src, filter, dst)
-            ->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, filter, dst);
 }
 
 void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
                                     _megdnn_tensor_in filter,
                                     _megdnn_tensor_out dst,
                                     _megdnn_workspace workspace) {
+    check_exec(src.layout, filter.layout, dst.layout, workspace.size);
     AlgoBase::ExecArgs args(this, src, filter, dst, workspace);
     auto algo = get_algorithm(this, src.layout, filter.layout, dst.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 const char* Convolution3DForwardImpl::get_algorithm_set_name() const {
@@ -133,9 +132,10 @@ void Convolution3DBackwardDataImpl::exec(_megdnn_tensor_in filter,
                                          _megdnn_tensor_in diff,
                                          _megdnn_tensor_out grad,
                                          _megdnn_workspace workspace) {
+    check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
     AlgoBase::ExecArgs args(this, filter, diff, grad, workspace);
     auto algo = get_algorithm(this, filter.layout, diff.layout, grad.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 std::vector<Convolution3DBackwardDataImpl::Algorithm*>
@@ -200,9 +200,7 @@ Convolution3DBackwardDataImpl::get_algorithm_heuristic(
 size_t Convolution3DBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
-    AlgoBase::SizeArgs args(this, filter, diff, grad);
-    return get_algorithm(this, filter, diff, grad)
-            ->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, filter, diff, grad);
 }
 
 const char* Convolution3DBackwardDataImpl::get_algorithm_set_name() const {
@@ -213,10 +211,11 @@ void Convolution3DBackwardFilterImpl::exec(_megdnn_tensor_in src,
                                            _megdnn_tensor_in diff,
                                            _megdnn_tensor_out grad,
                                            _megdnn_workspace workspace) {
+    check_exec(src.layout, diff.layout, grad.layout, workspace.size);
     AlgoBase::ExecArgs args(this, src, diff, grad, workspace);
     auto algo =
             get_algorithm(this, src.layout, diff.layout, grad.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 std::vector<Convolution3DBackwardFilterImpl::Algorithm*>
@@ -281,9 +280,7 @@ Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
 size_t Convolution3DBackwardFilterImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& diff,
         const TensorLayout& grad) {
-    AlgoBase::SizeArgs args(this, src, diff, grad);
-    return get_algorithm(this, src, diff, grad)
-            ->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, diff , grad);
 }
 
 const char* Convolution3DBackwardFilterImpl::get_algorithm_set_name() const {

@@ -22,6 +22,7 @@
 #include "megbrain/opr/tensor_manip.h"
 #include "megdnn/oprs/base.h"
 #include "megdnn/dtype.h"
+#include "megdnn/heuristic_cache.h"
 
 #include <cmath>
 #include <random>
@@ -337,6 +338,7 @@ void test_no_profiling_on_shape_change(const TensorShapeArray& inps0,
 
 TEST(TestOprDNN, FastrunNoProfilingOnShapeChange) {
     REQUIRE_GPU(1);
+    megdnn::HeuristicCache::instance().clear();
 
     test_no_profiling_on_shape_change<opr::Convolution>(
             {{12, 3, 36, 36}, {4, 3, 3, 3}}, {{32, 3, 28, 28}, {4, 3, 3, 3}});

@@ -29,6 +29,7 @@
 #include "megbrain/plugin/profiler.h"
 
 #include "megbrain/test/helper.h"
+#include "megdnn/heuristic_cache.h"
 #include "megdnn/oprs/base.h"
 
 #include <atomic>
@@ -2075,10 +2076,12 @@ void test_free_memory_in_weight_preprocess(int record_level, CompNode cn) {
 
 TEST(TestGraph, FreeMemoryInWeightPreprocess) {
     test_free_memory_in_weight_preprocess(0, CompNode::load("xpu0"));
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, RecordFreeMemoryInWeightPreprocess) {
     test_free_memory_in_weight_preprocess(1, CompNode::load("cpu0"));
+    megdnn::HeuristicCache::instance().clear();
 }
 
 namespace {
@@ -2157,6 +2160,7 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithValueInfer) {
                          ->cast_final_safe<opr::SharedDeviceTensor>()
                          .get_dev_tensor()
                          .empty());
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
@@ -2200,6 +2204,7 @@ TEST(TestGraph, FreeMemoryInWeightPreprocessWithMultiReader) {
                         ->cast_final_safe<opr::SharedDeviceTensor>()
                         .get_dev_tensor()
                         .empty());
+    megdnn::HeuristicCache::instance().clear();
 }
 
 TEST(TestGraph, FreeBias) {

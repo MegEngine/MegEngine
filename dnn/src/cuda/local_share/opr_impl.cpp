@@ -59,17 +59,17 @@ LocalShareForwardImpl::get_all_algorithms(const TensorLayout& src,
 size_t LocalShareForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                      const TensorLayout& filter,
                                                      const TensorLayout& dst) {
-    AlgoBase::SizeArgs args(this, src, filter, dst);
-    return get_algorithm(this, src, filter, dst)->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, filter, dst);
 }
 
 void LocalShareForwardImpl::exec(_megdnn_tensor_in src,
                                  _megdnn_tensor_in filter,
                                  _megdnn_tensor_out dst,
                                  _megdnn_workspace workspace) {
+    check_exec(src.layout, filter.layout, dst.layout, workspace.size);
     AlgoBase::ExecArgs args(this, src, filter, dst, workspace);
     auto algo = get_algorithm(this, src.layout, filter.layout, dst.layout);
-    algo->check_workspace(args, workspace).exec(args);
+    algo->exec(args);
 }
 
 const char* LocalShareForwardImpl::get_algorithm_set_name() const {
@@ -112,8 +112,7 @@ LocalShareBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
 size_t LocalShareBackwardDataImpl::get_workspace_in_bytes(const TensorLayout& filter,
                                                      const TensorLayout& diff,
                                                      const TensorLayout& grad) {
-    AlgoBase::SizeArgs args(this, filter, diff, grad);
-    return get_algorithm(this, filter, diff, grad)->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, filter, diff, grad);
 }
 
 void LocalShareBackwardDataImpl::exec(_megdnn_tensor_in filter,
@@ -166,8 +165,7 @@ LocalShareBackwardFilterImpl::get_all_algorithms(const TensorLayout& src,
 size_t LocalShareBackwardFilterImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                      const TensorLayout& diff,
                                                      const TensorLayout& grad) {
-    AlgoBase::SizeArgs args(this, src, diff, grad);
-    return get_algorithm(this, src, diff, grad)->get_workspace_in_bytes(args);
+    return get_dnn_workspace(this, src, diff, grad);
 }
 
 void LocalShareBackwardFilterImpl::exec(_megdnn_tensor_in src,

@@ -146,6 +146,15 @@ size_t ConvolutionImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst,
         const PreprocessedFilter* preprocessed_filter) {
+    TensorLayoutArray layouts{src, filter, dst};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(), &this->param(),
+                            sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
     auto fparam =
             make_ncb_kern_size_param(src, filter, dst, preprocessed_filter);
     auto&& algo = get_algorithm(fparam);
@@ -494,6 +503,15 @@ void ConvolutionBackwardDataImpl::exec(_megdnn_tensor_in filter,
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
         const TensorLayout& filter, const TensorLayout& diff,
         const TensorLayout& grad) {
+    TensorLayoutArray layouts{filter, diff, grad};
+    HeuristicCache::Key key{this->handle(), this->get_opr_type(),
+                            layouts.data(), layouts.size(), &this->param(),
+                            sizeof(this->param())};
+    auto rst = HeuristicCache::instance().get(key);
+    if (rst.policy.algo.valid()) {
+        return rst.workspace;
+    }
+
     if (param().format == param::Convolution::Format::NHWCD4 ||
         param().format == param::Convolution::Format::NCHW4 ||
         (param().format == param::Convolution::Format::NCHW &&
