@@ -15,7 +15,7 @@ import shelve
 
 from ..core._imperative_rt import PersistentCache as _PersistentCache
 from ..logger import get_logger
-from ..version import __version__
+from ..version import __version__, git_version
 
 
 class _FakeRedisConn:
@@ -27,6 +27,7 @@ class _FakeRedisConn:
         if os.getenv("MGE_FASTRUN_CACHE_TYPE") == "MEMORY":
             self._dict = {}
             self._is_shelve = False
+            get_logger().info("fastrun use in-memory cache")
         else:
             try:
                 from ..hub.hub import _get_megengine_home
@@ -38,9 +39,16 @@ class _FakeRedisConn:
                 self.cache_file = os.path.join(cache_dir, "cache")
                 self._dict = shelve.open(self.cache_file)
                 self._is_shelve = True
+                get_logger().info(
+                    "fastrun use in-file cache {}".format(self._cached_conn.cache_file)
+                )
             except:
                 self._dict = {}
                 self._is_shelve = False
+                get_logger().error(
+                    "failed to create cache file {}; fallback to "
+                    "in-memory cache".format(self.cache_file)
+                )
 
     def get(self, key):
         if self._is_shelve and isinstance(key, bytes):
@@ -55,7 +63,7 @@ class _FakeRedisConn:
         self._dict[key] = val
 
     def clear(self):
-        print("{} cache item in {} deleted".format(len(self._dict), self.cache_file))
+        print("{} cache item deleted".format(len(self._dict)))
         self._dict.clear()
 
     def __del__(self):
@@ -82,7 +90,9 @@ class PersistentCacheOnServer(_PersistentCache):
         return "mgbcache:{}".format(getpass.getuser())
 
     def _make_key(self, category, key):
-        prefix_with_version = "{}:MGB{}".format(self._prefix, __version__)
+        prefix_with_version = "{}:MGB{}:GIT:{}".format(
+            self._prefix, __version__, git_version
+        )
         return b"@".join(
             (prefix_with_version.encode("ascii"), category.encode("ascii"), key)
         )
