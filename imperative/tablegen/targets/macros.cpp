@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "./macros.h"
 #include "./cpp_class.h"
 #include "../emitter.h"
 

@@ -60,10 +60,7 @@
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 // TableHolderBase has no problem; ignore the warning for old clang versions
 
-#include "./helper.h"
 #include "./interp_helper.h"
-
-#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace megdnn::megcv;

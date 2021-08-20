@@ -10,6 +10,7 @@
  */
 #pragma once
 #include <stdint.h>
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {

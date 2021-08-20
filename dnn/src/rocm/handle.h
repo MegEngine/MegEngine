@@ -9,6 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include "src/rocm/miopen_wrapper.h"
+
 #include "megcore_rocm.h"
 #include "megdnn/basic_types.h"
 #include "megdnn/handle.h"
@@ -16,7 +18,6 @@
 
 #include "src/common/handle_impl.h"
 #include "src/common/utils.h"
-#include "src/rocm/miopen_with_check.h"
 
 #include <rocblas.h>
 #include <atomic>

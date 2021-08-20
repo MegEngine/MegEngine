@@ -281,8 +281,8 @@ MGB_DEFINE_OPR_CLASS(AddUpdate,
  * Mode specifies the actual arithmetic; and exactly one of *axis* and
  * *target_shape* must be provided, to specify output shape.
  */
-MGB_DEFINE_OPR_CLASS(Reduce, intl::DynamicOutputIfInputDynamic<
-        intl::OutshapeBySymvarSCNOpr<mixin::MegDNNOprHolder>>) //  {
+MGB_DEFINE_OPR_CLASS(Reduce,
+        intl::DynamicOutputIfInputDynamic<intl::OutshapeBySymvarSCNOpr<mixin::MegDNNOprHolder>>) // {
 
     public:
         using Param = megdnn::param::Reduce;
@@ -350,16 +350,17 @@ MGB_DEFINE_OPR_CLASS(Reduce, intl::DynamicOutputIfInputDynamic<
  * the optimizer.
  */
 MGB_DEFINE_OPR_CLASS(PowC, intl::MegDNNOprWrapperFwd<megdnn::PowC>) // {
+public:
+    PowC(VarNode* inp, const Param& param, const OperatorNodeConfig& config);
+    static SymbolVar make(SymbolVar inp, const Param& param = {},
+                          const OperatorNodeConfig& config = {});
+
+private:
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
     void mem_plan_fwd_in2out_writable() override;
     NodeProp* do_make_node_prop() const override;
     void scn_do_execute() override;
-
-public:
-    PowC(VarNode* inp, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(SymbolVar inp, const Param& param = {},
-                          const OperatorNodeConfig& config = {});
 };
 
 } // namespace opr

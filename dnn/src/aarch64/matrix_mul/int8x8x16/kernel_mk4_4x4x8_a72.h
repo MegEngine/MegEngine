@@ -53,7 +53,9 @@ static inline void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
     const int8_t* b_ptr = packB;
 
     LDC = LDC * sizeof(int8_t);
-// clang-format off
+
+    // clang-format off
+
     #define STORE_LINE(reg0)                 \
     "cmp w10, #0 \n"                         \
     "beq 101f\n"                             \

@@ -722,8 +722,7 @@
         }                                                                  \
     } while (0)
 
-#include <immintrin.h>
-#include <avxintrin.h>
+#include "src/x86/avx_helper.h"
 #include <algorithm>
 
 #include "../convolution_direct_special_cases.h"

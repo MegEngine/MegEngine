@@ -9,6 +9,7 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {

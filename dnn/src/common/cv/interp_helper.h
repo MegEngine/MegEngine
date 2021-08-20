@@ -62,7 +62,9 @@
 #pragma once
 
 #include "src/common/cv/aligned_allocator.h"
+#include "src/common/utils.h"
 
+#include "./helper.h"
 #include "megdnn/opr_param_defs.h"
 
 #include <cstdint>

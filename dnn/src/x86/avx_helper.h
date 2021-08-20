@@ -13,9 +13,11 @@
 #include "megdnn/arch.h"
 
 #include <immintrin.h>
+#ifdef WIN32
 #include <avxintrin.h>
 #include <avx2intrin.h>
 #include <fmaintrin.h>
+#endif
 
 #if !defined (__clang__)
 #pragma GCC target ("avx")

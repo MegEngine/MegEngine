@@ -11,7 +11,6 @@
  */
 #pragma once
 #include <x86intrin.h>
-
 #ifdef WIN32
 #include <avx2intrin.h>
 #include <avxintrin.h>

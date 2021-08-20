@@ -14,6 +14,7 @@
 #include "megbrain/common.h"
 #include <thread>
 #include <atomic>
+#include "megbrain/utils/metahelper.h"
 
 namespace mgb {
 
@@ -24,7 +25,7 @@ class Spinlock final: public NonCopyableObj {
     public:
 
         void lock() {
-            while (m_state.test_and_set(std::memory_order_acquire));
+            while (m_state.test_and_set(std::memory_order_acquire)) {};
         }
 
         void unlock() {

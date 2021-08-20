@@ -13,9 +13,11 @@
 #include "megdnn/arch.h"
 
 #include <immintrin.h>
+#ifdef WIN32
 #include <xmmintrin.h>
 #include <avxintrin.h>
 #include <fmaintrin.h>
+#endif
 #include <cmath>
 #include <algorithm>
 

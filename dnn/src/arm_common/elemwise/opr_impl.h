@@ -10,7 +10,6 @@
  * implied.
  */
 #pragma once
-
 #include "src/fallback/elemwise/opr_impl.h"
 
 #include "src/arm_common/elemwise_op.h"

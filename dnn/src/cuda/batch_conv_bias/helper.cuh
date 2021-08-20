@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "src/cuda/convolution_helper/parameter.cuh"
+#include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {

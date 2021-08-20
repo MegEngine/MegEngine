@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir::tblgen {
+using llvm::raw_ostream;
 
 struct Environment {
     std::unordered_map<unsigned int, std::pair<llvm::StringRef, llvm::StringRef>> enumAlias;

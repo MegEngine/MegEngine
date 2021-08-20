@@ -10,6 +10,7 @@
  */
 
 #include "src/arm_common/simd_macro/marm_neon.h"
+
 #include "src/arm_common/matrix_mul/int8/gemv.h"
 #include "src/common/utils.h"
 #include "megdnn/oprs.h"
