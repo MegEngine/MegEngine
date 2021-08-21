@@ -58,6 +58,7 @@ from .module_tracer import (
 )
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import ArgsIndex, tree_flatten
+from .utils import replace_container_with_module_container
 
 logger = get_logger(__name__)
 
@@ -988,7 +989,9 @@ class TracedModuleBuilder(NodeMixin):
                 if k not in TracedModuleBuilder.__builder_attributes__:
                     if isinstance(v, TracedModuleBuilder):
                         v = v.build()
-                    setattr(traced_module, k, v)
+                        setattr(traced_module, k, v)
+                    elif isinstance(v, RawTensor):
+                        setattr(traced_module, k, v)
 
             if isinstance(self._mod, QATModule):
                 unset_module_tracing()
@@ -1146,7 +1149,16 @@ class TracedModuleBuilder(NodeMixin):
 
             if id(attr) in active_module_tracer().id2name:
                 full_name = active_module_tracer().id2name[id(attr)]
-
+            if isinstance(attr, (List, Dict)):
+                unset_module_tracing()
+                has_module, m_container = replace_container_with_module_container(attr)
+                if m_container:
+                    attr = m_container
+                if has_module and not m_container:
+                    raise ValueError(
+                        "Can not trace the module that uses the same container to store Module and Non-Module objects "
+                    )
+                set_module_tracing()
             if isinstance(attr, Module):
                 attr = TracedModuleBuilder(attr)
 
@@ -1178,17 +1190,22 @@ class TracedModuleBuilder(NodeMixin):
             return object.__getattribute__(self, name)
         else:
             wrapped = object.__getattribute__(self, name)
+            class_members = dict(inspect.getmembers(self.__class__))
             if name in self._mod.__dict__:
                 mod_attr = getattr(self._mod, name)
+                if name in class_members:
+                    if (
+                        not isinstance(wrapped, TracedModuleBuilder)
+                        and wrapped is not mod_attr
+                    ):
+                        wrapped = self.__getattr__(name)
 
-                if not isinstance(mod_attr, Module) and wrapped is not mod_attr:
-                    wrapped = mod_attr
-                    setattr(self, name, wrapped)
-
-                if isinstance(mod_attr, Module):
-                    assert mod_attr is wrapped._mod
+                if isinstance(wrapped, TracedModuleBuilder):
+                    if not isinstance(mod_attr, (List, Dict)):
+                        assert mod_attr is wrapped._mod
                 else:
                     assert mod_attr is wrapped
+
                 full_name = None
                 if id(mod_attr) in active_module_tracer().id2name:
                     full_name = active_module_tracer().id2name[id(mod_attr)]
@@ -1679,7 +1696,6 @@ def _register_all_builtin_module():
                 isclass(m[1])
                 and issubclass(m[1], M.Module)
                 and m[1] is not M.Sequential
-                and m[1] is not M.ModuleList
             ):
                 module_tracer.register_as_builtin(m[1])
 
