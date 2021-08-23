@@ -16,6 +16,17 @@
 
 namespace mgb::imperative::interpreter {
 
+struct AsyncError : std::nested_exception, std::exception {
+    const char* what() const noexcept {
+        try {
+            rethrow_nested();
+        } catch (const std::exception& e) {
+            return e.what();
+        } catch (...) {}
+        return "unkown async error";
+    }
+};
+
 struct Interpreter {
     using Handle = void*;
 

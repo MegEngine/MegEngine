@@ -12,6 +12,7 @@ from ..core.ops.builtin import AssertEqual
 from ..tensor import Tensor
 from ..utils.deprecation import deprecated_func
 from .elemwise import abs, maximum, minimum
+from .tensor import ones, zeros
 
 __all__ = ["topk_accuracy"]
 
@@ -57,6 +58,13 @@ def _assert_equal(
     result = apply(AssertEqual(maxerr=maxerr, verbose=verbose), expect, actual, err)[0]
     _sync()  # sync interpreter to get exception
     return result
+
+
+def _simulate_error():
+    x1 = zeros(100)
+    x2 = ones(100)
+    (ret,) = apply(AssertEqual(maxerr=0, verbose=False), x1, x2, x2)
+    return ret
 
 
 topk_accuracy = deprecated_func(

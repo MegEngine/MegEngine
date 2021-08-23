@@ -90,3 +90,11 @@ with megengine.core.option("enable_host_compute", 0):
     y.numpy()
 """
     subprocess.check_call([sys.executable, "-c", prog])
+
+
+def test_regression_2870():
+    x = F.zeros(1000)
+    y = F.utils._simulate_error()
+    with pytest.raises(RuntimeError):
+        y.numpy()
+    (x + x).numpy()
