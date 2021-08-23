@@ -69,6 +69,7 @@ protected:
     std::unordered_map<size_t, RNG*> m_rng;
     std::unordered_map<size_t, DType> m_dtype;
     std::unordered_map<size_t, TensorFormat> m_fmt;
+    std::set<size_t> m_bypass;
     float_t m_epsilon = 1e-3, m_max_avg_error = 1e-3,
             m_max_avg_biased_error = 1e-3;
     float_t m_perf_check_threshold = -1;
@@ -182,6 +183,10 @@ public:
     }
     Checker& set_rng(size_t idx, RNG* rng) {
         m_rng[idx] = rng;
+        return *this;
+    }
+    Checker& set_bypass(size_t idx) {
+        m_bypass.insert(idx);
         return *this;
     }
     //! max error of a single element

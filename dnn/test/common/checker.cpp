@@ -419,7 +419,7 @@ void CheckerHelper::copy_tensors_from_device(const TensorValueArray& dest,
 void CheckerHelper::check_tensors(const TensorValueArray& expected,
                                   const TensorValueArray& computed) {
     for (size_t i = 0; i < expected.size(); ++i) {
-        if (expected[i].layout.ndim == 0)
+        if (expected[i].layout.ndim == 0 || m_bypass.find(i) != m_bypass.end())
             continue;
         if (m_allow_invalid_check) {
             MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG_ALLOW_INVALID(

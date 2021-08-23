@@ -211,6 +211,10 @@ void IIDRNG::gen(const TensorND& tensor) {
         }
         return;
     }
+    if (tensor.layout.dtype.enumv() == DTypeEnum::Byte) {
+        memset(tensor.raw_ptr, 0, tensor.layout.access_bytes());
+        return;
+    }
     megdnn_assert(0, "IIDRNG does not know how to generate value for DType %s",
                   tensor.layout.dtype.name());
 }

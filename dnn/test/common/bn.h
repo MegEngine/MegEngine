@@ -53,6 +53,18 @@ std::vector<TestArg> get_args() {
                           TensorShape{1, 3, 1, 1}, dtype::Float16());
     }
 
+    // case 3: 1 x 1 x 1 x C
+
+    for (size_t i = 4; i < 257; i *= 4) {
+        param::BN param;
+        param.fwd_mode = param::BN::FwdMode::TRAINING;
+        param.param_dim = param::BN::ParamDim::DIM_111C;
+        args.emplace_back(param, TensorShape{3, i, i, 3},
+                          TensorShape{1, 1, 1, 3}, dtype::Float32());
+        args.emplace_back(param, TensorShape{3, i, i, 3},
+                          TensorShape{1, 1, 1, 3}, dtype::Float16());
+    }
+
     return args;
 }
 

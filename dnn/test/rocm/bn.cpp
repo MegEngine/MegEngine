@@ -31,6 +31,7 @@ TEST_F(ROCM, BN_FORWARD) {
             checker.set_dtype(i, dtype::Float32());
         }
         checker.set_dtype(0, arg.dtype);
+        checker.set_dtype(8, arg.dtype);
         checker.set_epsilon(1e-3).set_param(arg.param);
         for (bool need_statistic : {false, true})
             checker.exec({
@@ -43,7 +44,8 @@ TEST_F(ROCM, BN_FORWARD) {
                                    : TensorShape({0}),  // variance
                     arg.param_shape,                    // batch_mean
                     arg.param_shape,                    // batch_inv_variance
-                    {}                                  // dst
+                    {0},                                // reserve
+                    arg.src                             // dst
             });
     }
 }
@@ -53,15 +55,16 @@ TEST_F(ROCM, BN_BACKWARD) {
     std::vector<TestArg> args = get_args();
     Checker<BNBackward> checker(handle_rocm());
     for (auto&& arg : args) {
-        for (int i = 0; i < 8; ++i) {
+        for (int i = 0; i < 9; ++i) {
             checker.set_dtype(i, dtype::Float32());
         }
         checker.set_dtype(0, arg.dtype)    // x
                 .set_dtype(1, arg.dtype)   // dy
-                .set_dtype(7, arg.dtype);  // dx
+                .set_dtype(8, arg.dtype);  // dx
         checker.set_epsilon(1e-3).set_param(arg.param).exec(
                 {arg.src, arg.src, arg.param_shape, arg.param_shape,
-                 arg.param_shape, arg.param_shape, arg.param_shape, arg.src});
+                 arg.param_shape, {0}, arg.param_shape, arg.param_shape,
+                 arg.src});
     }
 }
 
