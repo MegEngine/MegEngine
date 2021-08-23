@@ -51,16 +51,16 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
               "BatchNorm expects 3 or 5 inputs; got %lu actually", nr_inp);
     // need running mean/variance
     bool need_stat = (nr_inp == 5) && op_def.fwd_mode == BatchNorm::FwdMode::TRAINING;
-    size_t nr_out = need_stat? 5 : 3;
+    size_t nr_out = need_stat? 6 : 4;
     SmallVector<LogicalTensorDesc> out_shapes(nr_out);
     auto&& i0 = inputs[0];
     auto&& i1 = inputs[1];
     // [running_mean, running_var,] save_mean, save_var
-    for (size_t i = 0; i < nr_out-1; ++ i) {
+    for (size_t i = 0; i < nr_out-2; ++ i) {
         out_shapes[i] = {i1.layout, i1.comp_node};
     }
-    // output tensor
-    out_shapes[nr_out-1] = {i0.layout, i0.comp_node};
+    out_shapes[nr_out-2] = {TensorLayout({0}, dtype::Byte()), i0.comp_node}; // reserve
+    out_shapes[nr_out-1] = {i0.layout, i0.comp_node}; // output
     return {out_shapes, out_shapes[nr_out-1].layout.ndim != 0};
 }
 

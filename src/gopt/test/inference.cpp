@@ -35,6 +35,7 @@
 #include "megdnn/tensor_format.h"
 
 #include <random>
+#include <vector>
 
 #if MGB_CUDA
 #include <cudnn.h>
@@ -1665,44 +1666,49 @@ TEST(TestGoptInference, concatbypass) {
 TEST(TestGoptInference, ConvertBatchNormPass) {
     auto cn = CompNode::load("cpu0");
 
-    HostTensorGenerator<> gen(0, 1, 0);
-    auto graph = ComputingGraph::make();
-    graph->options().graph_opt_level = 0;
-    auto mkvar = [&](const char* name, const TensorShape& shp) {
-        return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
-    };
-    auto mkcvar = [&](const char* name, const TensorShape& shp) {
-        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                .rename(name);
-    };
-    using Param = opr::BatchNorm::Param;
-    Param param(Param::ParamDim::DIM_1C11, Param::FwdMode::INFERENCE);
-    TensorShape shp = {1, 3, 1, 1};
-    auto x = mkvar("x", {2, 3, 16, 24}), scale = mkcvar("scale", shp),
-         bias = mkcvar("bias", shp), mean = mkcvar("mean", shp);
-    auto host_variance = gen(shp, cn);
-    for (size_t i = 0; i < shp.total_nr_elems(); ++i) {
-        host_variance->ptr<float>()[i] =
-                std::abs(host_variance->ptr<float>()[i]);
-    }
-    auto variance = opr::SharedDeviceTensor::make(*graph, *host_variance)
-                            .rename("variance");
-    auto y = opr::BatchNorm::make(x, scale, bias, mean, variance, param)[4];
-    SymbolVar y_opt;
-    unpack_vector(gopt::optimize_for_inference(
-                          {y}, gopt::OptimizeForInferenceOptions{}),
-                  y_opt);
-    ASSERT_EQ(0u, find_opr_num<opr::BatchNorm>(y_opt));
-    graph->compile({{y_opt, {}}})
-            ->to_json()
-            ->writeto_fpath(
-                    output_file("TestGoptInference.ConvertBatchNormPass.json"));
+    std::vector<TensorShape> shps = {{1, 3, 1, 1}, {1, 1, 1, 3}},
+                xshps = {{2, 3, 16, 24}, {2, 16, 24, 3}};
+    for (int t = 0; t < 2; t++) {
+        HostTensorGenerator<> gen(0, 1, 0);
+        auto graph = ComputingGraph::make();
+        graph->options().graph_opt_level = 0;
+        auto mkvar = [&](const char* name, const TensorShape& shp) {
+            return opr::Host2DeviceCopy::make(*graph, gen(shp, cn)).rename(name);
+        };
+        auto mkcvar = [&](const char* name, const TensorShape& shp) {
+            return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                    .rename(name);
+        };
+        using Param = opr::BatchNorm::Param;
+        Param::ParamDim param_dim = t == 0 ? Param::ParamDim::DIM_1C11 : Param::ParamDim::DIM_111C;
+        Param param(param_dim, Param::FwdMode::INFERENCE);
+        TensorShape shp = shps[t], xshp = xshps[t];
+        auto x = mkvar("x", xshp), scale = mkcvar("scale", shp),
+             bias = mkcvar("bias", shp), mean = mkcvar("mean", shp);
+        auto host_variance = gen(shp, cn);
+        for (size_t i = 0; i < shp.total_nr_elems(); ++i) {
+            host_variance->ptr<float>()[i] =
+                    std::abs(host_variance->ptr<float>()[i]);
+        }
+        auto variance = opr::SharedDeviceTensor::make(*graph, *host_variance)
+                                .rename("variance");
+        auto y = opr::BatchNorm::make(x, scale, bias, mean, variance, param)[5];
+        SymbolVar y_opt;
+        unpack_vector(gopt::optimize_for_inference(
+                              {y}, gopt::OptimizeForInferenceOptions{}),
+                      y_opt);
+        ASSERT_EQ(0u, find_opr_num<opr::BatchNorm>(y_opt));
+        graph->compile({{y_opt, {}}})
+                ->to_json()
+                ->writeto_fpath(
+                        output_file("TestGoptInference.ConvertBatchNormPass.json"));
 
-    HostTensorND host_y, host_y_opt;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-                                make_callback_copy(y_opt, host_y_opt)});
-    func->execute();
-    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+        HostTensorND host_y, host_y_opt;
+        auto func = graph->compile({make_callback_copy(y, host_y),
+                                    make_callback_copy(y_opt, host_y_opt)});
+        func->execute();
+        MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-5);
+    }
 }
 
 TEST(TestGoptInference, ConvBiasNonlinearityFusePass) {

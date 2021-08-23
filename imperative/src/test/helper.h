@@ -23,7 +23,7 @@ class OprChecker {
 public:
      using InputSpec = std::variant<HostTensorND, TensorShape>;
      OprChecker(std::shared_ptr<OpDef> opdef);
-     void run(std::vector<InputSpec> inp_shapes);
+     void run(std::vector<InputSpec> inp_shapes, std::set<size_t> bypass={});
 private:
      std::shared_ptr<OpDef> m_op;
 };

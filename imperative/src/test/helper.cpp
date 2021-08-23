@@ -99,7 +99,7 @@ UNUSED void print(const char* s) {
 OprChecker::OprChecker(std::shared_ptr<OpDef> opdef)
     : m_op(opdef) {}
 
-void OprChecker::run(std::vector<InputSpec> inp_keys) {
+void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
     HostTensorGenerator<> gen;
     size_t nr_inps = inp_keys.size();
     SmallVector<HostTensorND> host_inp(nr_inps);
@@ -151,6 +151,8 @@ void OprChecker::run(std::vector<InputSpec> inp_keys) {
     func->execute().wait(); // run last because it may contain inplace operations
 
     for(size_t i = 0; i < nr_oups; ++ i) {
+        if (bypass.find(i) != bypass.end())
+            continue;
         MGB_ASSERT_TENSOR_EQ(host_sym_oup[i], host_imp_oup[i]);
     }
 }

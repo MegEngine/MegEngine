@@ -391,14 +391,14 @@ struct OprMaker<opr::BatchNorm, 0> {
 };
 
 template <>
-struct OprMaker<opr::BatchNormBackward, 5> {
+struct OprMaker<opr::BatchNormBackward, 6> {
     using Param = opr::BatchNormBackward::Param;
     static cg::OperatorNodeBase* make(const Param& param,
                                       const cg::VarNodeArray& i,
                                       ComputingGraph& graph,
                                       const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
-        return opr::BatchNormBackward::make(i[0], i[1], i[2], i[3], i[4], param,
+        return opr::BatchNormBackward::make(i[0], i[1], i[2], i[3], i[4], i[5], param,
                                             config)[0]
                 .node()
                 ->owner_opr();
@@ -576,7 +576,7 @@ using ConvBiasForwardV4 = ConvBiasForward;
 MGB_SEREG_OPR(ConvBiasForwardV4, 0);
 
 MGB_SEREG_OPR(BatchNorm, 0);
-MGB_SEREG_OPR(BatchNormBackward, 5);
+MGB_SEREG_OPR(BatchNormBackward, 6);
 
 using LocalShareForwardV1 = LocalShareForward;
 using LocalShareBackwardDataV1 = LocalShareBackwardData;

@@ -73,7 +73,7 @@ TEST(TestImperative, BatchNorm) {
           TensorShape{1, C, 1, 1},
           TensorShape{1, C, 1, 1},
           TensorShape{1, C, 1, 1}
-     });
+     }, {4});
 }
 
 TEST(TestImperative, Concat) {

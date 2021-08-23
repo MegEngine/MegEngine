@@ -183,6 +183,10 @@ namespace {
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _o(0), _o(1), _o(2)
 #include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 
+#define _NR_INPUTS 6
+#define _NR_OUTPUTS 3
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _o(0), _o(1), _o(2)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 } // anonymous namespace
 
     /* ======================= MegDNNOprWrapperFwd ======================= */

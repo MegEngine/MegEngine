@@ -689,7 +689,8 @@ ProxyGraph::make_backward_graph(
         output_descs.push_back({TensorLayout{i->dtype()}, i->comp_node()});
     }
     auto output_grads = make_input_place_holders(output_descs);
-    mgb_assert(output_grads.size() == output_has_grad.size());
+    mgb_assert(output_grads.size() == output_has_grad.size(), "%d vs %d",
+               output_grads.size(), output_has_grad.size());
     bool any_input_has_grad = false;
     for (size_t i = 0; i < output_grads.size(); ++ i) {
         if (!output_has_grad[i]) {

@@ -1766,7 +1766,7 @@ void ConvertBatchNormToElemwisePass::apply(OptState& state) const {
                               x.dtype().name(), res.dtype().name());
                 }
                 rewriter.replace_var(
-                        opr->output(4), res.node(),
+                        opr->output(5), res.node(),
                         mgb_cstr_log(
                                 "replace batch_norm(x, scale, bias, mean, "
                                 "varience) "

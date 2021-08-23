@@ -207,7 +207,7 @@ TEST(TestImperative, BatchNormGrad) {
         attr.param.write_pod(param);
         OpDef::make_backward_graph(attr, {inp, stat, stat, stat, stat},
                                    {true, true, true, false, false},
-                                   {false, false, false, false, true});
+                                   {false, false, false, false, false, true});
     }
     {
         auto op = OprAttr::make("BatchNorm");
@@ -216,7 +216,7 @@ TEST(TestImperative, BatchNormGrad) {
         param.fwd_mode = Param::FwdMode::TRAINING;
         attr.param.write_pod(param);
         OpDef::make_backward_graph(attr, {inp, stat, stat}, {true, true, true},
-                                   {false, false, true});
+                                   {false, false, false, true});
     }
 }
 

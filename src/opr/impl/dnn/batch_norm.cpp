@@ -62,10 +62,12 @@ BatchNormForward::BatchNormForward(VarNode *x,
     }
 
     init_megdnn_opr(*this, param);
-    output(4)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 
     add_input({x, scale, bias, mean, variance});
 
+    output(4)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE); // reserve
+    output(5)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    // running mean/var
     if (param.fwd_mode == Param::FwdMode::INFERENCE) {
         auto mark_empty_var = [&](VarNode *var) {
             var->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
@@ -92,9 +94,10 @@ BatchNormForward::BatchNormForward(VarNode *x,
           {x, scale, bias}}
 {
     init_megdnn_opr(*this, param);
-    output(4)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 
     add_input({x, scale, bias});
+    output(4)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE); // reserve
+    output(5)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     auto mark_empty_var = [&](VarNode *var) {
         var->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE)
             .add_flag(VarNode::Flag::VOLATILE_CONTENT);
@@ -151,7 +154,7 @@ BatchNormForward::do_make_node_prop() const {
 
 void BatchNormForward::scn_do_execute() {
     auto &&x = input(0)->dev_tensor();
-    auto &&y = output(4)->dev_tensor();
+    auto &&y = output(5)->dev_tensor();
     if (need_stats()) {
         auto &&o0 = output(0)->dev_tensor(),
              &&o1 = output(1)->dev_tensor(),
@@ -192,9 +195,10 @@ void BatchNormForward::scn_do_execute() {
     }
     auto save_mean = output(2)->dev_tensor().as_megdnn();
     auto save_variance = output(3)->dev_tensor().as_megdnn();
+    auto reserve = output(4)->dev_tensor().as_megdnn();
     auto workspace = intl::get_megdnn_workspace_from_var(output().back());
     megdnn_opr()->exec(x.as_megdnn(), scale, bias, mean, variance,
-        save_mean, save_variance, y.as_megdnn(), workspace);
+        save_mean, save_variance, reserve, y.as_megdnn(), workspace);
 }
 
 void BatchNormForward::add_input_layout_constraint() {
@@ -208,18 +212,25 @@ void BatchNormForward::get_output_var_shape(
         "expect input, scale and bias to be 4 dim tensor, but "
         "got input dim: %zu, scale dim: %zu, bias dim: %zu",
         inp_shape[0].ndim, inp_shape[1].ndim, inp_shape[2].ndim);
-
-    size_t inp_c = inp_shape[0][1],
-           scale_c = inp_shape[1][1],
-           bias_c = inp_shape[2][1];
+    
+    size_t channel_idx;
+    if (param().param_dim == Param::ParamDim::DIM_111C) {
+        channel_idx = 3;
+    } else {
+        channel_idx = 1;
+    }
+    size_t inp_c = inp_shape[0][channel_idx],
+           scale_c = inp_shape[1][channel_idx],
+           bias_c = inp_shape[2][channel_idx];
     mgb_assert(inp_c == scale_c && inp_c == bias_c,
         "inconsistent channel size, input chennel: %zu, scale channel: %zu, bias channel: %zu",
         inp_c, scale_c, bias_c);
 
-    out_shape[4] = inp_shape[0];
+    out_shape[5] = inp_shape[0];
     for (size_t i = 0; i < 4; ++ i) {
         out_shape[i] = inp_shape[1];
     }
+    out_shape[4] = {megdnn_opr()->get_reserve_in_bytes({inp_shape[0], input(0)->dtype()})};
     if (!need_stats()) {
         out_shape[0] = out_shape[1] = {0};
     }
@@ -231,7 +242,7 @@ size_t BatchNormForward::get_workspace_size_bytes(
 #define in(x) {input_shapes[x], input(x)->dtype()}
 #define out(x) {output_shapes[x], output(x)->dtype()}
     return megdnn_opr()->get_workspace_in_bytes(
-            in(0), in(1), in(2), out(0), out(1), out(2), out(3), out(4));
+            in(0), in(1), in(2), out(0), out(1), out(2), out(3), out(4), out(5));
 #undef in
 #undef out
 }
@@ -249,7 +260,8 @@ void BatchNormForward::init_output_dtype() {
     for (size_t i = 2; i < nr_inp; ++ i) {
         mgb_assert(input(1)->dtype() == input(i)->dtype());
     }
-    output(4)->dtype(input(0)->dtype());
+    output(4)->dtype(dtype::Byte()); // reserve
+    output(5)->dtype(input(0)->dtype()); // output
     for (size_t i = 0; i < 4; ++ i) {
         output(i)->dtype(input(1)->dtype());
     }
@@ -271,9 +283,10 @@ MGB_IMPL_OPR_GRAD(BatchNormForward) {
     switch (opr.param().fwd_mode) {
     case BatchNorm::Param::FwdMode::TRAINING:
         grad = BatchNormBackward::make(
-                opr.input(0), out_grad[4],
+                opr.input(0), out_grad[5],
                 opr.output(2), opr.output(3),
-                opr.input(1), opr.param());
+                opr.input(1), opr.output(4), // reserve
+                opr.param());
         for (size_t i = 0; i < 3; ++ i) {
             ret[i] = grad[(i + 2) % 3].node();
         }
@@ -281,13 +294,13 @@ MGB_IMPL_OPR_GRAD(BatchNormForward) {
     case BatchNorm::Param::FwdMode::INFERENCE:
         auto sqrt_var = PowC::make((SymbolVar{opr.input(4)}
                         + static_cast<dt_float32>(opr.param().epsilon)), 0.5, opr.config());
-        auto d_bn_scale_unreduced = SymbolVar{out_grad[4]} *
+        auto d_bn_scale_unreduced = SymbolVar{out_grad[5]} *
                             (SymbolVar{opr.input(0)} - SymbolVar{opr.input(3)}) / sqrt_var;
         auto d_bn_scale = Reduce::make(d_bn_scale_unreduced,
                             Reduce::Param::Mode::SUM, GetVarShape::make(opr.input(1)));
-        auto d_bn_bias = Reduce::make(out_grad[4],
+        auto d_bn_bias = Reduce::make(out_grad[5],
                             Reduce::Param::Mode::SUM, GetVarShape::make(opr.input(2)));
-        auto dx = SymbolVar{out_grad[4]} * SymbolVar{opr.input(1)} / sqrt_var;
+        auto dx = SymbolVar{out_grad[5]} * SymbolVar{opr.input(1)} / sqrt_var;
 
         ret[0] = dx.node();
         ret[1] = d_bn_scale.node();
@@ -302,26 +315,26 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(BatchNormBackward);
 
 BatchNormBackward::BatchNormBackward(VarNode *x,
         VarNode *y_grad, VarNode *save_mean,
-        VarNode* save_variance, VarNode *scale,
+        VarNode* save_variance, VarNode *scale, VarNode *reserve,
         const Param &param, const OperatorNodeConfig &config):
     Super({x->owner_graph(), config, "batch_norm_bwd",
-            {x, y_grad, save_mean, save_variance, scale}},
+            {x, y_grad, save_mean, save_variance, scale, reserve}},
             0, true)
 {
     init_megdnn_opr(*this, param);
-    add_input({x, y_grad, save_mean, save_variance, scale});
+    add_input({x, y_grad, save_mean, save_variance, scale, reserve});
 }
 
 SymbolVarArray BatchNormBackward::make(SymbolVar x,
         SymbolVar y_grad, SymbolVar save_mean,
-        SymbolVar save_variance, SymbolVar scale,
+        SymbolVar save_variance, SymbolVar scale, SymbolVar reserve,
         const Param &param,
         const OperatorNodeConfig &config) {
     auto&& out = x.node()
                     ->owner_graph()
                     ->insert_opr(std::make_unique<BatchNormBackward>(
                         x.node(), y_grad.node(), save_mean.node(),
-                        save_variance.node(), scale.node(), param, config))
+                        save_variance.node(), scale.node(), reserve.node(), param, config))
                     ->output();
     SymbolVarArray ret(out.size());
     for (size_t i = 0; i < ret.size(); i++) {
@@ -355,4 +368,11 @@ void BatchNormBackward::init_output_dtype() {
     output(2)->dtype(input(0)->dtype());
 }
 
+cg::OperatorNodeBase::NodeProp*
+BatchNormBackward::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(5),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

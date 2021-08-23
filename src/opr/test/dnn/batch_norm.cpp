@@ -95,13 +95,13 @@ SymbolVarArray batch_norm(const SymbolVarArray& inputs, const Param &param) {
     SymbolVarArray ret;
     if (inputs.size() == 3) {
         ret = opr::BatchNorm::make(inputs[0], inputs[1], inputs[2], param);
-        return {ret[4], ret[2], ret[3]};
+        return {ret[5], ret[2], ret[3]};
     }
     else {
         mgb_assert(inputs.size() == 5);
         ret = opr::BatchNorm::make(inputs[0], inputs[1], inputs[2],
                                    inputs[3], inputs[4], param);
-        return {ret[4], ret[0], ret[1]};
+        return {ret[5], ret[0], ret[1]};
     }
 }
 

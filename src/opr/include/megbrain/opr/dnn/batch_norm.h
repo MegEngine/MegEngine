@@ -24,7 +24,7 @@ namespace opr {
 /* input:
  *   x, scale, bias, [running_mean, running_variance]
  * output:
- *   running_mean, running_variance, save_mean, save_inv_variance, y
+ *   running_mean, running_variance, save_mean, save_inv_variance, reserve, y
  *
  * All params have the same definition with cudnn batch normalization.
  *
@@ -35,6 +35,9 @@ namespace opr {
  *
  * For statistic(mean and variance) update:
  *     running_mean = (1 - moving_average) * running_mean + moving_average * new_mean
+ *
+ * Output reserve is used for cudnnBatchNormalizationForwardTrainingEx, and should
+ * be preserved for backward.
  */
 MGB_DEFINE_OPR_CLASS(BatchNormForward,
     cg::OutshapePureByInshapeOpr<
@@ -86,7 +89,7 @@ MGB_DEFINE_OPR_CLASS(BatchNormForward,
 using BatchNorm = BatchNormForward;
 
 /* input:
- *   x, y_grad, save_mean, save_inv_variance, scale
+ *   x, y_grad, save_mean, save_inv_variance, scale, reserve
  * output:
  *   scale_grad, bias_grad, x_grad
  */
@@ -97,15 +100,17 @@ MGB_DEFINE_OPR_CLASS(BatchNormBackward,
     public:
         BatchNormBackward(VarNode *x, VarNode *y_grad,
                 VarNode *save_mean, VarNode *save_variance,
-                VarNode *scale,
+                VarNode *scale, VarNode *reserve,
                 const Param &param,
                 const OperatorNodeConfig &config);
         static SymbolVarArray make(SymbolVar x,
                 SymbolVar y_grad, SymbolVar save_mean,
                 SymbolVar save_variance, SymbolVar scale,
+                SymbolVar reserve,
                 const Param &param = {},
                 const OperatorNodeConfig &config = {});
     private:
+        NodeProp* do_make_node_prop() const override;
         void init_output_static_infer_desc() override;
         void init_output_dtype() override;
 };

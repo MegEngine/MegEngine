@@ -811,7 +811,8 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
-def test_conv2d_io16c32():
+def test_conv2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
     inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
     weight = tensor(np.random.randn(64, 3, 7, 7), dtype=np.float32)
@@ -918,11 +919,14 @@ def test_layer_norm():
     assert abs(outvar.mean()) < 1e-7
 
 
-def test_batchnorm2d_io16c32():
+def test_batchnorm2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
-    inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
-    weight = tensor(np.ones((1, 3, 1, 1)), dtype=np.float32)
-    bias = tensor(np.zeros((1, 3, 1, 1)), dtype=np.float32)
+    tshape = (1, 224, 224, 3)
+    pshape = (1, 1, 1, 3)
+    inp = tensor(np.random.randn(*tshape), dtype=np.float32)
+    weight = tensor(np.ones(pshape, dtype=np.float32))
+    bias = tensor(np.zeros(pshape, dtype=np.float32))
 
     out = F.batch_norm(inp, weight=weight, bias=bias, training=True, inplace=False)
 

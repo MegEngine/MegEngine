@@ -1122,7 +1122,8 @@ def batch_norm(
     momentum: float = 0.9,
     eps: float = 1e-5,
     inplace: bool = True,
-    compute_mode="default"
+    compute_mode="default",
+    param_dim="dim_1c11"
 ):
     r"""Applies batch normalization to the input.
 
@@ -1147,16 +1148,23 @@ def batch_norm(
     if inp.ndim != 4:
         raise NotImplementedError("batch_norm for ndim != 4")
 
-    C = inp.shape[1]
+    if param_dim == "dim_1c11":
+        C = inp.shape[1]
+        pshape = (1, C, 1, 1)
+    elif param_dim == "dim_111c":
+        C = inp.shape[3]
+        pshape = (1, 1, 1, C)
+    else:
+        raise ValueError("Invalid param_dim {}".format(param_dim))
 
     def make_full_if_none(x, value):
         if x is None:
             (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
-            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
+            shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
         elif x.ndim == 1:
-            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
+            shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Reshape(), x, shape)
             return result
         return x
@@ -1183,19 +1191,19 @@ def batch_norm(
 
     if not training:
         op = builtin.BatchNorm(
-            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="dim_1c11"
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim=param_dim
         )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            avg_factor=1 - momentum, epsilon=eps, param_dim="dim_1c11"
+            avg_factor=1 - momentum, epsilon=eps, param_dim=param_dim
         )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
             running_var = make_full_if_none(running_var, 1)
-            new_mean, new_var, _, _, inp = apply(
+            new_mean, new_var, *_, inp = apply(
                 op, inp, weight, bias, running_mean, running_var
             )
             if not has_mean:
@@ -1213,7 +1221,7 @@ def batch_norm(
             else:
                 return inp, new_mean, new_var
         else:
-            (_, _, inp,) = apply(op, inp, weight, bias)
+            inp = apply(op, inp, weight, bias)[-1]
             return inp
 
 
