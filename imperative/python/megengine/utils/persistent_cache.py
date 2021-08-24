@@ -19,7 +19,7 @@ from ..version import __version__, git_version
 
 
 class _FakeRedisConn:
-    cache_file = None
+    _cache_dir = None
     _is_shelve = False
     _dict = {}
 
@@ -30,24 +30,26 @@ class _FakeRedisConn:
             get_logger().info("fastrun use in-memory cache")
         else:
             try:
-                from ..hub.hub import _get_megengine_home
+                self._cache_dir = os.getenv("MGE_FASTRUN_CACHE_DIR")
+                if not self._cache_dir:
+                    from ..hub.hub import _get_megengine_home
 
-                cache_dir = os.path.expanduser(
-                    os.path.join(_get_megengine_home(), "persistent_cache")
-                )
-                os.makedirs(cache_dir, exist_ok=True)
-                self.cache_file = os.path.join(cache_dir, "cache")
-                self._dict = shelve.open(self.cache_file)
+                    self._cache_dir = os.path.expanduser(
+                        os.path.join(_get_megengine_home(), "persistent_cache")
+                    )
+                os.makedirs(self._cache_dir, exist_ok=True)
+                cache_file = os.path.join(self._cache_dir, "cache")
+                self._dict = shelve.open(cache_file)
                 self._is_shelve = True
                 get_logger().info(
-                    "fastrun use in-file cache {}".format(self._cached_conn.cache_file)
+                    "fastrun use in-file cache in {}".format(self._cache_dir)
                 )
-            except:
+            except Exception as exc:
                 self._dict = {}
                 self._is_shelve = False
                 get_logger().error(
-                    "failed to create cache file {}; fallback to "
-                    "in-memory cache".format(self.cache_file)
+                    "failed to create cache file in {} {!r}; fallback to "
+                    "in-memory cache".format(self._cache_dir, exc)
                 )
 
     def get(self, key):
@@ -63,7 +65,7 @@ class _FakeRedisConn:
         self._dict[key] = val
 
     def clear(self):
-        print("{} cache item deleted".format(len(self._dict)))
+        print("{} cache item deleted in {}".format(len(self._dict), self._cache_dir))
         self._dict.clear()
 
     def __del__(self):
