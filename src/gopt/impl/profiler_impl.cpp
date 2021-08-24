@@ -165,6 +165,7 @@ public:
 
 private:
     static constexpr float PROFILE_TIME_OUT = 1e7;
+    using ReformatAttribute = ReformatKey::Attribute;
     /*!
      * \brief profile opr format agnostic operators (like elemwise, elemwise multi type, typecvt etc.)
      *
@@ -175,40 +176,48 @@ private:
      */
     OperatorNodeRecord profile_operator(
             const OperatorNodeBase* opr, TensorFormats base_format,
-            const SmallVector<TensorFormats>& available_tensor_formats) const;
+            const SmallVector<TensorFormats>& available_tensor_formats,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const;
     float profile_operator(const OperatorNodeBase* opr,
                            TensorFormats base_format,
-                           TensorFormats tensor_format) const;
+                           TensorFormats tensor_format,
+                           ReformatAttribute extra_attribute =
+                                   ReformatAttribute::DEFAULT) const;
     /*!
-     * \brief profile opr format aware operators (like conv, deconv, conv_bias, etc.)
+     * \brief profile opr format aware operators (like conv, deconv, conv_bias,
+     * etc.)
      *
      * \param opr pointer to the operator node to be profiled
      * \param base_config the tensor formats configuration of base opr format
-     * \param config all the available configuration  
+     * \param config all the available configuration
      * \return the operator node record
      */
     OperatorNodeRecord profile_operator(
             const OperatorNodeBase* opr,
             const OprTensorFormatsConfiguration& base_config,
-            const SmallVector<OprTensorFormatsConfiguration>& available_configs)
-            const;
+            const SmallVector<OprTensorFormatsConfiguration>& available_configs,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const;
     float profile_operator(const OperatorNodeBase* opr,
                            const OprTensorFormatsConfiguration& base_config,
-                           const OprTensorFormatsConfiguration& config) const;
+                           const OprTensorFormatsConfiguration& config,
+                           ReformatAttribute extra_attribute =
+                                   ReformatAttribute::DEFAULT) const;
     /*!
      * \brief profile layout transform of the var node
      *
      * \param var pointer to the var node to be profiled
-     * \param base_format the original tensor formats in which the var node is stored
-     * \param available_tensor_formats the available tensor formats
+     * \param base_format the original tensor formats in which the var node is
+     * stored \param available_tensor_formats the available tensor formats
      * \param extra_attribute the extra attributes (options) of the problem
      * \return the var node record
      */
     VarNodeRecord profile_var_node(
             const VarNode* var, TensorFormats base_format,
             const SmallVector<TensorFormats>& available_tensor_formats,
-            ReformatKey::Attribute extra_attribute =
-                    ReformatKey::Attribute::DEFAULT) const;
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const;
     float profile_var_node(const VarNode* var, TensorFormats base_format,
                            const ReformatKey& key) const;
     int m_runs; /// sample times of the profiler
@@ -216,20 +225,23 @@ private:
 
 ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
         const OperatorNodeBase* opr, TensorFormats base_format,
-        const SmallVector<TensorFormats>& available_tensor_formats) const {
+        const SmallVector<TensorFormats>& available_tensor_formats,
+        ReformatAttribute extra_attribute) const {
     OperatorNodeRecord record;
     record.opr = opr;
     auto& costs = record.costs;
     for (auto&& f : available_tensor_formats) {
         auto opr_format = tensor_formats_to_opr_format(f);
-        costs[opr_format] = profile_operator(opr, base_format, f);
+        costs[opr_format] =
+                profile_operator(opr, base_format, f, extra_attribute);
     }
     return record;
 }
 
 float ProfilerImpl::profile_operator(const OperatorNodeBase* opr,
                                      TensorFormats base_format,
-                                     TensorFormats tensor_format) const {
+                                     TensorFormats tensor_format,
+                                     ReformatAttribute extra_attribute) const {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
     graph->options().var_sanity_check_first_run = false;
@@ -239,8 +251,8 @@ float ProfilerImpl::profile_operator(const OperatorNodeBase* opr,
         auto&& cn = var->comp_node();
         auto&& dtype = var->dtype();
         auto dval = std::make_shared<DeviceTensorND>(cn, dtype);
-        auto aligned_tensor_shape =
-                make_aligned_tensor_shape(var, base_format, tensor_format);
+        auto aligned_tensor_shape = ReformatManager::make_aligned_tensor_shape(
+                var, base_format, tensor_format, extra_attribute);
         dval->resize(aligned_tensor_shape);
         auto aligned_var = opr::VolatileSharedDeviceTensor::make(*graph, dval);
         new_inps[i] = aligned_var.node();
@@ -263,8 +275,8 @@ float ProfilerImpl::profile_operator(const OperatorNodeBase* opr,
 ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
         const OperatorNodeBase* opr,
         const OprTensorFormatsConfiguration& base_config,
-        const SmallVector<OprTensorFormatsConfiguration>& available_configs)
-        const {
+        const SmallVector<OprTensorFormatsConfiguration>& available_configs,
+        ReformatAttribute extra_attribute) const {
     OperatorNodeRecord record;
     record.opr = opr;
     auto& costs = record.costs;
@@ -273,7 +285,8 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
         if (i.opr_format == OprFormat::NCHW &&
             opr->input(0)->dtype().enumv() != DTypeEnum::Float32)
             continue;
-        costs[i.opr_format] = profile_operator(opr, base_config, i);
+        costs[i.opr_format] =
+                profile_operator(opr, base_config, i, extra_attribute);
     }
     return record;
 }
@@ -281,7 +294,8 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
 float ProfilerImpl::profile_operator(
         const OperatorNodeBase* opr,
         const OprTensorFormatsConfiguration& base_config,
-        const OprTensorFormatsConfiguration& config) const {
+        const OprTensorFormatsConfiguration& config,
+        ReformatAttribute extra_attribute) const {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
     graph->options().var_sanity_check_first_run = false;
@@ -297,18 +311,18 @@ float ProfilerImpl::profile_operator(
         TensorShape aligned_shape;
         if (config.input_tensor_types[i] == TensorType::WEIGHT) {
             mgb_assert(base_config.input_tensor_types[i] == TensorType::WEIGHT);
-            aligned_shape = make_aligned_weight_shape(
+            aligned_shape = ReformatManager::make_aligned_weight_shape(
                     var, base_config.input_tensor_formats[i],
                     config.input_tensor_formats[i],
-                    config.output_tensor_formats[0]);
+                    config.output_tensor_formats[0], extra_attribute);
         } else {
             mgb_assert(base_config.input_tensor_types[i] ==
                        config.input_tensor_types[i]);
             mgb_assert(base_config.input_tensor_types[i] ==
                        TensorType::FEATURE);
-            aligned_shape = make_aligned_tensor_shape(
+            aligned_shape = ReformatManager::make_aligned_tensor_shape(
                     var, base_config.input_tensor_formats[i],
-                    config.input_tensor_formats[i]);
+                    config.input_tensor_formats[i], extra_attribute);
         }
         dval->resize(aligned_shape);
         auto aligned_var = opr::VolatileSharedDeviceTensor::make(*graph, dval);
@@ -357,7 +371,7 @@ float ProfilerImpl::profile_operator(
 ProfilerImpl::VarNodeRecord ProfilerImpl::profile_var_node(
         const VarNode* var, TensorFormats base_format,
         const SmallVector<TensorFormats>& available_tensor_formats,
-        ReformatKey::Attribute attribute) const {
+        ReformatAttribute attribute) const {
     VarNodeRecord record;
     record.var = var;
     auto& costs = record.costs;
@@ -379,8 +393,8 @@ float ProfilerImpl::profile_var_node(const VarNode* var,
     auto&& cn = var->comp_node();
     auto&& dtype = var->dtype();
     auto dval = std::make_shared<DeviceTensorND>(cn, dtype);
-    auto aligned_tensor_shape =
-            make_aligned_tensor_shape(var, base_format, key.input_format);
+    auto aligned_tensor_shape = ReformatManager::make_aligned_tensor_shape(
+            var, base_format, key.input_format, key.attribute);
     dval->resize(aligned_tensor_shape);
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
@@ -468,13 +482,14 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(
 
     auto base_format = problem.base_format();
     auto&& available_tensor_formats = problem.available_tensor_formats();
+    auto&& reformat_attribute = problem.attribute().reformat_attribute;
 
     ProfilingResult profiling_result;
     auto& opr_record = profiling_result.opr_record;
     auto& var_record = profiling_result.var_record;
     for (auto&& var : vars) {
-        var_record[var] =
-                profile_var_node(var, base_format, available_tensor_formats);
+        var_record[var] = profile_var_node(
+                var, base_format, available_tensor_formats, reformat_attribute);
     }
     for (auto&& opr : oprs) {
         auto&& opr_configs = problem.opr_configs();
@@ -482,11 +497,12 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(
         if (find == opr_configs.end()) {
             if (skip_oprs.count(opr) > 0) {
                 SmallVector<TensorFormats> tensor_formats = {base_format};
-                opr_record[opr] =
-                        profile_operator(opr, base_format, tensor_formats);
+                opr_record[opr] = profile_operator(
+                        opr, base_format, tensor_formats, reformat_attribute);
             } else {
                 opr_record[opr] = profile_operator(opr, base_format,
-                                                   available_tensor_formats);
+                                                   available_tensor_formats,
+                                                   reformat_attribute);
             }
         } else {
             auto&& dispatchers = find->second;
@@ -498,7 +514,8 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(
                 }
             }
             auto base_config = problem.base_config(opr);
-            opr_record[opr] = profile_operator(opr, base_config, configs);
+            opr_record[opr] = profile_operator(opr, base_config, configs,
+                                               reformat_attribute);
         }
     }
     for (auto&& rpair : opr_record) {

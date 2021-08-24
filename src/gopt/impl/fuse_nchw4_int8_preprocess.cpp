@@ -200,6 +200,15 @@ static inline bool is_nchw_nchw4_shuffle_vec(
            param.pattern[4] == 2;
 }
 
+static inline bool is_shape_before_nhwc(const TensorShape& shape) {
+    return shape.ndim == 4 && shape[1] == 4;
+}
+
+static inline bool is_nchw_nhwc_shuffle(const opr::Dimshuffle::Param param) {
+    return param.ndim == 4 && param.pattern[0] == 0 && param.pattern[1] == 2 &&
+           param.pattern[2] == 3 && param.pattern[3] == 1;
+}
+
 template <typename T>
 static inline bool is_immutable_equal(OperatorNodeBase* opr, T val,
                                       DTypeEnum dtype_enum) {
@@ -276,14 +285,20 @@ std::unique_ptr<FuseNCHW4Int8Preprocess> FuseNCHW4Int8Preprocess::make() {
                                     auto inp0 = opr->input()[0];
                                     return is_shape_nchw(inp0->shape());
                                 }};
+
         SGM::Node shuffle_root{
                 opr::Dimshuffle::typeinfo(),
-                {{nchwx_reshape}},
+                {{nchwx_reshape}, {broadcast_concat}},
                 [](OperatorNodeBase* opr) {
                     auto& shuffle_opr = opr->cast_final<opr::Dimshuffle>();
                     auto& input_vec = shuffle_opr.input();
-                    return is_shape_before_nchw4(input_vec[0]->shape()) &&
-                           is_nchw_nchw4_shuffle_vec(shuffle_opr.param());
+                    bool nchw_nchw4_ok =
+                            is_shape_before_nchw4(input_vec[0]->shape()) &&
+                            is_nchw_nchw4_shuffle_vec(shuffle_opr.param());
+                    bool nchw_nhwc_ok =
+                            is_shape_before_nhwc(input_vec[0]->shape()) &&
+                            is_nchw_nhwc_shuffle(shuffle_opr.param());
+                    return nchw_nchw4_ok || nchw_nhwc_ok;
                 }};
         return shuffle_root;
     };
@@ -382,6 +397,19 @@ std::unique_ptr<FuseNCHW4Int8Preprocess> FuseNCHW4Int8Preprocess::make() {
             auto out_node = opr::RelayoutFormat::make(
                     rewriter.get_var(src_node->output()[0]), param.mode,
                     config);
+            const auto& outshp = opr->output(0)->shape();
+            if (outshp.ndim == 4) {
+                auto shpvar = opr::GetVarShape::make(out_node);
+                auto cv = [&out_node](int v) {
+                    return out_node.make_scalar(v);
+                };
+                auto sub = [&shpvar, &cv](int idx) {
+                    return opr::IndexAt::make(shpvar, {{0, cv(idx)}});
+                };
+                auto nhwc_shp =
+                        opr::Concat::make({sub(0), sub(2), sub(3), sub(4)}, 0);
+                out_node = opr::Reshape::make(out_node, nhwc_shp);
+            }
             return out_node.node()->owner_opr();
         } else {
             return serialization::copy_opr_shallow(*opr, new_inp,

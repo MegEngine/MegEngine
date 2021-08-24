@@ -74,6 +74,7 @@ public:
             DEFAULT = 0,
             IMAGE2D = 1 << 0,
             IC_SMALL = 1 << 1,
+            AUTO_PADDING_NHWC = 1 << 2,
         };
         TensorFormats input_format, output_format;
         DTypeEnum input_dtype, output_dtype;
@@ -124,23 +125,40 @@ public:
     ReformatImpl auto_aligned_reformat_weight(
             const VarNode* orig_var, const ReformatKey& key,
             const AlignmentDesc& extra_alignment = {}) const;
+
+    static TensorShape make_aligned_tensor_shape(
+            const VarNode* var, TensorFormats orig_formats,
+            TensorFormats target_formats,
+            ReformatKey::Attribute extra_attribute =
+                    ReformatKey::Attribute::DEFAULT);
+    static TensorShape make_aligned_weight_shape(
+            const VarNode* var, TensorFormats orig_formats,
+            TensorFormats target_formats, TensorFormats extra_formats,
+            ReformatKey::Attribute extra_attribute =
+                    ReformatKey::Attribute::DEFAULT);
+    static AlignmentDesc make_aligned_desc(TensorFormats weight_format,
+                                           TensorFormats out_feature_format);
+
     static const ReformatManager& instance();
 
 private:
     ReformatCache m_cache;
 };
 
-TensorShape make_aligned_tensor_shape(const VarNode* var,
-                                      TensorFormats orig_formats,
-                                      TensorFormats target_formats);
+MGB_DEF_ENUM_CLASS_BIT_OPR(ReformatManager::ReformatKey::Attribute);
+//
+//TensorShape make_aligned_tensor_shape(
+//        const VarNode* var, TensorFormats orig_formats,
+//        TensorFormats target_formats,
+//        ReformatManager::ReformatKey::Attribute extra_attribute =
+//                ReformatManager::ReformatKey::Attribute::DEFAULT);
+//
+//TensorShape make_aligned_weight_shape(
+//        const VarNode* var, TensorFormats orig_formats,
+//        TensorFormats target_formats, TensorFormats extra_formats,
+//        ReformatManager::ReformatKey::Attribute extra_attribute =
+//                ReformatManager::ReformatKey::Attribute::DEFAULT);
 
-TensorShape make_aligned_weight_shape(const VarNode* var,
-                                      TensorFormats orig_formats,
-                                      TensorFormats target_formats,
-                                      TensorFormats extra_formats);
-
-ReformatManager::AlignmentDesc make_aligned_desc(
-        TensorFormats weight_format, TensorFormats out_feature_format);
 }  // namespace gopt
 }  // namespace mgb
 

@@ -92,19 +92,24 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 bool is_parameter =
                         fmtcfg.valid() && fmtcfg.val().input_tensor_types[i] ==
                                                   TensorType::WEIGHT;
-                ReformatManager::ReformatImpl reformat;
-                ReformatManager::ReformatKey key{from, to, reformat_attribute,
-                                                 var->dtype().enumv(),
-                                                 var->dtype().enumv()};
-                if (is_parameter) {
-                    auto aligned_desc = make_aligned_desc(base_fmt, out_fmt);
-                    reformat = ReformatManager::instance()
-                                       .auto_aligned_reformat_weight(
-                                               var, key, aligned_desc);
-                } else {
-                    reformat = ReformatManager::instance()
-                                       .auto_aligned_reformat_featrue(
-                                               var, base_fmt, key);
+                // need relayout
+                if (from != to && !new_var->shape().is_scalar()) {
+                    ReformatManager::ReformatImpl reformat;
+                    ReformatManager::ReformatKey key{
+                            from, to, reformat_attribute, var->dtype().enumv(),
+                            var->dtype().enumv()};
+                    if (is_parameter) {
+                        auto aligned_desc = ReformatManager::make_aligned_desc(
+                                base_fmt, out_fmt);
+                        reformat = ReformatManager::instance()
+                                           .auto_aligned_reformat_weight(
+                                                   var, key, aligned_desc);
+                    } else {
+                        reformat = ReformatManager::instance()
+                                           .auto_aligned_reformat_featrue(
+                                                   var, base_fmt, key);
+                    }
+                    new_var = reformat({new_var});
                 }
                 if (from != to && !new_var->shape().is_scalar())
                     new_var = reformat({new_var});

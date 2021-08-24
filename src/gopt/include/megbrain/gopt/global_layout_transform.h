@@ -143,6 +143,7 @@ public:
     TensorFormats base_format() const {
         return m_ctx.attribute().base_tensor_formats;
     }
+    Attribute attribute() const { return m_ctx.attribute(); }
     /*!
      * \brief return the tensor formats configuration of an operator in the
      * default op format

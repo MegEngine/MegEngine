@@ -21,7 +21,7 @@ using NamedTensorShape = megdnn::NamedTensorShape;
 using Dimension = megdnn::Dimension;
 
 namespace {
-int gcd(const int& p, const int& q) {
+static inline int gcd(const int& p, const int& q) {
     int x = p, y = q;
     while (y != 0) {
         if (x < y) {
@@ -32,6 +32,47 @@ int gcd(const int& p, const int& q) {
         }
     }
     return x;
+}
+
+static inline size_t extra_alignment(
+        ReformatManager::ReformatKey::Attribute attr,
+        TensorFormats target_formats, DType dt, size_t channel_alignment) {
+    using Attribute = ReformatManager::ReformatKey::Attribute;
+    if (attr & Attribute::AUTO_PADDING_NHWC) {
+        constexpr size_t alignment_in_bits = 32;
+        size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
+        size_t extra_alignment = alignment_in_bits >= dtype_bits
+                                         ? alignment_in_bits / dtype_bits
+                                         : 1;
+        if (target_formats == TensorFormats::NHWC)
+            channel_alignment = extra_alignment * channel_alignment /
+                                gcd(channel_alignment, extra_alignment);
+        return channel_alignment;
+    }
+    return channel_alignment;
+}
+
+static inline std::tuple<size_t, size_t> extra_alignment(
+        const ReformatManager::ReformatKey& key, DType dt,
+        size_t input_channel_alignment, size_t output_channel_alignment) {
+    using Attribute = ReformatManager::ReformatKey::Attribute;
+    if (key.attribute & Attribute::AUTO_PADDING_NHWC) {
+        constexpr size_t alignment_in_bits = 32;
+        size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
+        size_t extra_alignment = alignment_in_bits >= dtype_bits
+                                         ? alignment_in_bits / dtype_bits
+                                         : 1;
+        if (key.input_format == TensorFormats::NHWC)
+            input_channel_alignment =
+                    input_channel_alignment * extra_alignment /
+                    gcd(input_channel_alignment, extra_alignment);
+        if (key.output_format == TensorFormats::NHWC)
+            output_channel_alignment =
+                    output_channel_alignment * extra_alignment /
+                    gcd(output_channel_alignment, extra_alignment);
+        return {input_channel_alignment, output_channel_alignment};
+    }
+    return {input_channel_alignment, output_channel_alignment};
 }
 };  // namespace
 
@@ -293,7 +334,8 @@ ReformatManager::ReformatImpl ReformatManager::get(
             auto rst = find->second;
             return rst;
         }
-        mgb_assert(key.attribute == Attribute::DEFAULT);
+        mgb_assert(!(key.attribute & Attribute::IMAGE2D) &&
+                   !(key.attribute & Attribute::IC_SMALL));
         auto&& i = key.input_format;
         auto&& o = key.output_format;
         auto ishp = tensor_formats_to_named_tensor_shape(i);
@@ -346,6 +388,8 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
                "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
                input_alignment, output_alignment,
                input_shape.to_string().c_str());
+    std::tie(input_alignment, output_alignment) = extra_alignment(
+            key, orig_var->dtype(), input_alignment, output_alignment);
     NamedTensorShape orig_shape =
             tensor_formats_to_named_tensor_shape(orig_format);
     size_t orig_channel = 0;
@@ -451,6 +495,12 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
                "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
                in_channel_alignment, out_channel_alignment,
                output_shape.to_string().c_str());
+    in_channel_alignment =
+            ::extra_alignment(key.attribute, key.output_format,
+                              orig_var->dtype(), in_channel_alignment);
+    out_channel_alignment =
+            ::extra_alignment(key.attribute, key.output_format,
+                              orig_var->dtype(), out_channel_alignment);
     size_t aligned_in_channel =
             divup(in_channels, in_channel_alignment) * in_channel_alignment;
     if (extra_alignment.name == out_channel_name) {
@@ -506,9 +556,9 @@ const ReformatManager& ReformatManager::instance() {
     return inst;
 }
 
-TensorShape mgb::gopt::make_aligned_tensor_shape(const VarNode* var,
-                                                 TensorFormats orig_formats,
-                                                 TensorFormats target_formats) {
+TensorShape ReformatManager::make_aligned_tensor_shape(
+        const VarNode* var, TensorFormats orig_formats,
+        TensorFormats target_formats, ReformatKey::Attribute extra_attribute) {
     using Dimension = megdnn::Dimension;
     static constexpr uint32_t UNDETERMINED_EXTENT =
             Dimension::UNDETERMINED_EXTENT;
@@ -545,6 +595,15 @@ TensorShape mgb::gopt::make_aligned_tensor_shape(const VarNode* var,
                 tshp[i] = oshp[idx] * factor;
             else
                 tshp[i] = divup(oshp[idx], factor);
+            if (name == Dimension::Name::C) {
+                size_t channel_alignment = target_shape[i].stride();
+                size_t channels = tshp[i] * channel_alignment;
+                size_t new_channel_alignment =
+                        extra_alignment(extra_attribute, target_formats,
+                                        var->dtype(), channel_alignment);
+                tshp[i] = divup(channels, new_channel_alignment) *
+                          new_channel_alignment / channel_alignment;
+            }
         } else {
             tshp[i] = target_shape[i].extent();
         }
@@ -552,11 +611,12 @@ TensorShape mgb::gopt::make_aligned_tensor_shape(const VarNode* var,
     return tshp;
 }
 
-TensorShape mgb::gopt::make_aligned_weight_shape(const VarNode* var,
-                                                 TensorFormats orig_formats,
-                                                 TensorFormats target_formats,
-                                                 TensorFormats extra_formats) {
-    auto tshp = make_aligned_tensor_shape(var, orig_formats, target_formats);
+TensorShape ReformatManager::make_aligned_weight_shape(
+        const VarNode* var, TensorFormats orig_formats,
+        TensorFormats target_formats, TensorFormats extra_formats,
+        ReformatKey::Attribute extra_attribute) {
+    auto tshp = make_aligned_tensor_shape(var, orig_formats, target_formats,
+                                          extra_attribute);
     auto extra_shape = tensor_formats_to_named_tensor_shape(extra_formats);
     using Dimension = megdnn::Dimension;
     static constexpr uint32_t UNDETERMINED_EXTENT =
@@ -567,6 +627,9 @@ TensorShape mgb::gopt::make_aligned_weight_shape(const VarNode* var,
         if (name == Dimension::Name::C &&
             extra_shape[i].extent() == UNDETERMINED_EXTENT) {
             out_channel_alignment = extra_shape[i].stride();
+            out_channel_alignment =
+                    extra_alignment(extra_attribute, target_formats,
+                                    var->dtype(), out_channel_alignment);
         }
     }
 
@@ -583,9 +646,8 @@ TensorShape mgb::gopt::make_aligned_weight_shape(const VarNode* var,
     return tshp;
 }
 
-ReformatManager::AlignmentDesc mgb::gopt::make_aligned_desc(
+ReformatManager::AlignmentDesc ReformatManager::make_aligned_desc(
         TensorFormats weight_format, TensorFormats out_feature_format) {
-    using AlignmentDesc = ReformatManager::AlignmentDesc;
     using Name = Dimension::Name;
     auto weight_shape = tensor_formats_to_named_tensor_shape(weight_format);
     auto out_shape = tensor_formats_to_named_tensor_shape(out_feature_format);
