@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -21,7 +22,6 @@
 MIDOUT_DECL(arm_common_conv_bias_postprocess_helper)
 
 namespace {
-
 
 #define CONCAT_OP(_name) megdnn::arm_common::_name
 #define CONCAT_NL(_name) megdnn::NonlineMode::_name
@@ -57,9 +57,9 @@ namespace {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
                     dst_type, N, OC, OH* OW);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW44(_op)                           \
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                           \
     megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
-                                       megdnn::arm_common::VEC_BCAST101x4>:: \
+                                       megdnn::arm_common::VEC_BCAST101xX>:: \
             run(static_cast<ctype*>(conv_dst_ptr),                           \
                 reinterpret_cast<const ctype*>(bias_ptr),                    \
                 reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
@@ -86,9 +86,9 @@ namespace {
                 if (pack_oc_size == 1) {                                  \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
                 } else {                                                  \
-                    megdnn_assert(pack_oc_size == 4,                      \
-                                  "Only support nchw44 in ARM");          \
-                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
+                    megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
+                                  "Only support nchw44/nchw88 in ARM");   \
+                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX); \
                 }                                                         \
             }                                                             \
             MIDOUT_END();                                                 \
@@ -100,7 +100,7 @@ namespace {
             MIDOUT_END();                                                 \
             break;                                                        \
         default:                                                          \
-            megdnn_throw("unknow biasmode");                             \
+            megdnn_throw("unknow biasmode");                              \
             break;                                                        \
     }
 
@@ -160,7 +160,7 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 
 #undef FOR_NONLINEAR_UNARY
 #undef FOR_NONLINEAR_BINARY_BROADCAST
-#undef FOR_NONLINEAR_BINARY_BROADCAST_NCHW44
+#undef FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX
 #undef FOR_NONLINEAR_BINARY
 #undef FOR_NONLINEAR_NOBIAS
 #undef FOR_NONLINEAR
@@ -183,16 +183,24 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
                 reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, \
                 dst_type, N, OC, OH* OW);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW44(_op)                           \
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                           \
     megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,                \
-                                       megdnn::arm_common::VEC_BCAST101x4>:: \
+                                       megdnn::arm_common::VEC_BCAST101xX>:: \
             run(static_cast<opctype*>(conv_dst_ptr),                         \
                 reinterpret_cast<const opctype*>(bias_ptr),                  \
                 reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,   \
                 dst_type, N, OC, OH* OW, pack_oc_size);
 
-#define HANDLE_IDENTITY(_caller, _op)              \
-    case megdnn::NonlineMode::IDENTITY:            \
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW88(_op)                           \
+    megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,                \
+                                       megdnn::arm_common::VEC_BCAST101xX>:: \
+            run(static_cast<opctype*>(conv_dst_ptr),                         \
+                reinterpret_cast<const opctype*>(bias_ptr),                  \
+                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,   \
+                dst_type, N, OC, OH* OW, pack_oc_size);
+
+#define HANDLE_IDENTITY(_caller, _op)   \
+    case megdnn::NonlineMode::IDENTITY: \
         _caller(_op) break;
 
 #define FOR_NONLINEAR(_caller)                                          \
@@ -220,9 +228,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
             if (pack_oc_size == 1) {                                      \
                 FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);            \
             } else {                                                      \
-                megdnn_assert(pack_oc_size == 4,                          \
-                              "Only support nchw44 in ARM");              \
-                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44);     \
+                megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8,     \
+                              "Only support nchw44/nchw88 in ARM");       \
+                FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX);     \
             }                                                             \
             break;                                                        \
         default:                                                          \
@@ -230,9 +238,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
                 if (pack_oc_size == 1) {                                  \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
                 } else {                                                  \
-                    megdnn_assert(pack_oc_size == 4,                      \
-                                  "Only support nchw44 in ARM");          \
-                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHW44); \
+                    megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
+                                  "Only support nchw44/nchw88 in ARM");   \
+                    FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX); \
                 }                                                         \
                 break;                                                    \
             }                                                             \
@@ -254,7 +262,7 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
 
 #undef FOR_NONLINEAR_UNARY
 #undef FOR_NONLINEAR_BINARY_BROADCAST
-#undef FOR_NONLINEAR_BINARY_BROADCAST_NCHW44
+#undef FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX
 #undef FOR_NONLINEAR_BINARY
 #undef FOR_NONLINEAR_NOBIAS
 #undef FOR_NONLINEAR
@@ -268,9 +276,9 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
                     dst_type, N, OC, OH* OW);
 
-#define FOR_BINARY_BROADCAST_NCHW44(_op)                                     \
+#define FOR_BINARY_BROADCAST_NCHWXX(_op)                                     \
     megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
-                                       megdnn::arm_common::VEC_BCAST101x4>:: \
+                                       megdnn::arm_common::VEC_BCAST101xX>:: \
             run(static_cast<ctype*>(conv_dst_ptr),                           \
                 reinterpret_cast<const ctype*>(bias_ptr),                    \
                 reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
@@ -284,25 +292,25 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
                     reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
                     dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_BIAS(_bias_mode, OH, OW)                           \
-    switch (_bias_mode) {                                      \
-        case megdnn::BiasMode::NO_BIAS:                        \
-            break;                                             \
-        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:         \
-            if (pack_oc_size == 1) {                           \
-                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));        \
-            } else {                                           \
-                megdnn_assert(pack_oc_size == 4,               \
-                              "Only support nchw44 in ARM");   \
-                FOR_BINARY_BROADCAST_NCHW44(CONCAT_OP(AddOp)); \
-            }                                                  \
-            break;                                             \
-        case megdnn::BiasMode::BIAS:                           \
-            FOR_BINARY(CONCAT_OP(AddOp));                      \
-            break;                                             \
-        default:                                               \
-            megdnn_throw("unknow biasmode");                   \
-            break;                                             \
+#define FOR_BIAS(_bias_mode, OH, OW)                                  \
+    switch (_bias_mode) {                                             \
+        case megdnn::BiasMode::NO_BIAS:                               \
+            break;                                                    \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:                \
+            if (pack_oc_size == 1) {                                  \
+                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));               \
+            } else {                                                  \
+                megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
+                              "Only support nchw44/nchw88 in ARM");   \
+                FOR_BINARY_BROADCAST_NCHWXX(CONCAT_OP(AddOp));        \
+            }                                                         \
+            break;                                                    \
+        case megdnn::BiasMode::BIAS:                                  \
+            FOR_BINARY(CONCAT_OP(AddOp));                             \
+            break;                                                    \
+        default:                                                      \
+            megdnn_throw("unknow biasmode");                          \
+            break;                                                    \
     }
 
 template <typename ctype, typename dtype>
@@ -318,7 +326,7 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
 };
 
 #undef FOR_BINARY_BROADCAST
-#undef FOR_BINARY_BROADCAST_NCHW44
+#undef FOR_BINARY_BROADCAST_NCHWXX
 #undef FOR_BINARY
 #undef FOR_BIAS
 #undef CB

@@ -105,25 +105,21 @@ bool ElemwiseImpl::AlgoBinaryVecBcast101::is_available(
     return false;
 }
 
-bool ElemwiseImpl::AlgoBinaryVecBcast101x4::is_available(
+bool ElemwiseImpl::AlgoBinaryVecBcast101xX::is_available(
         const KernParam& kern_param) const {
     if (!is_available_common(kern_param.mode) ||
-        ((BcastType::VEC_BCAST101x4 != kern_param.broad_cast_type) &&
-         (BcastType::BCAST101x4_VEC != kern_param.broad_cast_type)))
+        ((BcastType::VEC_BCAST101xX != kern_param.broad_cast_type) &&
+         (BcastType::BCAST101xX_VEC != kern_param.broad_cast_type)))
         return false;
 
     auto& elparam = kern_param.binary_elparam;
     auto& src0 = elparam[0];
-#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-    if (DNN_FLOAT16_SELECT(src0.layout.dtype == dtype::Float16{}, false)) {
-        return false;
-    }
-#endif
 
-    DISPATCH_TYPE("AlgoBinaryVecBcast101x::is_available"_hash);
+    DISPATCH_TYPE("AlgoBinaryVecBcast101xX::is_available"_hash);
 
     return false;
 }
+
 #undef DISPATCH_MODE_FLOAT
 #undef DISPATCH_MODE_INT
 
@@ -334,16 +330,19 @@ void ElemwiseImpl::AlgoBinaryVecBcast101::exec(
     return;
 }
 
-void ElemwiseImpl::AlgoBinaryVecBcast101x4::exec(
+void ElemwiseImpl::AlgoBinaryVecBcast101xX::exec(
         const KernParam& kern_param) const {
     auto& elparam = kern_param.binary_elparam;
     auto &src0 = elparam[0], &src1 = elparam[1];
     auto&& dst = *(kern_param.m_dst);
     BroadcastChannelInfo binfo;
 
-    //  BcastType::VEC + BCAST_101x
-    if (BcastType::VEC_BCAST101x4 == kern_param.broad_cast_type &&
-        is_broadcastedx_channel_like<4>(src1.layout, binfo)) {
+    //  BcastType::VEC + BCAST_101X
+    if (BcastType::VEC_BCAST101xX == kern_param.broad_cast_type) {
+        megdnn_assert(
+                is_broadcastedx_channel_like<4>(src1.layout, binfo) ||
+                        is_broadcastedx_channel_like<8>(src1.layout, binfo),
+                "only nchw44 and nchw88 supported");
 #define DISPATCH_BINARY(_mode, _case, _type, _type_midout_id, _op)            \
     case Mode::_mode:                                                         \
         MIDOUT_BEGIN(megdnn_arm_common_elemwise_binary, midout_iv(_case),     \
@@ -351,7 +350,7 @@ void ElemwiseImpl::AlgoBinaryVecBcast101x4::exec(
             thin_function<void(const _type*, const _type*, _type*, DType,     \
                                DType, DType, size_t, size_t, size_t, size_t)> \
                     run = OpCallerBinary<_op<_type, _type>,                   \
-                                         BcastType::VEC_BCAST101x4>::run;     \
+                                         BcastType::VEC_BCAST101xX>::run;     \
             MEGDNN_DISPATCH_CPU_KERN(                                         \
                     static_cast<naive::HandleImpl*>(kern_param.handle),       \
                     run(static_cast<const _type*>(src0.raw_ptr),              \
@@ -362,17 +361,19 @@ void ElemwiseImpl::AlgoBinaryVecBcast101x4::exec(
         }                                                                     \
         MIDOUT_END();                                                         \
         return
-
         size_t batch_size =
                 src0.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
-        DISPATCH_TYPE("AlgoBinaryVecBcast101x::exec_vec_b"_hash);
+        DISPATCH_TYPE("AlgoBinaryVecBcast101xX::exec_vec_b"_hash);
 
 #undef DISPATCH_BINARY
     }
 
     // BCAST_101x + BcastType::VEC
-    if (BcastType::BCAST101x4_VEC == kern_param.broad_cast_type &&
-        is_broadcastedx_channel_like<4>(src0.layout, binfo)) {
+    if (BcastType::BCAST101xX_VEC == kern_param.broad_cast_type) {
+        megdnn_assert(
+                is_broadcastedx_channel_like<4>(src0.layout, binfo) ||
+                        is_broadcastedx_channel_like<8>(src0.layout, binfo),
+                "only nchw44 and nchw88 supported");
 #define DISPATCH_BINARY(_mode, _case, _type, _type_midout_id, _op)            \
     case Mode::_mode:                                                         \
         MIDOUT_BEGIN(megdnn_arm_common_elemwise_binary, midout_iv(_case),     \
@@ -380,7 +381,7 @@ void ElemwiseImpl::AlgoBinaryVecBcast101x4::exec(
             thin_function<void(const _type*, const _type*, _type*, DType,     \
                                DType, DType, size_t, size_t, size_t, size_t)> \
                     run = OpCallerBinary<_op<_type, _type>,                   \
-                                         BcastType::BCAST101x4_VEC>::run;     \
+                                         BcastType::BCAST101xX_VEC>::run;     \
             MEGDNN_DISPATCH_CPU_KERN(                                         \
                     static_cast<naive::HandleImpl*>(kern_param.handle),       \
                     run(static_cast<const _type*>(src0.raw_ptr),              \
@@ -394,12 +395,13 @@ void ElemwiseImpl::AlgoBinaryVecBcast101x4::exec(
         size_t batch_size =
                 src1.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
 
-        DISPATCH_TYPE("AlgoBinaryVecBcast101x::exec_b_vec"_hash);
+        DISPATCH_TYPE("AlgoBinaryVecBcast101xX::exec_b_vec"_hash);
 
 #undef DISPATCH_BINARY
     }
     return;
 }
+
 #undef DISPATCH_MODE_FLOAT
 #undef DISPATCH_MODE_INT
 

@@ -42,9 +42,9 @@ using namespace arm_common;
 DECL_AVAILABLE(VecVecVec, BcastType::VEC_VEC_VEC);
 DECL_AVAILABLE(VecVecScalar, BcastType::VEC_VEC_SCALAR);
 DECL_AVAILABLE(Bcast101VecBcast101, BcastType::BCAST101_VEC_BCAST101);
-DECL_AVAILABLE(Bcast101x4VecBcast101x4, BcastType::BCAST101x4_VEC_BCAST101x4);
+DECL_AVAILABLE(Bcast101xXVecBcast101xX, BcastType::BCAST101xX_VEC_BCAST101xX);
 DECL_AVAILABLE(VecBcast101Vec, BcastType::VEC_BCAST101_VEC);
-DECL_AVAILABLE(VecBcast101x4Vec, BcastType::VEC_BCAST101x4_VEC);
+DECL_AVAILABLE(VecBcast101xXVec, BcastType::VEC_BCAST101xX_VEC);
 DECL_AVAILABLE(VecScalarVec, BcastType::VEC_SCALAR_VEC);
 DECL_AVAILABLE(VecScalarScalar, BcastType::VEC_SCALAR_SCALAR);
 #undef DECL_CB
@@ -161,13 +161,15 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101VecBcast101::exec(
     return;
 }
 
-void ElemwiseImpl::AlgoTernaryFma3Bcast101x4VecBcast101x4::exec(
+void ElemwiseImpl::AlgoTernaryFma3Bcast101xXVecBcast101xX::exec(
         const KernParam& kern_param) const {
     auto& elparam = kern_param.ternary_elparam;
     auto &src0 = elparam[0], &src1 = elparam[1], &src2 = elparam[2];
 
     BroadcastChannelInfo binfo;
-    is_broadcastedx_channel_like<4>(src0.layout, binfo);
+    megdnn_assert(is_broadcastedx_channel_like<4>(src0.layout, binfo) ||
+                          is_broadcastedx_channel_like<8>(src0.layout, binfo),
+                  "only nchw44 and nchw88 supported");
 #define DISPATCH_TERNARY(_mode, _case, _type, _type_midout_id, _op)          \
     case Mode::_mode:                                                        \
         MIDOUT_BEGIN(megdnn_arm_common_elemwise_ternary, midout_iv(_case),   \
@@ -177,7 +179,7 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101x4VecBcast101x4::exec(
                                size_t, size_t, size_t)>                      \
                     run = OpCallerTernary<                                   \
                             _op<_type, _type>,                               \
-                            BcastType::BCAST101x4_VEC_BCAST101x4>::run;      \
+                            BcastType::BCAST101xX_VEC_BCAST101xX>::run;      \
             MEGDNN_DISPATCH_CPU_KERN(                                        \
                     static_cast<naive::HandleImpl*>(kern_param.handle),      \
                     run(static_cast<const _type*>(src0.raw_ptr),             \
@@ -193,19 +195,21 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101x4VecBcast101x4::exec(
 
     size_t batch_size = src1.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
     auto&& dst = *(kern_param.m_dst);
-    DISPATCH_TYPE("AlgoTernaryFma3Bcast101x4VecBcast101x4::exec"_hash);
+    DISPATCH_TYPE("AlgoTernaryFma3Bcast101xXVecBcast101xX::exec"_hash);
 #undef DISPATCH_TERNARY
 
     return;
 }
 
-void ElemwiseImpl::AlgoTernaryFma3VecBcast101x4Vec::exec(
+void ElemwiseImpl::AlgoTernaryFma3VecBcast101xXVec::exec(
         const KernParam& kern_param) const {
     auto& elparam = kern_param.ternary_elparam;
     auto &src0 = elparam[0], &src1 = elparam[1], &src2 = elparam[2];
 
     BroadcastChannelInfo binfo;
-    is_broadcastedx_channel_like<4>(src1.layout, binfo);
+    megdnn_assert(is_broadcastedx_channel_like<4>(src1.layout, binfo) ||
+                          is_broadcastedx_channel_like<8>(src1.layout, binfo),
+                  "only nchw44 and nchw88 supported");
 #define DISPATCH_TERNARY(_mode, _case, _type, _type_midout_id, _op)            \
     case Mode::_mode:                                                          \
         MIDOUT_BEGIN(megdnn_arm_common_elemwise_ternary, midout_iv(_case),     \
@@ -214,7 +218,7 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast101x4Vec::exec(
                                _type*, DType, DType, DType, DType, size_t,     \
                                size_t, size_t, size_t)>                        \
                     run = OpCallerTernary<_op<_type, _type>,                   \
-                                          BcastType::VEC_BCAST101x4_VEC>::run; \
+                                          BcastType::VEC_BCAST101xX_VEC>::run; \
             MEGDNN_DISPATCH_CPU_KERN(                                          \
                     static_cast<naive::HandleImpl*>(kern_param.handle),        \
                     run(static_cast<const _type*>(src0.raw_ptr),               \
@@ -230,7 +234,7 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast101x4Vec::exec(
 
     size_t batch_size = src0.layout.shape[0] / (binfo.x * binfo.y * binfo.z);
     auto&& dst = *(kern_param.m_dst);
-    DISPATCH_TYPE("AlgoTernaryFma3VecBcast101x4Vec::exec"_hash);
+    DISPATCH_TYPE("AlgoTernaryFma3VecBcast101xXVec::exec"_hash);
 #undef DISPATCH_TERNARY
 
     return;

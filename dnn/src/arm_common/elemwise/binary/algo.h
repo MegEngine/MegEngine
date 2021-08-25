@@ -34,7 +34,7 @@ namespace arm_common {
 DECL_CB(VecVec);
 DECL_CB(VecScalar);
 DECL_CB(VecBcast101);
-DECL_CB(VecBcast101x4);
+DECL_CB(VecBcast101xX);
 #undef DECL_CB
 }  // namespace arm_common
 }  // namespace megdnn

@@ -10,7 +10,9 @@
  * implied.
  */
 #pragma once
+
 #include "src/fallback/elemwise/opr_impl.h"
+
 #include "src/arm_common/elemwise_op.h"
 
 namespace megdnn {
@@ -37,13 +39,13 @@ private:
     class AlgoBinaryVecVec;
     class AlgoBinaryVecScalar;
     class AlgoBinaryVecBcast101;
-    class AlgoBinaryVecBcast101x4;
+    class AlgoBinaryVecBcast101xX;
     class AlgoTernaryFma3VecVecVec;
     class AlgoTernaryFma3VecVecScalar;
     class AlgoTernaryFma3Bcast101VecBcast101;
-    class AlgoTernaryFma3Bcast101x4VecBcast101x4;
+    class AlgoTernaryFma3Bcast101xXVecBcast101xX;
     class AlgoTernaryFma3VecBcast101Vec;
-    class AlgoTernaryFma3VecBcast101x4Vec;
+    class AlgoTernaryFma3VecBcast101xXVec;
     class AlgoTernaryFma3VecScalarVec;
     class AlgoTernaryFma3VecScalarScalar;
     class AlgoPack;

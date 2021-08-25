@@ -53,6 +53,20 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_TERNARY) {
         checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
         checker.execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
 
+        //! nchw88
+        checker.execs({{1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.execs({{1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.execs({{1, 8, 1, 1, 8}, {3, 8, 5, 3, 8}, {1, 8, 1, 1, 8}, {}});
+        checker.execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.execs({{1, 2, 1, 1, 8}, {1, 2, 5, 7, 8}, {1, 2, 1, 1, 8}, {}});
+
+        //! nchw88
+        checker.execs({{1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {}});
+        checker.execs({{2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {}});
+        checker.execs({{3, 8, 5, 3, 8}, {1, 8, 1, 1, 8}, {3, 8, 5, 3, 8}, {}});
+        checker.execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.execs({{1, 2, 5, 7, 8}, {1, 2, 1, 1, 8}, {1, 2, 5, 7, 8}, {}});
+
         checker.execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});
         checker.execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});
         checker.execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});
@@ -225,6 +239,78 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW44_FP32) {
     run(Mode::SUB);
     run(Mode::TRUE_DIV);
     run(Mode::POW);
+}
+
+TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW88_FP) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle());
+
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 8, 1, 1, 8}, {3, 8, 5, 3, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 2, 1, 1, 8}, {1, 2, 5, 7, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{3, 8, 5, 3, 8}, {1, 8, 1, 1, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+    checker.set_param(Mode::FUSE_ADD_RELU)
+            .execs({{1, 2, 5, 7, 8}, {1, 2, 1, 1, 8}, {}});
+
+    auto run = [&](Mode mode) {
+        // VEC_BCAST101x
+        checker.set_param(mode).execs({{1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.set_param(mode).execs({{2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.set_param(mode).execs({{3, 8, 5, 3, 8}, {1, 8, 1, 1, 8}, {}});
+        checker.set_param(mode).execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.set_param(mode).execs({{1, 2, 5, 7, 8}, {1, 2, 1, 1, 8}, {}});
+        // BCAST101x_VEC not powOp
+        checker.set_param(mode).execs({{1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {}});
+        checker.set_param(mode).execs({{1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {}});
+        checker.set_param(mode).execs({{1, 8, 1, 1, 8}, {3, 8, 5, 3, 8}, {}});
+        checker.set_param(mode).execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.set_param(mode).execs({{1, 2, 1, 1, 8}, {1, 2, 5, 7, 8}, {}});
+    };
+    auto run_all = [&]() {
+        run(Mode::ADD);
+        run(Mode::FUSE_ADD_H_SWISH);
+        run(Mode::FUSE_ADD_RELU);
+        run(Mode::MAX);
+        run(Mode::MIN);
+        run(Mode::MUL);
+        run(Mode::SUB);
+        run(Mode::TRUE_DIV);
+        run(Mode::POW);
+    };
+
+    {
+        UniformFloatRNG rng(1e-5, 7e1);
+        checker.set_rng(0, &rng);
+        checker.set_epsilon(1e-5);
+        checker.set_dtype(0, dtype::Float32());
+        checker.set_dtype(1, dtype::Float32());
+        run_all();
+    }
+
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    {
+        UniformFloatRNG rng(1, 2);
+        checker.set_rng(0, &rng);
+        checker.set_epsilon(3e-3);
+        checker.set_dtype(0, dtype::Float16());
+        checker.set_dtype(1, dtype::Float16());
+        run_all();
+    }
+#endif
 }
 
 #if MEGDNN_WITH_BENCHMARK

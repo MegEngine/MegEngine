@@ -27,14 +27,14 @@ class ElemwiseImpl::AlgoPack {
     AlgoBinaryVecVec algo_binary_vec_vec;
     AlgoBinaryVecScalar algo_binary_vec_sca;
     AlgoBinaryVecBcast101 algo_binary_vec_bcast101;
-    AlgoBinaryVecBcast101x4 algo_binary_VEC_BCAST101x4;
+    AlgoBinaryVecBcast101xX algo_binary_VEC_BCAST101xX;
     AlgoTernaryFma3VecVecVec algo_ternaryfma3_vec_vec_vec;
     AlgoTernaryFma3VecVecScalar algo_ternaryfma3_vec_vecsca;
     AlgoTernaryFma3Bcast101VecBcast101 algo_ternaryfma3_bcast101_vec_bcast101;
-    AlgoTernaryFma3Bcast101x4VecBcast101x4
-            algo_ternaryfma3_bcast101x4_vec_bcast101x4;
+    AlgoTernaryFma3Bcast101xXVecBcast101xX
+            algo_ternaryfma3_bcast101xX_vec_bcast101xX;
     AlgoTernaryFma3VecBcast101Vec algo_ternaryfma3_vec_bcast101_vec;
-    AlgoTernaryFma3VecBcast101x4Vec algo_ternaryfma3_vec_bcast101x4_vec;
+    AlgoTernaryFma3VecBcast101xXVec algo_ternaryfma3_vec_bcast101xX_vec;
     AlgoTernaryFma3VecScalarVec algo_ternaryfma3_vec_sca_vec;
     AlgoTernaryFma3VecScalarScalar algo_ternaryfma3_vec_sca_sca;
 
@@ -44,13 +44,13 @@ public:
         all_algos.emplace_back(&algo_binary_vec_vec);
         all_algos.emplace_back(&algo_binary_vec_sca);
         all_algos.emplace_back(&algo_binary_vec_bcast101);
-        all_algos.emplace_back(&algo_binary_VEC_BCAST101x4);
+        all_algos.emplace_back(&algo_binary_VEC_BCAST101xX);
         all_algos.emplace_back(&algo_ternaryfma3_vec_vec_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_vecsca);
         all_algos.emplace_back(&algo_ternaryfma3_bcast101_vec_bcast101);
-        all_algos.emplace_back(&algo_ternaryfma3_bcast101x4_vec_bcast101x4);
+        all_algos.emplace_back(&algo_ternaryfma3_bcast101xX_vec_bcast101xX);
         all_algos.emplace_back(&algo_ternaryfma3_vec_bcast101_vec);
-        all_algos.emplace_back(&algo_ternaryfma3_vec_bcast101x4_vec);
+        all_algos.emplace_back(&algo_ternaryfma3_vec_bcast101xX_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_sca_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_sca_sca);
     }
@@ -118,9 +118,10 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
         }
 
         if (is_vector(src1.layout) &&
-            is_broadcastedx_channel_like<4>(src0.layout, binfo) &&
+            (is_broadcastedx_channel_like<4>(src0.layout, binfo) ||
+             is_broadcastedx_channel_like<8>(src0.layout, binfo)) &&
             src0.layout.eq_layout(src2.layout)) {
-            kern_param.broad_cast_type = BcastType::BCAST101x4_VEC_BCAST101x4;
+            kern_param.broad_cast_type = BcastType::BCAST101xX_VEC_BCAST101xX;
             return kern_param;
         }
 
@@ -131,8 +132,9 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
         }
 
         if (is_vector(src0.layout) && src0.layout.eq_layout(src2.layout) &&
-            is_broadcastedx_channel_like<4>(src1.layout, binfo)) {
-            kern_param.broad_cast_type = BcastType::VEC_BCAST101x4_VEC;
+            (is_broadcastedx_channel_like<4>(src1.layout, binfo) ||
+             is_broadcastedx_channel_like<8>(src1.layout, binfo))) {
+            kern_param.broad_cast_type = BcastType::VEC_BCAST101xX_VEC;
             return kern_param;
         }
 
@@ -180,17 +182,18 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
         }
 
         if (is_vector(src0.layout) &&
-            is_broadcastedx_channel_like<4>(src1.layout, binfo)) {
-            kern_param.broad_cast_type = BcastType::VEC_BCAST101x4;
+            (is_broadcastedx_channel_like<4>(src1.layout, binfo) ||
+             is_broadcastedx_channel_like<8>(src1.layout, binfo))) {
+            kern_param.broad_cast_type = BcastType::VEC_BCAST101xX;
             return kern_param;
         }
 
         if (is_vector(src1.layout) &&
-            is_broadcastedx_channel_like<4>(src0.layout, binfo)) {
-            kern_param.broad_cast_type = BcastType::BCAST101x4_VEC;
+            (is_broadcastedx_channel_like<4>(src0.layout, binfo) ||
+             is_broadcastedx_channel_like<8>(src0.layout, binfo))) {
+            kern_param.broad_cast_type = BcastType::BCAST101xX_VEC;
             return kern_param;
         }
-
     } else if (opr->m_src->size() == 1) {
         kern_param.broad_cast_type = BcastType::VEC;
         kern_param.unary_elparam = opr->make_elemwise_op_param<1>();
