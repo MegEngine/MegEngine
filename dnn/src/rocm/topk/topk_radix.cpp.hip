@@ -18,13 +18,7 @@
 #include <algorithm>
 #include <cmath>
 
-#if __CUDACC_VER_MAJOR__ < 9
-#pragma message "topk is a little slower on cuda earlier than 9.0"
-// on cuda 9.0 and later, due to thread-divergent branches we should use
-// __syncwarp; and I am too lazy to implement a correct legacy version, so just
-// use __syncthreads instead for older cuda
 #define __syncwarp __syncthreads
-#endif
 
 using namespace megdnn;
 using namespace rocm;
@@ -256,12 +250,12 @@ static __global__ void update_prefix_and_k(const uint32_t* bucket_cnt,
         }
     }
 
-    //if ((cumsum_bucket_cnt[NR_BUCKET] < kv) |
-    //    (cumsum_bucket_cnt[i] != cumsum_bucket_cnt[i - 1] + sum)) {
-    //    // impossible
-    //    int* bad = 0x0;
-    //    *bad = 23;
-    //}
+    if ((cumsum_bucket_cnt[NR_BUCKET] < kv) |
+       (cumsum_bucket_cnt[i] != cumsum_bucket_cnt[i - 1] + sum)) {
+       // impossible
+       int* bad = 0x0;
+       *bad = 23;
+    }
 }
 
 static uint32_t get_grid_dim_x(uint32_t length) {

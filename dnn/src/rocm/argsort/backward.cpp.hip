@@ -14,8 +14,6 @@
 #include "./argsort.h.hip"
 #include "./backward.h.hip"
 
-// #include "src/rocm/utils.h"
-
 using namespace megdnn;
 using namespace rocm;
 using namespace argsort;

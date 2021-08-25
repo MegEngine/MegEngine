@@ -174,7 +174,7 @@ template void argsort::forward<dtype>(const dtype*, dtype*, int*, void*,     \
                                     
 ARGSORT_FOREACH_CTYPE(INST_FORWARD)
 INST_CUB_SORT(uint32_t)
-// INST_CUB_SORT(uint64_t)
+INST_CUB_SORT(uint64_t)
 #undef INST_CUB_SORT
 #undef INST_FORWARD
 }
