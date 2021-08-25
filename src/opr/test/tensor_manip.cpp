@@ -2163,47 +2163,4 @@ TEST(TestParamPack, Split) {
     test_param_pack_split<3>({{2, 9}, {123}, {5, 3}});
 }
 
-TEST(TestTensorManip, Padding_random) {
-    opr::Padding::Param param;
-    param.padding_mode = megdnn::param::Padding::PaddingMode(0);
-    param.front_offset_dim0 = 3;
-    param.front_offset_dim1 = 3;
-    param.front_offset_dim2 = 3;
-    param.front_offset_dim3 = 3;
-    param.front_offset_dim4 = 0;
-    param.front_offset_dim5 = 0;
-    param.front_offset_dim6 = 0;
-    param.back_offset_dim0 = 0;
-    param.back_offset_dim1 = 0;
-    param.back_offset_dim2 = 0;
-    param.back_offset_dim3 = 0;
-    param.back_offset_dim4 = 0;
-    param.back_offset_dim5 = 0;
-    param.back_offset_dim6 = 0;
-    param.padding_val = 0;
-    
-    using Checker = AutoOprChecker<1,1>;
-    
-    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        return {opr::Padding::make(inputs[0], param)};
-    };
-    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto opr = megdnn_naive_handle()->create_operator<megdnn::Padding>();
-        TensorShape out_shp{inp[0]->as_megdnn().layout.shape[0]+param.front_offset_dim0+param.back_offset_dim0,
-                       inp[0]->as_megdnn().layout.shape[1]+param.front_offset_dim1+param.back_offset_dim1,
-                       inp[0]->as_megdnn().layout.shape[2]+param.front_offset_dim2+param.back_offset_dim2,
-                       inp[0]->as_megdnn().layout.shape[3]+param.front_offset_dim3+param.back_offset_dim3};
-        opr->param() = param;
-        dest[0].resize(out_shp);
-        opr->exec(inp[0]->as_megdnn(), dest[0].as_megdnn(), {});
-    };
-    
-    Checker::RunOptions opt;
-    opt.numdiff_max_err = 2e-3;
-    Checker(make_graph, fwd, CompNode::load("xpu0"))
-    .run({TensorShape{5, 5, 5, 5}}, opt)
-    .run({TensorShape{4, 3, 4, 5}}, opt)
-    .run({TensorShape{5, 4, 4, 5}}, opt);
-}
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
