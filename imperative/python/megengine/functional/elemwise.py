@@ -104,7 +104,29 @@ def add(x, y):
 
 
 def sub(x, y):
-    r"""Element-wise `subtraction`."""
+    r"""Element-wise `sub`.
+
+    Examples:
+
+        .. testcode::
+
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
+
+            x = tensor(np.arange(1, 7, dtype=np.float32).reshape(2, 3))
+            y = tensor(np.arange(0, 6, dtype=np.float32).reshape(2, 3))
+            out = F.sub(x, y)
+            print(out.numpy())
+
+        Outputs:
+
+        .. testoutput::
+
+            [[1. 1. 1.]
+             [1. 1. 1.]]
+
+    """
     return _elwise(x, y, mode=Elemwise.Mode.SUB)
 
 
