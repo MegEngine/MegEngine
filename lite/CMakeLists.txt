@@ -32,7 +32,9 @@ endif()
 # Write out lite_build_config.h
 # It defines macros needed by lite
 configure_file(src/lite_build_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/genfiles/lite_build_config.h DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include)
+
+# begin config lite
 add_library(lite_static STATIC ${SOURCES_LITE})
 add_dependencies(lite_static lite_fbs_generate)
 include_directories($<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/genfiles>)
@@ -80,6 +82,26 @@ endif()
 if(ANDROID)
     target_link_libraries(lite_shared_whl PRIVATE log)
 endif()
+
+# add lite_static_all_in_one same name build by BUILD
+# please do not change flatbuffers/cpuinfo/clog/lite_static order, if change!, cmake
+# can not gen flatbuffers/cpuinfo/clog OBJs to lite_static_all_in_one, this may cmake issue
+# NOTICE: this target always use to separate build with lite, if build lite via include
+# MegEngine/megbrain ROOT_DIR/CMakeLists.txt, just depends lite_static or lite_shared
+#TODO: need refine lite_static_all_in_one depend objects, but now cmake do not support
+# define a add_library which OBJECTS args is a set or list or string
+if (MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
+    add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog> $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static>)
+elseif (MGE_ENABLE_CPUINFO AND NOT MGE_WITH_OPENCL)
+    add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:cpuinfo> $<TARGET_OBJECTS:clog> $<TARGET_OBJECTS:lite_static>)
+elseif (NOT MGE_ENABLE_CPUINFO AND MGE_WITH_OPENCL)
+    add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:OpenCL> $<TARGET_OBJECTS:lite_static>)
+else()
+    add_library(lite_static_all_in_one STATIC $<TARGET_OBJECTS:flatbuffers> $<TARGET_OBJECTS:lite_static>)
+endif()
+if(LITE_BUILD_WITH_MGE)
+    target_link_libraries(lite_static_all_in_one PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
+endif()
 set(LITE_VERSION_SCRIPT ${PROJECT_SOURCE_DIR}/lite/src/version_lite.ld CACHE INTERNAL "Path to linker version script")
 add_custom_target(_lite_version_ld SOURCES ${LITE_VERSION_SCRIPT})
 if(NOT MSVC AND NOT WIN32)
@@ -106,6 +128,10 @@ install(TARGETS lite_shared
     ARCHIVE DESTINATION lite/lib/${MGE_ARCH}
     )
 
+install(TARGETS lite_static_all_in_one
+    LIBRARY DESTINATION lite/lib/${MGE_ARCH}
+    FRAMEWORK DESTINATION lite/lib/${MGE_ARCH}
+    ARCHIVE DESTINATION lite/lib/${MGE_ARCH})
 install(FILES ${PROJECT_SOURCE_DIR}/lite/include/lite/common_enum_c.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lite/include/lite-c)
 
