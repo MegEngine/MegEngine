@@ -582,7 +582,8 @@ def interpolate(
             "nearest": "nearest",
             "bicubic": "cubic",
         }
-
+        if inp.dtype == np.float16:
+            inp = inp.astype("float32")
         op = builtin.Resize(imode=mode_map[mode], format="NCHW")
         shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
         (ret,) = apply(op, inp, shape)
