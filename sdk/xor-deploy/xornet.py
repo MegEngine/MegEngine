@@ -51,6 +51,7 @@ def main():
     def train_fun(data, label):
         opt.clear_grad()
         with gm:
+            data = mge.Tensor(data)
             pred = net(data)
             loss = F.loss.cross_entropy(pred, label)
             gm.backward(loss)
@@ -58,12 +59,14 @@ def main():
         return pred, loss
 
     def val_fun(data, label):
+        data = mge.Tensor(data)
         pred = net(data)
         loss = F.loss.cross_entropy(pred, label)
         return pred, loss
 
     @trace(symbolic=True, capture_as_const=True)
     def pred_fun(data):
+        data = mge.Tensor(data)
         pred = net(data)
         pred_normalized = F.softmax(pred)
         return pred_normalized
