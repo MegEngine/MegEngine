@@ -15,23 +15,6 @@ if [ "$(printf '%s\n' "$requiredGitVersion" "$currentGitVersion" | ${SORT} -V | 
     echo "Please update your Git version. (foud version $currentGitVersion, required version >= $requiredGitVersion)"
     exit -1
 fi
-
-function update_cpuinfo() {
-    git submodule update -f --init cpuinfo
-
-    name=`git config --get user.name || true`
-    if [ -z "$name" ]; then
-        name="default"
-    fi
-    email=`git config --get user.email || true`
-    if [ -z "$email" ]; then
-        email="default"
-    fi
-
-    source ./apply-patches.sh
-    apply_cpuinfo_patches ${name} ${email}
-}
-
 function git_submodule_update() {
     git submodule sync
     git submodule update -f --init midout
@@ -48,7 +31,7 @@ function git_submodule_update() {
     git submodule update -f --init libzmq
     git submodule update -f --init cppzmq
     git submodule update -f --init OpenBLAS
-    update_cpuinfo
+    git submodule update -f --init cpuinfo
 
     git submodule update -f --init MegRay
     pushd MegRay/third_party >/dev/null
