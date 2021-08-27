@@ -1,9 +1,17 @@
+# MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
+#
+# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
 from copy import deepcopy
 from typing import Union
 
-from ...core.tensor.dtype import QuantDtypeMeta
-from ...quantization.fake_quant import QParamsModuleMixin, _FakeQuantize
-from ...quantization.utils import QParams, QuantMode, fake_quant_tensor
+from ..core.tensor.dtype import QuantDtypeMeta
+from ..quantization.fake_quant import QParamsModuleMixin, _FakeQuantize
+from ..quantization.utils import QParams, QuantMode, fake_quant_tensor
 
 
 class FakeQuantize(_FakeQuantize, QParamsModuleMixin):

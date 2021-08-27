@@ -12,8 +12,8 @@ import numpy as np
 import megengine.functional as F
 import megengine.module as M
 from megengine import Tensor
-from megengine.experimental.traced_module import trace_module
 from megengine.module import Module
+from megengine.traced_module import trace_module
 
 
 class MyBlock(Module):

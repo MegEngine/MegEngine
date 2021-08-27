@@ -9,8 +9,8 @@ import numpy as np
 
 import megengine.functional as F
 import megengine.module as M
-from megengine.experimental.traced_module import trace_module
-from megengine.experimental.traced_module.expr import CallFunction, GetAttr
+from megengine.traced_module import trace_module
+from megengine.traced_module.expr import CallFunction, GetAttr
 
 
 class MyBlock(M.Module):

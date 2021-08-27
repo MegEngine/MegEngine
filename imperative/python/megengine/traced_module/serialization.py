@@ -7,9 +7,9 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 from typing import Dict
 
-from ...core._imperative_rt import OpDef
-from ...core.ops import builtin
-from ...version import __version__
+from ..core._imperative_rt import OpDef
+from ..core.ops import builtin
+from ..version import __version__
 
 OPDEF_PARAM_LOADER = {}
 

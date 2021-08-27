@@ -130,4 +130,3 @@ import megengine.optimizer
 import megengine.quantization
 import megengine.random
 import megengine.utils
-import megengine.experimental

@@ -15,10 +15,7 @@ import numpy as np
 import megengine as mge
 from megengine import Parameter, Tensor
 from megengine.core.ops import builtin
-from megengine.experimental.traced_module.serialization import (
-    get_opdef_state,
-    load_opdef_from_state,
-)
+from megengine.traced_module.serialization import get_opdef_state, load_opdef_from_state
 
 
 def test_tensor_serialization():

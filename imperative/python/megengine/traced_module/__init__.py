@@ -6,7 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-from ...core._imperative_rt.core2 import set_cpp_apply_module_trace
+from ..core._imperative_rt.core2 import set_cpp_apply_module_trace
 from .traced_module import (
     TracedModule,
     _register_all_builtin_module,

@@ -2,7 +2,7 @@ import numpy as np
 
 import megengine.module as M
 from megengine import Tensor
-from megengine.experimental.traced_module import TracedModule, trace_module
+from megengine.traced_module import TracedModule, trace_module
 
 
 class MyModule1(M.Module):

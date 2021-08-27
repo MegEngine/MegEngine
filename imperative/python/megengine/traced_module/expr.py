@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -14,13 +13,13 @@ import inspect
 import re
 from typing import Callable, Dict, List
 
-from ...core._imperative_rt import OpDef
-from ...core._imperative_rt.core2 import Tensor as RawTensor
-from ...core._imperative_rt.core2 import apply, set_module_tracing, unset_module_tracing
-from ...core.ops.builtin import FakeQuant
-from ...core.ops.special import Const
-from ...module import Module
-from ...tensor import Parameter, Tensor
+from ..core._imperative_rt import OpDef
+from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..core._imperative_rt.core2 import apply, set_module_tracing, unset_module_tracing
+from ..core.ops.builtin import FakeQuant
+from ..core.ops.special import Const
+from ..module import Module
+from ..tensor import Parameter, Tensor
 from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import ArgsIndex, TreeDef, _is_const_leaf, _is_leaf, tree_flatten

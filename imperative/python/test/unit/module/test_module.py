@@ -15,7 +15,6 @@ import pytest
 import megengine as mge
 import megengine.functional as F
 from megengine import Parameter, Tensor, tensor
-from megengine.experimental.traced_module import TracedModule, trace_module
 from megengine.module import (
     BatchNorm1d,
     BatchNorm2d,
@@ -30,6 +29,7 @@ from megengine.module import (
 )
 from megengine.module.module import _access_structure
 from megengine.quantization.quantize import quantize, quantize_qat
+from megengine.traced_module import TracedModule, trace_module
 from megengine.utils.module_utils import get_expand_structure, set_expand_structure
 
 

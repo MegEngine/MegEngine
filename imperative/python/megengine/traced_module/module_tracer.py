@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -8,11 +7,11 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import collections
 
-from ... import Tensor
-from ... import functional as F
-from ...core.tensor.array_method import ArrayMethodMixin
-from ...module import Module
-from ...module.qat import QATModule
+from .. import Tensor
+from .. import functional as F
+from ..core.tensor.array_method import ArrayMethodMixin
+from ..module import Module
+from ..module.qat import QATModule
 
 _active_module_tracer = None
 

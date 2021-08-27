@@ -16,10 +16,10 @@ import megengine.autodiff as ad
 import megengine.functional as F
 import megengine.optimizer as optim
 from megengine import Tensor
-from megengine.experimental.traced_module import trace_module
 from megengine.jit import trace
 from megengine.module import Linear, Module
 from megengine.optimizer import SGD
+from megengine.traced_module import trace_module
 
 batch_size = 64
 data_shape = (batch_size, 2)

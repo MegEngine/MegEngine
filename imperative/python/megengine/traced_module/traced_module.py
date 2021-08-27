@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -22,21 +21,21 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Uni
 
 from megengine import tensor
 
-from ... import functional as F
-from ... import get_logger
-from ... import module as M
-from ...core._imperative_rt.core2 import Tensor as RawTensor
-from ...core._imperative_rt.core2 import (
+from .. import functional as F
+from .. import get_logger
+from .. import module as M
+from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..core._imperative_rt.core2 import (
     is_tracing_module,
     set_module_tracing,
     unset_module_tracing,
 )
-from ...core._trace_option import set_symbolic_shape
-from ...core.tensor.array_method import ArrayMethodMixin
-from ...module import Module
-from ...module.qat import QATModule
-from ...quantization.fake_quant import LSQ, TQT, FakeQuantize, _FakeQuantize
-from ...quantization.observer import (
+from ..core._trace_option import set_symbolic_shape
+from ..core.tensor.array_method import ArrayMethodMixin
+from ..module import Module
+from ..module.qat import QATModule
+from ..quantization.fake_quant import LSQ, TQT, FakeQuantize, _FakeQuantize
+from ..quantization.observer import (
     ExponentialMovingAverageObserver,
     HistogramObserver,
     MinMaxObserver,
@@ -45,7 +44,7 @@ from ...quantization.observer import (
     SyncExponentialMovingAverageObserver,
     SyncMinMaxObserver,
 )
-from ...tensor import Tensor
+from ..tensor import Tensor
 from .expr import Apply, CallFunction, CallMethod, Constant, Expr, GetAttr, Input
 from .fake_quant import FakeQuantize as TM_FakeQuant
 from .module_tracer import (

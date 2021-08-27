@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -13,13 +12,13 @@ from typing import Callable, NamedTuple
 
 import numpy as np
 
-from ...core._imperative_rt.common import CompNode
-from ...core._imperative_rt.core2 import Tensor as RawTensor
-from ...core._wrap import Device
-from ...core.tensor.dtype import QuantDtypeMeta
-from ...module import Module
-from ...quantization.utils import LSQParams, QParams, QuantMode
-from ...tensor import Parameter, Tensor
+from ..core._imperative_rt.common import CompNode
+from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..core._wrap import Device
+from ..core.tensor.dtype import QuantDtypeMeta
+from ..module import Module
+from ..quantization.utils import LSQParams, QParams, QuantMode
+from ..tensor import Parameter, Tensor
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -10,7 +9,7 @@ import copy
 from collections.abc import MutableMapping, MutableSequence
 from typing import Dict, Iterable, List, Optional, Sequence
 
-from ...module import Module
+from ..module import Module
 
 
 def replace_container_with_module_container(container):

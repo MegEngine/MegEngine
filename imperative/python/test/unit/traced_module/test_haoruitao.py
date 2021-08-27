@@ -7,8 +7,8 @@ import megengine.functional as F
 import megengine.module as M
 import megengine.utils.comp_graph_tools as cgtools
 from megengine.core._trace_option import set_symbolic_shape
-from megengine.experimental.traced_module import trace_module
 from megengine.jit import trace
+from megengine.traced_module import trace_module
 
 set_symbolic_shape(True)
 

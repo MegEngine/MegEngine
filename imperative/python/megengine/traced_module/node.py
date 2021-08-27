@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -12,9 +11,9 @@ from typing import Any, Dict, List, Tuple, Type
 
 import numpy
 
-from ...core._imperative_rt.core2 import Tensor as RawTensor
-from ...module import Module
-from ...tensor import Tensor
+from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..module import Module
+from ..tensor import Tensor
 
 
 class Node:
