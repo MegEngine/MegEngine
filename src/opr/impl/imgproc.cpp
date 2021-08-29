@@ -10,9 +10,9 @@
  * implied.
  */
 
+#include "megbrain/opr/imgproc.h"
 #include "./internal/megdnn_opr_wrapper.inl"
 #include "megbrain/graph/grad_impl.h"
-#include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
 
@@ -340,7 +340,9 @@ void ResizeForward::outshape_by_symvar_do_get_output_shape(
     //! The index of height, e.g.,[b, h, w, c], the height_idx = 1
     size_t height_idx = 0;
     if (param().format == Param::Format::NCHW ||
-        param().format == Param::Format::NCHW4) {
+        param().format == Param::Format::NCHW4 ||
+        param().format == Param::Format::NCHW44 ||
+        param().format == Param::Format::NCHW88) {
         height_idx = 2;
     } else {
         height_idx = 1;

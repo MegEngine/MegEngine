@@ -6,12 +6,13 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
-#include "megdnn/basic_types.h"
 #include <iostream>
+#include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 #include "./rng.h"
 namespace megdnn {
@@ -68,13 +69,15 @@ static inline std::vector<TestArg> get_args(IMode imode = IMode::INTER_LINEAR) {
     std::vector<TestArg> args;
     set_nchw_args(args);
 
-    if(imode == IMode::INTER_LINEAR) {
-    //! test NHWC with ch != 1 or ch != 3
+    if (imode == IMode::INTER_LINEAR) {
+        //! test NHWC with ch != 1 or ch != 3
         param::Resize param;
         param.format = param::Resize::Format::NHWC;
         param.imode = imode;
-        args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 4, 6, 4});
-        args.emplace_back(param, TensorShape{2, 4, 6, 4}, TensorShape{2, 2, 3, 4});
+        args.emplace_back(param, TensorShape{2, 2, 3, 4},
+                          TensorShape{2, 4, 6, 4});
+        args.emplace_back(param, TensorShape{2, 4, 6, 4},
+                          TensorShape{2, 2, 3, 4});
     }
     return args;
 }
@@ -105,6 +108,48 @@ static inline std::vector<TestArg> get_nchw4_args() {
                       TensorShape{2, 2, 2, 4, 4});
     args.emplace_back(param, TensorShape{2, 4, 6, 8, 4},
                       TensorShape{2, 4, 3, 4, 4});
+    return args;
+}
+
+static inline std::vector<TestArg> get_nchw44_args() {
+    std::vector<TestArg> args;
+
+    param::Resize param;
+    param.format = param::Resize::Format::NCHW44;
+    param.imode = param::Resize::InterpolationMode::LINEAR;
+    rep(n, 4ul) rep(c, 4ul) rep(ih, 4ul) rep(iw, 4ul) rep(oh, 4ul) rep(ow, 4ul)
+            args.emplace_back(
+                    param,
+                    TensorShape{n + 1ul, c + 1ul, ih + 1ul, iw + 1ul, 4ul},
+                    TensorShape{n + 1ul, c + 1ul, oh + 1ul, ow + 1ul, 4ul});
+
+    param.imode = param::Resize::InterpolationMode::NEAREST;
+    rep(n, 4ul) rep(c, 4ul) rep(ih, 4ul) rep(iw, 4ul) rep(oh, 4ul) rep(ow, 4ul)
+            args.emplace_back(
+                    param,
+                    TensorShape{n + 1ul, c + 1ul, ih + 1ul, iw + 1ul, 4ul},
+                    TensorShape{n + 1ul, c + 1ul, oh + 1ul, ow + 1ul, 4ul});
+    return args;
+}
+
+static inline std::vector<TestArg> get_nchw88_args() {
+    std::vector<TestArg> args;
+
+    param::Resize param;
+    param.format = param::Resize::Format::NCHW88;
+    param.imode = param::Resize::InterpolationMode::LINEAR;
+    rep(n, 4ul) rep(c, 4ul) rep(ih, 4ul) rep(iw, 4ul) rep(oh, 4ul) rep(ow, 4ul)
+            args.emplace_back(
+                    param,
+                    TensorShape{n + 1ul, c + 1ul, ih + 1ul, iw + 1ul, 8ul},
+                    TensorShape{n + 1ul, c + 1ul, oh + 1ul, ow + 1ul, 8ul});
+
+    param.imode = param::Resize::InterpolationMode::NEAREST;
+    rep(n, 4ul) rep(c, 4ul) rep(ih, 4ul) rep(iw, 4ul) rep(oh, 4ul) rep(ow, 4ul)
+            args.emplace_back(
+                    param,
+                    TensorShape{n + 1ul, c + 1ul, ih + 1ul, iw + 1ul, 8ul},
+                    TensorShape{n + 1ul, c + 1ul, oh + 1ul, ow + 1ul, 8ul});
     return args;
 }
 

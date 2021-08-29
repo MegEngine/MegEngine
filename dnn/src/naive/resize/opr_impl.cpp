@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #include "src/naive/resize/opr_impl.h"
@@ -27,10 +28,11 @@ using namespace resize;
 
 template <typename ctype>
 ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
-        Format format, _megdnn_tensor_in src, _megdnn_tensor_out dst,
-        _megdnn_workspace workspace) {
+        Format format, InterpolationMode imode, _megdnn_tensor_in src,
+        _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     KernParam<ctype> ret;
     ret.format = format;
+    ret.imode = imode;
     ret.n = src.layout.shape[0];
     if (format == Format::NCHW) {
         ret.c = src.layout.shape[1];
@@ -50,6 +52,18 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
         ret.ow = dst.layout.shape[2];
     } else if (format == Format::NCHW4) {
         ret.c = src.layout.shape[1] * 4;
+        ret.ih = src.layout.shape[2];
+        ret.iw = src.layout.shape[3];
+        ret.oh = dst.layout.shape[2];
+        ret.ow = dst.layout.shape[3];
+    } else if (format == Format::NCHW44) {
+        ret.c = src.layout.shape[1] * 4;
+        ret.ih = src.layout.shape[2];
+        ret.iw = src.layout.shape[3];
+        ret.oh = dst.layout.shape[2];
+        ret.ow = dst.layout.shape[3];
+    } else if (format == Format::NCHW88) {
+        ret.c = src.layout.shape[1] * 8;
         ret.ih = src.layout.shape[2];
         ret.iw = src.layout.shape[3];
         ret.oh = dst.layout.shape[2];
@@ -115,33 +129,30 @@ void ResizeImpl::kern_nchw(const KernParam<ctype>& kern_param,
                     break;
                 }
                 case InterpolationMode::INTER_LINEAR: {
-                    auto coord_h = get_origin_coord(scale_h, IH, oh);
-                    auto coord_w = get_origin_coord(scale_w, IW, ow);
+                    int ih0, ih1, iw0, iw1;
+                    float ah0, ah1, aw0, aw1;
 
-                    float alphah = coord_h.first;
-                    float alphaw = coord_w.first;
-
-                    int ih0 = coord_h.second;
-                    int ih1 = ih0 + 1;
-                    int iw0 = coord_w.second;
-                    int iw1 = iw0 + 1;
+                    std::tie(ah0, ih0, ah1, ih1) = get_nearest_linear_coord(
+                            kern_param.imode, scale_h, IH, oh);
+                    std::tie(aw0, iw0, aw1, iw1) = get_nearest_linear_coord(
+                            kern_param.imode, scale_w, IW, ow);
 
                     rep(c, static_cast<int>(C)) {
                         dptr[c * OH * OW + oh * OW + ow] = output_converter(
-                                sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] *
-                                        (1.0f - alphaw) * (1.0f - alphah) +
-                                sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] *
-                                        alphaw * (1.0f - alphah) +
-                                sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] *
-                                        (1.0f - alphaw) * alphah +
-                                sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] *
-                                        alphaw * alphah);
+                                sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] * ah0 *
+                                        aw0 +
+                                sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] * ah0 *
+                                        aw1 +
+                                sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] * ah1 *
+                                        aw0 +
+                                sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] * ah1 *
+                                        aw1);
                     }
                     break;
                 }
                 case InterpolationMode::INTER_CUBIC: {
-                    auto coord_h = get_origin_coord(scale_h, IH, oh, true);
-                    auto coord_w = get_origin_coord(scale_w, IW, ow, true);
+                    auto coord_h = get_cubic_coord(scale_h, oh);
+                    auto coord_w = get_cubic_coord(scale_w, ow);
 
                     float alphah = coord_h.first;
                     float alphaw = coord_w.first;
@@ -193,7 +204,19 @@ void ResizeImpl::kern_naive(const KernParam<ctype>& kern_param) {
         return;
     } else if (kern_param.format == Format::NCHW4) {
         MIDOUT_BEGIN(megdnn_naive_resize_layout, midout_iv(2)) {
-            kern_naive_nchw4(kern_param);
+            kern_naive_nchwx<ctype, 4>(kern_param);
+        }
+        MIDOUT_END();
+        return;
+    } else if (kern_param.format == Format::NCHW44) {
+        MIDOUT_BEGIN(megdnn_naive_resize_layout, midout_iv(3)) {
+            kern_naive_nchwx<ctype, 4>(kern_param);
+        }
+        MIDOUT_END();
+        return;
+    } else if (kern_param.format == Format::NCHW88) {
+        MIDOUT_BEGIN(megdnn_naive_resize_layout, midout_iv(4)) {
+            kern_naive_nchwx<ctype, 8>(kern_param);
         }
         MIDOUT_END();
         return;
@@ -209,25 +232,20 @@ void ResizeImpl::kern_naive_nhwc(const KernParam<ctype>& kern_param) {
 
     rep(n, N) {
         rep(oh, OH) rep(ow, OW) {
-            auto coord_h = get_origin_coord(scale_h, IH, oh);
-            auto coord_w = get_origin_coord(scale_w, IW, ow);
+            int ih0, ih1, iw0, iw1;
+            float ah0, ah1, aw0, aw1;
 
-            float alphah = coord_h.first;
-            float alphaw = coord_w.first;
+            std::tie(ah0, ih0, ah1, ih1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_h, IH, oh);
+            std::tie(aw0, iw0, aw1, iw1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_w, IW, ow);
 
-            int ih0 = coord_h.second;
-            int ih1 = ih0 + 1;
-            int iw0 = coord_w.second;
-            int iw1 = iw0 + 1;
             rep(c, C) {
                 dptr[(oh * OW + ow) * C + c] = output_converter(
-                        sptr[(ih0 * IW + iw0) * C + c] * (1.0f - alphaw) *
-                                (1.0f - alphah) +
-                        sptr[(ih0 * IW + iw1) * C + c] * alphaw *
-                                (1.0f - alphah) +
-                        sptr[(ih1 * IW + iw0) * C + c] * (1.0f - alphaw) *
-                                alphah +
-                        sptr[(ih1 * IW + iw1) * C + c] * alphaw * alphah);
+                        sptr[(ih0 * IW + iw0) * C + c] * ah0 * aw0 +
+                        sptr[(ih0 * IW + iw1) * C + c] * ah0 * aw1 +
+                        sptr[(ih1 * IW + iw0) * C + c] * ah1 * aw0 +
+                        sptr[(ih1 * IW + iw1) * C + c] * ah1 * aw1);
             }
         }
         sptr += C * IH * IW;
@@ -251,26 +269,20 @@ void ResizeImpl::kern_naive_nhwcd4(const KernParam<ctype>& kern_param) {
 
     rep(n, N) {
         rep(oh, OH) rep(ow, OW) {
-            auto coord_h = get_origin_coord(scale_h, IH, oh);
-            auto coord_w = get_origin_coord(scale_w, IW, ow);
+            int ih0, ih1, iw0, iw1;
+            float ah0, ah1, aw0, aw1;
 
-            float alphah = coord_h.first;
-            float alphaw = coord_w.first;
+            std::tie(ah0, ih0, ah1, ih1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_h, IH, oh);
+            std::tie(aw0, iw0, aw1, iw1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_w, IW, ow);
 
-            int ih0 = coord_h.second;
-            int ih1 = ih0 + 1;
-            int iw0 = coord_w.second;
-            int iw1 = iw0 + 1;
             rep(c, C) {
                 dptr[get_tensor_addr(oh, ow, c, OW, C)] = output_converter(
-                        sptr[get_tensor_addr(ih0, iw0, c, IW, C)] *
-                                (1.0f - alphaw) * (1.0f - alphah) +
-                        sptr[get_tensor_addr(ih0, iw1, c, IW, C)] * alphaw *
-                                (1.0f - alphah) +
-                        sptr[get_tensor_addr(ih1, iw0, c, IW, C)] *
-                                (1.0f - alphaw) * alphah +
-                        sptr[get_tensor_addr(ih1, iw1, c, IW, C)] * alphaw *
-                                alphah);
+                        sptr[get_tensor_addr(ih0, iw0, c, IW, C)] * ah0 * aw0 +
+                        sptr[get_tensor_addr(ih0, iw1, c, IW, C)] * ah0 * aw1 +
+                        sptr[get_tensor_addr(ih1, iw0, c, IW, C)] * ah1 * aw0 +
+                        sptr[get_tensor_addr(ih1, iw1, c, IW, C)] * ah1 * aw1);
             }
         }
         sptr += IH * (C / 4) * IW * 4;
@@ -278,41 +290,46 @@ void ResizeImpl::kern_naive_nhwcd4(const KernParam<ctype>& kern_param) {
     }
 }
 
-template <typename ctype>
-void ResizeImpl::kern_naive_nchw4(const KernParam<ctype>& kern_param) {
+template <typename ctype, size_t pack_size>
+void ResizeImpl::kern_naive_nchwx(const KernParam<ctype>& kern_param) {
     UNPACK_RESIZE_FWD_KERN_PARAM(kern_param);
     rounding::RoundingConverter<ctype> output_converter;
     float scale_h = static_cast<float>(OH) / IH;
     float scale_w = static_cast<float>(OW) / IW;
 
+    megdnn_assert(pack_size == 4 || pack_size == 8);
+    size_t log_pack_size = 2;
+    if (pack_size == 8) {
+        log_pack_size = 3;
+    }
+
     auto get_tensor_addr = [&](size_t h, size_t w, size_t c, size_t H, size_t W,
                                size_t C) -> size_t {
-        megdnn_assert((C & 0x3) == 0);
-        return (((c >> 2) * H * W + h * W + w) << 2) + (c & 0b11);
+        megdnn_assert((C & (pack_size - 1)) == 0);
+        return (((c >> log_pack_size) * H * W + h * W + w) << log_pack_size) +
+               (c & (pack_size - 1));
     };
 
     rep(n, N) {
         rep(oh, OH) rep(ow, OW) {
-            auto coord_h = get_origin_coord(scale_h, IH, oh);
-            auto coord_w = get_origin_coord(scale_w, IW, ow);
+            int ih0, ih1, iw0, iw1;
+            float ah0, ah1, aw0, aw1;
 
-            float alphah = coord_h.first;
-            float alphaw = coord_w.first;
+            std::tie(ah0, ih0, ah1, ih1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_h, IH, oh);
+            std::tie(aw0, iw0, aw1, iw1) =
+                    get_nearest_linear_coord(kern_param.imode, scale_w, IW, ow);
 
-            int ih0 = coord_h.second;
-            int ih1 = ih0 + 1;
-            int iw0 = coord_w.second;
-            int iw1 = iw0 + 1;
             rep(c, C) {
                 dptr[get_tensor_addr(oh, ow, c, OH, OW, C)] = output_converter(
-                        sptr[get_tensor_addr(ih0, iw0, c, IH, IW, C)] *
-                                (1.0f - alphaw) * (1.0f - alphah) +
-                        sptr[get_tensor_addr(ih0, iw1, c, IH, IW, C)] * alphaw *
-                                (1.0f - alphah) +
-                        sptr[get_tensor_addr(ih1, iw0, c, IH, IW, C)] *
-                                (1.0f - alphaw) * alphah +
-                        sptr[get_tensor_addr(ih1, iw1, c, IH, IW, C)] * alphaw *
-                                alphah);
+                        sptr[get_tensor_addr(ih0, iw0, c, IH, IW, C)] * ah0 *
+                                aw0 +
+                        sptr[get_tensor_addr(ih0, iw1, c, IH, IW, C)] * ah0 *
+                                aw1 +
+                        sptr[get_tensor_addr(ih1, iw0, c, IH, IW, C)] * ah1 *
+                                aw0 +
+                        sptr[get_tensor_addr(ih1, iw1, c, IH, IW, C)] * ah1 *
+                                aw1);
             }
         }
         sptr += IH * IW * C;
@@ -327,8 +344,8 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
 #define cb(dt, ct, _midout_iv)                                              \
     case DTypeTrait<dt>::enumv: {                                           \
         MIDOUT_BEGIN(megdnn_naive_resize_nchw, midout_iv(_midout_iv)) {     \
-            auto kparam = KernParam<ct>::from_tensors(param().format, src,  \
-                                                      dst, workspace);      \
+            auto kparam = KernParam<ct>::from_tensors(                      \
+                    param().format, param().imode, src, dst, workspace);    \
             MEGDNN_DISPATCH_CPU_KERN_OPR(kern_nchw(kparam, param().imode)); \
         }                                                                   \
         MIDOUT_END();                                                       \
@@ -356,15 +373,15 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
     if (((src.layout[3] != 1 && src.layout[3] != 3) ||
          !is_nhwc_contig_wc(src.layout)) ||
         (param().imode == param::Resize::InterpolationMode::LINEAR)) {
-#define cb(dt, ct, _midout_iv)                                             \
-    case DTypeTrait<dt>::enumv: {                                          \
-        MIDOUT_BEGIN(megdnn_naive_resize_layout, midout_iv(_midout_iv)) {  \
-            auto kparam = KernParam<ct>::from_tensors(param().format, src, \
-                                                      dst, workspace);     \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));              \
-        }                                                                  \
-        MIDOUT_END();                                                      \
-        return;                                                            \
+#define cb(dt, ct, _midout_iv)                                            \
+    case DTypeTrait<dt>::enumv: {                                         \
+        MIDOUT_BEGIN(megdnn_naive_resize_layout, midout_iv(_midout_iv)) { \
+            auto kparam = KernParam<ct>::from_tensors(                    \
+                    param().format, param().imode, src, dst, workspace);  \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(kern_naive(kparam));             \
+        }                                                                 \
+        MIDOUT_END();                                                     \
+        return;                                                           \
     }
 
         switch (src.layout.dtype.enumv()) {
@@ -409,27 +426,24 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
             rep(oh, OH) rep(ow, OW) {
                 switch (param().imode) {
                     case InterpolationMode::INTER_LINEAR: {
-                        auto coord_h = get_origin_coord(scale_h, IH, oh);
-                        auto coord_w = get_origin_coord(scale_w, IW, ow);
+                        int ih0, ih1, iw0, iw1;
+                        float ah0, ah1, aw0, aw1;
 
-                        float alphah = coord_h.first;
-                        float alphaw = coord_w.first;
-
-                        int ih0 = coord_h.second;
-                        int ih1 = ih0 + 1;
-                        int iw0 = coord_w.second;
-                        int iw1 = iw0 + 1;
+                        std::tie(ah0, ih0, ah1, ih1) = get_nearest_linear_coord(
+                                param().imode, scale_h, IH, oh);
+                        std::tie(aw0, iw0, aw1, iw1) = get_nearest_linear_coord(
+                                param().imode, scale_w, IW, ow);
 
                         rep(c, C) {
                             float hidden = hptr[c * OH * OW + oh * OW + ow];
                             sptr[c * IH * IW + ih0 * IW + iw0] +=
-                                    (1.0f - alphaw) * (1.0f - alphah) * hidden;
+                                    ah0 * aw0 * hidden;
                             sptr[c * IH * IW + ih1 * IW + iw0] +=
-                                    (1.0f - alphaw) * alphah * hidden;
+                                    ah1 * aw0 * hidden;
                             sptr[c * IH * IW + ih0 * IW + iw1] +=
-                                    alphaw * (1.0f - alphah) * hidden;
+                                    ah0 * aw1 * hidden;
                             sptr[c * IH * IW + ih1 * IW + iw1] +=
-                                    alphaw * alphah * hidden;
+                                    ah1 * aw1 * hidden;
                         }
                         break;
                     }
@@ -443,8 +457,8 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
                         break;
                     }
                     case InterpolationMode::INTER_CUBIC: {
-                        auto coord_h = get_origin_coord(scale_h, IH, oh, true);
-                        auto coord_w = get_origin_coord(scale_w, IW, ow, true);
+                        auto coord_h = get_cubic_coord(scale_h, oh);
+                        auto coord_w = get_cubic_coord(scale_w, ow);
 
                         float alphah = coord_h.first;
                         float alphaw = coord_w.first;
@@ -460,7 +474,8 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
                             rep(kh, ksize) {
                                 int h = saturate<int, int>(ih0 + kh, 0, IH - 1);
                                 rep(kw, ksize) {
-                                    int w = saturate<int, int>(iw0 + kw, 0, IW - 1);
+                                    int w = saturate<int, int>(iw0 + kw, 0,
+                                                               IW - 1);
                                     sptr[c * IH * IW + h * IW + w] +=
                                             hptr[c * OH * OW + oh * OW + ow] *
                                             h_coeff[kh] * w_coeff[kw];

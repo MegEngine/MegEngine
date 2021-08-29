@@ -197,7 +197,11 @@ public:
 
 protected:
     //! get origin coord
-    std::pair<float, int> get_origin_coord(float scale, int size, int idx, bool cubic=false);
+    std::pair<float, int> get_cubic_coord(float scale, int idx);
+
+    std::tuple<float, int, float, int> get_nearest_linear_coord(
+            InterpolationMode imode, float scale, int size, int idx);
+
     //! get nearest index in src
     int get_nearest_src(float scale, int size, int idx);
 

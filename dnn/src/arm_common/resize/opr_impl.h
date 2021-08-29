@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 #pragma once
 #include "megdnn/oprs.h"
@@ -25,6 +26,16 @@ public:
                                   const TensorLayout&) override {
         return 0;
     }
+
+private:
+    template <typename ctype>
+    void kern_nchw44_fp32(const KernParam<ctype>& kern_param);
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    template <typename ctype>
+    void kern_nchw88_fp16(const KernParam<ctype>& kern_param);
+#endif
+    void kern_nearest_upsample2_pack_simd_width(_megdnn_tensor_in src,
+                                                _megdnn_tensor_out dst);
 };
 
 }  // namespace arm_common
