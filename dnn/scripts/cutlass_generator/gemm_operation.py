@@ -1073,7 +1073,11 @@ void initialize_${operation_name}(Manifest &manifest) {
 """
   #
   def __enter__(self):
-    self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name()) 
+    if self.short_path:
+      self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % GlobalCnt.cnt) 
+      GlobalCnt.cnt += 1
+    else:
+      self.kernel_path = os.path.join(self.kernel_path, "%s.cu" % self.operation.procedural_name())
     self.kernel_file = open(self.kernel_path, "w")
     self.kernel_file.write(SubstituteTemplate(self.header_template, {
       'required_cuda_ver_major': str(self.operation.required_cuda_ver_major),
