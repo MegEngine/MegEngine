@@ -621,8 +621,11 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
     if (prof.empty())
         return {{}, rst};
 
+    size_t workspace_limit = WorkspaceLimitGetter::get_workspace_limit(
+            owner_graph(), m_cn, m_execution_policy.workspace_limit);
     auto target_attr = extract_algo_attribute(selected_strategy);
     bool skip_by_negative = false;
+    bool skip_by_workspace = false;
     for (auto&& i : prof) {
         auto attr_of_algo = static_cast<megdnn::Algorithm::Attribute>(i.attribute);
         bool contain_attr_all_positive =
@@ -631,13 +634,18 @@ AlgoChooser<Opr>::AlgoChooserHelper::get_profile_result_from_cache(
                 static_cast<bool>(attr_of_algo & target_attr.second);
         if (contain_attr_all_positive) {
             if (!contain_attr_any_negative) {
-                Algorithm::Info::Desc algo_desc = deserialize_read_pod(i.algo);
-                return {algo_desc, rst};
+                if (i.workspace <= workspace_limit) {
+                    Algorithm::Info::Desc algo_desc = deserialize_read_pod(i.algo);
+                    return {algo_desc, rst};
+                }
+                skip_by_workspace = true;
             } else {
                 skip_by_negative = true;
             }
         }
     }
+    if (skip_by_workspace)
+        return {};
 
     std::string layouts_str =
             format_fixlayouts<Opr>(m_fastrun_layouts, arity_in, arity_out);

@@ -316,6 +316,22 @@ protected:
     typename Super::NodeProp* do_make_node_prop() const override;
 };
 
+class WorkspaceLimitHook final : public UserDataContainer::UserData {
+    MGB_TYPEINFO_OBJ_DECL;
+
+public:
+    using GetWorkspaceLimitImpl = thin_function<size_t(CompNode, size_t)>;
+    WorkspaceLimitHook() = default;
+    ~WorkspaceLimitHook() = default;
+    static void set_impl(ComputingGraph* graph, GetWorkspaceLimitImpl impl);
+    static const GetWorkspaceLimitImpl& get_impl(ComputingGraph* graph);
+
+private:
+    void set_impl(GetWorkspaceLimitImpl impl);
+    const GetWorkspaceLimitImpl& get_impl() const;
+    GetWorkspaceLimitImpl m_impl;
+};
+
 }  // namespace intl
 }  // namespace opr
 }  // namespace mgb
