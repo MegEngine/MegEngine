@@ -473,7 +473,34 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_INT8) {
             execs({A, B, {}});
     }
 }
+TEST_F(CUDA, MATRIX_MUL_CUBLASLT_F32) {
+    require_compute_capability(7, 5);
+    size_t m = 128, n = 1024, k = 18432;
+    Checker<MatrixMul> checker(handle_cuda());
+    checker.set_before_exec_callback(
+            AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
 
+    using Param = MatrixMul::Param;
+
+    Param param;
+    DType stype = dtype::Float32();
+    DType dtype = dtype::Float32();
+    TensorShape A, B;
+    param.transposeA = param.transposeB = 0;
+    if (param.transposeA)
+        A = TensorShape{k, m};
+    else
+        A = TensorShape{m, k};
+    if (param.transposeB)
+        B = TensorShape{n, k};
+    else
+        B = TensorShape{k, n};
+    checker.set_param(param)
+            .set_dtype(0, stype)
+            .set_dtype(1, stype)
+            .set_dtype(2, dtype)
+            .execs({A, B, {}});
+}
 } // namespace test
 } // namespace megdnn
 // vim: syntax=cpp.doxygen

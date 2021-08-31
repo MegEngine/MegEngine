@@ -313,6 +313,19 @@ bool CUBLASLTMatmulDesc::get_algorithm_heuristic(const SizeArgs& args,
     cublas_check(cublasLtMatmulPreferenceSetAttribute(
             algo_pref, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &algo_ws_limit,
             sizeof(algo_ws_limit)));
+#if CUDA_VERSION < 11000
+    bool is_f32_config = args.layout_a.dtype == dtype::Float32() &&
+                         args.layout_b.dtype == dtype::Float32() &&
+                         args.layout_c.dtype == dtype::Float32();
+    if (is_f32_config) {
+        // disable HMMA tensor op matmul when inputs and output are all f32
+        // tensors, to avoid the potential accuracy loss
+        uint32_t math_mode = CUBLAS_DEFAULT_MATH;
+        cublas_check(cublasLtMatmulPreferenceSetAttribute(
+                algo_pref, CUBLASLT_MATMUL_PREF_MATH_MODE_MASK, &math_mode,
+                sizeof(math_mode)));
+    }
+#endif
     status = cublasLtMatmulAlgoGetHeuristic(
             cublasLt_handle, matmul_desc,
             dt_c == CUDA_R_32I ? layout_trans_b : layout_b,

@@ -215,6 +215,7 @@ std::vector<BenchArgs> get_feat_model_args() {
     return args;
 }
 
+#if CUDA_VERSION >= 10020
 std::vector<BenchArgs> get_f16_feat_model_args() {
     std::vector<BenchArgs> args;
     args.emplace_back(BenchArgs{128, 9216, 9216});
@@ -222,6 +223,7 @@ std::vector<BenchArgs> get_f16_feat_model_args() {
     args.emplace_back(BenchArgs{128, 5184, 5184});
     return args;
 }
+#endif
 
 void benchmark_matrix_mul(
         Handle* handle, const std::vector<BenchArgs>& args, DType A_dtype,
