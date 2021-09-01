@@ -16,6 +16,7 @@
 
 #include "megdnn/opr_param_defs.h"
 #include "megbrain/opr/param_defs.h"
+#include "megbrain/imperative/ops/custom_opdef.h"
 
 namespace PYBIND11_NAMESPACE {
 namespace detail {
@@ -35,3 +36,4 @@ FOR_EACH_BIT_COMBINED_ENUM_PARAM(ENUM_CASTER_DEF)
 } // PYBIND11_NAMESPACE
 
 void init_ops(pybind11::module m);
+void init_custom(pybind11::module m);

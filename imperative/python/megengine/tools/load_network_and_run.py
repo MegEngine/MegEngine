@@ -13,6 +13,7 @@ from collections import OrderedDict
 import numpy as np
 
 import megengine as mge
+from megengine.core.ops import custom
 from megengine.core.tensor import megbrain_graph as G
 from megengine.device import get_device_count, set_default_device
 from megengine.functional.debug_param import set_execution_strategy
@@ -397,6 +398,10 @@ def main():
         type=str,
         help="Record the static graph's static memory info.",
     )
+    parser.add_argument(
+        "--custom-op-lib", type=str, help="path of the custom op",
+    )
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -409,6 +414,8 @@ def main():
 
     if args.dump_cpp_model:
         args.embed_input = True
+    if args.custom_op_lib is not None:
+        custom.load(args.custom_op_lib)
 
     logger.info("loading model ...")
     ret = G.load_graph(args.net)

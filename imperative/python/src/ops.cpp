@@ -607,4 +607,107 @@ void init_ops(py::module m) {
         .def("compile", [](PySubgraphBuilder& self, int gopt_level){
             return (std::shared_ptr<OpDef>)CompiledOp::make(self.build(), gopt_level);
         });
+    
+    auto custom = submodule(m, "_custom");
+    init_custom(custom);
+}
+
+#define CUSTOM_CASE_TO_PARSE_NON_LIST(dyn_type, static_type)                \
+    case mgb::custom::ParamDynType::dyn_type: {                             \
+        param_val = py::handle(kv.second).cast<static_type>();              \
+        break;                                                              \
+    }
+
+#define CUSTOM_CASE_TO_PARSE_LIST(dyn_type, static_type)                    \
+    case mgb::custom::ParamDynType::dyn_type: {                             \
+        auto pyvals = py::handle(kv.second).cast<py::list>();               \
+        static_type vals;                                                   \
+        using basic_type =                                                  \
+            mgb::custom::get_vector_template_arg_type<static_type>::type;   \
+        for (auto &pyval: pyvals) {                                         \
+            vals.push_back(py::handle(pyval).cast<basic_type>());           \
+        }                                                                   \
+        param_val = vals;                                                   \
+        break;                                                              \
+    }
+
+PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs, PyObject *kwnames) {
+    auto op_name = py::handle(args[0]).cast<std::string>();
+    auto kwargs = py::handle(args[1]).cast<py::dict>();
+
+    std::shared_ptr<OpDef> opdef = CustomOpDefFactory::inst()->create_opdef(op_name);
+    auto &custom_opdef = static_cast<mgb::imperative::CustomOpDef&>(*opdef);
+    auto &param = custom_opdef.param();
+
+    for (auto &&kv: kwargs) {
+        std::string param_name = py::handle(kv.first).cast<std::string>();
+        std::string type_name = py::handle(kv.second).ptr()->ob_type->tp_name;
+        
+        if (!param.exist(param_name)) {
+            mgb_log_warn(
+                "op %s have no param named %s, ignore this param parsed from python",
+                op_name.c_str(), param_name.c_str()
+            );
+            continue;
+        }
+
+        auto& param_val = param[param_name];
+        switch (param_val.type()) {
+            CUSTOM_FOR_EACH_BASIC_PARAMTYPE(CUSTOM_CASE_TO_PARSE_NON_LIST)
+            CUSTOM_FOR_STRING_PARAMTYPE(CUSTOM_CASE_TO_PARSE_NON_LIST)
+            CUSTOM_FOR_EACH_BASIC_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
+            CUSTOM_FOR_BOOL_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
+            CUSTOM_FOR_STRING_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
+            default: {
+                mgb_assert(
+                    false, "param dtype of %s:%s is invalid",
+                    op_name.c_str(), param_name.c_str()
+                );
+            }
+        }
+    }
+
+    PyTypeObject* pytype;
+    pytype = &PyOpType(OpDef);
+    PyObject* obj = pytype->tp_alloc(pytype, 0);
+    reinterpret_cast<PyOp(OpDef)*>(obj)->op = opdef;
+    
+    return obj;
+}
+
+#undef CUSTOM_CASE_TO_PARSE_LIST
+#undef CUSTOM_CASE_TO_PARSE_NON_LIST
+
+py::list install_custom(const std::string &name, const std::string &path) {
+    py::list ret;
+    const auto &ops_in_lib = mgb::custom::LibManager::inst()->install(name, path);
+    for (const auto &op: ops_in_lib) {
+        ret.append(op);
+    }
+    return std::move(ret);
+}
+
+bool uninstall_custom(const std::string &name) {
+    return mgb::custom::LibManager::inst()->uninstall(name);
+}
+
+py::list get_custom_op_list(void) {
+    std::vector<std::string> all_ops = CustomOpDefFactory::inst()->op_list();
+    py::list ret;
+    for (auto &op: all_ops) {
+        ret.append(op);
+    }
+    return std::move(ret);
+}
+
+void init_custom(pybind11::module m) {
+    m.def("install", &install_custom);
+    m.def("uninstall", &uninstall_custom);
+    m.def("get_custom_op_list", &get_custom_op_list);
+
+    static PyMethodDef method_def = {
+        "make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
+    };
+    auto* func = PyCFunction_NewEx(&method_def, nullptr, nullptr);
+    pybind11::setattr(m, method_def.ml_name, func);
 }
