@@ -52,6 +52,14 @@ void Value::writeto_fpath(const char* fout_path, int indent) const {
 }
 
 void Number::writeto(std::string& fout, int) const {
+    if (std::isinf(m_val)){
+        fout += "\"inf\"";
+        return ;
+    }
+    if (std::isnan(m_val)){
+        fout += "\"nan\"";
+        return ;
+    }
     static char fmt[16];
     static Spinlock fmt_mtx;
     if (!fmt[sizeof(fmt) - 1]) {
