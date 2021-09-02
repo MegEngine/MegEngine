@@ -30,7 +30,8 @@ __global__ void reorder_filter_nc4hw4_to_n4hwc4_kernel(
     const int32_t fhfw = blockIdx.x * BLOCKSIZE_Y + threadIdx.x;
 
     if (fhfw < FHFW && icb < IC / 4) {
-        int src_value[4], dst_value[4];
+        array_wrapper<int, 4> src_value;
+        int dst_value[4];
 #pragma unroll
         for (int i = 0; i < 4; i++) {
             src_value[i] = *reinterpret_cast<const int*>(
@@ -38,7 +39,8 @@ __global__ void reorder_filter_nc4hw4_to_n4hwc4_kernel(
         }
 
         // transpose 4x4
-        transpose_int8_interleavedx4<4, int>(src_value, dst_value);
+        auto trans = transpose_int8_interleavedx4<4, int>();
+        trans(src_value, dst_value);
 
 #pragma unroll
         for (int i = 0; i < 4; i++) {
@@ -60,7 +62,7 @@ __global__ void reorder_filter_nhwc_to_cnxhwx_kernel(
     const int32_t icb = fhfw_icb % (IC / 4);
 
     if (ocb < OC / interleaved && fhfw < FHFW) {
-        int src_value[interleaved];
+        array_wrapper<int, interleaved> src_value;
         vec_type dst_value[4];
 
 #pragma unroll
@@ -70,8 +72,8 @@ __global__ void reorder_filter_nhwc_to_cnxhwx_kernel(
                     icb * 4);
         }
 
-        transpose_int8_interleavedx4<interleaved, vec_type>(src_value,
-                                                            dst_value);
+        auto trans = transpose_int8_interleavedx4<interleaved, vec_type>();
+        trans(src_value, dst_value);
 
 #pragma unroll
         for (int i = 0; i < 4; i++) {
