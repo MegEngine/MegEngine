@@ -19,6 +19,8 @@
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 using namespace megdnn;
 using namespace arm_common;
 using namespace fp16;

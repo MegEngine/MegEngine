@@ -284,7 +284,7 @@ void channel_wise_nchw88::do_conv_kern_stride1_3x3(
         const __fp16* src, const __fp16* filter, const __fp16* bias,
         __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
         const size_t OW, const size_t PH, const size_t PW) {
-    if (IH == OH && IW == OW && PH == 1 && PW == 1) {
+    if (IH == OH && IW == OW && IH >= 3 && IW >= 3 && PH == 1 && PW == 1) {
         do_conv_kern_3x3_stride1_padding1<bias_mode, Op>(src, dst, filter, bias,
                                                          OH, OW);
         return;

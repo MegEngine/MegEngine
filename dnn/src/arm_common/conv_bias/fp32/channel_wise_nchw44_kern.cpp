@@ -11,6 +11,8 @@
  */
 
 #include "src/arm_common/conv_bias/fp32/channel_wise_nchw44_kern.h"
+#include "src/arm_common/conv_bias/fp32/channel_wise_3x3_s1p1_nchw44_kern.h"
+#include "src/arm_common/conv_bias/fp32/channel_wise_5x5_s1p2_nchw44_kern.h"
 #include "src/arm_common/elemwise_op.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/arm_common/utils.h"
@@ -413,6 +415,13 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
         const float* src, const float* filter, const float* bias, float* dst,
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
+    if (IH == OH && IW == OW && IH >= 3 && IW >= 3 && PH == 1 && PW == 1) {
+        channel_wise_nchw44_float::do_conv_kern_3x3_stride1_padding1<bias_mode,
+                                                                     Op>(
+                src, dst, filter, bias, OH, OW);
+        return;
+    }
+
     float32x4_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
@@ -424,10 +433,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
     size_t ow_start = PW;
     size_t oh_end = IH + PH - 2;
     size_t ow_end = IW + PW - 2;
-    if (PH == 1 && PW == 1) {
-        PaddingComputeK3P1<bias_mode, Op>::compute(src, bias, dst, 1, IH, IW,
-                                                   OH, OW, kernel, init);
-    } else if (PH || PW) {
+    if (PH || PW) {
         PaddingCompute<bias_mode, Op>::compute(src, bias, dst, 3, 1, IH, IW, OH,
                                                OW, PH, PW, kernel, init);
     }
@@ -557,6 +563,13 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
         const float* src, const float* filter, const float* bias, float* dst,
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
+    if (IH == OH && IW == OW && IH >= 5 && IW >= 5 && PH == 2 && PW == 2) {
+        channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2<bias_mode,
+                                                                     Op>(
+                src, dst, filter, bias, OH, OW);
+        return;
+    }
+
     Op op;
     float32x4_t init = vdupq_n_f32(0.f);
     if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
