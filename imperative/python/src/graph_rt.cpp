@@ -485,7 +485,9 @@ void init_graph_rt(py::module m) {
 
     py::class_<cg::ComputingGraph::Options::DTRConfig>(PyComputingGraphOptions, "DTRConfig")
         DEF_READWRITE(eviction_threshold)
-        DEF_READWRITE(evictee_minimum_size);
+        DEF_READWRITE(evictee_minimum_size)
+        DEF_READWRITE(recomp_memory_factor)
+        DEF_READWRITE(recomp_time_factor);
 
 #undef CURRENT_CLASS
     auto common = rel_import("common", m, 1);

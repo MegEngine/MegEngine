@@ -163,6 +163,8 @@ struct SeqModifierBase::Opr {
     //! by make_discard_plan()
     size_t block_begin_time = 0, block_end_time = 0;
 
+    std::vector<ptrdiff_t> inputs_size;
+
     Opr(OperatorNodeBase* opr, size_t t)
             : orig_opr{opr},
               time{t},
@@ -176,7 +178,6 @@ struct SeqModifierBase::Var {
     VarNode* const orig_var;
     size_t size;  //!< memory usage in bytes of this var
     size_t recomp_id = 0;
-    double last_access_time = 0;
 
     //! write or read access of a var
     struct AccessRecord {

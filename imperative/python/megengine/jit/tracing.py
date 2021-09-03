@@ -528,6 +528,12 @@ class trace:
             graph.options.dtr_config.evictee_minimum_size = (
                 self._dtr_config.evictee_minimum_size
             )
+            graph.options.dtr_config.recomp_memory_factor = (
+                self._dtr_config.recomp_memory_factor
+            )
+            graph.options.dtr_config.recomp_time_factor = (
+                self._dtr_config.recomp_time_factor
+            )
         # graph optimization
         if self._graph_opt_config is not None:
             mapping = {None: 0, False: 1, True: 2}

@@ -105,6 +105,7 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
 
     ThinHashSet<Var*> alive_vars;
     size_t cur_usage = 0;
+    size_t cur_op_cnt = 0;
 
     //! map from original var to latest var
     ThinHashMap<VarNode*, Var*> latest_var;
@@ -125,7 +126,9 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
             auto size = var->size;
             mgb_assert(size <= cur_usage);
             cur_usage -= size;
+            return true;
         }
+        return false;
     };
 
     auto get_latest = [&](Var* var) {
@@ -137,11 +140,10 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         }
     };
 
-    double est_time = 0;
-
     ThinHashMap<Var*, double> dfs_back;
+    ThinHashMap<Var*, double> dfs_ops;
     ThinHashMap<Var*, double> dfs_front;
-
+    ThinHashMap<Var*, double> dfs_mem;
     auto regen_time = [&](Var* var) {
         thin_function<double(Var*)> dfs_b;
         thin_function<double(Var*)> dfs_f;
@@ -180,21 +182,67 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         return dfs_f(var) * dfs_b(var);
     };
 
+    auto regen_mem = [&](Var* var) {
+        thin_function<double(Var*)> dfs_b;
+        dfs_b = [&](Var* var) {
+            if (dfs_mem.find(var) != dfs_mem.end()) {
+                return dfs_mem[var];
+            }
+            auto opr = var->owner_opr();
+            double mem_sum = var->size;
+            for (auto i : opr->input) {
+                auto ivar = get_latest(i);
+                if (need_regen(ivar)) {
+                    mem_sum += dfs_b(ivar);
+                }
+            }
+            dfs_mem[var] = mem_sum;
+            return mem_sum;
+        };
+        return dfs_b(var);
+    };
+
+    auto next_used = [&](Var* var) {
+        var = get_latest(var);
+        size_t t = DUPOPR_TIME;
+        for (auto rec : var->access_rec) {
+            if (rec.time > cur_op_cnt - 1 && rec.time < t)
+                t = rec.time;
+        }
+        if (t < DUPOPR_TIME) {
+            return t + 1 - cur_op_cnt;
+        } else {
+            return t;
+        }
+    };
+
+    double tim_factor = 1;
+    double mem_factor = 1;
+    if (config->recomp_memory_factor >= 0) {
+        mem_factor = config->recomp_memory_factor;
+    }
+    if (config->recomp_time_factor >= 0) {
+        tim_factor = config->recomp_time_factor;
+    }
+
     static constexpr double MAX_EVAL_VALUE = std::numeric_limits<double>::max();
     auto find_best = [&]() {
         Var* best = nullptr;
         double min_eval_value = MAX_EVAL_VALUE;
         dfs_back.clear();
         dfs_front.clear();
+        dfs_mem.clear();
         for (auto var : alive_vars) {
             if (var->size < config->evictee_minimum_size 
                     || pin[var->orig_var] > 0
                     || is_bad_opr(var->owner_opr()->orig_opr)) {
                 continue;
             }
-            double regen = regen_time(var);
-            double eval_value = regen / static_cast<double>(var->size)
-                                / (est_time - var->last_access_time + 1e-8);
+            double regen_t = regen_time(var);
+            double regen_m = regen_mem(var);
+            double eval_value = pow(regen_t, tim_factor) * pow(regen_m, mem_factor)
+                                / static_cast<double>(var->size)
+                                / next_used(var);
             if (eval_value < min_eval_value) {
                 min_eval_value = eval_value;
                 best = var;
@@ -207,13 +255,43 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         remove_alive(var);
     };
 
+    thin_function<void(Var*)> recursive_free;
     auto auto_evict = [&](size_t needed) {
+        // proactively remove end-of-life vars 
+        std::vector<Var*> to_free(0);
+        for (auto i : alive_vars) {
+            if (next_used(get_latest(i)) == DUPOPR_TIME && pin[i->orig_var]==0) {
+                to_free.push_back(get_latest(i));
+            }
+        }
+        for (auto i : to_free) {
+            recursive_free(get_latest(i));
+        }
         while (cur_usage + needed >= config->eviction_threshold) {
             Var* v = find_best();
             if (!v) {
                 break;
             }
             do_evict(v);
+        }
+    };
+
+    recursive_free = [&](Var* var) {
+        if (pin[var->orig_var] > 0) return;
+        auto opr = var->owner_opr();
+        bool need = false;
+        for (auto i : var->access_rec) {
+            if (i.time >= cur_op_cnt) {
+                need = true;
+                break;
+            }
+        }
+        if (!need) {
+            if (remove_alive(var)) {
+                for (auto i : opr->input) {
+                    recursive_free(get_latest(i));
+                }
+            }
         }
     };
 
@@ -230,16 +308,10 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
 
         new_opr->input.reserve(opr->input.size());
         new_opr->output.reserve(opr->output.size());
+        new_opr->estimate_compute_time = opr->estimate_compute_time;
 
         for (auto i : opr->input) {
-            i->last_access_time = est_time;
             pin[i->orig_var] ++;
-        }
-        for (auto o : opr->output) {
-            auto lo = get_latest(o);
-            if (!need_regen(lo)) {
-                remove_alive(lo);
-            }
         }
         for (auto i : opr->input) {
             auto ivar = get_latest(i);
@@ -264,15 +336,18 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
                                                      new_opr);
             ovar->recomp_id = lo->recomp_id + 1;
             new_opr->output.push_back(ovar.get());
-            if (o == var) {
-                new_var = ovar.get();
+            if (need_regen(lo)) { // latest output is not in memory
+                if (o == var) {
+                    new_var = ovar.get();
+                    for (size_t i = 1; i < lo->access_rec.size(); i ++) {
+                        new_var->access_rec.push_back(lo->access_rec[i]);
+                    }
+                    add_alive(new_var);
+                    latest_var[o->orig_var] = new_var;
+                }
             }
-            add_alive(ovar.get());
-            ovar->last_access_time = est_time;
-            latest_var[o->orig_var] = ovar.get();
             var_storage().emplace_back(std::move(ovar));
         }
-        est_time += opr->estimate_compute_time;
         for (auto i : opr->input) {
             pin[i->orig_var] --;
         }
@@ -280,34 +355,44 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
     };
 
     for (size_t j = 0; j < seq().size(); ++j) {
+        ++ cur_op_cnt;
         auto opr = seq()[j].get();
         for (auto i : opr->input) {
             pin[i->orig_var] ++;
+        }
+        for (auto i : opr->inputs_size) {
+            if (i > 0) cur_usage += i;
         }
         for (auto i : opr->input) {
             i = get_latest(i);
             if (need_regen(i)) {
                 i = regenerate(opr, i);
             }
-            i->last_access_time = est_time;
         }
         size_t needed = 0;
         for (auto o : opr->output) {
             needed += o->size;
         }
         auto_evict(needed);
-        est_time += opr->estimate_compute_time;
         for (auto o : opr->output) {
+            o = get_latest(o);
             add_alive(o);
-            o->last_access_time = est_time;
         }
         for (auto i : opr->input) {
             pin[i->orig_var] --;
         }
         for (auto i : opr->input) {
-            i = get_latest(i);
-            if (opr == i->last_access_opr())
-                remove_alive(i);
+            if (opr == i->last_access_opr()) {
+                recursive_free(get_latest(i));
+            }
+        }
+        for (auto o : opr->output) {
+            if (opr == o->last_access_opr()) {
+                recursive_free(get_latest(o));
+            }
+        }
+        for (auto i : opr->inputs_size) {
+            if (i < 0) cur_usage += i;
         }
     }
     for (size_t j = 0; j < seq().size(); ++j) {

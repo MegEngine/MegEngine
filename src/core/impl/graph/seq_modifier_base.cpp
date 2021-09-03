@@ -26,6 +26,7 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
     m_nr_endpoint_oprs = 0;
 
     ThinHashMap<VarNode*, Var*> varmap;
+    ThinHashMap<VarNode*, Opr*> var_used;
     for (auto orig_opr : *m_orig_opr_seq) {
         auto time = m_seq.size();
         m_seq.emplace_back(m_opr_mempool.alloc_unique(orig_opr, time));
@@ -38,6 +39,11 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
             auto iter = varmap.find(dep.first);
             if (iter == varmap.end()) {
                 // input var needs not to be considered
+                size_t size = dep.first->dtype().size(dep.first->shape().total_nr_elems());
+                if (!var_used[dep.first]) {
+                    opr->inputs_size.push_back(size);
+                }
+                var_used[dep.first] = opr;
                 continue;
             }
 
@@ -75,7 +81,10 @@ void SeqModifierBase::ModifyActionPlannerBase::init_seq(const OprNodeArray& opr_
         }
         mgb_assert(!opr->output.empty());
     }
-
+    for (auto x : var_used) {
+        size_t size = x.first->dtype().size(x.first->shape().total_nr_elems());
+        var_used[x.first]->inputs_size.push_back(-static_cast<ptrdiff_t>(size));
+    }
     if (remove_unused_output) {
         for (auto&& i : m_seq) {
             auto&& oarr = i->output;

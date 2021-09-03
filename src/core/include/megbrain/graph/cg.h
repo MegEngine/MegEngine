@@ -454,6 +454,8 @@ class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
             struct DTRConfig {
                 size_t eviction_threshold = 0;
                 size_t evictee_minimum_size = 1ULL << 20;
+                double recomp_memory_factor = 1;
+                double recomp_time_factor = 1;
             } dtr_config;
 
             //! do not re-profile to select best impl algo when input shape
