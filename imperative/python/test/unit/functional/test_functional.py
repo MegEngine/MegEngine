@@ -57,10 +57,14 @@ def test_where():
 
 
 def test_dropout():
-    data = tensor(np.ones(10, dtype=np.float32))
-    out = F.dropout(data, 1.0 / 3.0, training=False)
+    # test training mode
+    data = tensor(np.ones(10000000, dtype=np.float32))
+    out = F.nn.dropout(data, 1.0 / 3.0, training=True)
+    assert not out.numpy().all()
 
-    assert out.numpy().sum() >= 0.0
+    # test eval mode
+    out = F.nn.dropout(data, 1.0 / 3.0, training=False)
+    assert out.numpy().all()
 
 
 def test_matinv():
