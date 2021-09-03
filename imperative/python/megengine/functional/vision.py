@@ -398,8 +398,8 @@ def warp_perspective(
 
     .. math::
             \text{output}(n, c, h, w) = \text{input} \left( n, c,
-                \frac{M_{00}h + M_{01}w + M_{02}}{M_{20}h + M_{21}w + M_{22}},
-                \frac{M_{10}h + M_{11}w + M_{12}}{M_{20}h + M_{21}w + M_{22}}
+                \frac{M_{00}w + M_{01}h + M_{02}}{M_{20}w + M_{21}h + M_{22}},
+                \frac{M_{10}w + M_{11}h + M_{12}}{M_{20}w + M_{21}h + M_{22}}
                 \right)
 
     Optionally, we can set `mat_idx` to assign different transformations to the same image,

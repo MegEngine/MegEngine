@@ -1063,7 +1063,7 @@ def linspace(
 
     op = builtin.Linspace(comp_node=device)
     (result,) = apply(op, start, stop, num)
-    if np.dtype(dtype) == np.int32:
+    if np.dtype(dtype) != np.float32:
         return result.astype(dtype)
     return result
 
@@ -1112,7 +1112,7 @@ def arange(
     num = ceil((stop - start) / step)
     stop = start + step * (num - 1)
     result = linspace(start, stop, num, device=device)
-    if np.dtype(dtype) == np.int32:
+    if np.dtype(dtype) != np.float32:
         return result.astype(dtype)
     return result
 

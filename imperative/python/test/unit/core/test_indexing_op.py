@@ -556,18 +556,16 @@ def test_advance_indexing_with_bool(test_varnode):
     aa[bb] = False
     np.testing.assert_equal(a, aa.numpy())
 
-    # XXX: trace does not expect empty condtake tensor
-    if not use_symbolic_shape():
-        a = np.ones((2, 2), dtype=np.int32)
-        b = np.array([[False, False], [False, False]])
-        aa = Tensor(a)
-        bb = Tensor(b)
-        np.testing.assert_equal(a[b], aa[b].numpy())
-        np.testing.assert_equal(a[b], aa[bb].numpy())
+    a = np.ones((2, 2), dtype=np.int32)
+    b = np.array([[False, False], [False, False]])
+    aa = Tensor(a)
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[b].numpy())
+    np.testing.assert_equal(a[b], aa[bb].numpy())
 
-        b = np.array([False, False])
-        bb = Tensor(b)
-        np.testing.assert_equal(a[b], aa[bb].numpy().reshape(a[b].shape))  # FIXME
+    b = np.array([False, False])
+    bb = Tensor(b)
+    np.testing.assert_equal(a[b], aa[bb].numpy().reshape(a[b].shape))
 
     a = np.arange(576).reshape(2, 3, 4, 3, 4, 2).astype("int32")
     aa = Tensor(a)
