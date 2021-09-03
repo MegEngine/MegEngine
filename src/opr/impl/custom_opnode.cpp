@@ -214,11 +214,6 @@ void CustomOpNode::on_output_comp_node_stream_changed() {
 }
 
 cg::OperatorNodeBase::NodeProp* CustomOpNode::do_make_node_prop() const {    
-    // auto ret = &const_cast<OperatorNodeBase::NodeProp&>(node_prop());
-    // for (auto &&inp_var: input()) 
-    //     ret->add_dep_type(inp_var, NodeProp::DepType::DEV_VALUE);
-    // ret->add_flag(NodeProp::Flag::SINGLE_COMP_NODE);
-    // return ret;
     return OperatorNodeBase::do_make_node_prop();
 }
 

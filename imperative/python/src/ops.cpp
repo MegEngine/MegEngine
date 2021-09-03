@@ -684,7 +684,7 @@ py::list install_custom(const std::string &name, const std::string &path) {
     for (const auto &op: ops_in_lib) {
         ret.append(op);
     }
-    return std::move(ret);
+    return ret;
 }
 
 bool uninstall_custom(const std::string &name) {
@@ -701,12 +701,12 @@ py::list get_custom_op_list(void) {
 }
 
 void init_custom(pybind11::module m) {
-    m.def("install", &install_custom);
-    m.def("uninstall", &uninstall_custom);
-    m.def("get_custom_op_list", &get_custom_op_list);
+    m.def("_install", &install_custom);
+    m.def("_uninstall", &uninstall_custom);
+    m.def("_get_custom_op_list", &get_custom_op_list);
 
     static PyMethodDef method_def = {
-        "make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
+        "_make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
     };
     auto* func = PyCFunction_NewEx(&method_def, nullptr, nullptr);
     pybind11::setattr(m, method_def.ml_name, func);

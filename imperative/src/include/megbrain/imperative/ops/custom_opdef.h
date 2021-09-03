@@ -60,18 +60,5 @@ public:
     std::shared_ptr<OpDef> create_opdef(const custom::RunTimeId&, const custom::Param&) const;
 };
 
-namespace custom_opdef {    // avoid name conflict
-
-void apply_on_device_tensornd(const OpDef&, const SmallVector<DeviceTensorND>&, SmallVector<DeviceTensorND>*);
-SmallVector<TensorPtr> apply_on_physical_tensor(const OpDef&, const SmallVector<TensorPtr>&);
-VarNodeArray apply_on_var_node(const OpDef&, const cg::VarNodeArray&);
-std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef&, const SmallVector<LogicalTensorDesc>&);
-size_t hash(const OpDef&);
-bool is_same_st(const OpDef&, const OpDef&);
-std::vector<std::pair<const char*, std::string>> props(const OpDef&);
-std::string make_name(const OpDef&);
-
-}   // custom_opdef     
-
 }   // imperative
 }   // mgb

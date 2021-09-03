@@ -286,19 +286,19 @@ std::string make_name(const OpDef& def) {
     return op.name();
 }
 
-}   // custom_opdef
-
 OP_TRAIT_REG(CustomOpDef, CustomOpDef)
-    .apply_on_physical_tensor(imperative::custom_opdef::apply_on_physical_tensor)
-    .apply_on_var_node(imperative::custom_opdef::apply_on_var_node)
-    .apply_on_device_tensornd(imperative::custom_opdef::apply_on_device_tensornd)
-    .infer_output_attrs_fallible(imperative::custom_opdef::infer_output_attrs_fallible)
-    .infer_output_mem_desc(imperative::custom_opdef::infer_output_mem_desc)
-    .hash(imperative::custom_opdef::hash)
-    .is_same_st(imperative::custom_opdef::is_same_st)
-    .props(imperative::custom_opdef::props)
-    .make_name(imperative::custom_opdef::make_name)
+    .apply_on_physical_tensor(apply_on_physical_tensor)
+    .apply_on_var_node(apply_on_var_node)
+    .apply_on_device_tensornd(apply_on_device_tensornd)
+    .infer_output_attrs_fallible(infer_output_attrs_fallible)
+    .infer_output_mem_desc(infer_output_mem_desc)
+    .hash(hash)
+    .is_same_st(is_same_st)
+    .props(props)
+    .make_name(make_name)
     .fallback();
+
+}   // custom_opdef
 
 }   // imperative
 }   // mgb
