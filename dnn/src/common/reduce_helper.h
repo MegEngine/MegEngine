@@ -48,10 +48,10 @@ struct MeanOp {
     src_ctype* src;
     dst_ctype* dst;
     const size_t B;
-
+    
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
     MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val / static_cast<dst_ctype>(B);
+        dst[idx] = val / static_cast<wtype>(B);
     }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs + rhs;

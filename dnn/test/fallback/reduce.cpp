@@ -74,6 +74,15 @@ TEST_F(FALLBACK, REDUCE) {
                 Config config(param, dtype, shape);
                 configs.push_back(config);
             }
+    
+    {
+        // large reduce_mean for O16C32
+        TensorShape shape{1, 65536, 5};
+        Param param(Mode::MEAN, 1, DataType::FLOAT_O16xC32);
+        Config config(param, dtype::Float16(), shape);
+        configs.push_back(config);
+    }
+    
     for (auto&& config : configs) {
         auto&& dtype = config.dtype;
         auto&& param = config.param;

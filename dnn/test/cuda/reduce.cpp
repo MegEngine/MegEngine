@@ -103,6 +103,16 @@ TEST_F(CUDA, REDUCE) {
                 .set_param(param)
                 .execs({{1, 4194304, 1}, {1, 1, 1}});
     }
+
+    {
+        // large reduce_mean for O16C32
+        Reduce::Param param{Mode::MEAN, 1,
+                            Reduce::Param::DataType::FLOAT_O16xC32};
+        checker.set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_param(param)
+                .execs({{1, 65536, 5}, {1, 1, 5}});
+    }
 }
 
 // vim: syntax=cpp.doxygen
