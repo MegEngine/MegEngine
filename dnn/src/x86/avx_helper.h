@@ -31,6 +31,15 @@ static inline __m256 _mm256_loadu2_m128_emulate(
             _mm_loadu_ps(hiaddr), 1);
 }
 
+MEGDNN_ATTRIBUTE_TARGET("avx")
+static inline void _mm256_storeu2_m128_emulate(float *hiaddr, float *loaddr,
+                                               __m256 reg) {
+    auto xmm0 = _mm256_extractf128_ps(reg, 0);
+    auto xmm1 = _mm256_extractf128_ps(reg, 1);
+    _mm_storeu_ps(loaddr, xmm0);
+    _mm_storeu_ps(hiaddr, xmm1);
+}
+
 template <typename ctype, size_t len>
 struct Vector;
 

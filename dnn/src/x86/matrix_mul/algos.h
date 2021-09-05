@@ -149,6 +149,19 @@ public:
     MEGDNN_DECL_ALGO_TYPE(X86_F32_MK8_8X8)
 };
 
+class MatrixMulImpl::AlgoFloatAVX2M6N16 : public AlgoBase {
+public:
+  AlgoAttribute attribute() const override {
+    return AlgoAttribute::REPRODUCIBLE;
+  }
+  const char *name() const override { return "X86_F32_6x16"; }
+  bool usable(const KernSizeParam &) const override;
+  size_t get_workspace(const KernSizeParam &) const override;
+  kern_t get_kern(const KernSizeParam &) const override;
+  MEGDNN_REG_GEMM_FUNC_FOR_IM2COL();
+  MEGDNN_DECL_ALGO_TYPE(X86_F32_6x16)
+};
+
 #if MEGDNN_X86_WITH_VNNI
 class MatrixMulImpl::AlgoInt8x8x32Vnni : public AlgoBase {
 public:

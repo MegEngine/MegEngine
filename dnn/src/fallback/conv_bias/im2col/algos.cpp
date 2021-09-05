@@ -70,16 +70,16 @@ static void choice_ohw_oc_block(
         fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) {
     //! calculate m_oc_tile_size in choice_ohw_oc_block() fucntion,
     //! when ohw_tile_size < this value ohw_tile_size = ohw
-    static constexpr size_t DEFAULT_OHW_MIN_TILE_SIZE = 32;
+    size_t DEFAULT_OHW_MIN_TILE_SIZE = round_up(32UL, block_n);
     //! when nr_threads > 1 and round(ohw,nr_threads)>nr_threads,
     //! oc_tile_size = DEFAULT_OC_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_TILE_SIZE = 512;
+    size_t DEFAULT_OC_TILE_SIZE = round_up(512UL, block_m);
     //! when oc_tile_size > this value m_oc_tile_size =
     //! DEFAULT_OC_MAX_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_MAX_TILE_SIZE = 1024;
+    size_t DEFAULT_OC_MAX_TILE_SIZE = round_up(1024UL, block_m);
     //! when oc_tile_size < this value oc_tile_size =
     //! DEFAULT_OC_MIN_TILE_SIZE the purpose is aligning the calculation
-    static constexpr size_t DEFAULT_OC_MIN_TILE_SIZE = 128;
+    size_t DEFAULT_OC_MIN_TILE_SIZE = round_up(128UL, block_m);;
     size_t nr_threads = param.nr_threads;
     size_t OC = param.filter_meta.ocpg;
     size_t ohw = param.osz[0] * param.osz[1];
