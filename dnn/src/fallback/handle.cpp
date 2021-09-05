@@ -36,6 +36,7 @@
 #include "src/fallback/batched_matrix_mul/opr_impl.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/powc/opr_impl.h"
+#include "src/fallback//local/opr_impl.h"
 
 namespace megdnn {
 namespace fallback {
@@ -70,6 +71,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(Resize)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BatchedMatrixMulForward)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvBias)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(PowC)
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(LocalForward)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
