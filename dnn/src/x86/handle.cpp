@@ -20,7 +20,6 @@
 #include "src/x86/elemwise/opr_impl.h"
 #include "src/x86/elemwise_multi_type/opr_impl.h"
 #include "src/x86/gaussian_blur/opr_impl.h"
-#include "src/x86/local/opr_impl.h"
 #include "src/x86/lrn/opr_impl.h"
 #include "src/x86/matrix_mul/opr_impl.h"
 #include "src/x86/pooling/opr_impl.h"
@@ -75,7 +74,6 @@ size_t HandleImpl::alignment_requirement() const {
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SeparableConv)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SeparableFilter)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Pooling)
-MEGDNN_SPECIALIZE_CREATE_OPERATOR(Local)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(LRN)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MatrixMul)
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Elemwise)
