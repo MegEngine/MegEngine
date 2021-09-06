@@ -12,6 +12,7 @@
 #pragma once
 
 #include "megbrain/plugin/static_mem_record.h"
+#include "megbrain/utils/visable_data_set.h"
 #include "megbrain_build_config.h"
 
 #include <cstddef>

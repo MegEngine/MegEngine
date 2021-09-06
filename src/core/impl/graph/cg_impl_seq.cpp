@@ -13,6 +13,7 @@
 #include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/utils/arith_helper.h"
+#include "megbrain/utils/visable_data_set.h"
 
 using namespace mgb;
 using namespace cg;
@@ -300,7 +301,9 @@ void ComputingGraphImpl::ComputingSequence::do_execute(
 
     exec_ctx.perform(&m_exec_env);
 #ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
     do_regist();
+#endif
 #endif
 }
 
@@ -514,17 +517,20 @@ AsyncExecutable& ComputingGraphImpl::ComputingSequence::execute() {
     return *this;
 }
 #ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
 void ComputingGraphImpl::ComputingSequence::get_static_memory_alloc_info(
-        const std::string& svg_name) const {
+        const std::string& log_dir) const {
     auto& recorder = StaticMemRecorder::Instance();
     recorder.active();
-    recorder.set_svg_name(svg_name);
+    recorder.set_log_dir_name(log_dir);
+    VisableDataSet writer(log_dir);
+    writer.draw_graph(this->to_json());
 }
 
 void ComputingGraphImpl::ComputingSequence::do_regist() const {
     // regist weights
     auto& recorder = StaticMemRecorder::Instance();
-    if (recorder.valid()) {
+    if (recorder.valid() && recorder.weight_chunk_id() == 0) {
         size_t addr_base = recorder.peak_mem_size();
         size_t chunk_id = recorder.set_weight_chunk_id();
         for (auto&& i : *(this->m_opr_seq)) {
@@ -549,9 +555,10 @@ void ComputingGraphImpl::ComputingSequence::do_regist() const {
             }
         }
         recorder.set_sum_mem_size(addr_base);
-        recorder.show();
+        recorder.dump_to_json();
     }
 }
+#endif
 #endif
 AsyncExecutable& ComputingGraphImpl::ComputingSequence::wait() {
     do_wait(true);

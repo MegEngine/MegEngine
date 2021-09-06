@@ -106,8 +106,6 @@ void VisableDataSet::write_to_file() {
     }
 }
 
-// const std::string PeakMemoryInfo::content() const {return }
-
 std::shared_ptr<json::Value> Chunk::to_json() const {
     auto objptr = json::Object::make();
     auto&& obj = *objptr;

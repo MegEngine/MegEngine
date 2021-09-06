@@ -142,11 +142,13 @@ R"__usage__(
     the doc of `ComputingGraph::Options::comp_node_seq_record_level` for more
     details.
 )__usage__"
-#ifndef __IN_TEE_ENV__ 
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
 R"__usage__(
-  --get-static-mem-info <svgname>
+  --get-static-mem-info <log_dir_path>
     Record the static graph's static memory info.
 )__usage__"
+#endif
 #endif
 #if MGB_ENABLE_FASTRUN
 R"__usage__(
@@ -555,7 +557,9 @@ struct Args {
     bool reproducible = false;
     std::string fast_run_cache_path;
 #ifndef __IN_TEE_ENV__
-    std::string static_mem_svg_path;
+#if MGB_ENABLE_JSON
+    std::string static_mem_log_dir_path;
+#endif
 #endif
     bool copy_to_host = false;
     int nr_run = 10;
@@ -859,9 +863,11 @@ void run_test_st(Args &env) {
 
     auto func = env.load_ret.graph_compile(out_spec);
 #ifndef __IN_TEE_ENV__
-    if (!env.static_mem_svg_path.empty()) {
-        func->get_static_memory_alloc_info(env.static_mem_svg_path);
+#if MGB_ENABLE_JSON
+    if (!env.static_mem_log_dir_path.empty()) {
+        func->get_static_memory_alloc_info(env.static_mem_log_dir_path);
     }
+#endif
 #endif
     auto warmup = [&]() {
         printf("=== prepare: %.3fms; going to warmup\n",
@@ -1444,16 +1450,14 @@ Args Args::from_argv(int argc, char **argv) {
             continue;
         }
 #ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
         if (!strcmp(argv[i], "--get-static-mem-info")) {
             ++i;
             mgb_assert(i < argc, "value not given for --get-static-mem-info");
-            ret.static_mem_svg_path = argv[i];
-            mgb_assert(
-                    ret.static_mem_svg_path.find(".svg") != std::string::npos,
-                    "the filename should be end with .svg, but got %s",
-                    ret.static_mem_svg_path.c_str());
+            ret.static_mem_log_dir_path = argv[i];
             continue;
         }
+#endif
 #endif
 #if MGB_ENABLE_FASTRUN
         if (!strcmp(argv[i], "--fast-run")) {

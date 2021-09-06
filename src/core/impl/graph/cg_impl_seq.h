@@ -173,11 +173,13 @@ public:
 
     std::unique_ptr<RecordedComputingSequence> as_recorded_seq();
 #ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
     void get_static_memory_alloc_info(
-            const std::string& svg_name =
-                    "static_mem_record.svg") const override;
+            const std::string& log_dir =
+                    "logs/test") const override;
 
     void do_regist() const;
+#endif
 #endif
 };
 

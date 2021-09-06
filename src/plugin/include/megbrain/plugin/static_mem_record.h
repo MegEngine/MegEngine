@@ -12,6 +12,7 @@
 
 #pragma once
 #include "megbrain/utils/metahelper.h"
+#include <regex>
 #ifndef __IN_TEE_ENV__
 namespace mgb {
 namespace cg {
@@ -66,33 +67,25 @@ public:
     }
 
     const size_t& weight_chunk_id() const { return m_weight_chunk_id; }
-
-    void dump_svg();
-
-    void show();
-
-    void set_svg_name(const std::string& svg_name) {
-        mgb_assert(svg_name.length() > 4,
-                   "svg_name must be end with \".svg\"\n");
-        mgb_assert(svg_name.compare(svg_name.length() - 4, 4, ".svg") == 0,
-                   "svg_name must be end with \".svg\"\n");
-        m_svg_name = svg_name;
+#if MGB_ENABLE_JSON
+    void dump_to_json();
+#endif
+    void set_log_dir_name(const std::string& log_dir) {
+        std::regex reg("^[0-9a-zA-Z/]+$");
+        mgb_assert(std::regex_match(log_dir, reg), "log_dir format error.\n");
+        m_log_dir = log_dir;
     }
 
-    const std::string& get_svg_name() const{
-        return m_svg_name;
-    }
+    const std::string& get_log_dir() const { return m_log_dir; }
 
 private:
     bool m_is_record = false;
-    std::string m_svg_name;
+    std::string m_log_dir;
     // All chunks after m_memory_chunk_recorder.at(m_weight_chunk_id) are
     // weights memory chunks
     size_t m_peak_mem_size, m_sum_mem_size, m_weight_chunk_id;
     std::vector<opr_record> m_opr_seq_recorder;
     std::vector<memory_chunk_record> m_memory_chunk_recorder;
-    std::vector<std::vector<size_t>> get_chunk_construct(
-            std::vector<size_t> opr_ids);
 };
 }  // namespace cg
 }  // namespace mgb
