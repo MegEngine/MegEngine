@@ -514,7 +514,7 @@ struct ExecutionPolicyAlgoName {
  * \brief a callable to check that given algorithm is used for heuristic
  * \param require_algo if its value is true, then requires
  *      get_algorithm_heuristic() to return the expected algo; otherwise the
- *      expected algo must exist in get_all_algorithms() and it would be set to
+ *      expected algo must exist in get_all_algorithms_safe() and it would be set to
  *      be used
  */
 template <class Opr, typename OprAlgoProxy = OprAlgoProxy<Opr>>
@@ -536,7 +536,7 @@ public:
         opr->param() =
                 Algorithm::deserialize_read_pod<typename Opr::Param>(param);
         for (auto algo_info :
-             AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info(
+             AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info_safe(
                      opr.get(), layouts)) {
             if (std::regex_match(
                         algo_info.desc.name,

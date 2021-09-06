@@ -74,10 +74,13 @@ size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
         return fallback_worksapce;
     }
 }
-
 std::vector<Algorithm*> PoolingImpl::get_all_algorithms(
         const TensorLayout& src, const TensorLayout& dst) {
     return megdnn::get_all_algorithms<PoolingImpl>({this, src, dst});
+}
+std::vector<Algorithm*> PoolingImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& dst) {
+    return megdnn::get_all_algorithms_safe<PoolingImpl>({this, src, dst});
 }
 
 Algorithm* PoolingImpl::get_algorithm_heuristic(

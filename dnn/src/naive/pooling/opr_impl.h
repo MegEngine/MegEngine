@@ -35,6 +35,8 @@ class PoolingForwardImpl: public PoolingForward {
 
         std::vector<Algorithm*> get_all_algorithms(
                 const TensorLayout& src, const TensorLayout& dst) override;
+        std::vector<Algorithm*> get_all_algorithms_safe(
+                const TensorLayout& src, const TensorLayout& dst) override;
 
         Algorithm* get_algorithm_heuristic(
                 const TensorLayout& src, const TensorLayout& dst,
@@ -58,6 +60,9 @@ public:
     Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& dst,
+            const TensorLayout& diff, const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& src, const TensorLayout& dst,
             const TensorLayout& diff, const TensorLayout& grad) override;
 

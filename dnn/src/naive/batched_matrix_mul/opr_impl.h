@@ -27,6 +27,9 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,
             const TensorLayout& /*C*/) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& /*A*/, const TensorLayout& /*B*/,
+            const TensorLayout& /*C*/) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /*A*/, const TensorLayout& /*B*/,

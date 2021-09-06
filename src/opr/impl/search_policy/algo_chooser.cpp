@@ -805,7 +805,7 @@ std::vector<typename AlgoChooser<Opr>::ImplAlgo>
 AlgoChooser<Opr>::AlgoChooserHelper::get_all_candidates() const {
     MIDOUT_B(Opr, midout_iv(MGB_HASH_STR("get_all_candidates")))
     auto heu = choose_by_heuristic(m_execution_policy.strategy);
-    auto&& ret = APPLY(m_dnn_opr->get_all_algorithms_info(args...),
+    auto&& ret = APPLY(m_dnn_opr->get_all_algorithms_info_safe(args...),
                        m_fastrun_layouts);
     bool found = false;
     for (size_t i = 0; i < ret.size(); ++i) {

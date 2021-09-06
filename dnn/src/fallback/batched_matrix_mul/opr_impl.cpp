@@ -26,6 +26,13 @@ BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
     AlgoBase::SizeArgs args{this, A, B, C};
     return megdnn::get_all_algorithms<BatchedMatrixMulForwardImpl>(args);
 }
+std::vector<BatchedMatrixMulForwardImpl::Algorithm*>
+BatchedMatrixMulForwardImpl::get_all_algorithms_safe(const TensorLayout& A,
+                                                const TensorLayout& B,
+                                                const TensorLayout& C) {
+    AlgoBase::SizeArgs args{this, A, B, C};
+    return megdnn::get_all_algorithms_safe<BatchedMatrixMulForwardImpl>(args);
+}
 
 BatchedMatrixMulForwardImpl::Algorithm*
 BatchedMatrixMulForwardImpl::get_algorithm_heuristic(

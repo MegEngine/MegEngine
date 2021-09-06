@@ -695,7 +695,7 @@ Checker<Convolution> checker(handle);
         float scale = 1.0f / sqrt(fshp[channel_start] * FH * FW);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_rng(0, &rng).set_rng(1, &rng);
-        for (auto algo : opr->get_all_algorithms_info(ily, fly, oly)) {
+        for (auto algo : opr->get_all_algorithms_info_safe(ily, fly, oly)) {
             used_algos.insert(algo.desc);
             opr->execution_policy().algo = algo.desc;
 
@@ -720,7 +720,7 @@ Checker<Convolution> checker(handle);
             opr->param() = param;
             std::string param_str;
             Algorithm::serialize_write_pod(opr->param(), param_str);
-            for (auto algo : opr->get_all_algorithms_info(fly, oly, ily)) {
+            for (auto algo : opr->get_all_algorithms_info_safe(fly, oly, ily)) {
                 used_algos_bwd_data.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
                 construct_sub_execution_policy_heuristic<
@@ -747,7 +747,7 @@ Checker<Convolution> checker(handle);
             opr->param() = param;
             std::string param_str;
             Algorithm::serialize_write_pod(opr->param(), param_str);
-            for (auto algo : opr->get_all_algorithms_info(ily, oly, fly)) {
+            for (auto algo : opr->get_all_algorithms_info_safe(ily, oly, fly)) {
                 used_algos_bwd_flt.insert(algo.desc);
                 opr->execution_policy().algo = algo.desc;
                 construct_sub_execution_policy_heuristic<

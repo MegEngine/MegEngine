@@ -49,6 +49,16 @@ ConvBiasForwardImpl::get_all_algorithms(const TensorLayout& src,
             {this, src, filter, bias, z, dst});
 }
 
+std::vector<ConvBiasForward::Algorithm*>
+ConvBiasForwardImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                        const TensorLayout& filter,
+                                        const TensorLayout& bias,
+                                        const TensorLayout& z,
+                                        const TensorLayout& dst) {
+    return megdnn::get_all_algorithms_safe<ConvBiasForwardImpl>(
+            {this, src, filter, bias, z, dst});
+}
+
 ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& bias, const TensorLayout& z,

@@ -84,6 +84,10 @@ public:
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,
             const TensorLayout& dst) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& z,
+            const TensorLayout& dst) override;
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& bias, const TensorLayout& z,

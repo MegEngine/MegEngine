@@ -603,6 +603,10 @@ std::vector<Algorithm*> PoolingForwardImpl::get_all_algorithms(
         const TensorLayout&, const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo()};
 }
+std::vector<Algorithm*> PoolingForwardImpl::get_all_algorithms_safe(
+        const TensorLayout&, const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo()};
+}
 
 Algorithm* PoolingForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
@@ -622,6 +626,11 @@ Algorithm* PoolingBackwardImpl::get_algorithm_from_desc(
 }
 
 std::vector<Algorithm*> PoolingBackwardImpl::get_all_algorithms(
+        const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
+        const TensorLayout& /*diff*/, const TensorLayout& /*grad*/) {
+    return {static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo()};
+}
+std::vector<Algorithm*> PoolingBackwardImpl::get_all_algorithms_safe(
         const TensorLayout& /*src*/, const TensorLayout& /*dst*/,
         const TensorLayout& /*diff*/, const TensorLayout& /*grad*/) {
     return {static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo()};

@@ -287,6 +287,13 @@ ConvolutionForwardImpl:: get_all_algorithms(const TensorLayout &,
     return {static_cast<HandleImpl *>(handle())->default_conv_fwd_algo()};
 }
 
+std::vector<ConvolutionForward::Algorithm *>
+ConvolutionForwardImpl:: get_all_algorithms_safe(const TensorLayout &,
+        const TensorLayout &, const TensorLayout &)
+{
+    return {static_cast<HandleImpl *>(handle())->default_conv_fwd_algo()};
+}
+
 ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* filter */,
         const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
@@ -308,6 +315,13 @@ ConvolutionForward::Algorithm* ConvolutionForwardImpl::get_algorithm_from_desc(
 
 std::vector<ConvolutionBackwardData::Algorithm *>
 ConvolutionBackwardDataImpl:: get_all_algorithms(const TensorLayout &,
+        const TensorLayout &, const TensorLayout &)
+{
+    return {static_cast<HandleImpl *>(handle())->default_conv_bwd_data_algo()};
+}
+
+std::vector<ConvolutionBackwardData::Algorithm *>
+ConvolutionBackwardDataImpl:: get_all_algorithms_safe(const TensorLayout &,
         const TensorLayout &, const TensorLayout &)
 {
     return {static_cast<HandleImpl *>(handle())->default_conv_bwd_data_algo()};
@@ -336,6 +350,13 @@ ConvolutionBackwardDataImpl::get_algorithm_from_desc(
 
 std::vector<ConvolutionBackwardFilter::Algorithm *>
 ConvolutionBackwardFilterImpl:: get_all_algorithms(const TensorLayout &,
+        const TensorLayout &, const TensorLayout &)
+{
+    return {static_cast<HandleImpl*>(handle())->default_conv_bwd_filter_algo()};
+}
+
+std::vector<ConvolutionBackwardFilter::Algorithm *>
+ConvolutionBackwardFilterImpl:: get_all_algorithms_safe(const TensorLayout &,
         const TensorLayout &, const TensorLayout &)
 {
     return {static_cast<HandleImpl*>(handle())->default_conv_bwd_filter_algo()};

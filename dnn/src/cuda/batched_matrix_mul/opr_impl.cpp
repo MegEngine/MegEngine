@@ -51,6 +51,12 @@ std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(
     }
     return ret;
 }
+std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms_safe(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
+    auto ret_safe = get_all_algorithms(A,B,C);
+    megdnn_assert(!ret_safe.empty(), "no usable batchedmatrixmulForward fwd algorithm");
+    return ret_safe;
+}
 
 Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,

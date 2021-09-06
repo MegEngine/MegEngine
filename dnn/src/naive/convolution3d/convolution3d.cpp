@@ -108,9 +108,14 @@ void Convolution3DBackwardFilterImpl::exec(_megdnn_tensor_in src,
 
     megdnn_assert_internal(0);
 }
-
 std::vector<Convolution3DForward::Algorithm*>
 Convolution3DForwardImpl::get_all_algorithms(const TensorLayout&,
+                                             const TensorLayout&,
+                                             const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo()};
+}
+std::vector<Convolution3DForward::Algorithm*>
+Convolution3DForwardImpl::get_all_algorithms_safe(const TensorLayout&,
                                              const TensorLayout&,
                                              const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo()};
@@ -143,6 +148,13 @@ Convolution3DBackwardDataImpl::get_all_algorithms(const TensorLayout&,
     return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo()};
 }
 
+std::vector<Convolution3DBackwardData::Algorithm*>
+Convolution3DBackwardDataImpl::get_all_algorithms_safe(const TensorLayout&,
+                                                  const TensorLayout&,
+                                                  const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo()};
+}
+
 Convolution3DBackwardData::Algorithm*
 Convolution3DBackwardDataImpl::get_algorithm_heuristic(
         const TensorLayout& /* filter */, const TensorLayout& /* diff */,
@@ -166,6 +178,14 @@ Convolution3DBackwardDataImpl::get_algorithm_from_desc(
 
 std::vector<Convolution3DBackwardFilter::Algorithm*>
 Convolution3DBackwardFilterImpl::get_all_algorithms(const TensorLayout&,
+                                                    const TensorLayout&,
+                                                    const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_conv3d_bwd_filter_algo()};
+}
+
+std::vector<Convolution3DBackwardFilter::Algorithm*>
+Convolution3DBackwardFilterImpl::get_all_algorithms_safe(const TensorLayout&,
                                                     const TensorLayout&,
                                                     const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())

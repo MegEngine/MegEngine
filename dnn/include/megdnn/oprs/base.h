@@ -315,7 +315,7 @@ public:
     /*!
      * \brief get a string representation for current algorithm set;
      *
-     * get_all_algorithms() may return different algorithms only if
+     * get_all_algorithms_safe() may return different algorithms only if
      * algorithm set name differs. This is used for checking cache
      * validity.
      */
@@ -354,6 +354,15 @@ public:
         return ret;
     }
 
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
+                                                       const TensorLayout& p1) {
+        std::vector<AlgorithmInfo> ret;
+        for (auto&& algo : get_all_algorithms_safe(p0, p1)) {
+            ret.emplace_back(algo->info());
+        }
+        return ret;
+    }
+
     /**
      * \brief Returns the best algorithm information which indicate the
      * algorithm by heuristic.
@@ -377,6 +386,8 @@ protected:
 
     //! get all possible algorithms for the specified layouts
     virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& p0, const TensorLayout& p1) = 0;
 
     /**
@@ -412,6 +423,16 @@ public:
         return ret;
     }
 
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
+                                                       const TensorLayout& p1,
+                                                       const TensorLayout& p2) {
+        std::vector<AlgorithmInfo> ret;
+        for (auto&& algo : get_all_algorithms_safe(p0, p1, p2)) {
+            ret.emplace_back(algo->info());
+        }
+        return ret;
+    }
+
     /**
      * \brief Returns the best algorithm information which indicate the
      * algorithm by heuristic.
@@ -436,6 +457,9 @@ protected:
 
     //! get all possible algorithms for the specified layouts
     virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1,
+            const TensorLayout& p2) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& p0, const TensorLayout& p1,
             const TensorLayout& p2) = 0;
 
@@ -463,12 +487,23 @@ public:
     using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
-    std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
+       std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
                                                        const TensorLayout& p1,
                                                        const TensorLayout& p2,
                                                        const TensorLayout& p3) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1, p2, p3)) {
+            ret.emplace_back(algo->info());
+        }
+        return ret;
+    }
+
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
+                                                       const TensorLayout& p1,
+                                                       const TensorLayout& p2,
+                                                       const TensorLayout& p3) {
+        std::vector<AlgorithmInfo> ret;
+        for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3)) {
             ret.emplace_back(algo->info());
         }
         return ret;
@@ -498,6 +533,9 @@ protected:
 
     //! get all possible algorithms for the specified layouts
     virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1,
+            const TensorLayout& p2, const TensorLayout& p3) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& p0, const TensorLayout& p1,
             const TensorLayout& p2, const TensorLayout& p3) = 0;
 
@@ -537,6 +575,18 @@ public:
         return ret;
     }
 
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
+                                                       const TensorLayout& p1,
+                                                       const TensorLayout& p2,
+                                                       const TensorLayout& p3,
+                                                       const TensorLayout& p4) {
+        std::vector<AlgorithmInfo> ret;
+        for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3, p4)) {
+            ret.emplace_back(algo->info());
+        }
+        return ret;
+    }
+
     /**
      * \brief Returns the best algorithm information which indicate the
      * algorithm by heuristic.
@@ -562,7 +612,11 @@ protected:
     ~MultiAlgoOpr() = default;
 
     //! get all possible algorithms for the specified layouts
-    virtual std::vector<Algorithm*> get_all_algorithms(
+        virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1,
+            const TensorLayout& p2, const TensorLayout& p3,
+            const TensorLayout& p4) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& p0, const TensorLayout& p1,
             const TensorLayout& p2, const TensorLayout& p3,
             const TensorLayout& p4) = 0;
@@ -604,6 +658,18 @@ public:
         return ret;
     }
 
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
+            const TensorLayout& p0, const TensorLayout& p1,
+            const TensorLayout& p2, const TensorLayout& p3,
+            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p6, const TensorLayout& p7) {
+        std::vector<AlgorithmInfo> ret;
+        for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3, p4, p5, p6, p7)) {
+            ret.emplace_back(algo->info());
+        }
+        return ret;
+    }
+
     /**
      * \brief Returns the best algorithm information which indicate the
      * algorithm by heuristic.
@@ -629,7 +695,12 @@ protected:
     ~MultiAlgoOpr() = default;
 
     //! get all possible algorithms for the specified layouts
-    virtual std::vector<Algorithm*> get_all_algorithms(
+        virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1,
+            const TensorLayout& p2, const TensorLayout& p3,
+            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p6, const TensorLayout& p7) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& p0, const TensorLayout& p1,
             const TensorLayout& p2, const TensorLayout& p3,
             const TensorLayout& p4, const TensorLayout& p5,

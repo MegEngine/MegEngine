@@ -63,9 +63,15 @@ void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A,
     }
 
 }
-
 std::vector<BatchedMatrixMulForward::Algorithm*>
 BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
+                                                const TensorLayout& /*B*/,
+                                                const TensorLayout& /*C*/) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_batched_matmul_fwd_algo()};
+}
+std::vector<BatchedMatrixMulForward::Algorithm*>
+BatchedMatrixMulForwardImpl::get_all_algorithms_safe(const TensorLayout& /*A*/,
                                                 const TensorLayout& /*B*/,
                                                 const TensorLayout& /*C*/) {
     return {static_cast<HandleImpl*>(handle())

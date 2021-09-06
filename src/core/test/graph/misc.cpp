@@ -1938,7 +1938,7 @@ typename megdnn::ExecutionPolicy try_find_any_weight_preprocess_algo(
             return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms_info(
+    for (auto&& algo : dnn_op->get_all_algorithms_info_safe(
             std::forward<Args>(args)...)) {
         dnn_op->execution_policy().algo = algo.desc;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(
@@ -1972,7 +1972,7 @@ typename megdnn::ExecutionPolicy try_find_any_bias_preprocess_algo(
             return {};
         }
     }
-    for (auto&& algo : dnn_op->get_all_algorithms_info(
+    for (auto&& algo : dnn_op->get_all_algorithms_info_safe(
             std::forward<Args>(args)...)) {
         dnn_op->execution_policy().algo = algo.desc;
         auto layouts = dnn_op->deduce_preprocessed_filter_layout(

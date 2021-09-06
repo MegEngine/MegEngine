@@ -63,6 +63,8 @@ public:
 protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& src, const TensorLayout& dst) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& src, const TensorLayout& dst) override;
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& src, const TensorLayout& dst,
             size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,

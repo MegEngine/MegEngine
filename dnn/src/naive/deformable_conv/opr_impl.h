@@ -25,6 +25,12 @@ public:
             const TensorLayout& /* dst */) override {
         return std::vector<Algorithm*>();
     };
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& /* im */, const TensorLayout& /* filter */,
+            const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+            const TensorLayout& /* dst */) override {
+        return std::vector<Algorithm*>();
+    };
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /* src */, const TensorLayout& /* filter */,
@@ -67,6 +73,13 @@ public:
             const TensorLayout& /* filter_grad */) override {
         return std::vector<Algorithm*>();
     };
+    
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& /* im */, const TensorLayout& /* offset */,
+            const TensorLayout& /* mask */, const TensorLayout& /* out_grad */,
+            const TensorLayout& /* filter_grad */) override {
+        return std::vector<Algorithm*>();
+    };
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /* im */, const TensorLayout& /* offset */,
@@ -103,6 +116,16 @@ public:
     using DeformableConvBackwardData::DeformableConvBackwardData;
 
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& /* im */, const TensorLayout& /* filter */,
+            const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+            const TensorLayout& /* out_grad */,
+            const TensorLayout& /* im_grad */,
+            const TensorLayout& /* offset_grad */,
+            const TensorLayout& /* mask_grad */) override {
+        return std::vector<Algorithm*>();
+    };
+
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /* im */, const TensorLayout& /* filter */,
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
             const TensorLayout& /* out_grad */,

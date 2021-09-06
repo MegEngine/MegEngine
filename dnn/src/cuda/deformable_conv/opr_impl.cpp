@@ -51,6 +51,15 @@ std::vector<AlgoFwd*> Fwd::get_all_algorithms(const TensorLayout& /* im */,
 
     return algos;
 }
+std::vector<AlgoFwd*> Fwd::get_all_algorithms_safe(const TensorLayout& im,
+                                              const TensorLayout& filter,
+                                              const TensorLayout& offset,
+                                              const TensorLayout& mask,
+                                              const TensorLayout& dst) {
+    auto ret_safe = Fwd::get_all_algorithms(im,filter,offset,mask,dst);
+    megdnn_assert(!ret_safe.empty(), "no usable deformable_conv fwd algorithm");
+    return ret_safe;
+}
 
 AlgoFwd* Fwd::get_algorithm_heuristic(const TensorLayout& im,
                                       const TensorLayout& filter,
@@ -113,6 +122,14 @@ std::vector<AlgoBwdFlt*> BwdFlt::get_all_algorithms(const TensorLayout& /* im */
     for (auto i : sm_algo_pack.all_algos)
         algos.push_back(static_cast<AlgoBwdFlt*>(i));
     return algos;
+}
+
+std::vector<AlgoBwdFlt*> BwdFlt::get_all_algorithms_safe(const TensorLayout& im, 
+        const TensorLayout& offset, const TensorLayout& mask,
+        const TensorLayout& out_grad, const TensorLayout& filter_grad) {
+    auto ret_safe = BwdFlt::get_all_algorithms(im,offset,mask,out_grad,filter_grad);
+    megdnn_assert(!ret_safe.empty(), "no usable deformable_conv bwd filter algorithm");
+    return ret_safe;
 }
 
 AlgoBwdFlt* BwdFlt::get_algorithm_heuristic(
@@ -180,6 +197,14 @@ std::vector<AlgoBwdData*> BwdData::get_all_algorithms(
     for (auto i : sm_algo_pack.all_algos)
         algos.push_back(static_cast<AlgoBwdData*>(i));
     return algos;
+}
+std::vector<AlgoBwdData*> BwdData::get_all_algorithms_safe(
+        const TensorLayout& im, const TensorLayout& filter,
+        const TensorLayout& offset, const TensorLayout& mask, const TensorLayout& out_grad,
+        const TensorLayout& im_grad, const TensorLayout& offset_grad, const TensorLayout& mask_grad ) {
+    auto ret_safe = BwdData::get_all_algorithms(im,filter,offset,mask,out_grad,im_grad,offset_grad,mask_grad);
+    megdnn_assert(!ret_safe.empty(), "no usable deformable_conv bwd data algorithm");
+    return ret_safe;
 }
 
 AlgoBwdData* BwdData::get_algorithm_heuristic(

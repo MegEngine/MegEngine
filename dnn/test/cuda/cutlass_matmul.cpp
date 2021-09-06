@@ -84,7 +84,7 @@ void test_multibatchsize(
         auto opr_reference = handle_cuda->create_operator<MatrixMulForward>();
         {
             opr_reference->execution_policy().algo.reset();
-            for (auto i : opr_reference->get_all_algorithms_info(
+            for (auto i : opr_reference->get_all_algorithms_info_safe(
                          A_tensor.layout(), B_tensor.layout(),
                          C_tensor.layout())) {
                 if (std::regex_match(
@@ -113,7 +113,7 @@ void test_multibatchsize(
                        {{}, {}, C_tensor_prime.tensornd_host()});
         {
             opr_reference->execution_policy().algo.reset();
-            for (auto i : opr_reference->get_all_algorithms_info(
+            for (auto i : opr_reference->get_all_algorithms_info_safe(
                          A_tensor_prime.layout(), B_tensor.layout(),
                          C_tensor_batch.layout())) {
                 if (std::regex_match(

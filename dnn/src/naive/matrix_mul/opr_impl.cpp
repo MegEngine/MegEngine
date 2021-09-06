@@ -88,6 +88,13 @@ MatrixMulForwardImpl::get_all_algorithms(const TensorLayout& /*A*/,
     return {static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo()};
 }
 
+std::vector<MatrixMulForward::Algorithm*>
+MatrixMulForwardImpl::get_all_algorithms_safe(const TensorLayout& /*A*/,
+                                         const TensorLayout& /*B*/,
+                                         const TensorLayout& /*C*/)  {
+    return {static_cast<HandleImpl*>(handle())->default_matmul_fwd_algo()};
+}
+
 MatrixMulForward::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /*A*/, const TensorLayout& /*B*/,
         const TensorLayout& /*C*/, size_t /*workspace_limit_in_bytes*/,

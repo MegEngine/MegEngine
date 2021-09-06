@@ -37,6 +37,9 @@ public:
 
 protected:
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& src, const TensorLayout& filter,
             const TensorLayout& dst) override;
     Algorithm* get_algorithm_heuristic(
@@ -72,6 +75,9 @@ protected:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& filter, const TensorLayout& diff,
             const TensorLayout& grad, size_t workspace_limit_in_bytes,
@@ -103,6 +109,9 @@ public:
 
 protected:
     std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& src, const TensorLayout& diff,
             const TensorLayout& grad) override;
     Algorithm* get_algorithm_heuristic(

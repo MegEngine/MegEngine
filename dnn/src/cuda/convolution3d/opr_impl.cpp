@@ -108,6 +108,14 @@ Convolution3DForwardImpl::get_all_algorithms(const TensorLayout& src,
             {this, src, filter, dst});
 }
 
+std::vector<Convolution3DForwardImpl::Algorithm*>
+Convolution3DForwardImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                             const TensorLayout& filter,
+                                             const TensorLayout& dst) {
+    return megdnn::get_all_algorithms_safe<Convolution3DForwardImpl>(
+            {this, src, filter, dst});
+}
+
 size_t Convolution3DForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,
         const TensorLayout& dst) {
@@ -143,6 +151,14 @@ Convolution3DBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
                                                   const TensorLayout& diff,
                                                   const TensorLayout& grad) {
     return megdnn::get_all_algorithms<Convolution3DBackwardDataImpl>(
+            {this, filter, diff, grad});
+}
+
+std::vector<Convolution3DBackwardDataImpl::Algorithm*>
+Convolution3DBackwardDataImpl::get_all_algorithms_safe(const TensorLayout& filter,
+                                                  const TensorLayout& diff,
+                                                  const TensorLayout& grad) {
+    return megdnn::get_all_algorithms_safe<Convolution3DBackwardDataImpl>(
             {this, filter, diff, grad});
 }
 
@@ -223,6 +239,14 @@ Convolution3DBackwardFilterImpl::get_all_algorithms(const TensorLayout& src,
                                                     const TensorLayout& diff,
                                                     const TensorLayout& grad) {
     return megdnn::get_all_algorithms<Convolution3DBackwardFilterImpl>(
+            {this, src, diff, grad});
+}
+
+std::vector<Convolution3DBackwardFilterImpl::Algorithm*>
+Convolution3DBackwardFilterImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                                    const TensorLayout& diff,
+                                                    const TensorLayout& grad) {
+    return megdnn::get_all_algorithms_safe<Convolution3DBackwardFilterImpl>(
             {this, src, diff, grad});
 }
 

@@ -25,9 +25,9 @@ struct AlgoProxy;
     template <typename Opr>                                                   \
     struct AlgoProxy<Opr, arity> {                                            \
         static std::vector<typename Opr::AlgorithmInfo>                       \
-        get_all_algorithms_info(Opr* opr, const TensorLayoutArray& layouts) { \
+        get_all_algorithms_info_safe(Opr* opr, const TensorLayoutArray& layouts) { \
             megdnn_assert(layouts.size() == arity);                           \
-            return opr->get_all_algorithms_info(LAYOUTS);                     \
+            return opr->get_all_algorithms_info_safe(LAYOUTS);                     \
         }                                                                     \
         static typename Opr::AlgorithmInfo get_algorithm_info_heuristic(      \
                 Opr* opr, const TensorLayoutArray& layouts) {                 \
@@ -80,9 +80,9 @@ DEF_ALGO_PROXY(8);
     template <>                                                                \
     struct AlgoProxy<Opr, arity> {                                             \
         static std::vector<typename Opr::AlgorithmInfo>                        \
-        get_all_algorithms_info(Opr* opr, const TensorLayoutArray& layouts) {  \
+        get_all_algorithms_info_safe(Opr* opr, const TensorLayoutArray& layouts) {  \
             megdnn_assert(layouts.size() == arity);                            \
-            return opr->get_all_algorithms_info(LAYOUTS);                      \
+            return opr->get_all_algorithms_info_safe(LAYOUTS);                      \
         }                                                                      \
         static typename Opr::AlgorithmInfo get_algorithm_info_heuristic(       \
                 Opr* opr, const TensorLayoutArray& layouts) {                  \

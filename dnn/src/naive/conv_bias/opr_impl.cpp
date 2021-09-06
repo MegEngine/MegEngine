@@ -321,6 +321,15 @@ ConvBiasForwardImpl::get_all_algorithms(const TensorLayout&,
     return {static_cast<HandleImpl*>(handle())->default_conv_bias_fwd_algo()};
 }
 
+std::vector<ConvBiasForward::Algorithm*>
+ConvBiasForwardImpl::get_all_algorithms_safe(const TensorLayout&,
+                                        const TensorLayout&,
+                                        const TensorLayout&,
+                                        const TensorLayout&,
+                                        const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_conv_bias_fwd_algo()};
+}
+
 ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* filter */,
         const TensorLayout& /* bias */, const TensorLayout& /* z */,

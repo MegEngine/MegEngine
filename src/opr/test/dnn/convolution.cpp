@@ -2473,6 +2473,11 @@ public:
                  std::vector<AlgorithmInfo>(const TensorLayout& p0,
                                          const TensorLayout& p1,
                                          const TensorLayout& p2));
+
+    MOCK_METHOD3(get_all_algorithms_info_safe,
+                 std::vector<AlgorithmInfo>(const TensorLayout& p0,
+                                         const TensorLayout& p1,
+                                         const TensorLayout& p2));
     MOCK_METHOD6(get_algorithm_info_heuristic,
                  AlgorithmInfo(const TensorLayout& p0, const TensorLayout& p1,
                                const TensorLayout& p2,
@@ -2481,6 +2486,11 @@ public:
                                const AlgoAttribute& negative_attr));
 
     MOCK_METHOD3(get_all_algorithms,
+                 std::vector<Algorithm*>(const TensorLayout& p0,
+                                         const TensorLayout& p1,
+                                         const TensorLayout& p2));
+
+    MOCK_METHOD3(get_all_algorithms_safe,
                  std::vector<Algorithm*>(const TensorLayout& p0,
                                          const TensorLayout& p1,
                                          const TensorLayout& p2));

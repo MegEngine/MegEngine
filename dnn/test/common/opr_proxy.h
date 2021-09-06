@@ -288,7 +288,7 @@ struct OprProxyProfilingBase
                 Algorithm::deserialize_read_pod<typename Opr::Param>(param);
 
         std::vector<Algorithm::SearchItem> ret;
-        for (auto algo_info : AlgoProxy<Opr, arity>::get_all_algorithms_info(
+        for (auto algo_info : AlgoProxy<Opr, arity>::get_all_algorithms_info_safe(
                      opr.get(), layouts)) {
             Algorithm* algo = opr->get_algorithm_from_desc(algo_info.desc);
             std::vector<Algorithm::SearchItem>&& sub_items =
@@ -367,7 +367,7 @@ struct OprProxyProfilingBase
             megdnn_log("Find best algo %s in cache", algo->name());
             return;
         }
-        for (auto algo : AlgoProxy<Opr, arity>::get_all_algorithms_info(
+        for (auto algo : AlgoProxy<Opr, arity>::get_all_algorithms_info_safe(
                      opr.get(), layouts)) {
             //! construct execution_policy
             opr->execution_policy().algo = algo.desc;
@@ -492,7 +492,7 @@ struct OprWeightPreprocessProxyImpl : public OprProxyProfilingBase<Opr> {
         if (Base::m_profiling && !Base::target_execution_policy.algo.valid()) {
             size_t min_time = std::numeric_limits<size_t>::max();
             for (auto algo :
-                 AlgoProxy<Opr, arity>::get_all_algorithms_info(opr, layouts)) {
+                 AlgoProxy<Opr, arity>::get_all_algorithms_info_safe(opr, layouts)) {
                 opr->execution_policy().algo = algo.desc;
 
                 auto preprocess_tensors =

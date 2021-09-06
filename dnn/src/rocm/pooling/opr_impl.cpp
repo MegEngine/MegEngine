@@ -25,11 +25,15 @@ size_t PoolingForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
 const char* PoolingForwardImpl::get_algorithm_set_name() const {
     return "ROCM_POOLING_FORWARD";
 }
-
 std::vector<PoolingForwardImpl::Algorithm*>
 PoolingForwardImpl::get_all_algorithms(const TensorLayout& src,
                                        const TensorLayout& dst) {
     return megdnn::get_all_algorithms<PoolingForwardImpl>({this, src, dst});
+}
+std::vector<PoolingForwardImpl::Algorithm*>
+PoolingForwardImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                       const TensorLayout& dst) {
+    return megdnn::get_all_algorithms_safe<PoolingForwardImpl>({this, src, dst});
 }
 
 PoolingForwardImpl::Algorithm* PoolingForwardImpl::get_algorithm_heuristic(
@@ -79,6 +83,13 @@ std::vector<Algorithm*> PoolingBackwardImpl::get_all_algorithms(
         const TensorLayout& src, const TensorLayout& dst,
         const TensorLayout& diff, const TensorLayout& grad) {
     return megdnn::get_all_algorithms<PoolingBackwardImpl>(
+            {this, src, dst, diff, grad});
+}
+
+std::vector<Algorithm*> PoolingBackwardImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& dst,
+        const TensorLayout& diff, const TensorLayout& grad) {
+    return megdnn::get_all_algorithms_safe<PoolingBackwardImpl>(
             {this, src, dst, diff, grad});
 }
 

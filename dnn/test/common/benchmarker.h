@@ -377,7 +377,7 @@ float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
     auto opr = benchmark.opr();
     opr->param() = benchmark.param();
     proxy.deduce_layout(opr, layouts);
-    auto algos = OprAlgoProxy<Opr>::get_all_algorithms_info(opr, layouts);
+    auto algos = OprAlgoProxy<Opr>::get_all_algorithms_info_safe(opr, layouts);
     float min_used = std::numeric_limits<float>::max();
     bool execed = false;
     for (auto i : algos) {

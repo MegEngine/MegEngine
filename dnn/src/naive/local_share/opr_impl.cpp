@@ -159,6 +159,13 @@ LocalShareForwardImpl::get_all_algorithms(const TensorLayout&,
     return {static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo()};
 }
 
+std::vector<LocalShareForward::Algorithm*>
+LocalShareForwardImpl::get_all_algorithms_safe(const TensorLayout&,
+                                          const TensorLayout&,
+                                          const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_local_share_fwd_algo()};
+}
+
 LocalShareForward::Algorithm* LocalShareForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* diff */,
         const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
@@ -181,6 +188,14 @@ LocalShareForwardImpl::get_algorithm_from_desc(
 
 std::vector<LocalShareBackwardData::Algorithm*>
 LocalShareBackwardDataImpl::get_all_algorithms(const TensorLayout&,
+                                               const TensorLayout&,
+                                               const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_local_share_bwd_data_algo()};
+}
+
+std::vector<LocalShareBackwardData::Algorithm*>
+LocalShareBackwardDataImpl::get_all_algorithms_safe(const TensorLayout&,
                                                const TensorLayout&,
                                                const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())
@@ -210,6 +225,14 @@ LocalShareBackwardDataImpl::get_algorithm_from_desc(
 
 std::vector<LocalShareBackwardFilter::Algorithm*>
 LocalShareBackwardFilterImpl::get_all_algorithms(const TensorLayout&,
+                                                 const TensorLayout&,
+                                                 const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_local_share_bwd_filter_algo()};
+}
+
+std::vector<LocalShareBackwardFilter::Algorithm*>
+LocalShareBackwardFilterImpl::get_all_algorithms_safe(const TensorLayout&,
                                                  const TensorLayout&,
                                                  const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())

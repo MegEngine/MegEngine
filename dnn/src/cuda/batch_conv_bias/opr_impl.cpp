@@ -51,6 +51,15 @@ BatchConvBiasForwardImpl::get_all_algorithms(const TensorLayout& src,
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
     return megdnn::get_all_algorithms<BatchConvBiasForwardImpl>(args);
 }
+std::vector<BatchConvBiasForwardImpl::Algorithm*>
+BatchConvBiasForwardImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                             const TensorLayout& filter,
+                                             const TensorLayout& bias,
+                                             const TensorLayout& z,
+                                             const TensorLayout& dst) {
+    AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
+    return megdnn::get_all_algorithms_safe<BatchConvBiasForwardImpl>(args);
+}
 
 size_t BatchConvBiasForwardImpl::get_workspace_in_bytes(
         const TensorLayout& src, const TensorLayout& filter,

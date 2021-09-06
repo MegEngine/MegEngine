@@ -25,6 +25,9 @@ class ConvolutionForwardImpl: public ConvolutionForward {
         std::vector<Algorithm *> get_all_algorithms(const TensorLayout &src,
                 const TensorLayout &filter,
                 const TensorLayout &dst) override;
+        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &src,
+                const TensorLayout &filter,
+                const TensorLayout &dst) override;
         Algorithm* get_algorithm_heuristic(
                 const TensorLayout& src, const TensorLayout& filter,
                 const TensorLayout& dst, size_t workspace_limit_in_bytes,
@@ -67,6 +70,9 @@ class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
         std::vector<Algorithm *> get_all_algorithms(const TensorLayout &filter,
                 const TensorLayout &diff,
                 const TensorLayout &grad) override;
+        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &filter,
+                const TensorLayout &diff,
+                const TensorLayout &grad) override;
         Algorithm* get_algorithm_heuristic(
                 const TensorLayout& filter, const TensorLayout& diff,
                 const TensorLayout& grad, size_t workspace_limit_in_bytes,
@@ -88,6 +94,9 @@ class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
                 _megdnn_tensor_out grad,
                 _megdnn_workspace workspace) override;
         std::vector<Algorithm *> get_all_algorithms(const TensorLayout &src,
+                const TensorLayout &diff,
+                const TensorLayout &grad) override;
+        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &src,
                 const TensorLayout &diff,
                 const TensorLayout &grad) override;
         Algorithm* get_algorithm_heuristic(

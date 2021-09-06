@@ -172,8 +172,13 @@ std::vector<Algorithm*> PoolingImpl::get_all_algorithms(
             ret.push_back(i);
         }
     }
-    megdnn_assert(!ret.empty(), "no usable pooling fwd algorithm");
     return ret;
+}
+std::vector<Algorithm*> PoolingImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& dst) {
+    auto ret_safe = get_all_algorithms(src,dst);
+    megdnn_assert(!ret_safe.empty(), "no usable pooling fwd algorithm");
+    return ret_safe;
 }
 
 Algorithm* PoolingImpl::get_algorithm_heuristic(

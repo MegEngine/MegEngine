@@ -96,6 +96,13 @@ std::vector<MatrixMul::Algorithm*> MatrixMulImpl::get_all_algorithms(
     return gemv_algos;
 }
 
+std::vector<MatrixMul::Algorithm*> MatrixMulImpl::get_all_algorithms_safe(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
+    auto gemv_algos_safe = get_all_algorithms(A,B,C);
+    megdnn_assert(!gemv_algos_safe.empty(), "no usable MatrixMul fwd algorithm");
+    return gemv_algos_safe;
+}
+
 MatrixMulImpl::Algorithm* MatrixMulImpl::get_algorithm_from_desc(
         const AlgorithmDesc& desc) {
     if (!desc.valid()) {

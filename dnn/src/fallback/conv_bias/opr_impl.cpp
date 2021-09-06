@@ -279,10 +279,17 @@ std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms(
     auto fparam = make_ncb_kern_size_param(src, filter, bias, dst, nullptr);
     auto ret = get_all_algorithms_with_ncb(fparam);
     if (ret.empty()) {
-        return naive::ConvBiasForwardImpl::get_all_algorithms(src, filter, bias,
+        return naive::ConvBiasForwardImpl::get_all_algorithms_safe(src, filter, bias,
                                                               z, dst);
     }
     return ret;
+}
+std::vector<ConvBiasImpl::Algorithm*> ConvBiasImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& bias, const TensorLayout& z,
+        const TensorLayout& dst) {
+    auto ret_safe = ConvBiasImpl::get_all_algorithms(src,filter,bias,z,dst);
+    return ret_safe;
 }
 
 ConvBiasImpl::Algorithm* ConvBiasImpl::get_algorithm_heuristic(

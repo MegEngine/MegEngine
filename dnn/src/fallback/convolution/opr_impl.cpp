@@ -198,10 +198,17 @@ std::vector<ConvolutionImpl::Algorithm*> ConvolutionImpl::get_all_algorithms(
     auto fparam = make_ncb_kern_size_param(src, filter, dst, nullptr);
     auto ret = get_all_algorithms_with_ncb(fparam);
     if (ret.empty()) {
-        return naive::ConvolutionForwardImpl::get_all_algorithms(src, filter,
+        return naive::ConvolutionForwardImpl::get_all_algorithms_safe(src, filter,
                                                                  dst);
     }
     return ret;
+}
+
+std::vector<ConvolutionImpl::Algorithm*> ConvolutionImpl::get_all_algorithms_safe(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& dst) {
+    auto ret_safe = ConvolutionImpl::get_all_algorithms(src,filter,dst);
+    return ret_safe;
 }
 
 ConvolutionImpl::Algorithm* ConvolutionImpl::get_algorithm_heuristic(
@@ -536,8 +543,17 @@ ConvolutionBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
     }
     auto fparam = make_ncb_kern_size_param(filter, diff, grad);
     auto ret = get_all_algorithms_with_ncb(fparam);
-    megdnn_assert(!ret.empty(), "no usable conv fwd algorithm");
     return ret;
+}
+
+std::vector<ConvolutionBackwardDataImpl::Algorithm*>
+ConvolutionBackwardDataImpl::get_all_algorithms_safe(const TensorLayout& filter,
+                                                const TensorLayout& diff,
+                                                const TensorLayout& grad) {
+    
+    auto ret_safe = ConvolutionBackwardDataImpl::get_all_algorithms(filter,diff,grad);
+    megdnn_assert(!ret_safe.empty(), "no usable conv bwd algorithm");
+    return ret_safe;
 }
 
 ConvolutionBackwardDataImpl::Algorithm*

@@ -47,13 +47,20 @@ LocalShareForwardImpl::get_algorithm_heuristic(
                      Algorithm::attribute_str(positive_attr).c_str(),
                      args.to_string().c_str(), workspace_limit_in_bytes));
 }
-
 std::vector<LocalShareForwardImpl::Algorithm*>
 LocalShareForwardImpl::get_all_algorithms(const TensorLayout& src,
                                           const TensorLayout& filter,
                                           const TensorLayout& dst) {
     AlgoBase::SizeArgs args{this, src, filter, dst};
     return megdnn::get_all_algorithms<LocalShareForwardImpl>(args);
+}
+
+std::vector<LocalShareForwardImpl::Algorithm*>
+LocalShareForwardImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                          const TensorLayout& filter,
+                                          const TensorLayout& dst) {
+    AlgoBase::SizeArgs args{this, src, filter, dst};
+    return megdnn::get_all_algorithms_safe<LocalShareForwardImpl>(args);
 }
 
 size_t LocalShareForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
@@ -109,6 +116,14 @@ LocalShareBackwardDataImpl::get_all_algorithms(const TensorLayout& filter,
     return megdnn::get_all_algorithms<LocalShareBackwardDataImpl>(args);
 }
 
+std::vector<LocalShareBackwardDataImpl::Algorithm*>
+LocalShareBackwardDataImpl::get_all_algorithms_safe(const TensorLayout& filter,
+                                          const TensorLayout& diff,
+                                          const TensorLayout& grad) {
+    AlgoBase::SizeArgs args{this, filter, diff, grad};
+    return megdnn::get_all_algorithms_safe<LocalShareBackwardDataImpl>(args);
+}
+
 size_t LocalShareBackwardDataImpl::get_workspace_in_bytes(const TensorLayout& filter,
                                                      const TensorLayout& diff,
                                                      const TensorLayout& grad) {
@@ -160,6 +175,14 @@ LocalShareBackwardFilterImpl::get_all_algorithms(const TensorLayout& src,
                                           const TensorLayout& grad) {
     AlgoBase::SizeArgs args{this, src, diff, grad};
     return megdnn::get_all_algorithms<LocalShareBackwardFilterImpl>(args);
+}
+
+std::vector<LocalShareBackwardFilterImpl::Algorithm*>
+LocalShareBackwardFilterImpl::get_all_algorithms_safe(const TensorLayout& src,
+                                          const TensorLayout& diff,
+                                          const TensorLayout& grad) {
+    AlgoBase::SizeArgs args{this, src, diff, grad};
+    return megdnn::get_all_algorithms_safe<LocalShareBackwardFilterImpl>(args);
 }
 
 size_t LocalShareBackwardFilterImpl::get_workspace_in_bytes(const TensorLayout& src,
