@@ -34,6 +34,18 @@ set_property(CACHE MGE_ARCH PROPERTY STRINGS AUTO
 )
 set (MGE_EXPORT_TARGETS MegEngine-targets)
 
+if(NOT "$ENV{LD_LIBRARY_PATH}" STREQUAL "")
+    string(REPLACE ":" ";" ALTER_LD_LIBRARY_PATHS $ENV{LD_LIBRARY_PATH})
+else()
+    set(ALTER_LD_LIBRARY_PATHS "")
+endif()
+
+if(NOT "$ENV{LIBRARY_PATH}" STREQUAL "")
+    string(REPLACE ":" ";" ALTER_LIBRARY_PATHS $ENV{LIBRARY_PATH})
+else()
+    set(ALTER_LIBRARY_PATHS "")
+endif()
+
 option(MGE_WITH_JIT "Build MegEngine with JIT." ON)
 option(MGE_WITH_JIT_MLIR "Build MegEngine with MLIR JIT." OFF)
 option(MGE_WITH_HALIDE "Build MegEngine with Halide JIT" OFF)

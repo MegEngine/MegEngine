@@ -75,6 +75,10 @@
 2: install gcc/g++, which version >= 6, (gcc/g++ >= 7, if need build training mode)
 3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool librdmacm-dev rdmacm-utils python3-dev python3-numpy texinfo
 4: CUDA env(if enable CUDA), version detail refer to README.md
+recommend set env about cuda/cudnn/tensorrt as followed:
+export CUDA_ROOT_DIR=/path/to/cuda/lib
+export CUDNN_ROOT_DIR=/path/to/cudnn/lib
+export TRT_ROOT_DIR=/path/to/tensorrt/lib
 ```
 
 ### MacOS host build

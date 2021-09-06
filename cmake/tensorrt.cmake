@@ -1,7 +1,3 @@
-if(NOT "$ENV{LIBRARY_PATH}" STREQUAL "")
-    string(REPLACE ":" ";" SYSTEM_LIBRARY_PATHS $ENV{LIBRARY_PATH})
-endif()
-
 if("${TRT_ROOT_DIR}" STREQUAL "" AND NOT "$ENV{TRT_ROOT_DIR}"  STREQUAL "")
     set(TRT_ROOT_DIR $ENV{TRT_ROOT_DIR})
 endif()
@@ -9,15 +5,15 @@ endif()
 if(MGE_CUDA_USE_STATIC)
     find_library(TRT_LIBRARY 
         NAMES libnvinfer_static.a nvinfer.lib
-        PATHS $ENV{LD_LIBRARY_PATH} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "TRT library." )
 else()
     find_library(TRT_LIBRARY 
         NAMES libnvinfer.so libnvinfer.dylib nvinfer.dll
-        PATHS $ENV{LD_LIBRARY_PATH} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-        HINTS ${SYSTEM_LIBRARY_PATHS}
+        PATHS ${ALTER_LD_LIBRARY_PATHS} ${TRT_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
+        HINTS ${ALTER_LIBRARY_PATHS}
         PATH_SUFFIXES lib lib64
         DOC "TRT library." )
 endif()
