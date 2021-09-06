@@ -35,8 +35,9 @@ class FakeQuantize(_FakeQuantize, QParamsModuleMixin):
         return self.qparams
 
     def set_qparams(self, qparams: QParams):
-        """
-        :param qparams: used to set initial scale.
+        r"""
+        Args:
+          qparams: used to set initial scale.
         """
         if qparams.scale is None:
             raise AssertionError("Can not get an initialized scale")

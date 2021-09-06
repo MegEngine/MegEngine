@@ -43,9 +43,7 @@ PROTOCOLS = {
 
 
 def _get_megengine_home() -> str:
-    """
-    MGE_HOME setting complies with the XDG Base Directory Specification
-    """
+    r"""MGE_HOME setting complies with the XDG Base Directory Specification"""
     megengine_home = os.path.expanduser(
         os.getenv(
             ENV_MGE_HOME,
@@ -95,24 +93,18 @@ def _init_hub(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ):
-    """
-    Imports hubmodule like python import.
+    r"""Imports hubmodule like python import.
 
-    :param repo_info:
-        a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-        tag/branch. The default branch is ``master`` if not specified.
-        Example: ``"brain_sdk/MegBrain[:hub]"``
-    :param git_host:
-        host address of git repo.
-        Example: github.com
-    :param use_cache:
-        whether to use locally cached code or completely re-fetch.
-    :param commit:
-        commit id on github or gitlab.
-    :param protocol:
-        which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
-        The value should be one of HTTPS, SSH.
-    :return:
+    Args:
+        repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+            tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+        git_host: host address of git repo. Eg: github.com
+        use_cache: whether to use locally cached code or completely re-fetch.
+        commit: commit id on github or gitlab.
+        protocol: which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
+            The value should be one of HTTPS, SSH.
+
+    Returns:
         a python module.
     """
     cache_dir = os.path.expanduser(os.path.join(_get_megengine_home(), "hub"))
@@ -139,24 +131,18 @@ def list(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> List[str]:
-    """
-    Lists all entrypoints available in repo hubconf.
+    r"""Lists all entrypoints available in repo hubconf.
 
-    :param repo_info:
-        a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-        tag/branch. The default branch is ``master`` if not specified.
-        Example: ``"brain_sdk/MegBrain[:hub]"``
-    :param git_host:
-        host address of git repo.
-        Example: github.com
-    :param use_cache:
-        whether to use locally cached code or completely re-fetch.
-    :param commit:
-        commit id on github or gitlab.
-    :param protocol:
-        which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
-        The value should be one of HTTPS, SSH.
-    :return:
+    Args:
+        repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+            tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+        git_host: host address of git repo. Eg: github.com
+        use_cache: whether to use locally cached code or completely re-fetch.
+        commit: commit id on github or gitlab.
+        protocol: which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
+            The value should be one of HTTPS, SSH.
+
+    Returns:
         all entrypoint names of the model.
     """
     hubmodule = _init_hub(repo_info, git_host, use_cache, commit, protocol)
@@ -178,26 +164,19 @@ def load(
     protocol: str = DEFAULT_PROTOCOL,
     **kwargs
 ) -> Any:
-    """
-    Loads model from github or gitlab repo, with pretrained weights.
+    r"""Loads model from github or gitlab repo, with pretrained weights.
 
-    :param repo_info:
-        a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-        tag/branch. The default branch is ``master`` if not specified.
-        Example: ``"brain_sdk/MegBrain[:hub]"``
-    :param entry:
-        an entrypoint defined in hubconf.
-    :param git_host:
-        host address of git repo.
-        Example: github.com
-    :param use_cache:
-        whether to use locally cached code or completely re-fetch.
-    :param commit:
-        commit id on github or gitlab.
-    :param protocol:
-        which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
-        The value should be one of HTTPS, SSH.
-    :return:
+    Args:
+        repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+            tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+        entry: an entrypoint defined in hubconf.
+        git_host: host address of git repo. Eg: github.com
+        use_cache: whether to use locally cached code or completely re-fetch.
+        commit: commit id on github or gitlab.
+        protocol: which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
+            The value should be one of HTTPS, SSH.
+
+    Returns:
         a single model with corresponding pretrained weights.
     """
     hubmodule = _init_hub(repo_info, git_host, use_cache, commit, protocol)
@@ -219,30 +198,23 @@ def help(
     commit: str = None,
     protocol: str = DEFAULT_PROTOCOL,
 ) -> str:
-    """
-    This function returns docstring of entrypoint ``entry`` by following steps:
+    r"""This function returns docstring of entrypoint ``entry`` by following steps:
 
     1. Pull the repo code specified by git and repo_info.
     2. Load the entry defined in repo's hubconf.py
     3. Return docstring of function entry.
 
-    :param repo_info:
-        a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
-        tag/branch. The default branch is ``master`` if not specified.
-        Example: ``"brain_sdk/MegBrain[:hub]"``
-    :param entry:
-        an entrypoint defined in hubconf.py
-    :param git_host:
-        host address of git repo.
-        Example: github.com
-    :param use_cache:
-        whether to use locally cached code or completely re-fetch.
-    :param commit:
-        commit id on github or gitlab.
-    :param protocol:
-        which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
-        The value should be one of HTTPS, SSH.
-    :return:
+    Args:
+        repo_info: a string with format ``"repo_owner/repo_name[:tag_name/:branch_name]"`` with an optional
+            tag/branch. The default branch is ``master`` if not specified. Eg: ``"brain_sdk/MegBrain[:hub]"``
+        entry: an entrypoint defined in hubconf.py
+        git_host: host address of git repo. Eg: github.com
+        use_cache: whether to use locally cached code or completely re-fetch.
+        commit: commit id on github or gitlab.
+        protocol: which protocol to use to get the repo, and HTTPS protocol only supports public repo on github.
+            The value should be one of HTTPS, SSH.
+
+    Returns:
         docstring of entrypoint ``entry``.
     """
     hubmodule = _init_hub(repo_info, git_host, use_cache, commit, protocol)
@@ -255,16 +227,17 @@ def help(
 
 
 def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
-    """
-    Loads MegEngine serialized object from the given URL.
+    """Loads MegEngine serialized object from the given URL.
 
     If the object is already present in ``model_dir``, it's deserialized and
     returned. If no ``model_dir`` is specified, it will be ``MGE_HOME/serialized``.
 
-    :param url: url to serialized object.
-    :param model_dir: dir to cache target serialized file.
+    Args:
+        url: url to serialized object.
+        model_dir: dir to cache target serialized file.
 
-    :return: loaded object.
+    Returns:
+        loaded object.
     """
     if model_dir is None:
         model_dir = os.path.join(_get_megengine_home(), "serialized")
@@ -297,8 +270,7 @@ def load_serialized_obj_from_url(url: str, model_dir=None) -> Any:
 
 
 class pretrained:
-    r"""
-    Decorator which helps to download pretrained weights from the given url.
+    r"""Decorator which helps to download pretrained weights from the given url.
 
     For example, we can decorate a resnet18 function as follows
 
@@ -306,10 +278,10 @@ class pretrained:
 
         @hub.pretrained("https://url/to/pretrained_resnet18.pkl")
         def resnet18(**kwargs):
-            return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
-    When decorated function is called with ``pretrained=True``, MegEngine will automatically
-    download and fill the returned model with pretrained weights.
+    Returns:
+        When decorated function is called with ``pretrained=True``, MegEngine will automatically
+        download and fill the returned model with pretrained weights.
     """
 
     def __init__(self, url):

@@ -30,11 +30,10 @@ logger = get_logger(__name__)
 
 
 class ImageNet(ImageFolder):
-    r"""
-    Load ImageNet from raw files or folder. Expected folder looks like:
-
-    .. code-block:: bash
-
+    r"""Load ImageNet from raw files or folder. Expected folder looks like:
+    
+    .. code-block:: shell
+    
         ${root}/
         |       [REQUIRED TAR FILES]
         |-  ILSVRC2012_img_train.tar
@@ -45,22 +44,8 @@ class ImageNet(ImageFolder):
         |-  val/cls/xxx.${img_ext}
         |-  ILSVRC2012_devkit_t12/data/meta.mat
         |-  ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt
-
+    
     If the image folders don't exist, raw tar files are required to get extracted and processed.
-    """
-
-    raw_file_meta = {
-        "train": ("ILSVRC2012_img_train.tar", "1d675b47d978889d74fa0da5fadfb00e"),
-        "val": ("ILSVRC2012_img_val.tar", "29b22e2961454d5413ddabcf34fc5622"),
-        "devkit": ("ILSVRC2012_devkit_t12.tar.gz", "fa75699e90414af021442c21a62c3abf"),
-    }  # ImageNet raw files
-    default_train_dir = "train"
-    default_val_dir = "val"
-    default_devkit_dir = "ILSVRC2012_devkit_t12"
-
-    def __init__(self, root: str = None, train: bool = True, **kwargs):
-        r"""
-        Initialization:
 
         * if ``root`` contains ``self.target_folder`` depending on ``train``:
 
@@ -77,10 +62,22 @@ class ImageNet(ImageFolder):
 
             * raise error.
 
-        :param root: root directory of imagenet data, if root is ``None``, use default_dataset_root.
-        :param train: if ``True``, load the train split, otherwise load the validation split.
-        """
+    Args:
+        root: root directory of imagenet data, if root is ``None``, use default_dataset_root.
+        train: if ``True``, load the train split, otherwise load the validation split.
 
+    """
+
+    raw_file_meta = {
+        "train": ("ILSVRC2012_img_train.tar", "1d675b47d978889d74fa0da5fadfb00e"),
+        "val": ("ILSVRC2012_img_val.tar", "29b22e2961454d5413ddabcf34fc5622"),
+        "devkit": ("ILSVRC2012_devkit_t12.tar.gz", "fa75699e90414af021442c21a62c3abf"),
+    }  # ImageNet raw files
+    default_train_dir = "train"
+    default_val_dir = "val"
+    default_devkit_dir = "ILSVRC2012_devkit_t12"
+
+    def __init__(self, root: str = None, train: bool = True, **kwargs):
         # process the root path
         if root is None:
             self.root = self._default_root

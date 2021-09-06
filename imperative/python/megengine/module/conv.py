@@ -97,8 +97,7 @@ class _ConvNd(Module):
 
 class Conv1d(_ConvNd):
 
-    r"""
-    Applies a 1D convolution over an input tensor.
+    r"""Applies a 1D convolution over an input tensor.
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, H)`,
     this layer generates an output of the size
@@ -121,52 +120,49 @@ class Conv1d(_ConvNd):
     a depthwise convolution with a depthwise multiplier `K`, can be constructed
     by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions.
-    :param stride: stride of the 1D convolution operation.
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 1D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and there would be an extra dimension at the beginning of the weight's
-        shape. Default: 1
-    :param bias: whether to add a bias onto the result of convolution. Default:
-        True
-    :param conv_mode: Supports `cross_correlation`. Default:
-        `cross_correlation`
-    :param compute_mode: When set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions.
+        stride: stride of the 1D convolution operation.
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 1D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and there would be an extra dimension at the beginning of the weight's
+            shape. Default: 1
+        bias: whether to add a bias onto the result of convolution. Default: True
+        conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
+        compute_mode: When set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
 
-    .. note::
-
-       * ``weight`` usually has shape ``(out_channels, in_channels, kernel_size)`` ,
-         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, kernel_size)``
-       * ``bias`` usually has shape ``(1, out_channels, 1)``
+    Note:
+        * ``weight`` usually has shape ``(out_channels, in_channels, kernel_size)`` ,
+          if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, kernel_size)``
+        * ``bias`` usually has shape ``(1, out_channels, 1)``
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.Conv1d(in_channels=3, out_channels=1, kernel_size=3)
-        inp = mge.tensor(np.arange(0, 24).astype("float32").reshape(2, 3, 4))
-        oup = m(inp)
-        print(oup.numpy().shape)
+            m = M.Conv1d(in_channels=3, out_channels=1, kernel_size=3)
+            inp = mge.tensor(np.arange(0, 24).astype("float32").reshape(2, 3, 4))
+            oup = m(inp)
+            print(oup.numpy().shape)
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        (2, 1, 2)
-
+            (2, 1, 2)
     """
 
     def __init__(
@@ -245,8 +241,7 @@ class Conv1d(_ConvNd):
 
 
 class Conv2d(_ConvNd):
-    r"""
-    Applies a 2D convolution over an input tensor.
+    r"""Applies a 2D convolution over an input tensor.
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, H, W)`,
     this layer generates an output of the size
@@ -284,54 +279,51 @@ class Conv2d(_ConvNd):
     a depthwise convolution with a depthwise multiplier `K`, can be constructed
     by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
-        an :class:`int`, the actual kernel size would be
-        ``(kernel_size, kernel_size)``.
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and there would be an extra dimension at the beginning of the weight's
-        shape. Default: 1
-    :param bias: whether to add a bias onto the result of convolution. Default:
-        True
-    :param conv_mode: Supports `cross_correlation`. Default:
-        `cross_correlation`
-    :param compute_mode: When set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If kernel_size is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size)``.
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and there would be an extra dimension at the beginning of the weight's
+            shape. Default: 1
+        bias: whether to add a bias onto the result of convolution. Default: True
+        conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
+        compute_mode: When set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
 
-    .. note::
-
-       * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
-         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
+    Note:
+        * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
+            if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.Conv2d(in_channels=3, out_channels=1, kernel_size=3)
-        inp = mge.tensor(np.arange(0, 96).astype("float32").reshape(2, 3, 4, 4))
-        oup = m(inp)
-        print(oup.numpy().shape)
+            m = M.Conv2d(in_channels=3, out_channels=1, kernel_size=3)
+            inp = mge.tensor(np.arange(0, 96).astype("float32").reshape(2, 3, 4, 4))
+            oup = m(inp)
+            print(oup.numpy().shape)
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        (2, 1, 2, 2)
-
+            (2, 1, 2, 2)
     """
 
     def __init__(
@@ -411,8 +403,7 @@ class Conv2d(_ConvNd):
 
 class Conv3d(_ConvNd):
 
-    r"""
-    Applies a 3D convolution over an input tensor.
+    r"""Applies a 3D convolution over an input tensor.
 
     For instance, given an input of the size :math:`(N, C_{\text{in}}, T, H, W)`,
     this layer generates an output of the size
@@ -434,50 +425,47 @@ class Conv3d(_ConvNd):
     a depthwise convolution with a depthwise multiplier `K`, can be constructed
     by arguments :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
-        an :class:`int`, the actual kernel size would be
-        `(kernel_size, kernel_size, kernel_size)`.
-    :param stride: stride of the 3D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 3D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and there would be an extra dimension at the beginning of the weight's
-        shape. Default: 1
-    :param bias: whether to add a bias onto the result of convolution. Default:
-        True
-    :param conv_mode: Supports `cross_correlation`. Default:
-        `cross_correlation`
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If kernel_size is
+            an :class:`int`, the actual kernel size would be
+            `(kernel_size, kernel_size, kernel_size)`.
+        stride: stride of the 3D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 3D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and there would be an extra dimension at the beginning of the weight's
+            shape. Default: 1
+        bias: whether to add a bias onto the result of convolution. Default: True
+        conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
 
-    .. note::
-
-       * ``weight`` usually has shape ``(out_channels, in_channels, depth, height, width)`` ,
-         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, depth, height, width)``
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
+    Note:
+        * ``weight`` usually has shape ``(out_channels, in_channels, depth, height, width)`` ,
+          if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, depth, height, width)``
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
 
-        m = M.Conv3d(in_channels=3, out_channels=1, kernel_size=3)
-        inp = mge.tensor(np.arange(0, 384).astype("float32").reshape(2, 3, 4, 4, 4))
-        oup = m(inp)
-        print(oup.numpy().shape)
+            m = M.Conv3d(in_channels=3, out_channels=1, kernel_size=3)
+            inp = mge.tensor(np.arange(0, 384).astype("float32").reshape(2, 3, 4, 4, 4))
+            oup = m(inp)
+            print(oup.numpy().shape)
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        (2, 1, 2, 2, 2)
-
+            (2, 1, 2, 2, 2)
     """
 
     def __init__(
@@ -551,8 +539,7 @@ class Conv3d(_ConvNd):
 
 
 class ConvTranspose2d(_ConvNd):
-    r"""
-    Applies a 2D transposed convolution over an input tensor.
+    r"""Applies a 2D transposed convolution over an input tensor.
 
     This module is also known as a deconvolution or a fractionally-strided convolution.
     :class:`ConvTranspose2d` can be seen as the gradient of :class:`Conv2d` operation
@@ -562,35 +549,32 @@ class ConvTranspose2d(_ConvNd):
     the opposite way, transforming a smaller input to a larger output while preserving the
     connectivity pattern.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
-        an :class:`int`, the actual kernel size would be
-        ``(kernel_size, kernel_size)``.
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and there would be an extra dimension at the beginning of the weight's
-        shape. Default: 1
-    :param bias: wether to add a bias onto the result of convolution. Default:
-        True
-    :param conv_mode: Supports `cross_correlation`. Default:
-        `cross_correlation`
-    :param compute_mode: When set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size)``.
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and there would be an extra dimension at the beginning of the weight's
+            shape. Default: 1
+        bias: wether to add a bias onto the result of convolution. Default: True
+            conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
+        compute_mode: When set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
 
-    .. note::
-
-       * ``weight`` usually has shape ``(in_channels, out_channels, height, width)`` ,
-         if groups is not 1, shape will be ``(groups, in_channels // groups, out_channels // groups, height, width)``
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
-
+    Note:
+        * ``weight`` usually has shape ``(in_channels, out_channels, height, width)`` ,
+          if groups is not 1, shape will be ``(groups, in_channels // groups, out_channels // groups, height, width)``
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
     def __init__(
@@ -669,30 +653,28 @@ class ConvTranspose2d(_ConvNd):
 
 
 class LocalConv2d(Conv2d):
-    r"""
-    Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
+    r"""Applies a spatial convolution with untied kernels over an groupped channeled input 4D tensor.
     It is also known as the locally connected layer.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param input_height: the height of the input images.
-    :param input_width: the width of the input images.
-    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
-        an :class:`int`, the actual kernel size would be
-        ``(kernel_size, kernel_size)``.
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``. Default: 1
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        input_height: the height of the input images.
+        input_width: the width of the input images.
+        kernel_size: size of weight on spatial dimensions. If kernel_size is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size)``.
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``. Default: 1
 
-    .. note::
-
-       * ``weight`` usually has shape ``(out_height, out_width, in_channels, height, width, in_channels)`` ,
-         if groups is not 1, shape will be ``(groups, out_height, out_width, in_channels // groups, height, width, out_channels // groups)``
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
-
+    Note:
+        * ``weight`` usually has shape ``(out_height, out_width, in_channels, height, width, in_channels)`` ,
+          if groups is not 1, shape will be ``(groups, out_height, out_width, in_channels // groups, height, width, out_channels // groups)``
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
     def __init__(
@@ -755,8 +737,7 @@ class LocalConv2d(Conv2d):
 
 
 class ConvRelu2d(Conv2d):
-    r"""
-    A fused :class:`~.Module` including :class:`~.module.Conv2d` and :func:`~.relu`.
+    r"""A fused :class:`~.Module` including :class:`~.module.Conv2d` and :func:`~.relu`.
     Could be replaced with :class:`~.QATModule` version :class:`~.qat.ConvRelu2d` using :func:`~.quantize.quantize_qat`.
     """
 
@@ -765,38 +746,34 @@ class ConvRelu2d(Conv2d):
 
 
 class DeformableConv2d(_ConvNd):
-    """
-    Deformable Convolution.
+    r"""Deformable Convolution.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions. If kernel_size is
-        an :class:`int`, the actual kernel size would be
-        ``(kernel_size, kernel_size)``.
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and there would be an extra dimension at the beginning of the weight's
-        shape. Default: 1
-    :param bias: whether to add a bias onto the result of convolution. Default:
-        True
-    :param conv_mode: Supports `cross_correlation`. Default:
-        `cross_correlation`
-    :param compute_mode: When set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If kernel_size is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size)``.
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and there would be an extra dimension at the beginning of the weight's
+            shape. Default: 1
+        bias: whether to add a bias onto the result of convolution. Default: True
+        conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
+        compute_mode: When set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
 
-    .. note::
-
-       * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
-         if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
-
+    Note:
+        * ``weight`` usually has shape ``(out_channels, in_channels, height, width)`` ,
+          if groups is not 1, shape will be ``(groups, out_channels // groups, in_channels // groups, height, width)``
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
     def __init__(
@@ -877,8 +854,7 @@ class DeformableConv2d(_ConvNd):
 
 
 class ConvTranspose3d(_ConvNd):
-    r"""
-    Applies a 3D transposed convolution over an input tensor.
+    r"""Applies a 3D transposed convolution over an input tensor.
 
     Only support the case that groups = 1 and conv_mode = "cross_correlation".
 
@@ -889,23 +865,21 @@ class ConvTranspose3d(_ConvNd):
     works the opposite way, transforming a smaller input to a larger output while
     preserving the connectivity pattern.
 
-    :param in_channels: number of input channels.
-    :param out_channels: number of output channels.
-    :param kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
-        an :class:`int`, the actual kernel size would be
-        ``(kernel_size, kernel_size, kernel_size)``.
-    :param stride: stride of the 3D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on all sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 3D convolution operation. Default: 1
-    :param bias: wether to add a bias onto the result of convolution. Default:
-        True
+    Args:
+        in_channels: number of input channels.
+        out_channels: number of output channels.
+        kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
+            an :class:`int`, the actual kernel size would be
+            ``(kernel_size, kernel_size, kernel_size)``.
+        stride: stride of the 3D convolution operation. Default: 1
+        padding: size of the paddings added to the input on all sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 3D convolution operation. Default: 1
+        bias: wether to add a bias onto the result of convolution. Default: True
 
-    .. note::
-
-       * ``weight`` usually has shape ``(in_channels, out_channels, depth, height, width)`` .
-       * ``bias`` usually has shape ``(1, out_channels, *1)``
-
+    Note:
+        * ``weight`` usually has shape ``(in_channels, out_channels, depth, height, width)`` .
+        * ``bias`` usually has shape ``(1, out_channels, *1)``
     """
 
     def __init__(

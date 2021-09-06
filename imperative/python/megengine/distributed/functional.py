@@ -50,7 +50,7 @@ def _backend():
 
 
 def collective_comm(inp, mode, group, device):
-    """Helper function for applying collective communication functions."""
+    r"""Helper function for applying collective communication functions."""
     assert isinstance(group, Group)
     if group is None:
         return inp
@@ -158,8 +158,7 @@ class _ReduceSum(Function):
 def reduce_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
-    r"""
-    Reduce tensor data across the specified group by sum.
+    r"""Reduce tensor data across the specified group by sum.
     Only root process will receive the final result.
 
     Args:
@@ -176,22 +175,20 @@ def reduce_sum(
         Reduced tensor if in root process, None in other processes.
 
     Examples:
+        .. code-block::
 
-    .. code-block::
+           input = Tensor([rank])
+           # Rank 0 # input: Tensor([0])
+           # Rank 1 # input: Tensor([1])
+           output = reduce_sum(input)
+           # Rank 0 # output: Tensor([1])
+           # Rank 1 # output: None
 
-        input = Tensor([rank])
-        # Rank 0 # input: Tensor([0])
-        # Rank 1 # input: Tensor([1])
-        output = reduce_sum(input)
-        # Rank 0 # output: Tensor([1])
-        # Rank 1 # output: None
-
-        input = Tensor([rank])
-        group = Group([1, 0]) # first rank is root
-        output = reduce_sum(input, group)
-        # Rank 0 # output: None
-        # Rank 1 # output: Tensor([1])
-
+           input = Tensor([rank])
+           group = Group([1, 0]) # first rank is root
+           output = reduce_sum(input, group)
+           # Rank 0 # output: None
+           # Rank 1 # output: Tensor([1])
     """
     op = _ReduceSum(group, device)
     (out,) = apply(op, inp)
@@ -222,8 +219,7 @@ class _Broadcast(Function):
 def broadcast(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
-    r"""
-    Broadcast tensor data from root process to others.
+    r"""Broadcast tensor data from root process to others.
 
     Args:
         inp: Input tensor.
@@ -240,21 +236,20 @@ def broadcast(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([rank])
-        # Rank 0 # input: Tensor([0])
-        # Rank 1 # input: Tensor([1])
-        output = broadcast(input)
-        # Rank 0 # output: Tensor([0])
-        # Rank 1 # output: Tensor([0])
+           input = Tensor([rank])
+           # Rank 0 # input: Tensor([0])
+           # Rank 1 # input: Tensor([1])
+           output = broadcast(input)
+           # Rank 0 # output: Tensor([0])
+           # Rank 1 # output: Tensor([0])
 
-        input = Tensor([rank])
-        group = Group([1, 0]) # first rank is root
-        output = broadcast(input, group)
-        # Rank 0 # output: Tensor([1])
-        # Rank 1 # output: Tensor([1])
-
+           input = Tensor([rank])
+           group = Group([1, 0]) # first rank is root
+           output = broadcast(input, group)
+           # Rank 0 # output: Tensor([1])
+           # Rank 1 # output: Tensor([1])
     """
     shape, dtype = _bcast_shape_dtype(group, inp)
     if group.rank != 0:
@@ -278,8 +273,7 @@ def _bcast_param(
 def all_gather(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None, axis=0,
 ) -> Tensor:
-    r"""
-    Gather tensors across the specified group and concat them at first dimension.
+    r"""Gather tensors across the specified group and concat them at first dimension.
 
     Args:
         inp: Input tensor.
@@ -298,21 +292,20 @@ def all_gather(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([rank])
-        # Rank 0 # input: Tensor([0])
-        # Rank 1 # input: Tensor([1])
-        output = all_gather(input)
-        # Rank 0 # output: Tensor([0 1])
-        # Rank 1 # output: Tensor([0 1])
+           input = Tensor([rank])
+           # Rank 0 # input: Tensor([0])
+           # Rank 1 # input: Tensor([1])
+           output = all_gather(input)
+           # Rank 0 # output: Tensor([0 1])
+           # Rank 1 # output: Tensor([0 1])
 
-        input = Tensor([rank])
-        group = Group([1, 0])
-        output = all_gather(input, group)
-        # Rank 0 # output: Tensor([1 0])
-        # Rank 1 # output: Tensor([1 0])
-
+           input = Tensor([rank])
+           group = Group([1, 0])
+           output = all_gather(input, group)
+           # Rank 0 # output: Tensor([1 0])
+           # Rank 1 # output: Tensor([1 0])
     """
     mode = CollectiveComm.Mode.ALL_GATHER
     out = collective_comm(inp, mode, group, device)
@@ -338,8 +331,7 @@ def all_gather(
 def reduce_scatter_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None, axis=0
 ) -> Tensor:
-    r"""
-    Reduce tensors across the specified group by sum and split them at first dimension.
+    r"""Reduce tensors across the specified group by sum and split them at first dimension.
 
     Args:
         inp: Input tensor.
@@ -358,21 +350,20 @@ def reduce_scatter_sum(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([0 1])
-        # Rank 0 # input: Tensor([0 1])
-        # Rank 1 # input: Tensor([0 1])
-        output = reduce_scatter_sum(input)
-        # Rank 0 # output: Tensor([0])
-        # Rank 1 # output: Tensor([2])
+           input = Tensor([0 1])
+           # Rank 0 # input: Tensor([0 1])
+           # Rank 1 # input: Tensor([0 1])
+           output = reduce_scatter_sum(input)
+           # Rank 0 # output: Tensor([0])
+           # Rank 1 # output: Tensor([2])
 
-        input = Tensor([0 1])
-        group = Group([1, 0])
-        output = reduce_scatter_sum(input, group)
-        # Rank 0 # output: Tensor([2])
-        # Rank 1 # output: Tensor([0])
-
+           input = Tensor([0 1])
+           group = Group([1, 0])
+           output = reduce_scatter_sum(input, group)
+           # Rank 0 # output: Tensor([2])
+           # Rank 1 # output: Tensor([0])
     """
     group_size = group.size if group is not None else 1
     assert (
@@ -398,8 +389,7 @@ def reduce_scatter_sum(
 def all_reduce_sum(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
-    r"""
-    Reduce tensors across the specified group by sum.
+    r"""Reduce tensors across the specified group by sum.
 
     Args:
         inp: Input tensor.
@@ -416,15 +406,14 @@ def all_reduce_sum(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor(rank)
-        # Rank 0 # input: Tensor(0)
-        # Rank 1 # input: Tensor(1)
-        output = all_reduce_sum(input)
-        # Rank 0 # output: Tensor(1)
-        # Rank 1 # output: Tensor(1)
-
+           input = Tensor(rank)
+           # Rank 0 # input: Tensor(0)
+           # Rank 1 # input: Tensor(1)
+           output = all_reduce_sum(input)
+           # Rank 0 # output: Tensor(1)
+           # Rank 1 # output: Tensor(1)
     """
     mode = CollectiveComm.Mode.ALL_REDUCE_SUM
     return collective_comm(inp, mode, group, device)
@@ -433,8 +422,7 @@ def all_reduce_sum(
 def all_reduce_max(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
-    r"""
-    Reduce tensors across the specified group by max.
+    r"""Reduce tensors across the specified group by max.
 
     Args:
         inp: Input tensor.
@@ -451,15 +439,14 @@ def all_reduce_max(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor(rank)
-        # Rank 0 # input: Tensor(0)
-        # Rank 1 # input: Tensor(1)
-        output = all_reduce_max(input)
-        # Rank 0 # output: Tensor(1)
-        # Rank 1 # output: Tensor(1)
-
+           input = Tensor(rank)
+           # Rank 0 # input: Tensor(0)
+           # Rank 1 # input: Tensor(1)
+           output = all_reduce_max(input)
+           # Rank 0 # output: Tensor(1)
+           # Rank 1 # output: Tensor(1)
     """
     mode = CollectiveComm.Mode.ALL_REDUCE_MAX
     return collective_comm(inp, mode, group, device)
@@ -468,8 +455,7 @@ def all_reduce_max(
 def all_reduce_min(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None,
 ) -> Tensor:
-    r"""
-    Reduce tensors across the specified group by min.
+    r"""Reduce tensors across the specified group by min.
 
     Args:
         inp: Input tensor.
@@ -486,15 +472,14 @@ def all_reduce_min(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor(rank)
-        # Rank 0 # input: Tensor(0)
-        # Rank 1 # input: Tensor(1)
-        output = all_reduce_min(input)
-        # Rank 0 # output: Tensor(0)
-        # Rank 1 # output: Tensor(0)
-
+           input = Tensor(rank)
+           # Rank 0 # input: Tensor(0)
+           # Rank 1 # input: Tensor(1)
+           output = all_reduce_min(input)
+           # Rank 0 # output: Tensor(0)
+           # Rank 1 # output: Tensor(0)
     """
     mode = CollectiveComm.Mode.ALL_REDUCE_MIN
     return collective_comm(inp, mode, group, device)
@@ -520,8 +505,7 @@ class _Gather(Function):
 def gather(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None, axis=0,
 ) -> Tensor:
-    r"""
-    Gather tensors across the specified group.
+    r"""Gather tensors across the specified group.
     Only root process will receive the final result.
 
     Args:
@@ -534,27 +518,23 @@ def gather(
             Specify "gpu0:1" to execute this operator on diffrent cuda stream,
             1 is stream id, and default stream id is 0.
         axis: The concat axis for collective_comm result
-            The default axis is 0
-    Returns:
-        Result tensor if in root process, None if in other process
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([rank])
-        # Rank 0 # input: Tensor([0])
-        # Rank 1 # input: Tensor([1])
-        output = gather(input)
-        # Rank 0 # output: Tensor([0 1])
-        # Rank 1 # output: None
+           input = Tensor([rank])
+           # Rank 0 # input: Tensor([0])
+           # Rank 1 # input: Tensor([1])
+           output = gather(input)
+           # Rank 0 # output: Tensor([0 1])
+           # Rank 1 # output: None
 
-        input = Tensor([rank])
-        group = Group([1, 0]) # first rank is root
-        output = gather(input, group)
-        # Rank 0 # output: None
-        # Rank 1 # output: Tensor([1 0])
-
+           input = Tensor([rank])
+           group = Group([1, 0]) # first rank is root
+           output = gather(input, group)
+           # Rank 0 # output: None
+           # Rank 1 # output: Tensor([1 0])
     """
     assert (
         axis < inp.ndim
@@ -607,8 +587,7 @@ class _Scatter(Function):
 def scatter(
     inp: Tensor, group: Optional[Group] = WORLD, device: Optional[str] = None, axis=0,
 ) -> Tensor:
-    r"""
-    Split tensor in root process at first dimension.
+    r"""Split tensor in root process at first dimension.
 
     Args:
         inp: Input tensor.
@@ -627,21 +606,20 @@ def scatter(
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([0 1]) + rank*2
-        # Rank 0 # input: Tensor([0 1])
-        # Rank 1 # input: Tensor([2 3])
-        output = scatter(input)
-        # Rank 0 # output: Tensor([0])
-        # Rank 1 # output: Tensor([1])
+           input = Tensor([0 1]) + rank*2
+           # Rank 0 # input: Tensor([0 1])
+           # Rank 1 # input: Tensor([2 3])
+           output = scatter(input)
+           # Rank 0 # output: Tensor([0])
+           # Rank 1 # output: Tensor([1])
 
-        input = Tensor([0 1]) + rank*2
-        group = Group([1, 0]) # first rank is root
-        output = scatter(input, group)
-        # Rank 0 # output: Tensor([3])
-        # Rank 1 # output: Tensor([2])
-
+           input = Tensor([0 1]) + rank*2
+           group = Group([1, 0]) # first rank is root
+           output = scatter(input, group)
+           # Rank 0 # output: Tensor([3])
+           # Rank 1 # output: Tensor([2])
     """
     shape, dtype = _bcast_shape_dtype(group, inp)
     if group.rank != 0:
@@ -680,8 +658,7 @@ def all_to_all(
     split_axis: int = 0,
     concat_axis: int = 0,
 ) -> Tensor:
-    r"""
-    Each process scatter input tensor to all processes and return gathered tensor.
+    r"""Each process scatter input tensor to all processes and return gathered tensor.
 
     Args:
         inp: Input tensor.
@@ -694,29 +671,26 @@ def all_to_all(
             1 is stream id, and default stream id is 0.
         split_axis: The axis that collectivecomm will split data
             the default axis is 0
-        split_axis: The axis that collectivecomm will concat data
-            the default axis is 0
 
     Returns:
         Result tensor.
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        input = Tensor([0 1]) + rank*2
-        # Rank 0 # input: Tensor([0 1])
-        # Rank 1 # input: Tensor([2 3])
-        output = all_to_all(input)
-        # Rank 0 # output: Tensor([0 2])
-        # Rank 1 # output: Tensor([1 3])
+           input = Tensor([0 1]) + rank*2
+           # Rank 0 # input: Tensor([0 1])
+           # Rank 1 # input: Tensor([2 3])
+           output = all_to_all(input)
+           # Rank 0 # output: Tensor([0 2])
+           # Rank 1 # output: Tensor([1 3])
 
-        input = Tensor([0 1]) + rank*2
-        group = Group([1, 0])
-        output = all_to_all(input, group)
-        # Rank 0 # output: Tensor([0 3])
-        # Rank 1 # output: Tensor([2 1])
-
+           input = Tensor([0 1]) + rank*2
+           group = Group([1, 0])
+           output = all_to_all(input, group)
+           # Rank 0 # output: Tensor([0 3])
+           # Rank 1 # output: Tensor([2 1])
     """
     group_size = group.size if group is not None else 1
     assert (
@@ -805,8 +779,7 @@ class _RemoteRecv(Function):
 
 
 def remote_send(inp: Tensor, dest_rank: int):
-    r"""
-    Send tensor to another process.
+    r"""Send tensor to another process.
 
     Args:
         inp: Tensor to send.
@@ -816,17 +789,15 @@ def remote_send(inp: Tensor, dest_rank: int):
         None.
 
     Examples:
+        .. code-block::
 
-    .. code-block::
-
-        if rank == 0:
-            data = mge.tensor(1)
-            # Tensor(1)
-            F.distributed.remote_send(data, 1) # return None
-        else:
-            data = F.distributed.remote_recv(0)
-            # Tensor(1)
-
+           if rank == 0:
+               data = mge.tensor(1)
+               # Tensor(1)
+               F.distributed.remote_send(data, 1) # return None
+           else:
+               data = F.distributed.remote_recv(0)
+               # Tensor(1)
     """
     group = _SendRecvGroup(get_rank(), dest_rank)
     _bcast_shape_dtype(group, inp)
@@ -844,8 +815,7 @@ def remote_send(inp: Tensor, dest_rank: int):
 
 
 def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor:
-    r"""
-    Receive a tensor from another process.
+    r"""Receive a tensor from another process.
 
     Args:
         src_rank: Rank of source process.
@@ -862,14 +832,13 @@ def remote_recv(src_rank: int, device: Optional[str] = None, inp=None) -> Tensor
 
     .. code-block::
 
-        if rank == 0:
-            data = mge.tensor(1)
-            # Tensor(1)
-            F.distributed.remote_send(data, 1) # return None
-        else:
-            data = F.distributed.remote_recv(0)
-            # Tensor(1)
-
+       if rank == 0:
+           data = mge.tensor(1)
+           # Tensor(1)
+           F.distributed.remote_send(data, 1) # return None
+       else:
+           data = F.distributed.remote_recv(0)
+           # Tensor(1)
     """
     group = _SendRecvGroup(src_rank, get_rank())
     shape, dtype = _bcast_shape_dtype(group, None)

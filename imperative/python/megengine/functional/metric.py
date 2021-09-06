@@ -19,33 +19,16 @@ from .tensor import broadcast_to, transpose
 def topk_accuracy(
     logits: Tensor, target: Tensor, topk: Union[int, Iterable[int]] = 1
 ) -> Union[Tensor, Iterable[Tensor]]:
-    r"""
-    Calculates the classification accuracy given predicted logits and ground-truth labels.
+    r"""Calculates the classification accuracy given predicted logits and ground-truth labels.
 
-    :param logits: model predictions of shape `[batch_size, num_classes]`,
-        representing the probability (likelyhood) of each class.
-    :param target: ground-truth labels, 1d tensor of int32.
-    :param topk: specifies the topk values, could be an int or tuple of ints. Default: 1
-    :return: tensor(s) of classification accuracy between 0.0 and 1.0.
+    Args:
+        logits: model predictions of shape `[batch_size, num_classes]`,
+            representing the probability (likelyhood) of each class.
+        target: ground-truth labels, 1d tensor of int32.
+        topk: specifies the topk values, could be an int or tuple of ints. Default: 1
 
-    Examples:
-
-    .. testcode::
-
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-
-        logits = tensor(np.arange(80, dtype=np.int32).reshape(8,10))
-        target = tensor(np.arange(8, dtype=np.int32))
-        top1, top5 = F.metric.topk_accuracy(logits, target, (1, 5))
-        print(top1.numpy(), top5.numpy())
-
-    Outputs:
-
-    .. testoutput::
-
-        0.0 0.375
+    Returns:
+        tensor(s) of classification accuracy between 0.0 and 1.0.
     """
     if isinstance(topk, int):
         topk = (topk,)

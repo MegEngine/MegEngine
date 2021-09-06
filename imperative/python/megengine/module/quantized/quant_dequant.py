@@ -10,8 +10,7 @@ from .module import QuantizedModule
 
 
 class QuantStub(QuantizedModule):
-    r"""
-    Quantized version of :class:`~.qat.QuantStub`,
+    r"""Quantized version of :class:`~.qat.QuantStub`,
     will convert input to quantized dtype.
     """
 
@@ -24,16 +23,11 @@ class QuantStub(QuantizedModule):
 
     @classmethod
     def from_qat_module(cls, qat_module: QAT.QuantStub):
-        r"""
-        Return a :class:`~.QuantizedModule` instance converted from a
-        :class:`~.QATModule` instance.
-        """
         return cls(qat_module.get_activation_dtype(), name=qat_module.name)
 
 
 class DequantStub(QuantizedModule):
-    r"""
-    Quantized version of :class:`~.qat.DequantStub`,
+    r"""Quantized version of :class:`~.qat.DequantStub`,
     will restore quantized input to float32 dtype.
     """
 
@@ -42,8 +36,4 @@ class DequantStub(QuantizedModule):
 
     @classmethod
     def from_qat_module(cls, qat_module: QAT.DequantStub):
-        r"""
-        Return a :class:`~.QuantizedModule` instance converted from a
-        :class:`~.QATModule` instance.
-        """
         return cls(name=qat_module.name)

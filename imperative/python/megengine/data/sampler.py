@@ -17,9 +17,7 @@ import megengine.distributed as dist
 
 
 class Sampler(ABC):
-    r"""
-    An abstract base class for all Sampler
-    """
+    r"""An abstract base class for all Sampler"""
 
     @abstractmethod
     def __init__(self):
@@ -27,19 +25,19 @@ class Sampler(ABC):
 
 
 class MapSampler(Sampler):
-    r"""
-    Sampler for map dataset.
+    r"""Sampler for map dataset.
 
-    :param dataset: dataset to sample from.
-    :param batch_size: batch size for batch method.
-    :param drop_last: set ``True`` to drop the last incomplete batch,
-        if the dataset size is not divisible by the batch size. If ``False`` and 
-        the size of dataset is not divisible by the batch_size, then the last batch will
-        be smaller. Default: False
-    :param num_samples: number of samples assigned to one rank.
-    :param world_size: number of ranks.
-    :param rank: rank id, non-negative interger within 0 and ``world_size``.
-    :param seed: seed for random operators.
+    Args:
+        dataset: dataset to sample from.
+        batch_size: batch size for batch method.
+        drop_last: set ``True`` to drop the last incomplete batch,
+            if the dataset size is not divisible by the batch size. If ``False`` and
+            the size of dataset is not divisible by the batch_size, then the last batch will
+            be smaller. Default: False
+        num_samples: number of samples assigned to one rank.
+        world_size: number of ranks.
+        rank: rank id, non-negative interger within 0 and ``world_size``.
+        seed: seed for random operators.
     """
 
     def __init__(
@@ -106,14 +104,11 @@ class MapSampler(Sampler):
             return int(math.ceil(self.num_samples / self.batch_size))
 
     def sample(self):
-        """
-        Return a list contains all sample indices.
-        """
+        r"""Return a list contains all sample indices."""
         raise NotImplementedError
 
     def scatter(self, indices) -> List:
-        r"""
-        Scatter method is used for splitting indices into subset, each subset
+        r"""Scatter method is used for splitting indices into subset, each subset
         will be assigned to a rank. Indices are evenly splitted by default.
         If customized indices assignment method is needed, please rewrite this method.
         """
@@ -130,9 +125,7 @@ class MapSampler(Sampler):
         return indices
 
     def batch(self) -> Iterator[List[Any]]:
-        r"""
-        Batch method provides a batch indices generator.
-        """
+        r"""Batch method provides a batch indices generator."""
         indices = list(self.sample())
 
         # user might pass the world_size parameter without dist,
@@ -150,18 +143,15 @@ class MapSampler(Sampler):
 
 
 class StreamSampler(Sampler):
-    r"""
-    Sampler for stream dataset.
+    r"""Sampler for stream dataset.
 
-    .. warning::
-
+    Warning:
         In the case of multiple machines, sampler should ensure that each worker gets
         different data. But this class cannot do it yet, please build your own
         dataset and sampler to achieve this goal.
 
     Usually, :meth:`~.StreamDataset.__iter__` can return different iterator by
     ``rank = dist.get_rank()``. So that they will get different data.
-
     """
 
     def __init__(self, batch_size=1):
@@ -175,18 +165,18 @@ class StreamSampler(Sampler):
 
 
 class SequentialSampler(MapSampler):
-    r"""
-    Sample elements sequentially.
+    r"""Sample elements sequentially.
 
-    :param dataset: dataset to sample from.
-    :param batch_size: batch size for batch method.
-    :param drop_last: set ``True`` to drop the last incomplete batch,
-        if the dataset size is not divisible by the batch size. If ``False`` and 
-        the size of dataset is not divisible by the batch_size, then the last batch will
-        be smaller. Default: False
-    :param indices: indice of samples.
-    :param world_size: number of ranks.
-    :param rank: rank id, non-negative interger within 0 and ``world_size``.
+    Args:
+        dataset: dataset to sample from.
+        batch_size: batch size for batch method.
+        drop_last: set ``True`` to drop the last incomplete batch,
+            if the dataset size is not divisible by the batch size. If ``False`` and
+            the size of dataset is not divisible by the batch_size, then the last batch will
+            be smaller. Default: False
+        indices: indice of samples.
+        world_size: number of ranks.
+        rank: rank id, non-negative interger within 0 and ``world_size``.
     """
 
     def __init__(
@@ -207,9 +197,7 @@ class SequentialSampler(MapSampler):
         self.indices = indices
 
     def sample(self) -> Iterator[Any]:
-        r"""
-        Return a generator.
-        """
+        r"""Return a generator."""
         if self.indices is None:
             return iter(range(len(self.dataset)))
         else:
@@ -217,19 +205,19 @@ class SequentialSampler(MapSampler):
 
 
 class RandomSampler(MapSampler):
-    r"""
-    Sample elements randomly without replacement.
+    r"""Sample elements randomly without replacement.
 
-    :param dataset: dataset to sample from.
-    :param batch_size: batch size for batch method.
-    :param drop_last: set ``True`` to drop the last incomplete batch,
-        if the dataset size is not divisible by the batch size. If ``False`` and 
-        the size of dataset is not divisible by the batch_size, then the last batch will
-        be smaller. Default: False
-    :param indices: indice of samples.
-    :param world_size: number of ranks.
-    :param rank: rank id, non-negative interger within 0 and ``world_size``.
-    :param seed: seed for random operators.
+    Args:
+        dataset: dataset to sample from.
+        batch_size: batch size for batch method.
+        drop_last: set ``True`` to drop the last incomplete batch,
+            if the dataset size is not divisible by the batch size. If ``False`` and
+            the size of dataset is not divisible by the batch_size, then the last batch will
+            be smaller. Default: False
+        indices: indice of samples.
+        world_size: number of ranks.
+        rank: rank id, non-negative interger within 0 and ``world_size``.
+        seed: seed for random operators.
     """
 
     def __init__(
@@ -258,20 +246,20 @@ class RandomSampler(MapSampler):
 
 
 class ReplacementSampler(MapSampler):
-    r"""
-    Sample elements randomly with replacement.
+    r"""Sample elements randomly with replacement.
 
-    :param dataset: dataset to sample from.
-    :param batch_size: batch size for batch method.
-    :param drop_last: set ``True`` to drop the last incomplete batch,
-        if the dataset size is not divisible by the batch size. If ``False`` and 
-        the size of dataset is not divisible by the batch_size, then the last batch will
-        be smaller. Default: False
-    :param num_samples: number of samples assigned to one rank.
-    :param weights: weights for sampling indices, it could be unnormalized weights.
-    :param world_size: number of ranks.
-    :param rank: rank id, non-negative interger within 0 and ``world_size``.
-    :param seed: seed for random operators.
+    Args:
+        dataset: dataset to sample from.
+        batch_size: batch size for batch method.
+        drop_last: set ``True`` to drop the last incomplete batch,
+            if the dataset size is not divisible by the batch size. If ``False`` and
+            the size of dataset is not divisible by the batch_size, then the last batch will
+            be smaller. Default: False
+        num_samples: number of samples assigned to one rank.
+        weights: weights for sampling indices, it could be unnormalized weights.
+        world_size: number of ranks.
+        rank: rank id, non-negative interger within 0 and ``world_size``.
+        seed: seed for random operators.
     """
 
     def __init__(

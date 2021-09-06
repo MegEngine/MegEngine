@@ -59,15 +59,13 @@ class _PlasmaStoreManager:
 
 class PlasmaShmQueue:
     def __init__(self, maxsize: int = 0):
-        r"""
-        Use pyarrow in-memory plasma store to implement shared memory queue.
-
+        r"""Use pyarrow in-memory plasma store to implement shared memory queue.
         Compared to native `multiprocess.Queue`, `PlasmaShmQueue` avoid pickle/unpickle
         and communication overhead, leading to better performance in multi-process
         application.
 
-        :type maxsize: int
-        :param maxsize: maximum size of the queue, `None` means no limit. (default: ``None``)
+        Args:
+            maxsize: maximum size of the queue, `None` means no limit. (default: ``None``)
         """
 
         # Lazy start the plasma store manager

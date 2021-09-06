@@ -26,9 +26,7 @@ __all__ = [
 
 
 def _reduce_output(loss_fn):
-    r"""
-    Wrapper to apply canonical reductions to loss outputs.
-    """
+    r"""Wrapper to apply canonical reductions to loss outputs."""
 
     @functools.wraps(loss_fn)
     def reduced_loss_fn(*args, reduction="mean", **kwargs):
@@ -45,13 +43,14 @@ def _reduce_output(loss_fn):
 
 @_reduce_output
 def l1_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
-    r"""
-    Calculates the mean absolute error (MAE) between
+    r"""Calculates the mean absolute error (MAE) between
     each element in the pred :math:`x` and label :math:`y`.
 
     The mean absolute error can be described as:
 
-    .. math:: \ell(x,y) = mean\left(L \right)
+    .. math::
+
+       \ell(x,y) = mean\left(L \right)
 
     where
 
@@ -63,30 +62,32 @@ def l1_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
     :math:`x` and :math:`y` are tensors of arbitrary shapes with a total
     of :math:`N` elements each. :math:`N` is the batch size.
 
-    :param pred: predicted result from model.
-    :param label: ground truth to compare.
-    :param reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
-    :return: loss value.
+    Args:
+        pred: predicted result from model.
+        label: ground truth to compare.
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+
+    Returns:
+        loss value.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.functional as F
+            import numpy as np
+            import megengine as mge
+            import megengine.functional as F
 
-        ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
-        tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-        loss = F.nn.l1_loss(ipt, tgt)
-        print(loss.numpy())
+            ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
+            tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
+            loss = F.nn.l1_loss(ipt, tgt)
+            print(loss.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        2.75
-
+            2.75
     """
     diff = pred - label
     return abs(diff)
@@ -94,53 +95,56 @@ def l1_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
 
 @_reduce_output
 def square_loss(pred: Tensor, label: Tensor, reduction: str = "mean") -> Tensor:
-    r"""
-    Calculates the mean squared error (squared L2 norm) between
+    r"""Calculates the mean squared error (squared L2 norm) between
     each element in the pred :math:`x` and label :math:`y`.
 
     The mean squared error can be described as:
 
-    .. math:: \ell(x, y) = mean\left( L \right)
+    .. math::
+
+       \ell(x, y) = mean\left( L \right)
 
     where
 
     .. math::
 
-        L = \{l_1,\dots,l_N\}, \quad
-        l_n = \left( x_n - y_n \right)^2,
+       L = \{l_1,\dots,l_N\}, \quad
+       l_n = \left( x_n - y_n \right)^2,
 
     :math:`x` and :math:`y` are tensors of arbitrary shapes with a total
     of :math:`N` elements each. :math:`N` is the batch size.
 
-    :param pred: predicted result from model.
-    :param label: ground truth to compare.
-    :param reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
-    :return: loss value.
+    Args:
+        pred: predicted result from model.
+        label: ground truth to compare.
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+
+    Returns:
+        loss value.
 
     Shape:
-        - pred: :math:`(N, *)` where :math:`*` means any number of additional
-          dimensions.
-        - label: :math:`(N, *)`. Same shape as ``pred``.
+      * pred: :math:`(N, *)` where :math:`*` means any number of additional
+        dimensions.
+      * label: :math:`(N, *)`. Same shape as ``pred``.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.functional as F
+            import numpy as np
+            import megengine as mge
+            import megengine.functional as F
 
-        ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
-        tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
-        loss = F.nn.square_loss(ipt, tgt)
-        print(loss.numpy())
+            ipt = mge.tensor(np.array([3, 3, 3, 3]).astype(np.float32))
+            tgt = mge.tensor(np.array([2, 8, 6, 1]).astype(np.float32))
+            loss = F.nn.square_loss(ipt, tgt)
+            print(loss.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        9.75
-
+            9.75
     """
     diff = pred - label
     return diff ** 2
@@ -155,8 +159,7 @@ def cross_entropy(
     label_smooth: float = 0,
     reduction: str = "mean",
 ) -> Tensor:
-    r"""
-    Computes the multi-class cross entropy loss (using logits by default).
+    r"""Computes the multi-class cross entropy loss (using logits by default).
 
     By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
     class probabilities are given by softmax.
@@ -170,35 +173,37 @@ def cross_entropy(
     where :math:`y^{LS}` and :math:`y` are new label distribution and origin label distribution respectively.
     k is the index of label distribution. :math:`\alpha` is ``label_smooth`` and :math:`K` is the number of classes.
 
-    :param pred: input tensor representing the predicted probability.
-    :param label: input tensor representing the classification label.
-    :param axis: an axis along which softmax will be applied. Default: 1
-    :param with_logits: whether to apply softmax first. Default: True
-    :param label_smooth: a label smoothing of parameter that can re-distribute target distribution. Default: 0
-    :param reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
-    :return: loss value.
+    Args:
+        pred: input tensor representing the predicted probability.
+        label: input tensor representing the classification label.
+        axis: an axis along which softmax will be applied. Default: 1
+        with_logits: whether to apply softmax first. Default: True
+        label_smooth: a label smoothing of parameter that can re-distribute target distribution. Default: 0
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+
+    Returns:
+        loss value.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        data_shape = (1, 2)
-        label_shape = (1, )
-        pred = tensor(np.array([0, 0], dtype=np.float32).reshape(data_shape))
-        label = tensor(np.ones(label_shape, dtype=np.int32))
-        loss = F.nn.cross_entropy(pred, label)
-        print(loss.numpy().round(decimals=4))
+            data_shape = (1, 2)
+            label_shape = (1, )
+            pred = tensor(np.array([0, 0], dtype=np.float32).reshape(data_shape))
+            label = tensor(np.ones(label_shape, dtype=np.int32))
+            loss = F.nn.cross_entropy(pred, label)
+            print(loss.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        0.6931
-
+            0.6931
     """
     n0 = pred.ndim
     n1 = label.ndim
@@ -226,37 +231,38 @@ def cross_entropy(
 def binary_cross_entropy(
     pred: Tensor, label: Tensor, with_logits: bool = True, reduction: str = "mean",
 ) -> Tensor:
-    r"""
-    Computes the binary cross entropy loss (using logits by default).
+    r"""Computes the binary cross entropy loss (using logits by default).
 
     By default(``with_logitis`` is True), ``pred`` is assumed to be logits,
     class probabilities are given by sigmoid.
 
-    :param pred: `(N, *)`, where `*` means any number of additional dimensions.
-    :param label: `(N, *)`, same shape as the input.
-    :param with_logits: bool, whether to apply sigmoid first. Default: True
-    :param reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
-    :return: loss value.
+    Args:
+        pred: `(N, *)`, where `*` means any number of additional dimensions.
+        label: `(N, *)`, same shape as the input.
+        with_logits: bool, whether to apply sigmoid first. Default: True
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+
+    Returns:
+        loss value.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        pred = tensor(np.array([0, 0], dtype=np.float32).reshape(1, 2))
-        label = tensor(np.ones((1, 2), dtype=np.float32))
-        loss = F.nn.binary_cross_entropy(pred, label)
-        print(loss.numpy().round(decimals=4))
+            pred = tensor(np.array([0, 0], dtype=np.float32).reshape(1, 2))
+            label = tensor(np.ones((1, 2), dtype=np.float32))
+            loss = F.nn.binary_cross_entropy(pred, label)
+            print(loss.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        0.6931
-
+            0.6931
     """
     if not with_logits:
         return -(label * log(pred) + (1 - label) * log(1 - pred))
@@ -269,37 +275,38 @@ def binary_cross_entropy(
 def hinge_loss(
     pred: Tensor, label: Tensor, norm: str = "L1", reduction: str = "mean"
 ) -> Tensor:
-    r"""
-    Caculates the hinge loss which is often used in SVM.
+    r"""Caculates the hinge loss which is often used in SVM.
 
     The hinge loss can be described as:
 
     .. math:: loss(x, y) = \frac{1}{N}\sum_i\sum_j(max(0, 1 - x_{ij}*y_{ij}))
 
-    :param pred: input tensor representing the predicted probability, shape is `(N, C)`.
-    :param label: input tensor representing the binary classification label, shape is `(N, C)`.
-    :param norm: specify the norm to caculate the loss, should be "L1" or "L2".
-    :param reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
-    :return: loss value.
+    Args:
+        pred: input tensor representing the predicted probability, shape is `(N, C)`.
+        label: input tensor representing the binary classification label, shape is `(N, C)`.
+        norm: specify the norm to caculate the loss, should be "L1" or "L2".
+        reduction: the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default: 'mean'
+
+    Returns:
+        loss value.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        from megengine import tensor
-        import megengine.functional as F
+            from megengine import tensor
+            import megengine.functional as F
 
-        pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]], dtype="float32")
-        label = tensor([[1, -1, -1], [-1, 1, 1]], dtype="float32")
-        loss = F.nn.hinge_loss(pred, label)
-        print(loss.numpy())
+            pred = tensor([[0.5, -0.5, 0.1], [-0.6, 0.7, 0.8]], dtype="float32")
+            label = tensor([[1, -1, -1], [-1, 1, 1]], dtype="float32")
+            loss = F.nn.hinge_loss(pred, label)
+            print(loss.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        1.5
-
+            1.5
     """
     norm = norm.upper()
     assert norm in ["L1", "L2"], "norm must be L1 or L2"

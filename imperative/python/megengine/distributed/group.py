@@ -36,15 +36,13 @@ _sd = None
 
 
 class Group:
-    r"""
-    Include ranked nodes running collective communication (See :mod:`~.functional.distributed`).
+    r"""Include ranked nodes running collective communication (See :mod:`~.functional.distributed`).
 
-    By default collectives operate on the default group (also called ``WORLD``) 
-    and require all processes to enter the distributed function call. 
+    By default collectives operate on the default group (also called ``WORLD``)
+    and require all processes to enter the distributed function call.
 
-    :param proc_ranks: rank list of the group, the first one is root rank.
-
-    
+    Args:
+        proc_ranks: rank list of the group, the first one is root rank.
     """
 
     def __init__(self, proc_ranks):
@@ -116,15 +114,15 @@ def init_process_group(
     backend: Optional[str] = "auto",
     device_type: str = "xpu",
 ) -> None:
-    """
-    Initialize the distributed process group and specify the device used in the current process
+    r"""Initialize the distributed process group and specify the device used in the current process
 
-    :param master_ip: ip address of the master node.
-    :param port: port available for all processes to communicate.
-    :param world_size: total number of processes participating in the job.
-    :param rank: rank of the current process.
-    :param device: the GPU device id to bind this process to.
-    :param backend: communicator backend, currently support 'nccl' and 'shm'.
+    Args:
+        master_ip: ip address of the master node.
+        port: port available for all processes to communicate.
+        world_size: total number of processes participating in the job.
+        rank: rank of the current process.
+        device: the GPU device id to bind this process to.
+        backend: communicator backend, currently support 'nccl' and 'shm'.
     """
     physical_device_type = what_is_xpu() if device_type == "xpu" else device_type
     if not isinstance(master_ip, str):
@@ -180,10 +178,10 @@ def _set_machine_ranks(ranks) -> None:
 
 @contextmanager
 def override_backend(new_backend: str):
-    """
-    Override distributed backend
+    r"""Override distributed backend
 
-    :param new_backend: communicator backend set in this context.
+    Args:
+        new_backend: communicator backend set in this context.
     """
     global _sd
     assert _sd, "please call init_process_group first"
@@ -196,51 +194,51 @@ def override_backend(new_backend: str):
 
 
 def is_distributed() -> bool:
-    """Return True if the distributed process group has been initialized."""
+    r"""Return True if the distributed process group has been initialized."""
     return _sd is not None
 
 
 def get_rank() -> int:
-    """Get the rank of the current process."""
+    r"""Get the rank of the current process."""
     return _sd.proc_rank if _sd is not None else 0
 
 
 def get_world_size() -> int:
-    """Get the total number of processes participating in the job."""
+    r"""Get the total number of processes participating in the job."""
     return _sd.world_size if _sd is not None else 1
 
 
 def get_backend() -> str:
-    """Get the backend str."""
+    r"""Get the backend str."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.backend if _sd is not None else None
 
 
 def get_py_server_addr() -> Tuple[str, int]:
-    """Get master_ip and port of python XML RPC server."""
+    r"""Get master_ip and port of python XML RPC server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.master_ip, _sd.py_server_port
 
 
 def get_mm_server_addr() -> Tuple[str, int]:
-    """Get master_ip and port of C++ mm_server."""
+    r"""Get master_ip and port of C++ mm_server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.master_ip, _sd.mm_server_port
 
 
 def get_client() -> Client:
-    """Get client of python XML RPC server."""
+    r"""Get client of python XML RPC server."""
     assert _sd is not None, "please call init_process_group first"
     return _sd.client
 
 
 def new_group(proc_ranks: List[int]) -> Group:
-    """Build a subgroup containing certain ranks."""
+    r"""Build a subgroup containing certain ranks."""
     return Group(proc_ranks)
 
 
 def group_barrier(group: Group = WORLD) -> None:
-    """Block until all ranks in the group reach this barrier."""
+    r"""Block until all ranks in the group reach this barrier."""
     # if running with single node, skip it
     if _sd is None:
         return

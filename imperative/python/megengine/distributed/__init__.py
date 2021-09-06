@@ -31,17 +31,15 @@ from .server import Client, Server
 
 @mproperty
 def backend(mod):
-    r"""
-    Get or set backend of collective communication.
+    r"""Get or set backend of collective communication.
     Available backends are ['nccl', 'shm', 'rccl']
 
     Examples:
 
-    .. code-block::
+        .. code-block::
 
-        import megengine.distributed as dist
-        dist.backend = "nccl"
-
+            import megengine.distributed as dist
+            dist.backend = "nccl"
     """
     assert group._sd, "please call init_process_group first"
     return group._sd.backend

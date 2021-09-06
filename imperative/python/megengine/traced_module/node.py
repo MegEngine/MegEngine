@@ -17,11 +17,12 @@ from ..tensor import Tensor
 
 
 class Node:
-    """
-    ``Node`` represents the variables （Tensor/Module/other python object) used in Module's forward method. They are inputs/outputs of Expr(the operations on variables).
+    r"""``Node`` represents the variables （Tensor/Module/other python object) used in Module's forward method.
+    They are inputs/outputs of Expr(the operations on variables).
 
-    param expr: the Expr which produces the node
-    param name: the name of the node
+    Args:
+        expr: the Expr which produces the node
+        name: the name of the node
     """
 
     expr = None
@@ -90,14 +91,7 @@ class Node:
 
 
 class ModuleNode(Node):
-    """
-    ``ModuleNode`` represents the Module objects.
-
-    Attributes:
-        module_type: type of the Module correspending to the ModuleNode
-        graph: the InternalGraph which will be interpreted when call Module's forward method
-        attr_type_map: record the type of Module's attributes
-    """
+    r"""``ModuleNode`` represents the Module objects."""
 
     module_type = Module  # type: Type[Module]
     _owner = None  # type: weakref.ReferenceType
@@ -123,9 +117,7 @@ class ModuleNode(Node):
 
 
 class TensorNode(Node):
-    """
-    ``TensorNode`` represents the Tensor objects.
-    """
+    r"""``TensorNode`` represents the Tensor objects."""
 
     _shape = None  # type: Tuple[int]
     _dtype = None  # type: numpy.dtype

@@ -12,8 +12,7 @@ from ..qat import QATModule
 
 
 class QuantizedModule(Module):
-    r"""
-    Base class of quantized :class:`~.Module`, 
+    r"""Base class of quantized :class:`~.Module`,
     which should be converted from :class:`~.QATModule` and not support traning.
     """
 
@@ -29,6 +28,6 @@ class QuantizedModule(Module):
     @abstractmethod
     def from_qat_module(cls, qat_module: QATModule):
         r"""
-        Return a :class:`~.QuantizedModule` instance converted from a
-        :class:`~.QATModule` instance.
+        Return a :class:`~.QATModule` instance converted from
+        a float :class:`~.Module` instance.
         """

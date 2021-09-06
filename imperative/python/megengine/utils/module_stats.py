@@ -420,18 +420,17 @@ def module_stats(
     logging_to_stdout: bool = True,
     bar_length_max: int = 20,
 ):
-    r"""
-    Calculate and print ``model``'s statistics by adding hook and record Module's inputs outputs size.
+    r"""Calculate and print ``model``'s statistics by adding hook and record Module's inputs outputs size.
 
-    :param model: model that need to get stats info.
-    :param inputs: user defined input data for running model and calculating stats, alternative with input_shapes.
-    :param input_shapes: shapes to generate random inputs for running model and calculating stats, alternative with inputs.
-    :param cal_params: whether calculate and record params size.
-    :param cal_flops: whether calculate and record op flops.
-    :param cal_activations: whether calculate and record op activations.
-    :param logging_to_stdout: whether print all calculated statistic details.
-    :param bar_length_max: size of bar indicating max flops or parameter size in net stats.
-    
+    Args:
+        model: model that need to get stats info.
+        inputs: user defined input data for running model and calculating stats, alternative with input_shapes.
+        input_shapes: shapes to generate random inputs for running model and calculating stats, alternative with inputs.
+        cal_params: whether calculate and record params size.
+        cal_flops: whether calculate and record op flops.
+        cal_activations: whether calculate and record op activations.
+        logging_to_stdout: whether print all calculated statistic details.
+        bar_length_max: size of bar indicating max flops or parameter size in net stats.
     """
     has_inputs = False
     if inputs is not None:

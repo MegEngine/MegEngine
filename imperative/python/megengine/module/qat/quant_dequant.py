@@ -10,8 +10,7 @@ from .module import QATModule
 
 
 class QuantStub(Float.QuantStub, QATModule):
-    r"""
-    A helper :class:`~.QATModule` simply return input, but will quantize
+    r"""A helper :class:`~.QATModule` simply return input, but will quantize
     input after converted to :class:`~.QuantizedModule`.
     """
 
@@ -30,8 +29,7 @@ class QuantStub(Float.QuantStub, QATModule):
 
 
 class DequantStub(Float.DequantStub, QATModule):
-    r"""
-    A helper :class:`~.QATModule` simply return input, but will de-quantize
+    r"""A helper :class:`~.QATModule` simply return input, but will de-quantize
     input after converted to :class:`~.QuantizedModule`.
     """
 

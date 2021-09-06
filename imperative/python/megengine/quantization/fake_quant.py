@@ -72,13 +72,13 @@ class _FakeQuantize(Module):
 
 
 class TQT(_FakeQuantize, QParamsModuleMixin):
-    r"""
-    TQT: https://arxiv.org/abs/1903.08066 Trained Quantization Thresholds
+    r"""TQT: https://arxiv.org/abs/1903.08066 Trained Quantization Thresholds
     for Accurate and Efficient Fixed-Point Inference of Deep Neural Networks.
 
-    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
-        quantization dtype of input.
-    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
+    Args:
+        dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+            quantization dtype of input.
+        enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def __init__(
@@ -104,12 +104,12 @@ class TQT(_FakeQuantize, QParamsModuleMixin):
 
 
 class FakeQuantize(_FakeQuantize):
-    r"""
-    A module to do quant and dequant according to observer's scale and zero_point.
+    r"""A module to do quant and dequant according to observer's scale and zero_point.
 
-    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
-        quantization dtype of input.
-    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
+    Args:
+        dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+            quantization dtype of input.
+        enable: whether do ``normal_forward`` or ``fake_quant_forward``.
     """
 
     def fake_quant_forward(self, inp, qparams: QParams = None):
@@ -122,14 +122,14 @@ class FakeQuantize(_FakeQuantize):
 
 
 class LSQ(_FakeQuantize, QParamsModuleMixin):
-    r"""
-    LSQ: https://arxiv.org/pdf/1902.08153.pdf Estimating and scaling the 
+    r"""LSQ: https://arxiv.org/pdf/1902.08153.pdf Estimating and scaling the
     task loss gradient at each weight and activation layer's quantizer step size
 
-    :param dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
-        quantization dtype of input.
-    :param enable: whether do ``normal_forward`` or ``fake_quant_forward``.
-    :param eps:a small value to avoid division by zero. Default: 1e-5
+    Args:
+        dtype: a string or :class:`~.QuantDtypeMeta` indicating the target
+            quantization dtype of input.
+        enable: whether do ``normal_forward`` or ``fake_quant_forward``.
+        eps: a small value to avoid division by zero. Default: 1e-5
     """
 
     def __init__(

@@ -23,10 +23,13 @@ def clip_grad_norm(
     The norm is computed over all gradients together, as if they were
     concatenated into a single vector. Gradients are modified in-place.
 
-    :param tensors: an iterable of Tensors or a single Tensor.
-    :param max_norm: max norm of the gradients.
-    :param ord: type of the used p-norm. Can be ``'inf'`` for infinity norm.
-    :return: total norm of the parameters (viewed as a single vector).
+    Args:
+        tensors: an iterable of Tensors or a single Tensor.
+        max_norm: max norm of the gradients.
+        ord: type of the used p-norm. Can be ``'inf'`` for infinity norm.
+
+    Returns:
+      total norm of the parameters (viewed as a single vector).
     """
     push_scope("clip_grad_norm")
     if isinstance(tensors, Tensor):
@@ -53,14 +56,15 @@ def clip_grad_value(
 ):
     r"""Clips gradient of an iterable of parameters to a specified lower and
     upper. Gradients are modified in-place.
-
+    
     The gradients are clipped in the range:
-
+    
     .. math:: \left[\text{lower}, \text{upper}\right]
 
-    :param tensors: an iterable of Tensors or a single Tensor.
-    :param lower: minimum allowed value of the gradients.
-    :param upper: maximum allowed value of the gradients.
+    Args:
+        tensors: an iterable of Tensors or a single Tensor.
+        lower: minimum allowed value of the gradients.
+        upper: maximum allowed value of the gradients.
     """
     push_scope("clip_grad_value")
     if isinstance(tensors, Tensor):

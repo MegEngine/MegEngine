@@ -44,28 +44,28 @@ def raise_timeout_error():
 
 class DataLoader:
     r"""Provides a convenient way to iterate on a given dataset.
-
+    
     DataLoader combines a dataset with
     :class:`~.Sampler`, :class:`~.Transform` and :class:`~.Collator`,
     make it flexible to get minibatch continually from a dataset.
 
-    :param dataset: dataset from which to load the minibatch.
-    :param sampler: defines the strategy to sample data from the dataset.
-    :param transform: defined the transforming strategy for a sampled batch.
-        Default: None
-    :param collator: defined the merging strategy for a transformed batch.
-        Default: None
-    :param num_workers: the number of sub-process to load, transform and collate
-        the batch. ``0`` means using single-process. Default: 0
-    :param timeout: if positive, means the timeout value(second) for collecting a
-        batch from workers. Default: 0
-    :param timeout_event: callback function triggered by timeout, default to raise
-        runtime error.
-    :param divide: define the paralleling strategy in multi-processing mode.
-        ``True`` means one batch is divided into :attr:`num_workers` pieces, and
-        the workers will process these pieces parallelly. ``False`` means
-        different sub-process will process different batch. Default: False
-
+    Args:
+        dataset: dataset from which to load the minibatch.
+        sampler: defines the strategy to sample data from the dataset.
+        transform: defined the transforming strategy for a sampled batch.
+            Default: None
+        collator: defined the merging strategy for a transformed batch.
+            Default: None
+        num_workers: the number of sub-process to load, transform and collate
+            the batch. ``0`` means using single-process. Default: 0
+        timeout: if positive, means the timeout value(second) for collecting a
+            batch from workers. Default: 0
+        timeout_event: callback function triggered by timeout, default to raise
+            runtime error.
+        divide: define the paralleling strategy in multi-processing mode.
+            ``True`` means one batch is divided into :attr:`num_workers` pieces, and
+            the workers will process these pieces parallelly. ``False`` means
+            different sub-process will process different batch. Default: False
     """
     __initialized = False
 

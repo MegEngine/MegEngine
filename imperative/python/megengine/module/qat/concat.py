@@ -13,8 +13,7 @@ from .module import QATModule
 
 
 class Concat(Float.Concat, QATModule):
-    r"""
-    A :class:`~.QATModule` to do functional :func:`~.concat` with QAT support.
+    r"""A :class:`~.QATModule` to do functional :func:`~.concat` with QAT support.
     Could be applied with :class:`~.Observer` and :class:`~.FakeQuantize`.
     """
 
@@ -23,8 +22,4 @@ class Concat(Float.Concat, QATModule):
 
     @classmethod
     def from_float_module(cls, float_module):
-        r"""
-        Return a :class:`~.QATModule` instance converted from
-        a float :class:`~.Module` instance.
-        """
         return cls(name=float_module.name)

@@ -9,12 +9,12 @@
 
 
 class GraphOptimizationConfig:
-    r"""
-    Configuration for graph optimization: False for OFF, True for ON. The default value
+    r"""Configuration for graph optimization: False for OFF, True for ON. The default value
     None means that opt_level will decide whther this optimization will be applied or not.
 
-    :param jit_fuse_dimshuffle: whether to fuse dimshuffle in JIT optimization
-    :param jit_fuse_reduce: whether to fuse reduce in JIT optimization
+    Args:
+        jit_fuse_dimshuffle: whether to fuse dimshuffle in JIT optimization
+        jit_fuse_reduce: whether to fuse reduce in JIT optimization
     """
 
     def __init__(self):

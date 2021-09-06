@@ -17,12 +17,11 @@ from ..module import Module
 
 
 class QATModule(Module):
-    r"""
-    Base class of quantized-float related :class:`~.Module`, basically for QAT and Calibration.
-
+    r"""Base class of quantized-float related :class:`~.Module`, basically for QAT and Calibration.
+    
     Use :meth:`from_float_module` to generate a instance from float :class:`~.Module`.
     Or use :func:`~.quantize.quantize_qat` to do it recursively and automatically.
-
+    
     Can also be converted to :class:`~.QuantizedModule` for deployment using
     :func:`~.quantize.quantize` further.
     """
@@ -43,8 +42,7 @@ class QATModule(Module):
         return "QAT." + super().__repr__()
 
     def set_qconfig(self, qconfig: QConfig):
-        r"""
-        Set quantization related configs with ``qconfig``, including
+        r"""Set quantization related configs with ``qconfig``, including
         observer and fake_quant for weight and activation.
         """
 
@@ -96,24 +94,19 @@ class QATModule(Module):
         return oup
 
     def apply_quant_weight(self, target: Tensor):
-        r"""
-        Apply weight's observer and fake_quant from ``qconfig`` on ``target``.
-        """
+        r"""Apply weight's observer and fake_quant from ``qconfig`` on ``target``."""
         return self._apply_fakequant_with_observer(
             target, self.weight_fake_quant, self.weight_observer
         )
 
     def apply_quant_activation(self, target: Tensor):
-        r"""
-        Apply weight's observer and fake_quant from ``qconfig`` on ``target``.
-        """
+        r"""Apply weight's observer and fake_quant from ``qconfig`` on ``target``."""
         return self._apply_fakequant_with_observer(
             target, self.act_fake_quant, self.act_observer
         )
 
     def apply_quant_bias(self, target: Tensor, inp: Tensor, w_qat: Tensor):
-        r"""
-        Use :func:`~.fake_quant_bias` to process ``target``. Only valid when
+        r"""Use :func:`~.fake_quant_bias` to process ``target``. Only valid when
         ``act_fake_quant`` and ``weight_fake_quant`` are both enabled.
         """
         # bias should have the same dtype as activation, so act_fake_quant can also
@@ -139,33 +132,25 @@ class QATModule(Module):
         return None
 
     def get_weight_dtype(self):
-        r"""
-        Get weight's quantization dtype as the method from ``qconfig``.
-        """
+        r"""Get weight's quantization dtype as the method from ``qconfig``."""
         return self._get_method_result(
             "get_quantized_dtype", self.weight_fake_quant, self.weight_observer
         )
 
     def get_activation_dtype(self):
-        r"""
-        Get activation's quantization dtype as the method from ``qconfig``.
-        """
+        r"""Get activation's quantization dtype as the method from ``qconfig``."""
         return self._get_method_result(
             "get_quantized_dtype", self.act_fake_quant, self.act_observer
         )
 
     def get_weight_qparams(self):
-        r"""
-        Get weight's quantization parameters.
-        """
+        r"""Get weight's quantization parameters."""
         return self._get_method_result(
             "get_qparams", self.weight_fake_quant, self.weight_observer
         )
 
     def get_activation_qparams(self):
-        r"""
-        Get activation's quantization parameters.
-        """
+        r"""Get activation's quantization parameters."""
         return self._get_method_result(
             "get_qparams", self.act_fake_quant, self.act_observer
         )
@@ -173,7 +158,6 @@ class QATModule(Module):
     @classmethod
     @abstractmethod
     def from_float_module(cls, float_module: Module):
-        r"""
-        Return a :class:`~.QATModule` instance converted from
+        r"""Return a :class:`~.QATModule` instance converted from
         a float :class:`~.Module` instance.
         """

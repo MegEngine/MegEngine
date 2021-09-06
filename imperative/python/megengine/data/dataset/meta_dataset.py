@@ -11,8 +11,7 @@ from typing import Tuple
 
 
 class Dataset(ABC):
-    r"""
-    An abstract base class for all datasets.
+    r"""An abstract base class for all datasets.
 
     __getitem__ and __len__ method are aditionally needed.
     """
@@ -31,8 +30,7 @@ class Dataset(ABC):
 
 
 class StreamDataset(Dataset):
-    r"""
-    An abstract class for stream data.
+    r"""An abstract class for stream data.
 
     __iter__ method is aditionally needed.
     """
@@ -53,10 +51,9 @@ class StreamDataset(Dataset):
 
 
 class ArrayDataset(Dataset):
-    r"""
-    ArrayDataset is a dataset for numpy array data.
+    r"""ArrayDataset is a dataset for numpy array data.
 
-    One or more numpy arrays are needed to initiate the dataset. 
+    One or more numpy arrays are needed to initiate the dataset.
     And the dimensions represented sample number are expected to be the same.
     """
 

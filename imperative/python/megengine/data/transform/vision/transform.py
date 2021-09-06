@@ -42,36 +42,36 @@ __all__ = [
 
 
 class VisionTransform(Transform):
-    r"""
-    Base class of all transforms used in computer vision.
+    r"""Base class of all transforms used in computer vision.
     Calling logic: apply_batch() -> apply() -> _apply_image() and other _apply_*()
     method. If you want to implement a self-defined transform method for image,
     rewrite _apply_image method in subclass.
 
-    :param order: input type order. Input is a tuple containing different structures,
-        order is used to specify the order of structures. For example, if your input
-        is (image, boxes) type, then the ``order`` should be ("image", "boxes").
-        Current available strings and data type are describe below:
-
-        * "image": input image, with shape of `(H, W, C)`.
-        * "coords": coordinates, with shape of `(N, 2)`.
-        * "boxes": bounding boxes, with shape of `(N, 4)`, "xyxy" format,
-          the 1st "xy" represents top left point of a box,
-          the 2nd "xy" represents right bottom point.
-        * "mask": map used for segmentation, with shape of `(H, W, 1)`.
-        * "keypoints": keypoints with shape of `(N, K, 3)`, N for number of instances,
-          and K for number of keypoints in one instance. The first two dimensions
-          of last axis is coordinate of keypoints and the the 3rd dimension is
-          the label of keypoints.
-        * "polygons": a sequence containing numpy arrays, its length is the number of instances.
-          Each numpy array represents polygon coordinate of one instance.
-        * "category": categories for some data type. For example, "image_category"
-          means category of the input image and "boxes_category" means categories of
-          bounding boxes.
-        * "info": information for images such as image shapes and image path.
-
-        You can also customize your data types only if you implement the corresponding
-        _apply_*() methods, otherwise ``NotImplementedError`` will be raised.
+    Args:
+        order: input type order. Input is a tuple containing different structures,
+            order is used to specify the order of structures. For example, if your input
+            is (image, boxes) type, then the ``order`` should be ("image", "boxes").
+            Current available strings and data type are describe below:
+    
+            * "image": input image, with shape of `(H, W, C)`.
+            * "coords": coordinates, with shape of `(N, 2)`.
+            * "boxes": bounding boxes, with shape of `(N, 4)`, "xyxy" format,
+              the 1st "xy" represents top left point of a box,
+              the 2nd "xy" represents right bottom point.
+            * "mask": map used for segmentation, with shape of `(H, W, 1)`.
+            * "keypoints": keypoints with shape of `(N, K, 3)`, N for number of instances,
+              and K for number of keypoints in one instance. The first two dimensions
+              of last axis is coordinate of keypoints and the the 3rd dimension is
+              the label of keypoints.
+            * "polygons": a sequence containing numpy arrays, its length is the number of instances.
+              Each numpy array represents polygon coordinate of one instance.
+            * "category": categories for some data type. For example, "image_category"
+              means category of the input image and "boxes_category" means categories of
+              bounding boxes.
+            * "info": information for images such as image shapes and image path.
+    
+    You can also customize your data types only if you implement the corresponding
+    _apply_*() methods, otherwise ``NotImplementedError`` will be raised.
     """
 
     def __init__(self, order=None):
@@ -154,13 +154,13 @@ class VisionTransform(Transform):
 
 
 class ToMode(VisionTransform):
-    r"""
-    Change input data to a target mode.
+    r"""Change input data to a target mode.
     For example, most transforms use HWC mode image,
     while the neural network might use CHW mode input tensor.
 
-    :param mode: output mode of input. Default: "CHW"
-    :param order: the same with :class:`VisionTransform`
+    Args:
+        mode: output mode of input. Default: "CHW"
+        order: the same with :class:`VisionTransform`
     """
 
     def __init__(self, mode="CHW", *, order=None):
@@ -183,32 +183,31 @@ class ToMode(VisionTransform):
 
 
 class Compose(VisionTransform):
-    r"""
-    Composes several transforms together.
+    r"""Composes several transforms together.
 
-    :param transforms: list of :class:`VisionTransform` to compose.
-    :param batch_compose: whether use shuffle_indices for batch data or not.
-        If True, use original input sequence.
-        Otherwise, the shuffle_indices will be used for transforms.
-    :param shuffle_indices: indices used for random shuffle, start at 1.
-        For example, if shuffle_indices is [(1, 3), (2, 4)], then the 1st and 3rd transform
-        will be random shuffled, the 2nd and 4th transform will also be shuffled.
-    :param order: the same with :class:`VisionTransform`
-
+    Args:
+        transforms: list of :class:`VisionTransform` to compose.
+        batch_compose: whether use shuffle_indices for batch data or not.
+            If True, use original input sequence.
+            Otherwise, the shuffle_indices will be used for transforms.
+        shuffle_indices: indices used for random shuffle, start at 1.
+            For example, if shuffle_indices is [(1, 3), (2, 4)], then the 1st and 3rd transform
+            will be random shuffled, the 2nd and 4th transform will also be shuffled.
+        order: the same with :class:`VisionTransform`
+    
     Examples:
-
-    .. testcode::
-
-        from megengine.data.transform import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, ToMode, Compose
-
-        transform_func = Compose([
-            RandomHorizontalFlip(),
-            RandomVerticalFlip(),
-            CenterCrop(100),
-            ToMode("CHW"),
-            ],
-            shuffle_indices=[(1, 2, 3)]
-            )
+        .. testcode::
+        
+           from megengine.data.transform import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, ToMode, Compose
+           
+           transform_func = Compose([
+           RandomHorizontalFlip(),
+           RandomVerticalFlip(),
+           CenterCrop(100),
+           ToMode("CHW"),
+           ],
+           shuffle_indices=[(1, 2, 3)]
+           )
     """
 
     def __init__(
@@ -260,13 +259,13 @@ class Compose(VisionTransform):
 
 
 class TorchTransformCompose(VisionTransform):
-    r"""
-    Compose class used for transforms in torchvision, only support PIL image,
+    r"""Compose class used for transforms in torchvision, only support PIL image,
     some transforms with tensor in torchvision are not supported,
     such as Normalize and ToTensor in torchvision.
 
-    :param transforms: the same with ``Compose``.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        transforms: the same with ``Compose``.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, transforms, *, order=None):
@@ -302,19 +301,19 @@ class TorchTransformCompose(VisionTransform):
 
 
 class Pad(VisionTransform):
-    r"""
-    Pad the input data.
+    r"""Pad the input data.
 
-    :param size: padding size of input image, it could be integer or sequence.
-        If it is an integer, the input image will be padded in four directions.
-        If it is a sequence containing two integers, the bottom and right side
-        of image will be padded.
-        If it is a sequence containing four integers, the top, bottom, left, right
-        side of image will be padded with given size.
-    :param value: padding value of image, could be a sequence of int or float.
-        if it is float value, the dtype of image will be casted to float32 also.
-    :param mask_value: padding value of segmentation map.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        size: padding size of input image, it could be integer or sequence.
+            If it is an integer, the input image will be padded in four directions.
+            If it is a sequence containing two integers, the bottom and right side
+            of image will be padded.
+            If it is a sequence containing four integers, the top, bottom, left, right
+            side of image will be padded with given size.
+        value: padding value of image, could be a sequence of int or float.
+            if it is float value, the dtype of image will be casted to float32 also.
+        mask_value: padding value of segmentation map.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, size=0, value=0, mask_value=0, *, order=None):
@@ -350,18 +349,18 @@ class Pad(VisionTransform):
 
 
 class Resize(VisionTransform):
-    r"""
-    Resize the input data.
+    r"""Resize the input data.
 
-    :param output_size: target size of image, with (height, width) shape.
-    :param interpolation: interpolation method. All methods are listed below:
-
-        * cv2.INTER_NEAREST – a nearest-neighbor interpolation.
-        * cv2.INTER_LINEAR – a bilinear interpolation (used by default).
-        * cv2.INTER_AREA – resampling using pixel area relation.
-        * cv2.INTER_CUBIC – a bicubic interpolation over 4×4 pixel neighborhood.
-        * cv2.INTER_LANCZOS4 – a Lanczos interpolation over 8×8 pixel neighborhood.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        output_size: target size of image, with (height, width) shape.
+        interpolation: interpolation method. All methods are listed below:
+    
+            * cv2.INTER_NEAREST – a nearest-neighbor interpolation.
+            * cv2.INTER_LINEAR – a bilinear interpolation (used by default).
+            * cv2.INTER_AREA – resampling using pixel area relation.
+            * cv2.INTER_CUBIC – a bicubic interpolation over 4×4 pixel neighborhood.
+            * cv2.INTER_LANCZOS4 – a Lanczos interpolation over 8×8 pixel neighborhood.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, output_size, interpolation=cv2.INTER_LINEAR, *, order=None):
@@ -410,9 +409,7 @@ class Resize(VisionTransform):
 
 
 class ShortestEdgeResize(VisionTransform):
-    r"""
-    Resize the input data with specified shortset edge.
-    """
+    r"""Resize the input data with specified shortset edge."""
 
     def __init__(
         self,
@@ -481,11 +478,11 @@ class ShortestEdgeResize(VisionTransform):
 
 
 class RandomResize(VisionTransform):
-    r"""
-    Resize the input data randomly.
+    r"""Resize the input data randomly.
 
-    :param scale_range: range of scaling.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        scale_range: range of scaling.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, scale_range, interpolation=cv2.INTER_LINEAR, *, order=None):
@@ -526,15 +523,15 @@ class RandomResize(VisionTransform):
 
 
 class RandomCrop(VisionTransform):
-    r"""
-    Crop the input data randomly. Before applying the crop transform,
+    r"""Crop the input data randomly. Before applying the crop transform,
     pad the image first. If target size is still bigger than the size of
     padded image, pad the image size to target size.
 
-    :param output_size: target size of output image, with (height, width) shape.
-    :param padding_size: the same with `size` in ``Pad``.
-    :param padding_value: the same with `value` in ``Pad``.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        output_size: target size of output image, with (height, width) shape.
+        padding_size: the same with `size` in ``Pad``.
+        padding_value: the same with `value` in ``Pad``.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(
@@ -584,16 +581,16 @@ class RandomCrop(VisionTransform):
 
 
 class RandomResizedCrop(VisionTransform):
-    r"""
-    Crop the input data to random size and aspect ratio.
+    r"""Crop the input data to random size and aspect ratio.
     A crop of random size (default: of 0.08 to 1.0) of the original size and a random
     aspect ratio (default: of 3/4 to 1.33) of the original aspect ratio is made.
     After applying crop transfrom, the input data will be resized to given size.
 
-    :param output_size: target size of output image, with (height, width) shape.
-    :param scale_range: range of size of the origin size cropped. Default: (0.08, 1.0)
-    :param ratio_range: range of aspect ratio of the origin aspect ratio cropped. Default: (0.75, 1.33)
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        output_size: target size of output image, with (height, width) shape.
+        scale_range: range of size of the origin size cropped. Default: (0.08, 1.0)
+        ratio_range: range of aspect ratio of the origin aspect ratio cropped. Default: (0.75, 1.33)
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(
@@ -674,11 +671,11 @@ class RandomResizedCrop(VisionTransform):
 
 
 class CenterCrop(VisionTransform):
-    r"""
-    Crops the given the input data at the center.
+    r"""Crops the given the input data at the center.
 
-    :param output_size: target size of output image, with (height, width) shape.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        output_size: target size of output image, with (height, width) shape.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, output_size, *, order=None):
@@ -718,11 +715,11 @@ class CenterCrop(VisionTransform):
 
 
 class RandomHorizontalFlip(VisionTransform):
-    r"""
-    Horizontally flip the input data randomly with a given probability.
+    r"""Horizontally flip the input data randomly with a given probability.
 
-    :param p: probability of the input data being flipped. Default: 0.5
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        p: probability of the input data being flipped. Default: 0.5
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, prob: float = 0.5, *, order=None):
@@ -751,11 +748,11 @@ class RandomHorizontalFlip(VisionTransform):
 
 
 class RandomVerticalFlip(VisionTransform):
-    r"""
-    Vertically flip the input data randomly with a given probability.
+    r"""Vertically flip the input data randomly with a given probability.
 
-    :param p: probability of the input data being flipped. Default: 0.5
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        p: probability of the input data being flipped. Default: 0.5
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, prob: float = 0.5, *, order=None):
@@ -784,15 +781,15 @@ class RandomVerticalFlip(VisionTransform):
 
 
 class Normalize(VisionTransform):
-    r"""
-    Normalize the input data with mean and standard deviation.
+    r"""Normalize the input data with mean and standard deviation.
     Given mean: ``(M1,...,Mn)`` and std: ``(S1,..,Sn)`` for ``n`` channels,
     this transform will normalize each channel of the input data.
     ``output[channel] = (input[channel] - mean[channel]) / std[channel]``
 
-    :param mean: sequence of means for each channel.
-    :param std: sequence of standard deviations for each channel.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        mean: sequence of means for each channel.
+        std: sequence of standard deviations for each channel.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, mean=0.0, std=1.0, *, order=None):
@@ -811,13 +808,13 @@ class Normalize(VisionTransform):
 
 
 class GaussianNoise(VisionTransform):
-    r"""
-    Add random gaussian noise to the input data.
+    r"""Add random gaussian noise to the input data.
     Gaussian noise is generated with given mean and std.
 
-    :param mean: Gaussian mean used to generate noise.
-    :param std: Gaussian standard deviation used to generate noise.
-    :param order: the same with :class:`VisionTransform`
+    Args:
+        mean: Gaussian mean used to generate noise.
+        std: Gaussian standard deviation used to generate noise.
+        order: the same with :class:`VisionTransform`
     """
 
     def __init__(self, mean=0.0, std=1.0, *, order=None):
@@ -839,12 +836,12 @@ class GaussianNoise(VisionTransform):
 
 
 class BrightnessTransform(VisionTransform):
-    r"""
-    Adjust brightness of the input data.
+    r"""Adjust brightness of the input data.
 
-    :param value: how much to adjust the brightness. Can be any
-        non negative number. 0 gives the original image.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        value: how much to adjust the brightness. Can be any
+            non negative number. 0 gives the original image.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, value, *, order=None):
@@ -871,12 +868,12 @@ class BrightnessTransform(VisionTransform):
 
 
 class ContrastTransform(VisionTransform):
-    r"""
-    Adjust contrast of the input data.
+    r"""Adjust contrast of the input data.
 
-    :param value: how much to adjust the contrast. Can be any
-        non negative number. 0 gives the original image.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        value: how much to adjust the contrast. Can be any
+            non negative number. 0 gives the original image.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, value, *, order=None):
@@ -903,12 +900,12 @@ class ContrastTransform(VisionTransform):
 
 
 class SaturationTransform(VisionTransform):
-    r"""
-    Adjust saturation of the input data.
+    r"""Adjust saturation of the input data.
 
-    :param value: how much to adjust the saturation. Can be any
-        non negative number. 0 gives the original image.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        value: how much to adjust the saturation. Can be any
+            non negative number. 0 gives the original image.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, value, *, order=None):
@@ -935,12 +932,12 @@ class SaturationTransform(VisionTransform):
 
 
 class HueTransform(VisionTransform):
-    r"""
-    Adjust hue of the input data.
+    r"""Adjust hue of the input data.
 
-    :param value: how much to adjust the hue. Can be any number
-        between 0 and 0.5, 0 gives the original image.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        value: how much to adjust the hue. Can be any number
+            between 0 and 0.5, 0 gives the original image.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, value, *, order=None):
@@ -974,22 +971,22 @@ class HueTransform(VisionTransform):
 
 
 class ColorJitter(VisionTransform):
-    r"""
-    Randomly change the brightness, contrast, saturation and hue of an image.
+    r"""Randomly change the brightness, contrast, saturation and hue of an image.
 
-    :param brightness: how much to jitter brightness.
-        Chosen uniformly from [max(0, 1 - brightness), 1 + brightness]
-        or the given [min, max]. Should be non negative numbers.
-    :param contrast: how much to jitter contrast.
-        Chosen uniformly from [max(0, 1 - contrast), 1 + contrast]
-        or the given [min, max]. Should be non negative numbers.
-    :param saturation: how much to jitter saturation.
-        Chosen uniformly from [max(0, 1 - saturation), 1 + saturation]
-        or the given [min, max]. Should be non negative numbers.
-    :param hue: how much to jitter hue.
-        Chosen uniformly from [-hue, hue] or the given [min, max].
-        Should have 0<= hue <= 0.5 or -0.5 <= min <= max <= 0.5.
-    :param order: the same with :class:`VisionTransform`.
+    Args:
+        brightness: how much to jitter brightness.
+            Chosen uniformly from [max(0, 1 - brightness), 1 + brightness]
+            or the given [min, max]. Should be non negative numbers.
+        contrast: how much to jitter contrast.
+            Chosen uniformly from [max(0, 1 - contrast), 1 + contrast]
+            or the given [min, max]. Should be non negative numbers.
+        saturation: how much to jitter saturation.
+            Chosen uniformly from [max(0, 1 - saturation), 1 + saturation]
+            or the given [min, max]. Should be non negative numbers.
+        hue: how much to jitter hue.
+            Chosen uniformly from [-hue, hue] or the given [min, max].
+            Should have 0<= hue <= 0.5 or -0.5 <= min <= max <= 0.5.
+        order: the same with :class:`VisionTransform`.
     """
 
     def __init__(self, brightness=0, contrast=0, saturation=0, hue=0, *, order=None):
@@ -1014,11 +1011,10 @@ class ColorJitter(VisionTransform):
 
 
 class Lighting(VisionTransform):
-    r"""
-    Apply AlexNet-Style "lighting" augmentation to input data.
-
+    r"""Apply AlexNet-Style "lighting" augmentation to input data.
+    
     Input images are assumed to have 'RGB' channel order.
-
+    
     The degree of color jittering is randomly sampled via a normal distribution,
     with standard deviation given by the scale parameter.
     """

@@ -14,18 +14,13 @@ from .utils.max_recursion_limit import max_recursion_limit
 
 
 def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.HIGHEST_PROTOCOL):
-    r"""
-    Save an object to disk file.
+    r"""Save an object to disk file.
 
-    :type obj: object
-    :param obj: object to save. Only ``module`` or ``state_dict`` are allowed.
-    :type f: text file object
-    :param f: a string of file name or a text file object to which ``obj`` is saved to.
-    :type pickle_module:
-    :param pickle_module: Default: ``pickle``.
-    :type pickle_protocol:
-    :param pickle_protocol: Default: ``pickle.HIGHEST_PROTOCOL``.
-
+    Args:
+        obj: object to save. Only ``module`` or ``state_dict`` are allowed.
+        f: a string of file name or a text file object to which ``obj`` is saved to.
+        pickle_module: Default: ``pickle``.
+        pickle_protocol: Default: ``pickle.HIGHEST_PROTOCOL``.
     """
     if isinstance(f, str):
         with open(f, "wb") as fout:
@@ -82,40 +77,30 @@ def _get_callable_map_location(map_location):
 
 
 def load(f, map_location=None, pickle_module=pickle):
-    r"""
-    Load an object saved with save() from a file.
+    r"""Load an object saved with :func:~.megengine.save` from a file.
 
-    :type f: text file object
-    :param f: a string of file name or a text file object from which to load.
-    :type map_location: str, dict or a function specifying the map rules
-    :param map_location: Default: ``None``.
+    Args:
+        f: a string of file name or a text file object from which to load.
+        map_location: Default: ``None``.
+        pickle_module: Default: ``pickle``.
 
-    .. note::
-
-        map_location defines device mapping. See examples for usage.
-
-    :type pickle_module:
-    :param pickle_module: Default: ``pickle``.
-
-    .. note::
-
-        If you will call :func:`mge.set_default_device()`, please do it
-        before :func:`mge.load()`.
+    Note:
+       * ``map_location`` defines device mapping. See examples for usage.
+       * If you will call :func:`~.megengine.set_default_device()`, please do it
+         before :func:`~.megengine.load()`.
 
     Examples:
+        .. code-block::
 
-    .. testcode:
-
-        import megengine as mge
-        # Load tensors to the same device as defined in model.pkl
-        mge.load('model.pkl')
-        # Load all tensors to gpu0.
-        mge.load('model.pkl', map_location='gpu0')
-        # Load all tensors originally on gpu0 to cpu0
-        mge.load('model.pkl', map_location={'gpu0':'cpu0'})
-        # Load all tensors to cpu0
-        mge.load('model.pkl', map_location=lambda dev: 'cpu0')
-
+           import megengine as mge
+           # Load tensors to the same device as defined in model.pkl
+           mge.load('model.pkl')
+           # Load all tensors to gpu0.
+           mge.load('model.pkl', map_location='gpu0')
+           # Load all tensors originally on gpu0 to cpu0
+           mge.load('model.pkl', map_location={'gpu0':'cpu0'})
+           # Load all tensors to cpu0
+           mge.load('model.pkl', map_location=lambda dev: 'cpu0')
     """
     if isinstance(f, str):
         with open(f, "rb") as fin:

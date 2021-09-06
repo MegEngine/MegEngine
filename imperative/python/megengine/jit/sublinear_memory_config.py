@@ -10,26 +10,26 @@ from ..device import get_device_count
 
 
 class SublinearMemoryConfig:
-    r"""
-    Configuration for sublinear memory optimization.
+    r"""Configuration for sublinear memory optimization.
 
-    :param thresh_nr_try: number of samples both for searching in linear space
-        and around current thresh in sublinear memory optimization. Default: 10.
-        It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_THRESH_NR_TRY'.
-    :param genetic_nr_iter: number of iterations to find the best checkpoints in genetic algorithm.
-        Default: 0.
-        It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER'.
-    :param genetic_pool_size: number of samples for the crossover random selection
-        during genetic optimization. Default: 20.
-        It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_GENETIC_POOL_SIZE'.
-    :param lb_memory_mb: memory lower bound of bottleneck size in MB for sublinear memory optimization.
-        It can be used to perform manual tradeoff between memory and speed. Default: 0.
-        It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_LOWER_BOUND_MB'.
-    :param num_worker: number of thread workers to search the optimum checkpoints
-        in sublinear memory optimization. Default: half of cpu number in the system.
-        Note: the value must be greater or equal to one.
-        It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_WORKERS'.
-
+    Args:
+        thresh_nr_try: number of samples both for searching in linear space
+            and around current thresh in sublinear memory optimization. Default: 10.
+            It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_THRESH_NR_TRY'.
+        genetic_nr_iter: number of iterations to find the best checkpoints in genetic algorithm.
+            Default: 0.
+            It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER'.
+        genetic_pool_size: number of samples for the crossover random selection
+            during genetic optimization. Default: 20.
+            It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_GENETIC_POOL_SIZE'.
+        lb_memory_mb: memory lower bound of bottleneck size in MB for sublinear memory optimization.
+            It can be used to perform manual tradeoff between memory and speed. Default: 0.
+            It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_LOWER_BOUND_MB'.
+        num_worker: number of thread workers to search the optimum checkpoints
+            in sublinear memory optimization. Default: half of cpu number in the system.
+            Note: the value must be greater or equal to one.
+            It can also be set through the environmental variable 'MGB_SUBLINEAR_MEMORY_WORKERS'.
+    
     Note that the environmental variable MGB_COMP_GRAPH_OPT must be set to 'enable_sublinear_memory_opt=1'
     in order for the above environmental variable to be effective.
     """

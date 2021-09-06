@@ -75,7 +75,7 @@ class Conv2d(Float.Conv2d, QuantizedModule):
     @classmethod
     def from_qat_module(cls, qat_module: QAT.Conv2d):
         r"""
-        return a :class:`~.QuantizedModule` instance converted from a
+        Return a :class:`~.QuantizedModule` instance converted from a
         :class:`~.QATModule` instance.
         """
         output_dtype = qat_module.get_activation_dtype()
@@ -119,7 +119,8 @@ class ConvTranspose2d(Float.ConvTranspose2d, QuantizedModule):
 
     The parameter is same with :class:`~.module.ConvTranspose2d` but dtype.
 
-    :param dtype: data type of the output, should be qint8.
+    Args:
+        dtype: data type of the output, should be qint8.
     """
 
     def __init__(

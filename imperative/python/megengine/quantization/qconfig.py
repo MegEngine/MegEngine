@@ -27,33 +27,33 @@ class QConfig(
         ["weight_observer", "act_observer", "weight_fake_quant", "act_fake_quant"],
     )
 ):
-    r"""
-    A config class indicating how to do quantize toward :class:`~.QATModule` 's
+    r"""A config class indicating how to do quantize toward :class:`~.QATModule` 's
     ``activation`` and ``weight``. See :meth:`~.QATModule.set_qconfig` for detail usage.
 
-    :param weight_observer: interface to instantiate an :class:`~.Observer` indicating
-        how to collect scales and zero_point of wegiht.
-    :param act_observer: similar to ``weight_observer`` but toward activation.
-    :param weight_fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
-        how to do fake_quant calculation.
-    :param act_observer: similar to ``weight_fake_quant`` but toward activation.
-
+    Args:
+        weight_observer: interface to instantiate an :class:`~.Observer` indicating
+            how to collect scales and zero_point of wegiht.
+        act_observer: similar to ``weight_observer`` but toward activation.
+        weight_fake_quant: interface to instantiate a :class:`~.FakeQuantize` indicating
+            how to do fake_quant calculation.
+        act_observer: similar to ``weight_fake_quant`` but toward activation.
+    
     Examples:
-
-    .. code-block::
-
-        # Default EMA QConfig for QAT.
-        ema_fakequant_qconfig = QConfig(
-            weight_observer=partial(MinMaxObserver, dtype="qint8_narrow"),
-            act_observer=partial(ExponentialMovingAverageObserver, dtype="qint8"),
-            weight_fake_quant=partial(FakeQuantize, dtype="qint8_narrow"),
-            act_fake_quant=partial(FakeQuantize, dtype="qint8"),
-        )
-
+    
+        .. code-block::
+  
+           # Default EMA QConfig for QAT.
+           ema_fakequant_qconfig = QConfig(
+               weight_observer=partial(MinMaxObserver, dtype="qint8_narrow"),
+               act_observer=partial(ExponentialMovingAverageObserver, dtype="qint8"),
+               weight_fake_quant=partial(FakeQuantize, dtype="qint8_narrow"),
+               act_fake_quant=partial(FakeQuantize, dtype="qint8"),
+           )
+    
     Each parameter is a ``class`` rather than an instance. And we recommand using ``functools.partial``
     to add initialization parameters of the ``class``, so that don't need to provide parameters in
     :meth:`~.QATModule.set_qconfig`.
-
+    
     Usually we choose narrow version dtype (like ``qint8_narrow``) for weight related
     paramters and normal version for activation related ones. For the result of
     multiplication and addition as ``a * b + c * d``, if four variables are all -128 of

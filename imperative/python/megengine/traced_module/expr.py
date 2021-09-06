@@ -33,9 +33,7 @@ def rstrip(s: str, __chars: str):
 
 
 class Expr:
-    """
-    ``Expr`` represents the operations(i.e. CallMethod, CallFunction, Apply, GetAttr, Input, Constant) on ``Node``.
-    """
+    """``Expr`` represents the operations(i.e. CallMethod, CallFunction, Apply, GetAttr, Input, Constant) on ``Node``."""
 
     __total_id = 0
     inputs = None  # type: List[Node]

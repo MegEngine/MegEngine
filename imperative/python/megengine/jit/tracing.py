@@ -120,21 +120,21 @@ _io_op_types = {AssertEqual, CollectiveComm, RemoteSend, RemoteRecv}
 
 
 class trace:
-    """
-    Wraps a callable and provide:
+    """Wraps a callable and provide:
 
     * tracing via :meth:`.trace` and :meth:`.dump`
     * accelerated evalutaion via :meth:`.__call__`
 
-    :param function: the function will be traced.
-    :param symbolic: whether to apply symbolic execution for tracing. Default: False
-    :param capture_as_const: capture global vars or closures as const value. Default: False
-    :param sublinear_memory_config: configuration for sublinear memory optimization.
-        If not None, it enables sublinear memory optimization with given setting.
-    :param profiling: whether to profile compiled trace. Default: False
-    :param opt_level: optimization level for compiling trace. Default: 2
-    :param graph_opt_config: configuration for graph optimization. Default: None
-    :param symbolic_shape: whether to use symbolic shape for tracing. Default: True
+    Args:
+        function: the function will be traced.
+        symbolic: whether to apply symbolic execution for tracing. Default: False
+        capture_as_const: capture global vars or closures as const value. Default: False
+        sublinear_memory_config: configuration for sublinear memory optimization.
+            If not None, it enables sublinear memory optimization with given setting.
+        profiling: whether to profile compiled trace. Default: False
+        opt_level: optimization level for compiling trace. Default: 2
+        graph_opt_config: configuration for graph optimization. Default: None
+        symbolic_shape: whether to use symbolic shape for tracing. Default: True
     """
 
     def __new__(cls, *args, **kwargs):
@@ -696,75 +696,74 @@ class trace:
         enable_metadata: bool = True,
         **kwargs
     ):
-        r"""
-        Serializes trace to file system.
+        r"""Serializes trace to file system.
 
-        :param file: output file, could be file object or filename.
-        :param arg_names: names of the input tensors in the traced function.
-        :param output_names: names of the output tensors in the traced function,
-            use the default name if not specified.
-        :param append: whether output is appended to ``file``.
-            Only works when ``file`` is str.
-        :param keep_var_name: level for keeping variable names:
+        Args:
+            file: output file, could be file object or filename.
+            arg_names: names of the input tensors in the traced function.
+            output_names: names of the output tensors in the traced function,
+                use the default name if not specified.
+            append: whether output is appended to ``file``.
+                Only works when ``file`` is str.
+            keep_var_name: level for keeping variable names:
 
-            * 0: none of the names are kept
-            * 1: (default)keep names of output vars
-            * 2: keep names of all (output and internal) vars
-        :param keep_opr_name: whether to keep operator names.
-        :param keep_param_name: whether to keep param names, so param values can be
-            easily manipulated after loading model
-        :param keep_opr_priority: whether to keep priority setting for operators
-        :param strip_info_file: a string for path or a file handler. if is not None,
-            then the dump information for code strip would be written to ``strip_info_file``
-        :param append_json: will be check when `strip_info_file` is not None. if set
-            true, the information for code strip will be append to strip_info_file.
-            if set false, will rewrite strip_info_file
-        :param optimize_for_inference: enbale optmizations,
-            will skip all optimize options if this is False. Default: True
-        :param user_info: any type object, which will be pickled to bytes.
-        :param enable_metadata: whether to save metadata into output file.
+                * 0: none of the names are kept
+                * 1: (default)keep names of output vars
+                * 2: keep names of all (output and internal) vars
 
-        :Keyword Arguments:
+            keep_opr_name: whether to keep operator names.
+            keep_param_name: whether to keep param names, so param values can be
+                easily manipulated after loading model
+            keep_opr_priority: whether to keep priority setting for operators
+            strip_info_file: a string for path or a file handler. if is not None,
+                then the dump information for code strip would be written to ``strip_info_file``
+            append_json: will be check when `strip_info_file` is not None. if set
+                true, the information for code strip will be append to strip_info_file.
+                if set false, will rewrite strip_info_file
+            optimize_for_inference: enbale optmizations,
+                will skip all optimize options if this is False. Default: True
+            user_info: any type object, which will be pickled to bytes.
+            enable_metadata: whether to save metadata into output file.
 
-            * enable_io16xc32 --
-                whether to use float16 for I/O between oprs and use
-                float32 as internal computation precision. Note the output var would be
-                changed to float16.
-            * enable_ioc16 --
-                whether to use float16 for both I/O and computation
-                precision.
+        Keyword Arguments:
 
-            * enable_hwcd4 --
-                whether to use NHWCD4 data layout. This is faster on some
-                OpenCL backend.
-            * enable_nchw88 --
-                whether to use NCHW88 data layout, currently
-                used in X86 AVX backend.
-            * enable_nchw44 --
-                whether to use NCHW44 data layout, currently
-                used in arm backend.
-            * enable_nchw44_dot --
-                whether to use NCHW44_dot data layout, currently
-                used in armv8.2+dotprod backend.
-            * enable_nchw4 --
-                whether to use NCHW4 data layout, currently
-                used in nvidia backend(based on cudnn).
-            * enable_nchw32 --
-                whether to use NCHW32 data layout, currently
-                used in nvidia backend with tensorcore(based on cudnn).
-            * enable_chwn4 --
-                whether to use CHWN4 data layout, currently
-                used in nvidia backend with tensorcore.
-            * enable_nchw64 --
-                whether to use NCHW64 data layout, used for fast int4
-                support on Nvidia GPU.
-
-            * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
-                into one opr.
-            * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
-                input for inference on nvidia backend(this optimization pass will
-                result in mismatch of the precision of output of training and
-                inference)
+        * enable_io16xc32 --
+          whether to use float16 for I/O between oprs and use
+          float32 as internal computation precision. Note the output var would be
+          changed to float16.
+        * enable_ioc16 --
+          whether to use float16 for both I/O and computation
+          precision.
+        * enable_hwcd4 --
+          whether to use NHWCD4 data layout. This is faster on some
+          OpenCL backend.
+        * enable_nchw88 --
+          whether to use NCHW88 data layout, currently
+          used in X86 AVX backend.
+        * enable_nchw44 --
+          whether to use NCHW44 data layout, currently
+          used in arm backend.
+        * enable_nchw44_dot --
+          whether to use NCHW44_dot data layout, currently
+          used in armv8.2+dotprod backend.
+        * enable_nchw4 --
+          whether to use NCHW4 data layout, currently
+          used in nvidia backend(based on cudnn).
+        * enable_nchw32 --
+          whether to use NCHW32 data layout, currently
+          used in nvidia backend with tensorcore(based on cudnn).
+        * enable_chwn4 --
+          whether to use CHWN4 data layout, currently
+          used in nvidia backend with tensorcore.
+        * enable_nchw64 --
+          whether to use NCHW64 data layout, used for fast int4
+          support on Nvidia GPU.
+        * enable_fuse_conv_bias_nonlinearity: whether to fuse conv+bias+nonlinearty
+          into one opr.
+        * enable_fuse_conv_bias_with_z: whether to fuse conv_bias with z
+          input for inference on nvidia backend(this optimization pass will
+          result in mismatch of the precision of output of training and
+          inference)
         """
         if not self._capture_as_const:
             raise ValueError(
@@ -1033,10 +1032,10 @@ class trace:
                     )
 
     def get_profile(self):
-        """
-        Get profiling result for compiled trace.
+        r"""Get profiling result for compiled trace.
 
-        :return: a json compatible object.
+        Return:
+            a json compatible object.
         """
         if not self._profiler:
             raise RuntimeError("trace is not set with profiling=True")
@@ -1050,9 +1049,7 @@ class trace:
 
 
 class CompiledTensorProxy:
-    """
-    Duck-typed RawTensor
-    """
+    r"""Duck-typed RawTensor"""
 
     def __init__(self, handle):
         self.__handle = handle

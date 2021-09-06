@@ -23,7 +23,7 @@ from megengine.utils.profile_analyzer import (
 
 
 def _tabulate_ml(tab, **kwargs):
-    """Tabulate profile output with multi-line support."""
+    r"""Tabulate profile output with multi-line support."""
     new_tab = []
     new_tab_is_row = []
     for row in tab:
@@ -48,7 +48,7 @@ def _tabulate_ml(tab, **kwargs):
 
 
 def _tabulate_confluence(tab, **kwargs):
-    """Tabulate profile output."""
+    r"""Tabulate profile output."""
     kwargs.pop("tablefmt", None)
     s = tabulate(tab, tablefmt="orgtbl", **kwargs)
     lines = s.split("\n")
@@ -57,9 +57,7 @@ def _tabulate_confluence(tab, **kwargs):
 
 
 def main(passed_args=None):  # pylint: disable=too-many-statements
-    """
-    Analyses profile info from :mod:`~.utils.profile_analyzer` .
-
+    r"""Analyses profile info from :mod:`~.utils.profile_analyzer` .
     Run this file with ``--help`` to get more usage.
     """
     parser = argparse.ArgumentParser(

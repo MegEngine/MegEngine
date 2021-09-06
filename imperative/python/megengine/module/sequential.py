@@ -12,38 +12,35 @@ from .module import Module
 
 
 class Sequential(Module):
-    r"""
-    A sequential container.
+    r"""A sequential container.
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
-    To make it easier to understand, here is a small example:
-
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.module as M
-        import megengine.functional as F
-        from collections import OrderedDict
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+            import megengine.functional as F
+            from collections import OrderedDict
 
-        batch_size = 64
-        data = mge.tensor(np.zeros((batch_size, 28 * 28)), dtype=np.float32)
-        label = mge.tensor(np.zeros(batch_size,), dtype=np.int32)
+            batch_size = 64
+            data = mge.tensor(np.zeros((batch_size, 28 * 28)), dtype=np.float32)
+            label = mge.tensor(np.zeros(batch_size,), dtype=np.int32)
 
-        net0 = M.Sequential(
-                M.Linear(28 * 28, 320),
-                M.Linear(320, 10)
-            )
-        pred0 = net0(data)
+            net0 = M.Sequential(
+                    M.Linear(28 * 28, 320),
+                    M.Linear(320, 10)
+                )
+            pred0 = net0(data)
 
-        modules = OrderedDict()
-        modules["fc0"] = M.Linear(28 * 28, 320)
-        modules["fc1"] = M.Linear(320, 10)
-        net1 = M.Sequential(modules)
-        pred1 = net1(data)
+            modules = OrderedDict()
+            modules["fc0"] = M.Linear(28 * 28, 320)
+            modules["fc1"] = M.Linear(320, 10)
+            net1 = M.Sequential(modules)
+            pred1 = net1(data)
     """
 
     def __init__(self, *args, **kwargs):

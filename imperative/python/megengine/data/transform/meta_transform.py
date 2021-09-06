@@ -11,9 +11,7 @@ from typing import Sequence, Tuple
 
 
 class Transform(ABC):
-    """
-    Rewrite apply method in subclass.
-    """
+    r"""Rewrite apply method in subclass."""
 
     def apply_batch(self, inputs: Sequence[Tuple]):
         return tuple(self.apply(input) for input in inputs)

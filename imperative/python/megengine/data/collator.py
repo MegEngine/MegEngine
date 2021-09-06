@@ -33,16 +33,11 @@ default_collate_err_msg_format = (
 
 
 class Collator:
-    r"""
-    Used for merging a list of samples to form a mini-batch of Tensor(s). Used when using batched loading from a dataset.
+    r"""Used for merging a list of samples to form a mini-batch of Tensor(s). Used when using batched loading from a dataset.
     Modified from https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py
     """
 
     def apply(self, inputs):
-        """
-        :param inputs: sequence_N(tuple(CHW, C, CK)).
-        :return: tuple(NCHW, NC, NCK).
-        """
         elem = inputs[0]
         elem_type = type(elem)
         if (

@@ -19,7 +19,7 @@ from .module import Module
 
 class TensorrtRuntimeSubgraph(Module):
     r"""Load a serialized TensorrtRuntime subgraph.
-
+    
     See :func:`~.tensorrt_runtime_opr` for more details.
     """
 
@@ -41,7 +41,7 @@ class TensorrtRuntimeSubgraph(Module):
 
 class CambriconRuntimeSubgraph(Module):
     r"""Load a serialized CambriconRuntime subgraph.
-
+    
     See :func:`~.cambricon_runtime_opr` for more details.
     """
 
@@ -68,7 +68,7 @@ class CambriconRuntimeSubgraph(Module):
 
 class AtlasRuntimeSubgraph(Module):
     r"""Load a serialized AtlasRuntime subgraph.
-
+    
     See :func:`~.atlas_runtime_opr` for more details.
     """
 

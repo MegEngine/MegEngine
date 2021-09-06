@@ -103,15 +103,14 @@ def expand_hw(x):
 def linear(
     inp: Tensor, weight: Tensor, bias: Optional[Tensor] = None, compute_mode="default",
 ) -> Tensor:
-    """
-    Applies a linear transformation to the input tensor.
+    r"""Applies a linear transformation to the input tensor.
 
     Refer to :class:`~.module.linear.Linear` for more information.
 
-    :param inp: input tensor with shape `(N, in_features)`.
-    :param weight: weight with shape `(out_features, in_features)`.
-    :param bias: bias with shape `(out_features,)`.
-        Default: None
+    Args:
+        inp: input tensor with shape `(N, in_features)`.
+        weight: weight with shape `(out_features, in_features)`.
+        bias: bias with shape `(out_features,)`. Default: None
     """
     ret = matmul(inp, weight, transpose_b=True, compute_mode=compute_mode)
     if bias is not None:
@@ -132,32 +131,29 @@ def conv1d(
     conv_mode="cross_correlation",
     compute_mode="default",
 ) -> Tensor:
-    """1D convolution operation.
+    r"""1D convolution operation.
 
     Refer to :class:`~.Conv1d` for more information.
 
-    :param inp: The feature map of the convolution operation
-    :param weight: The convolution kernel.
-    :param bias: The bias added to the result of convolution (if given)
-    :param stride: Stride of the 1D convolution operation. Default: 1
-    :param padding: Size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: Dilation of the 1D convolution operation. Default: 1
-    :param groups: number of groups to divide input and output channels into,
-        so as to perform a "grouped convolution". When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, kernel_size)``. Default: 1
-    :type conv_mode: string or :class:`mgb.opr_param_defs.Convolution.Mode`
-    :param conv_mode: Supports 'cross_correlation'. Default:
-        'cross_correlation'.
-    :type compute_mode: string or
-        :class:`mgb.opr_param_defs.Convolution.ComputeMode`
-    :param compute_mode: When set to 'default', no special requirements will be
-        placed on the precision of intermediate results. When set to 'float32',
-        float32 would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
-
+    Args:
+        inp: The feature map of the convolution operation
+        weight: The convolution kernel.
+        bias: The bias added to the result of convolution (if given)
+        stride: Stride of the 1D convolution operation. Default: 1
+        padding: Size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: Dilation of the 1D convolution operation. Default: 1
+        groups: number of groups to divide input and output channels into,
+            so as to perform a "grouped convolution". When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, kernel_size)``. Default: 1
+        conv_mode: Supports 'cross_correlation'. Default:
+            'cross_correlation'.
+        compute_mode: When set to 'default', no special requirements will be
+            placed on the precision of intermediate results. When set to 'float32',
+            float32 would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
     """
     assert (
         conv_mode.lower() == "cross_correlation"
@@ -217,33 +213,31 @@ def conv2d(
     conv_mode="cross_correlation",
     compute_mode="default",
 ) -> Tensor:
-    """
-    2D convolution operation.
+    r"""2D convolution operation.
 
     Refer to :class:`~.module.Conv2d` for more information.
 
-    :param inp: feature map of the convolution operation.
-    :param weight: convolution kernel.
-    :param bias: bias added to the result of convolution (if given).
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, height, width)``. Default: 1
-    :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "cross_correlation". Default:
-        "cross_correlation"
-    :type compute_mode: string or
-        :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
-    :return: output tensor.
+    Args:
+        inp: feature map of the convolution operation.
+        weight: convolution kernel.
+        bias: bias added to the result of convolution (if given).
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, height, width)``. Default: 1
+        conv_mode: supports "cross_correlation". Default: "cross_correlation"
+        compute_mode: when set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
+
+    Returns:
+        output tensor.
     """
     assert (
         conv_mode.lower() == "cross_correlation"
@@ -292,26 +286,27 @@ def conv3d(
     groups: int = 1,
     conv_mode: str = "cross_correlation",
 ) -> Tensor:
-    """
-    3D convolution operation.
+    r"""3D convolution operation.
 
     Refer to :class:`~.Conv3d` for more information.
 
-    :param inp: feature map of the convolution operation.
-    :param weight: convolution kernel.
-    :param bias: bias added to the result of convolution (if given).
-    :param stride: stride of the 3D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 3D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
-        and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, depth, height, width)``. Default: 1
-    :param conv_mode: supports "cross_correlation". Default:
-        "cross_correlation"
-    :return: output tensor.
+    Args:
+        inp: feature map of the convolution operation.
+        weight: convolution kernel.
+        bias: bias added to the result of convolution (if given).
+        stride: stride of the 3D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 3D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by ``groups``,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, depth, height, width)``. Default: 1
+        conv_mode: supports "cross_correlation". Default: "cross_correlation"
+
+    Returns:
+        output tensor.
     """
     assert conv_mode.lower() == "cross_correlation"
 
@@ -359,33 +354,31 @@ def conv_transpose2d(
     conv_mode="cross_correlation",
     compute_mode="default",
 ) -> Tensor:
-    """
-    2D transposed convolution operation.
+    r"""2D transposed convolution operation.
 
     Refer to :class:`~.ConvTranspose2d` for more information.
 
-    :param inp: feature map of the convolution operation.
-    :param weight: convolution kernel.
-    :param bias: bias added to the result of convolution (if given).
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by groups,
-        and the shape of weight should be ``(groups, in_channels // groups,
-        out_channels // groups, height, width)``. Default: 1
-    :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "cross_correlation". Default:
-        "cross_correlation"
-    :type compute_mode: string or
-        :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
-    :return: output tensor.
+    Args:
+        inp: feature map of the convolution operation.
+        weight: convolution kernel.
+        bias: bias added to the result of convolution (if given).
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by groups,
+            and the shape of weight should be ``(groups, in_channels // groups,
+            out_channels // groups, height, width)``. Default: 1
+        conv_mode: supports "cross_correlation". Default: "cross_correlation"
+        compute_mode: when set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
+
+    Returns:
+        output tensor.
     """
     assert (
         conv_mode.lower() == "cross_correlation"
@@ -437,33 +430,31 @@ def deformable_conv2d(
     conv_mode="cross_correlation",
     compute_mode="default",
 ) -> Tensor:
-    """
-    Deformable Convolution.
+    r"""Deformable Convolution.
 
-    :param inp: input feature map.
-    :param weight: convolution kernel.
-    :param offset: input offset to kernel, channel of this tensor should match the deformable settings.
-    :param mask: input mask to kernel, channel of this tensor should match the deformable settings.
-    :param bias: bias added to the result of convolution (if given).
-    :param stride: stride of the 2D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on both sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 2D convolution operation. Default: 1
-    :param groups: number of groups into which the input and output channels are divided,
-        so as to perform a ``grouped convolution``. When ``groups`` is not 1,
-        ``in_channels`` and ``out_channels`` must be divisible by groups,
-        and the shape of weight should be ``(groups, out_channel // groups,
-        in_channels // groups, height, width)``. Default: 1
-    :type conv_mode: string or :class:`Convolution.Mode`
-    :param conv_mode: supports "cross_correlation". Default:
-        "cross_correlation"
-    :type compute_mode: string or
-        :class:`Convolution.ComputeMode`
-    :param compute_mode: when set to "default", no special requirements will be
-        placed on the precision of intermediate results. When set to "float32",
-        "float32" would be used for accumulator and intermediate result, but only
-        effective when input and output are of float16 dtype.
-    :return: output tensor.
+    Args:
+        inp: input feature map.
+        weight: convolution kernel.
+        offset: input offset to kernel, channel of this tensor should match the deformable settings.
+        mask: input mask to kernel, channel of this tensor should match the deformable settings.
+        bias: bias added to the result of convolution (if given).
+        stride: stride of the 2D convolution operation. Default: 1
+        padding: size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 2D convolution operation. Default: 1
+        groups: number of groups into which the input and output channels are divided,
+            so as to perform a ``grouped convolution``. When ``groups`` is not 1,
+            ``in_channels`` and ``out_channels`` must be divisible by groups,
+            and the shape of weight should be ``(groups, out_channel // groups,
+            in_channels // groups, height, width)``. Default: 1
+        conv_mode: supports "cross_correlation". Default: "cross_correlation"
+        compute_mode: when set to "default", no special requirements will be
+            placed on the precision of intermediate results. When set to "float32",
+            "float32" would be used for accumulator and intermediate result, but only
+            effective when input and output are of float16 dtype.
+
+    Returns:
+        output tensor.
     """
     assert (
         conv_mode.lower() == "cross_correlation"
@@ -508,7 +499,7 @@ def local_conv2d(
     dilation: Union[int, Tuple[int, int]] = 1,
     conv_mode="cross_correlation",
 ):
-    """Applies spatial 2D convolution over an groupped channeled image with untied kernels."""
+    r"""Applies spatial 2D convolution over an groupped channeled image with untied kernels."""
     assert (
         conv_mode.lower() == "cross_correlation"
         or conv_mode.name == "CROSS_CORRELATION"
@@ -548,21 +539,23 @@ def conv_transpose3d(
     padding: Union[int, Tuple[int, int, int]] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
 ) -> Tensor:
-    """
-    3D transposed convolution operation. Only support the case that groups = 1
+    r"""3D transposed convolution operation. Only support the case that groups = 1
     and conv_mode = "cross_correlation".
 
     Refer to :class:`~.ConvTranspose3d` for more information.
 
-    :param inp: feature map of the convolution operation.
-    :param weight: convolution kernel.
-        weight usually has shape ``(in_channels, out_channels, depth, height, width)``.
-    :param bias: bias added to the result of convolution (if given).
-    :param stride: stride of the 3D convolution operation. Default: 1
-    :param padding: size of the paddings added to the input on all sides of its
-        spatial dimensions. Only zero-padding is supported. Default: 0
-    :param dilation: dilation of the 3D convolution operation. Default: 1
-    :return: output tensor.
+    Args:
+        inp: feature map of the convolution operation.
+        weight: convolution kernel.
+            weight usually has shape ``(in_channels, out_channels, depth, height, width)``.
+        bias: bias added to the result of convolution (if given).
+        stride: stride of the 3D convolution operation. Default: 1
+        padding: size of the paddings added to the input on all sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0
+        dilation: dilation of the 3D convolution operation. Default: 1
+
+    Returns:
+        output tensor.
     """
     D, H, W = 0, 1, 2
     pad = _triple(padding)
@@ -599,17 +592,19 @@ def max_pool2d(
     stride: Optional[Union[int, Tuple[int, int]]] = None,
     padding: Union[int, Tuple[int, int]] = 0,
 ) -> Tensor:
-    """
-    Applies a 2D max pooling over an input tensor.
+    r"""Applies a 2D max pooling over an input tensor.
 
     Refer to :class:`~.MaxPool2d` for more information.
 
-    :param inp: input tensor.
-    :param kernel_size: size of the window.
-    :param stride: stride of the window. If not provided, its value is set to kernel_size.
-        Default: None
-    :param padding: implicit zero padding added on both sides. Default: 0
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        kernel_size: size of the window.
+        stride: stride of the window. If not provided, its value is set to kernel_size.
+            Default: None
+        padding: implicit zero padding added on both sides. Default: 0
+
+    Returns:
+        output tensor.
     """
     if stride is None:
         stride = kernel_size
@@ -637,19 +632,21 @@ def avg_pool2d(
     padding: Union[int, Tuple[int, int]] = 0,
     mode: str = "average_count_exclude_padding",
 ) -> Tensor:
-    """
-    Applies 2D average pooling over an input tensor.
+    r"""Applies 2D average pooling over an input tensor.
 
     Refer to :class:`~.AvgPool2d` for more information.
 
-    :param inp: input tensor.
-    :param kernel_size: size of the window.
-    :param stride: stride of the window. If not provided, its value is set to ``kernel_size``.
-        Default: None
-    :param padding: implicit zero padding added on both sides. Default: 0
-    :param mode: whether to count padding values, set to "average" will do counting.
-        Default: "average_count_exclude_padding"
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        kernel_size: size of the window.
+        stride: stride of the window. If not provided, its value is set to ``kernel_size``.
+            Default: None
+        padding: implicit zero padding added on both sides. Default: 0
+        mode: whether to count padding values, set to "average" will do counting.
+            Default: "average_count_exclude_padding"
+
+    Returns:
+        output tensor.
     """
     if stride is None:
         stride = kernel_size
@@ -673,14 +670,16 @@ def avg_pool2d(
 def adaptive_max_pool2d(
     inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
 ) -> Tensor:
-    """
-    Applies a 2D max adaptive pooling over an input.
+    r"""Applies a 2D max adaptive pooling over an input.
 
     Refer to :class:`~.MaxAdaptivePool2d` for more information.
 
-    :param inp: input tensor.
-    :param oshp: `(OH, OW)` size of the output shape.
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        oshp: OH, OW)` size of the output shape.
+
+    Returns:
+        output tensor.
     """
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
@@ -694,14 +693,16 @@ def adaptive_max_pool2d(
 def adaptive_avg_pool2d(
     inp: Tensor, oshp: Union[Tuple[int, int], int, Tensor],
 ) -> Tensor:
-    """
-    Applies a 2D average adaptive pooling over an input.
+    r"""Applies a 2D average adaptive pooling over an input.
 
     Refer to :class:`~.AvgAdaptivePool2d` for more information.
 
-    :param inp: input tensor.
-    :param oshp: `(OH, OW)` size of the output shape.
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        oshp: OH, OW)` size of the output shape.
+
+    Returns:
+        output tensor.
     """
     if isinstance(oshp, int):
         oshp = (oshp, oshp)
@@ -724,19 +725,19 @@ def deformable_psroi_pooling(
     spatial_scale: float,
     trans_std: float = 0.1,
 ):
-    """
-    Deformable PSROI(Position Sensitive Region of Interest) Pooling.
+    r"""Deformable PSROI(Position Sensitive Region of Interest) Pooling.
 
-    :param inp: input feature map.
-    :param rois: the rois for feature pooling.
-    :param trans: input offset to psroi_pooling.
-    :param no_trans: check the phase of DeformablePSROIPooling. False to the
-                        1st phase, True to the 2nd phase.
-    :param part_size: part size.
-    :param sample_per_part: sample points of each part.
-    :param pooled_shape: kernel shape of convolution.
-    :param spatial_scale: the spatial_scale w.r.t input image.
-    :param trans_std: multiplier used in 2nd phase.
+    Args:
+        inp: input feature map.
+        rois: the rois for feature pooling.
+        trans: input offset to psroi_pooling.
+        no_trans: check the phase of DeformablePSROIPooling. False to the
+            1st phase, True to the 2nd phase.
+        part_size: part size.
+        sample_per_part: sample points of each part.
+        pooled_shape: kernel shape of convolution.
+        spatial_scale: the spatial_scale w.r.t input image.
+        trans_std: multiplier used in 2nd phase.
     """
     op = builtin.DeformablePSROIPooling(
         no_trans=no_trans,
@@ -752,55 +753,50 @@ def deformable_psroi_pooling(
 
 
 def hswish(x):
-    """
-    Element-wise `x * relu6(x + 3) / 6`.
-
-    :param x: input tensor.
-    :return: computed tensor.
+    r"""Element-wise `x * relu6(x + 3) / 6`.
 
     Example:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(5).astype(np.float32))
-        out = F.hswish(x)
-        print(out.numpy().round(decimals=4))
+            x = tensor(np.arange(5).astype(np.float32))
+            out = F.hswish(x)
+            print(out.numpy().round(decimals=4))
 
-    .. testoutput::
+        .. testoutput::
 
-        [0.     0.6667 1.6667 3.     4.    ]
+            [0.     0.6667 1.6667 3.     4.    ]
 
     """
     return _elwise(x, mode=Elemwise.Mode.H_SWISH)
 
 
 def sigmoid(x):
-    """Element-wise `1 / ( 1 + exp( -x ) )`."""
+    r"""Element-wise `1 / ( 1 + exp( -x ) )`."""
     return _elwise(x, mode=Elemwise.Mode.SIGMOID)
 
 
 def hsigmoid(x):
-    """Element-wise `relu6(x + 3) / 6`."""
+    r"""Element-wise `relu6(x + 3) / 6`."""
     return relu6(x + 3) / 6
 
 
 def relu(x):
-    """Element-wise `max(x, 0)`."""
+    r"""Element-wise `max(x, 0)`."""
     return _elwise(x, mode=Elemwise.Mode.RELU)
 
 
 def relu6(x):
-    """Element-wise `min(max(x, 0), 6)`."""
+    r"""Element-wise `min(max(x, 0), 6)`."""
     return minimum(maximum(x, 0), 6)
 
 
 def prelu(inp: Tensor, weight: Tensor) -> Tensor:
-    r"""
-    Applies the element-wise PReLU function.
+    r"""Elememt-wise PReLU function.
 
     Refer to :class:`~.PReLU` for more information.
     """
@@ -808,8 +804,7 @@ def prelu(inp: Tensor, weight: Tensor) -> Tensor:
 
 
 def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
-    r"""
-    Applies the element-wise leaky_relu function
+    r"""Element-wose LeakyReLU function
 
     Refer to :class:`~.LeakyReLU` for more information.
     """
@@ -817,15 +812,12 @@ def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
 
 
 def silu(x):
-    r"""
-    Applies the element-wise Sigmoid Linear Unit function, i.e. `x * sigmoid(x)`.
-    """
+    r"""Applies the element-wise Sigmoid Linear Unit function, i.e. `x * sigmoid(x)`."""
     return _elwise(x, mode=Elemwise.Mode.SILU)
 
 
 def gelu(x):
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{gelu}(x) = x\Phi(x)
@@ -836,8 +828,7 @@ def gelu(x):
 
 
 def softplus(inp: Tensor) -> Tensor:
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{softplus}(x) = \log(1 + \exp(x))
@@ -851,33 +842,29 @@ def softplus(inp: Tensor) -> Tensor:
                            = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0)
                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
-    :param inp: input tensor.
+   Examples:
 
-    Examples:
+        .. testcode::
 
-    .. testcode::
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            x = tensor(np.arange(-3, 3, dtype=np.float32))
+            y = F.softplus(x)
+            print(y.numpy().round(decimals=4))
 
-        x = tensor(np.arange(-3, 3, dtype=np.float32))
-        y = F.softplus(x)
-        print(y.numpy().round(decimals=4))
+        Outputs:
 
-    Outputs:
+        .. testoutput::
 
-    .. testoutput::
-
-        [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
-
+            [0.0486 0.1269 0.3133 0.6931 1.3133 2.1269]
     """
     return log1p(exp(-abs(inp))) + relu(inp)
 
 
 def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
-    r"""
-    Applies the :math:`\log(\text{softmax}(x))` function to an n-dimensional
+    r"""Applies the :math:`\log(\text{softmax}(x))` function to an n-dimensional
     input tensor. The :math:`\text{logsoftmax}(x)` formulation can be simplified as:
 
     .. math::
@@ -891,35 +878,30 @@ def logsoftmax(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
         = x - \log (\sum_{i}(\exp (x_{i})))
         = x - \text{logsumexp}(x)
 
-    :param inp: input tensor.
-    :param axis: axis along which :math:`\text{logsoftmax}(x)` will be applied.
-
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-        y = F.logsoftmax(x, axis=1)
-        print(y.numpy().round(decimals=4))
+            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+            y = F.logsoftmax(x, axis=1)
+            print(y.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
-         [-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]]
-
+            [[-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]
+             [-4.4519 -3.4519 -2.4519 -1.4519 -0.4519]]
     """
     return inp - logsumexp(inp, axis, keepdims=True)
 
 
 def logsigmoid(inp: Tensor) -> Tensor:
-    r"""
-    Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{logsigmoid}(x) = \log(\frac{ 1 }{ 1 + \exp(-x)})
@@ -927,27 +909,24 @@ def logsigmoid(inp: Tensor) -> Tensor:
         = - \log(1 + \exp(-x))
         = - \text{softplus}(-x)
 
-    :param inp: input tensor.
-
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(-5, 5, dtype=np.float32))
-        y = F.logsigmoid(x)
-        print(y.numpy().round(decimals=4))
+            x = tensor(np.arange(-5, 5, dtype=np.float32))
+            y = F.logsigmoid(x)
+            print(y.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-5.0067 -4.0182 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
-         -0.0181]
-
+            [-5.0067 -4.0182 -3.0486 -2.1269 -1.3133 -0.6931 -0.3133 -0.1269 -0.0486
+            -0.0181]
     """
     return -softplus(-inp)
 
@@ -955,8 +934,7 @@ def logsigmoid(inp: Tensor) -> Tensor:
 def logsumexp(
     inp: Tensor, axis: Union[int, Sequence[int]], keepdims: bool = False
 ) -> Tensor:
-    r"""
-    Calculates the logarithm of the inputs' exponential sum along the given :attr:`axis`.
+    r"""Calculates the logarithm of the inputs' exponential sum along the given :attr:`axis`.
 
     .. math::
 
@@ -974,28 +952,23 @@ def logsumexp(
     .. math::
         b = \max(x_j)
 
-    :param inp: input tensor.
-    :param axis: axis over which the sum is taken. It could be single axis or list of axes.
-    :param keepdims: whether to retain :attr:`axis` or not for the output tensor.
-
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-        y = F.logsumexp(x, axis=1, keepdims=False)
-        print(y.numpy().round(decimals=4))
+            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+            y = F.logsumexp(x, axis=1, keepdims=False)
+            print(y.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [-0.5481  4.4519]
-
+            [-0.5481  4.4519]
     """
     max_value = max(inp.detach(), axis, keepdims=True)
     if keepdims:
@@ -1013,8 +986,7 @@ def _get_softmax_axis(ndim: int) -> int:
 
 
 def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
-    r"""
-    Applies a :math:`\text{softmax}(x)` function. :math:`\text{softmax}(x)` is defined as:
+    r"""Applies a :math:`\text{softmax}(x)` function. :math:`\text{softmax}(x)` is defined as:
 
     .. math::
             \text{softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
@@ -1022,31 +994,26 @@ def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
     It is applied to all elements along axis, and rescales elements so that
     they stay in the range `[0, 1]` and sum to 1.
 
-    See :class:`~megengine.module.activation.Softmax` for more details.
-
-    :param inp: input tensor.
-    :param axis: an axis along which :math:`\text{softmax}(x)` will be applied. By default,
-        :math:`\text{softmax}(x)` will apply along the highest ranked axis.
+    See :class:`~.module.Softmax` for more details.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
-        out = F.softmax(x)
-        print(out.numpy().round(decimals=4))
+            x = tensor(np.arange(-5, 5, dtype=np.float32)).reshape(2,5)
+            out = F.softmax(x)
+            print(out.numpy().round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[0.0117 0.0317 0.0861 0.2341 0.6364]
-         [0.0117 0.0317 0.0861 0.2341 0.6364]]
-
+            [[0.0117 0.0317 0.0861 0.2341 0.6364]
+            [0.0117 0.0317 0.0861 0.2341 0.6364]]
     """
     if axis is None:
         axis = _get_softmax_axis(len(inp.shape))
@@ -1069,28 +1036,25 @@ def batch_norm(
     inplace: bool = True,
     compute_mode="default"
 ):
-    r"""
-    Applies batch normalization to the input.
+    r"""Applies batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
-    :param inp: input tensor.
-    :param running_mean: tensor to store running mean.
-    :param running_var: tensor to store running variance.
-    :param weight: scaling tensor in the learnable affine parameters.
-        See :math:`\gamma` in :class:`~.BatchNorm2d`.
-    :param bias: bias tensor in the learnable affine parameters.
-        See :math:`\beta` in :class:`~.BatchNorm2d`.
-    :param training: a boolean value to indicate whether batch norm is performed
-        in training mode. Default: False
-    :param momentum: value used for the ``running_mean`` and ``running_var``
-        computation.
-        Default: 0.9
-    :param eps: a value added to the denominator for numerical stability.
-        Default: 1e-5
-    :param inplace: whether to update ``running_mean`` and ``running_var`` inplace or return new tensors
-        Default: True
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        running_mean: tensor to store running mean.
+        running_var: tensor to store running variance.
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.BatchNorm2d`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.BatchNorm2d`.
+        training: a boolean value to indicate whether batch norm is performed
+            in training mode. Default: False
+        momentum: value used for the ``running_mean`` and ``running_var``
+            computation. Default: 0.9
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+        inplace: whether to update ``running_mean`` and ``running_var``
+            inplace or return new tensors. Default: True
     """
     if inp.ndim != 4:
         raise NotImplementedError("batch_norm for ndim != 4")
@@ -1282,30 +1246,28 @@ def sync_batch_norm(
     eps_mode="additive",
     group=WORLD,
 ) -> Tensor:
-    r"""
-    Applies synchronized batch normalization to the input.
+    r"""Applies synchronized batch normalization to the input.
 
     Refer to :class:`~.BatchNorm2d` and :class:`~.BatchNorm1d` for more information.
 
-    :param inp: input tensor.
-    :param running_mean: tensor to store running mean.
-    :param running_var: tensor to store running variance.
-    :param weight: scaling tensor in the learnable affine parameters.
-        See :math:`\gamma` in :class:`~.BatchNorm2d`.
-    :param bias: bias tensor in the learnable affine parameters.
-        See :math:`\beta` in :class:`~.BatchNorm2d`.
-    :param training: a boolean value to indicate whether batch norm is performed
-        in traning mode. Default: False
-    :param momentum: value used for the ``running_mean`` and ``running_var``
-        computation.
-        Default: 0.9
-    :param eps: a value added to the denominator for numerical stability.
-        Default: 1e-5
-    :param eps_mode: mode of calculation for eps, "max" or "additive".
-        Default: "additive"
-    :param group: communication group, caculate mean and variance between this group.
-        Default: :obj:`~megengine.distributed.WORLD`
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        running_mean: tensor to store running mean.
+        running_var: tensor to store running variance.
+        weight: scaling tensor in the learnable affine parameters.
+            See :math:`\gamma` in :class:`~.BatchNorm2d`.
+        bias: bias tensor in the learnable affine parameters.
+            See :math:`\beta` in :class:`~.BatchNorm2d`.
+        training: a boolean value to indicate whether batch norm is performed
+            in traning mode. Default: False
+        momentum: value used for the ``running_mean`` and ``running_var``
+            computation. Default: 0.9
+        eps: a value added to the denominator for numerical stability.
+            Default: 1e-5
+        eps_mode: mode of calculation for eps, "max" or "additive".
+            Default: "additive"
+        group: communication group, caculate mean and variance between this group.
+            Default: :obj:`~megengine.distributed.WORLD`
     """
     assert eps_mode.lower() in {"max", "additive"}, "unknown eps_mode: {}".format(
         eps_mode
@@ -1392,40 +1354,40 @@ def sync_batch_norm(
 
 
 def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
-    """
-    Returns a new tensor where each of the elements are randomly set to zero
+    r"""Returns a new tensor where each of the elements are randomly set to zero
     with probability P = ``drop_prob``. Optionally rescale the output tensor if ``training`` is True.
 
-    :param inp: input tensor.
-    :param drop_prob: probability to drop (set to zero) a single element.
-    :param training: the default behavior of ``dropout`` during training is to rescale the output,
-        then it can be replaced by an :class:`~.Identity` during inference. Default: True
-    :return: the output tensor
+    Args:
+        inp: input tensor.
+        drop_prob: probability to drop (set to zero) a single element.
+        training: the default behavior of ``dropout`` during training is to rescale the output,
+            then it can be replaced by an :class:`~.Identity` during inference. Default: True
+    Returns:
+        the ouput tensor
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        # test training mode
-        data = tensor(np.ones(10000000, dtype=np.float32))
-        out = F.nn.dropout(data, 1.0 / 3.0, training=True)
-        assert not out.numpy().all()
+            # test training mode
+            data = tensor(np.ones(10000000, dtype=np.float32))
+            out = F.nn.dropout(data, 1.0 / 3.0, training=True)
+            assert not out.numpy().all()
 
-        # test eval mode
-        out = F.nn.dropout(data, 1.0 / 3.0, training=False)
-        assert out.numpy().all()
+            # test eval mode
+            out = F.nn.dropout(data, 1.0 / 3.0, training=False)
+            assert out.numpy().all()
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
-        :options: +SKIP
+        .. testoutput::
+            :options: +SKIP
 
-        [1.5 1.5 0.  1.5 1.5 1.5 1.5 1.5 1.5 1.5]
-
+            [1.5 1.5 0.  1.5 1.5 1.5 1.5 1.5 1.5 1.5]
     """
     assert 0 <= drop_prob < 1
     if not training or drop_prob == 0:
@@ -1441,33 +1403,31 @@ def dropout(inp: Tensor, drop_prob: float, training: bool = True) -> Tensor:
 
 
 def one_hot(inp: Tensor, num_classes: int) -> Tensor:
-    r"""
-    Performs one-hot encoding for the input tensor.
+    r"""Performs one-hot encoding for the input tensor.
 
-    :param inp: input tensor.
-    :param num_classes: number of classes denotes the last dimension of the output tensor.
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        num_classes: number of classes denotes the last dimension of the output tensor.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(1, 4, dtype=np.int32))
-        out = F.one_hot(x, num_classes=4)
-        print(out.numpy())
+            x = tensor(np.arange(1, 4, dtype=np.int32))
+            out = F.one_hot(x, num_classes=4)
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[0 1 0 0]
-         [0 0 1 0]
-         [0 0 0 1]]
-
+            [[0 1 0 0]
+             [0 0 1 0]
+             [0 0 0 1]]
     """
     zeros_tensor = zeros(list(inp.shape) + [num_classes], inp.dtype, inp.device)
     ones_tensor = ones(list(inp.shape) + [1], inp.dtype, inp.device)
@@ -1484,17 +1444,16 @@ def embedding(
     max_norm: Optional[float] = None,
     norm_type: Optional[float] = None,
 ):
-    """
-    Applies lookup table for embedding.
+    r"""Applies lookup table for embedding.
 
-    :param inp: tensor with indices.
-    :param weight: learnable weights which embeds from.
-    :param padding_idx: should be set to None, not supported now.
-    :param max_norm: should be set to None, not supported now.
-    :param norm_type: should be set to None, not supported now.
-    :return: output tensor.
+    Args:
+        inp: tensor with indices.
+        weight: learnable weights which embeds from.
+        padding_idx: should be set to None, not supported now.
+        max_norm: should be set to None, not supported now.
+        norm_type: should be set to None, not supported now.
 
-    Refer to :class:`~.Embedding` for more information.
+    Refer to :class:`~.module.Embedding` for more information.
     """
     if padding_idx is not None:
         raise ValueError("Not support padding_idx Now!")
@@ -1508,33 +1467,31 @@ def embedding(
 def indexing_one_hot(
     src: Tensor, index: Tensor, axis: int = 1, keepdims=False
 ) -> Tensor:
-    r"""
-    One-hot indexing for some axes.
+    r"""One-hot indexing for some axes.
 
-    :param src: input tensor.
-    :param index: index tensor.
-    :param axis: axis on src for which values in index index. Default: 1
-    :param keepdims: whether not to remove the axis in result. Default: False
-    :return: output tensor.
+    Args:
+        src: input tensor.
+        index: index tensor.
+        axis: axis on src for which values in index index. Default: 1
+        keepdims: whether not to remove the axis in result. Default: False
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import megengine.functional as F
-        from megengine import tensor
+            import megengine.functional as F
+            from megengine import tensor
 
-        src = tensor([[1.0, 2.0]])
-        index = tensor([0])
-        val = F.indexing_one_hot(src, index)
-        print(val.numpy())
+            src = tensor([[1.0, 2.0]])
+            index = tensor([0])
+            val = F.indexing_one_hot(src, index)
+            print(val.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [1.]
-
+            [1.]
     """
     assert isinstance(src, Tensor), "src must be of Tensor type"
     op = builtin.IndexingOneHot(axis=axis)
@@ -1552,17 +1509,16 @@ def sliding_window(
     stride: Union[int, Tuple[int, int]] = 1,
     dilation: Union[int, Tuple[int, int]] = 1,
 ) -> Tensor:
-    """
-    Extracts sliding local blocks from a batched input tensor.
+    r"""Extracts sliding local blocks from a batched input tensor.
 
     Refer to :class:`~.SlidingWindow` for more information.
 
-    :param inp: input tensor.
-    :param kernel_size: size of the window.
-    :param padding: implicit zero padding added on both sides of input. Default: 0
-    :param stride: stride of the window. Default: 1
-    :param dilation: dilation of the window. Default: 1
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        kernel_size: size of the window.
+        padding: implicit zero padding added on both sides of input. Default: 0
+        stride: stride of the window. Default: 1
+        dilation: dilation of the window. Default: 1
     """
     padding_h, padding_w = _pair(padding)
     stride_h, stride_w = _pair_nonzero(stride)
@@ -1591,18 +1547,17 @@ def sliding_window_transpose(
     stride: Union[int, Tuple[int, int]] = 1,
     dilation: Union[int, Tuple[int, int]] = 1,
 ) -> Tensor:
-    """
-    Sum over the sliding windows on the corresponding input location.
+    r"""Sum over the sliding windows on the corresponding input location.
 
     Refer to :class:`~.SlidingWindowTranspose` for more information.
 
-    :param inp: input tensor.
-    :param output_size: shape of output tensor.
-    :param kernel_size: size of the window.
-    :param padding: implicit zero padding added on both sides of input. Default: 0
-    :param stride: stride of the window. Default: 1
-    :param dilation: dilation of the window. Default: 1
-    :return: output tensor.
+    Args:
+        inp: input tensor.
+        output_size: shape of output tensor.
+        kernel_size: size of the window.
+        padding: implicit zero padding added on both sides of input. Default: 0
+        stride: stride of the window. Default: 1
+        dilation: dilation of the window. Default: 1
     """
     output_h, output_w = _pair_nonzero(output_size)
     padding_h, padding_w = _pair(padding)

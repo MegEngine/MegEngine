@@ -15,8 +15,7 @@ from .module import Module
 
 
 class GroupNorm(Module):
-    """
-    Simple implementation of GroupNorm. Only support 4d tensor now.
+    """Simple implementation of GroupNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 
@@ -64,8 +63,7 @@ class GroupNorm(Module):
 
 
 class InstanceNorm(Module):
-    """
-    Simple implementation of InstanceNorm. Only support 4d tensor now.
+    """Simple implementation of InstanceNorm. Only support 4d tensor now.
     Reference: https://arxiv.org/abs/1607.08022.
     Note that InstanceNorm equals using GroupNome with num_groups=num_channels.
     """
@@ -108,8 +106,7 @@ class InstanceNorm(Module):
 
 
 class LayerNorm(Module):
-    """
-    Simple implementation of LayerNorm. Support tensor of any shape as input.
+    """Simple implementation of LayerNorm. Support tensor of any shape as input.
     Reference: https://arxiv.org/pdf/1803.08494.pdf.
     """
 

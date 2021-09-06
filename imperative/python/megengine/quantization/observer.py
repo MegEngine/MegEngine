@@ -25,11 +25,11 @@ logger = get_logger(__name__)
 
 
 class Observer(Module, QParamsModuleMixin):
-    r"""
-    A base class for Observer Module. Used to record input tensor's statistics for
+    r"""A base class for Observer Module. Used to record input tensor's statistics for
     quantization.
 
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def __init__(self, dtype: Union[str, QuantDtypeMeta], **kwargs):
@@ -73,12 +73,12 @@ class Observer(Module, QParamsModuleMixin):
 
 
 class MinMaxObserver(Observer):
-    r"""
-    A Observer Module records input tensor's running min and max values to calc scale.
+    r"""A Observer Module records input tensor's running min and max values to calc scale.
 
-    :param mode: set quantization mode.
-    :param eps: a initial maximum value to avoid division by zero problem.
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        mode: set quantization mode.
+        eps: a initial maximum value to avoid division by zero problem.
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def __init__(
@@ -128,12 +128,12 @@ class MinMaxObserver(Observer):
 
 
 class SyncMinMaxObserver(MinMaxObserver):
-    r"""
-    A distributed version of :class:`~.MinMaxObserver`.
+    r"""A distributed version of :class:`~.MinMaxObserver`.
 
-    :param mode: set quantization mode.
-    :param eps: a initial maximum value to avoid division by zero problem.
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        mode: set quantization mode.
+        eps: a initial maximum value to avoid division by zero problem.
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def forward(self, x_orig):
@@ -151,13 +151,13 @@ class SyncMinMaxObserver(MinMaxObserver):
 
 
 class ExponentialMovingAverageObserver(MinMaxObserver):
-    r"""
-    A :class:`~.MinMaxObserver` with momentum support for min/max updating.
+    r"""A :class:`~.MinMaxObserver` with momentum support for min/max updating.
 
-    :param momentum: momentum ratio for min/max updating.
-    :param mode: set quantization mode.
-    :param eps: a initial maximum value to avoid division by zero problem.
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        momentum: momentum ratio for min/max updating.
+        mode: set quantization mode.
+        eps: a initial maximum value to avoid division by zero problem.
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def __init__(
@@ -196,13 +196,13 @@ class ExponentialMovingAverageObserver(MinMaxObserver):
 
 
 class SyncExponentialMovingAverageObserver(ExponentialMovingAverageObserver):
-    r"""
-    A distributed version of :class:`~.ExponentialMovingAverageObserver`.
+    r"""A distributed version of :class:`~.ExponentialMovingAverageObserver`.
 
-    :param momentum: momentum ratio for min/max updating.
-    :param mode: set quantization mode.
-    :param eps: a initial maximum value to avoid division by zero problem.
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        momentum: momentum ratio for min/max updating.
+        mode: set quantization mode.
+        eps: a initial maximum value to avoid division by zero problem.
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def forward(self, x_orig):
@@ -227,15 +227,15 @@ class SyncExponentialMovingAverageObserver(ExponentialMovingAverageObserver):
 
 
 class HistogramObserver(MinMaxObserver):
-    r"""
-    A :class:`~.MinMaxObserver` using running histogram of tensor values
+    r"""A :class:`~.MinMaxObserver` using running histogram of tensor values
     for min/max updating. Usually used for calibration quantization.
 
-    :param bins: number of bins to use for the histogram.
-    :param upsample_rate: which ratio to interpolate histograms in.
-    :param mode: set quantization mode.
-    :param eps: a initial maximum value to avoid division by zero problem.
-    :param dtype: a string indicating which dtype to collect scale and zero_point of.
+    Args:
+        bins: number of bins to use for the histogram.
+        upsample_rate: which ratio to interpolate histograms in.
+        mode: set quantization mode.
+        eps: a initial maximum value to avoid division by zero problem.
+        dtype: a string indicating which dtype to collect scale and zero_point of.
     """
 
     def __init__(
@@ -256,8 +256,7 @@ class HistogramObserver(MinMaxObserver):
         self.histogram = Tensor([-1] + [0.0] * (bins - 1), dtype="float32")
 
     def _non_linear_param_search(self):
-        r"""
-        Non-linear parameter search.
+        r"""Non-linear parameter search.
         An approximation for L2 error minimization for selecting min/max.
         By selecting new min/max, we filter out outliers in input distribution.
         """
@@ -269,8 +268,7 @@ class HistogramObserver(MinMaxObserver):
         bin_width = (np_max_val - np_min_val) / self.bins
 
         def _get_norm(delta_begin, delta_end, density, norm_type):
-            r"""
-            Compute the norm of the values uniformaly distributed between
+            r"""Compute the norm of the values uniformaly distributed between
             delta_begin and delta_end.
             norm = density * (integral_{begin, end} x^2)
                  = density * (end^3 - begin^3) / 3
@@ -285,8 +283,7 @@ class HistogramObserver(MinMaxObserver):
             return density * norm
 
         def _compute_quantization_error(next_start_bin, next_end_bin, norm_type):
-            r"""
-            Compute the quantization error if we use start_bin to end_bin as the
+            r"""Compute the quantization error if we use start_bin to end_bin as the
             min and max to do the quantization.
             """
 
@@ -488,9 +485,7 @@ class HistogramObserver(MinMaxObserver):
 
 
 class PassiveObserver(Observer):
-    r"""
-    An Observer that supports setting :attr:`scale` directly.
-    """
+    r"""An Observer that supports setting :attr:`scale` directly."""
 
     def __init__(self, dtype: Union[str, QuantDtypeMeta], **kwargs):
         super().__init__(dtype, **kwargs)
@@ -510,8 +505,10 @@ class PassiveObserver(Observer):
         return self.qparams
 
     def set_qparams(self, qparams: QParams):
-        """
-        :param qparams: used to set initial scale.
+        r"""set the ``qparams``.
+
+        Args:
+          qparams: used to set initial scale.
         """
         self.qparams = deepcopy(qparams)
         if qparams.scale is None:
@@ -527,7 +524,5 @@ class PassiveObserver(Observer):
         self.orig_scale = qparams.scale.numpy()
 
     def forward(self, x):
-        r"""
-        Just return input because :attr:`qparams` is set by :func:`~.apply_easy_quant`.
-        """
+        r"""Just return input because :attr:`qparams` is set by :func:`~.apply_easy_quant`."""
         return x

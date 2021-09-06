@@ -19,37 +19,36 @@ __all__ = ["topk_accuracy"]
 def _assert_equal(
     expect: Tensor, actual: Tensor, *, maxerr: float = 0.0001, verbose: bool = False
 ):
-    r"""
-    Asserts two tensors equal and returns expected value (first input).
+    r"""Asserts two tensors equal and returns expected value (first input).
     It is a variant of python assert which is symbolically traceable (similar to ``numpy.testing.assert_equal``).
     If we want to verify the correctness of model, just ``assert`` its states and outputs.
     While sometimes we need to verify the correctness at different backends for *dumped* model
     (or in :class:`~jit.trace` context), and no python code could be executed in that case.
     Thus we have to use :func:`~functional.utils._assert_equal` instead.
 
-    :param expect: expected tensor value
-    :param actual: tensor to check value
-    :param maxerr: max allowed error; error is defined as the minimal of absolute and relative error
-    :param verbose: whether to print maxerr to stdout during opr exec
-    :return: expected tensor
+    Args:
+        expect: expected tensor value
+        actual: tensor to check value
+        maxerr: max allowed error; error is defined as the minimal of absolute and relative error
+        verbose: whether to print maxerr to stdout during opr exec
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor([1, 2, 3], np.float32)
-        y = tensor([1, 2, 3], np.float32)
-        print(F.utils._assert_equal(x, y, maxerr=0).numpy())
+            x = tensor([1, 2, 3], np.float32)
+            y = tensor([1, 2, 3], np.float32)
+            print(F.utils._assert_equal(x, y, maxerr=0).numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [1. 2. 3.]
+            [1. 2. 3.]
     """
     err = (
         abs(expect - actual)

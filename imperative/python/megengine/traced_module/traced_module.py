@@ -341,13 +341,12 @@ class _InsertExprs:
 
 
 class InternalGraph:
-    """
-    ``InternalGraph`` is a graph consist of ``Node`` and  ``Expr``, it is used to represent the execution procedure of Module's forward method.
+    r"""``InternalGraph`` is a graph consist of ``Node`` and  ``Expr``, it is used to represent the execution procedure of Module's forward method.
 
     Attributes:
-    _exprs: List of Exprs in order of execution
-    _inputs: Input Nodes of InternalGraph
-    _outputs: Output Nodes of InternalGraph
+        _exprs: List of Exprs in order of execution
+        _inputs: Input Nodes of InternalGraph
+        _outputs: Output Nodes of InternalGraph
     """
 
     _exprs = None  # type: List[Expr]
@@ -733,9 +732,7 @@ class InternalGraph:
                 n.inputs[idx] = repl_node
 
     def compile(self):
-        """
-        Delete unused expr.
-        """
+        """Delete unused expr."""
         dep_exprs = self.get_dep_exprs(self.outputs)
         i = 0
         while i < len(self._exprs):
@@ -1403,9 +1400,7 @@ class ExprFilterExprId(ExprFilter):
 
 
 class TracedModule(Module):
-    """
-    `TracedModule` is the Module created by tracing normal module. It owns an argdef to graph(InternalGraph) map. The forward method of `TracedModule` will get a graph from `argdef_graph_map` according to the argdef of input args/kwargs and interpret it.
-    """
+    r"""`TracedModule` is the Module created by tracing normal module. It owns an argdef to graph(InternalGraph) map. The forward method of `TracedModule` will get a graph from `argdef_graph_map` according to the argdef of input args/kwargs and interpret it."""
 
     # m_node = None  # type: ModuleNode
     argdef_graph_map = None
@@ -1526,8 +1521,7 @@ class TracedModule(Module):
                     obj._update_ref(mnode_map, graph)
 
     def flatten(self):
-        """
-        Get a new module, which eliminates ``GetAttr`` and has no hierarchy.
+        r"""Get a new module, which eliminates ``GetAttr`` and has no hierarchy.
 
         :return: :class:`TracedModule`
         """
@@ -1661,18 +1655,16 @@ def cpp_apply_module_trace(opdef, *args):
 
 
 def register_as_builtin(mod_cls: Type[Module]) -> None:
-    """
-    Registers class ``mod_cls`` (subclass of megengine.module.Module) as builtin module.
+    r"""Registers class ``mod_cls`` (subclass of megengine.module.Module) as builtin module.
 
-    param mod_cls: the Module class which will be threated as builtin module in tracing
+    Args:
+        mod_cls: the Module class which will be threated as builtin module in tracing
     """
     module_tracer.register_as_builtin(mod_cls)
 
 
 def wrap(func: Callable):
-    """
-    Call this function to register func as a builtin function.
-    """
+    r"""Call this function to register func as a builtin function."""
     assert callable(func), "func must be a callable"
     assert hasattr(func, "__code__")
     fn_name = func.__code__.co_name
@@ -1713,12 +1705,12 @@ def _register_all_builtin_module():
 
 
 def trace_module(mod: Module, *args: Tensor, **kwargs: Tensor) -> TracedModule:
-    """
-    Traces module ``mod`` and returns corresponding TracedModule.
+    r"""Traces module ``mod`` and returns corresponding TracedModule.
 
-    param mod: the module will be converted to TracedModule
-    param input: the positional arguments passed to forward method of ``mod``
-    param kwargs: the keyword arguments passed to forward method of ``mod``
+    Args:
+        mod: the module will be converted to TracedModule
+        input: the positional arguments passed to forward method of ``mod``
+        kwargs: the keyword arguments passed to forward method of ``mod``
     """
     assert active_module_tracer() is None
     assert isinstance(mod, Module)

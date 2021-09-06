@@ -15,17 +15,16 @@ from .optimizer import Optimizer
 
 
 class Adam(Optimizer):
-    r"""
-    Implements Adam algorithm proposed in `"Adam: A Method for Stochastic Optimization" <https://arxiv.org/abs/1412.6980>`_.
+    r"""Implements Adam algorithm proposed in `"Adam: A Method for Stochastic Optimization" <https://arxiv.org/abs/1412.6980>`_.
 
-    :param params: iterable of parameters to optimize or dicts defining
+    Args:
+        params: iterable of parameters to optimize or dicts defining
             parameter groups.
-    :param lr: learning rate.
-    :param betas: coefficients used for computing running averages of gradient
-        and its square. Default: (0.9, 0.999)
-    :param eps: term added to the denominator to improve numerical stability
-        Default: 1e-8
-    :param weight_decay: weight decay (L2 penalty). Default: 0
+        lr: learning rate.
+            betas: coefficients used for computing running averages of gradient
+            and its square. Default: (0.9, 0.999)
+        eps: term added to the denominator to improve numerical stability. Default: 1e-8
+        weight_decay: weight decay (L2 penalty). Default: 0
     """
 
     def __init__(

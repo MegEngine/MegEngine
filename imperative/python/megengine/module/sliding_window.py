@@ -13,8 +13,7 @@ from .module import Module
 
 
 class SlidingWindow(Module):
-    r"""
-    Apply a sliding window to input tensor and copy content in the window to
+    r"""Apply a sliding window to input tensor and copy content in the window to
     corresponding output location. Assume input shape is :math:`(N, C, IH, IW)`,
     then output shape would be :math:`(N, C, OH, OW, window_h, window_w)` where
     :math:`(OH, OW)` would be computed from padding, stride, window and
@@ -26,46 +25,45 @@ class SlidingWindow(Module):
         \text{where } & ih=-pad_h+oh \times stride_h + (wh-1) \times (dilation_h-1) \\
                        & iw=-pad_w+ow \times stride_w + (ww-1) \times (dilation_w-1)
 
-
-    :param kernel_size: the size of the window to take a max over.
-    :param padding: implicit zero padding to be added on both sides. Default: 0
-    :param stride: the stride of the window. Default: 1
-    :param dilation: the dilation of the window. Default: 1
+    Args:
+        kernel_size: the size of the window to take a max over.
+        padding: implicit zero padding to be added on both sides. Default: 0
+        stride: the stride of the window. Default: 1
+        dilation: the dilation of the window. Default: 1
 
     Example:
 
-    .. testcode::
+        .. testcode::
 
-        from megengine import tensor
-        import megengine.module as M
-        import numpy as np
+            from megengine import tensor
+            import megengine.module as M
+            import numpy as np
 
-        inp = tensor(np.arange(30).reshape(1,1,5,6))
-        op = M.SlidingWindow(kernel_size=3, padding=1, stride=2, dilation=2)
-        out = op(inp)
-        print(out.numpy())
+            inp = tensor(np.arange(30).reshape(1,1,5,6))
+            op = M.SlidingWindow(kernel_size=3, padding=1, stride=2, dilation=2)
+            out = op(inp)
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[[[ 0  0  0]
-             [ 0  7  9]
-             [ 0 19 21]]
+            [[[[[[ 0  0  0]
+                 [ 0  7  9]
+                 [ 0 19 21]]
 
-            [[ 0  0  0]
-             [ 7  9 11]
-             [19 21 23]]]
+                [[ 0  0  0]
+                 [ 7  9 11]
+                 [19 21 23]]]
 
 
-           [[[ 0  7  9]
-             [ 0 19 21]
-             [ 0  0  0]]
+               [[[ 0  7  9]
+                 [ 0 19 21]
+                 [ 0  0  0]]
 
-            [[ 7  9 11]
-             [19 21 23]
-             [ 0  0  0]]]]]]
-
+                [[ 7  9 11]
+                 [19 21 23]
+                 [ 0  0  0]]]]]]
     """
 
     def __init__(
@@ -89,21 +87,20 @@ class SlidingWindow(Module):
 
 
 class SlidingWindowTranspose(Module):
-    r"""
-    Opposite opration of SlidingWindow, sum over the sliding windows on the 
-    corresponding input location. Given an input of the size 
-    :math:`(N, C,  IH, IW, window_h, window_w)` and :attr:`output_size`, the 
+    r"""Opposite opration of SlidingWindow, sum over the sliding windows on the
+    corresponding input location. Given an input of the size
+    :math:`(N, C,  IH, IW, window_h, window_w)` and :attr:`output_size`, the
     output shape would be :math:`(N, C, output\_size_{h}, output\_size_{w})` and the
     arguments must satisfy
 
     .. math::
-        \text{IH} = \lfloor \frac{\text{output_size}_{h} + 2 * \text{padding}_{h} - 
+        \text{IH} = \lfloor \frac{\text{output_size}_{h} + 2 * \text{padding}_{h} -
         \text{dilation}_{h} * (\text{kernel_size}_{h} - 1) - 1}{\text{stride}_{h}} + 1 \rfloor
 
     .. math::
-        \text{IW} = \lfloor \frac{\text{output_size}_{w} + 2 * \text{padding}_{w} - 
+        \text{IW} = \lfloor \frac{\text{output_size}_{w} + 2 * \text{padding}_{w} -
         \text{dilation}_{w} * (\text{kernel_size}_{w} - 1) - 1}{\text{stride}_{w}} + 1 \rfloor
-    
+
     For each output location, we have:
 
     .. math::
@@ -113,36 +110,13 @@ class SlidingWindowTranspose(Module):
         \text{location}(n, c, ih, iw, wh, ww) &= (n, c, oh+wh, ow+ww) \\
         \text{where } & oh=-pad_h+ih \times stride_h + (wh-1) \times (dilation_h-1) \\
                        & ow=-pad_w+iw \times stride_w + (ww-1) \times (dilation_w-1)
-                       
-    :param output_size: the size of the output tensor.
-    :param kernel_size: the size of the window to take a max over.
-    :param padding: implicit zero padding to be added on both sides. Default: 0
-    :param stride: the stride of the window. Default: 1
-    :param dilation: the dilation of the window. Default: 1
 
-    Example:
-
-    .. testcode::
-
-        from megengine import tensor
-        import megengine.module as M
-        import numpy as np
-
-        inp = tensor(np.arange(20).reshape(1,1,4,5))
-        unfold = M.SlidingWindow(kernel_size=3, padding=0, stride=1, dilation=1)
-        fold = M.SlidingWindowTranspose((4,5), kernel_size=3, padding=0, stride=1, dilation=1)
-        out = fold(unfold(inp))
-        print(out.numpy())
-
-    Outputs:
-
-    .. testoutput::
-        
-        [[[[ 0  2  6  6  4]
-           [10 24 42 32 18]
-           [20 44 72 52 28]
-           [15 32 51 36 19]]]]
-
+    Args:
+        output_size: the size of the output tensor.
+        kernel_size: the size of the window to take a max over.
+        padding: implicit zero padding to be added on both sides. Default: 0
+        stride: the stride of the window. Default: 1
+        dilation: the dilation of the window. Default: 1
     """
 
     def __init__(

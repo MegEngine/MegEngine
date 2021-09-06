@@ -21,31 +21,32 @@ from .tensor import broadcast_to, concat, expand_dims, reshape, transpose
 
 
 def cvt_color(inp: Tensor, mode: str = ""):
-    r"""
-    Convert images from one format to another
+    r"""Convert images from one format to another
 
-    :param inp: input images.
-    :param mode: format mode.
-    :return: convert result.
+    Args:
+        inp: input images.
+        mode: format mode.
+
+    Returns:
+        convert result.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        import megengine as mge
-        import megengine.functional as F
+            import numpy as np
+            import megengine as mge
+            import megengine.functional as F
 
-        x = mge.tensor(np.array([[[[-0.58675045, 1.7526233, 0.10702174]]]]).astype(np.float32))
-        y = F.vision.cvt_color(x, mode="RGB2GRAY")
-        print(y.numpy())
+            x = mge.tensor(np.array([[[[-0.58675045, 1.7526233, 0.10702174]]]]).astype(np.float32))
+            y = F.vision.cvt_color(x, mode="RGB2GRAY")
+            print(y.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[0.86555195]]]]
-
+            [[[[0.86555195]]]]
     """
     mode = mode.upper()
     assert mode in builtin.CvtColor.Mode.__dict__, "unspport mode for cvt_color"
@@ -63,37 +64,38 @@ def roi_pooling(
     mode: str = "max",
     scale: float = 1.0,
 ) -> Tensor:
-    """
-    Applies roi pooling on input feature.
+    r"""Applies roi pooling on input feature.
 
-    :param inp: tensor that represents the input feature, `(N, C, H, W)` images.
-    :param rois: `(K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
-    :param output_shape: `(height, width)` of output rois feature.
-    :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "max"
-    :param scale: scale the input boxes by this number. Default: 1.0
-    :return: `(K, C, output_shape[0], output_shape[1])` feature of rois.
+    Args:
+        inp: tensor that represents the input feature, `(N, C, H, W)` images.
+        rois: K, 5)` boxes. First column is the index into N. The other 4 columns are xyxy.
+        output_shape: height, width)` of output rois feature.
+        mode: max" or "average", use max/average align just like max/average pooling. Default: "max"
+        scale: scale the input boxes by this number. Default: 1.0
+
+    Returns:
+        ``K, C, output_shape[0], output_shape[1])`` feature of rois.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+                import numpy as np
+                from megengine import tensor
+                import megengine.functional as F
 
-            np.random.seed(42)
-            inp = tensor(np.random.randn(1, 1, 128, 128))
-            rois = tensor(np.random.random((4, 5)))
-            y = F.vision.roi_pooling(inp, rois, (2, 2))
-            print(y.numpy()[0].round(decimals=4))
+                np.random.seed(42)
+                inp = tensor(np.random.randn(1, 1, 128, 128))
+                rois = tensor(np.random.random((4, 5)))
+                y = F.vision.roi_pooling(inp, rois, (2, 2))
+                print(y.numpy()[0].round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-            [[[-0.1383 -0.1383]
-              [-0.5035 -0.5035]]]
-
+                [[[-0.1383 -0.1383]
+                  [-0.5035 -0.5035]]]
     """
     assert mode.lower() in ["max", "average"], "only max/average mode is supported"
     if isinstance(output_shape, int):
@@ -116,17 +118,17 @@ def correlation(
     pad_size: int = 0,
     is_multiply: bool = True,
 ) -> Tensor:
-    """ Applies correlation to inputs.
+    r"""Applies correlation to inputs.
 
-    :param data1:  Input data1 to the correlation. format must be nchw
-    :param data2:  Input data2 to the correlation. format must be nchw
-    :param kernel_size: (int (non-negative), optional, default=1) – kernel size for Correlation must be an odd number
-    :param max_displacement: (int (non-negative), optional, default=1) – Max displacement of Correlation
-    :param stride1: (int (non-negative), optional, default=1) – stride1 quantize data1 globally
-    :param stride2: (int (non-negative), optional, default=1) – stride2 quantize data2 within the neighborhood centered around data1
-    :param pad_size: (int (non-negative), optional, default=0) – pad for Correlation
-    :param is_multiply: (boolean, optional, default=True) – operation type is either multiplication or absolute difference
-
+    Args:
+        data1: Input data1 to the correlation. format must be nchw
+        data2: Input data2 to the correlation. format must be nchw
+        kernel_size: int (non-negative), optional, default=1) – kernel size for Correlation must be an odd number
+        max_displacement: int (non-negative), optional, default=1) – Max displacement of Correlation
+        stride1: int (non-negative), optional, default=1) – stride1 quantize data1 globally
+        stride2: int (non-negative), optional, default=1) – stride2 quantize data2 within the neighborhood centered around data1
+        pad_size: int (non-negative), optional, default=0) – pad for Correlation
+        is_multiply: boolean, optional, default=True) – operation type is either multiplication or absolute difference
     """
 
     op = builtin.Correlation(
@@ -152,41 +154,42 @@ def roi_align(
     sample_points: Union[int, tuple, list] = 2,
     aligned: bool = True,
 ) -> Tensor:
-    """
-    Applies roi align on input feature.
+    r"""Applies roi align on input feature.
 
-    :param inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
-    :param rois: `(N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
-    :param output_shape: `(height, width)` shape of output rois feature.
-    :param mode: "max" or "average", use max/average align just like max/average pooling. Default: "average"
-    :param spatial_scale: scale the input boxes by this number. Default: 1.0
-    :param sample_points: number of inputs samples to take for each output sample.
-        0 to take samples densely. Default: 2
-    :param aligned: wheather to align the input feature, with `aligned=True`,
-        we first appropriately scale the ROI and then shift it by -0.5. Default: True
-    :return: output tensor.
+    Args:
+        inp: tensor that represents the input feature, shape is `(N, C, H, W)`.
+        rois: N, 5)` boxes. First column is the box index. The other 4 columns are ``xyxy``.
+        output_shape: height, width)` shape of output rois feature.
+        mode: max" or "average", use max/average align just like max/average pooling. Default: "average"
+        spatial_scale: scale the input boxes by this number. Default: 1.0
+        sample_points: number of inputs samples to take for each output sample.
+            0 to take samples densely. Default: 2
+        aligned: wheather to align the input feature, with `aligned=True`,
+            we first appropriately scale the ROI and then shift it by -0.5. Default: True
+
+    Returns:
+        output tensor.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-            import numpy as np
-            from megengine import tensor
-            import megengine.functional as F
+                import numpy as np
+                from megengine import tensor
+                import megengine.functional as F
 
-            np.random.seed(42)
-            inp = tensor(np.random.randn(1, 1, 128, 128))
-            rois = tensor(np.random.random((4, 5)))
-            y = F.vision.roi_align(inp, rois, (2, 2))
-            print(y.numpy()[0].round(decimals=4))
+                np.random.seed(42)
+                inp = tensor(np.random.randn(1, 1, 128, 128))
+                rois = tensor(np.random.random((4, 5)))
+                y = F.vision.roi_align(inp, rois, (2, 2))
+                print(y.numpy()[0].round(decimals=4))
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-            [[[0.175  0.175 ]
-              [0.1359 0.1359]]]
-
+                [[[0.175  0.175 ]
+                  [0.1359 0.1359]]]
     """
     if inp.dtype != np.float32:
         inp = inp.astype(np.float32)
@@ -217,43 +220,43 @@ def roi_align(
 def nms(
     boxes: Tensor, scores: Tensor, iou_thresh: float, max_output: Optional[int] = None
 ) -> Tensor:
-    r"""
-    Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
+    r"""Performs non-maximum suppression (NMS) on the boxes according to their intersection-over-union(IoU).
 
-    :param boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
-    :param iou_thresh: IoU threshold for overlapping.
-    :param scores: tensor of shape `(N,)`, the score of boxes.
-    :param max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
-        otherwise it required to be specified; if it is not specified, all boxes are kept.
-    :return: indices of the elements that have been kept by NMS, sorted by scores.
+    Args:
+        boxes: tensor of shape `(N, 4)`; the boxes to perform nms on; each box is expected to be in `(x1, y1, x2, y2)` format.
+        iou_thresh: IoU threshold for overlapping.
+        scores: tensor of shape `(N,)`, the score of boxes.
+        max_output: the maximum number of boxes to keep; it is optional if this operator is not traced
+            otherwise it required to be specified; if it is not specified, all boxes are kept.
 
-    .. note::
+    Returns:
+        indices of the elements that have been kept by NMS, sorted by scores.
 
-        max_output should be specified and should have valid positive value under tracing
+    Note:
+        max_output should be specified and should have valid positive value under tracing.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = np.zeros((100,4))
-        np.random.seed(42)
-        x[:,:2] = np.random.rand(100,2)*20
-        x[:,2:] = np.random.rand(100,2)*20 + 100
-        scores = tensor(np.random.rand(100))
-        inp = tensor(x)
-        result = F.vision.nms(inp, scores, iou_thresh=0.7)
-        print(result.numpy())
+            x = np.zeros((100,4))
+            np.random.seed(42)
+            x[:,:2] = np.random.rand(100,2)*20
+            x[:,2:] = np.random.rand(100,2)*20 + 100
+            scores = tensor(np.random.rand(100))
+            inp = tensor(x)
+            result = F.vision.nms(inp, scores, iou_thresh=0.7)
+            print(result.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [75 69]
-
+            [75 69]
     """
     assert (
         boxes.ndim == 2 and boxes.shape[1] == 4
@@ -286,45 +289,46 @@ def remap(
     scalar: float = 0.0,
     interp_mode: str = "linear",
 ) -> Tensor:
-    r"""
-    Applies remap transformation to batched 2D images.
+    r"""Applies remap transformation to batched 2D images.
 
     The input images are transformed to the output images by the tensor map_xy.
     The output's H and W are same as map_xy's H and W.
 
-    :param inp: input image
-    :param map_xy: (batch, oh, ow, 2) transformation matrix
-    :param border_mode: pixel extrapolation method.
-        Default: "replicate". Currently also support "constant", "reflect",
-        "reflect_101", "wrap".
-    :param scalar: value used in case of a constant border. Default: 0
-    :param interp_mode: interpolation methods.
-        Default: "linear". Currently only support "linear" mode.
-    :return: output tensor.
+    Args:
+        inp: input image
+        map_xy: batch, oh, ow, 2) transformation matrix
+        border_mode: pixel extrapolation method.
+            Default: "replicate". Currently also support "constant", "reflect",
+            "reflect_101", "wrap".
+        scalar: value used in case of a constant border. Default: 0
+        interp_mode: interpolation methods.
+            Default: "linear". Currently only support "linear" mode.
+
+    Returns:
+        output tensor.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
-        inp_shape = (1, 1, 4, 4)
-        inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-        map_xy_shape = (1, 2, 2, 2)
-        map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
-                            [[0., 1.],[0., 1.]]],
-                             dtype=np.float32).reshape(map_xy_shape))
-        out = F.vision.remap(inp, map_xy)
-        print(out.numpy())
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
+            inp_shape = (1, 1, 4, 4)
+            inp = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+            map_xy_shape = (1, 2, 2, 2)
+            map_xy = tensor(np.array([[[1., 0.],[0., 1.]],
+                                [[0., 1.],[0., 1.]]],
+                                dtype=np.float32).reshape(map_xy_shape))
+            out = F.vision.remap(inp, map_xy)
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[1. 4.]
-           [4. 4.]]]]
-
+            [[[[1. 4.]
+               [4. 4.]]]]
     """
 
     op = builtin.Remap(
@@ -344,27 +348,28 @@ def warp_affine(
     format: str = "NHWC",
     interp_mode: str = "linear",
 ) -> Tensor:
-    """
-    Batched affine transform on 2D images.
+    r"""Batched affine transform on 2D images.
 
-    :param inp: input image.
-    :param mat: `(batch, 2, 3)` transformation matrix.
-    :param out_shape: output tensor shape.
-    :param border_mode: pixel extrapolation method.
-        Default: "wrap". Currently "constant", "reflect",
-        "reflect_101", "isolated", "wrap", "replicate", "transparent" are supported.
-    :param border_val: value used in case of a constant border. Default: 0
-    :param format: "NHWC" as default based on historical concerns,
-        "NCHW" is also supported. Default: "NHWC".
-    :param interp_mode: interpolation methods. Could be "linear", "nearest", "cubic", "area".
-        Default: "linear".
-    :return: output tensor.
+    Args:
+        inp: input image.
+        mat: batch, 2, 3)` transformation matrix.
+        out_shape: output tensor shape.
+        border_mode: pixel extrapolation method.
+            Default: "wrap". Currently "constant", "reflect",
+            "reflect_101", "isolated", "wrap", "replicate", "transparent" are supported.
+        border_val: value used in case of a constant border. Default: 0
+        format: NHWC" as default based on historical concerns,
+            "NCHW" is also supported. Default: "NHWC".
+        interp_mode: interpolation methods. Could be "linear", "nearest", "cubic", "area".
+            Default: "linear".
 
-    .. note::
+    Returns:
+        output tensor.
 
-       Here all available options for params are listed,
-       however it does not mean that you can use all the combinations.
-       On different platforms, different combinations are supported.
+    Note:
+        Here all available options for params are listed,
+        however it does not mean that you can use all the combinations.
+        On different platforms, different combinations are supported.
     """
     op = builtin.WarpAffine(
         border_mode=border_mode,
@@ -387,8 +392,7 @@ def warp_perspective(
     format: str = "NCHW",
     interp_mode: str = "linear",
 ) -> Tensor:
-    r"""
-    Applies perspective transformation to batched 2D images.
+    r"""Applies perspective transformation to batched 2D images.
 
     The input images are transformed to the output images by the transformation matrix:
 
@@ -401,48 +405,49 @@ def warp_perspective(
     Optionally, we can set `mat_idx` to assign different transformations to the same image,
     otherwise the input images and transformations should be one-to-one correnspondence.
 
-    :param inp: input image.
-    :param mat: `(batch, 3, 3)` transformation matrix.
-    :param out_shape: `(h, w)` size of the output image.
-    :param mat_idx: `(batch, )` image batch idx assigned to each matrix. Default: None
-    :param border_mode: pixel extrapolation method.
-        Default: "replicate". Currently also support "constant", "reflect",
-        "reflect_101", "wrap".
-    :param border_val: value used in case of a constant border. Default: 0
-    :param format: "NHWC" is also supported. Default: "NCHW".
-    :param interp_mode: interpolation methods.
-        Default: "linear". Currently only support "linear" mode.
-    :return: output tensor.
+    Args:
+        inp: input image.
+        mat: batch, 3, 3)` transformation matrix.
+        out_shape: h, w)` size of the output image.
+        mat_idx: batch, )` image batch idx assigned to each matrix. Default: None
+        border_mode: pixel extrapolation method.
+            Default: "replicate". Currently also support "constant", "reflect",
+            "reflect_101", "wrap".
+        border_val: value used in case of a constant border. Default: 0
+        format: NHWC" is also supported. Default: "NCHW".
+        interp_mode: interpolation methods.
+            Default: "linear". Currently only support "linear" mode.
 
-    .. note::
+    Returns:
+        output tensor.
 
-       The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
+    Note:
+        The transformation matrix is the inverse of that used by `cv2.warpPerspective`.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        inp_shape = (1, 1, 4, 4)
-        x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
-        M_shape = (1, 3, 3)
-        # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
-        M = tensor(np.array([[1., 0., 1.],
-                             [0., 1., 1.],
-                             [0., 0., 1.]], dtype=np.float32).reshape(M_shape))
-        out = F.vision.warp_perspective(x, M, (2, 2))
-        print(out.numpy())
+            inp_shape = (1, 1, 4, 4)
+            x = tensor(np.arange(16, dtype=np.float32).reshape(inp_shape))
+            M_shape = (1, 3, 3)
+            # M defines a translation: dst(1, 1, h, w) = rst(1, 1, h+1, w+1)
+            M = tensor(np.array([[1., 0., 1.],
+                                [0., 1., 1.],
+                                [0., 0., 1.]], dtype=np.float32).reshape(M_shape))
+            out = F.vision.warp_perspective(x, M, (2, 2))
+            print(out.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[ 5.  6.]
-           [ 9. 10.]]]]
-
+            [[[[ 5.  6.]
+               [ 9. 10.]]]]
     """
     if inp.dtype == np.float32:
         mat = mat.astype("float32")
@@ -467,48 +472,48 @@ def interpolate(
     mode: str = "bilinear",
     align_corners: Optional[bool] = None,
 ) -> Tensor:
-    r"""
-    Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
+    r"""Down/up samples the input tensor to either the given size or with the given scale_factor. ``size`` can not coexist with ``scale_factor``.
 
-    :param inp: input tensor.
-    :param size: size of the output tensor. Default: None
-    :param scale_factor: scaling factor of the output tensor. Default: None
-    :param mode: interpolation methods, acceptable values are:
-        "bilinear", "linear", "bicubic" and "nearest". Default: "bilinear"
-    :param align_corners: This only has an effect when `mode`
-        is "bilinear" or "linear". Geometrically, we consider the pixels of the input
-        and output as squares rather than points. If set to ``True``, the input
-        and output tensors are aligned by the center points of their corner
-        pixels, preserving the values at the corner pixels. If set to ``False``,
-        the input and output tensors are aligned by the corner points of their
-        corner pixels, and the interpolation uses edge value padding for
-        out-of-boundary values, making this operation *independent* of input size
+    Args:
+        inp: input tensor.
+        size: size of the output tensor. Default: None
+        scale_factor: scaling factor of the output tensor. Default: None
+        mode: interpolation methods, acceptable values are:
+            "bilinear", "linear", "bicubic" and "nearest". Default: "bilinear"
+        align_corners: This only has an effect when `mode`
+            is "bilinear" or "linear". Geometrically, we consider the pixels of the input
+            and output as squares rather than points. If set to ``True``, the input
+            and output tensors are aligned by the center points of their corner
+            pixels, preserving the values at the corner pixels. If set to ``False``,
+            the input and output tensors are aligned by the corner points of their
+            corner pixels, and the interpolation uses edge value padding for
+            out-of-boundary values, making this operation *independent* of input size
 
-    :return: output tensor.
+    Returns:
+        output tensor.
 
     Examples:
 
-    .. testcode::
+        .. testcode::
 
-        import numpy as np
-        from megengine import tensor
-        import megengine.functional as F
+            import numpy as np
+            from megengine import tensor
+            import megengine.functional as F
 
-        x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
-        out = F.vision.interpolate(x, [4, 4], align_corners=False)
-        print(out.numpy())
-        out2 = F.vision.interpolate(x, scale_factor=2.)
-        np.testing.assert_allclose(out.numpy(), out2.numpy())
+            x = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
+            out = F.vision.interpolate(x, [4, 4], align_corners=False)
+            print(out.numpy())
+            out2 = F.vision.interpolate(x, scale_factor=2.)
+            np.testing.assert_allclose(out.numpy(), out2.numpy())
 
-    Outputs:
+        Outputs:
 
-    .. testoutput::
+        .. testoutput::
 
-        [[[[1.   1.25 1.75 2.  ]
-           [1.5  1.75 2.25 2.5 ]
-           [2.5  2.75 3.25 3.5 ]
-           [3.   3.25 3.75 4.  ]]]]
-
+            [[[[1.   1.25 1.75 2.  ]
+               [1.5  1.75 2.25 2.5 ]
+               [2.5  2.75 3.25 3.5 ]
+               [3.   3.25 3.75 4.  ]]]]
     """
     mode = mode.lower()
     if mode not in ["bilinear", "linear", "bicubic", "nearest"]:
@@ -623,15 +628,15 @@ def interpolate(
 
 
 def nvof(src: Tensor, precision: int = 1) -> Tensor:
-    r"""
-    Implements NVIDIA Optical Flow SDK.
+    r"""Implements NVIDIA Optical Flow SDK.
 
-    :src shape: input tensor with shape (n, t, h, w, c4).
-    :src dtype: uint8.
-    :param precision: 0:NV_OF_PERF_LEVEL_SLOW 1:NV_OF_PERF_LEVEL_MEDIUM 2:NV_OF_PERF_LEVEL_FAST.
-    :output shape: ``(n, t-1, (h+out_grid_size-1)//out_grid_size, (w+out_grid_size-1)//out_grid_size, c2)``.
-        By default, out_grid_size = 4.
-    :output dtype: int16.
+    Args:
+        src: input tensor with shape (n, t, h, w, c4) and unit8 dtype.
+        precision: 0:NV_OF_PERF_LEVEL_SLOW 1:NV_OF_PERF_LEVEL_MEDIUM 2:NV_OF_PERF_LEVEL_FAST.
+
+    Returns:
+        output tensor with shape: ``(n, t-1, (h+out_grid_size-1)//out_grid_size, (w+out_grid_size-1)//out_grid_size, c2)``.
+        By default, out_grid_size = 4. dtype: int16.
 
     .. code-block:: python
 
@@ -643,7 +648,6 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
         src = tensor(x)
         result = F.nn.nvof(src, precision=1)
         print(result.numpy())
-
     """
     assert src.ndim == 5 and src.shape[4] == 4
 

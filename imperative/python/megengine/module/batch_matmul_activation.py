@@ -14,9 +14,7 @@ from .module import Module
 
 
 class BatchMatMulActivation(Module):
-    r"""
-    Batched :func:`~.matmul` with activation(only :func:`~.relu` supported), no transpose anywhere.
-    """
+    r"""Batched :func:`~.matmul` with activation(only :func:`~.relu` supported), no transpose anywhere."""
 
     def __init__(
         self,

@@ -39,7 +39,7 @@ def _run_wrapped(
     queue: mp.Queue,
     machine_ranks: list,
 ):
-    """Init distributed process group and run wrapped function."""
+    r"""Init distributed process group and run wrapped function."""
     _check_device_initialized(device_type, dev)
     init_process_group(
         master_ip=master_ip,
@@ -64,15 +64,16 @@ def _run_wrapped(
 
 
 class launcher:
-    """Decorator for launching multiple processes in single-machine multi-gpu training.
+    r"""Decorator for launching multiple processes in single-machine multi-gpu training.
 
-    :param func: the function you want to launch in distributed mode.
-    :param n_gpus: how many devices each node.
-    :param world_size: how many devices totally.
-    :param rank_start: start number for rank.
-    :param master_ip: ip address for master node (where the rank 0 is).
-    :param port: server port for distributed server.
-    :param backend: set default collective communication backend.
+    Args:
+        func: the function you want to launch in distributed mode.
+        n_gpus: how many devices each node.
+        world_size: how many devices totally.
+        rank_start: start number for rank.
+        master_ip: ip address for master node (where the rank 0 is).
+        port: server port for distributed server.
+        backend: set default collective communication backend.
     """
 
     def __new__(cls, *args, **kwargs):
