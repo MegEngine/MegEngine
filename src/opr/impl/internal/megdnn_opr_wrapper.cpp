@@ -428,13 +428,12 @@ void WorkspaceLimitHook::set_impl(GetWorkspaceLimitImpl /* impl */) {
     mgb_assert(false);
 }
 
-const WorkspaceLimitHook::GetWorkspaceLimitImpl& WorkspaceLimitHook::get_impl()
-        const {
+const WorkspaceLimitHook::GetWorkspaceLimitImpl& WorkspaceLimitHook::get_impl() const {
     mgb_assert(false);
 }
 
-void WorkspaceLimitHook::set_impl(ComputingGraph* /* graph */,
-                                  GetWorkspaceLimitImpl /* impl */) {
+void WorkspaceLimitHook::set_impl(
+        ComputingGraph* /* graph */, GetWorkspaceLimitImpl /* impl */) {
     mgb_assert(false);
 }
 
@@ -447,13 +446,11 @@ void WorkspaceLimitHook::set_impl(GetWorkspaceLimitImpl impl) {
     m_impl = std::move(impl);
 }
 
-const WorkspaceLimitHook::GetWorkspaceLimitImpl& WorkspaceLimitHook::get_impl()
-        const {
+const WorkspaceLimitHook::GetWorkspaceLimitImpl& WorkspaceLimitHook::get_impl() const {
     return m_impl;
 }
 
-void WorkspaceLimitHook::set_impl(ComputingGraph* graph,
-                                  GetWorkspaceLimitImpl impl) {
+void WorkspaceLimitHook::set_impl(ComputingGraph* graph, GetWorkspaceLimitImpl impl) {
     mgb_assert(graph->options().imperative_proxy_graph);
     auto maker = []() { return std::make_shared<WorkspaceLimitHook>(); };
     graph->options()
@@ -464,8 +461,7 @@ void WorkspaceLimitHook::set_impl(ComputingGraph* graph,
 const WorkspaceLimitHook::GetWorkspaceLimitImpl& WorkspaceLimitHook::get_impl(
         ComputingGraph* graph) {
     mgb_assert(graph->options().imperative_proxy_graph);
-    auto container =
-            graph->options().user_data.get_user_data<WorkspaceLimitHook>();
+    auto container = graph->options().user_data.get_user_data<WorkspaceLimitHook>();
     mgb_assert(container.second == 1);
     return container.first[0]->get_impl();
 }

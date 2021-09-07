@@ -273,6 +273,13 @@ public:
         activate();
         return m_mem_alloc->get_max_block_size_available();
     }
+
+    size_t get_free_mem() override {
+        m_env.cuda_env().activate();
+        size_t tot, free;
+        MGB_CUDA_CHECK(cudaMemGetInfo(&free, &tot));
+        return free;
+    }
 #endif
 
     Locator locator() override { return m_locator; }

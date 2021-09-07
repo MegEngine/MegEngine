@@ -27,6 +27,11 @@ public:
     static std::unique_ptr<MegBrainError> get_async_error() {
         return std::move(tm_async_error);
     }
+    static size_t get_workspace_limit(CompNode cn, size_t old_limit) {
+        size_t free = cn.get_free_mem();
+        size_t lmt = cn.get_max_block_size_available();
+        return std::max(lmt, free);
+    }
 
     /********************** Physical Tensor API **********************/
 

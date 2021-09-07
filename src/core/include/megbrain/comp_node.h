@@ -336,6 +336,8 @@ public:
     size_t get_max_block_size_available() const {
         return m_impl->get_max_block_size_available();
     }
+
+    size_t get_free_mem() const { return m_impl->get_free_mem(); }
 #endif
 
     //! change to another stream on the same memory node
@@ -519,6 +521,7 @@ protected:
         }
         virtual size_t get_used_memory() { return 0; }
         virtual size_t get_max_block_size_available() { return 0; }
+        virtual size_t get_free_mem() { return 0; }
 #endif
 
         virtual Locator locator() = 0;
