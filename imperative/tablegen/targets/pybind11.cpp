@@ -50,14 +50,15 @@ void OpDefEmitter::emit() {
                 );
                 std::vector<std::string> body;
                 for (auto&& i: attr->getEnumMembers()) {
-                    os << formatv(
-                        "\n    .value(\"{2}\", {0}::{1}::{2})",
-                        className, attr->getEnumName(), i
-                    );
+                    size_t d1 = i.find(' ');
+                    size_t d2 = i.find('=');
+                    size_t d = d1 <= d2 ? d1 : d2;
+                    os << formatv("\n    .value(\"{2}\", {0}::{1}::{2})",
+                                  className, attr->getEnumName(),
+                                  i.substr(0, d));
                     body.push_back(formatv(
-                        "if (str == \"{2}\") return {0}::{1}::{2};",
-                        className, attr->getEnumName(), i
-                    ));
+                            "if (str == \"{2}\") return {0}::{1}::{2};",
+                            className, attr->getEnumName(), i.substr(0, d)));
                 }
                 if (attr->getEnumCombinedFlag()) {
                     //! define operator |

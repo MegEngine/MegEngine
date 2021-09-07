@@ -136,12 +136,13 @@ class HeaderGen:
                 mode_list = [i.strip() for i in fin]
 
         for i in mode_list:
+            i = i.split(' ')[0].split('=')[0]
             if i in self._elemwise_modes:
                 content = '_cb({})'.format(i)
             else:
                 content = ''
             self._write_def(
-                '_MEGDNN_ELEMWISE_MODE_ENABLE_IMPL_{}(_cb)'.format(i), content)
+                '_MEGDNN_ELEMWISE_MODE_ENABLE_IMPL_{}(_cb)'.format(i.split(' ')[0].split('=')[0]), content)
         self._write_def('MEGDNN_ELEMWISE_MODE_ENABLE(_mode, _cb)',
                         '_MEGDNN_ELEMWISE_MODE_ENABLE_IMPL_##_mode(_cb)')
 

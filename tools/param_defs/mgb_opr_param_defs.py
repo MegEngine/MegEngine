@@ -20,14 +20,14 @@ pdef('PersistentOutputStorage').add_fields(
 
 (pdef('ExecutionPolicy', version=0, is_legacy=True).
  add_enum('Strategy',
-          Doc('HEURISTIC', 'use heuristic to choose the fastest algorithm'),
-          Doc('HEURISTIC_REPRODUCIBLE', 'use heuristic to choose the fastest algorithm, '
+          Doc('HEURISTIC = 0', 'use heuristic to choose the fastest algorithm'),
+          Doc('HEURISTIC_REPRODUCIBLE = 1', 'use heuristic to choose the fastest algorithm, '
               'and the chosen algorithm is reproducible'),
-          Doc('PROFILE',
+          Doc('PROFILE = 2',
               'run possible algorithms on real device to find the best'),
-          Doc('PROFILE_REPRODUCIBLE',
+          Doc('PROFILE_REPRODUCIBLE = 3',
               'the fastest of profile result that is also reproducible'),
-          Doc('PROFILE_HEURISTIC',
+          Doc('PROFILE_HEURISTIC = 4',
               'use profile result and heuristic to choose the fastest algorithm')).
  add_fields('uint64',
             Doc('workspace_limit', 'workspace limit in bytes'),
@@ -35,13 +35,13 @@ pdef('PersistentOutputStorage').add_fields(
 
 (pdef('ExecutionPolicy', 'specify how to select an algorithm for an operator', version=1).
  add_bit_combination_enum('Strategy',
-          Doc('HEURISTIC', 'use heuristic to choose the fastest algorithm'),
-          Doc('PROFILE',
+          Doc('HEURISTIC = 1 << 0', 'use heuristic to choose the fastest algorithm'),
+          Doc('PROFILE = 1 << 1',
               'run possible algorithms on real device to find the best'),
-          Doc('REPRODUCIBLE',
+          Doc('REPRODUCIBLE = 1 << 2',
               'when profile or heuristic algo selection it require the algos'
               'must be reproducible'),
-          Doc('OPTIMIZED',
+          Doc('OPTIMIZED = 1 << 3',
               'profile require algos are optmized to achieve fast-profile'),
           default=('HEURISTIC',),
           member_alias=[(('HEURISTIC', 'REPRODUCIBLE'), 'HEURISTIC_REPRODUCIBLE'),
@@ -66,19 +66,19 @@ pdef('PersistentOutputStorage').add_fields(
 (pdef('CollectiveComm', 'collective communication between multiple computing '
       'nodes on localhost')
  .add_enum(Doc('Mode', 'mode of collective communication'),
-           Doc('REDUCE_SUM', 'reduce by sum to output computing node'),
-           Doc('BROADCAST', 'copy input value to each output computing node'),
-           Doc('ALL_GATHER', 'each output comp node gets the concatenated '
+           Doc('REDUCE_SUM = 0', 'reduce by sum to output computing node'),
+           Doc('BROADCAST = 1', 'copy input value to each output computing node'),
+           Doc('ALL_GATHER = 2', 'each output comp node gets the concatenated '
                'value of all inputs'),
-           Doc('REDUCE_SCATTER_SUM',
+           Doc('REDUCE_SCATTER_SUM = 3',
                'reduce inputs by sum and each output gets one part of it'),
-           Doc('ALL_REDUCE_SUM', 'every output gets the sum of all inputs'),
-           Doc('ALL_REDUCE_MAX', 'every output gets the max of all inputs'),
-           Doc('ALL_REDUCE_MIN', 'every output gets the min of all inputs'),
-           Doc('ALL_REDUCE_PROD', 'every output gets the prod of all inputs'),
-           Doc('GATHER', 'concat inputs to one node'),
-           Doc('SCATTER', 'scatter input to each output computing node'),
-           Doc('ALL_TO_ALL', 'scatter inputs and gather them on each computing node'),
+           Doc('ALL_REDUCE_SUM = 4', 'every output gets the sum of all inputs'),
+           Doc('ALL_REDUCE_MAX = 5', 'every output gets the max of all inputs'),
+           Doc('ALL_REDUCE_MIN = 6', 'every output gets the min of all inputs'),
+           Doc('ALL_REDUCE_PROD = 7', 'every output gets the prod of all inputs'),
+           Doc('GATHER = 8', 'concat inputs to one node'),
+           Doc('SCATTER = 9', 'scatter input to each output computing node'),
+           Doc('ALL_TO_ALL = 10', 'scatter inputs and gather them on each computing node'),
            name_field='mode'))
 
 (pdef('FakeSerializedDType',
@@ -91,13 +91,13 @@ pdef('PersistentOutputStorage').add_fields(
       'evaluate a predicate and branch keys to setup ExecutionMask objects '
       'with associated predicate proxy vars (PPVs)')
  .add_enum(Doc('Mode', 'how to compare predicate var with branch keys'),
-           Doc('CASE',
+           Doc('CASE = 0',
                'The outputs correspond to branch keys, '
                'and the one which equals predicate would be activated. '
                'This behaves like a case-statement in many languages.'),
-           Doc('CASE_FALLBACK', 'like :attr:`CASE`, but add an extra output '
+           Doc('CASE_FALLBACK = 1', 'like :attr:`CASE`, but add an extra output '
                'that would be activated if no branch is matched'),
-           Doc('PIECEWISE', 'One more outputs would be produced than the '
+           Doc('PIECEWISE = 2', 'One more outputs would be produced than the '
                'number of branch keys, representing the interval in which the '
                'predicate var fits in. The intervals are defined as '
                r':math:`(-\\infty, k_0), [k_0, k_1), \\ldots, '
@@ -112,20 +112,20 @@ pdef('PersistentOutputStorage').add_fields(
 
 (pdef('CondExecPredLogical',
       'compute a logical function over a set of PPVs')
- .add_enum('Mode', Doc('OR', 'logical or'),
-           Doc('AND', 'logical and'),
-           Doc('XOR', 'exclusive-or'),
-           Doc('NOR', 'not or(inputs)'),
-           Doc('NAND', 'not and(inputs)'),
-           Doc('XNOR', 'not xor(inputs)'))
+ .add_enum('Mode', Doc('OR = 0', 'logical or'),
+           Doc('AND = 1', 'logical and'),
+           Doc('XOR = 2', 'exclusive-or'),
+           Doc('NOR = 3', 'not or(inputs)'),
+           Doc('NAND = 4', 'not and(inputs)'),
+           Doc('XNOR = 5', 'not xor(inputs)'))
  )
 
 (pdef('CondExecMark',
       'add ExecutionMask of the input PPV to this opr and readers of the '
       'outputs of this opr')
  .add_enum(Doc('GradMode', 'mode for computing the gradient'),
-           Doc('SUM', 'normal gradient mode: sum all the activated components'),
-           Doc('SUM_COND_OUT', 'use :attr:`CondExecMerge.SUM_COND_OUT` mode so '
+           Doc('SUM = 0', 'normal gradient mode: sum all the activated components'),
+           Doc('SUM_COND_OUT = 1', 'use :attr:`CondExecMerge.SUM_COND_OUT` mode so '
                'oprs that depend on the gradient opr would not be executed '
                'if the forward var is not used.'),
            name_field='grad_mode')
@@ -135,10 +135,10 @@ pdef('PersistentOutputStorage').add_fields(
                execution into account, this option can be used to bypass static
                inference errors. This is currently only used by automatically
                generated gradient oprs."""),
-           Doc('SHAPE_VALUE', 'enable both shape and value inference'),
-           Doc('SHAPE_ONLY',
+           Doc('SHAPE_VALUE = 0', 'enable both shape and value inference'),
+           Doc('SHAPE_ONLY = 1',
                'only enable shape inference (disable value inference)'),
-           Doc('NONE', 'disable both shape and value inference'),
+           Doc('NONE = 2', 'disable both shape and value inference'),
            name_field='static_infer')
  )
 
@@ -147,17 +147,17 @@ pdef('PersistentOutputStorage').add_fields(
                            'number of output vars (i.e. vars per branch)'),
              1)
  .add_enum('Mode',
-           Doc('EXACT_ONE', 'copy the var whose mask is activated to the output'
+           Doc('EXACT_ONE = 0', 'copy the var whose mask is activated to the output'
                ', requiring that exactly one branch is active'),
-           Doc('EXACT_ONE_SAME_SHAPE', 'like :attr:`EXACT_ONE` with the '
+           Doc('EXACT_ONE_SAME_SHAPE = 1', 'like :attr:`EXACT_ONE` with the '
                'requirement that all branches have the same shape, so shape '
                'inference can be easier'),
-           Doc('SUM', 'sum all the active branches into output var; require '
+           Doc('SUM = 2', 'sum all the active branches into output var; require '
                'all branches to have the same shape. Extra shape vars are '
                'needed in this mod, so the outputs can be initialized to zero '
                'when no input is active (and their shapes are probably '
                'unknown).'),
-           Doc('SUM_COND_OUT', 'like :attr:`SUM` but also add an ExecutionMask'
+           Doc('SUM_COND_OUT = 3', 'like :attr:`SUM` but also add an ExecutionMask'
                ' to the readers of output vars, so they would be skipped if '
                ' no branch is taken')
            )

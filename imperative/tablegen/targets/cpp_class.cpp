@@ -177,9 +177,13 @@ void OpDefEmitter::emit_tpl_spl() {
                 std::vector<std::string> case_body;
                 std::string ename = formatv("{0}::{1}",
                     op.getCppClassName(), attr->getEnumName());
-                llvm::for_each(attr->getEnumMembers(), [&](auto&& v){
-                    case_body.push_back(formatv(
-                        "case {0}::{1}: return \"{1}\";", ename, v));
+                llvm::for_each(attr->getEnumMembers(), [&](auto&& v) {
+                    size_t d1 = v.find(' ');
+                    size_t d2 = v.find('=');
+                    size_t d = d1 <= d2 ? d1 : d2;
+                    case_body.push_back(
+                            formatv("case {0}::{1}: return \"{1}\";", ename,
+                                    v.substr(0, d)));
                 });
                 os << formatv(R"(
 template <>

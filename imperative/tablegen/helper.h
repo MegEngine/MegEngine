@@ -241,14 +241,17 @@ private:
                 if (auto* enumAttr = llvm::dyn_cast<MgbEnumAttrMixin>(&it.attr)) {
                     body += formatv("    switch ({0}){{\n", "$_self." + it.name);
                     for (auto&& enumMember: enumAttr->getEnumMembers()) {
-                        body += formatv(
-                            "    case {0}::{1}::{2}:\n",
-                            getCppClassName(), enumAttr->getEnumName(), enumMember
-                        );
-                        body += formatv(
-                            "        props_.emplace_back(\"{0}\", \"{1}\");\n",
-                            it.name, enumMember
-                        );
+                        size_t d1 = enumMember.find(' ');
+                        size_t d2 = enumMember.find('=');
+                        size_t d = d1 <= d2 ? d1 : d2;
+                        body += formatv("    case {0}::{1}::{2}:\n",
+                                        getCppClassName(),
+                                        enumAttr->getEnumName(),
+                                        enumMember.substr(0, d));
+                        body +=
+                                formatv("        props_.emplace_back(\"{0}\", "
+                                        "\"{1}\");\n",
+                                        it.name, enumMember.substr(0, d));
                         body += "        break;\n";
                     }
                     body += "    default: break;\n";

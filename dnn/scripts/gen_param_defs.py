@@ -121,10 +121,12 @@ class member_defs:
         def normalize_enum_value(self, value):
             def normalize(v):
                 if isinstance(v, str):
-                    if v not in self.members:
-                        raise ValueError(
-                            "enum member '{}' does not exist.".format(v))
-                    v = self.members.index(v)
+                    for idx, m in enumerate(self.members):
+                        m = str(m).split(' ')[0].split('=')[0]
+                        if v == m :
+                            return idx
+                    raise ValueError(
+                        "enum member '{}' does not exist.".format(v))
                 assert isinstance(v, int)
                 return v
             if self.combined:
@@ -524,21 +526,25 @@ class SerializedDType(_ParamDefBase):
 
         self._write_doc(e.name)
 
-        for idx, emem in enumerate(e.members):
+        for emem in e.members:
             if e.combined:
-                self._write('%s = 1 << %d', emem, idx)
+                self._write('%s', emem)
                 self._write_doc(emem)
             else:
-                self._write('%s = "%s"', emem, emem)
+                v = str(emem).split(' ')[0].split('=')[0]
+                n = int(str(emem).split('=')[1])
+                self._write('%s = "%s"', v, v)
                 self._write_doc(emem)
                 self._enum_member2num.append('id({}.{}):{}'.format(
-                    qualname, emem, idx))
+                    qualname, v, n))
 
         for emem, emem_alias in e.member_alias:
+            em_a = emem_alias.split(' ')[0].split('=')[0]
             if e.combined:
-                self._write('%s = %s', emem_alias, e.compose_combined_enum(emem))
+                self._write('%s = %s', em_a, e.compose_combined_enum(emem))
             else:
-                self._write('%s = %s', emem_alias, emem)
+                em = str(emem).split(' ')[0].split('=')[0]
+                self._write('%s = %s', em_a, em)
 
         self._unindent()
         self._write('')
@@ -546,7 +552,7 @@ class SerializedDType(_ParamDefBase):
         if e.combined:
             default = e.compose_combined_enum(e.default)
         else:
-            default = "'{}'".format(e.members[e.default])
+            default = "'{}'".format(str(e.members[e.default]).split(' ')[0].split('=')[0])
 
         self._cur_fields.append(self.FieldDef(
             name=e.name_field,
@@ -564,7 +570,7 @@ class SerializedDType(_ParamDefBase):
         if s.combined:
             default = s.compose_combined_enum(e.get_default())
         else:
-            default = "'{}'".format(s.members[e.get_default()])
+            default = "'{}'".format(str(s.members[e.get_default()]).split(' ')[0].split('=')[0])
         self._cur_fields.append(self.FieldDef(
             name=e.name_field,
             cvt='{}.convert({})'.format(qualname, e.name_field),
@@ -700,11 +706,9 @@ class CPPWriter(IndentWriterBase):
     def _on_member_enum(self, e):
         self._write_doc(e.name)
         self._write('enum class %s: uint32_t {', e.name, indent=1)
-        for idx, i in enumerate(e.members):
+        for i in e.members:
             self._write_doc(i)
-            v = '{} = {}'.format(i, idx)
-            if e.combined:
-                v = '{} = 1 << {}'.format(i, idx)
+            v = str(i)
             if i is not e.members[-1] or e.member_alias:
                 v += ','
             self._write(v)
@@ -712,7 +716,7 @@ class CPPWriter(IndentWriterBase):
             if e.combined:
                 self._write('%s = %s,', alias, e.compose_combined_enum(mem))
             else:
-                self._write('%s = %s,', alias, mem)
+                self._write('%s = %s,', str(alias).split(' ')[0].split('=')[0], str(mem).split(' ')[0].split('=')[0])
         self._write('};', indent=-1)
         self._non_static_members.append(e)
         self._write('static MEGDNN_CONSTEXPR uint32_t %s_NR_MEMBER = %d;',
@@ -720,7 +724,9 @@ class CPPWriter(IndentWriterBase):
         if e.combined:
             default = 'static_cast<{}>({})'.format(e.name, e.compose_combined_enum(e.default))
         else:
-            default = '{}::{}'.format(e.name, e.members[e.default])
+            value = str(e.members[e.default])
+            value = value.split(' ')[0].split('=')[0]
+            default = '{}::{}'.format(e.name, value)
         self._add_ctor_args(e.name, default, e.name_field)
 
     def _on_member_enum_alias(self, e):
@@ -732,7 +738,9 @@ class CPPWriter(IndentWriterBase):
         if s.combined:
             default = 'static_cast<{}>({})'.format(e.name, s.compose_combined_enum(e.default))
         else:
-            default = '{}::{}'.format(e.name, s.members[e.get_default()])
+            value = str(s.members[e.get_default()])
+            value = value.split(' ')[0].split('=')[0]
+            default = '{}::{}'.format(e.name, value)
         self._add_ctor_args(e.name, default, e.name_field)
 
     def _on_member_field(self, f):
@@ -754,11 +762,12 @@ class CPPEnumValueWriter(CPPWriter):
     def _on_member_enum(self, e):
         self._write_doc(e.name)
         self._write('struct %s {', e.name, indent=1)
-        for idx, val in enumerate(e.members):
+        for val in e.members:
             self._write_doc(val)
-            self._write('static const uint32_t %s = %d;', val, idx)
+            v = str(val)
+            self._write('static const uint32_t %s;', v)
         for mem, alias in e.member_alias:
-            self._write('static const uint32_t %s = %s;', alias, mem)
+            self._write('static const uint32_t %s = %s;', str(alias).split(' ')[0].split('=')[0], str(mem).split(' ')[0].split('=')[0])
         self._write('};', indent=-1)
 
     def _on_member_enum_alias(self, e):
@@ -848,9 +857,11 @@ class CPPParamJsonFuncWriter(IndentWriterBase):
             members = e.src_enum.members
         else:
             members = e.members
-        for idx, i in enumerate(members):
+        for i in members:
+            v = str(i)
+            v = v.split(' ')[0].split('=')[0]
             self._write('case %s::%s::%s: return "%s";',
-                        self._param_name, e.name, i, i, indent=0)
+                        self._param_name, e.name, v, v, indent=0)
         self._write('default: mgb_throw(MegBrainError, "Invalid %s::%s:%%d", static_cast<int>(arg));',
                     self._param_name, e.name, indent=0)
         self._write('}', indent=-1)

@@ -23,8 +23,14 @@ def _cname_to_fbname(cname):
     }[cname]
 
 def scramble_enum_member_name(name):
+    s = name.find('<<')
+    if s != -1:
+        name = name[0:name.find('=') + 1] + ' ' + name[s+2:]
     if name in ("MIN", "MAX"):
         return name + "_"
+    o_name = name.split(' ')[0].split('=')[0]
+    if o_name in ("MIN", "MAX"):
+        return name.replace(o_name, o_name + "_")
     return name
 
 class FlatBuffersWriter(IndentWriterBase):
@@ -97,7 +103,8 @@ class FlatBuffersWriter(IndentWriterBase):
         if e.combined:
             default = e.compose_combined_enum(e.default)
         else:
-            default = scramble_enum_member_name(str(e.members[e.default]))
+            default = scramble_enum_member_name(
+                str(e.members[e.default]).split(' ')[0].split('=')[0])
         self._write("%s:%s%s = %s;", e.name_field, p.name, e.name, default)
 
     def _resolve_const(self, v):
@@ -124,7 +131,8 @@ class FlatBuffersWriter(IndentWriterBase):
         if s.combined:
             default = s.compose_combined_enum(e.get_default())
         else:
-            default = scramble_enum_member_name(str(s.members[e.get_default()]))
+            default = scramble_enum_member_name(
+                str(s.members[e.get_default()]).split(' ')[0].split('=')[0])
         self._write("%s:%s = %s;", e.name_field, enum_name, default)
 
     def _get_fb_default(self, cppdefault):

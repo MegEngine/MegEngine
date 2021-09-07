@@ -89,7 +89,7 @@ class ConverterWriter(IndentWriterBase):
         fullname = "::megdnn::param::{}".format(p.name)
         enum_def = "MgbEnumAttr<\"{}\", \"{}\", [".format(fullname, e.name)
         def format(v):
-            return '\"{}\"'.format(str(v))
+            return '\"{}\"'.format(str(v).split(' ')[0].split('=')[0])
         enum_def += ','.join(format(i) for i in e.members)
 
         if e.combined:
@@ -110,7 +110,8 @@ class ConverterWriter(IndentWriterBase):
             default_val = "static_cast<{}::{}>({})".format(
                     fullname, e.name, e.compose_combined_enum(e.default))
         else:
-            default_val = "{}::{}::{}".format(fullname, e.name, e.members[e.default])
+            default_val = "{}::{}::{}".format(
+                fullname, e.name, str(e.members[e.default]).split(' ')[0].split('=')[0])
 
         wrapped = self._wrapped_with_default_value(td_class, default_val)
 
@@ -134,7 +135,8 @@ class ConverterWriter(IndentWriterBase):
             default_val = "static_cast<{}::{}>({})".format(
                     fullname, e.name, s.compose_combined_enum(e.get_default()))
         else:
-            default_val = "{}::{}::{}".format(fullname, e.name, s.members[e.get_default()])
+            default_val = "{}::{}::{}".format(fullname, e.name, str(
+                s.members[e.get_default()]).split(' ')[0].split('=')[0])
 
         wrapped = self._wrapped_with_default_value(td_class, default_val)
 

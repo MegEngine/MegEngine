@@ -102,7 +102,10 @@ void EnumAttrEmitter::emit_tpl_spl() {
             &ctx);
 
     auto quote = [&](auto&& i) -> std::string {
-        return formatv("\"{0}\"", i);
+        size_t d1 = i.find(' ');
+        size_t d2 = i.find('=');
+        size_t d = d1 <= d2 ? d1 : d2;
+        return formatv("\"{0}\"", i.substr(0, d));
     };
     os << tgfmt(R"(
 template<> const char*
@@ -110,7 +113,11 @@ $enumTpl<$opClass::$enumClass>::members[] = {$0};
 )", &ctx, llvm::join(llvm::map_range(attr->getEnumMembers(), quote), ", "));
 
     auto mem2value = [&](auto&& i) -> std::string {
-        return tgfmt("{normalize_enum(\"$0\"), $opClass::$enumClass::$0}", &ctx, i);
+        size_t d1 = i.find(' ');
+        size_t d2 = i.find('=');
+        size_t d = d1 <= d2 ? d1 : d2;
+        return tgfmt("{normalize_enum(\"$0\"), $opClass::$enumClass::$0}", &ctx,
+                     i.substr(0, d));
     };
     os << tgfmt(R"(
 template<> std::unordered_map<std::string, $opClass::$enumClass>
@@ -192,12 +199,15 @@ os << tgfmt(R"(
 
         auto&& members = attr->getEnumMembers();
         for (size_t idx = 0; idx < members.size(); ++ idx) {
+            size_t d1 = members[idx].find(' ');
+            size_t d2 = members[idx].find('=');
+            size_t d = d1 <= d2 ? d1 : d2;
             os << tgfmt(R"({
     PyObject* inst = e_type->tp_alloc(e_type, 0);
     reinterpret_cast<$enumTpl<$opClass::$enumClass>*>(inst)->value = $opClass::$enumClass::$0;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "$0", inst) >= 0);
     $enumTpl<$opClass::$enumClass>::pyobj_insts[$1] = inst;
-})", &ctx, members[idx], idx);
+})", &ctx, members[idx].substr(0, d), idx);
         }
     }
 
