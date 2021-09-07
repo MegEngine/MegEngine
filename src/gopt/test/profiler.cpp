@@ -10,6 +10,7 @@
  * implied.
  */
 
+#include "megbrain/plugin/profiler.h"
 #include "./helper.h"
 #include "megbrain/gopt/global_layout_transform.h"
 #include "megbrain/gopt/inference.h"
@@ -22,123 +23,59 @@ using namespace mgb;
 using namespace gopt;
 using namespace serialization;
 
-namespace {
-class LayoutTransformContext : public NonCopyableObj {
-public:
-    using OprList = SubGraphExtractor::OprList;
-    using OprFormat = Problem::OprFormat;
-    using OprConfigTrait = Problem::OprConfigTrait;
-
-    LayoutTransformContext() = delete;
-    LayoutTransformContext(OprList opr_list,
-                           SmallVector<TensorFormats> available_tensor_formats,
-                           OprConfigTrait opr_configs)
-            : m_opr_list{std::move(opr_list)},
-              m_available_tensor_formats{std::move(available_tensor_formats)},
-              m_opr_configs{std::move(opr_configs)} {}
-    const OprList& opr_list() const { return m_opr_list; }
-    const SmallVector<TensorFormats>& available_tensor_formats() const {
-        return m_available_tensor_formats;
-    }
-    const OprConfigTrait& opr_configs() const { return m_opr_configs; }
-    static std::unique_ptr<LayoutTransformContext> make() {
-        OprList opr_list = {
-                opr::ConvBiasForward::typeinfo(),
-                opr::ConvolutionForward::typeinfo(),
-                opr::ConvolutionBackwardData::typeinfo(),
-                opr::ElemwiseMultiType::typeinfo(),
-                opr::Elemwise::typeinfo(),
-                opr::TypeCvt::typeinfo(),
-                opr::PoolingForward::typeinfo(),
-                opr::WarpPerspectiveForward::typeinfo(),
-        };
-        OprConfigTrait opr_configs;
-        {
-            auto& dispatchers = opr_configs[opr::ConvBias::typeinfo()];
-#define cb(_fmt)                                                           \
-    dispatchers[OprFormat::_fmt] =                                         \
-            OprTensorFormatsConfiguration::find_dispatcher_by_type_format( \
-                    opr::ConvBias::typeinfo(), OprFormat::_fmt);
-            cb(NCHW4);
-            cb(NCHW32);
-            cb(NHWC);
-            cb(NCHW64);
-            cb(CHWN4);
-#undef cb
-        }
-        {
-            auto& dispatchers =
-                    opr_configs[opr::ConvolutionBackwardData::typeinfo()];
-#define cb(_fmt)                                                           \
-    dispatchers[OprFormat::_fmt] =                                         \
-            OprTensorFormatsConfiguration::find_dispatcher_by_type_format( \
-                    opr::ConvolutionBackwardData::typeinfo(),              \
-                    OprFormat::_fmt);
-            cb(NCHW4);
-#undef cb
-        }
-
-        {
-            auto& dispatchers =
-                    opr_configs[opr::ConvolutionForward::typeinfo()];
-#define cb(_fmt)                                                           \
-    dispatchers[OprFormat::_fmt] =                                         \
-            OprTensorFormatsConfiguration::find_dispatcher_by_type_format( \
-                    opr::ConvolutionForward::typeinfo(), OprFormat::_fmt);
-            cb(NCHW4);
-#undef cb
-        }
-
-        {
-            auto& dispatchers = opr_configs[opr::PoolingForward::typeinfo()];
-#define cb(_fmt)                                                           \
-    dispatchers[OprFormat::_fmt] =                                         \
-            OprTensorFormatsConfiguration::find_dispatcher_by_type_format( \
-                    opr::PoolingForward::typeinfo(), OprFormat::_fmt);
-            cb(NCHW4);
-            cb(NCHW32);
-            cb(NHWC);
-            cb(NCHW64);
-            cb(CHWN4);
-#undef cb
-        }
-
-        {
-            auto& dispatchers =
-                    opr_configs[opr::WarpPerspectiveForward::typeinfo()];
-#define cb(_fmt)                                                           \
-    dispatchers[OprFormat::_fmt] =                                         \
-            OprTensorFormatsConfiguration::find_dispatcher_by_type_format( \
-                    opr::WarpPerspectiveForward::typeinfo(), OprFormat::_fmt);
-            cb(NHWC);
-            cb(NCHW4);
-            cb(NCHW64);
-#undef cb
-        }
-
-        SmallVector<TensorFormats> available_tensor_formats = {
-                TensorFormats::NHWC, TensorFormats::NCHWc4,
-                TensorFormats::NCHWc32, TensorFormats::NCHWc64};
-        return std::make_unique<LayoutTransformContext>(
-                std::move(opr_list), std::move(available_tensor_formats),
-                std::move(opr_configs));
-    }
-
-private:
-    OprList m_opr_list;
-    SmallVector<TensorFormats> m_available_tensor_formats;
-    OprConfigTrait m_opr_configs;
-};
-};  // namespace
-
 #if MGB_CUDA
+namespace {
+std::unique_ptr<LayoutTransformContext> make_ctx() {
+    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprList = LayoutTransformContext::OprList;
+    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
+    using Attribute = LayoutTransformContext::Attribute;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ConvolutionBackwardData::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::WarpPerspectiveForward::typeinfo(),
+    };
+
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW,    TensorFormats::NHWC,
+            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
+            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+                           ReformatAttribute::DEFAULT};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats),
+            attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4,
+                OprFormat::NCHW32, OprFormat::NCHW64, OprFormat::CHWN4})
+            .add_opr_config(opr::ConvolutionForward::typeinfo(),
+                            {OprFormat::NCHW, OprFormat::NCHW4})
+            .add_opr_config(opr::ConvolutionBackwardData::typeinfo(),
+                            {OprFormat::NCHW, OprFormat::NCHW4})
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(),
+                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
+                     OprFormat::NCHW64, OprFormat::CHWN4})
+            .add_opr_config(
+                    opr::WarpPerspectiveForward::typeinfo(),
+                    {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
+    return ctx;
+}
+}  // namespace
+
 #if CUDA_VERSION >= 10020
 TEST(TestProfiler, Conv) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
     REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(7, 5);
-    auto ctx = LayoutTransformContext::make();
+    auto ctx = make_ctx();
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -177,14 +114,10 @@ TEST(TestProfiler, Conv) {
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({c2}, strategy);
-    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
     SubGraphExtractor extractor(ctx->opr_list());
     auto partitions = extractor.extract({c2});
     ASSERT_EQ(partitions.size(), 1u);
-    using Attribute = Problem::Attribute;
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW};
-    Problem problem(partitions[0], ctx->available_tensor_formats(),
-                    ctx->opr_configs(), attribute);
+    Problem problem(partitions[0], *ctx);
     auto profiler = ProfilerBase::make_profiler();
     auto rst = profiler->profile(problem);
     const auto& opr_rst = rst.opr_record;
@@ -204,7 +137,7 @@ TEST(TestProfiler, Deconv) {
     auto cn = CompNode::load("gpu0");
     cn.activate();
     REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(7, 5);
-    auto ctx = LayoutTransformContext::make();
+    auto ctx = make_ctx();
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -238,14 +171,10 @@ TEST(TestProfiler, Deconv) {
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({c2}, strategy);
-    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
     SubGraphExtractor extractor(ctx->opr_list());
     auto partitions = extractor.extract({c2});
     ASSERT_EQ(partitions.size(), 1u);
-    using Attribute = Problem::Attribute;
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW};
-    Problem problem(partitions[0], ctx->available_tensor_formats(),
-                    ctx->opr_configs(), attribute);
+    Problem problem(partitions[0], *ctx);
     auto profiler = ProfilerBase::make_profiler();
     auto rst = profiler->profile(problem);
     const auto& opr_rst = rst.opr_record;
@@ -262,7 +191,7 @@ TEST(TestProfiler, Warp) {
     auto cn = CompNode::load("gpu0");
     cn.activate();
     REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(7, 5);
-    auto ctx = LayoutTransformContext::make();
+    auto ctx = make_ctx();
 
     constexpr size_t INP_H = 10, INP_W = 10, N = 16;
 
@@ -307,14 +236,9 @@ TEST(TestProfiler, Warp) {
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({w1}, strategy);
-    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
     SubGraphExtractor extractor(ctx->opr_list());
     auto partitions = extractor.extract({w1});
-    ASSERT_EQ(partitions.size(), 1u);
-    using Attribute = Problem::Attribute;
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW};
-    Problem problem(partitions[0], ctx->available_tensor_formats(),
-                    ctx->opr_configs(), attribute);
+    Problem problem(partitions[0], *ctx);
     auto profiler = ProfilerBase::make_profiler();
     auto rst = profiler->profile(problem);
     const auto& opr_rst = rst.opr_record;
@@ -330,7 +254,7 @@ TEST(TestProfiler, Pooling) {
     auto cn = CompNode::load("gpu0");
     cn.activate();
     REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(7, 5);
-    auto ctx = LayoutTransformContext::make();
+    auto ctx = make_ctx();
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -353,14 +277,10 @@ TEST(TestProfiler, Pooling) {
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({p2}, strategy);
-    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
     SubGraphExtractor extractor(ctx->opr_list());
     auto partitions = extractor.extract({p2});
     ASSERT_EQ(partitions.size(), 1u);
-    using Attribute = Problem::Attribute;
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW};
-    Problem problem(partitions[0], ctx->available_tensor_formats(),
-                    ctx->opr_configs(), attribute);
+    Problem problem(partitions[0], *ctx);
     auto profiler = ProfilerBase::make_profiler();
     auto rst = profiler->profile(problem);
     const auto& opr_rst = rst.opr_record;
@@ -373,8 +293,7 @@ TEST(TestProfiler, Elemwise) {
     REQUIRE_GPU(1);
     auto cn = CompNode::load("gpu0");
     cn.activate();
-    REQUIRE_CUDA_COMPUTE_CAPABILITY_EQ(7, 5);
-    auto ctx = LayoutTransformContext::make();
+    auto ctx = make_ctx();
 
     HostTensorGenerator<dtype::Int8> gen;
     auto graph = ComputingGraph::make();
@@ -403,14 +322,10 @@ TEST(TestProfiler, Elemwise) {
             OperatorNodeConfig(
                     dtype::Quantized4Asymm(13.f, static_cast<uint8_t>(4))));
 
-    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
     SubGraphExtractor extractor(ctx->opr_list());
     auto partitions = extractor.extract({q4e});
     ASSERT_EQ(partitions.size(), 1u);
-    using Attribute = Problem::Attribute;
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW};
-    Problem problem(partitions[0], ctx->available_tensor_formats(),
-                    ctx->opr_configs(), attribute);
+    Problem problem(partitions[0], *ctx);
     auto profiler = ProfilerBase::make_profiler();
     auto rst = profiler->profile(problem);
     const auto& opr_rst = rst.opr_record;
@@ -423,7 +338,6 @@ TEST(TestProfiler, Elemwise) {
     EXPECT_TRUE(var_rst.count(q8a.node()) > 0);
     EXPECT_TRUE(var_rst.count(q8b.node()) > 0);
 }
-
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

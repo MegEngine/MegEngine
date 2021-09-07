@@ -36,6 +36,28 @@ static inline const char* opr_format_to_string(
 #undef cb
 }
 
+static inline TensorFormats opr_format_to_tensor_formats(
+        OprTensorFormatsConfiguration::OprFormat opr_format) {
+    using OprFormat = OprTensorFormatsConfiguration::OprFormat;
+    switch (opr_format) {
+        case OprFormat::NCHW:
+            return TensorFormats::NCHW;
+        case OprFormat::NHWC:
+            return TensorFormats::NHWC;
+        case OprFormat::NCHW4:
+            return TensorFormats::NCHWc4;
+        case OprFormat::NCHW32:
+            return TensorFormats::NCHWc32;
+        case OprFormat::NCHW64:
+            return TensorFormats::NCHWc64;
+        case OprFormat::CHWN4:
+            return TensorFormats::CHWNc4;
+        default:
+            mgb_throw(AssertionError, "format(%s) is not supported",
+                      opr_format_to_string(opr_format));
+    };
+}
+
 static inline megdnn::NamedTensorShape tensor_formats_to_named_tensor_shape(
         TensorFormats format) {
     switch (format) {

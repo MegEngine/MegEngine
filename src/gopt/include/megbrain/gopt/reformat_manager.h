@@ -84,9 +84,18 @@ public:
                   output_dtype{DTypeEnum::Float32},
                   attribute{Attribute::DEFAULT} {}
         ReformatKey(TensorFormats input_format_, TensorFormats output_format_,
-                    Attribute attribute_ = Attribute::DEFAULT,
+                    Attribute attribute_,
                     DTypeEnum input_dtype_ = DTypeEnum::Float32,
                     DTypeEnum output_dtype_ = DTypeEnum::Float32)
+                : input_format{input_format_},
+                  output_format{output_format_},
+                  input_dtype{input_dtype_},
+                  output_dtype{output_dtype_},
+                  attribute{attribute_} {}
+        ReformatKey(TensorFormats input_format_, TensorFormats output_format_,
+                    DTypeEnum input_dtype_ = DTypeEnum::Float32,
+                    DTypeEnum output_dtype_ = DTypeEnum::Float32,
+                    Attribute attribute_ = Attribute::DEFAULT)
                 : input_format{input_format_},
                   output_format{output_format_},
                   input_dtype{input_dtype_},
@@ -99,7 +108,6 @@ public:
             bool operator()(const ReformatKey& lhs,
                             const ReformatKey& rhs) const;
         };
-        ReformatKey& deduce_reformat_dtype_enum(const DType& dt);
     };
     using ReformatCache =
             std::unordered_map<ReformatKey, ReformatImpl, ReformatKey::Hash,
@@ -130,6 +138,9 @@ TensorShape make_aligned_weight_shape(const VarNode* var,
                                       TensorFormats orig_formats,
                                       TensorFormats target_formats,
                                       TensorFormats extra_formats);
+
+ReformatManager::AlignmentDesc make_aligned_desc(
+        TensorFormats weight_format, TensorFormats out_feature_format);
 }  // namespace gopt
 }  // namespace mgb
 

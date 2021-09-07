@@ -447,6 +447,7 @@ TEST(TestReformatManager, AutoAlignedFeatureProfiling) {
     for (size_t i = 0; i < RUNS; ++i)
         func->execute();
     double time_profiler = profiler->duration() * 1e6;
+    printf("time: %f, %f\n", time_cuda_evt, time_profiler);
     MGB_CUDA_CHECK(cudaEventDestroy(evt0));
     MGB_CUDA_CHECK(cudaEventDestroy(evt1));
 }

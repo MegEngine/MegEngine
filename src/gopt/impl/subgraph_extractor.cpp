@@ -304,9 +304,14 @@ std::vector<GraphPartition> SubGraphExtractor::extract(
                 }
             }
             partition->opr_set().insert(opr);
+            partition->all_oprs().push_back(opr);
             for (const auto& i : opr->input())
                 partition->input().insert(i);
         }
+    }
+    for (auto&& partition : partitions) {
+        auto& all_oprs = partition.all_oprs();
+        std::reverse(all_oprs.begin(), all_oprs.end());
     }
     return partitions;
 }

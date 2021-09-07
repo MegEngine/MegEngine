@@ -17,6 +17,7 @@
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
+#include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/plugin/base.h"
 #include "megbrain/serialization/sereg.h"
@@ -265,6 +266,10 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
     record.opr = opr;
     auto& costs = record.costs;
     for (auto&& i : available_configs) {
+        /// XXXX remove later
+        if (i.opr_format == OprFormat::NCHW &&
+            opr->input(0)->dtype().enumv() != DTypeEnum::Float32)
+            continue;
         costs[i.opr_format] = profile_operator(opr, base_config, i);
     }
     return record;
@@ -414,37 +419,42 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(
             cb(Resize, 1),
 #undef cb
     };
+    static const ThinHashSet<Typeinfo*> skip_opr_types = {
+            TypeCvt::typeinfo(), Elemwise::typeinfo(),
+            ElemwiseMultiType::typeinfo()};
     ThinHashSet<VarNode*> vars;
     ThinHashSet<OperatorNodeBase*> oprs;
-    {
-        auto cb = [&cvprop, &vars, &oprs](OperatorNodeBase* opr) {
-            if (cvprop.is_const(opr))
-                return;
-            oprs.insert(opr);
-            auto find = format_aware_input_tensors.find(opr->dyn_typeinfo());
-            if (find == format_aware_input_tensors.end()) {
-                for (auto&& i : opr->input()) {
-                    if (!cvprop.is_const(i)) {
-                        vars.insert(i);
-                    }
-                }
-            } else {
-                size_t nr_input_tensor =
-                        std::min(find->second, opr->input().size());
-                for (size_t i = 0; i < nr_input_tensor; ++i) {
-                    if (!cvprop.is_const(opr->input(i))) {
-                        vars.insert(opr->input(i));
-                    }
+    ThinHashSet<OperatorNodeBase*> skip_oprs;
+    for (auto&& opr : problem.graph_partition().all_oprs()) {
+        if (cvprop.is_const(opr))
+            continue;
+        bool skip = true;
+        for (auto&& i : opr->input()) {
+            skip &= problem.graph_partition().input().count(i) > 0 ||
+                    skip_oprs.count(i->owner_opr()) > 0;
+        }
+        skip &= skip_opr_types.count(opr->dyn_typeinfo());
+        if (skip)
+            skip_oprs.insert(opr);
+        oprs.insert(opr);
+        auto find = format_aware_input_tensors.find(opr->dyn_typeinfo());
+        if (find == format_aware_input_tensors.end()) {
+            for (auto&& i : opr->input()) {
+                if (!cvprop.is_const(i)) {
+                    vars.insert(i);
                 }
             }
-            vars.insert(opr->output(0));
-        };
-        DepOprIter iter{cb};
-        for (auto&& i : problem.graph_partition().input()) {
-            iter.set_visited(i->owner_opr());
+        } else {
+            size_t nr_input_tensor =
+                    std::min(find->second, opr->input().size());
+            for (size_t i = 0; i < nr_input_tensor; ++i) {
+                if (!cvprop.is_const(opr->input(i))) {
+                    vars.insert(opr->input(i));
+                }
+            }
         }
-        for (auto&& o : problem.graph_partition().output()) {
-            iter.add(o->owner_opr());
+        for (auto&& ov : opr->usable_output()) {
+            vars.insert(ov);
         }
     }
 
@@ -462,8 +472,14 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(
         auto&& opr_configs = problem.opr_configs();
         auto find = opr_configs.find(opr->dyn_typeinfo());
         if (find == opr_configs.end()) {
-            opr_record[opr] = profile_operator(opr, base_format,
-                                               available_tensor_formats);
+            if (skip_oprs.count(opr) > 0) {
+                SmallVector<TensorFormats> tensor_formats = {base_format};
+                opr_record[opr] =
+                        profile_operator(opr, base_format, tensor_formats);
+            } else {
+                opr_record[opr] = profile_operator(opr, base_format,
+                                                   available_tensor_formats);
+            }
         } else {
             auto&& dispatchers = find->second;
             SmallVector<OprTensorFormatsConfiguration> configs;

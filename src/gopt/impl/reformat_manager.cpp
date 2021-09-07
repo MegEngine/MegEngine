@@ -11,9 +11,9 @@
  */
 
 #include "megbrain/gopt/reformat_manager.h"
+#include "./utils.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/utils/arith_helper.h"
-#include "./utils.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -85,21 +85,6 @@ bool ReformatManager::ReformatKey::Equal::operator()(
            lhs.input_dtype == rhs.input_dtype &&
            lhs.output_dtype == rhs.output_dtype &&
            lhs.attribute == rhs.attribute;
-}
-
-ReformatManager::ReformatKey&
-ReformatManager::ReformatKey::deduce_reformat_dtype_enum(const DType& dt) {
-    static const ThinHashSet<std::pair<TensorFormats, TensorFormats>> set = {
-            {TensorFormats::NCHW, TensorFormats::NCHWc64},
-            {TensorFormats::NCHWc64, TensorFormats::NCHW},
-            {TensorFormats::NCHW, TensorFormats::NHWC},
-            {TensorFormats::NHWC, TensorFormats::NCHW}};
-    if (set.count({input_format, output_format}) > 0 &&
-        (dt.enumv() == DTypeEnum::QuantizedS4 ||
-         dt.enumv() == DTypeEnum::Quantized4Asymm)) {
-        input_dtype = output_dtype = dt.enumv();
-    }
-    return *this;
 }
 
 // =================== ReformatManager ====================*/
@@ -378,7 +363,7 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             divup(orig_channel, input_alignment) * input_alignment;
     size_t aligned_out_channel =
             divup(orig_channel, output_alignment) * output_alignment;
-   size_t common_alignment = input_alignment * output_alignment /
+    size_t common_alignment = input_alignment * output_alignment /
                               gcd(input_alignment, output_alignment);
     size_t aligned_channel =
             divup(orig_channel, common_alignment) * common_alignment;
@@ -427,11 +412,11 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
     for (size_t i = 0; i < input_shape.ndim; ++i) {
         if (input_shape[i].name() == Dimension::Name::C &&
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
-            in_channels = orig_var->shape()[i];
+            in_channels = orig_var->shape()[i] * input_shape[i].stride();
             input_channel_idx = i;
-            mgb_assert(input_shape[i].stride() == 1,
-                       "unsupport weight format(got:%s)",
-                       input_shape.to_string().c_str());
+//            mgb_assert(input_shape[i].stride() == 1,
+//                       "unsupport weight format(got:%s)",
+//                       input_shape.to_string().c_str());
         } else if ((input_shape[i].name() == Dimension::Name::K ||
                     input_shape[i].name() == Dimension::Name::N) &&
                    input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -536,7 +521,8 @@ TensorShape mgb::gopt::make_aligned_tensor_shape(const VarNode* var,
                "formats(var:%s;shp:%s;fmt:%s)",
                var->cname(), oshp.to_string().c_str(),
                orig_shape.to_string().c_str());
-    if (oshp.is_scalar()) return oshp;
+    if (oshp.is_scalar())
+        return oshp;
     TensorShape tshp;
     ThinHashMap<Dimension::Name, int> name2dominant;
     for (size_t i = 0; i < orig_shape.ndim; ++i) {
@@ -595,6 +581,34 @@ TensorShape mgb::gopt::make_aligned_weight_shape(const VarNode* var,
         }
     }
     return tshp;
+}
+
+ReformatManager::AlignmentDesc mgb::gopt::make_aligned_desc(
+        TensorFormats weight_format, TensorFormats out_feature_format) {
+    using AlignmentDesc = ReformatManager::AlignmentDesc;
+    using Name = Dimension::Name;
+    auto weight_shape = tensor_formats_to_named_tensor_shape(weight_format);
+    auto out_shape = tensor_formats_to_named_tensor_shape(out_feature_format);
+    size_t out_channel_alignment = 1;
+    for (size_t i = 0; i < out_shape.ndim; ++i) {
+        auto name = out_shape[i].name();
+        auto extent = out_shape[i].extent();
+        if ((name == Name::C || name == Name::K) &&
+            extent == Dimension::UNDETERMINED_EXTENT) {
+            out_channel_alignment = out_shape[i].stride();
+            break;
+        }
+    }
+    Name out_channel_name;
+    for (size_t i = 0; i < weight_shape.ndim; ++i) {
+        auto name = weight_shape[i].name();
+        auto extent = weight_shape[i].extent();
+        if ((name == Name::N || name == Name::K) &&
+            extent == Dimension::UNDETERMINED_EXTENT) {
+            out_channel_name = name;
+        }
+    }
+    return AlignmentDesc{out_channel_name, out_channel_alignment};
 }
 
 // vim: syntax=cpp.doxygen
