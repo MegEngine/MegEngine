@@ -303,20 +303,6 @@ OP_TRAIT_REG(GroupLocal, GroupLocal)
 }  // namespace
 
 namespace {
-namespace indexing_one_hot {
-auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
-    auto&& op = static_cast<const IndexingOneHot&>(def);
-    mgb_assert(inputs.size() == 2);
-    OperatorNodeConfig config{op.make_name()};
-    return opr::IndexingOneHot::make(inputs[0], inputs[1], op.param(), config);
-}
-OP_TRAIT_REG(IndexingOneHot, IndexingOneHot)
-        .apply_on_var_node(apply_on_var_node)
-        .fallback();
-}  // namespace indexing_one_hot
-}  // namespace
-
-namespace {
 namespace indexing_set_one_hot {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const IndexingSetOneHot&>(def);
