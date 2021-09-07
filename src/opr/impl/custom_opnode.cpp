@@ -140,7 +140,8 @@ void CustomOpNode::do_execute(ExecEnv &env) {
         std::vector<custom::Tensor> custom_inputs = custom::to_custom<DeviceTensorND, custom::Tensor>(inputs);
         std::vector<custom::Tensor> custom_outputs = custom::to_custom<DeviceTensorND, custom::Tensor>(outputs);
         m_op->compute(custom_inputs, m_param, custom_outputs);
-        CompNode::sync_all();               // whether reasonable
+        // [TODO] sync should be modified
+        CompNode::sync_all();
 
         this->owner_graph()->event().signal_inplace<cg::event::AfterKernel>(
             this, m_comp_node
@@ -157,7 +158,8 @@ void CustomOpNode::init_output_static_infer_desc() {
     auto &&mgr = owner_graph()->static_infer_manager();
 
     DepVal dep;
-    if (true) {     // need design a function to allow user to decide it
+    // [TODO] need design a interface to allow user to decide it
+    if (true) {     
         for (auto input_var: input())                       
             dep.push_back({input_var, DepType::SHAPE});
     }
