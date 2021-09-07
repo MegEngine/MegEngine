@@ -15,6 +15,7 @@
 #include "megbrain/gopt/reformat_manager.h"
 #include "megbrain/gopt/subgraph_extractor.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/plugin/opr_footprint.h"
 
 namespace mgb {
 namespace gopt {
@@ -218,11 +219,27 @@ public:
         /// A hashmap, that maps the var node to the costs of layout transform
         ThinHashMap<VarNode*, VarNodeRecord> var_record;
     };
+    using OprFilter = thin_function<bool(const cg::OperatorNodeBase*,
+                                         cg::OperatorNodeBase*)>;
+    using VarNodeFilter = thin_function<bool(const VarNode*, TensorShape,
+                                             TensorShape, TensorFormat)>;
 
-    ProfilerBase() = default;
+    ProfilerBase(float opr_threshold = 2.f, float var_node_threshold = 2.f);
+    ProfilerBase(OprFilter opr_filter, VarNodeFilter var_node_filter = {})
+            : m_opr_filter{std::move(opr_filter)},
+              m_var_node_filter{std::move(var_node_filter)} {}
     virtual ~ProfilerBase() = default;
     virtual ProfilingResult profile(const Problem& problem) const = 0;
     static std::unique_ptr<ProfilerBase> make_profiler();
+
+protected:
+    OprFilter m_opr_filter;
+    VarNodeFilter m_var_node_filter;
+    float m_opr_threshold;
+    float m_var_node_threshold;
+
+private:
+    OprFootprint m_opr_footprint;
 };
 
 /*! 
