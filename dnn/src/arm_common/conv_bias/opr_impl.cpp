@@ -86,6 +86,7 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
     AlgoF16Direct f16_direct;
     AlgoF16DirectStride1 f16_direct_stride1;
     AlgoF16ChannelWiseNCHW88 f16_channel_wise_nchw88;
+    AlgoF16DirectNCHW88 f16_direct_nchw88;
 #endif
 
     SmallVector<std::unique_ptr<AlgoBase>> refhold;
@@ -121,6 +122,7 @@ public:
         m_direct_algos.emplace_back(&f16_direct_stride1);
         m_direct_algos.emplace_back(&f16_direct);
         m_direct_algos.emplace_back(&f16_channel_wise_nchw88);
+        m_direct_algos.emplace_back(&f16_direct_nchw88);
 #endif
         m_direct_algos.emplace_back(&i8x8x16_direct);
         m_direct_algos.emplace_back(&i8x8x16_stride2_filter2);
@@ -252,7 +254,6 @@ public:
             }
         }
 
-
         for (auto&& algo : m_direct_algos) {
             m_all_algos_map.emplace(algo->info().desc, algo);
         }
@@ -261,8 +262,7 @@ public:
         }
     }
 
-    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& direct_algos()
-            const {
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& direct_algos() const {
         return m_direct_algos;
     }
     const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos()

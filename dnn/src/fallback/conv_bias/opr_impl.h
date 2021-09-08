@@ -56,8 +56,7 @@ public:
     bool is_thread_safe() const override { return true; }
 
     void exec_preprocess(const TensorLayout& src_layout,
-                         _megdnn_tensor_in filter,
-                         _megdnn_tensor_in bias,
+                         _megdnn_tensor_in filter, _megdnn_tensor_in bias,
                          const TensorLayout& z_layout,
                          const TensorLayout& dst_layout,
                          PreprocessedFilter* preprocessed_filter,
@@ -243,6 +242,7 @@ public:
             ARM_COMMON_DIRECT_FP16,
             ARM_COMMON_DIRECT_STRD1_FP16,
             ARM_COMMON_CHWNWISE_NCHW88_F16,
+            ARM_COMMON_DIRECT_NCHW88_FP16,
             ARM_COMMON_WINOGRAD_F23_4X4_FP32,
             ARM_COMMON_WINOGRAD_F63_FP32,
             ARM_COMMON_WINOGRAD_F63_4X4_FP32,
@@ -288,7 +288,7 @@ public:
 #else
             ARMV7_MATMUL_S8,
             ARMV7_MATMUL_QU8,
-#endif // MEGDNN_AARCH64
+#endif  // MEGDNN_AARCH64
 #endif
         };
 

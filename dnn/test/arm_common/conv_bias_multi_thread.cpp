@@ -124,8 +124,8 @@ std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
     for (size_t n : {1, 2}) {
         for (auto nlmode : nonlinemode) {
             for (bool pad : {true}) {
-                for (size_t group : {1, 2, 4, 7, 128}) {
-                    for (size_t size : {4, 6, 7, 9, 15, 40}) {
+                for (size_t group : {1, 2, 4, 7, 16}) {
+                    for (size_t size : {4, 6, 7, 9, 20}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -134,8 +134,8 @@ std::vector<conv_bias::TestArg> get_nchw44_channel_wise_args(
                 }
             }
             for (bool pad : {false}) {
-                for (size_t group : {1, 2, 7, 128}) {
-                    for (size_t size : {7, 9, 15, 40}) {
+                for (size_t group : {1, 2, 7, 16}) {
+                    for (size_t size : {7, 9, 20}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -199,8 +199,8 @@ std::vector<conv_bias::TestArg> get_nchw88_channel_wise_args(
     for (size_t n : {1, 2}) {
         for (auto nlmode : nonlinemode) {
             for (bool pad : {true}) {
-                for (size_t group : {1, 2, 4, 7, 8, 128}) {
-                    for (size_t size : {4, 6, 7, 9, 15, 40}) {
+                for (size_t group : {1, 2, 4, 7, 8, 16}) {
+                    for (size_t size : {4, 6, 7, 9, 20}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -209,8 +209,8 @@ std::vector<conv_bias::TestArg> get_nchw88_channel_wise_args(
                 }
             }
             for (bool pad : {false}) {
-                for (size_t group : {1, 2, 7, 128}) {
-                    for (size_t size : {7, 9, 15, 40}) {
+                for (size_t group : {1, 2, 7, 16}) {
+                    for (size_t size : {7, 9, 20}) {
                         for (size_t kern : kernel) {
                             pack(n, group, size, size, kern, stride, nlmode,
                                  pad);
@@ -412,6 +412,23 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_CHANNEL_WISE_STRIDE2_FP16_NCHW88) {
             get_nchw88_channel_wise_args({2, 3, 5}, 2, false, false, false),
             handle(), rng, "F16_CHANNEL_WISE_NCHW88", 0.03);
 }
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_NCHW88_S1) {
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            get_nchw88_conv_bias_args({1, 2, 3, 5, 7}, FULL_NLMODE,
+                                      ALL_BIASMODE, 1),
+            handle(), rng, "F16_CONV_NCHW88_DIRECT", 0.03);
+}
+
+TEST_F(ARM_COMMON_MULTI_THREADS, CONVBIAS_DIRECT_FP16_NCHW88_S2) {
+    NormalRNG rng(1);
+    checker_conv_bias_f16(
+            get_nchw88_conv_bias_args({1, 2, 3, 5, 7}, FULL_NLMODE,
+                                      ALL_BIASMODE, 2),
+            handle(), rng, "F16_CONV_NCHW88_DIRECT", 0.03);
+}
+
 #endif
 
 /**********************************algo 8816 direct************************/
@@ -794,8 +811,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63) {
     check_winograd("1:6:32", checker, args);
 }
 
-
-
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4) {
     using namespace conv_bias;
     std::vector<TestArg> args = get_winograd_mk_packed_args();
@@ -804,18 +819,14 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4) {
     check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4);
 }
 
-
-
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F63_4_NCHW44) {
     using namespace conv_bias;
     std::vector<TestArg> args =
-            get_nchw44_conv_bias_args({3},QUAN_NLMODE,BR_AND_NO_BIASMODE,1);
+            get_nchw44_conv_bias_args({3}, QUAN_NLMODE, BR_AND_NO_BIASMODE, 1);
     Checker<ConvBiasForward> checker(handle());
     check_winograd("4:6:16", checker, args, param::MatrixMul::Format::MK4,
                    param::ConvBias::Format::NCHW44);
 }
-
-
 
 //! uncomment it when low precision mode is ok
 #if 0
@@ -846,8 +857,6 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F54) {
 
     check_winograd("1:5:32", checker, args);
 }
-
-
 
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_F45) {
     using namespace conv_bias;
@@ -971,18 +980,17 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
     using namespace conv_bias;
 
     Checker<ConvBiasForward> checker(handle());
-    auto run = [&checker](const std::vector<TestArg>& args,
-                          DType A_dtype,
+    auto run = [&checker](const std::vector<TestArg>& args, DType A_dtype,
                           DType B_dtype, DType C_dtype, DType D_dtype,
                           float eps) {
         for (auto&& arg : args) {
-                checker.set_dtype(0, A_dtype)
-                        .set_dtype(1, B_dtype)
-                        .set_dtype(2, C_dtype)
-                        .set_dtype(4, D_dtype)
-                        .set_epsilon(eps)
-                        .set_param(arg.param)
-                        .execs({arg.src, arg.filter, arg.bias, {}, {}});
+            checker.set_dtype(0, A_dtype)
+                    .set_dtype(1, B_dtype)
+                    .set_dtype(2, C_dtype)
+                    .set_dtype(4, D_dtype)
+                    .set_epsilon(eps)
+                    .set_param(arg.param)
+                    .execs({arg.src, arg.filter, arg.bias, {}, {}});
         }
     };
 
@@ -997,9 +1005,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8) {
     std::vector<TestArg> quantized_args = get_int8_nchw44_args(3, 4);
     UniformIntRNG int_rng{-50, 50};
     checker.set_rng(0, &int_rng).set_rng(1, &int_rng).set_rng(2, &int_rng);
-    run(quantized_args, dtype::QuantizedS8(2.5f),
-        dtype::QuantizedS8(2.5f), dtype::QuantizedS32(6.25f),
-        dtype::QuantizedS8(60.25f),1e-3);
+    run(quantized_args, dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+        dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f), 1e-3);
 }
 
 TEST_F(ARM_COMMON_MULTI_THREADS,

@@ -1185,9 +1185,10 @@ void check_conv_bias_preprocess(std::vector<conv_bias::TestArg> args,
     }
 }
 
-void checker_conv_bias_common(std::vector<conv_bias::TestArg> args, Handle* handle,
-                       RNG* rng, float epsilon, DType type0, DType type1,
-                       DType type2, DType type3, const char* algo_name) {
+void checker_conv_bias_common(std::vector<conv_bias::TestArg> args,
+                              Handle* handle, RNG* rng, float epsilon,
+                              DType type0, DType type1, DType type2,
+                              DType type3, const char* algo_name) {
     using namespace conv_bias;
 
     Checker<ConvBias> checker(handle);
@@ -1369,6 +1370,88 @@ std::vector<conv_bias::TestArg> get_nchw44_conv_bias_args(
                                          std::min(std::min(oc, ic), 4_z);
                                          ++group) {
                                         if (kernel != 1 && (h == 1 || w == 1)) {
+                                            continue;
+                                        }
+                                        pack(n, oc, ic, h, w, kernel, stride,
+                                             group, nlmode, bias);
+                                    }
+                                }
+    return args;
+}
+
+std::vector<conv_bias::TestArg> get_nchw88_conv_bias_args(
+        std::vector<size_t> kernel_vec,
+        std::vector<param::ConvBias::NonlineMode> nlmode_vec,
+        std::vector<megdnn::BiasMode> biasmode_vec, size_t stride) {
+    using namespace conv_bias;
+    using NLMode = param::ConvBias::NonlineMode;
+
+    std::vector<TestArg> args;
+
+    auto pack = [&](size_t n, size_t oc, size_t ic, size_t h, size_t w,
+                    size_t kernel, size_t stride, size_t group, NLMode nlmode,
+                    megdnn::BiasMode bias_mode) {
+        constexpr int pack_c = 8;
+        const size_t pad = kernel / 2;
+        auto oc_per_group = oc / group;
+        auto ic_per_group = ic / group;
+
+        megdnn_assert(oc_per_group % pack_c == 0 && ic_per_group % pack_c == 0,
+                      "ocpg/icpg not divided by 8");
+
+        size_t kernel_h = kernel;
+        size_t kernel_w = kernel;
+        param::ConvBias param;
+        param.format = param::ConvBias::Format::NCHW88;
+
+        param.stride_h = stride;
+        param.stride_w = stride;
+        param.pad_h = pad;
+        param.pad_w = pad;
+        param.nonlineMode = nlmode;
+
+        auto src_tensor_shape = TensorShape{n, ic / pack_c, h, w, pack_c};
+        auto weight_tensor_shape = TensorShape{
+                oc / pack_c, ic / pack_c, kernel_h, kernel_w, pack_c, pack_c};
+        auto bias_tensor_shape = TensorShape{};
+        if (bias_mode == megdnn::BiasMode::BROADCAST_CHANNEL_BIAS) {
+            bias_tensor_shape = {1, oc / pack_c, 1, 1, pack_c};
+        } else if (bias_mode == megdnn::BiasMode::BIAS) {
+            bias_tensor_shape = {n, oc / pack_c,
+                                 (h + 2 * pad - kernel) / stride + 1,
+                                 (w + 2 * pad - kernel) / stride + 1, pack_c};
+        }
+        if (group == 1) {
+            param.sparse = param::ConvBias::Sparse::DENSE;
+        } else {
+            param.sparse = param::ConvBias::Sparse::GROUP;
+            weight_tensor_shape = TensorShape{group,
+                                              oc_per_group / pack_c,
+                                              ic_per_group / pack_c,
+                                              kernel_h,
+                                              kernel_w,
+                                              pack_c,
+                                              pack_c};
+        }
+        args.emplace_back(param, src_tensor_shape, weight_tensor_shape,
+                          bias_tensor_shape);
+    };
+
+    for (auto bias : biasmode_vec)
+        for (auto nlmode : nlmode_vec)
+            for (size_t n : {1, 2})
+                for (size_t kernel : kernel_vec)
+                    for (size_t oc : {8, 16})
+                        for (size_t ic : {8, 16, 24})
+                            for (size_t h : {1, 3, 12})
+                                for (size_t w : {1, 8, 13}) {
+                                    for (size_t group = 1; group < oc / 8;
+                                         ++group) {
+                                        if (ic % (group * 8) ||
+                                            oc % (group * 8)) {
+                                            continue;
+                                        }
+                                        if (kernel < h || kernel < w) {
                                             continue;
                                         }
                                         pack(n, oc, ic, h, w, kernel, stride,

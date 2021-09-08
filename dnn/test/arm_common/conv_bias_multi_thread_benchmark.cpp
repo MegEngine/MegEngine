@@ -400,7 +400,8 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF16_STR1) {
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
 }
-TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_F16_NCHW88) {
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CHANNEL_WISE_FP16_NCHW88) {
     constexpr size_t RUNS = 50;
 
     std::string algo_name = "F16_CHANNEL_WISE_NCHW88";
@@ -460,6 +461,64 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_F16_NCHW88) {
     bench_case(1, 64, 100, 100, 2, 0, 2);
     bench_case(1, 64, 56, 56, 2, 0, 2);
     bench_case(1, 64, 28, 28, 2, 0, 2);
+}
+
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_FP16_NCHW88) {
+    constexpr size_t RUNS = 40;
+    std::vector<DType> data_type = {dtype::Float16(), dtype::Float16(),
+                                    dtype::Float16(), dtype::Float16()};
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
+                          size_t FS, size_t group, size_t P, size_t S) {
+        param::ConvBias param;
+        param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+        param.pad_h = P;
+        param.pad_w = P;
+        param.stride_h = S;
+        param.stride_w = S;
+        param.sparse = param::ConvBias::Sparse::DENSE;
+        param.format = param::ConvBias::Format::NCHW88;
+        auto OH = (H + 2 * P - FS) / static_cast<size_t>(S) + 1;
+        auto OW = (W + 2 * P - FS) / static_cast<size_t>(S) + 1;
+        TensorShape src = {N, IC / 8, H, W, 8};
+        TensorShape filter = {OC / 8, IC / 8, FS, FS, 8, 8};
+        if (group > 1) {
+            filter = {group, OC / group / 8, IC / group / 8, FS, FS, 8, 8};
+            param.sparse = param::ConvBias::Sparse::GROUP;
+        }
+        TensorShape bias = {1, OC / 8, 1, 1, 8};
+        TensorShape dst = {N, OC / 8, OH, OW, 8};
+
+        SmallVector<TensorShape> shapes{src, filter, bias, {}, dst};
+        float computations =
+                (((IC / group) * FS * FS + 1) * dst.total_nr_elems() * 2 +
+                 dst.total_nr_elems()) *
+                1e-6;
+        std::vector<std::pair<SmallVector<TensorShape>, float>> shape_arg = {
+                std::make_pair(shapes, computations)};
+        benchmark_impl(param, shape_arg, ".+", RUNS, {4, {4, 5, 6, 7}},
+                       {1, {7}}, data_type);
+    };
+    bench_case(1, 64, 64, 28, 28, 3, 1, 1, 1);
+    bench_case(1, 64, 64, 28, 28, 5, 1, 2, 1);
+    bench_case(1, 64, 64, 28, 28, 7, 1, 3, 1);
+
+    bench_case(1, 64, 64, 28, 28, 3, 1, 1, 2);
+    bench_case(1, 64, 64, 28, 28, 5, 1, 2, 2);
+    bench_case(1, 64, 64, 28, 28, 7, 1, 3, 2);
+
+    bench_case(1, 64, 64, 28, 28, 3, 2, 1, 1);
+    bench_case(1, 64, 64, 28, 28, 3, 4, 1, 1);
+    bench_case(1, 64, 64, 28, 28, 3, 8, 1, 1);
+
+    bench_case(1, 16, 16, 28, 28, 3, 1, 1, 1);
+    bench_case(1, 32, 32, 28, 28, 3, 1, 1, 1);
+    bench_case(1, 128, 128, 28, 28, 3, 1, 1, 1);
+    bench_case(1, 256, 256, 28, 28, 3, 1, 1, 1);
+
+    bench_case(1, 64, 64, 7, 7, 3, 1, 1, 1);
+    bench_case(1, 64, 64, 14, 14, 3, 1, 1, 1);
+    bench_case(1, 64, 64, 56, 56, 3, 1, 1, 1);
+    bench_case(1, 64, 64, 112, 112, 3, 1, 1, 1);
 }
 
 #endif
@@ -769,10 +828,10 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44_DOT) {
     bench_case(1, 128, 128, 28, 28, 3, 4, 1, 1);
     bench_case(1, 256, 256, 14, 14, 3, 4, 1, 1);
     bench_case(1, 512, 512, 7, 7, 3, 4, 1, 1);
-
 }
 
-TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44_DOT_S2) {
+TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
+       BENCHMARK_CONVBIAS_INT8_NCHW44_DOT_S2) {
     constexpr size_t RUNS = 40;
     std::vector<DType> data_type = {
             dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
@@ -825,16 +884,13 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_INT8_NCHW44_DOT_S2
     bench_case(1, 128, 128, 28, 28, 3, 4, 1, 2);
     bench_case(1, 256, 256, 14, 14, 3, 4, 1, 2);
     bench_case(1, 512, 512, 7, 7, 3, 4, 1, 2);
-
 }
-
 
 #endif
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_FLOAT_NCHW44) {
     constexpr size_t RUNS = 40;
-    std::vector<DType> data_type = {
-            dtype::Float32(), dtype::Float32(),
-            dtype::Float32(), dtype::Float32()};
+    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
+                                    dtype::Float32(), dtype::Float32()};
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                           size_t FS, size_t group, size_t P, size_t S,
                           bool is_nchw = false) {
@@ -880,15 +936,12 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_FLOAT_NCHW44) {
     bench_case(1, 128, 128, 28, 28, 3, 4, 1, 2);
     bench_case(1, 256, 256, 14, 14, 3, 4, 1, 2);
     bench_case(1, 512, 512, 7, 7, 3, 4, 1, 2);
-    
-    bench_case(1, 64, 64, 56*2, 56*2, 3, 4, 1, 2);
-    bench_case(1, 128, 128, 28*2, 28*2, 3, 4, 1, 2);
-    bench_case(1, 256, 256, 14*2, 14*2, 3, 4, 1, 2);
-    bench_case(1, 512, 512, 7*2, 7*2, 3, 4, 1, 2);
+
+    bench_case(1, 64, 64, 56 * 2, 56 * 2, 3, 4, 1, 2);
+    bench_case(1, 128, 128, 28 * 2, 28 * 2, 3, 4, 1, 2);
+    bench_case(1, 256, 256, 14 * 2, 14 * 2, 3, 4, 1, 2);
+    bench_case(1, 512, 512, 7 * 2, 7 * 2, 3, 4, 1, 2);
 }
-
-
-
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_CONVBIAS_INT8_INT8_INT8_STRIDE2) {
@@ -1473,9 +1526,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_WINOGRAD_INT8) {
     algo_name = "WINOGRAD:ARMV7_INT16X16X32_MK8_4X8:8:2:32";
 #endif
 
-
-    std::vector<DType> data_type = {dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
-                                   dtype::QuantizedS32(6.25f) ,dtype::QuantizedS8(60.25f) };
+    std::vector<DType> data_type = {
+            dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
+            dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f)};
     printf("Benchmark WINOGRAD_IN8_MK8 algo\n");
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
                    {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
@@ -1839,7 +1892,6 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
 }
 
-
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
        BENCHMARK_IM2COL_NCHW44_INT8x8x32_STRIDE1) {
     constexpr size_t RUNS = 50;
@@ -1852,18 +1904,17 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     param.stride_w = 1;
     param.sparse = param::ConvBias::Sparse::DENSE;
     param.format = param::ConvBias::Format::NCHW44;
-    
 
     std::vector<std::pair<SmallVector<TensorShape>, float>>
             shapes_and_computation;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                          size_t FS, size_t group=1) {
-        SmallVector<TensorShape> shapes{{N, IC, H, W,4},
-                                        {OC, IC / group, FS, FS,4,4},
+                          size_t FS, size_t group = 1) {
+        SmallVector<TensorShape> shapes{{N, IC, H, W, 4},
+                                        {OC, IC / group, FS, FS, 4, 4},
                                         {/*1, OC, 1, 1*/},
                                         {},
-                                        {N, OC, H, W,4}};
-        TensorShape dst{N, OC, H, W,4};
+                                        {N, OC, H, W, 4}};
+        TensorShape dst{N, OC, H, W, 4};
         float computations =
                 ((4 * IC / group) * FS * FS * dst.total_nr_elems() * 2 +
                  dst.total_nr_elems()) *
@@ -1907,9 +1958,10 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
 #endif
     std::string algo_name = "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:96";
     printf("Benchmarker  IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:96  algo\n");
-    std::vector<DType> data_type = {
-            dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
-           dtype::QuantizedS32(6.25f),  {}};
+    std::vector<DType> data_type = {dtype::QuantizedS8(2.5f),
+                                    dtype::QuantizedS8(2.5f),
+                                    dtype::QuantizedS32(6.25f),
+                                    {}};
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
                    {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
@@ -1917,10 +1969,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
 
-
-    
     algo_name = "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:192";
-    printf("Benchmarker  IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:192  algo\n");
+    printf("Benchmarker  IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:192  "
+           "algo\n");
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
                    {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
@@ -1929,14 +1980,14 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS,
                    {1, {4}}, data_type);
 
     algo_name = "IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:384";
-    printf("Benchmarker  IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:384  algo\n");
+    printf("Benchmarker  IM2COLMATMUL:AARCH64_INT8X8X32_MK4_4X4X16:384  "
+           "algo\n");
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
                    {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
                    {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
     benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
                    {1, {4}}, data_type);
-
 }
 
 #endif
