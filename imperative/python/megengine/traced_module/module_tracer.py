@@ -72,7 +72,6 @@ BUILTIN_ARRAY_METHOD = [
     "astype",
     "reshape",
     "_broadcast",
-    "transpose",
     "flatten",
     "sum",
     "prod",

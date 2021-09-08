@@ -7,15 +7,18 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 import collections
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+from functools import partial
 from typing import Callable, NamedTuple
 
 import numpy as np
 
+from ..core._imperative_rt import OpDef
 from ..core._imperative_rt.common import CompNode
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._wrap import Device
 from ..core.tensor.dtype import QuantDtypeMeta
+from ..distributed import Group
 from ..module import Module
 from ..quantization.utils import LSQParams, QParams, QuantMode
 from ..tensor import Parameter, Tensor
@@ -49,45 +52,54 @@ SUPPORTED_LEAF_TYPE = {
     type(Ellipsis),
     QuantMode,
     ArgsIndex,
+    Group,
 }
 
+USER_REGISTERED_LEAF_TYPE = []
+USER_REGISTERED_CONTAINER_TYPE = []
 # if isinstance(object, SUPPORTED_LEAF_CLS) or issubclass(obj, SUPPORTED_LEAF_CLS) is True, the object could be threated as leaf node of pytree
-SUPPORTED_LEAF_CLS = [Module, Node, NodeMixin, np.dtype, np.ndarray, np.number]
+SUPPORTED_LEAF_CLS = [
+    Module,
+    Node,
+    NodeMixin,
+    np.dtype,
+    np.ndarray,
+    np.number,
+    np.bool_,
+    OpDef,
+]
 
 NodeType = NamedTuple("NodeType", [("flatten", Callable), ("unflatten", Callable)])
 
 
 def register_supported_type(type, flatten=None, unflatten=None):
+    tp_info = (type.__module__, type.__qualname__)
+    if flatten and unflatten:
+        USER_REGISTERED_CONTAINER_TYPE.append(tp_info)
+    else:
+        USER_REGISTERED_LEAF_TYPE.append(tp_info)
+    _register_supported_type(type, flatten, unflatten)
+
+
+def _register_supported_type(type, flatten=None, unflatten=None):
     if flatten and unflatten:
         SUPPORTED_TYPE[type] = NodeType(flatten, unflatten)
     else:
         SUPPORTED_LEAF_CLS.append(type)
 
 
-def _dict_flatten(inp):
+def _dict_flatten(ordered, inp):
     aux_data = []
     results = []
-    for key, value in sorted(inp.items()):
+    dict_items = inp.items() if ordered else sorted(inp.items())
+    for key, value in dict_items:
         results.append(value)
         aux_data.append(key)
     return results, tuple(aux_data)
 
 
-def _dict_unflatten(inps, aux_data):
-    return dict(zip(aux_data, inps))
-
-
-def _ordereddict_flatten(inp):
-    aux_data = []
-    results = []
-    for key, value in inp.items():
-        results.append(value)
-        aux_data.append(key)
-    return results, tuple(aux_data)
-
-
-def _ordereddict_unflatten(inps, aux_data):
-    return OrderedDict(zip(aux_data, inps))
+def _dict_unflatten(dict_type, inps, aux_data):
+    return dict_type(zip(aux_data, inps))
 
 
 def qparams_flatten(inp):
@@ -99,33 +111,41 @@ def qparams_flatten(inp):
     return results, tuple(aux_data)
 
 
-def qparams_unflatten(inp, aux_data):
-    obj = QParams.__new__(QParams)
+def qparams_unflatten(qparam_type, inp, aux_data):
+    obj = qparam_type.__new__(qparam_type)
     for k, v in zip(aux_data, inp):
         setattr(obj, k, v)
     return obj
 
 
-register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
-register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: tuple(x))
-register_supported_type(dict, _dict_flatten, _dict_unflatten)
-register_supported_type(
-    collections.OrderedDict, _ordereddict_flatten, _ordereddict_unflatten
+_register_supported_type(list, lambda x: (x, None), lambda x, aux_data: list(x))
+_register_supported_type(tuple, lambda x: (x, None), lambda x, aux_data: tuple(x))
+_register_supported_type(
+    dict, partial(_dict_flatten, False), partial(_dict_unflatten, dict)
 )
-register_supported_type(
+_register_supported_type(
+    defaultdict, partial(_dict_flatten, False), partial(_dict_unflatten, defaultdict)
+)
+_register_supported_type(
+    OrderedDict, partial(_dict_flatten, True), partial(_dict_unflatten, OrderedDict)
+)
+_register_supported_type(
     slice,
     lambda x: ([x.start, x.stop, x.step], None),
     lambda x, aux_data: slice(x[0], x[1], x[2]),
 )
 
-register_supported_type(QParams, qparams_flatten, qparams_unflatten)
+_register_supported_type(QParams, qparams_flatten, partial(qparams_unflatten, QParams))
+_register_supported_type(
+    LSQParams, qparams_flatten, partial(qparams_unflatten, LSQParams)
+)
 
 
 def _is_leaf(obj):
-    if isinstance(obj, type):
-        return issubclass(obj, tuple(SUPPORTED_LEAF_CLS)) or obj in SUPPORTED_LEAF_TYPE
+    obj_type = obj if isinstance(obj, type) else type(obj)
     return (
-        isinstance(obj, tuple(SUPPORTED_LEAF_CLS)) or type(obj) in SUPPORTED_LEAF_TYPE
+        issubclass(obj_type, tuple(SUPPORTED_LEAF_CLS))
+        or obj_type in SUPPORTED_LEAF_TYPE
     )
 
 

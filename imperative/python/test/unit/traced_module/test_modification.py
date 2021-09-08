@@ -85,12 +85,12 @@ class NewModule(M.Module):
         return x
 
 
-def _check_expr_users(traced_module):
+def _check_expr_users(flattened_module):
     node_user = defaultdict(list)
-    for expr in traced_module.graph._exprs:
+    for expr in flattened_module.graph._exprs:
         for node in expr.inputs:
             node_user[node].append(expr)
-    for node in traced_module.graph.nodes():
+    for node in flattened_module.graph.nodes():
         node.users.sort(key=lambda m: m._id)
         node_user[node].sort(key=lambda m: m._id)
         assert node.users == node_user[node]

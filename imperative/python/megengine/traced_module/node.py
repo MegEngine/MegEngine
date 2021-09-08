@@ -6,7 +6,9 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import abc
+import copy
 import weakref
+from importlib import import_module
 from typing import Any, Dict, List, Tuple, Type
 
 import numpy
@@ -14,7 +16,9 @@ import numpy
 from .. import get_logger
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..module import Module
+from ..quantization.utils import QParams
 from ..tensor import Tensor
+from .utils import _check_obj_attr
 
 logger = get_logger(__name__)
 
@@ -145,6 +149,23 @@ class Node:
         assert isinstance(id, int)
         cls.__total_id = id
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        state = {}
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if not isinstance(v, weakref.ReferenceType) and k != "actual_node":
+                state[k] = copy.deepcopy(v, memo)
+        result.__dict__.update(state)
+        return result
+
 
 class ModuleNode(Node):
     r"""``ModuleNode`` represents the Module objects."""
@@ -157,19 +178,28 @@ class ModuleNode(Node):
         super().__init__(expr, name, qualname)
 
     def __getstate__(self):
-        return {
+        state = {
             "expr": self.expr,
             "users": self.users,
             "_id": self._id,
             "_name": self._name,
             "_qualname": self._qualname,
-            "module_type": self.module_type,
+            "module_type": (self.module_type.__module__, self.module_type.__qualname__),
         }
+        _check_obj_attr(state)
+        return state
 
     def __setstate__(self, state):
         if "_orig_name" in state:
             state["_qualname"] = state.pop("_orig_name")
         self.__dict__.update(state)
+        try:
+            if isinstance(self.module_type, tuple):
+                mname, classname = self.module_type
+                mtype = getattr(import_module(mname), classname)
+                self.module_type = mtype
+        except Exception:
+            pass
 
     @property
     def owner(self):
@@ -185,12 +215,26 @@ class TensorNode(Node):
 
     _shape = None  # type: Tuple[int]
     _dtype = None  # type: numpy.dtype
-    _qparams = None
+    _qparams = None  # type: QParams
     _device = None
     _value = None  # type: Tensor
 
+    def __init__(
+        self,
+        expr: "Expr",
+        name: str = None,
+        qualname: str = None,
+        shape: Tuple[int] = None,
+        dtype: numpy.dtype = None,
+        qparams: QParams = None,
+    ):
+        super().__init__(expr, name, qualname)
+        self._shape = shape
+        self._dtype = shape
+        self._qparams = qparams
+
     def __getstate__(self):
-        return {
+        state = {
             "expr": self.expr,
             "users": self.users,
             "_id": self._id,
@@ -201,6 +245,8 @@ class TensorNode(Node):
             "_name": self._name,
             "_qualname": self._qualname,
         }
+        _check_obj_attr(state)
+        return state
 
     def __setstate__(self, state):
         if "_orig_name" in state:
@@ -276,7 +322,10 @@ class NodeMixin(abc.ABC):
         assert isinstance(node, TensorNode)
         assert isinstance(value, RawTensor)
         if isinstance(value, RawTensor):
-            node._dtype = value.dtype
+            try:
+                node._dtype = value.dtype
+            except RuntimeError:
+                node._dtype = None
             node._shape = (
                 value._tuple_shape if isinstance(value, Tensor) else value.shape
             )

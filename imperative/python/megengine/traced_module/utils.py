@@ -5,11 +5,16 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+import collections
 import copy
+import inspect
 from collections.abc import MutableMapping, MutableSequence
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence, Type
 
+from .. import get_logger
 from ..module import Module
+
+logger = get_logger(__name__)
 
 
 def replace_container_with_module_container(container):
@@ -50,6 +55,101 @@ def replace_container_with_module_container(container):
         else:
             return has_module, _ModuleList(m_list)
     return has_module, module_container
+
+
+def _convert_kwargs_to_args(func, args, kwargs, is_bounded=False):
+    # is_bounded = True when func is a method and provided args don't include 'self'
+    arg_specs = inspect.getfullargspec(func)
+    arg_specs_args = arg_specs.args
+    if is_bounded:
+        arg_specs_args = arg_specs.args[1:]
+    new_args = []
+    new_kwargs = {}
+    new_args.extend(args)
+    if set(arg_specs_args[0 : len(new_args)]) & set(kwargs.keys()):
+        repeated_arg_name = set(arg_specs_args[0 : len(new_args)]) & set(kwargs.keys())
+        raise TypeError(
+            "{} got multiple values for argument {}".format(
+                func.__qualname__, ", ".join(repeated_arg_name)
+            )
+        )
+    if len(new_args) < len(arg_specs.args):
+        for ind in range(len(new_args), len(arg_specs_args)):
+            arg_name = arg_specs_args[ind]
+            if arg_name in kwargs:
+                new_args.append(kwargs[arg_name])
+            else:
+                index = ind - len(arg_specs_args) + len(arg_specs.defaults)
+                assert index < len(arg_specs.defaults) and index >= 0
+                new_args.append(arg_specs.defaults[index])
+
+    for kwarg_name in arg_specs.kwonlyargs:
+        if kwarg_name in kwargs:
+            new_kwargs[kwarg_name] = kwargs[kwarg_name]
+        else:
+            assert kwarg_name in arg_specs.kwonlydefaults
+            new_kwargs[kwarg_name] = arg_specs.kwonlydefaults[kwarg_name]
+    for k, v in kwargs.items():
+        if k not in arg_specs.args and k not in arg_specs.kwonlyargs:
+            if arg_specs.varkw is None:
+                raise TypeError(
+                    "{} got an unexpected keyword argument {}".format(
+                        func.__qualname__, k
+                    )
+                )
+            new_kwargs[k] = v
+    return tuple(new_args), new_kwargs
+
+
+def _check_obj_attr(obj):
+    # check if all the attributes of a obj is serializable
+    from .pytree import tree_flatten
+    from .pytree import SUPPORTED_LEAF_CLS, SUPPORTED_LEAF_TYPE, TreeDef
+    from .expr import Expr
+    from .traced_module import TracedModule, InternalGraph, NameSpace
+
+    def _check_leaf_type(leaf):
+        leaf_type = leaf if isinstance(leaf, type) else type(leaf)
+        traced_module_types = [Expr, TreeDef, TracedModule, InternalGraph, NameSpace]
+        return (
+            issubclass(leaf_type, tuple(SUPPORTED_LEAF_CLS + traced_module_types))
+            or leaf_type in SUPPORTED_LEAF_TYPE
+        )
+
+    for _, v in obj.items():
+        leafs, _ = tree_flatten(v, is_leaf=lambda _: True)
+        for leaf in leafs:
+            assert _check_leaf_type(
+                leaf
+            ), "Type {} is not supported by traced module".format(
+                leaf if isinstance(leaf, type) else type(leaf)
+            )
+
+
+def _check_builtin_module_attr(mod):
+    from .pytree import _is_leaf as _check_leaf_type
+    from .pytree import tree_flatten
+
+    # check if all the attributes of a builtin module is serializable
+    is_non_serializable_module = lambda m: isinstance(
+        m, Module
+    ) and not _check_builtin_module_attr(m)
+    for k, v in mod.__dict__.items():
+        if k == "_m_dump_modulestate":
+            continue
+        if is_non_serializable_module(v):
+            return False
+        elif not isinstance(v, Module):
+            leafs, _ = tree_flatten(v, is_leaf=lambda _: True)
+            for leaf in leafs:
+                if not _check_leaf_type(leaf) or is_non_serializable_module(leaf):
+                    logger.warn(
+                        "Type {} is not supported by traced module".format(
+                            leaf if isinstance(leaf, type) else type(leaf)
+                        )
+                    )
+                    return False
+    return True
 
 
 class _ModuleList(Module, MutableSequence):

@@ -11,19 +11,28 @@ import collections
 import copy
 import inspect
 import re
-from typing import Callable, Dict, List, Optional, Union
+import weakref
+from importlib import import_module
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from ..core._imperative_rt import OpDef
 from ..core._imperative_rt.core2 import Tensor as RawTensor
-from ..core._imperative_rt.core2 import apply, set_module_tracing, unset_module_tracing
+from ..core._imperative_rt.core2 import (
+    apply,
+    is_tracing_module,
+    set_module_tracing,
+    unset_module_tracing,
+)
 from ..core.ops.builtin import FakeQuant
 from ..core.ops.special import Const
 from ..module import Module
 from ..tensor import Parameter, Tensor
+from ..version import __version__
 from .module_tracer import active_module_tracer, module_tracer
 from .node import ModuleNode, Node, NodeMixin, TensorNode
 from .pytree import ArgsIndex, TreeDef, _is_const_leaf, _is_leaf, tree_flatten
-from .serialization import get_opdef_state, load_opdef_from_state
+from .serialization import _ModuleState
+from .utils import _check_builtin_module_attr, _check_obj_attr, _convert_kwargs_to_args
 
 
 def rstrip(s: str, __chars: str):
@@ -112,6 +121,7 @@ class Expr:
                 node.users.append(self)
             else:
                 assert node is None
+                assert not isinstance(val, (Module, RawTensor))
                 assert _is_leaf(val) and _is_const_leaf(val)
                 idx = len(self.inputs) + len(self.const_val)
                 self.const_val.append((idx, val))
@@ -132,14 +142,14 @@ class Expr:
         current_graph._namespace.auto_naming_for_outputs(self)
 
     def unflatten_args(self, inputs):
-        if self.arg_def is not None:
-            inputs = list(inputs)
-            for idx, val in self.const_val:
-                inputs.insert(idx, val)
-            args, kwargs = self.arg_def.unflatten(inputs)
-            return args, kwargs
-        else:
-            return inputs, {}
+        assert self.arg_def is not None, "{} expr doesn't have args/kwargs".format(
+            type(self).__name__
+        )
+        inputs = list(inputs)
+        for idx, val in self.const_val:
+            inputs.insert(idx, val)
+        args, kwargs = self.arg_def.unflatten(inputs)
+        return args, kwargs
 
     def replace_inputs(self, repl_dict: Dict[Node, Node]):
         r"""Replace the input Nodes of this Expr.
@@ -166,6 +176,39 @@ class Expr:
             repl_node.users.append(self)
 
     @property
+    def _support_set_args_kwargs(self):
+        return False
+
+    def set_args_kwargs(self, *args, **kwargs):
+        r""" Set args and kwargs for Expr.
+        """
+        assert (
+            self._support_set_args_kwargs
+        ), "Doesn't support set args/kwargs for {} expr".format(type(self).__name__)
+        args, kwargs = _convert_kwargs_to_args(self._get_func(), args, kwargs)
+        inputs, arg_def = tree_flatten((args, kwargs))
+        orig_inputs = self.inputs
+        self.inputs = []
+        self.const_val = []
+        for val in inputs:
+            if isinstance(val, (TensorNode, ModuleNode)):
+                self.inputs.append(val)
+            else:
+                assert _is_leaf(val) and _is_const_leaf(val)
+                idx = len(self.inputs) + len(self.const_val)
+                self.const_val.append((idx, val))
+
+        for n in orig_inputs:
+            if n not in self.inputs:
+                n.users.remove(self)
+
+        for n in self.inputs:
+            if n not in orig_inputs:
+                n.users.append(self)
+
+        self.arg_def = arg_def
+
+    @property
     def kwargs(self):
         r"""Get the keyword arguments of the operation corresponding to this Expr."""
         _, kwargs = self.unflatten_args(self.inputs)
@@ -177,18 +220,67 @@ class Expr:
         args, _ = self.unflatten_args(self.inputs)
         return args
 
+    def _get_func(self):
+        # get called function when the expr is interpreted
+        raise NotImplementedError
+
+    @property
+    def named_args(self):
+        func = self._get_func()
+        return inspect.getcallargs(func, *self.args, **self.kwargs)
+
+    def set_arg(self, name, val):
+        func = self._get_func()
+        if name in self.kwargs:
+            new_kwargs = self.kwargs
+            new_kwargs[name] = val
+            self.set_args_kwargs(*self.args, **new_kwargs)
+        else:
+            arg_spec = inspect.getfullargspec(func)
+            if name in arg_spec.args:
+                ind = arg_spec.args.index(name)
+                new_args = list(self.args)
+                new_args[ind] = val
+                self.set_args_kwargs(*new_args)
+            elif name == arg_spec.varargs:
+                assert arg_spec.varargs is not None
+                assert len(self.args) >= len(arg_spec.args)
+                val = (val,) if not isinstance(val, Sequence) else val
+                self.set_args_kwargs(*self.args[0 : len(arg_spec.args)], *val)
+            else:
+                assert (
+                    arg_spec.varkw is not None
+                ), "func {} does't have argument named {}".format(func, name)
+                new_kwargs = self.kwargs
+                new_kwargs[name] = val
+                self.set_args_kwargs(*self.args, **new_kwargs)
+
+    @property
+    def return_val(self):
+        return self.out_def.unflatten(self.outputs)
+
+    @return_val.setter
+    def return_val(self, new_outputs):
+        outputs, out_def = tree_flatten(
+            new_outputs, is_leaf=lambda x: isinstance(x, Node)
+        )
+        assert all(
+            isinstance(o, Node) for o in outputs
+        ), "Return values of expr must be ModuleNode or TensorNode or Container with them"
+        assert all(
+            o.expr in (None, self) for o in outputs
+        ), "Some nodes are produced by other expr, can not be output of expr {}".format(
+            self
+        )
+        self.outputs = outputs
+        self.out_def = out_def
+
     @property
     def top_graph(self):
         r"""Get the parent graph of this Expr."""
         if self._top_graph:
             return self._top_graph()
         return None
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        if "_top_graph" in state:
-            state.pop("_top_graph")
-        return state
 
     @classmethod
     def _get_next_id(cls):
@@ -198,6 +290,23 @@ class Expr:
     def _set_next_id(cls, id: int = 0):
         assert isinstance(id, int)
         cls.__total_id = id
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        state = {}
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if not isinstance(v, weakref.ReferenceType):
+                state[k] = copy.deepcopy(v, memo)
+        result.__dict__.update(state)
+        return result
 
 
 # expr: None (i.e. fake expression which is used to mark input)
@@ -228,6 +337,17 @@ class Input(Expr):
 
     def __repr__(self):
         return "%{}:\t{} = Input()".format(self._id, self.outputs[0])
+
+    def __getstate__(self):
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "name": self.name,
+        }
+        _check_obj_attr(state)
+        return state
 
 
 # expr: outputs = getattr(inputs[0], self.name)
@@ -276,10 +396,22 @@ class GetAttr(Expr):
     def __repr__(self):
         out_type = "Tensor"
         if isinstance(self.outputs[0], ModuleNode):
-            out_type = self.outputs[0].module_type.__name__
+            m_type = self.outputs[0].module_type
+            out_type = m_type.__name__ if isinstance(m_type, type) else m_type[1]
         return '%{}:\t{} = getattr({}, "{}") -> ({})'.format(
             self._id, self.outputs[0], self.inputs[0], self.name, out_type
         )
+
+    def __getstate__(self):
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "name": self.name,
+        }
+        _check_obj_attr(state)
+        return state
 
 
 # expr: outputs = inputs[0].__call__(*inputs[1:])
@@ -307,6 +439,7 @@ class CallMethod(Expr):
                 node,
             ]
             self.const_val = []
+        self.arg_def = tree_flatten(((node,), {}))[1]
         self.method = method
 
     @classmethod
@@ -342,6 +475,27 @@ class CallMethod(Expr):
         outputs, _ = tree_flatten(outputs, is_leaf=lambda x: isinstance(x, RawTensor))
         return outputs
 
+    def _get_func(self):
+        if isinstance(self.args[0], type):
+            obj_type = self.args[0]
+        elif isinstance(self.args[0], ModuleNode):
+            obj_type = self.args[0].module_type
+        else:
+            assert isinstance(self.args[0], TensorNode)
+            obj_type = Tensor
+        meth = getattr(
+            obj_type, "forward" if issubclass(obj_type, Module) else self.method
+        )
+        return meth
+
+    @property
+    def _support_set_args_kwargs(self):
+        # only expr call tensor method or builtin module support modify args/kwargs
+        return (
+            isinstance(self.args[0], (TensorNode, type))
+            or self.args[0].module_type is not Module
+        )
+
     def __repr__(self):
         args = ", ".join(str(i) for i in self.args[1:])
         kwargs = ", ".join("{}={}".format(k, v) for k, v in self.kwargs.items())
@@ -358,6 +512,21 @@ class CallMethod(Expr):
             method,
             ", ".join([args, kwargs]),
         )
+
+    def __getstate__(self):
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "inputs": self.inputs,
+            "const_val": self.const_val,
+            "method": self.method,
+            "arg_def": self.arg_def,
+            "out_def": self.out_def,
+            "outputs": self.outputs,
+            "version": __version__,
+        }
+        _check_obj_attr(state)
+        return state
 
 
 # expr: outputs = apply(self.opdef, *inputs)
@@ -394,14 +563,32 @@ class Apply(Expr):
         )
 
     def __getstate__(self):
-        state = super().__getstate__()
-        state["opdef"] = get_opdef_state(state["opdef"])
+        opdef_state = self.opdef.__getstate__()
+        opdef_state["opdef_type"] = type(self.opdef)
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "opdef_state": opdef_state,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "version": __version__,
+        }
+        _check_obj_attr(state)
         return state
 
     def __setstate__(self, state):
-        state["opdef"] = load_opdef_from_state(state["opdef"])
-        for k, v in state.items():
-            setattr(self, k, v)
+        # compat with mge 1.6
+        if "opdef" in state and "opdef_state" not in state:
+            opdef_state = state.pop("opdef")
+            opdef_state["opdef_type"] = opdef_state.pop("type")
+            state["opdef_state"] = opdef_state
+        self.__dict__.update(state)
+        assert isinstance(state["opdef_state"], dict)
+        opdef_state = state["opdef_state"].copy()
+        opdef_type = opdef_state.pop("opdef_type")
+        opdef_obj = opdef_type()
+        opdef_obj.__setstate__(opdef_state)
+        setattr(self, "opdef", opdef_obj)
 
     @classmethod
     def apply_module_trace_hook(cls, opdef, *inputs):
@@ -458,11 +645,23 @@ class CallFunction(Expr):
 
     def interpret(self, *inputs):
         args, kwargs = self.unflatten_args(inputs)
-        outputs = self.func(*args, **kwargs)
+        func = (
+            self.func
+            if not is_tracing_module()
+            else active_module_tracer().patcher.wrap_fn(self.func)
+        )
+        outputs = func(*args, **kwargs)
         if outputs is None:
             return outputs
         outputs, _ = tree_flatten(outputs, is_leaf=lambda x: isinstance(x, RawTensor))
         return outputs
+
+    def _get_func(self):
+        return self.func
+
+    @property
+    def _support_set_args_kwargs(self):
+        return True
 
     def __repr__(self):
         args = ", ".join(str(i) for i in self.args)
@@ -476,6 +675,33 @@ class CallFunction(Expr):
             self.func.__module__.rsplit(".")[-1] + "." + self.func.__name__,
             ", ".join([args, kwargs]),
         )
+
+    def __getstate__(self):
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "func": (self.func.__module__, self.func.__qualname__),
+            "const_val": self.const_val,
+            "inputs": self.inputs,
+            "arg_def": self.arg_def,
+            "out_def": self.out_def,
+            "outputs": self.outputs,
+            "version": __version__,
+        }
+        _check_obj_attr(state)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        try:
+            if isinstance(self.func, tuple):
+                mname, fname = self.func
+                f = import_module(mname)
+                for i in fname.split("."):
+                    f = getattr(f, i)
+                self.func = f
+        except Exception:
+            pass
 
 
 # expr outputs = self.value
@@ -496,6 +722,13 @@ class Constant(Expr):
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
             assert module_tracer.is_builtin(c) or c.is_qat
+        if isinstance(c, RawTensor):
+            if is_tracing_module():
+                unset_module_tracing()
+                c = Tensor(c)
+                set_module_tracing()
+            else:
+                c = Tensor(c)
         self.value = c
         self.name = name
         self.inputs = []
@@ -530,9 +763,25 @@ class Constant(Expr):
         )
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        if "_top_graph" in state:
-            state.pop("_top_graph")
+        state = {
+            "_id": self._id,
+            "_disable_remove": self._disable_remove,
+            "value": self.value,
+            "name": self.name,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+        }
+        _check_obj_attr(state)
         if isinstance(self.value, RawTensor):
             state["value"] = Tensor(self.value)
+        if isinstance(self.value, Module) and module_tracer.is_builtin(self.value):
+            _check_builtin_module_attr(self.value)
+            state["value"] = _ModuleState.get_module_state(self.value)
+
         return state
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            if isinstance(v, _ModuleState):
+                state[k] = v.to_module()
+        self.__dict__.update(state)

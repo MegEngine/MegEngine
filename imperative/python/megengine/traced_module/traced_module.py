@@ -14,6 +14,7 @@ import inspect
 import keyword
 import re
 import weakref
+from importlib import import_module
 from inspect import getcallargs, getmembers, isclass, ismethod
 from itertools import chain
 from types import FunctionType
@@ -53,6 +54,7 @@ from ..quantization.observer import (
     SyncMinMaxObserver,
 )
 from ..tensor import Tensor
+from ..version import __version__
 from .expr import (
     Apply,
     CallFunction,
@@ -80,8 +82,27 @@ from .module_tracer import (
     set_active_module_tracer,
 )
 from .node import ModuleNode, Node, NodeMixin, TensorNode
-from .pytree import ArgsIndex, tree_flatten
-from .utils import replace_container_with_module_container
+from .pytree import (
+    USER_REGISTERED_CONTAINER_TYPE,
+    USER_REGISTERED_LEAF_TYPE,
+    ArgsIndex,
+    TreeDef,
+    _register_supported_type,
+    tree_flatten,
+)
+from .serialization import (
+    _ModuleState,
+    load_apply_expr,
+    load_call_module_expr,
+    load_call_tensor_method_expr,
+    load_functional,
+)
+from .utils import (
+    _check_builtin_module_attr,
+    _check_obj_attr,
+    _convert_kwargs_to_args,
+    replace_container_with_module_container,
+)
 
 logger = get_logger(__name__)
 
@@ -341,7 +362,7 @@ class NameSpace:
     def create_unique_name(self, name: str, node: Any = None) -> str:
         assert isinstance(name, str), "The name must be a string"
 
-        if name in self._used_names and self._used_names[name] is node:
+        if name in self._used_names and (self._used_names[name] is node):
             return name
 
         name = re.sub("[^0-9a-zA-Z_]+", "_", name)
@@ -1067,6 +1088,7 @@ class InternalGraph:
                 if node2value[n][1] == 0:
                     node2value.pop(n)
             if values is not None:
+                assert len(values) == len(expr.outputs)
                 for n, v in zip(expr.outputs, values):
                     if ref_count(n) > 0:
                         node2value[n] = [v, ref_count(n)]
@@ -1105,13 +1127,27 @@ class InternalGraph:
         return res
 
     def __getstate__(self):
-        state = self.__dict__.copy()
-        if "_top_graph" in state:
-            state.pop("_top_graph")
+        state = {
+            "_exprs": self._exprs,
+            "_inputs": self._inputs,
+            "_outputs": self._outputs,
+            "_watch_point": [],
+            "_end_point": [],
+            "_namespace": self._namespace,
+            "_rst": collections.defaultdict(list),
+            "_name": self._name,
+            "_qualname": self._qualname,
+        }
+        if self._total_ids:
+            state["_total_ids"] = self._total_ids
+
+        _check_obj_attr(state)
+
         return state
 
     def __setstate__(self, state):
         old_version = False
+
         if "_module_name" in state:
             old_version = True
             state["_qualname"] = state.pop("_module_name")
@@ -1144,6 +1180,25 @@ class InternalGraph:
             self._namespace = NameSpace(self._name, self._qualname)
             self._re_associate_name()
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+        cls = self.__class__
+        result = cls.__new__(cls)
+        state = {}
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if not isinstance(v, weakref.ReferenceType):
+                state[k] = copy.deepcopy(v, memo)
+        result.__dict__.update(state)
+        return result
+
 
 def _get_meth_name(obj, func):
     tp = obj if isinstance(obj, type) else type(obj)
@@ -1157,9 +1212,7 @@ def _get_meth_name(obj, func):
 def _wrapped_function(orig_func):
     @functools.wraps(orig_func)
     def wrapped_fn(*args, **kwargs):
-        method_func = wrapped_fn
-        if "method_func" in kwargs:
-            method_func = kwargs.pop("method_func")
+        method_func = kwargs.pop("method_func", wrapped_fn)
         if is_tracing_module():
             unset_module_tracing()
             inputs, tree_def = tree_flatten((args, kwargs))
@@ -1167,11 +1220,11 @@ def _wrapped_function(orig_func):
                 if not NodeMixin.get(i, None):
                     if isinstance(i, (RawTensor, NodeMixin)):
                         NodeMixin.wrap_safe(i, Constant.make(i))
-            meth_name, arg_type = None, None
-            if args:
-                meth_name = _get_meth_name(args[0], method_func)
-                arg_type = args[0] if isinstance(args[0], type) else type(args[0])
+            args, kwargs = _convert_kwargs_to_args(orig_func, args, kwargs)
+            meth_name = _get_meth_name(args[0], method_func)
+            arg_type = args[0] if isinstance(args[0], type) else type(args[0])
             if meth_name and arg_type and issubclass(arg_type, RawTensor):
+                inputs, tree_def = tree_flatten((args, kwargs))
                 self = inputs[0]
                 if meth_name == "__new__":
                     if all([not isinstance(i, RawTensor) for i in inputs]):
@@ -1190,6 +1243,7 @@ def _wrapped_function(orig_func):
                     call_node = CallMethod.make(NodeMixin.get(self), meth_name)
                 call_node.add_inputs(inputs[1:])
             else:
+                inputs, tree_def = tree_flatten((args, kwargs))
                 call_node = CallFunction.make(orig_func)
                 call_node.add_inputs(inputs)
 
@@ -1228,9 +1282,11 @@ class TracedModuleBuilder(NodeMixin):
         "_record_wrapped_nodes",
         "_argdef_graph_map",
         "_argdef_outdef_map",
+        "_check_qat_module",
         "nodes",
         "__class__",
         "__dict__",
+        "_is_top",
     ]
 
     def __init__(self, mod, is_top_module=False):
@@ -1301,22 +1357,18 @@ class TracedModuleBuilder(NodeMixin):
                 qat_module.weight_fake_quant.set_qparams(qparams)
 
     def build(self):
-        if self._is_builtin or isinstance(self._mod, TracedModule):
-            if module_tracer.is_builtin(self._mod) or isinstance(
-                self._mod, TracedModule
-            ):
-                mod_type = type(self._mod)
-            else:
-                assert isinstance(self._mod, (Observer, _FakeQuantize))
-                mod_type = (
-                    Observer if isinstance(self._mod, Observer) else _FakeQuantize
-                )
+        if self._is_builtin:
+            assert module_tracer.is_builtin(self._mod)
+            mod_type = type(self._mod)
+
             for node in self.nodes:
                 node.module_type = mod_type
 
             return self._mod
         else:
-            is_qat = isinstance(self._mod, QATModule)
+            is_qat = isinstance(self._mod, QATModule) or (
+                isinstance(self._mod, TracedModule) and self._mod.is_qat
+            )
             traced_module = TracedModule(
                 self._is_top, self._argdef_graph_map, self._argdef_outdef_map, is_qat
             )
@@ -1338,14 +1390,17 @@ class TracedModuleBuilder(NodeMixin):
                 traced_module.with_act = self._mod.with_act
                 traced_module.with_weight = self._mod.with_weight
                 if not hasattr(traced_module, "act_fake_quant"):
-                    traced_module.act_fakequant = None
+                    traced_module.act_fake_quant = None
                 if not hasattr(traced_module, "act_observer"):
                     traced_module.act_observer = None
                 if not hasattr(traced_module, "weight_fake_quant"):
-                    traced_module.weight_fakequant = None
+                    traced_module.weight_fake_quant = None
                 if not hasattr(traced_module, "weight_observer"):
                     traced_module.weight_observer = None
                 set_module_tracing()
+
+            if self._is_top:
+                traced_module._update_ref()
 
             return traced_module
 
@@ -1357,6 +1412,7 @@ class TracedModuleBuilder(NodeMixin):
         # prepare args and kwargs for inner graph
         if "method_func" in kwargs:
             kwargs.pop("method_func")
+        args, kwargs = _convert_kwargs_to_args(self._mod.forward, args, kwargs, True)
 
         def mark_constant(x):
             node = NodeMixin.get(x, None)
@@ -1372,11 +1428,7 @@ class TracedModuleBuilder(NodeMixin):
 
         callnode.arg_def = tree_def
 
-        if (
-            self._is_builtin
-            or tree_def in self._argdef_graph_map
-            or isinstance(self._mod, TracedModule)
-        ):
+        if self._is_builtin or tree_def in self._argdef_graph_map:
             unset_module_tracing()
             rst = self._mod(*args, **kwargs)
             outputs, out_def = tree_flatten(rst, is_leaf=_is_leaf)
@@ -1385,33 +1437,7 @@ class TracedModuleBuilder(NodeMixin):
                 self._body = None
             elif tree_def in self._argdef_graph_map:
                 self._body = self._argdef_graph_map[tree_def]
-            else:
-                self._mod._is_top = False
-                self._body = self._mod.argdef_graph_map[tree_def]
-                module_qualname = NodeMixin.get(self).qualname
-                if module_qualname != self._body.qualname:
-                    src_name, dst_name = self._body.qualname, module_qualname
-
-                    def replace_qualname(g):
-                        attr_name = get_suffix_name(src_name, g.qualname)
-                        if attr_name is not None:
-                            g._qualname = (
-                                ("%s.%s" % (dst_name, attr_name))
-                                if attr_name
-                                else dst_name
-                            )
-                        assert get_suffix_name(dst_name, g.qualname) is not None
-
-                    for mod in self._mod.modules():
-                        if not hasattr(mod, "argdef_graph_map"):
-                            continue
-                        for g in mod.argdef_graph_map.values():
-                            replace_qualname(g)
-                            g._namespace.qualname = g.qualname
-                            for n in g.nodes(False):
-                                replace_qualname(n)
         else:
-            self_node = None
             orig_self = NodeMixin.get(self)
             parent_graph = active_module_tracer().current_scope()
             module_qualname = orig_self._qualname
@@ -1423,20 +1449,14 @@ class TracedModuleBuilder(NodeMixin):
             active_module_tracer().push_scope(self._body)
             # rebind self to new input node
 
-            if self_node:
-                NodeMixin.wrap_safe(self, self_node)
-                active_module_tracer().current_scope()._add_input(self_node)
-            else:
-                NodeMixin.wrap_safe(
-                    self,
-                    self_node
-                    if self_node
-                    else Input.make(
-                        name="self",
-                        qualname=module_qualname,
-                        type=NodeMixin.get_wrapped_type(self),
-                    ),
-                )
+            NodeMixin.wrap_safe(
+                self,
+                Input.make(
+                    name="self",
+                    qualname=module_qualname,
+                    type=NodeMixin.get_wrapped_type(self),
+                ),
+            )
 
             origin_inp_node = [NodeMixin.get(i, None) for i in inputs[1:]]
             # prepare args and kwargs for inner graph
@@ -1470,8 +1490,23 @@ class TracedModuleBuilder(NodeMixin):
                 return x
 
             args = [self]
-            for i, v in enumerate(inputs[1:]):
-                args.append(wrap(v, idx2key[i + 1]))
+            orig_traced_inputs = (
+                None
+                if not isinstance(self._mod, TracedModule)
+                else self._mod.argdef_graph_map[tree_def].inputs
+            )
+            ind = 1
+            for v in inputs[1:]:
+                if isinstance(v, (RawTensor, NodeMixin)):
+                    args_name = (
+                        orig_traced_inputs[ind]._name
+                        if orig_traced_inputs
+                        else idx2key[ind]
+                    )
+                    ind += 1
+                    args.append(wrap(v, args_name))
+                else:
+                    args.append(v)
 
             args, kwargs = tree_def.unflatten(args)
             active_module_tracer().patcher.auto_patch(
@@ -1514,7 +1549,6 @@ class TracedModuleBuilder(NodeMixin):
             attr = getattr(type(self._mod), name).__get__(self, type(self))
         else:
             attr = getattr(self._mod, name)
-
             if (
                 isinstance(attr, FunctionType)
                 and id(attr) in active_module_tracer().patcher.patched_fn_ids
@@ -1568,7 +1602,7 @@ class TracedModuleBuilder(NodeMixin):
                         wrapped = self.__getattr__(name)
 
                 if isinstance(wrapped, TracedModuleBuilder):
-                    if not isinstance(mod_attr, (List, Dict)):
+                    if not isinstance(mod_attr, (List, Dict, QATModule)):
                         assert mod_attr is wrapped._mod
                 else:
                     assert mod_attr is wrapped
@@ -1977,8 +2011,6 @@ class TracedModule(Module):
     def graph(self) -> InternalGraph:
         """Return the ``InternalGraph`` of this ``TracedModule``.
         """
-        if self._is_top:
-            self._update_ref()
         assert len(self.argdef_graph_map) == 1
         return list(self.argdef_graph_map.values())[0]
 
@@ -2112,7 +2144,7 @@ class TracedModule(Module):
                             if hasattr(obj, "argdef_graph_map")
                             else None
                         )
-                        if expr_graph is not None:
+                        if expr_graph is not None and not obj.is_qat:
                             exprs = _flatten_subgraph(graph, expr_graph, expr, obj)
 
                 if parent_graph is not None:
@@ -2137,18 +2169,110 @@ class TracedModule(Module):
         )
         new_module.graph._re_associate_name()
         new_module.graph.compile()
+        new_module._update_ref()
         new_module.graph._reset_ids()
         return new_module
 
     def __getstate__(self):
-        d = self.__dict__
+        d = self.__dict__.copy()
         for k in Module.__dict__:
             d.pop(k, None)
+        _check_obj_attr(d)
+        for k in d:
+            if module_tracer.is_builtin(d[k]):
+                assert _check_builtin_module_attr(
+                    d[k]
+                ), "Module {} can not be serialized. ".format(type(d[k]))
+                d[k] = _ModuleState.get_module_state(d[k])
+        dump_info = {
+            "version": __version__,
+            "register_type": USER_REGISTERED_LEAF_TYPE,
+            "register_container_type": USER_REGISTERED_CONTAINER_TYPE,
+            "register_mdule": USER_REGISTERED_MODULE,
+            "register_function": USER_REGISTERED_FUNCTION,
+        }
+        d["dump_info"] = dump_info
         return d
+
+    def __setstate__(self, state):
+
+        for k, v in state.items():
+            if isinstance(v, _ModuleState):
+                state[k] = v.to_module()
+        self.__dict__.update(state)
+        self._update_ref()
+
+        for _, graph in self.argdef_graph_map.items():
+            for expr in graph._exprs:
+                if isinstance(expr, CallFunction):
+                    load_functional(expr)
+                if isinstance(expr, CallMethod):
+                    if expr.method == "__call__":
+                        load_call_module_expr(expr)
+                    else:
+                        load_call_tensor_method_expr(expr)
+                if isinstance(expr, Apply):
+                    load_apply_expr(expr)
+
+        for _, graph in self.argdef_graph_map.items():
+            ind = 0
+            while ind < len(graph._exprs):
+                cur_expr = graph._exprs[ind]
+                has_new_expr = False
+                for i in cur_expr.inputs:
+                    if i.expr not in graph._exprs and not isinstance(i.expr, Input):
+                        graph._exprs.insert(ind, i.expr)
+                        has_new_expr = True
+                if not has_new_expr:
+                    ind += 1
+            for expr in graph._exprs:
+                for i in expr.inputs:
+                    if expr.inputs.count(i) != i.users.count(expr):
+                        add_or_del_count = expr.inputs.count(i) - i.users.count(expr)
+                        if add_or_del_count > 0:
+                            i.users.extend([expr] * add_or_del_count)
+                        else:
+                            [i.users.remove(expr) for i in range(-add_or_del_count)]
+
+                for o in expr.outputs:
+                    if o.expr is not expr:
+                        assert o not in o.expr.outputs
+                        o.expr = expr
+            for node in graph.nodes(False):
+                # remove users of node which doesn't use node as input
+                node.users = [e for e in node.users if node in e.inputs]
+
+            for expr in graph._exprs:
+                graph._namespace.auto_naming_for_outputs(expr)
+        self._update_ref()
+        for _, graph in self.argdef_graph_map.items():
+            graph._reset_ids()
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        state = {}
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if not isinstance(v, weakref.ReferenceType):
+                state[k] = copy.deepcopy(v, memo)
+        result.__dict__.update(state)
+        result._update_ref()
+        return result
 
 
 def cpp_apply_module_trace(opdef, *args):
     return Apply.apply_module_trace_hook(opdef, *args)
+
+
+USER_REGISTERED_MODULE = []
+USER_REGISTERED_FUNCTION = []
 
 
 def register_as_builtin(mod_cls: Type[Module]) -> None:
@@ -2157,6 +2281,7 @@ def register_as_builtin(mod_cls: Type[Module]) -> None:
     Args:
         mod_cls: the module class which will be treated as builtin module in tracing.
     """
+    USER_REGISTERED_MODULE.append((mod_cls.__module__, mod_cls.__qualname__))
     module_tracer.register_as_builtin(mod_cls)
 
 
@@ -2181,6 +2306,7 @@ def wrap(func: Callable):
     Args:
         func: the function of the global function to insert into the graph when it's called.
     """
+    USER_REGISTERED_FUNCTION.append((func.__module__, func.__qualname__))
     assert callable(func), "func must be a callable"
     assert hasattr(func, "__code__")
     fn_name = func.__code__.co_name
@@ -2247,6 +2373,8 @@ def trace_module(
             NodeMixin.wrap_safe(
                 builder, Input.make(name="top", type=ModuleNode, qualname=net_name)
             )
+            args, kwargs = _convert_kwargs_to_args(mod.forward, args, kwargs, True)
+
             inputs, _ = tree_flatten((args, kwargs))
             for _, i in enumerate(inputs):
                 # assert isinstance(i, Tensor), "not support "

@@ -8,6 +8,7 @@ import numpy as np
 import megengine as mge
 import megengine.functional as F
 import megengine.module as M
+import megengine.module.qat as QM
 import megengine.quantization as Q
 from megengine import Tensor
 from megengine.module.qat.module import QATModule
@@ -28,10 +29,18 @@ def get_subattr(self: M.Module, name: str):
     return getattr(self, name)
 
 
+class MyConvBnRelu2d(M.ConvBnRelu2d):
+    pass
+
+
+class MyQATConvBnRelu2d(QM.ConvBnRelu2d):
+    pass
+
+
 class Myblcok(M.Module):
     def __init__(self,):
         super().__init__()
-        self.conv0 = M.ConvBnRelu2d(3, 3, 3, 1, 1)
+        self.conv0 = MyConvBnRelu2d(3, 3, 3, 1, 1)
         self.conv1 = M.ConvBn2d(3, 3, 1, 1, 0)
         self.conv2 = M.ConvBn2d(3, 3, 1, 1, 0)
         self.add = M.Elemwise("FUSE_ADD_RELU")
@@ -106,7 +115,11 @@ def check_qparams(qparmsa: Q.QParams, qparmsb: Q.QParams):
 
 
 def build_observered_net(net: M.Module, observer_cls):
-    qat_net = Q.quantize_qat(net, qconfig=get_observer_config(observer_cls))
+    qat_net = Q.quantize_qat(
+        net,
+        qconfig=get_observer_config(observer_cls),
+        mapping={MyConvBnRelu2d: MyQATConvBnRelu2d},
+    )
     Q.enable_observer(qat_net)
     inp = Tensor(np.random.random(size=(5, 3, 32, 32)))
     qat_net(inp)
@@ -134,6 +147,15 @@ def test_trace_qat():
                 check_qparams(weight_qparams, traced_weight_qparams)
             if act_qparams:
                 check_qparams(act_qparams, traced_act_qparams)
+        flatten_traced_net = traced_net.flatten()
+        conv0_node = flatten_traced_net.graph.get_node_by_name(
+            "MyModule_block0_conv0"
+        ).as_unique()
+        conv0_out_node = flatten_traced_net.graph.get_node_by_name(
+            "MyModule_block0_conv0_out"
+        ).as_unique()
+        assert isinstance(conv0_node.owner, TracedModule)
+        assert conv0_out_node.expr.inputs[0] is conv0_node
 
     _check_qat_module(build_observered_net(MyModule(), Q.MinMaxObserver))
     _check_qat_module(build_observered_net(MyModule(), MyMinMaxObserver))
