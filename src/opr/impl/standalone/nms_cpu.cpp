@@ -23,6 +23,7 @@ bool box_iou(Box a, Box b, float thresh) {
 }  // anonymous namespace
 
 size_t mgb::opr::standalone::nms::cpu_kern_workspace(size_t nr_boxes) {
+    if (nr_boxes == 0) return 0;
     return (((nr_boxes - 1) / sizeof(size_t)) + 1) * sizeof(size_t);
 }
 

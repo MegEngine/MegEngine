@@ -600,7 +600,19 @@ def test_hinge_loss():
     opr_test(cases, hinge_loss_with_l2_norm)
 
 
-def test_nms():
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_nms(is_symbolic):
+    def fn(inp, scores):
+        return F.vision.nms(
+            inp,
+            scores=scores,
+            iou_thresh=0.5,
+            max_output=None if is_symbolic is None else 4,
+        )
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
     x = np.array(
         [
             [0, 0, 100, 100],
@@ -612,8 +624,16 @@ def test_nms():
     )
     inp = tensor(x)
     scores = tensor([0.5, 0.8, 0.9, 0.6], dtype=np.float32)
-    result = F.vision.nms(inp, scores=scores, iou_thresh=0.5)
-    np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
+    for _ in range(3):
+        result = fn(inp, scores=scores)
+        np.testing.assert_equal(result.numpy(), np.array([2, 1, 3], dtype=np.int32))
+
+    x = np.array([], dtype=np.float32,).reshape(0, 4)
+    inp = tensor(x)
+    scores = tensor([], dtype=np.float32)
+    for _ in range(3):
+        result = fn(inp, scores=scores)
+        np.testing.assert_equal(result.numpy(), np.array([], dtype=np.int32))
 
 
 @pytest.mark.skipif(

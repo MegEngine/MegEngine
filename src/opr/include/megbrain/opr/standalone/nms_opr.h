@@ -53,6 +53,8 @@ private:
 
     //! execute the operator
     void scn_do_execute() override;
+
+    NodeProp* do_make_node_prop() const override;
 };
 
 }  // namespace standalone

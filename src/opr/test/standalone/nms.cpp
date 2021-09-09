@@ -55,6 +55,25 @@ void run_on_comp_node(const char* cn_name) {
     }
 }
 
+void run_empty_input_on_comp_node(const char* cn_name) {
+    auto cn = CompNode::load(cn_name);
+    auto graph = ComputingGraph::make();
+    auto host_x = std::make_shared<HostTensorND>(cn, TensorShape{1, 0, 4},
+                                                 dtype::Float32{});
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x);
+
+    {
+        auto idx = opr::standalone::NMSKeep::make(x, {0.2, 16});
+        auto size = idx.node()->owner_opr()->output(1);
+        HostTensorND host_idx, host_size;
+        auto func = graph->compile({make_callback_copy(idx, host_idx),
+                                    make_callback_copy(size, host_size)});
+        func->execute().wait();
+        auto size_ptr = host_size.ptr<int32_t>();
+        ASSERT_EQ(size_ptr[0], 0);
+    }
+}
+
 }
 
 TEST(TestOprNMS, CPU) {
@@ -64,6 +83,15 @@ TEST(TestOprNMS, CPU) {
 TEST(TestOprNMS, GPU) {
     REQUIRE_GPU(1);
     run_on_comp_node("gpu0");
+}
+
+TEST(TestOprNMSEmptyIO, CPU) {
+    run_empty_input_on_comp_node("cpu0");
+}
+
+TEST(TestOprNMSEmptyIO, GPU) {
+    REQUIRE_GPU(1);
+    run_empty_input_on_comp_node("gpu0");
 }
 
 #if MGB_ENABLE_EXCEPTION
