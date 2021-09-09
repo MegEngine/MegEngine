@@ -28,7 +28,10 @@ public:
 private:
     using TensorFormatsBitSet = uint32_t;
     using State = SmallVector<TensorFormatsBitSet>;
-    static constexpr uint32_t MAX_TENSOR_FORMATS = sizeof(TensorFormatsBitSet);
+    /// 1bit represents one kind of tensor formats
+    static constexpr uint32_t BITS_PER_BYTE = 8;
+    static constexpr uint32_t MAX_TENSOR_FORMATS =
+            sizeof(TensorFormatsBitSet) * BITS_PER_BYTE;
     TensorFormatsBitSet add(TensorFormatsBitSet& set, TensorFormats fmt) {
         mgb_assert(static_cast<uint32_t>(fmt) < MAX_TENSOR_FORMATS);
         set |= (1 << static_cast<uint32_t>(fmt));

@@ -245,19 +245,26 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NHWC> {
             if (i == 2)
                 available &= opr->input(i)->dtype().enumv() ==
                              DTypeEnum::QuantizedS32;
-            else
-                available &= opr->input(i)->dtype().enumv() ==
-                                     DTypeEnum::Quantized4Asymm ||
-                             opr->input(i)->dtype().enumv() ==
-                                     DTypeEnum::QuantizedS4;
+            else {
+                bool i4_config = opr->input(i)->dtype().enumv() ==
+                                         DTypeEnum::Quantized4Asymm ||
+                                 opr->input(i)->dtype().enumv() ==
+                                         DTypeEnum::QuantizedS4;
+                bool i8_config = opr->input(i)->dtype().enumv() ==
+                                 DTypeEnum::QuantizedS8;
+                available &= (i4_config || i8_config);
+            }
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
             TensorType tensor_type =
                     i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
-        available &=
+        bool i4_config =
                 opr->output(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
                 opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
+        bool i8_config =
+                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        available &= (i4_config || i8_config);
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         config.input_tensor_formats = {TensorFormats::NHWC, TensorFormats::NHWC,
@@ -496,6 +503,38 @@ struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
     }
 };
 
+template <>
+struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
+                                       OprFormat::NHWC> {
+    using Opr = opr::ConvolutionBackwardData;
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW4;
+        bool available = true;
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            available &=
+                    opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type =
+                    i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        available &= conv.param().sparse == opr::ConvBias::Param::Sparse::DENSE;
+        config.input_tensor_formats = {TensorFormats::NHWC, TensorFormats::NHWC,
+                                       TensorFormats::NHWC,
+                                       TensorFormats::NHWC};
+        config.output_tensor_formats = {TensorFormats::NHWC};
+        if (available)
+            return config;
+        return None;
+    }
+};
+
 struct StaticData {
     struct KeyHash {
         size_t operator()(const std::pair<Typeinfo*, OprFormat>& val) const {
@@ -543,6 +582,7 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW4);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NCHW);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NHWC);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NCHW4);
 
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(WarpPerspectiveForward, NCHW);

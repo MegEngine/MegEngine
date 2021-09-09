@@ -329,10 +329,21 @@ ReformatManager::ReformatImpl ReformatManager::get(
         const ReformatKey& key) const {
     using Attribute = ReformatKey::Attribute;
     MGB_TRY {
-        auto find = m_cache.find(key);
-        if (find != m_cache.end()) {
-            auto rst = find->second;
-            return rst;
+        {
+            auto find = m_cache.find(key);
+            if (find != m_cache.end()) {
+                auto rst = find->second;
+                return rst;
+            }
+        }
+        if (key.attribute == Attribute::AUTO_PADDING_NHWC) {
+            auto key_ = key;
+            key_.attribute = Attribute::DEFAULT;
+            auto find = m_cache.find(key_);
+            if (find != m_cache.end()) {
+                auto rst = find->second;
+                return rst;
+            }
         }
         mgb_assert(!(key.attribute & Attribute::IMAGE2D) &&
                    !(key.attribute & Attribute::IC_SMALL));

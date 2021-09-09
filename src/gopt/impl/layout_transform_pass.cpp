@@ -111,8 +111,6 @@ void LayoutTransformPass::apply(OptState& opt) const {
                     }
                     new_var = reformat({new_var});
                 }
-                if (from != to && !new_var->shape().is_scalar())
-                    new_var = reformat({new_var});
                 new_inp[i] = new_var;
             }
             VarNode* new_out;
@@ -164,7 +162,9 @@ void LayoutTransformPass::apply(OptState& opt) const {
             }
         } else {
             auto new_opr = rewriter.auto_replace_outputs(opr);
-            var2fmts[new_opr->output(0)] = base_fmt;
+            for (auto&& ov : new_opr->usable_output()) {
+                var2fmts[ov] = base_fmt;
+            }
         }
     };
     opt.graph().iter(on_opr);

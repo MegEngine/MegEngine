@@ -146,18 +146,6 @@ private:
 };
 
 MGB_DEF_ENUM_CLASS_BIT_OPR(ReformatManager::ReformatKey::Attribute);
-//
-//TensorShape make_aligned_tensor_shape(
-//        const VarNode* var, TensorFormats orig_formats,
-//        TensorFormats target_formats,
-//        ReformatManager::ReformatKey::Attribute extra_attribute =
-//                ReformatManager::ReformatKey::Attribute::DEFAULT);
-//
-//TensorShape make_aligned_weight_shape(
-//        const VarNode* var, TensorFormats orig_formats,
-//        TensorFormats target_formats, TensorFormats extra_formats,
-//        ReformatManager::ReformatKey::Attribute extra_attribute =
-//                ReformatManager::ReformatKey::Attribute::DEFAULT);
 
 }  // namespace gopt
 }  // namespace mgb

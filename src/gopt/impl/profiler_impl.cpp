@@ -17,7 +17,6 @@
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
-#include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/nn_int.h"
 #include "megbrain/plugin/base.h"
@@ -167,11 +166,12 @@ private:
     static constexpr float PROFILE_TIME_OUT = 1e7;
     using ReformatAttribute = ReformatKey::Attribute;
     /*!
-     * \brief profile opr format agnostic operators (like elemwise, elemwise multi type, typecvt etc.)
+     * \brief profile opr format agnostic operators (like elemwise, elemwise
+     * multi type, typecvt etc.)
      *
      * \param opr pointer to the operator node to be profiled
      * \param base_format the original tensor format of the operator node.
-     * \param available_tensor_formats the available tensor formats 
+     * \param available_tensor_formats the available tensor formats
      * \return the operator node record
      */
     OperatorNodeRecord profile_operator(
@@ -220,7 +220,7 @@ private:
                     ReformatAttribute::DEFAULT) const;
     float profile_var_node(const VarNode* var, TensorFormats base_format,
                            const ReformatKey& key) const;
-    int m_runs; /// sample times of the profiler
+    int m_runs;  /// sample times of the profiler
 };
 
 ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
@@ -281,10 +281,6 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
     record.opr = opr;
     auto& costs = record.costs;
     for (auto&& i : available_configs) {
-        /// XXXX remove later
-        if (i.opr_format == OprFormat::NCHW &&
-            opr->input(0)->dtype().enumv() != DTypeEnum::Float32)
-            continue;
         costs[i.opr_format] =
                 profile_operator(opr, base_config, i, extra_attribute);
     }
@@ -403,8 +399,8 @@ float ProfilerImpl::profile_var_node(const VarNode* var,
     auto builder = ReformatManager::instance().auto_aligned_reformat_featrue(
             var, base_format, key);
     auto y = builder({aligned_var.node()});
-    if (!m_var_node_filter(var, aligned_tensor_shape, y->shape(),
-                           TensorFormat{}))
+
+    if (!m_var_node_filter(var, aligned_tensor_shape, y->shape(), key))
         return PROFILE_TIME_OUT;
     ThinHashSet<OperatorNodeBase*> set;
     DepOprIter iter([&set](OperatorNodeBase* opr) { set.insert(opr); });
@@ -533,6 +529,17 @@ ProfilerBase::ProfilerBase(float opr_threshold, float var_node_threshold)
           m_var_node_threshold{var_node_threshold} {
     m_opr_filter = [this](const OperatorNodeBase* opr,
                           OperatorNodeBase* new_opr) {
+        /// \note: for the considerations of performance, we skip nchw(naive)
+        /// kernels for conv bias on CUDA platform. to remove this later
+        if (auto conv = try_cast_as_op<opr::ConvBiasForward>(new_opr)) {
+            if (conv->output(0)->comp_node().device_type() ==
+                        CompNode::DeviceType::CUDA &&
+                conv->input(0)->dtype().category() ==
+                        DTypeCategory::QUANTIZED &&
+                conv->param().format == OprFormat::NCHW) {
+                return false;
+            }
+        }
         float comp1 = m_opr_footprint.get_computation(
                 const_cast<OperatorNodeBase*>(opr));
         float comp2 = m_opr_footprint.get_computation(new_opr);
@@ -541,18 +548,27 @@ ProfilerBase::ProfilerBase(float opr_threshold, float var_node_threshold)
         return true;
     };
     m_var_node_filter = [this](const VarNode* var, TensorShape from,
-                               TensorShape to, TensorFormat format) {
-        TensorFormat default_;
-        TensorLayout orig_ly, from_ly, to_ly;
-        if (format == default_) {
-            orig_ly = {var->shape(), var->dtype()};
-            from_ly = {from, var->dtype()};
-            to_ly = {to, var->dtype()};
-        } else {
-            orig_ly = {var->shape(), var->dtype(), format};
-            from_ly = {from, var->dtype(), format};
-            to_ly = {to, var->dtype(), format};
+                               TensorShape to, ReformatKey key) {
+        /// \note: due to the alignment requirement of low-bit tensor, we skip
+        /// some layout transform for low-bit tensors. The skipped layout
+        /// transforms do not have corresponding dnn kernel and cannot be
+        /// implemented by tensor manip operators (like reshape, dimshuffle,
+        /// subtensor, etc.).
+        if (var->dtype().enumv() == DTypeEnum::QuantizedS4 ||
+            var->dtype().enumv() == DTypeEnum::Quantized4Asymm) {
+            if (key.input_format == TensorFormats::NCHW &&
+                key.output_format != TensorFormats::NHWC &&
+                key.output_format != TensorFormats::NCHWc64) {
+                return false;
+            }
+            if (key.output_format == TensorFormats::NCHW &&
+                key.input_format != TensorFormats::NHWC &&
+                key.input_format != TensorFormats::NCHWc64) {
+                return false;
+            }
         }
+        TensorLayout orig_ly = {var->shape(), var->dtype()},
+                     from_ly = {from, var->dtype()}, to_ly = {to, var->dtype()};
         float orig_memory = orig_ly.span().dist_byte() * 2.f;
         float reformat_memory =
                 from_ly.span().dist_byte() + to_ly.span().dist_byte();

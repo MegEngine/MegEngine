@@ -222,8 +222,9 @@ public:
     };
     using OprFilter = thin_function<bool(const cg::OperatorNodeBase*,
                                          cg::OperatorNodeBase*)>;
-    using VarNodeFilter = thin_function<bool(const VarNode*, TensorShape,
-                                             TensorShape, TensorFormat)>;
+    using VarNodeFilter =
+            thin_function<bool(const VarNode*, TensorShape, TensorShape,
+                               ReformatManager::ReformatKey)>;
 
     ProfilerBase(float opr_threshold = 2.f, float var_node_threshold = 2.f);
     ProfilerBase(OprFilter opr_filter, VarNodeFilter var_node_filter = {})
