@@ -131,7 +131,8 @@ public:
                 bool enable_update) const;
 
         //! get all profile algorithm from cache, return invalid if not exists
-        ImplAlgoDesc get_profile_result_from_cache(
+        std::pair<ImplAlgoDesc, Maybe<AlgoChooserProfileCache::Result>>
+        get_profile_result_from_cache(
                 const ExecutionStrategy& selected_strategy) const;
 
         /**
