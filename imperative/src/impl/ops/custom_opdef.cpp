@@ -70,7 +70,7 @@ void CustomOpDef::compute(const SmallVector<DeviceTensorND> &inputs,
 std::tuple<SmallVector<LogicalTensorDesc>, bool> CustomOpDef::infer_output_attrs(
         const SmallVector<TensorPtr> &inputs) const {
     SmallVector<LogicalTensorDesc> input_descs(inputs.size());
-    for (int i=0; i<inputs.size(); i++) {
+    for (size_t i=0; i<inputs.size(); i++) {
         input_descs[i].comp_node = inputs[i]->comp_node();
         input_descs[i].layout = inputs[i]->layout();
     }
@@ -84,7 +84,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> CustomOpDef::infer_output_attrs
     SmallVector<megdnn::DType> i_dtypes(inputs.size());
     SmallVector<TensorFormat> i_formats(inputs.size());
 
-    for (int i=0; i<inputs.size(); i++) {
+    for (size_t i=0; i<inputs.size(); i++) {
         i_devices[i] = inputs[i].comp_node;
         i_shapes[i] = inputs[i].layout;   // TensorLayout is derived from TensorShape
         i_dtypes[i] = inputs[i].layout.dtype;
@@ -132,7 +132,7 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> CustomOpDef::infer_output_attrs
     }
 
     SmallVector<LogicalTensorDesc> outputs(this->output_num());
-    for (int i=0; i<this->output_num(); i++) {
+    for (size_t i=0; i<this->output_num(); i++) {
         outputs[i].comp_node = std::move(o_devices[i]);
         outputs[i].layout = std::move(
             TensorLayout(o_shapes[i], o_dtypes[i], o_formats[i])

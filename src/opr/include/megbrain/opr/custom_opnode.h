@@ -93,8 +93,8 @@ public:
     custom::Param param(void) const;
     std::string op_type(void) const;
     std::string op_desc(void) const;
-    int input_num(void) const;
-    int output_num(void) const;
+    size_t input_num(void) const;
+    size_t output_num(void) const;
     custom::ArgInfo input_info(size_t idx) const;
     custom::ArgInfo output_info(size_t idx) const;
 };

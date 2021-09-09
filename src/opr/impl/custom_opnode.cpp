@@ -18,7 +18,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(CustomOpNode);
 
 void CustomOpNode::infer_output_comp_node(void) {
     SmallVector<CompNode> input_comp_nodes(input_num());
-    for (int i=0; i<input_num(); ++i) {
+    for (size_t i=0; i<input_num(); ++i) {
         input_comp_nodes[i] = input(i)->comp_node();
     }
 
@@ -28,7 +28,7 @@ void CustomOpNode::infer_output_comp_node(void) {
         )
     );
     
-    for (int i=0; i<output_num(); ++i) {
+    for (size_t i=0; i<output_num(); ++i) {
         mgb_assert(output_comp_nodes[i] == output_comp_nodes[0], 
                   "only single comp node operator is supported");
         output(i)->comp_node(output_comp_nodes[i]);
@@ -39,7 +39,7 @@ void CustomOpNode::infer_output_comp_node(void) {
 
 void CustomOpNode::infer_output_dtype(void) {
     SmallVector<DType> input_dtypes(input_num());
-    for (int i=0; i<input_num(); ++i) {
+    for (size_t i=0; i<input_num(); ++i) {
         input_dtypes[i] = input(i)->dtype();
     }
 
@@ -49,14 +49,14 @@ void CustomOpNode::infer_output_dtype(void) {
         )
     );
 
-    for (int i=0; i<output_num(); ++i) {
+    for (size_t i=0; i<output_num(); ++i) {
         output(i)->dtype(output_dtypes[i]);
     }
 }
 
 void CustomOpNode::infer_output_format(void) {
     SmallVector<TensorFormat> input_formats(input_num());
-    for (int i=0; i<input_num(); ++i) {
+    for (size_t i=0; i<input_num(); ++i) {
         input_formats[i] = input(i)->format();
     }
 
@@ -66,14 +66,14 @@ void CustomOpNode::infer_output_format(void) {
         )
     );
 
-    for (int i=0; i<output_num(); ++i) {
+    for (size_t i=0; i<output_num(); ++i) {
         output(i)->format(output_formats[i]);
     }
 }
 
 void CustomOpNode::infer_output_shape(void) {
     SmallVector<TensorShape> input_shapes(input_num());
-    for (int i=0; i<input_num(); ++i) {
+    for (size_t i=0; i<input_num(); ++i) {
         input_shapes[i] = input(i)->shape();
     }
 
@@ -83,7 +83,7 @@ void CustomOpNode::infer_output_shape(void) {
         )
     );
 
-    for (int i=0; i<output_num(); ++i) {
+    for (size_t i=0; i<output_num(); ++i) {
         output(i)->shape(output_shapes[i]);
     }
 }
@@ -235,10 +235,10 @@ CustomOpNode::CustomOpNode(const std::shared_ptr<const custom::CustomOp> &op,
                            const OperatorNodeConfig &config):
         OperatorNodeBase(inputs[0]->owner_graph(), config, op->op_type(), inputs), m_op(op), m_param(param) {
     mgb_assert(input_num() == inputs.size(), "wrong input tensors list length");
-    for (int i=0; i < input_num(); ++i) 
+    for (size_t i=0; i < input_num(); ++i) 
         add_input({inputs[i]});
 
-    for (int i=0; i<output_num(); ++i) 
+    for (size_t i=0; i<output_num(); ++i) 
         add_output(output_info(i).name());
     
     if (!std::is_empty<custom::Param>::value) {
@@ -306,11 +306,11 @@ std::string CustomOpNode::op_desc(void) const {
     return m_op->op_desc();
 }
 
-int CustomOpNode::input_num(void) const {
+size_t CustomOpNode::input_num(void) const {
     return m_op->input_num();
 }
 
-int CustomOpNode::output_num(void) const {
+size_t CustomOpNode::output_num(void) const {
     return m_op->output_num();
 }
 

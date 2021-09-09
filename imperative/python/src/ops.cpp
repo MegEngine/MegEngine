@@ -613,17 +613,17 @@ void init_ops(py::module m) {
 }
 
 #define CUSTOM_CASE_TO_PARSE_NON_LIST(dyn_type, static_type)                \
-    case mgb::custom::ParamDynType::dyn_type: {                             \
+    case custom::ParamDynType::dyn_type: {                                  \
         param_val = py::handle(kv.second).cast<static_type>();              \
         break;                                                              \
     }
 
 #define CUSTOM_CASE_TO_PARSE_LIST(dyn_type, static_type)                    \
-    case mgb::custom::ParamDynType::dyn_type: {                             \
+    case custom::ParamDynType::dyn_type: {                             \
         auto pyvals = py::handle(kv.second).cast<py::list>();               \
         static_type vals;                                                   \
         using basic_type =                                                  \
-            mgb::custom::get_vector_template_arg_type<static_type>::type;   \
+            custom::get_vector_template_arg_type<static_type>::type;        \
         for (auto &pyval: pyvals) {                                         \
             vals.push_back(py::handle(pyval).cast<basic_type>());           \
         }                                                                   \
@@ -631,7 +631,7 @@ void init_ops(py::module m) {
         break;                                                              \
     }
 
-PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs, PyObject *kwnames) {
+PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
     auto op_name = py::handle(args[0]).cast<std::string>();
     auto kwargs = py::handle(args[1]).cast<py::dict>();
 
@@ -680,7 +680,7 @@ PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs, PyOb
 
 py::list install_custom(const std::string &name, const std::string &path) {
     py::list ret;
-    const auto &ops_in_lib = mgb::custom::LibManager::inst()->install(name, path);
+    const auto &ops_in_lib = custom::LibManager::inst()->install(name, path);
     for (const auto &op: ops_in_lib) {
         ret.append(op);
     }
@@ -688,7 +688,7 @@ py::list install_custom(const std::string &name, const std::string &path) {
 }
 
 bool uninstall_custom(const std::string &name) {
-    return mgb::custom::LibManager::inst()->uninstall(name);
+    return custom::LibManager::inst()->uninstall(name);
 }
 
 py::list get_custom_op_list(void) {
@@ -697,8 +697,16 @@ py::list get_custom_op_list(void) {
     for (auto &op: all_ops) {
         ret.append(op);
     }
-    return std::move(ret);
+    return ret;
 }
+
+#ifndef METH_FASTCALL
+    PyObject* py35_make_custom_op(PyObject* self, PyObject* args) {
+        auto* arr = &PyTuple_GET_ITEM(args, 0);
+        auto size = PyTuple_GET_SIZE(args);
+        return make_custom_op(self, arr, size);
+    };
+#endif
 
 void init_custom(pybind11::module m) {
     m.def("_install", &install_custom);
@@ -706,7 +714,11 @@ void init_custom(pybind11::module m) {
     m.def("_get_custom_op_list", &get_custom_op_list);
 
     static PyMethodDef method_def = {
+#ifdef METH_FASTCALL
         "_make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
+#else
+        "_make_custom_op", (PyCFunction)py35_make_custom_op, METH_VARARGS, ""
+#endif
     };
     auto* func = PyCFunction_NewEx(&method_def, nullptr, nullptr);
     pybind11::setattr(m, method_def.ml_name, func);
