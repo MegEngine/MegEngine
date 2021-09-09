@@ -404,6 +404,11 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
     NamedTensorShape orig_shape =
             tensor_formats_to_named_tensor_shape(orig_format);
     size_t orig_channel = 0;
+    mgb_assert(orig_var->shape().ndim == orig_shape.ndim,
+               "incompatible NamedTensorShape for "
+               "feature(var:%s;shape:%s)",
+               cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
+               orig_shape.to_string().c_str());
     for (size_t i = 0; i < orig_shape.ndim; ++i) {
         if (orig_shape[i].name() == Dimension::Name::C &&
             orig_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -412,7 +417,9 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
         }
     }
     mgb_assert(orig_channel > 0,
-               "incompatible NamedTensorShape for feature(got:%s)",
+               "incompatible NamedTensorShape for "
+               "feature(var:%s;shape:%s)",
+               cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
                orig_shape.to_string().c_str());
     size_t aligned_in_channel =
             divup(orig_channel, input_alignment) * input_alignment;

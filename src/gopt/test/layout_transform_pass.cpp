@@ -45,7 +45,6 @@ size_t find_opr_num(SymbolVar endpoint) {
     size_t opr_num = 0;
     auto cb = [&opr_num](cg::OperatorNodeBase* opr) {
         if (opr->same_type<T>()) {
-            printf("%s, %s\n", opr->cname(), opr->dyn_typeinfo()->name);
             opr_num++;
         }
     };
@@ -78,6 +77,7 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
 
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
+    using Target = LayoutTransformContext::Target;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
     OprList opr_list = {
@@ -91,7 +91,7 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW, TensorFormats::NHWC, TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
                            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
@@ -167,8 +167,9 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
 
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
-    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
+    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ElemwiseMultiType::typeinfo(),
@@ -181,7 +182,7 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
             TensorFormats::NCHW,    TensorFormats::NHWC,
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
                            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
@@ -288,8 +289,9 @@ TEST(TestLayoutTransform, Detection_QS8) {
 
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
-    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
+    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ElemwiseMultiType::typeinfo(),
@@ -302,7 +304,7 @@ TEST(TestLayoutTransform, Detection_QS8) {
             TensorFormats::NCHW,    TensorFormats::NHWC,
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
                            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
@@ -362,6 +364,7 @@ TEST(TestLayoutTransform, Detection_QS4) {
     using OprList = LayoutTransformContext::OprList;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ElemwiseMultiType::typeinfo(),
@@ -374,7 +377,7 @@ TEST(TestLayoutTransform, Detection_QS4) {
             TensorFormats::NCHW,    TensorFormats::NHWC,
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
                            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
@@ -443,13 +446,14 @@ TEST(TestLayoutTransform, Wide) {
     using OprList = LayoutTransformContext::OprList;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::Elemwise::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {TensorFormats::NCHW,
                                                            TensorFormats::NHWC};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
                            ReformatAttribute::DEFAULT};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
@@ -571,8 +575,8 @@ TEST(TestLayoutTransform, DetectionHead) {
 
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
-    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ConvolutionForward::typeinfo(),
@@ -588,7 +592,7 @@ TEST(TestLayoutTransform, DetectionHead) {
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
     Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
-                           ReformatAttribute::DEFAULT};
+                           Target::UNSPEC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
             attribute);

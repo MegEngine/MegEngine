@@ -30,6 +30,8 @@
 #include "megbrain/tensorrt/opr_replace.h"
 #endif
 
+#include "megbrain/gopt/global_layout_transform.h"
+
 using namespace mgb;
 using namespace gopt;
 
@@ -808,6 +810,40 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_optimize_options(
 
     if (need_param_fuse) {
         add_pass<ParamFusePass>();
+    }
+    return *this;
+}
+
+const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
+        const GraphTuningOptions& options) {
+    bool need_param_fuse = false;
+
+#define cb(_options, _passes)           \
+    if (options.has_set_##_options()) { \
+        _passes need_param_fuse = true; \
+    }
+
+    cb(layout_transform, {
+        add_pass<FuseConvBiasNonlinPass>();
+        add_pass<FuseConvBiasZPass>();
+        auto profiler = ProfilerBase::make_profiler();
+        std::unique_ptr<SolverBase> solver{
+                new DynamicProgrammingSolver(std::move(profiler))};
+        auto ctx = LayoutTransformContext::make(options.target);
+        add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver));
+        add_pass<ShuffleShuffleRemovePass>();
+        add_pass(FuseNCHW4Int8Preprocess::make());
+        add_pass(FuseNCHW4Int8Preprocess::make());
+        add_pass<FuseWarpPerspectiveDimshufflePass>();
+#if CUDA_VERSION >= 10020
+        add_pass<FoldingConvBiasDimshufflePass>();
+#endif
+    });
+#undef cb
+
+    if (need_param_fuse) {
+        add_pass<ParamFusePass>();
+        add_pass<ParamMergePass>();
     }
     return *this;
 }

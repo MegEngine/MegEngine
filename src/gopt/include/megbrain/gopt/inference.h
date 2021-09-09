@@ -353,6 +353,39 @@ namespace gopt {
         }
     };
 
+    /**
+     * \brief graph level tuning options.
+     * The GraphTuningOptions is corresponding to graph level optimizations.
+     * Unlike the GraphCommonOptimizeOptions, these optimization options are
+     * usually target-dependent and profiling based, and the optimize usually should take place
+     * during runtime. The GraphTuningOptions includes layout optimization etc,
+     * more optimize options will be introduced in the future.
+     */
+    struct GraphTuningOptions {
+        enum class Target : uint32_t {
+            UNSPEC = 0,  ///< unspecific device target
+            CUDA = 1,  ///< CUDA device, usually refer to GPU devices of Nvidia
+            X86 = 2,   ///< x86 cpu
+            ARM = 3,   ///< arm cpu
+            OPENCL = 4,  ///< opencl, usually run on mobile devices
+        };
+        Target target;
+        bool layout_transform = false;  ///< whether to enable graph level
+                                        ///< tuning for layouts of tensors
+#define SET(n)                          \
+    GraphTuningOptions& enable_##n() {  \
+        n = true;                       \
+        return *this;                   \
+    }                                   \
+    GraphTuningOptions& disable_##n() { \
+        n = false;                      \
+        return *this;                   \
+    }                                   \
+    bool has_set_##n() const { return n == true; }
+        SET(layout_transform);
+#undef SET
+    };
+
     /*!
      * \brief optimize a computing graph for inference
      *
@@ -362,6 +395,16 @@ namespace gopt {
     SymbolVarArray optimize_for_inference(
             const SymbolVarArray& dest_vars,
             const OptimizeForInferenceOptions& opt = {});
+
+    /*!
+     * \brief optimize the layout selection for a computing graph
+     *
+     * The layout selection optimizers are target-dependent. And this function
+     * applies a set of predefined optimizer passes designed for specific
+     * device.      */
+    SymbolVarArray layout_transform(const SymbolVarArray& dest_vars,
+                                    GraphTuningOptions::Target target =
+                                            GraphTuningOptions::Target::UNSPEC);
 
     /*!
      * \brief modify execution strategy for oprs with multiple

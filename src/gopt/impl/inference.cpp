@@ -118,6 +118,17 @@ SymbolVarArray gopt::optimize_for_inference(
             .endpoint_vars();
 }
 
+SymbolVarArray gopt::layout_transform(const SymbolVarArray& dest_vars,
+                                      GraphTuningOptions::Target target) {
+    GraphTuningOptions options;
+    options.target = target;
+    options.enable_layout_transform();
+    return gopt::GraphOptimizer{}
+            .add_passes_for_graph_tuning_options(options)
+            .apply({dest_vars})
+            .endpoint_vars();
+}
+
 namespace {
 void modify_conv_strategy(
         opr::mixin::AlgoChooserHelper& conv,

@@ -16,6 +16,7 @@
 #include "megbrain/gopt/subgraph_extractor.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/plugin/opr_footprint.h"
+#include "megbrain/gopt/inference.h"
 
 namespace mgb {
 namespace gopt {
@@ -52,6 +53,7 @@ public:
     using OprConfigTrait =
             ThinHashMap<Typeinfo*,
                         ThinHashMap<OprFormat, OprTensorFormatsDispatcher*>>;
+    using Target = GraphTuningOptions::Target;
     using ReformatAttribute = ReformatManager::ReformatKey::Attribute;
     struct Attribute {
         OprFormat base_opr_format;  /// the base opr format indicates that the
@@ -66,11 +68,13 @@ public:
                                       /// (like elemwise, elemwise multi type,
                                       /// typecvt etc.) are built in the base
                                       /// tensor format.
-        ReformatAttribute
-                reformat_attribute;  /// additional reformat attribute, which
-                                     /// indicates whether to pad nhwc layout
-                                     /// automatically or to enable nhwcd4 format
-                                     /// on opencl platform to use image object
+        Target target;                /// target which indicates the device type
+        ReformatAttribute reformat_attribute =
+                ReformatAttribute::DEFAULT;  /// additional reformat attribute,
+                                             /// which indicates whether to pad
+                                             /// nhwc layout automatically or to
+                                             /// enable nhwcd4 format on opencl
+                                             /// platform to use image object
     };
     LayoutTransformContext() = delete;
     LayoutTransformContext(OprList opr_list,
@@ -108,6 +112,10 @@ public:
      */
     LayoutTransformContext& add_opr_config(Typeinfo* opr,
                                            SmallVector<OprFormat> opr_formats);
+    static std::unique_ptr<LayoutTransformContext> make(
+            Target target = Target::UNSPEC,
+            OprFormat base_opr_format = OprFormat::NCHW,
+            TensorFormats base_tensor_format = TensorFormats::NCHW);
 
 private:
     OprList m_opr_list; /// supported operator list

@@ -46,7 +46,8 @@ void LayoutTransformPass::apply(OptState& opt) const {
 
     auto&& opr_configs = m_ctx->opr_configs();
     auto&& base_fmt = m_ctx->attribute().base_tensor_formats;
-    auto&& reformat_attribute = m_ctx->attribute().reformat_attribute;
+    auto&& reformat_attribute =
+            ReformatManager::ReformatKey::Attribute::DEFAULT;
     ThinHashMap<VarNode*, TensorFormats> var2fmts;
     static ThinHashSet<Typeinfo*> format_aware_oprs = {
 #define cb(_Opr) opr::_Opr::typeinfo(),

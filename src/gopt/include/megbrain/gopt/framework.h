@@ -24,6 +24,9 @@ namespace gopt {
     //! forward declaration for structs in inference.h
     struct OptimizeForInferenceOptions;
 
+    //! forward declaration for GraphTuningOptions
+    struct GraphTuningOptions;
+
     /*!
      * \brief represent a computing graph to be optimized by specifying its
      *      endpoints
@@ -479,6 +482,14 @@ namespace gopt {
 
             const GraphOptimizer& add_passes_for_optimize_options(
                     const cg::GraphCommonOptimizeOptions& options);
+            
+            /**
+             * \brief add pass indicated by graph tuning options
+             *
+             * \param options graph tuning options
+             */
+            const GraphOptimizer& add_passes_for_graph_tuning_options(
+                    const GraphTuningOptions& options);
     };
 
     /*!

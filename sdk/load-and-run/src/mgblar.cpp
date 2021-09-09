@@ -247,7 +247,19 @@ R"__usage__(
     Execute operators with kernels implemented in MegDNN with NCHW64 tensor format. Can only be used
     on Nvidia GPUs, which natively support fast int4 tensorcore inference.
 )__usage__"
+R"__usage__(
+  --layout-transform [cuda|x86|arm|opencl|unspec]
+    Enable global layout transform optimization for computing graph. User should specify the device target for the optimization, and a series of passes will be applied on the computing graph. The passes will benchmark the elapsed time of operators on different tensor layouts, and select fastest implementation for the operators. The optimization process will take some time. The default target is unspec, which all the available for operators will be profiled. So the optimize time will be longer.
+  --layout-transform-dump <dump_path>
+    The computing graph after global layout transform will be dumped to the given file path.
+  --layout-transform-verify
+    After applying the layout transform optimization, the results of the computing graph before and after layout transform passes will be compared to verify the correctness of the passes.
+)__usage__"
+R"__usage__(
+)__usage__"
 ;
+
+
 
 struct DataParser {
     struct Brace {
@@ -566,6 +578,11 @@ struct Args {
     serialization::GraphLoader::LoadConfig load_config;
     thin_function<void(size_t)> affinity_cb;
 
+    bool layout_transform = false;
+    gopt::GraphTuningOptions::Target layout_transform_target =
+            gopt::GraphTuningOptions::Target::UNSPEC;
+    std::string layout_transform_dump_path;
+
     static Args from_argv(int argc, char **argv);
 };
 
@@ -712,6 +729,91 @@ void run_test_st(Args &env) {
 
     printf("load model: %.3fms\n", timer.get_msecs_reset());
 
+    auto& output_var_list = env.load_ret.output_var_list;
+    mgb::gopt::set_opr_algo_workspace_limit_inplace(output_var_list,
+                                                    env.workspace_limit);
+    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
+    S strategy = static_cast<S>(0);
+    if (env.reproducible) {
+        strategy = S::REPRODUCIBLE;
+    }
+#if MGB_ENABLE_FASTRUN
+    if (env.use_full_run) {
+        strategy = S::PROFILE | strategy;
+    } else if (env.use_fast_run) {
+        strategy = S::PROFILE | S::OPTIMIZED | strategy;
+    } else {
+        strategy = S::HEURISTIC | strategy;
+    }
+#else
+    strategy = S::HEURISTIC | strategy;
+#endif
+    mgb::gopt::modify_opr_algo_strategy_inplace(output_var_list, strategy);
+    if (!env.fast_run_cache_path.empty()) {
+#if MGB_ENABLE_FASTRUN
+        if (!access(env.fast_run_cache_path.c_str(), F_OK)) {
+#else
+        mgb_assert(access(env.fast_run_cache_path.c_str(), F_OK) == 0,
+                   "fast-run cache file can't be accessed");
+#endif
+            FILE* fin = fopen(env.fast_run_cache_path.c_str(), "rb");
+            auto flen = get_file_size(fin);
+            std::unique_ptr<uint8_t[]> buf{new uint8_t[flen]};
+            size_t ret = fread(buf.get(), flen, 1, fin);
+            MGB_MARK_USED_VAR(ret);
+            mgb_assert(ret == 1, "read 1 block (got %zu), and block size %zu.",
+                       ret, flen);
+            fclose(fin);
+            PersistentCache::set_impl(
+                    std::make_shared<InFilePersistentCache>(buf.get(), flen));
+#if MGB_ENABLE_FASTRUN
+        } else {
+            mgb_assert(env.use_full_run || env.use_fast_run,
+                       "fast-run or fast-run should be enabled");
+            PersistentCache::set_impl(
+                    std::make_shared<InFilePersistentCache>());
+        }
+        if (!env.use_full_run && !env.use_fast_run)
+#endif
+            mgb::gopt::enable_opr_use_profiling_cache_inplace(output_var_list);
+    }
+
+    // load testcase
+    decltype(env.load_ret) testcase;
+    if (nr_test) {
+        loader = serialization::GraphLoader::make(loader->reset_file(),
+                                                  loader->format());
+        testcase = loader->load(env.load_config, false);
+    }
+
+    if (env.layout_transform) {
+        env.load_ret.output_var_list = gopt::layout_transform(
+                env.load_ret.output_var_list, env.layout_transform_target);
+        if (!env.layout_transform_dump_path.empty()) {
+            auto out_file = serialization::OutputFile::make_fs(
+                    env.layout_transform_dump_path.c_str(), 'w');
+            if (nr_test) {
+                const char* magic = "mgbtest0";
+                constexpr size_t len = sizeof(magic);
+                out_file->write(magic, len);
+                uint32_t nr_inp_tensors = testcase.output_var_list.size();
+                out_file->write(&nr_inp_tensors, sizeof(nr_inp_tensors));
+            }
+            auto dumper = serialization::GraphDumper::make(std::move(out_file),
+                                                           format.val());
+            using DumpConfig = serialization::GraphDumper::DumpConfig;
+            DumpConfig config{1, false, false};
+            dumper->dump(env.load_ret.output_var_list, config);
+            if (nr_test) {
+                out_file = serialization::OutputFile::make_fs(
+                        env.layout_transform_dump_path.c_str(), 'a');
+                auto testdumper = serialization::GraphDumper::make(
+                        std::move(out_file), format.val());
+                testdumper->dump(testcase.output_var_list, config);
+            }
+        }
+    }
+
     // compile function to compute all outputs
     ComputingGraph::OutputSpec out_spec;
     std::string output_names;
@@ -753,53 +855,6 @@ void run_test_st(Args &env) {
     SymbolVarArray vars;
     for (auto i : out_spec) {
         vars.push_back(i.first);
-    }
-
-    mgb::gopt::set_opr_algo_workspace_limit_inplace(vars, env.workspace_limit);
-    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
-    S strategy = static_cast<S>(0);
-    if (env.reproducible) {
-        strategy = S::REPRODUCIBLE;
-    }
-#if MGB_ENABLE_FASTRUN
-    if (env.use_full_run) {
-        strategy = S::PROFILE | strategy;
-    } else if (env.use_fast_run) {
-        strategy = S::PROFILE | S::OPTIMIZED | strategy;
-    } else {
-        strategy = S::HEURISTIC | strategy;
-    }
-#else
-    strategy = S::HEURISTIC | strategy;
-#endif
-    mgb::gopt::modify_opr_algo_strategy_inplace(vars, strategy);
-    if (!env.fast_run_cache_path.empty()) {
-#if MGB_ENABLE_FASTRUN
-        if (!access(env.fast_run_cache_path.c_str(), F_OK)) {
-#else
-        mgb_assert(access(env.fast_run_cache_path.c_str(), F_OK) == 0,
-                   "fast-run cache file can't be accessed");
-#endif
-            FILE* fin = fopen(env.fast_run_cache_path.c_str(), "rb");
-            auto flen = get_file_size(fin);
-            std::unique_ptr<uint8_t[]> buf{new uint8_t[flen]};
-            size_t ret = fread(buf.get(), flen, 1, fin);
-            MGB_MARK_USED_VAR(ret);
-            mgb_assert(ret == 1, "read 1 block (got %zu), and block size %zu.",
-                       ret, flen);
-            fclose(fin);
-            PersistentCache::set_impl(
-                    std::make_shared<InFilePersistentCache>(buf.get(), flen));
-#if MGB_ENABLE_FASTRUN
-        } else {
-            mgb_assert(env.use_full_run || env.use_fast_run,
-                       "fast-run or fast-run should be enabled");
-            PersistentCache::set_impl(
-                    std::make_shared<InFilePersistentCache>());
-        }
-        if (!env.use_full_run && !env.use_fast_run)
-#endif
-            mgb::gopt::enable_opr_use_profiling_cache_inplace(vars);
     }
 
     auto func = env.load_ret.graph_compile(out_spec);
@@ -924,9 +979,6 @@ void run_test_st(Args &env) {
                 env.c_opr_args.copr_param_device_ptr_malloc(c_opr_param.get());
             }
 
-            loader = serialization::GraphLoader::make(
-                    loader->reset_file(), loader->format());
-            auto testcase = loader->load(env.load_config, false);
             mgb_assert(testcase.output_var_list.size() == inp_tensors.size());
             for (size_t i = 0; i < inp_tensors.size(); ++ i) {
                 auto &&opr = testcase.output_var_list[i].node()->owner_opr()->
@@ -1522,7 +1574,45 @@ Args Args::from_argv(int argc, char **argv) {
             graph_opt.graph_opt.enable_weight_preprocess();
             continue;
         }
+        if (!strcmp(argv[i], "--layout-transform")) {
+            ret.layout_transform = true;
+            ++i;
+            if (i >= argc) {
+                --i;
+                continue;
+            }
+           
+            using Target = gopt::GraphTuningOptions::Target;
+            if (!strcmp(argv[i], "cuda")) {
+                ret.layout_transform_target = Target::CUDA;
+            } else if (!strcmp(argv[i], "x86")) {
+                ret.layout_transform_target = Target::X86;
+            } else if (!strcmp(argv[i], "arm")) {
+                ret.layout_transform_target = Target::ARM;
+            } else if (!strcmp(argv[i], "opencl")) {
+                ret.layout_transform_target = Target::OPENCL;
+            } else if (!strncmp(argv[i], "--", 2)) {
+                --i;
+            } else {
+                mgb_assert(false,
+                           "unsupported target(got:%s) for global layout "
+                           "transform",
+                           argv[i]);
+            }
 
+            continue;
+        }
+
+        if (!strcmp(argv[i], "--layout-transform-dump")) {
+            ++i;
+            mgb_assert(i < argc,
+                       "dump path not given for --layout-transform-dump");
+            mgb_assert(strncmp(argv[i], "--", 2),
+                       "dump path not given for --layout-transform-dump");
+            ret.layout_transform_dump_path = argv[i];
+            continue;
+        }
+       
         fprintf(stderr, "invalid arg: %s\n", argv[i]);
         ret.args_parse_ret = -1;
         return ret;

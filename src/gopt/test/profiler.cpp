@@ -28,8 +28,8 @@ namespace {
 std::unique_ptr<LayoutTransformContext> make_ctx() {
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
-    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ConvolutionForward::typeinfo(),
@@ -45,8 +45,7 @@ std::unique_ptr<LayoutTransformContext> make_ctx() {
             TensorFormats::NCHW,    TensorFormats::NHWC,
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
-                           ReformatAttribute::DEFAULT};
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::CUDA};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
             attribute);
