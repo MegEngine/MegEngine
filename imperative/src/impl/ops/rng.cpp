@@ -312,12 +312,7 @@ struct _InferLayout<false>
 
     template<typename Op>
     static TensorLayout do_infer(const LogicalTensorDesc& inp, const Op& rng){
-        size_t size = inp.layout.total_nr_elems();
-        mgb_assert(
-                size > 0,
-                "target size of %s expects size>0; got size=%lu actually",
-                rng.dyn_typeinfo()->name,
-                size);
+        mgb_assert(inp.layout.ndim);
         return inp.layout;
     }
 };
@@ -376,6 +371,7 @@ void exec(const OpDef& op, const SmallVector<TensorPtr>& inputs,
     auto&& rng = op.cast_final_safe<Op>();
  
     auto dest = outputs[0];
+    if (dest->layout().is_empty()) return;
     auto cn = dest->comp_node();
     auto handle = rng.handle;
     if (!handle) {

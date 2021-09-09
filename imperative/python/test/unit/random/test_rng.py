@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import megengine.functional as F
-from megengine import Tensor
+from megengine import Tensor, jit, random
 from megengine.core._imperative_rt import CompNode
 from megengine.core._imperative_rt.core2 import apply
 from megengine.core._imperative_rt.ops import (
@@ -402,3 +402,44 @@ def test_seed():
     seed(11)
     out4 = uniform(size=[10, 10])
     assert not (out1.numpy() == out4.numpy()).all()
+
+
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_rng_empty_tensor(is_symbolic):
+    shapes = [
+        (0,),
+        (0, 0, 0),
+        (10, 0, 10),
+    ]
+
+    def fn(shape):
+        o1 = random.uniform(0, 1, shape)
+        o2 = random.normal(0, 1, shape)
+        o3 = random.gamma(2, 1, shape)
+        o4 = random.beta(2, 1, shape)
+        o5 = random.poisson(2, shape)
+        return o1, o2, o3, o4, o5
+
+    for shape in shapes:
+        if is_symbolic is not None:
+            fn_ = jit.trace(symbolic=is_symbolic)(fn)
+        else:
+            fn_ = fn
+        for _ in range(3):
+            outs = fn_(shape)
+            for out in outs:
+                np.testing.assert_equal(out.numpy().shape, shape)
+            if is_symbolic is None:
+                break
+
+    def fn2(n):
+        return random.permutation(n=n)
+
+    if is_symbolic is not None:
+        fn2 = jit.trace(symbolic=is_symbolic)(fn2)
+
+    for _ in range(3):
+        out = fn2(0)
+        np.testing.assert_equal(out.numpy().shape, (0,))
+        if is_symbolic is None:
+            break

@@ -67,6 +67,7 @@ _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(PermutationRNG)
 #define _DEFINE_RNG_OPR_WITH_INPUT_CLASS(RNG)                                      \
 MGB_DEFINE_OPR_CLASS(RNG, RNGOprBase<megdnn::RNG>)                                 \
     void add_input_layout_constraint() override;                                   \
+    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;            \
     public:                                                                        \
         RNG(_INPUTS(VarNode*), const Param &param,                                 \
             const OperatorNodeConfig &config);                                     \

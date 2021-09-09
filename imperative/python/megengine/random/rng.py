@@ -209,7 +209,8 @@ def _poisson(
 
 
 def _permutation(n: int, seed: int, device: str, handle: int, dtype: str) -> Tensor:
-    assert isinstance(n, int) and n > 0, "Permutation is not defined when n <= 0"
+    assert isinstance(n, int)
+    assert n >= 0, "Permutation is not defined when n < 0"
     size = (n,)
     op = PermutationRNG(seed=seed, handle=handle, dtype=dtype)
     _ref = Tensor([], dtype="int32", device=device)

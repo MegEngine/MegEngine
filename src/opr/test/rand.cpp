@@ -247,6 +247,92 @@ TEST(TestOprRand, PermutationRNG) {
     }
 }
 
+TEST(TestOprRand, EmptyShape) {
+    auto test_uniform = []() {
+        static constexpr size_t M = 128, N = 0;
+        auto graph = ComputingGraph::make();
+        SymbolVar dev_out = opr::UniformRNG::make(
+                *graph, {M, N}, {CompNode::load("xpu0")}, {23, DTypeEnum::Float32});
+        HostTensorND host_out;
+        auto func = graph->compile({make_callback_copy(dev_out, host_out)});
+        func->execute();
+        ASSERT_EQ(host_out.shape(), TensorShape({M, N}));
+
+    };
+    auto test_gaussian = []() {
+        size_t SIZE = 0;
+        constexpr float MEAN = 1, STD = 2;
+        auto graph = ComputingGraph::make();
+        auto y = opr::GaussianRNG::make(
+                SymbolVar::make_scalar(int(SIZE), *graph, {CompNode::load("xpu0")}),
+                {23, MEAN, STD, DTypeEnum::Float32});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({SIZE}), host_y.shape());
+    };
+    auto test_gamma = []() {
+        std::shared_ptr<HostTensorND> shape_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        std::shared_ptr<HostTensorND> scale_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto shape_sym = opr::Host2DeviceCopy::make(*graph, shape_host);
+        auto scale_sym = opr::Host2DeviceCopy::make(*graph, scale_host);
+
+        auto y = opr::GammaRNG::make(shape_sym, scale_sym, {10});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({10, 0}), host_y.shape());
+    };
+    auto test_poisson = []() {
+        std::shared_ptr<HostTensorND> lam_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto lam_sym = opr::Host2DeviceCopy::make(*graph, lam_host);
+        auto y = opr::PoissonRNG::make(lam_sym, {10});
+
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({10, 0}), host_y.shape());
+    };
+    auto test_beta = []() {
+        std::shared_ptr<HostTensorND> alpha_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        std::shared_ptr<HostTensorND> beta_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto alpha_sym = opr::Host2DeviceCopy::make(*graph, alpha_host);
+        auto beta_sym = opr::Host2DeviceCopy::make(*graph, beta_host);
+        auto y = opr::BetaRNG::make(alpha_sym,beta_sym, {10});
+
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({10, 0}), host_y.shape());
+    };
+    auto test_permutation = []() {
+        static constexpr size_t SIZE = 0;
+        auto graph = ComputingGraph::make();
+        auto y = opr::PermutationRNG::make(
+                SymbolVar::make_scalar(int(SIZE), *graph, {CompNode::load("xpu0")}),
+                {23, DTypeEnum::Int32});
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({SIZE}), host_y.shape());
+    };
+    test_uniform();
+    test_gaussian();
+    test_gamma();
+    test_poisson();
+    test_beta();
+    test_permutation();
+}
+
+
 TEST(TestOprRand, UniformReprod) {
     static constexpr size_t SIZE = 123;
     auto graph = ComputingGraph::make();

@@ -48,6 +48,9 @@ cg::OperatorNodeBase::NodeProp* RNGOpr::do_make_node_prop() const {             
     auto prop = Super::do_make_node_prop();                                         \
     prop->add_flag(NodeProp::Flag::IMPURE_FUNC);                                    \
     prop->reset_dep_type(input(), {NodeProp::DepType::HOST_VALUE});                 \
+    for (auto i: input()) {                                                         \
+        prop->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);   \
+    }                                                                               \
     return prop;                                                                    \
 }                                                                                   \
 RNGOpr::RNGOpr(VarNode *shape, const Param &param,                                  \
@@ -56,7 +59,7 @@ RNGOpr::RNGOpr(VarNode *shape, const Param &param,                              
 {                                                                                   \
     DType dtype = DType::from_enum(param.dtype);                                    \
     add_input({shape});                                                             \
-    add_output(None)->dtype(dtype);                                                 \
+    add_output(None)->dtype(dtype).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);      \
     cg::add_workspace_output(this);                                                 \
     add_equivalence_component<ScalarHash<void*>>(this);                             \
 }                                                                                   \
@@ -84,7 +87,12 @@ void RNGOpr::init_output_static_infer_desc() {                                  
             {SourceType::DEP, {{output(0), DepType::SHAPE}}, infer_wk});            \
 }                                                                                   \
 void RNGOpr::scn_do_execute() {                                                     \
-    m_dnn_opr->exec(output(0)->dev_tensor().as_megdnn(),                            \
+    auto&& ret = output(0);                                                         \
+    if (ret->layout().is_empty()) {                                                 \
+        mgb_assert(ret->dev_tensor().empty());                                      \
+        return;                                                                     \
+    }                                                                               \
+    m_dnn_opr->exec(ret->dev_tensor().as_megdnn(),                                  \
             get_megdnn_workspace_from_var(output(1)));                              \
 }
 
@@ -105,7 +113,7 @@ RNGOpr::RNGOpr(_INPUTS(VarNode*,), const Param &param,                          
     Super({i0->owner_graph(), config, (name), {_INPUTS(,)}}, param)                     \
 {                                                                                       \
     add_input({_INPUTS(,)});                                                            \
-    add_output(None)->dtype(i0->dtype());                                               \
+    add_output(None)->dtype(i0->dtype()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);    \
     cg::add_workspace_output(this);                                                     \
     add_equivalence_component<ScalarHash<void*>>(this);                                 \
 }                                                                                       \
@@ -132,9 +140,22 @@ void RNGOpr::add_input_layout_constraint(){                                     
     for (auto i : input()) i->add_layout_constraint_contiguous();                       \
 };                                                                                      \
 void RNGOpr::scn_do_execute() {                                                         \
+    auto&& ret = output(0);                                                             \
+    if (ret->layout().is_empty()) {                                                     \
+        mgb_assert(ret->dev_tensor().empty());                                          \
+        return;                                                                         \
+    }                                                                                   \
     m_dnn_opr->exec(_FOR_EACH(_AS_MEGDNN),output(0)->dev_tensor().as_megdnn(),          \
                     get_megdnn_workspace_from_var(output(1)));                          \
-}           
+}                                                                                       \
+cg::OperatorNodeBase::NodeProp* RNGOpr::do_make_node_prop() const {                     \
+    auto prop = Super::do_make_node_prop();                                             \
+    prop->add_flag(NodeProp::Flag::IMPURE_FUNC);                                        \
+    for (auto i: input()) {                                                             \
+        prop->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);       \
+    }                                                                                   \
+    return prop;                                                                        \
+}
 
 /* ================= 1 input =================  */
 #define _INPUTS(prefix, subfix) prefix i0 subfix
