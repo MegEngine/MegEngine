@@ -55,6 +55,12 @@ MGB_DEFINE_OPR_CLASS(Argmin,
  */
 MGB_DEFINE_OPR_CLASS(ArgsortForward,
             intl::MegDNNOprWrapperFwd<megdnn::ArgsortForward>) // {
+    protected:
+        NodeProp* do_make_node_prop() const override;
+        void scn_do_execute() override;
+        void get_output_var_shape(
+                const TensorShapeArray &inp_shape,
+                TensorShapeArray &out_shape) const override;
     public:
         ArgsortForward(VarNode *in_tensor,
                 const Param &param,

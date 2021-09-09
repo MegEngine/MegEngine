@@ -110,14 +110,40 @@ def test_sort():
     data2_shape = (12, 2)
     data1 = np.random.random(data1_shape).astype(np.float32)
     data2 = np.random.random(data2_shape).astype(np.float32)
-    output0 = [np.sort(data1), np.argsort(data1).astype(np.int32)]
-    output1 = [np.sort(data2), np.argsort(data2).astype(np.int32)]
+    output1 = [np.sort(data1), np.argsort(data1).astype(np.int32)]
+    output2 = [np.sort(data2), np.argsort(data2).astype(np.int32)]
 
     cases = [
-        {"input": data1, "output": output0},
-        {"input": data2, "output": output1},
+        {"input": data1, "output": output1},
+        {"input": data2, "output": output2},
     ]
     opr_test(cases, F.sort)
+
+
+@pytest.mark.parametrize("is_symbolic", [None, False, True])
+def test_sort_empty(is_symbolic):
+    data_shapes = [
+        (0,),
+        (10, 0),
+    ]
+
+    def fn(x):
+        return F.sort(x)
+
+    for shape in data_shapes:
+        if is_symbolic is not None:
+            fn_ = jit.trace(symbolic=is_symbolic)(fn)
+        else:
+            fn_ = fn
+        data = np.random.random(shape).astype(np.float32)
+        for _ in range(3):
+            outs = fn_(tensor(data))
+            ref_outs = (np.sort(data), np.argsort(data))
+            assert len(ref_outs) == len(outs)
+            for i in range(len(outs)):
+                np.testing.assert_equal(outs[i].numpy(), ref_outs[i])
+        if is_symbolic is None:
+            break
 
 
 def test_normalize():
