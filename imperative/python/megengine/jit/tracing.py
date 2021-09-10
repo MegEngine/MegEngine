@@ -29,13 +29,13 @@ from ..core._imperative_rt.core2 import (
 from ..core._imperative_rt.ops import (
     AssertEqual,
     CollectiveComm,
+    ExternOpr,
     RemoteRecv,
     RemoteSend,
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core._wrap import as_device
 from ..core.ops.builtin import BatchNorm, OpDef
-from ..core.ops.special import Const
 from ..core.tensor import megbrain_graph as G
 from ..core.tensor.utils import setscalar
 from ..utils.naming import AutoNaming
@@ -129,6 +129,7 @@ class trace:
         function: the function will be traced.
         symbolic: whether to apply symbolic execution for tracing. Default: False
         capture_as_const: capture global vars or closures as const value. Default: False
+        record_only: if True, won't run even if call the function. Default: False
         sublinear_memory_config: configuration for sublinear memory optimization.
             If not None, it enables sublinear memory optimization with given setting.
         profiling: whether to profile compiled trace. Default: False
@@ -147,6 +148,7 @@ class trace:
         function,
         symbolic=False,
         capture_as_const=False,
+        record_only=False,
         sublinear_memory_config: SublinearMemoryConfig = None,
         dtr_config: DTRConfig = None,
         profiling: bool = False,
@@ -155,8 +157,9 @@ class trace:
         symbolic_shape: bool = True,
     ):
         self.__wrapped__ = function
-        self._symbolic = symbolic
-        self._capture_as_const = capture_as_const
+        self._symbolic = symbolic or record_only
+        self._capture_as_const = capture_as_const or record_only
+        self._record_only = record_only
         self._sublinear_memory_config = sublinear_memory_config
         self._dtr_config = dtr_config
         self._profiling = profiling
@@ -418,35 +421,40 @@ class trace:
         def do_finalize():
             escaped_tensors = self._take_escaped_tensors()
             if self._untraced:
-                for x in escaped_tensors:
-                    if x():
-                        info = self._tinfo[x()._mixin_handle]
-                        info.data_read = True
-                        x()._mixin_handle = -1
-                        x()._recording = False
-                if self._inputs_to_restore:
-                    for x in self._inputs_to_restore:
-                        x._mixin_handle = -1
-                        x._recording = False
-                if self._symbolic and (
-                    self._lazy_eval_tensors or self._lazy_eval_links
-                ):
-                    # eval lazy eval tensors
-                    self._lazy_eval(
-                        self._lazy_eval_graph,
-                        self._lazy_eval_tensors,
-                        self._lazy_eval_links,
-                    )
+                if self._record_only:
                     self._lazy_eval_graph = None
                     self._lazy_eval_tensors = None
                     self._lazy_eval_links = None
-                self._untraced = False
+                else:
+                    for x in escaped_tensors:
+                        if x():
+                            info = self._tinfo[x()._mixin_handle]
+                            info.data_read = True
+                            x()._mixin_handle = -1
+                            x()._recording = False
+                    if self._inputs_to_restore:
+                        for x in self._inputs_to_restore:
+                            x._mixin_handle = -1
+                            x._recording = False
+                    if self._symbolic and (
+                        self._lazy_eval_tensors or self._lazy_eval_links
+                    ):
+                        # eval lazy eval tensors
+                        self._lazy_eval(
+                            self._lazy_eval_graph,
+                            self._lazy_eval_tensors,
+                            self._lazy_eval_links,
+                        )
+                        self._lazy_eval_graph = None
+                        self._lazy_eval_tensors = None
+                        self._lazy_eval_links = None
+                    self._untraced = False
             else:
                 # compiled_tensor leaks
                 if self._pc == len(self._seq):
                     for x in escaped_tensors:
                         try:
-                            assign_raw_tensor(x(), RawTensor(x()._dev_tensor()))
+                            x().__init__(RawTensor(x()._dev_tensor()))
                         except RuntimeError:
                             # TraceMismatchError thrown in do_exit
                             pass
@@ -769,8 +777,8 @@ class trace:
             raise ValueError(
                 "you must specify capture_as_const=True at __init__ to use dump"
             )
-        if self._untraced:
-            raise RuntimeError("should run at least once before calling dump")
+        if self._untraced and len(self._seq) == 0:
+            raise RuntimeError("should do record first before dump")
         if self._output_names and output_names:
             raise TypeError(
                 "cannot specify output_names when output is already in dict format"
@@ -1102,10 +1110,6 @@ class CompiledTensorProxy:
             self.__info.value_reader.drop_value()
         if self.__info.data_read and self.__data is not None:
             self.__info.data_reader.drop_value()
-
-
-def assign_raw_tensor(lhs, rhs):
-    lhs.__init__(rhs)
 
 
 def apply_symbolic_mode(op: OpDef, *args: RawTensor):

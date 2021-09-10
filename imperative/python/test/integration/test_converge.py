@@ -76,7 +76,7 @@ class XORNet(Module):
 @pytest.mark.parametrize("test_traced_module", [True, False])
 def test_training_converge(test_traced_module):
     net = XORNet()
-    if test_training_converge:
+    if test_traced_module:
         inp = Tensor(np.random.random((14, 2)))
         net = trace_module(net, inp)
 

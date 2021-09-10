@@ -20,7 +20,6 @@ from .._imperative_rt import GraphOptimizeOptions
 from .._imperative_rt.core2 import apply, set_cpp_apply_backward_varnode
 from .._wrap import as_device
 from ..ops.builtin import OpDef
-from .core import TensorBase
 
 
 def set_priority_to_id(dest_vars):
@@ -127,7 +126,7 @@ class Graph(_imperative_rt.ComputingGraph):
             print("this function should be called after compilation.")
 
 
-class VarNode(TensorBase):
+class VarNode:
     def __init__(self, node: _imperative_rt.VarNode, isscalar=False):
         self._node = node
         self._isscalar = isscalar

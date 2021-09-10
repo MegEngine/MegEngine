@@ -381,6 +381,24 @@ def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 
+def ExternOpr: MgbHashableOp<"ExternOpr"> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbArrayAttr<MgbSizeTAddr>>:$output_shapes,
+    MgbStringAttr:$name,
+    MgbStringAttr:$data,
+    MgbSizeTAddr:$data_len,
+    MgbArrayAttr<MgbDTypeAttr>:$output_dtypes
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.name),
+        mgb::hash($_self.data))
+      );
+  }];
+}
+
 def Cumsum: MgbHashableOp<"Cumsum", [CumsumParam]>;
 
 def Split: MgbHashableOp<"Split", [EmptyParam]> {
