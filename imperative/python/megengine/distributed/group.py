@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple
 
 from mprop import mproperty
 
-from ..device import set_default_device, what_is_xpu
+from ..device import _sh, set_default_device, what_is_xpu
 from ..random import seed
 from .server import Client, Server
 
@@ -27,7 +27,6 @@ class StaticData:
     proc_rank = None
     device = None
     backend = None
-    next_stream = None
     device_type = None
     machine_ranks = None
 
@@ -43,6 +42,8 @@ class Group:
 
     Args:
         proc_ranks: rank list of the group, the first one is root rank.
+
+
     """
 
     def __init__(self, proc_ranks):
@@ -55,9 +56,7 @@ class Group:
     def reset(self, proc_ranks):
         self.check(proc_ranks)
         self.proc_ranks = proc_ranks
-        self.stream = _sd.next_stream
-        _sd.next_stream += 1
-        self.is_single_machine_cache = None
+        self.stream = _sh.get_next()
 
     def check(self, proc_ranks):
         assert _sd is not None, "please call init_process_group first"
@@ -160,7 +159,6 @@ def init_process_group(
     _sd.proc_rank = rank
     _sd.device = device
     _sd.backend = backend
-    _sd.next_stream = 1
     _sd.device_type = device_type
 
     WORLD.reset(list(range(world_size)))

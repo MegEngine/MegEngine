@@ -29,6 +29,19 @@ __all__ = [
 ]
 
 
+class _stream_helper:
+    def __init__(self):
+        self.stream = 1
+
+    def get_next(self):
+        out = self.stream
+        self.stream = self.stream + 1
+        return out
+
+
+_sh = _stream_helper()
+
+
 def _valid_device(inp):
     if isinstance(inp, str) and re.match("^([cxg]pu|rocm)(\d+|\d+:\d+|x)$", inp):
         return True
