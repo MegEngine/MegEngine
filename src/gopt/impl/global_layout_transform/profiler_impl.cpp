@@ -13,7 +13,7 @@
 #include "./opr_format_modifier.h"
 #include "./utils.h"
 #include "megbrain/gopt/framework.h"
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/profiler.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"

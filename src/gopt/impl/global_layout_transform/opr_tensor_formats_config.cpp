@@ -11,7 +11,7 @@
  */
 
 #include "./utils.h"
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/layout_transform_context.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 

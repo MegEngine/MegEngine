@@ -11,7 +11,7 @@
  */
 
 #pragma once
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/layout_transform_context.h"
 
 namespace mgb {
 namespace gopt {

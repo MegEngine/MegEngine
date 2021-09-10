@@ -30,7 +30,10 @@
 #include "megbrain/tensorrt/opr_replace.h"
 #endif
 
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/layout_transform_context.h"
+#include "megbrain/gopt/layout_transform_pass.h"
+#include "megbrain/gopt/profiler.h"
+#include "megbrain/gopt/solver.h"
 
 using namespace mgb;
 using namespace gopt;

@@ -10,9 +10,11 @@
  * implied.
  */
 
+#include "megbrain/gopt/layout_transform_pass.h"
 #include "./opr_format_modifier.h"
 #include "./utils.h"
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/profiler.h"
+#include "megbrain/gopt/solver.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/serialization/sereg.h"
@@ -46,8 +48,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
 
     auto&& opr_configs = m_ctx->opr_configs();
     auto&& base_fmt = m_ctx->attribute().base_tensor_formats;
-    auto&& reformat_attribute =
-            ReformatManager::ReformatKey::Attribute::DEFAULT;
+    auto&& reformat_attribute = m_ctx->attribute().reformat_attribute;
     ThinHashMap<VarNode*, TensorFormats> var2fmts;
     static ThinHashSet<Typeinfo*> format_aware_oprs = {
 #define cb(_Opr) opr::_Opr::typeinfo(),
@@ -55,8 +56,8 @@ void LayoutTransformPass::apply(OptState& opt) const {
 #undef cb
     };
     auto rewriter = opt.graph().make_rewriter();
-    auto on_opr = [this, &opr_configs, &base_fmt, &reformat_attribute,
-                   &rewriter, &solution, &var2fmts,
+    auto on_opr = [&opr_configs, &base_fmt, &reformat_attribute, &rewriter,
+                   &solution, &var2fmts,
                    &endpoint_vars](OperatorNodeBase* opr) {
         auto it = solution.find(opr);
         if (it != solution.end()) {
@@ -122,19 +123,6 @@ void LayoutTransformPass::apply(OptState& opt) const {
                                                           opr->config())
                                   ->output(0);
             }
-            if (endpoint_vars.count(opr->output(0)) && out_fmt != base_fmt) {
-                ReformatManager::ReformatKey key{
-                        out_fmt, base_fmt, reformat_attribute,
-                        opr->output(0)->dtype().enumv(),
-                        opr->output(0)->dtype().enumv()};
-                auto reformat = ReformatManager::instance()
-                                        .auto_aligned_reformat_featrue(
-                                                opr->output(0), base_fmt, key);
-                new_out = reformat({new_out});
-                var2fmts[new_out] = base_fmt;
-            } else {
-                var2fmts[new_out] = out_fmt;
-            }
             auto &&out0 = opr->output(),
                  &&out1 = new_out->owner_opr()->output();
             mgb_assert(opr->usable_output().size() ==
@@ -146,20 +134,29 @@ void LayoutTransformPass::apply(OptState& opt) const {
                        new_out->owner_opr()->cname(),
                        new_out->owner_opr()->dyn_typeinfo()->name, out0.size(),
                        out1.size());
-            for (size_t i = 0; i < out0.size(); ++i) {
-                if (!out0[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-                    mgb_assert(!out1[i]->contain_flag(
-                            VarNode::Flag::VOLATILE_CONTENT));
-                    auto src = out0[i];
-                    auto dst = out1[i];
-                    rewriter.replace_var(
-                            src, dst,
-                            mgb_cstr_log(ssprintf("replace opr(%s) to new opr "
-                                                  "format(%s)",
-                                                  opr->cname(),
-                                                  opr_format_to_string(opr_fmt))
-                                                 .c_str()));
+            size_t nr_outs = opr->usable_output().size();
+            for (size_t i = 0; i < nr_outs; ++i) {
+                const auto& ovar = out0[i];
+                auto new_ovar = out1[i];
+                if (endpoint_vars.count(ovar) && out_fmt != base_fmt) {
+                    ReformatManager::ReformatKey key{
+                            out_fmt, base_fmt, reformat_attribute,
+                            ovar->dtype().enumv(), ovar->dtype().enumv()};
+                    auto reformat = ReformatManager::instance()
+                                            .auto_aligned_reformat_featrue(
+                                                    ovar, base_fmt, key);
+                    new_ovar = reformat({new_ovar});
+                    var2fmts[new_ovar] = base_fmt;
+                } else {
+                    var2fmts[new_ovar] = out_fmt;
                 }
+                rewriter.replace_var(
+                        ovar, new_ovar,
+                        mgb_cstr_log(ssprintf("replace opr(%s) to new opr "
+                                              "format(%s)",
+                                              opr->cname(),
+                                              opr_format_to_string(opr_fmt))
+                                             .c_str()));
             }
         } else {
             auto new_opr = rewriter.auto_replace_outputs(opr);

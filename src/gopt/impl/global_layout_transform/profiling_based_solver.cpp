@@ -10,7 +10,8 @@
  * implied.
  */
 
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/profiler.h"
+#include "megbrain/gopt/solver.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 

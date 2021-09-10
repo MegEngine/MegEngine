@@ -12,7 +12,9 @@
 
 #include <queue>
 #include "./utils.h"
-#include "megbrain/gopt/global_layout_transform.h"
+#include "megbrain/gopt/layout_transform_context.h"
+#include "megbrain/gopt/profiler.h"
+#include "megbrain/gopt/solver.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -85,11 +87,11 @@ private:
         const SmallVector<TensorFormats>& available_tensor_formats;
     };
     /*!
-     * \brief get the tensor formats configuration for the operator with particular op format
-     * \param[out] var2fmts hashmap that maps varnode to actual tensor formats of the op format configuration
-     * \param[in] opr given operator
-     * \param[in] opr_fmt given op format, an enum type argument which indicates the op format configuration.
-     * \param[in] ctx context
+     * \brief get the tensor formats configuration for the operator with
+     * particular op format \param[out] var2fmts hashmap that maps varnode to
+     * actual tensor formats of the op format configuration \param[in] opr given
+     * operator \param[in] opr_fmt given op format, an enum type argument which
+     * indicates the op format configuration. \param[in] ctx context
      */
     TensorFormats get_io_formats(ThinHashMap<VarNode*, TensorFormats>& var2fmts,
                                  const OperatorNodeBase* opr, OprFormat opr_fmt,
