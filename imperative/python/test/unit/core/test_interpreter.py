@@ -7,6 +7,7 @@ import pytest
 import megengine as mge
 import megengine.functional as F
 from megengine.core._imperative_rt.core2 import (
+    AsyncError,
     _set_drop_flag,
     _set_swap_flag,
     config_async_level,
@@ -98,3 +99,25 @@ def test_regression_2870():
     with pytest.raises(RuntimeError):
         y.numpy()
     (x + x).numpy()
+
+
+# NOTE: DO NOT REMOVE THIS TEST
+#   This is also a compatibility test for
+#   mge.core.set_option('async_level', 0).
+#   If you change the canonical API to set async level,
+#   update the error message of AsyncError as well.
+def test_async_error():
+    orig_lvl = mge.core.get_option("async_level")
+    try:
+        mge.core.set_option("async_level", 1)
+        x = F.utils._simulate_error()
+        try:
+            x.numpy()
+        except AsyncError as e:
+            assert isinstance(e.__cause__, RuntimeError)
+
+        mge.core.set_option("async_level", 0)
+        with pytest.raises(RuntimeError):
+            F.utils._simulate_error()
+    finally:
+        mge.core.set_option("async_level", orig_lvl)

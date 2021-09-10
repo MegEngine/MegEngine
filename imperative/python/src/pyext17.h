@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <exception>
 #include <stdexcept>
 #include <vector>
 #include <utility>
@@ -69,10 +70,43 @@ inline int cvt_retint(int ret) {
 
 struct py_err_set : std::exception {};
 
-#define HANDLE_ALL_EXC(RET) catch(py_err_set&) {return RET;} \
-    catch(pybind11::error_already_set& e) {e.restore(); return RET;} \
-    catch(pybind11::builtin_exception& e) {e.set_error(); return RET;} \
-    catch(std::exception& e) {PyErr_SetString(PyExc_RuntimeError, e.what()); return RET;}
+// refer to pybind11 for the following exception handling helper
+
+inline void pybind11_translate_exception(std::exception_ptr last_exception) {
+    auto &registered_exception_translators = pybind11::detail::get_internals().registered_exception_translators;
+    for (auto& translator : registered_exception_translators) {
+        try {
+            translator(last_exception);
+        } catch (...) {
+            last_exception = std::current_exception();
+            continue;
+        }
+        return;
+    }
+    PyErr_SetString(PyExc_SystemError, "Exception escaped from default exception translator!");
+}
+
+inline void pybind11_translate_exception() {
+    pybind11_translate_exception(std::current_exception());
+}
+
+#if defined(__GNUG__) && !defined(__clang__)
+#define PYEXT17_TRANSLATE_EXC_CATCH_FORCED_UNWIND catch (::abi::__forced_unwind&) {throw;}
+#else
+#define PYEXT17_TRANSLATE_EXC_CATCH_FORCED_UNWIND
+#endif
+
+#define PYEXT17_TRANSLATE_EXC \
+catch(::pyext17::py_err_set&) {} \
+catch(::pybind11::error_already_set& e) {e.restore();} \
+PYEXT17_TRANSLATE_EXC_CATCH_FORCED_UNWIND \
+catch(...) {::pyext17::pybind11_translate_exception();}
+
+#define PYEXT17_TRANSLATE_EXC_RET(RET) \
+catch(::pyext17::py_err_set&) {return RET;} \
+catch(::pybind11::error_already_set& e) {e.restore(); return RET;} \
+PYEXT17_TRANSLATE_EXC_CATCH_FORCED_UNWIND \
+catch(...) {::pyext17::pybind11_translate_exception(); return RET;};
 
 template <typename T>
 struct wrap {
@@ -134,7 +168,7 @@ private:
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             try {
                 CVT_RET_PYOBJ((inst->*f)());
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
     };
 
@@ -146,7 +180,7 @@ private:
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             try {
                 CVT_RET_PYOBJ((inst->*f)(args, kwargs));
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
     };
 
@@ -159,7 +193,7 @@ private:
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             try {
                 CVT_RET_PYOBJ((inst->*f)(args, nargs));
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
         #else
         static constexpr int flags = METH_VARARGS;
@@ -170,7 +204,7 @@ private:
             auto size = PyTuple_GET_SIZE(args);
             try {
                 CVT_RET_PYOBJ((inst->*f)(arr, size));
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
         #endif
     };
@@ -183,7 +217,7 @@ private:
             auto* inst = reinterpret_cast<wrap_t*>(self)->inst();
             try {
                 CVT_RET_PYOBJ((inst->*f)(obj));
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
     };
 
@@ -209,7 +243,7 @@ private:
                 } else {
                     static_assert(!std::is_same_v<F, F>);
                 }
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
         }
     };
 
@@ -230,7 +264,7 @@ private:
                 } else {
                     static_assert(!std::is_same_v<F, F>);
                 }
-            } HANDLE_ALL_EXC(-1)
+            } PYEXT17_TRANSLATE_EXC_RET(-1)
         }
 
         static constexpr auto impl = []() {if constexpr (std::is_same_v<F, std::nullptr_t>) return nullptr;
@@ -314,7 +348,7 @@ private:
                 } else {
                     new(inst) T();
                 }
-            } HANDLE_ALL_EXC(nullptr)
+            } PYEXT17_TRANSLATE_EXC_RET(nullptr)
             free_guard.self = nullptr;
             return self;
         }
@@ -464,7 +498,7 @@ public:
         new(inst) T(std::forward<Args>(args)...);
         return self;
     }
-    
+
     struct caster {
         static constexpr auto name = T::tp_name;
 
@@ -493,4 +527,3 @@ public:
 #undef HAS_MEMBER
 #undef CVT_RET_PYOBJ
 #undef CVT_RET_INT
-#undef HANDLE_ALL_EXC

@@ -26,8 +26,11 @@
 #include "./graph_rt.h"
 #include "./helper.h"
 
+#include <object.h>
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
+#include <pybind11/pytypes.h>
+#include <pyerrors.h>
 #include <range/v3/all.hpp>
 #include <string>
 
@@ -230,10 +233,7 @@ PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObje
             ret[i] = TensorWrapper::make(pytype, std::move(outputs[i]));
         }
         return ret.release().ptr();
-    } catch (std::exception& e) {
-        PyErr_SetString(PyExc_RuntimeError, e.what());
-        return nullptr;
-    }
+    } PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 
@@ -391,7 +391,7 @@ void TensorWrapper::set_handle(PyObject* dest) {
 
 
 PyObject* TensorWrapper::shape() {
-    // if it's tracing compiled mode, get value from compiled_info 
+    // if it's tracing compiled mode, get value from compiled_info
     if (m_tensor->m_trace_info.compiled_info != nullptr) {
         if (m_tensor->m_flags & Tensor::Flags::SCALAR) {
             return PyTuple_New(0);
@@ -821,10 +821,7 @@ PyObject* dtype_promotion(PyObject* self, PyObject*const* args, size_t nargs) {
     try {
         PyArray_Descr* res = _dtype_promotion(args, nargs);
         return py::cast(npy::dtype_np2mgb_descr(res)).release().ptr();
-    } catch (std::exception& e) {
-        PyErr_SetString(PyExc_RuntimeError, e.what());
-        return nullptr;
-    }
+    } PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 PyObject* get_device(PyObject* self, PyObject*const* args, size_t nargs) {
@@ -835,10 +832,7 @@ PyObject* get_device(PyObject* self, PyObject*const* args, size_t nargs) {
     try {
         CompNode cn = _get_device(args, nargs);
         return py::cast(cn).release().ptr();
-    } catch (std::exception& e) {
-        PyErr_SetString(PyExc_RuntimeError, e.what());
-        return nullptr;
-    }
+    } PYEXT17_TRANSLATE_EXC_RET(nullptr)
 }
 
 #ifdef METH_FASTCALL
@@ -864,6 +858,34 @@ void init_tensor(py::module m) {
     imperative::Tensor::static_initialize();
     static auto sl_interpreter_for_py = interpreter::Interpreter::inst().create_channel();
     interpreter_for_py = sl_interpreter_for_py.get();
+
+    static py::exception<interpreter::AsyncError> py_async_error(m, "AsyncError", PyExc_RuntimeError);
+    py::register_exception_translator([](std::exception_ptr p) {
+        try {
+            if (p) std::rethrow_exception(p);
+        } catch (const interpreter::AsyncError& e) {
+            pyext17::pybind11_translate_exception(e.nested_ptr());
+            if (PyErr_Occurred()) {
+                PyObject *exc, *val, *tb;
+                PyErr_Fetch(&exc, &val, &tb);
+                PyErr_NormalizeException(&exc, &val, &tb);
+                if (tb) {
+                    PyException_SetTraceback(val, tb);
+                }
+                auto val2 = py_async_error.py::object::operator()(
+                    "An async error is reported. See above for the actual cause."
+                    " Hint: This is where it is reported, not where it happened."
+                    " You may call `megengine.core.set_option('async_level', 0)` to get better error reporting."
+                );
+                PyException_SetCause(val2.ptr(), val); // PyException_SetCause steals reference
+                Py_XDECREF(exc);
+                Py_XDECREF(tb);
+                PyErr_Restore(py_async_error.inc_ref().ptr(), val2.release().ptr(), nullptr);
+            } else {
+                py_async_error("Unkown async error");
+            }
+        }
+    });
 
     auto* tensor_type = TensorWrapper::wrap_t::type()
         .def<&TensorWrapper::numpy>("numpy")
@@ -932,7 +954,7 @@ void init_tensor(py::module m) {
                 if (v->is_scalar) {
                     return py::object(py::array(np_val).squeeze());
                 }
-                return np_val; 
+                return np_val;
 
             })
             .def("_isscalar", [](PySymbolVar* v) { return v->is_scalar; })
