@@ -24,7 +24,7 @@ else()
 endif()
 
 if(CUDNN_LIBRARY STREQUAL "CUDNN_LIBRARY-NOTFOUND")
-    message(FATAL_ERROR "Can not find CuDNN Library")
+    message(FATAL_ERROR "Can not find CuDNN Library, please refer to scripts/cmake-build/BUILD_README.md to init CUDNN env")
 endif()
 
 get_filename_component(__found_cudnn_root ${CUDNN_LIBRARY}/../.. REALPATH)
@@ -35,7 +35,7 @@ find_path(CUDNN_INCLUDE_DIR
     DOC "Path to CUDNN include directory." )
 
 if(CUDNN_INCLUDE_DIR STREQUAL "CUDNN_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find CuDNN Library")
+    message(FATAL_ERROR "Can not find CuDNN INCLUDE, please refer to scripts/cmake-build/BUILD_README.md to init CUDNN env")
 endif()
 
 if(EXISTS ${CUDNN_INCLUDE_DIR}/cudnn_version.h)

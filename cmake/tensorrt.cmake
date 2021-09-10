@@ -19,7 +19,7 @@ else()
 endif()
 
 if(TRT_LIBRARY STREQUAL "TRT_LIBRARY-NOTFOUND")
-    message(FATAL_ERROR "Can not find TensorRT Library")
+    message(FATAL_ERROR "Can not find TensorRT Library, please refer to scripts/cmake-build/BUILD_README.md to init TRT env")
 endif()
 
 get_filename_component(__found_trt_root ${TRT_LIBRARY}/../.. REALPATH)
@@ -30,7 +30,7 @@ find_path(TRT_INCLUDE_DIR
     DOC "Path to TRT include directory." )
 
 if(TRT_INCLUDE_DIR STREQUAL "TRT_INCLUDE_DIR-NOTFOUND")
-    message(FATAL_ERROR "Can not find TensorRT Library")
+    message(FATAL_ERROR "Can not find TensorRT INCLUDE, please refer to scripts/cmake-build/BUILD_README.md to init TRT env")
 endif()
 
 file(STRINGS "${TRT_INCLUDE_DIR}/NvInfer.h" TensorRT_MAJOR REGEX "^#define NV_TENSORRT_MAJOR [0-9]+.*$")
