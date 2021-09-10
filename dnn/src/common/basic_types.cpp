@@ -424,12 +424,20 @@ size_t TensorLayout::access_bytes() const {
     if (dtype.is_low_bit()) {
         ret = 1;
         int align_size_in_elements = 8 / dtype.low_bit();
+        auto min_stride = contig.stride[0];
         for (size_t i = 0; i < contig.ndim; ++i) {
             if (contig.stride[i] == 1) {
                 ret *= round_up((int)contig.shape[i], align_size_in_elements);
             } else {
                 ret *= contig.shape[i];
             }
+            if (min_stride > contig.stride[i]) {
+                min_stride = contig.stride[i];
+            }
+        }
+        if (min_stride != 1) {
+            megdnn_assert(min_stride == align_size_in_elements);
+            ret *= min_stride;
         }
         ret /= align_size_in_elements;
     } else {

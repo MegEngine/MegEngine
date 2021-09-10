@@ -70,6 +70,7 @@ void ParamElemVisitor<ndim, dt_quint4, CONTIG_OTHER>::host_init(
         const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert(rv.layout.ndim && rv.layout.ndim <= ndim);
     m_ptr = reinterpret_cast<Storage*>(rv.raw_ptr);
+    auto min_stride = rv.layout.stride[0];
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
         m_stride[i] = rv.layout.stride[i];
         m_shape[i] = rv.layout.shape[i];
@@ -81,7 +82,12 @@ void ParamElemVisitor<ndim, dt_quint4, CONTIG_OTHER>::host_init(
             else
                 m_align_shape_highdim[i] = rv.layout.shape[i + 1];
         }
+        if (min_stride > rv.layout.stride[i]) {
+            min_stride = rv.layout.stride[i];
+        }
     }
+    megdnn_assert(min_stride == 1 || min_stride == 2);
+    m_is_min_stride_2 = (min_stride == 2);
     for (size_t i = rv.layout.ndim - 1; i < ndim - 1; ++i) {
         m_shape_highdim[i] = 1;
         m_align_shape_highdim[i] = 1;

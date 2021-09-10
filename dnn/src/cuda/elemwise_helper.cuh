@@ -542,6 +542,7 @@ protected:
     int m_stride[ndim];
     int m_shape[ndim];
     bool m_is_physical_contiguous;
+    bool m_is_min_stride_2;
 
     //! m_shape_highdim[i] = original_shape[i + 1]
 #ifdef _MSC_VER
@@ -592,7 +593,7 @@ public:
         int idx = 0;
         if (m_is_physical_contiguous) {
             idx = access_idx;
-        } else {
+        } else if (!m_is_min_stride_2) {
             int shape_idx[ndim];
             bool valid = true;
             get_shape_from_access(access_idx, shape_idx);
@@ -605,6 +606,8 @@ public:
                 idx = (idx + shape_idx[i]) * m_shape[i + 1];
             }
             idx = valid ? idx + shape_idx[ndim - 1] : -1;
+        } else {  // min_stride == 2
+            idx = ((access_idx & 0x1) == 0) ? ((int)access_idx >> 1) : -1;
         }
         return idx;
     }

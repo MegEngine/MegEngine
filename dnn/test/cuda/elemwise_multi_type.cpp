@@ -152,7 +152,8 @@ static void run_test_q4(int arity, Checker<ElemwiseMultiType>& checker,
                     .execs({{1, 4, 5, 5}, {1, 4, 5, 5}});
         } else if (arity == 2) {
             checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {3, 4, 5, 6}})
-                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}});
+                    .execs({{1, 4, 5, 5}, {1, 4, 5, 5}, {1, 4, 5, 5}})
+                    .execs({{2, 2, 3, 1}, {2, 2, 3, 1}, {2, 2, 3, 1}});
         } else {
             megdnn_assert(0);
         }

@@ -925,6 +925,7 @@ TEST_F(CUDA, RELAYOUT_Q4) {
             .set_rng(1, &rng_int4)
             .set_dtype(0, dtype::QuantizedS4(1.f))
             .set_dtype(1, dtype::QuantizedS4(1.f))
+            .execs({{2, 2, 1, 1}, {1, 1, 2, 2}})
             .execs({{1, 64, 15, 15}, {1, 15, 15, 64}})
             .execs({{1, 5, 9, 32}, {1, 5, 32, 9}})
             .execl(TensorLayoutArray{

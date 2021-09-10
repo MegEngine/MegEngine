@@ -123,11 +123,13 @@ TEST_F(CUDA, QUANTIZED_TYPECVT_4BIT) {
         set_err(dst_dtype);
         checker.set_dtype(0, src_dtype)
                 .set_dtype(1, dst_dtype)
-                .execs({{16, 3, 224, 223}, {16, 3, 224, 223}});
+                .execs({{16, 3, 224, 223}, {16, 3, 224, 223}})
+                .execs({{16, 3, 224, 1}, {16, 3, 224, 1}});
         set_err(src_dtype);
         checker.set_dtype(0, dst_dtype)
                 .set_dtype(1, src_dtype)
-                .execs({{16, 3, 224, 223}, {16, 3, 224, 223}});
+                .execs({{16, 3, 224, 223}, {16, 3, 224, 223}})
+                .execs({{16, 3, 224, 1}, {16, 3, 224, 1}});
     };
 
     run(dtype::Quantized4Asymm{1.19990518f, 8},
