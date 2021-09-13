@@ -9,8 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/custom/param_val.h"
 #include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
+#include "megbrain/custom/param_val.h"
 
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
@@ -398,3 +401,5 @@ CUSTOM_DEFINE_BINARY_OP_FOR_BASIC_AND_STRING_AND_LIST(>, bool)
 CUSTOM_DEFINE_BINARY_OP_FOR_BASIC_AND_STRING_AND_LIST(<, bool)
 
 }
+
+#endif

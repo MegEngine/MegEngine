@@ -9,6 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain_build_config.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/op.h"
 #include "megbrain/comp_node.h"
 #include "megbrain/tensor.h"
@@ -203,3 +207,5 @@ TEST(TestCustomOp, TestCustomOpFuncSetter) {
 }
 
 }
+
+#endif

@@ -29,7 +29,7 @@ namespace mgb{void call_sereg(){}}
 #include "../../opr/impl/tensor_gen.sereg.h"
 #include "../../opr/impl/tensor_manip.sereg.h"
 #include "../../opr/impl/utility.sereg.h"
-#include "../../opr/impl/custom_opnode.sereg.h"
+
 #if MGB_ENABLE_TENSOR_RT
 #include "../../tensorrt/impl/tensorrt_opr.sereg.h"
 #endif
@@ -41,4 +41,8 @@ namespace mgb{void call_sereg(){}}
 #endif
 #if MGB_CAMBRICON
 #include "../../cambricon/impl/cambricon_runtime_opr.sereg.h"
+#endif
+
+#if MGB_CUSTOM_OP
+#include "../../opr/impl/custom_opnode.sereg.h"
 #endif

@@ -9,8 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/custom/manager.h"
 #include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
+#include "megbrain/custom/manager.h"
 #include <unordered_set>
 
 #ifndef _WIN32
@@ -179,3 +182,5 @@ std::shared_ptr<CustomOp> op_insert(std::string opname, uint32_t version) {
 }
 
 }
+
+#endif

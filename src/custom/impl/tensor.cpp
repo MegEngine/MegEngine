@@ -9,9 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/tensor.h"
 #include "megbrain/comp_node.h"
-#include "megbrain/common.h"
 #include "megbrain/tensor.h"
 #include <cctype>
 #include <algorithm>
@@ -484,3 +487,5 @@ const void *Tensor::data(void) const {
 }
 
 } // namespace custom
+
+#endif

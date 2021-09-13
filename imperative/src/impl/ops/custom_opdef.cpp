@@ -10,6 +10,9 @@
  */
 
 #include "megbrain/imperative/ops/custom_opdef.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/opr/custom_opnode.h"
 #include "megbrain/custom/data_adaptor.h"
 #include "../op_trait.h"
@@ -293,3 +296,5 @@ OP_TRAIT_REG(CustomOpDef, CustomOpDef)
 
 }   // imperative
 }   // mgb
+
+#endif

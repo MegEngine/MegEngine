@@ -9,8 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/custom/param.h"
 #include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
+#include "megbrain/custom/param.h"
 #include "megbrain/utils/hash.h"
 #include <limits>
 #include <sstream>
@@ -177,3 +180,5 @@ bool operator==(const Param &lhs, const Param &rhs) {
 }
 
 }
+
+#endif

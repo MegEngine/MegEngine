@@ -11,6 +11,8 @@
 
 #include "megbrain/opr/custom_opnode.h"
 
+#if MGB_CUSTOM_OP
+
 namespace mgb {
 namespace opr {
 
@@ -324,3 +326,5 @@ custom::ArgInfo CustomOpNode::output_info(size_t idx) const {
 
 }
 }
+
+#endif

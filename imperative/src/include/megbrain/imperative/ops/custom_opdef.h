@@ -11,6 +11,10 @@
 
 #pragma once
 
+#include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/custom.h"
 #include "megbrain/custom/manager.h"
 #include "megbrain/imperative/op_def.h"
@@ -62,3 +66,5 @@ public:
 
 }   // imperative
 }   // mgb
+
+#endif

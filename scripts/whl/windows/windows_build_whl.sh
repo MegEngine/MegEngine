@@ -151,6 +151,7 @@ function do_build() {
         echo "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}"
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
         export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo "
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_CUSTOM_OP=ON"
 
         #call build and install
         HOST_BUILD_ARGS=" -t -s"

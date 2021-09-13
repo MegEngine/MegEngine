@@ -10,6 +10,9 @@
  */
 
 #include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/op.h"
 #include "megbrain/custom/utils.h"
 #include <unordered_set>
@@ -529,3 +532,5 @@ void CustomOp::compute(const std::vector<Tensor> &inputs, const Param &param, st
 }
 
 }
+
+#endif

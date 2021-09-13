@@ -9,8 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/custom/utils.h"
 #include "megbrain/common.h"
+
+#if MGB_CUSTOM_OP
+
+#include "megbrain/custom/utils.h"
 #include <sstream>
 
 using namespace mgb;
@@ -39,3 +42,5 @@ UnImpleWarnLog::UnImpleWarnLog(const std::string &func, const std::string &attr,
 }
 
 }
+
+#endif

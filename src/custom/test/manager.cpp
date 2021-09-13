@@ -9,6 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain_build_config.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/manager.h"
 #include "megbrain/custom/custom.h"
 #include "gtest/gtest.h"
@@ -94,3 +98,5 @@ TEST(TestOpManager, TestOpReg) {
 }
 
 }
+
+#endif

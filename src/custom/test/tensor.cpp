@@ -9,6 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain_build_config.h"
+
+#if MGB_CUSTOM_OP
+
 #include "megbrain/custom/tensor.h"
 #include "megbrain/custom/data_adaptor.h"
 #include "megbrain/comp_node.h"
@@ -323,3 +327,5 @@ TEST(TestTensor, TestTensorAccessor1D) {
 }
 
 }
+
+#endif

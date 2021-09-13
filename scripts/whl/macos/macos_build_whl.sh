@@ -130,6 +130,7 @@ function do_build() {
         echo "PYTHON_INCLUDE_DIR: ${PYTHON_INCLUDE_DIR}"
         #config build type to RelWithDebInfo to enable MGB_ENABLE_DEBUG_UTIL etc
         export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_CUSTOM_OP=ON"
         #append cmake args for config python
         export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
         export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_LIBRARY}"

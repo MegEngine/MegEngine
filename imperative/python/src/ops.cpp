@@ -632,6 +632,7 @@ void init_ops(py::module m) {
     }
 
 PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
+#if MGB_CUSTOM_OP
     auto op_name = py::handle(args[0]).cast<std::string>();
     auto kwargs = py::handle(args[1]).cast<py::dict>();
 
@@ -673,31 +674,52 @@ PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
     reinterpret_cast<PyOp(OpDef)*>(obj)->op = opdef;
     
     return obj;
+#else
+    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    return nullptr;
+#endif
 }
 
 #undef CUSTOM_CASE_TO_PARSE_LIST
 #undef CUSTOM_CASE_TO_PARSE_NON_LIST
 
 py::list install_custom(const std::string &name, const std::string &path) {
+#if MGB_CUSTOM_OP
     py::list ret;
     const auto &ops_in_lib = custom::LibManager::inst()->install(name, path);
     for (const auto &op: ops_in_lib) {
         ret.append(op);
     }
     return ret;
+#else
+    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    py::list ret;
+    return ret;
+#endif
 }
 
 bool uninstall_custom(const std::string &name) {
+#if MGB_CUSTOM_OP
     return custom::LibManager::inst()->uninstall(name);
+#else
+    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    return false;
+#endif
 }
 
 py::list get_custom_op_list(void) {
+#if MGB_CUSTOM_OP
     std::vector<std::string> all_ops = CustomOpDefFactory::inst()->op_list();
     py::list ret;
     for (auto &op: all_ops) {
         ret.append(op);
     }
     return ret;
+#else
+    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    py::list ret;
+    return ret;
+#endif
 }
 
 #ifndef METH_FASTCALL

@@ -34,6 +34,7 @@
 #cmakedefine01 MGB_ENABLE_OPR_MM
 #cmakedefine01 MGB_ENABLE_FBS_SERIALIZATION
 #cmakedefine01 MGB_IS_DEV
+#cmakedefine01 MGB_CUSTOM_OP
 // DNN related flags
 // Platform macro's
 #cmakedefine01 MEGDNN_WITH_CUDA
@@ -159,6 +160,10 @@
 #endif
 #ifndef MGB_JIT_HALIDE
 #define MGB_JIT_HALIDE 0
+#endif
+
+#ifndef MGB_CUSTOM_OP
+#define MGB_CUSTOM_OP 0
 #endif
 
 #ifndef MEGDNN_WITH_CAMBRICON
