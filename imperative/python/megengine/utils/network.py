@@ -371,7 +371,9 @@ class Network:
                 if repl_var is var:
                     continue
                 for opnode in var.users:
-                    assert var in opnode.inputs
+                    # use method 'is' instead of 'in' to avoid
+                    # compare VarNode use elemwise equal
+                    assert any([var is _ for _ in opnode.inputs])
                     opnode.inputs = [repl_var if var is i else i for i in opnode.inputs]
                     if opnode not in repl_var.users:
                         repl_var.users.append(opnode)
