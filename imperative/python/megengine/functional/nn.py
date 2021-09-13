@@ -76,7 +76,6 @@ __all__ = [
     "relu",
     "relu6",
     "remap",
-    "resize",
     "sigmoid",
     "sliding_window",
     "sliding_window_transpose",
@@ -1647,17 +1646,7 @@ def pad(
     return output
 
 
-interpolate = deprecated_func("1.3", "megengine.functional.vision", "interpolate", True)
-roi_pooling = deprecated_func("1.3", "megengine.functional.vision", "roi_pooling", True)
-roi_align = deprecated_func("1.3", "megengine.functional.vision", "roi_align", True)
-nms = deprecated_func("1.3", "megengine.functional.vision", "nms", True)
-resize = deprecated_func("1.3", "megengine.functional.vision", "resize", True)
-remap = deprecated_func("1.3", "megengine.functional.vision", "remap", True)
-nvof = deprecated_func("1.3", "megengine.functional.vision", "nvof", True)
-warp_affine = deprecated_func("1.3", "megengine.functional.vision", "warp_affine", True)
-warp_perspective = deprecated_func(
-    "1.3", "megengine.functional.vision", "warp_perspective", True
-)
 from .quantized import conv_bias_activation  # isort:skip
 from .loss import *  # isort:skip
 from .metric import *  # isort:skip
+from .vision import *  # isort:skip
