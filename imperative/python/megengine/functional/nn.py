@@ -1660,3 +1660,4 @@ warp_perspective = deprecated_func(
 )
 from .quantized import conv_bias_activation  # isort:skip
 from .loss import *  # isort:skip
+from .metric import *  # isort:skip
