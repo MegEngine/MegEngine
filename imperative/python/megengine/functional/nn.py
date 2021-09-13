@@ -1595,24 +1595,16 @@ def sliding_window_transpose(
 def pad(
     src: Tensor,
     pad_witdth: Tuple[Tuple[int, int], ...],
-    mode: str = "CONSTANT",
+    mode: str = "constant",
     constant_value: float = 0.0,
 ) -> Tensor:
     """
-    pad
+    Pad is python warpper for padding opr in megbrain, can padding in random one of the max 7 dimensions.
+    Supported constant, edge(replicate) and reflect mode, constatnt is the default mode.
     """
     p_offsets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    assert mode in [
-        "constant",
-        "CONSTANT",
-        "edge",
-        "EDGE",
-        "replicate",
-        "REPLICATE",
-        "reflect",
-        "REFLECT",
-    ]
+    assert mode.lower() in ["constant", "edge", "replicate", "reflect"]
 
     if mode.lower() == "edge":
         mode = "replicate"

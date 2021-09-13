@@ -5,10 +5,15 @@ from .module import Module
 
 
 class Pad(Module):
+    """
+    Pad is python warpper for padding opr in megbrain, can padding in random one of the max 7 dimensions.
+    Supported constant, edge(replicate) and reflect mode, constatnt is the default mode.
+    """
+
     def __init__(
         self,
         pad_witdth: Tuple[Tuple[int, int], ...],
-        mode: str = "CONSTANT",
+        mode: str = "constant",
         constant_val: float = 0.0,
     ):
         super().__init__()
