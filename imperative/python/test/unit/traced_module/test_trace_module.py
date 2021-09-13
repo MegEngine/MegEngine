@@ -1,8 +1,10 @@
 import numpy as np
 
+import megengine.functional as F
 import megengine.module as M
 from megengine import Tensor
 from megengine.traced_module import TracedModule, trace_module
+from megengine.traced_module.expr import CallFunction
 
 
 class MyModule1(M.Module):
@@ -38,6 +40,15 @@ class MyModule3(M.Module):
         return y
 
 
+class MyModule4(M.Module):
+    def __init__(self):
+        super().__init__()
+        self.add = F.add
+
+    def forward(self, x, y):
+        return self.add(x, y)
+
+
 def test_trace_module():
 
     x = Tensor(1)
@@ -67,3 +78,8 @@ def test_trace_module():
     assert isinstance(tm3.modules.__dict__["0"], M.Elemwise)
     assert isinstance(tm3.modules.__dict__["2"], TracedModule)
     assert isinstance(tm3.modules.__dict__["2"].a, M.Elemwise)
+
+    m4 = MyModule4()
+    tm4 = trace_module(m4, a, b)
+    assert len(tm4.graph._exprs) == 1
+    assert isinstance(tm4.graph._exprs[0], CallFunction)

@@ -17,6 +17,7 @@ import re
 import weakref
 from inspect import getcallargs, getmembers, isclass, ismethod
 from itertools import chain
+from types import FunctionType
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Type, Union
 
 from megengine import tensor
@@ -1150,6 +1151,11 @@ class TracedModuleBuilder(NodeMixin):
         else:
             attr = getattr(self._mod, name)
             full_name = None
+            if (
+                isinstance(attr, FunctionType)
+                and id(attr) in active_module_tracer().patcher.patched_fn_ids
+            ):
+                return active_module_tracer().patcher.wrap_fn(attr)
 
             if id(attr) in active_module_tracer().id2name:
                 full_name = active_module_tracer().id2name[id(attr)]
