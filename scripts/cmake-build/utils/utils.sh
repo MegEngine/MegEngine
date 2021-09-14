@@ -61,8 +61,16 @@ function try_remove_old_build() {
 
     if [ $REMOVE_OLD_BUILD = "true" ]; then
         echo "remove old build/install dir"
-        rm -rf ${BUILD_DIR}
         rm -rf ${INSTALL_DIR}
+
+        # compat install is relative path for BUILD_DIR
+        if [ -d ${BUILD_DIR} ]; then
+            cd ${BUILD_DIR}
+            rm -rf ${INSTALL_DIR}
+            cd -
+        fi
+
+        rm -rf ${BUILD_DIR}
     else
         echo "strip remove old build"
     fi

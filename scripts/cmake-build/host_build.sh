@@ -33,8 +33,8 @@ BUILD_DEVELOP=ON
 NINJA_DRY_RUN=OFF
 SPECIFIED_TARGET="install/strip"
 if [[ $OS =~ "NT" ]]; then
-    echo "Windows do not support strip/install by defaut"
-    SPECIFIED_TARGET=""
+    echo "Windows no need strip, caused by pdb file always split with exe"
+    SPECIFIED_TARGET="install"
 fi
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
@@ -248,7 +248,10 @@ function cmake_build_windows() {
     # windows do not support long path, so we cache the BUILD_DIR ASAP
     prepare_env_for_windows_build
     BUILD_DIR=$SRC_DIR/build_dir/host/build
-    INSTALL_DIR=$BUILD_DIR/../install
+    # ninja have compat issue with bash env, which fork from windows-git
+    # which will map C: to /c/c/ dir, which will lead to install file to /c/c/..
+    # as a solution, we use relative path to INSTALL_DIR
+    INSTALL_DIR=../install
     MGE_WITH_CUDA=$1
     MGE_INFERENCE_ONLY=$2
     BUILD_TYPE=$3
@@ -261,7 +264,6 @@ function cmake_build_windows() {
 
     echo "create build dir"
     mkdir -p $BUILD_DIR
-    mkdir -p $INSTALL_DIR
     cd_real_build_dir $BUILD_DIR
     echo "now try build windows native with cmake/clang-ci/Ninja/Visual Studio ....."
     export CFLAGS=-$MGE_WINDOWS_BUILD_MARCH
