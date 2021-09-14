@@ -485,8 +485,8 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
 
     /// backward pass to generate the solution
     float min_time = std::numeric_limits<float>::max();
-    OperatorNodeBase* cur_opr;
-    OprFormat min_fmt;
+    OperatorNodeBase* cur_opr = nullptr;
+    OprFormat min_fmt = OprFormat::NCHW;
     const State* pstate = nullptr;
     for (auto&& kv : cuts.back().states) {
         auto&& v = kv.second;
@@ -507,6 +507,7 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
             }
         }
     }
+    mgb_assert(cur_opr != nullptr);
     mgb_log_debug("opr:%s;format:%s;time:%f", cur_opr->cname(),
                   opr_format_to_string(min_fmt), min_time);
 

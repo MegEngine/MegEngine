@@ -829,13 +829,8 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
     cb(layout_transform, {
         add_pass<FuseConvBiasNonlinPass>();
         add_pass<FuseConvBiasZPass>();
-        auto profiler = ProfilerBase::make_profiler();
-        std::unique_ptr<SolverBase> solver{
-                new DynamicProgrammingSolver(std::move(profiler))};
-        auto ctx = LayoutTransformContext::make(options.target);
-        add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver));
+        add_pass(LayoutTransformPass::make(options.target));
         add_pass<ShuffleShuffleRemovePass>();
-        add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass(FuseNCHW4Int8Preprocess::make());
         add_pass<FuseWarpPerspectiveDimshufflePass>();
 #if CUDA_VERSION >= 10020

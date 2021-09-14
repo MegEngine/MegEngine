@@ -11,6 +11,7 @@
  */
 
 #pragma once
+#include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/framework.h"
 
 namespace mgb {
@@ -30,6 +31,8 @@ public:
     LayoutTransformPass(std::unique_ptr<LayoutTransformContext> ctx,
                          std::unique_ptr<SolverBase> solver)
             : m_ctx{std::move(ctx)}, m_solver{std::move(solver)} {}
+    static std::unique_ptr<LayoutTransformPass> make(
+            GraphTuningOptions::Target target);
 
 private:
     std::unique_ptr<LayoutTransformContext> m_ctx;

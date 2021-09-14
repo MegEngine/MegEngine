@@ -240,7 +240,7 @@ template <int ndim>
 void ParamElemVisitor4bitBase<ndim, BCAST_OTHER>::host_init(
         const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     m_ptr = reinterpret_cast<Storage*>(rv.raw_ptr);
-    auto min_stride = rv.layout.stride[0];
+    ptrdiff_t min_stride = std::numeric_limits<ptrdiff_t>::max();
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
         m_stride[i] = rv.layout.stride[i];
         m_shape[i] = rv.layout.shape[i];
@@ -252,7 +252,9 @@ void ParamElemVisitor4bitBase<ndim, BCAST_OTHER>::host_init(
             else
                 m_align_shape_highdim[i] = rv.layout.shape[i + 1];
         }
-        if (min_stride > rv.layout.stride[i]) {
+        // \remark: stride=0 means this dimension should be broadcast, so here
+        // we skip dimension with stride that equals 0
+        if (rv.layout.stride[i] != 0 && min_stride > rv.layout.stride[i]) {
             min_stride = rv.layout.stride[i];
         }
     }

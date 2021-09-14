@@ -21,8 +21,20 @@
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/opr/imgproc.h"
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
 using namespace mgb;
 using namespace gopt;
+
+MIDOUT_DECL(megbrain_fuse_nchw4_int8_preprocess)
+#define MIDOUT_B(tag)                                 \
+    MIDOUT_BEGIN(megbrain_fuse_nchw4_int8_preprocess, \
+                 midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 namespace {
 #define RETURN_IF_FALSE(ok) \
     {                       \
@@ -481,6 +493,7 @@ std::unique_ptr<FuseNCHW4Int8Preprocess> FuseNCHW4Int8Preprocess::make() {
 }
 
 void FuseNCHW4Int8Preprocess::apply(OptState& state) const {
+    MIDOUT_B("FuseNCHW4Int8Preprocess::apply")
     state.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_DTYPE |
                                      VarReplaceCheckFlag::CHECK_SHAPE);
     auto rewriter = state.graph().make_rewriter();
@@ -527,6 +540,7 @@ void FuseNCHW4Int8Preprocess::apply(OptState& state) const {
     };
     state.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }
 
 /* ==================== FuseWarpPerspectiveDimshufflePass ================= */
@@ -535,6 +549,7 @@ const char* FuseWarpPerspectiveDimshufflePass::name() const {
 }
 
 void FuseWarpPerspectiveDimshufflePass::apply(OptState& opt) const {
+    MIDOUT_B("FuseWarpPerspectiveDimshufflePass::apply")
     auto rewriter = opt.graph().make_rewriter();
     auto uniq_reader_check = UniqReaderCheck{opt.graph()};
 
@@ -768,4 +783,5 @@ void FuseWarpPerspectiveDimshufflePass::apply(OptState& opt) const {
     };
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
 }

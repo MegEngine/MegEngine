@@ -154,8 +154,8 @@ TEST(TestProfiler, Deconv) {
                         .rename(name),
                 dtype);
     };
-    auto x = mkvar("x", {64, 10, 7, 7}, dtype::QuantizedS8(2.5f));
-    auto w1 = mkcvar("w1", {10, 10, 2, 2}, dtype::QuantizedS8(2.5f));
+    auto x = mkvar("x", {64, 12, 7, 7}, dtype::QuantizedS8(2.5f));
+    auto w1 = mkcvar("w1", {12, 12, 2, 2}, dtype::QuantizedS8(2.5f));
     using Param = opr::ConvolutionBackwardData::Param;
     Param param;
     param.format = opr::ConvolutionBackwardData::Param::Format::NCHW;
@@ -163,7 +163,7 @@ TEST(TestProfiler, Deconv) {
     param.pad_h = param.pad_w = 0;
     auto c1 = opr::ConvolutionBackwardData::make(
             w1, x, param, {}, OperatorNodeConfig(dtype::QuantizedS8(2.5f)));
-    auto w2 = mkcvar("w2", {10, 10, 2, 2}, dtype::QuantizedS8(2.5f));
+    auto w2 = mkcvar("w2", {12, 12, 2, 2}, dtype::QuantizedS8(2.5f));
     auto c2 = opr::ConvolutionBackwardData::make(
             w2, c1, param, {}, OperatorNodeConfig(dtype::QuantizedS8(2.5f)));
 

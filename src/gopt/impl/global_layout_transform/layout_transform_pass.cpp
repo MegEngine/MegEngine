@@ -13,18 +13,31 @@
 #include "megbrain/gopt/layout_transform_pass.h"
 #include "./opr_format_modifier.h"
 #include "./utils.h"
+#include "megbrain/gopt/layout_transform_context.h"
 #include "megbrain/gopt/profiler.h"
 #include "megbrain/gopt/solver.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/serialization/sereg.h"
 
+#include "megbrain/utils/hash_ct.h"
+#include "midout.h"
+
 using namespace mgb;
 using namespace gopt;
 using namespace cg;
 
+MIDOUT_DECL(megbrain_global_layout_transform)
+#define MIDOUT_B(tag)                              \
+    MIDOUT_BEGIN(megbrain_global_layout_transform, \
+                 midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_E \
+    }            \
+    MIDOUT_END();
+
 /* =================== LayoutTransformPass ======================*/
 void LayoutTransformPass::apply(OptState& opt) const {
+    MIDOUT_B("apply")
     opt.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_ALL ^
                                    VarReplaceCheckFlag::CHECK_SHAPE);
     SubGraphExtractor extractor(m_ctx->opr_list());
@@ -167,6 +180,19 @@ void LayoutTransformPass::apply(OptState& opt) const {
     };
     opt.graph().iter(on_opr);
     rewriter.apply_inplace();
+    MIDOUT_E
+}
+
+std::unique_ptr<LayoutTransformPass> LayoutTransformPass::make(
+        GraphTuningOptions::Target target) {
+    MIDOUT_B("make")
+    auto profiler = ProfilerBase::make_profiler();
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto ctx = LayoutTransformContext::make(target);
+    return std::make_unique<LayoutTransformPass>(std::move(ctx),
+                                                 std::move(solver));
+    MIDOUT_E
 }
 
 // vim: syntax=cpp.doxygen

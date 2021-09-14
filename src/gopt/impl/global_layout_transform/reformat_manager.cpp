@@ -70,9 +70,10 @@ static inline std::tuple<size_t, size_t> extra_alignment(
             output_channel_alignment =
                     output_channel_alignment * extra_alignment /
                     gcd(output_channel_alignment, extra_alignment);
-        return {input_channel_alignment, output_channel_alignment};
+        return std::make_tuple(input_channel_alignment,
+                               output_channel_alignment);
     }
-    return {input_channel_alignment, output_channel_alignment};
+    return std::make_tuple(input_channel_alignment, output_channel_alignment);
 }
 };  // namespace
 
@@ -679,7 +680,7 @@ ReformatManager::AlignmentDesc ReformatManager::make_aligned_desc(
             break;
         }
     }
-    Name out_channel_name;
+    Name out_channel_name = Name::N;
     for (size_t i = 0; i < weight_shape.ndim; ++i) {
         auto name = weight_shape[i].name();
         auto extent = weight_shape[i].extent();
