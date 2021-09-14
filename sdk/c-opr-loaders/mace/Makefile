@@ -15,9 +15,10 @@ endif
 TARGET := libmace_loader.so
 all: $(TARGET)
 
-CXX = aarch64-linux-android-g++
+# can be find at NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/
+CXX = aarch64-linux-android21-clang++
 
-CXXFLAGS = -std=c++14  -I$(SDKPATH)/include \
+CXXFLAGS = -std=c++14 -I$(SDKPATH)/include \
 			-Dmgb_mace_loader_init=mgb_c_opr_init
 
 DEBUG ?= 0
@@ -27,12 +28,7 @@ else
     CXXFLAGS += -O2
 endif
 
-LDFLAGS = -L$(SDKPATH)/lib \
-			-lmace_static -lcore -lgenerated_version \
-			-lport_android -lport_linux_base -lport_posix -lport_base \
-			-lproto -lutils -lgenerated_opencl_kernel \
-			-lops -lcore -lprotobuf-lite -llog \
-			-lpthread -l:rpcmem.a
+LDFLAGS = -L$(SDKPATH)/lib -lmace -llog
 
 LDLIBS = -shared -fPIC
 
