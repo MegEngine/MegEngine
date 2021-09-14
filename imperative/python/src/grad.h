@@ -16,6 +16,7 @@
 
 #include <megbrain/utils/small_vector.h>
 #include <memory>
+#include <optional>
 
 namespace mgb::imperative::python {
 
@@ -154,7 +155,7 @@ public:
     Maker maker(ApplyContext& ctx) {return {*this, ctx};}
 };
 
-using GradRuleFn = std::function<apply_result_t(ApplyContext&, CustomBackward::Maker&)>;
+using GradRuleFn = std::function<std::optional<apply_result_t>(ApplyContext&, CustomBackward::Maker&)>;
 
 std::unordered_map<Typeinfo*, GradRuleFn>& grad_rule_registry();
 

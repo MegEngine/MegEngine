@@ -393,13 +393,11 @@ apply_result_t apply_grad(ApplyContext& ctx) {
         auto&& it = registry.find(ctx.op->dyn_typeinfo());
         if (it != registry.end()) {
             auto&& maker = grad_fn_holder.emplace<CustomBackward>().maker(ctx);
-            try {
-                auto ret = it->second(ctx, maker);
+            if (auto ret = it->second(ctx, maker)) {
                 maker.finalize();
-                return ret;
-            } catch (GradRuleFallback&) {
-                grad_fn_holder.reset();
+                return *ret;
             }
+            grad_fn_holder.reset();
         }
         return backward_graph_grad_rule(ctx, grad_fn_holder);
     }();
