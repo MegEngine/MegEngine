@@ -481,6 +481,12 @@ namespace gopt {
             const char* name() const override;
             void apply(OptState& opt) const override;
     };
+
+    class FoldingConvBiasTypecvtPass final : public Pass {
+    public:
+        const char* name() const override;
+        void apply(OptState& opt) const override;
+    };
 #endif
 
     /*!

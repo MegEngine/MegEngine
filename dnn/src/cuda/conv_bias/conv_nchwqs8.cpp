@@ -121,7 +121,10 @@ bool ConvBiasForwardImpl::AlgoFallbackNCHWQS8::is_available(
     auto&& param = args.opr->param();
     bool is_format_ok = param.format == param::ConvBias::Format::NCHW;
     bool is_version_ok = CUDNN_VERSION >= 7500;
-    bool is_dtype_ok = args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8;
+    bool is_dtype_ok =
+            (args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             (args.dst_layout->dtype.enumv() != DTypeEnum::QuantizedS4 ||
+              args.dst_layout->dtype.enumv() != DTypeEnum::Quantized4Asymm));
     bool is_bias_ok =
             args.bias_layout->ndim == 0 ||
             (args.bias_layout->ndim == 4 && args.bias_layout->shape[0] == 1 &&

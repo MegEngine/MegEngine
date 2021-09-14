@@ -585,6 +585,7 @@ TEST(TestLayoutTransform, DetectionHead) {
     using OprFormat = LayoutTransformContext::OprFormat;
     using OprList = LayoutTransformContext::OprList;
     using Attribute = LayoutTransformContext::Attribute;
+    using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Target = LayoutTransformContext::Target;
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
@@ -600,8 +601,8 @@ TEST(TestLayoutTransform, DetectionHead) {
             TensorFormats::NCHW,    TensorFormats::NHWC,
             TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
             TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW,
-                           Target::UNSPEC};
+    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+                           ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats),
             attribute);
@@ -611,8 +612,9 @@ TEST(TestLayoutTransform, DetectionHead) {
                 OprFormat::NCHW32, OprFormat::NCHW64, OprFormat::CHWN4})
             .add_opr_config(opr::ConvolutionForward::typeinfo(),
                             {OprFormat::NCHW, OprFormat::NCHW4})
-            .add_opr_config(opr::ConvolutionBackwardData::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW4})
+            .add_opr_config(
+                    opr::ConvolutionBackwardData::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
@@ -630,6 +632,7 @@ TEST(TestLayoutTransform, DetectionHead) {
                                 .add_pass<ShuffleShuffleRemovePass>()
                                 .add_pass(FuseNCHW4Int8Preprocess::make())
                                 .add_pass<FoldingConvBiasDimshufflePass>()
+                                .add_pass<FoldingConvBiasTypecvtPass>()
                                 .add_pass<ParamFusePass>()
                                 .add_pass<ParamMergePass>()
                                 .apply(SymbolVarArray{y})
@@ -656,7 +659,8 @@ TEST(TestLayoutTransform, DetectionHead) {
     /// check first conv format
     const auto& first_conv = find_opr<opr::ConvBiasForward>(v);
     const auto& cast = first_conv.cast_final_safe<opr::ConvBiasForward>();
-    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NCHW4_NHWC);
+    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NHWC);
+    ASSERT_EQ(cast.output()[0]->dtype().enumv(), DTypeEnum::Quantized4Asymm);
 }
 #endif
 #endif

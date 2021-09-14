@@ -31,6 +31,11 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
         }
     }
 
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
+        args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
+        return false;
+    }
+
     // FIXME: cudnn cannot handle the case when the initial value of dst tensor
     // contains nan and beta is zero, because the result of 0.f * nan is still
     // nan

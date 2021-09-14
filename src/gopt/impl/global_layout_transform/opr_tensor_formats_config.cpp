@@ -512,7 +512,7 @@ struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
-        config.opr_format = OprFormat::NCHW4;
+        config.opr_format = OprFormat::NHWC;
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
             available &=

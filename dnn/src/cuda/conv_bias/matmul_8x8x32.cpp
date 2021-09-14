@@ -24,6 +24,11 @@ bool ConvBiasForwardImpl::AlgoMatmul8x8x32::is_available(
     if (!is_compute_capability_required(6, 1))
         return false;
 
+    if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm ||
+        args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4) {
+        return false;
+    }
+
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();

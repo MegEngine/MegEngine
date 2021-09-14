@@ -835,6 +835,7 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
         add_pass<FuseWarpPerspectiveDimshufflePass>();
 #if CUDA_VERSION >= 10020
         add_pass<FoldingConvBiasDimshufflePass>();
+        add_pass<FoldingConvBiasTypecvtPass>();
 #endif
     });
 #undef cb
