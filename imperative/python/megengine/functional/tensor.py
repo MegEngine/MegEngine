@@ -1352,10 +1352,11 @@ def roll(
         if shift_ == 0:
             continue
         size = shp[axis_normalized_]
-        if shift_ > 0:
-            a, b = split(out, [size - shift_,], axis=axis_normalized_)
+        shift_normalized_ = 0 if size == 0 else shift_ % size
+        if shift_normalized_ > 0:
+            a, b = split(out, [size - shift_normalized_,], axis=axis_normalized_)
         else:
-            a, b = split(out, [-shift_,], axis=axis_normalized_)
+            a, b = split(out, [-shift_normalized_,], axis=axis_normalized_)
         out = concat((b, a), axis=axis_normalized_)
     if shp_bak is not None:
         out = out.reshape(shp_bak)

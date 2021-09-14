@@ -1339,8 +1339,10 @@ void Concat::scn_do_execute() {
         if (real_axis < 0)
             real_axis += in.shape().ndim;
         end = begin + in.shape().shape[real_axis];
-        out.sub(Slice(begin, end).apply(out.layout(), real_axis)).
-            copy_from_fixlayout(in);
+        if (!in.layout().is_empty()) {
+            out.sub(Slice(begin, end).apply(out.layout(), real_axis)).
+                copy_from_fixlayout(in);
+        }
     }
 }
 
