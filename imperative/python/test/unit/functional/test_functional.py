@@ -142,6 +142,26 @@ def test_matmul():
     )
 
 
+@pytest.mark.parametrize(
+    "shape_a, shape_b", [((0,), (0,)), ((10, 0), (0, 10)), ((3, 10, 0), (3, 0, 10)),],
+)
+@pytest.mark.parametrize("is_symbolic", [None, True, False])
+def test_matmul_empty_tensor(shape_a, shape_b, is_symbolic):
+    def func(a, b):
+        return F.matmul(a, b)
+
+    if is_symbolic is not None:
+        func = jit.trace(symbolic=is_symbolic)(func)
+
+    a = tensor(np.random.randn(*shape_a))
+    b = tensor(np.random.randn(*shape_b))
+    for _ in range(3):
+        out = func(a, b)
+        assert np.all(out.numpy() == 0)
+        if is_symbolic is None:
+            break
+
+
 def test_interpolate():
     def linear_interpolate():
         inp = tensor(np.arange(1, 3, dtype=np.float32).reshape(1, 1, 2))

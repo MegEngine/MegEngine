@@ -250,7 +250,6 @@ DEF_IMPL(void)::do_run(const ShapeInpArray& shapes, const RunOptions& opt) {
         for (size_t i = 0; i < nr_out; ++i) {
             if (m_outputs_allow_grad[i]) {
                 auto nr = m_outputs_truth[i].shape().total_nr_elems();
-                mgb_assert(nr, "got empty output");
                 if (opt.cont_loss_p) {
                     m_loss_p[i]->resize({nr});
                     auto ptr = m_loss_p[i]->template ptr<float>();

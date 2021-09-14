@@ -45,6 +45,7 @@ MatrixMul::MatrixMul(VarNode* a, VarNode* b, const Param& param,
     init_megdnn_opr(*this, param);
     m_policy = policy;
     add_input({a, b});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar MatrixMul::make(SymbolVar a, SymbolVar b, const Param& param,
@@ -59,6 +60,15 @@ void MatrixMul::init_output_dtype() {
     megdnn_opr()->deduce_dtype(input(0)->dtype(), input(1)->dtype(),
                                output_dtype);
     output(0)->dtype(output_dtype);
+}
+
+MatrixMul::NodeProp* MatrixMul::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 bool MatrixMul::check_layout(const TensorLayout& layout, int transpose) {
@@ -138,6 +148,17 @@ void MatrixMul::scn_do_execute() {
     auto inp0 = input(0)->dev_tensor().as_megdnn(),
          inp1 = input(1)->dev_tensor().as_megdnn(),
          out = output(0)->dev_tensor().as_megdnn();
+    if ((inp0.layout.is_empty() || inp1.layout.is_empty())) {
+        if (!out.layout.is_empty()) {
+            if (!m_fill_opr) {
+                m_fill_opr = intl::get_megdnn_handle(comp_node())->
+                    create_operator<megdnn::Fill>();
+            }
+            m_fill_opr->param() = 0;
+            m_fill_opr->exec(out, {});
+        }
+        return;
+    }
     auto transpose = [](TensorLayout& layout, bool& trans) {
         if (!check_layout(layout, 0)) {
             mgb_assert(check_layout(layout, 1));
@@ -193,6 +214,7 @@ BatchedMatrixMul::BatchedMatrixMul(VarNode* a, VarNode* b, const Param& param,
     init_megdnn_opr(*this, param);
     m_policy = policy;
     add_input({a, b});
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar BatchedMatrixMul::make(SymbolVar a, SymbolVar b, const Param& param,
@@ -227,6 +249,15 @@ void BatchedMatrixMul::init_output_dtype() {
     megdnn_opr()->deduce_dtype(input(0)->dtype(), input(1)->dtype(),
                                output_dtype);
     output(0)->dtype(output_dtype);
+}
+
+BatchedMatrixMul::NodeProp* BatchedMatrixMul::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 bool BatchedMatrixMul::check_layout(const TensorLayout& layout,
@@ -294,6 +325,17 @@ void BatchedMatrixMul::scn_do_execute() {
     auto inp0 = input(0)->dev_tensor().as_megdnn(),
          inp1 = input(1)->dev_tensor().as_megdnn(),
          out = output(0)->dev_tensor().as_megdnn();
+    if ((inp0.layout.is_empty() || inp1.layout.is_empty())) {
+        if (!out.layout.is_empty()) {
+            if (!m_fill_opr) {
+                m_fill_opr = intl::get_megdnn_handle(comp_node())->
+                    create_operator<megdnn::Fill>();
+            }
+            m_fill_opr->param() = 0;
+            m_fill_opr->exec(out, {});
+        }
+        return;
+    }
     auto transpose = [](TensorLayout& layout, bool& trans) {
         if (!check_layout(layout, false)) {
             mgb_assert(check_layout(layout, true));
@@ -354,6 +396,7 @@ Dot::Dot(VarNode *opr0, VarNode *opr1, const OperatorNodeConfig &config):
 {
     init_megdnn_opr(*this, {});
     add_input({opr0, opr1}, AddInputSortType::CUR_ADDED);
+    output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     static_assert(std::is_empty<Param>::value, "Dot param should be empty");
     mgb_assert(opr0->dtype().category() != DTypeCategory::QUANTIZED &&
                        opr1->dtype().category() != DTypeCategory::QUANTIZED,
@@ -406,8 +449,26 @@ void Dot::scn_do_execute() {
             i1.layout.stride[0] = 0;
         }
     }
+    if ((i0.layout.is_empty() || i1.layout.is_empty())) {
+        if (!m_fill_opr) {
+            m_fill_opr = intl::get_megdnn_handle(comp_node())->
+                create_operator<megdnn::Fill>();
+        }
+        m_fill_opr->param() = 0;
+        m_fill_opr->exec(output(0)->dev_tensor().as_megdnn(), {});
+        return;
+    }
     megdnn_opr()->exec(i0, i1, output(0)->dev_tensor().as_megdnn(),
             intl::get_megdnn_workspace_from_var(output(1)));
+}
+
+Dot::NodeProp* Dot::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1),
+            NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 void Dot::add_input_layout_constraint() {

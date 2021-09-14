@@ -94,7 +94,9 @@ void run_sgemm_test(bool transa, bool transb) {
     Checker(make_graph, fwd)
             .run({mkx(4, 6), mky(6, 2)}, opt)
             .run({mkx(2, 3), mky(3, 100)}, opt)
-            .run({mkx(20, 3), mky(3, 20)}, opt);
+            .run({mkx(20, 3), mky(3, 20)}, opt)
+            .run({mkx(10, 0), mky(0, 10)}, opt)
+            .run({mkx(0, 0), mky(0, 0)}, opt);
 }
 
 #define FWD_BATCH_GEMM(dt_src, dt_dst)                                       \
@@ -143,7 +145,9 @@ void run_batched_sgemm_test(bool transa, bool transb) {
     Checker(make_graph, fwd)
             .run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
-            .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
+            .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt)
+            .run({mkx(3, 0, 2), mky(3, 2, 0)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt);
 }
 
 auto gen_fp16 = [](HostTensorND& dest) {
@@ -198,6 +202,7 @@ void run_batched_hgemm_test(bool transa, bool transb) {
 
     checker.run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt)
             .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
 }
 
@@ -236,6 +241,7 @@ void run_batched_igemm_test(bool transa, bool transb) {
 
     checker.run({mkx(3, 5, 7), mky(3, 7, 2)}, opt)
             .run({mkx(64, 1, 2), mky(64, 2, 1)}, opt)
+            .run({mkx(64, 10, 0), mky(64, 0, 10)}, opt)
             .run({mkx(1, 2, 3), mky(1, 3, 4)}, opt);
 }
 
@@ -650,7 +656,8 @@ TEST(TestOprBlas, Dot) {
             .run({TensorShape{15}, TensorShape{1}})
             .run({TensorShape{1}, TensorShape{16}})
             .run({TensorShape{23}, TensorShape{23}})
-            .run({TensorShape{1000}, TensorShape{1000}});
+            .run({TensorShape{1000}, TensorShape{1000}})
+            .run({TensorShape{0}, TensorShape{0}});
 }
 
 TEST(TestOprBlas, TransMatMul) {

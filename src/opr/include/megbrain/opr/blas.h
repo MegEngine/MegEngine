@@ -17,6 +17,7 @@
 #include "megbrain/graph.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 
+#include "megdnn/oprs/general.h"
 #include "megdnn/oprs/linalg.h"
 
 namespace mgb {
@@ -40,6 +41,7 @@ private:
     void add_input_layout_constraint() override;
     void scn_do_execute() override;
     void init_output_dtype() override;
+    NodeProp* do_make_node_prop() const override;
     size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
                                     const TensorShapeArray& output_shapes)
             const override;
@@ -47,6 +49,7 @@ private:
 
     //! store the policy of all transpose situations
     megdnn::ExecutionPolicy m_cadidate_execution_policies[4];
+    std::unique_ptr<megdnn::Fill> m_fill_opr;
 };
 
 /*!
@@ -70,6 +73,7 @@ private:
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
     void scn_do_execute() override;
+    NodeProp* do_make_node_prop() const override;
     size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
                                     const TensorShapeArray& output_shapes)
             const override;
@@ -77,6 +81,7 @@ private:
     static bool check_layout(const TensorLayout& layout, bool transpose);
     //! store the policy of all transpose situations
     megdnn::ExecutionPolicy m_cadidate_execution_policies[4];
+    std::unique_ptr<megdnn::Fill> m_fill_opr;
 };
 
 /*!
@@ -101,7 +106,9 @@ MGB_DEFINE_OPR_CLASS(Dot, cg::SingleCNOperatorNodeBaseT<
         void add_input_layout_constraint() override;
         void scn_do_execute() override;
         void init_output_static_infer_desc() override;
+        NodeProp* do_make_node_prop() const override;
         void record_execute_deps(ExecDependencyArray &deps) override;
+        std::unique_ptr<megdnn::Fill> m_fill_opr;
 };
 
 MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(MatrixInverse);

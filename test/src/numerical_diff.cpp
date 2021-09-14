@@ -36,7 +36,7 @@ std::vector<HostTensorND> mgb::numerical_diff_pt2(
             resize(cur_inp->shape());
         auto dptr = dest.ptr<float>();
 
-        mgb_assert(cur_inp->layout().is_contiguous());
+        mgb_assert(cur_inp->layout().is_contiguous() || cur_inp->layout().is_empty());
         auto cur_inp_ptr = cur_inp->ptr<float>();
 
         mgb::RealTimer timer;
