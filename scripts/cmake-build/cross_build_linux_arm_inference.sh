@@ -13,6 +13,16 @@ NINJA_DRY_RUN=OFF
 SPECIFIED_TARGET="install/strip"
 CMAKE_C_FLAGS="-Wno-psabi"
 CMAKE_CXX_FLAGS="-Wno-psabi"
+READLINK=readlink
+OS=$(uname -s)
+
+if [ $OS = "Darwin" ];then
+    READLINK=greadlink
+fi
+
+SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/utils.sh
+config_ninja_default_max_jobs
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
@@ -27,16 +37,27 @@ function usage() {
     echo "-r : remove old build dir before make, default off"
     echo "-v : ninja with verbose and explain, default off"
     echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
+    echo "-j : run N jobs in parallel for ninja, defaut is cpu_number + 2"
     echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -e)"
+    echo "-l : list CMakeLists.txt all options, can be use to config EXTRA_CMAKE_ARGS"
     echo "-h : show usage"
-    echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
-    echo "example: $0 -d"
+    echo "append other cmake config by config EXTRA_CMAKE_ARGS, for example, enable MGE_WITH_TEST and build with Debug mode:"
+    echo "EXTRA_CMAKE_ARGS=\"-DMGE_WITH_TEST=ON\" $0 -d"
     exit -1
 }
 
-while getopts "nvrkhdcfa:e:" arg
+while getopts "lnvrkhdcfa:e:j:" arg
 do
     case $arg in
+        j)
+            NINJA_MAX_JOBS=$OPTARG
+            echo "config NINJA_MAX_JOBS to ${NINJA_MAX_JOBS}"
+            ;;
+        l)
+            echo "list CMakeLists.txt all options, can be used to config EXTRA_CMAKE_ARGS"
+            show_cmakelist_options
+            exit 0
+            ;;
         d)
             echo "Build with Debug mode"
             BUILD_TYPE=Debug
@@ -101,15 +122,11 @@ echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
 echo "MGE_ARMV8_2_FEATURE_FP16: $MGE_ARMV8_2_FEATURE_FP16"
 echo "MGE_DISABLE_FLOAT16: $MGE_DISABLE_FLOAT16"
 echo "SPECIFIED_TARGET: ${SPECIFIED_TARGET}"
+echo "NINJA_MAX_JOBS: ${NINJA_MAX_JOBS}"
 echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
 
-READLINK=readlink
-OS=$(uname -s)
-
-if [ $OS = "Darwin" ];then
-    READLINK=greadlink
-elif [[ $OS =~ "NT" ]]; then
+if [[ $OS =~ "NT" ]]; then
     echo "BUILD in NT ..."
 fi
 
@@ -128,9 +145,6 @@ if [ $MGE_WITH_CUDA = "OFF" ];then
     CMAKE_C_FLAGS="-Werror=unused-parameter -Wno-psabi"
     CMAKE_CXX_FLAGS="-Werror=unused-parameter -Wno-psabi"
 fi
-
-SRC_DIR=$($READLINK -f "`dirname $0`/../../")
-source $SRC_DIR/scripts/cmake-build/utils/utils.sh
 
 function cmake_build() {
     BUILD_DIR=$SRC_DIR/build_dir/gnu-linux/MGE_WITH_CUDA_$3/$1/$BUILD_TYPE/build
@@ -161,7 +175,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         $SRC_DIR "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
     bash -c "${NINJA_CMD}"
 }
 

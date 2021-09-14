@@ -1,26 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-function usage() {
-    echo "$0 args1 args2 .."
-    echo "available args detail:"
-    echo "-d : Build with Debug mode, default Release mode"
-    echo "-c : Build with CUDA, default without CUDA"
-    echo "-t : Build with training mode, default inference only"
-    echo "-m : Build with m32 mode(only for windows build), default m64"
-    echo "-r : remove old build dir before make, default off"
-    echo "-v : ninja with verbose and explain, default off"
-    echo "-s : Do not build develop even build with training mode, default on when build with training, always for wheel"
-    echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
-    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -e)"
-    echo "-h : show usage"
-    echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
-    echo "example: $0 -d"
-    exit -1
-}
-
-READLINK=readlink
-OS=$(uname -s)
 BUILD_TYPE=Release
 MGE_WITH_CUDA=OFF
 MGE_INFERENCE_ONLY=ON
@@ -32,16 +12,56 @@ NINJA_VERBOSE=OFF
 BUILD_DEVELOP=ON
 NINJA_DRY_RUN=OFF
 SPECIFIED_TARGET="install/strip"
+READLINK=readlink
+
+OS=$(uname -s)
 if [[ $OS =~ "NT" ]]; then
     echo "Windows no need strip, caused by pdb file always split with exe"
     SPECIFIED_TARGET="install"
 fi
 
+if [ $OS = "Darwin" ];then
+    READLINK=greadlink
+fi
+
+SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/utils.sh
+config_ninja_default_max_jobs
+
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
-while getopts "nsrhdctmve:" arg
+function usage() {
+    echo "$0 args1 args2 .."
+    echo "available args detail:"
+    echo "-d : Build with Debug mode, default Release mode"
+    echo "-c : Build with CUDA, default without CUDA"
+    echo "-t : Build with training mode, default inference only"
+    echo "-m : Build with m32 mode(only for windows build), default m64"
+    echo "-r : remove old build dir before make, default off"
+    echo "-v : ninja with verbose and explain, default off"
+    echo "-s : Do not build develop even build with training mode, default on when build with training, always for wheel"
+    echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
+    echo "-j : run N jobs in parallel for ninja, defaut is cpu_number + 2"
+    echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -e)"
+    echo "-l : list CMakeLists.txt all options, can be use to config EXTRA_CMAKE_ARGS"
+    echo "-h : show usage"
+    echo "append other cmake config by config EXTRA_CMAKE_ARGS, for example, enable MGE_WITH_TEST and build with Debug mode:"
+    echo "EXTRA_CMAKE_ARGS=\"-DMGE_WITH_TEST=ON\" $0 -d"
+    exit -1
+}
+
+while getopts "lnsrhdctmve:j:" arg
 do
     case $arg in
+        j)
+            NINJA_MAX_JOBS=$OPTARG
+            echo "config NINJA_MAX_JOBS to ${NINJA_MAX_JOBS}"
+            ;;
+        l)
+            echo "list CMakeLists.txt all options, can be used to config EXTRA_CMAKE_ARGS"
+            show_cmakelist_options
+            exit 0
+            ;;
         d)
             echo "Build with Debug mode"
             BUILD_TYPE=Debug
@@ -95,10 +115,10 @@ echo "BUILD_TYPE: $BUILD_TYPE"
 echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
 echo "MGE_INFERENCE_ONLY: $MGE_INFERENCE_ONLY"
 echo "SPECIFIED_TARGET: ${SPECIFIED_TARGET}"
+echo "NINJA_MAX_JOBS: ${NINJA_MAX_JOBS}"
 echo "------------------------------------"
 
 if [ $OS = "Darwin" ];then
-    READLINK=greadlink
     if [ $MGE_WITH_CUDA = "ON" ];then
         echo "MACOS DO NOT SUPPORT TensorRT, ABORT NOW!!"
         exit -1
@@ -106,9 +126,6 @@ if [ $OS = "Darwin" ];then
 elif [[ $OS =~ "NT" ]]; then
     echo "BUILD in NT ..."
 fi
-
-SRC_DIR=$($READLINK -f "`dirname $0`/../../")
-source $SRC_DIR/scripts/cmake-build/utils/utils.sh
 
 if [ ${MGE_INFERENCE_ONLY} = "ON" ]; then
     echo "config BUILD_DEVELOP=OFF when MGE_INFERENCE_ONLY=ON"
@@ -141,7 +158,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         ${SRC_DIR} "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
     bash -c "${NINJA_CMD}"
 }
 
@@ -280,7 +297,7 @@ function cmake_build_windows() {
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
         ${EXTRA_CMAKE_ARGS} ../../.. "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
     cmd.exe /c " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && ${NINJA_CMD} "
 }
 

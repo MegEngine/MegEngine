@@ -10,6 +10,16 @@ REMOVE_OLD_BUILD=false
 NINJA_VERBOSE=OFF
 NINJA_DRY_RUN=OFF
 SPECIFIED_TARGET="install/strip"
+READLINK=readlink
+OS=$(uname -s)
+
+if [ $OS = "Darwin" ];then
+    READLINK=greadlink
+fi
+
+SRC_DIR=$($READLINK -f "`dirname $0`/../../")
+source $SRC_DIR/scripts/cmake-build/utils/utils.sh
+config_ninja_default_max_jobs
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
 
@@ -23,16 +33,27 @@ function usage() {
     echo "-r : remove old build dir before make, default off"
     echo "-v : ninja with verbose and explain, default off"
     echo "-n : ninja with -n dry run (don't run commands but act like they succeeded)"
+    echo "-j : run N jobs in parallel for ninja, defaut is cpu_number + 2"
     echo "-e : build a specified target (always for debug, NOTICE: do not do strip/install target when use -e)"
+    echo "-l : list CMakeLists.txt all options, can be use to config EXTRA_CMAKE_ARGS"
     echo "-h : show usage"
-    echo "append other cmake config by export EXTRA_CMAKE_ARGS=..."
-    echo "example: $0 -d"
+    echo "append other cmake config by config EXTRA_CMAKE_ARGS, for example, enable MGE_WITH_TEST and build with Debug mode:"
+    echo "EXTRA_CMAKE_ARGS=\"-DMGE_WITH_TEST=ON\" $0 -d"
     exit -1
 }
 
-while getopts "nvrkhdfa:e:" arg
+while getopts "lnvrkhdfa:e:j:" arg
 do
     case $arg in
+        j)
+            NINJA_MAX_JOBS=$OPTARG
+            echo "config NINJA_MAX_JOBS to ${NINJA_MAX_JOBS}"
+            ;;
+        l)
+            echo "list CMakeLists.txt all options, can be used to config EXTRA_CMAKE_ARGS"
+            show_cmakelist_options
+            exit 0
+            ;;
         d)
             echo "Build with Debug mode"
             BUILD_TYPE=Debug
@@ -95,17 +116,9 @@ echo "SPECIFIED_TARGET: ${SPECIFIED_TARGET}"
 echo "ARCH: $ARCH"
 echo "----------------------------------------------------"
 
-READLINK=readlink
-OS=$(uname -s)
-
-if [ $OS = "Darwin" ];then
-    READLINK=greadlink
-elif [[ $OS =~ "NT" ]]; then
+if [[ $OS =~ "NT" ]]; then
     echo "BUILD in NT ..."
 fi
-
-SRC_DIR=$($READLINK -f "`dirname $0`/../../")
-source $SRC_DIR/scripts/cmake-build/utils/utils.sh
 
 if [ -z $NDK_ROOT ];then
     echo "can not find NDK_ROOT env, pls export you NDK root dir to NDK_ROOT"
@@ -147,7 +160,7 @@ function cmake_build() {
         ${EXTRA_CMAKE_ARGS} \
         $SRC_DIR "
 
-    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN}
+    config_ninja_target_cmd ${NINJA_VERBOSE} "OFF" "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
     bash -c "${NINJA_CMD}"
 }
 
