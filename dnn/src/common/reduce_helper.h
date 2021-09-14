@@ -152,7 +152,7 @@ struct MaxOp {
 };
 
 template <typename src_ctype, typename dst_ctype, typename wtype_>
-struct CheckHasInfOp {
+struct CheckNonFiniteOp {
     typedef wtype_ wtype;
     const wtype INIT;
 
@@ -162,9 +162,9 @@ struct CheckHasInfOp {
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) {
 #if defined(__CUDA_ARCH__)
-        return isinf(src[idx]);
+        return !isfinite(src[idx]);
 #else
-        return std::isinf(src[idx]);
+        return !std::isfinite(src[idx]);
 #endif
     }
     MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
@@ -173,7 +173,7 @@ struct CheckHasInfOp {
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs | rhs;
     }
-    MEGDNN_HOST MEGDNN_DEVICE CheckHasInfOp(src_ctype* src, dst_ctype* dst,
+    MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(src_ctype* src, dst_ctype* dst,
                                             size_t B)
             : INIT(wtype(0)), src(src), dst(dst), B(B) {}
 };

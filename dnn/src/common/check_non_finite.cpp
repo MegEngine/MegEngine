@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/common/check_has_inf.cpp
+ * \file dnn/src/common/check_non_finite.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -14,7 +14,7 @@
 
 namespace megdnn {
 
-void CheckHasInf::check_exec(const TensorLayout& src, const TensorLayout& dst,
+void CheckNonFinite::check_exec(const TensorLayout& src, const TensorLayout& dst,
                              size_t workspace_in_bytes) {
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(dst);
@@ -24,7 +24,7 @@ void CheckHasInf::check_exec(const TensorLayout& src, const TensorLayout& dst,
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void CheckHasInf::deduce_layout(const TensorLayout&, TensorLayout& dst) {
+void CheckNonFinite::deduce_layout(const TensorLayout&, TensorLayout& dst) {
     dst.shape[0] = 1;
     dst.ndim = 1;
     dst.dtype = dtype::Int32();

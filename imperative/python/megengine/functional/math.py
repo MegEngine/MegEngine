@@ -1181,8 +1181,8 @@ def svd(inp: Tensor, full_matrices=False, compute_uv=True) -> Tensor:
     return U, sigma, V
 
 
-def _has_inf(inp: Tensor) -> Tensor:
-    r"""Check whether input contains infinite value.
+def _check_non_finite(inp: Tensor) -> Tensor:
+    r"""Check whether input contains infinite or nan value.
 
     Args:
         inp: a tensor to be checked.
@@ -1190,7 +1190,7 @@ def _has_inf(inp: Tensor) -> Tensor:
     Returns:
         a int32 scalar tensor, 0 for False and 1 for True.
     """
-    op = builtin.CheckHasInf()
+    op = builtin.CheckNonFinite()
     (oup,) = apply(op, inp.reshape(-1).astype("float32"))
     oup._setscalar()
     return oup

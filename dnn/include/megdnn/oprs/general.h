@@ -1319,11 +1319,11 @@ protected:
 };
 
 /*!
- * \brief check whether input contains inf value.
+ * \brief check whether input contains inf or nan value.
  */
-class CheckHasInf: public OperatorBase {
+class CheckNonFinite: public OperatorBase {
     DEF_OPR_PARAM(Empty);
-    DEF_OPR_IMPL(CheckHasInf, OperatorBase, 1, 1);
+    DEF_OPR_IMPL(CheckNonFinite, OperatorBase, 1, 1);
 
     public:
         virtual size_t get_workspace_in_bytes(const TensorLayout &src,

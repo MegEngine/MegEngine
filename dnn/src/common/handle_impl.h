@@ -216,7 +216,7 @@ private:
     cb(FakeQuantBackward) \
     cb(TQTForward) \
     cb(TQTBackward) \
-    cb(CheckHasInf) \
+    cb(CheckNonFinite) \
     cb(LSQForward) \
     cb(LSQBackward) \
     cb(Fill) \

@@ -131,7 +131,7 @@ DEF(PermutationRNG, 1, true, true);
 DEF(ShuffleRNGForward, 3, true, true);
 DEF(ShuffleRNGBackward, 3, true, false);
 DEF(ChecksumForward, 1, true, false);
-DEF(CheckHasInf, 2, true, true);
+DEF(CheckNonFinite, 2, true, true);
 DEF(LSQForward, 5, true, true);
 DEF(LSQBackward, 7, true, false);
 DEF(Fill, 1, true, false);

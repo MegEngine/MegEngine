@@ -1,5 +1,5 @@
 /**
- * \file test/naive/check_has_inf.cpp
+ * \file test/naive/check_non_finite.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -17,8 +17,8 @@
 namespace megdnn {
 namespace test {
 
-TEST_F(NAIVE, CHECK_HAS_INF_BASIC) {
-    Checker<CheckHasInf> checker(handle(), false);
+TEST_F(NAIVE, CHECK_NON_FINITE_BASIC) {
+    Checker<CheckNonFinite> checker(handle(), false);
     checker.exect(Testcase{TensorValue({4}, dtype::Float32(),
                                        {1.1, 2.2, 3.3, 4.3}),
                            {}},
@@ -27,6 +27,12 @@ TEST_F(NAIVE, CHECK_HAS_INF_BASIC) {
             Testcase{TensorValue({4}, dtype::Float32(),
                                  {1.1f, 2.2f, 3.3f,
                                   std::numeric_limits<float>::infinity()}),
+                     {}},
+            Testcase{{}, TensorValue({1}, dtype::Int32(), {1})});
+    checker.exect(
+            Testcase{TensorValue({4}, dtype::Float32(),
+                                 {1.1f, 2.2f, 3.3f,
+                                  std::numeric_limits<float>::quiet_NaN()}),
                      {}},
             Testcase{{}, TensorValue({1}, dtype::Int32(), {1})});
 }

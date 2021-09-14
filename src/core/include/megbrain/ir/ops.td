@@ -390,7 +390,7 @@ def CambriconRuntime: MgbHashableOp<"CambriconRuntime"> {
 
 def CvtColor: MgbHashableOp<"CvtColor", [CvtColorParam]>;
 
-def CheckHasInf: MgbHashableOp<"CheckHasInf", [EmptyParam]>;
+def CheckNonFinite: MgbHashableOp<"CheckNonFinite", [EmptyParam]>;
 
 def FastpathCopy: MgbHashableOp<"FastpathCopy">;
 

@@ -185,7 +185,7 @@ public:
                                          const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(CheckHasInf);
+MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(CheckNonFinite);
 
 } // namespace opr
 } // namespace mgb

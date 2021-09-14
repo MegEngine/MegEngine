@@ -20,7 +20,7 @@
 #include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/batch_normalization/opr_impl.h"
 #include "src/cuda/batched_matrix_mul/opr_impl.h"
-#include "src/cuda/check_has_inf/opr_impl.h"
+#include "src/cuda/check_non_finite/opr_impl.h"
 #include "src/cuda/checksum/opr_impl.h"
 #include "src/cuda/concat/opr_impl.h"
 #include "src/cuda/cond_take/opr_impl.h"

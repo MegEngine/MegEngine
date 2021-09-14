@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/check_has_inf/opr_impl.h
+ * \file dnn/src/naive/check_non_finite/opr_impl.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -16,9 +16,9 @@
 namespace megdnn {
 namespace naive {
 
-class CheckHasInfImpl final : public CheckHasInf {
+class CheckNonFiniteImpl final : public CheckNonFinite {
 public:
-    using CheckHasInf::CheckHasInf;
+    using CheckNonFinite::CheckNonFinite;
 
     bool is_thread_safe() const override { return true; }
 

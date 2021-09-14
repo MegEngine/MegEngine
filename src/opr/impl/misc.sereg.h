@@ -72,7 +72,7 @@ namespace opr {
 #if MGB_CUDA
     MGB_SEREG_OPR(NvOf, 1);
 #endif
-    MGB_SEREG_OPR(CheckHasInf, 1);
+    MGB_SEREG_OPR(CheckNonFinite, 1);
 
 } // namespace opr
 } // namespace mgb

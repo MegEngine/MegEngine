@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/naive/check_has_inf/opr_impl.cpp
+ * \file dnn/src/naive/check_non_finite/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -9,7 +9,7 @@
  * ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/naive/check_has_inf/opr_impl.h"
+#include "src/naive/check_non_finite/opr_impl.h"
 
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
@@ -27,7 +27,7 @@ void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
             size_t mid = l + (r - l) / 2;
             return func(l, mid) | func(mid, r);
         } else {
-            return static_cast<wtype>(std::isinf(sptr[l]));
+            return static_cast<wtype>(!std::isfinite(sptr[l]));
         }
     };
 
@@ -39,12 +39,12 @@ void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
 namespace megdnn {
 namespace naive {
 
-size_t CheckHasInfImpl::get_workspace_in_bytes(const TensorLayout&,
+size_t CheckNonFiniteImpl::get_workspace_in_bytes(const TensorLayout&,
                                                const TensorLayout&) {
     return 0;
 }
 
-void CheckHasInfImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+void CheckNonFiniteImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                            _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
 

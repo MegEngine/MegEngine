@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/check_has_inf/opr_impl.h
+ * \file dnn/src/cuda/check_non_finite/opr_impl.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -17,9 +17,9 @@
 namespace megdnn {
 namespace cuda {
 
-class CheckHasInfImpl final : public CheckHasInf {
+class CheckNonFiniteImpl final : public CheckNonFinite {
 public:
-    using CheckHasInf::CheckHasInf;
+    using CheckNonFinite::CheckNonFinite;
 
     size_t get_workspace_in_bytes(const TensorLayout& src,
                                   const TensorLayout& dst) override;

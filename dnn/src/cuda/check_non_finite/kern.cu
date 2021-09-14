@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/check_has_inf/kern.cu
+ * \file dnn/src/cuda/check_non_finite/kern.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -18,7 +18,7 @@ namespace cuda {
 
 #define COMMA ,
 
-INST_REDUCE(reduce::CheckHasInfOp<dt_float32 COMMA dt_int32 COMMA dt_int32>, false);
+INST_REDUCE(reduce::CheckNonFiniteOp<dt_float32 COMMA dt_int32 COMMA dt_int32>, false);
 
 #undef COMMA
 } // namespace cuda

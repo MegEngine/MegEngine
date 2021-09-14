@@ -491,12 +491,12 @@ MGB_IMPL_OPR_GRAD(TopK) {
 }
 #endif
 
-/* ================= CheckHasInf =================  */
+/* ================= CheckNonFinite =================  */
 namespace mgb {
 namespace opr {
 namespace intl {
 template<>
-struct MegDNNOprInitPostCtor<CheckHasInf> {
+struct MegDNNOprInitPostCtor<CheckNonFinite> {
     static void apply(cg::OperatorNodeBase &opr) {
         opr.output(0)->dtype(dtype::Int32());
     }
@@ -504,6 +504,6 @@ struct MegDNNOprInitPostCtor<CheckHasInf> {
 }
 }
 }
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(CheckHasInf);
-MEGDNN_OPR_INIT1(CheckHasInf, "check_has_inf")
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(CheckNonFinite);
+MEGDNN_OPR_INIT1(CheckNonFinite, "check_non_finite")
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

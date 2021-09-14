@@ -1,5 +1,5 @@
 /**
- * \file dnn/src/cuda/check_has_inf/opr_impl.cpp
+ * \file dnn/src/cuda/check_non_finite/opr_impl.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -9,7 +9,7 @@
  * ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/cuda/check_has_inf/opr_impl.h"
+#include "src/cuda/check_non_finite/opr_impl.h"
 #include "src/cuda/reduce_helper.cuh"
 
 #include "src/cuda/handle.h"
@@ -20,18 +20,18 @@
 namespace megdnn {
 namespace cuda {
 
-using reduce::CheckHasInfOp;
+using reduce::CheckNonFiniteOp;
 
-size_t CheckHasInfImpl::get_workspace_in_bytes(const TensorLayout& src,
+size_t CheckNonFiniteImpl::get_workspace_in_bytes(const TensorLayout& src,
                                                const TensorLayout& dst) {
-    typedef CheckHasInfOp<dt_float32, dt_int32, dt_int32> Op;
+    typedef CheckNonFiniteOp<dt_float32, dt_int32, dt_int32> Op;
     return get_reduce_workspace_in_bytes<Op>(1, src.total_nr_elems(), 1);
 }
 
-void CheckHasInfImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
+void CheckNonFiniteImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
                            _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-    typedef CheckHasInfOp<dt_float32, dt_int32, dt_int32> Op;
+    typedef CheckNonFiniteOp<dt_float32, dt_int32, dt_int32> Op;
     auto stream = cuda_stream(this->handle());
     auto B = src.layout.total_nr_elems();
     return run_reduce<Op, false>(
