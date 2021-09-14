@@ -708,7 +708,7 @@ Copy::Copy(VarNode *inp, const OperatorNodeConfig &config):
     Super{inp->owner_graph(), config, "copy", {inp}}
 {
     add_input({inp});
-    add_output(None);
+    add_output(None)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
 SymbolVar Copy::make(SymbolVar inp, const OperatorNodeConfig &config) {
@@ -767,6 +767,8 @@ Copy::NodeProp* Copy::do_make_node_prop() const {
     using F = NodeProp::Flag;
     rst->add_flag(F::CROSS_COMP_NODE_MEMORY);
     rst->add_flag(F::NO_AUTOMATIC_DUP);
+    rst->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return rst;
 }
 

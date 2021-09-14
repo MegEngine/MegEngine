@@ -277,6 +277,7 @@ MGB_DEFINE_OPR_CLASS(MarkNoBroadcastElemwise, intl::ForwardInputToOutput) // {
  * its gradient can be correctly computed.
  */
 MGB_DEFINE_OPR_CLASS(Identity, intl::ForwardInputToOutput) // {
+        NodeProp* do_make_node_prop() const override;
     public:
         using Param = megdnn::param::Empty;
         Identity(VarNode* input, const OperatorNodeConfig &config);

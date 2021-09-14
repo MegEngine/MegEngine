@@ -406,6 +406,20 @@ TEST(TestOprIO, D2DNonContig) {
     MGB_ASSERT_TENSOR_EQ(host_y, except_y);
 }
 
+TEST(TestOprIO, D2DCopyEmpty) {
+    auto cns = load_multiple_xpus(2);
+    HostTensorGenerator<> gen;
+    auto host_x = gen({2,0,3,0,4}, cns[0]);
+    auto graph = ComputingGraph::make();
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
+         y = (opr::Copy::make(x, {cns[1]})).rename("y");
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+    func->execute();
+    ASSERT_TRUE(host_y.layout().is_empty());
+    ASSERT_EQ(host_y.layout(), host_x->layout());
+}
+
 TEST(TestOprIO, MultipleDeviceTensorHolder) {
     auto cns = load_multiple_xpus(2);
     HostTensorGenerator<> gen0;

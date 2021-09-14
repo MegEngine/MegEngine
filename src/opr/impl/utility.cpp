@@ -423,7 +423,7 @@ Identity::Identity(VarNode* input, const OperatorNodeConfig &config):
     Super(input->owner_graph(), config, "identity", {input})
 {
     add_input({input});
-    add_output(None);
+    add_output(None)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     set_ignore_side_effect();
 }
 
@@ -435,6 +435,13 @@ SymbolVar Identity::make(
         return input;
     }
     return input.insert_single_output_opr<Identity>(input.node(), config);
+}
+
+Identity::NodeProp* Identity::do_make_node_prop() const {
+    auto ret = Super::do_make_node_prop();
+    ret->add_dep_type_existing_var(input(0),
+                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    return ret;
 }
 
 #if MGB_ENABLE_GRAD

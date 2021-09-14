@@ -170,6 +170,7 @@ void OutputCallback::init_output_static_infer_desc() {}
 cg::OperatorNodeBase::NodeProp* OutputCallback::do_make_node_prop() const {
     NodeProp* prop = Super::do_make_node_prop();
     prop->add_flag(NodeProp::Flag::NO_AUTOMATIC_DUP);
+    prop->add_flag(NodeProp::Flag::CROSS_COMP_NODE_MEMORY);
     SmallVector<NodeProp::DepType> dep_types(input().size(),
                                              NodeProp::DepType::DEV_COMP_ORDER);
     using IT = cg::static_infer::InferType;

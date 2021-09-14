@@ -711,6 +711,35 @@ def test_copy_d2d(is_varnode):
     copy_test("gpu0:0", "gpu0:1", network=network)
 
 
+@pytest.mark.require_ngpu(2)
+@pytest.mark.parametrize(
+    "shape, device_src, device_dst",
+    [
+        ((0,), "cpu0", "cpu0"),
+        ((10, 0), "cpu0", "cpu1"),
+        ((2, 0, 3), "cpu0", "gpu0"),
+        ((1, 0, 1, 0), "gpu0", "cpu0"),
+        ((2, 3, 4, 5, 0), "gpu0", "gpu1"),
+    ],
+)
+@pytest.mark.parametrize("is_symbolic", [None, True, False])
+def test_copy_empty(shape, device_src, device_dst, is_symbolic):
+    inp = tensor(np.random.randn(*shape).astype("float32"), device=device_src)
+
+    def func(inp):
+        return F.copy(inp, device_dst)
+
+    if is_symbolic is not None:
+        func = trace(symbolic=is_symbolic)(func)
+
+    for _ in range(3):
+        out = func(inp)
+        assert out.numpy().shape == shape
+        assert out.device == device_dst
+        if is_symbolic is None:
+            break
+
+
 @pytest.mark.parametrize(
     "shape, repeats, axis",
     [
