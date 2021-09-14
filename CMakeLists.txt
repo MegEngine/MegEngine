@@ -99,10 +99,7 @@ if(MSVC OR WIN32)
 
     # PE file linked by LLVM lld can not run at Windows XP env, so we force use link.exe
     # which always locate in Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/bin/*/*/link.exe
-    if(${MGE_ARCH} STREQUAL "i386")
-        set(CMAKE_LINKER "link.exe")
-        message(STATUS "Force use MSVS link when build for i386")
-    endif()
+    set(CMAKE_LINKER "link.exe")
     if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP OR MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
         if(NOT ${MGE_ARCH} STREQUAL "i386")
             message(FATAL_ERROR "only support 32bit when build for Windows xp")
