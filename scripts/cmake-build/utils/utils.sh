@@ -119,6 +119,18 @@ function show_cmakelist_options() {
 }
 
 function config_ninja_default_max_jobs() {
-    ((NINJA_MAX_JOBS = ${cpu_number} + 2))
-    echo "config default NINJA_MAX_JOBS to ${NINJA_MAX_JOBS}"
+    # plus 2 is ninja default behavior, you can run ninja -h to verify
+    # but at Windows env, default max jobs will take 100% cpu, which may lead
+    # to some Windows OS issue sometimes, eg, OpenSSH server lost respond or vcvarsall.bat
+    # setenv failed etc(especially enable CUDA). I have no idea about this Windows OS issue.
+    # as a workaround: config default NINJA_MAX_JOBS to cpu_number - 1
+    if [[ $OS =~ "NT" ]]; then
+        ((NINJA_MAX_JOBS = ${cpu_number} - 1))
+        if [[ ${NINJA_MAX_JOBS} -le 0 ]]; then
+            NINJA_MAX_JOBS=1
+        fi
+    else
+        ((NINJA_MAX_JOBS = ${cpu_number} + 2))
+    fi
+    echo "config default NINJA_MAX_JOBS to ${NINJA_MAX_JOBS} [cpu number is:${cpu_number}]"
 }
