@@ -144,13 +144,12 @@ ConvolutionBackwardDataImpl::get_algorithm_heuristic(
 
 #if CUDNN_MAJOR >= 7
         MEGDNN_MARK_USED_VAR(negative_attr);
-        auto& cudnn = args.handle->cudnn();
         int max_count = 0;
-        cudnn_check(cudnn.GetConvolutionBackwardDataAlgorithmMaxCount(
+        cudnn_check(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
                 cudnn_handle, &max_count));
         SmallVector<cudnnConvolutionBwdDataAlgoPerf_t> algo_perf(max_count);
         int ret_count = 0;
-        cudnn_check(cudnn.GetConvolutionBackwardDataAlgorithm_v7(
+        cudnn_check(cudnnGetConvolutionBackwardDataAlgorithm_v7(
                 cudnn_handle, desc.filter_desc.desc, desc.diff_desc.desc,
                 desc.conv_desc.desc, desc.grad_desc.desc, max_count, &ret_count,
                 algo_perf.data()));
@@ -280,13 +279,12 @@ ConvolutionBackwardFilterImpl::get_algorithm_heuristic(
 #endif
 #if CUDNN_MAJOR >= 7
         MEGDNN_MARK_USED_VAR(negative_attr);
-        auto& cudnn = args.handle->cudnn();
         int max_count = 0;
-        cudnn_check(cudnn.GetConvolutionBackwardFilterAlgorithmMaxCount(
+        cudnn_check(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
                 cudnn_handle, &max_count));
         SmallVector<cudnnConvolutionBwdFilterAlgoPerf_t> algo_perf(max_count);
         int ret_count = 0;
-        cudnn_check(cudnn.GetConvolutionBackwardFilterAlgorithm_v7(
+        cudnn_check(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
                 cudnn_handle, desc.src_desc.desc, desc.diff_desc.desc,
                 desc.conv_desc.desc, desc.grad_desc.desc, max_count, &ret_count,
                 algo_perf.data()));

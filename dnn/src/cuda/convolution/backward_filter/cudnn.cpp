@@ -29,7 +29,6 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
             return false;
         }
     }
-    auto& cudnn = args.handle->cudnn();
     CUDNNBwdFilterDescs D;
 
     TensorLayout bias_layout, z_layout;
@@ -44,7 +43,7 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
 
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
+    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(),
             D.src_desc.desc,
             D.diff_desc.desc,
@@ -57,11 +56,10 @@ bool ConvolutionBackwardFilterImpl::AlgoCUDNN::is_available(
 
 size_t ConvolutionBackwardFilterImpl::AlgoCUDNN::get_workspace_in_bytes(
         const SizeArgs &args) const {
-    auto& cudnn = args.handle->cudnn();
     CUDNNBwdFilterDescs D;
     args.init_desc(D);
     size_t workspace_size;
-    auto status = cudnn.GetConvolutionBackwardFilterWorkspaceSize(
+    auto status = cudnnGetConvolutionBackwardFilterWorkspaceSize(
             args.handle->cudnn_handle(),
             D.src_desc.desc,
             D.diff_desc.desc,

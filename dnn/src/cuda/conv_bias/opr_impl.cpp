@@ -95,13 +95,12 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         CUDNNForwardDescs desc;
         conv_args.init_conv_desc(desc);
 #if CUDNN_MAJOR >= 7
-        auto& cudnn = static_cast<HandleImpl*>(this->handle())->cudnn();
         int max_count = 0;
-        cudnn_check(cudnn.GetConvolutionForwardAlgorithmMaxCount(cudnn_handle,
+        cudnn_check(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle,
                                                                 &max_count));
         SmallVector<cudnnConvolutionFwdAlgoPerf_t> algo_perf(max_count);
         int ret_count = 0;
-        cudnn_check(cudnn.GetConvolutionForwardAlgorithm_v7(
+        cudnn_check(cudnnGetConvolutionForwardAlgorithm_v7(
                 cudnn_handle, desc.src_desc.desc, desc.filter_desc.desc,
                 desc.conv_desc.conv_desc, desc.dst_desc.desc, max_count,
                 &ret_count, algo_perf.data()));

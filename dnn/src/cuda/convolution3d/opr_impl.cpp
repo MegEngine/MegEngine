@@ -64,12 +64,13 @@ Convolution3DForwardImpl::get_algorithm_heuristic(
     auto get_cudnn_algo =
             [this, &args, workspace_limit_in_bytes, positive_attr,
              negative_attr]() -> Convolution3DForwardImpl::AlgoBase* {
+        auto cudnn_handle = cuda::cudnn_handle(this->handle());
         cudnnConvolutionFwdAlgo_t algo;
         CUDNNForwardDescs desc;
         args.init_desc(desc);
 
         bool got = cudnn_get_convolution_fwd_algo_helper(
-                this->handle(), desc.src_desc.desc, desc.filter_desc.desc,
+                cudnn_handle, desc.src_desc.desc, desc.filter_desc.desc,
                 desc.conv_desc.desc, desc.dst_desc.desc,
                 workspace_limit_in_bytes, &algo, positive_attr, negative_attr);
         if (got) {

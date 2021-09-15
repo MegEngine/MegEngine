@@ -124,10 +124,6 @@ class HandleImpl: public HandleImplHelper {
 
         size_t image2d_pitch_alignment() const override;
         HandleVendorType vendor_type() const override;
-
-        class CUDNN;
-
-        CUDNN& cudnn();
     private:
         bool m_is_tegra_k1;
         int m_device_id;
@@ -160,32 +156,7 @@ class HandleImpl: public HandleImplHelper {
         //! device ptr to const scalars
         ConstScalars* m_const_scalars;
 
-        std::unique_ptr<CUDNN> m_cudnn_api_cache;
-
         void initialize_cusolver();
-};
-
-class HandleImpl::CUDNN {
-    cudnnHandle_t m_handle;
-public:
-    CUDNN(cudnnHandle_t handle);
-#define WRAP_CUDNN_API(NAME) thin_function<decltype(cudnn##NAME)> NAME;
-    WRAP_CUDNN_API(GetConvolutionForwardWorkspaceSize);
-#if CUDNN_MAJOR >= 7
-    WRAP_CUDNN_API(GetConvolutionForwardAlgorithm_v7);
-    WRAP_CUDNN_API(GetConvolutionForwardAlgorithmMaxCount);
-#endif
-#if CUDNN_MAJOR >= 7
-    WRAP_CUDNN_API(GetConvolutionBackwardDataAlgorithm_v7);
-    WRAP_CUDNN_API(GetConvolutionBackwardDataAlgorithmMaxCount);
-#endif
-    WRAP_CUDNN_API(GetConvolutionBackwardDataWorkspaceSize);
-#if CUDNN_MAJOR >= 7
-    WRAP_CUDNN_API(GetConvolutionBackwardFilterAlgorithmMaxCount);
-    WRAP_CUDNN_API(GetConvolutionBackwardFilterAlgorithm_v7);
-#endif
-    WRAP_CUDNN_API(GetConvolutionBackwardFilterWorkspaceSize);
-#undef WRAP_CUDNN_API
 };
 
 } // namespace cuda
