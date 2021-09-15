@@ -59,7 +59,7 @@ TEST(TestImperative, Reduce) {
 }
 
 TEST(TestImperative, BatchNorm) {
-     auto op = OprAttr::make("BatchNorm");
+     auto op = OprAttr::make("BatchNormV1");
      auto&& attr = op->cast_final_safe<OprAttr>();
      using Param = opr::BatchNorm::Param;
      Param param;

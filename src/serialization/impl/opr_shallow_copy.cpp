@@ -207,7 +207,7 @@ cg::OperatorNodeBase* serialization::intl::copy_opr_shallow_default_impl(
     registry->dumper(dumper, opr);
 
     OprLoadContextMemory loader{opr.owner_graph(), dumper};
-    return registry->loader(loader, inputs, config);
+    return registry->loader(loader, inputs, config).opr();
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

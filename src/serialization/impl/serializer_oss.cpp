@@ -782,7 +782,8 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
     }
 
     // call loader
-    auto opr = registry->loader(*this, inputs, config);
+    auto accessor = registry->loader(*this, inputs, config);
+    auto opr = accessor.opr();
 
     // check opr type; note that:
     // 1. registry->type may be empty for dynamic opr loaders or legacy oprs
@@ -794,7 +795,7 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
             opr ? opr->dyn_typeinfo()->name : nullptr, registry->type->name);
     // record output vars; read output names
     size_t i = 0;
-    for (auto ovar : opr->output()) {
+    for (auto ovar : accessor.output()) {
         if (!ovar->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
             m_id2varnode.push_back(ovar);
             if (fbopr->output_name()) {

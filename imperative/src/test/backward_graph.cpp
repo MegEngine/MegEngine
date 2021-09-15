@@ -200,7 +200,7 @@ TEST(TestImperative, BatchNormGrad) {
     LogicalTensorDesc inp{TensorLayout{{N, C, H, W}, dtype::Float32()}, cn};
     LogicalTensorDesc stat{TensorLayout{{C}, dtype::Float32()}, cn};
     {
-        auto op = OprAttr::make("BatchNorm");
+        auto op = OprAttr::make("BatchNormV1");
         auto&& attr = op->cast_final_safe<OprAttr>();
         Param param;
         param.fwd_mode = Param::FwdMode::TRAINING;
@@ -210,7 +210,7 @@ TEST(TestImperative, BatchNormGrad) {
                                    {false, false, false, false, false, true});
     }
     {
-        auto op = OprAttr::make("BatchNorm");
+        auto op = OprAttr::make("BatchNormV1");
         auto&& attr = op->cast_final_safe<OprAttr>();
         Param param;
         param.fwd_mode = Param::FwdMode::TRAINING;

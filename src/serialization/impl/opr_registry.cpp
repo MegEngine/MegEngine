@@ -39,7 +39,7 @@ namespace {
         return inst;
     }
 
-    cg::OperatorNodeBase* dynamic_loader(
+    OprWithOutputAccessor dynamic_loader(
             OprLoadContext &ctx, const cg::VarNodeArray &inputs,
             const OperatorNodeConfig &config) {
         auto name = ctx.load_buf_with_len();
@@ -170,5 +170,21 @@ std::vector<std::pair<size_t, std::string>> OprRegistry::dump_registries() {
     return result;
 }
 #endif
+
+namespace {
+const VarNodeArray& default_accessor(const VarNodeArray& outputs) {
+    return outputs;
+}
+}
+
+OprWithOutputAccessor::OprWithOutputAccessor(cg::OperatorNodeBase* opr) : m_opr(opr){
+    m_accessor = &default_accessor;
+};
+OprWithOutputAccessor::OprWithOutputAccessor(cg::OperatorNodeBase* opr, Accessor accessor)
+        : OprWithOutputAccessor(opr) {
+    if (accessor) {
+        m_accessor = accessor;
+    }
+};
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

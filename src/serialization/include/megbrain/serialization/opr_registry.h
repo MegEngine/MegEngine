@@ -19,13 +19,33 @@ namespace serialization {
     class OprDumpContext;
     class OprLoadContext;
     class OprShallowCopyContext;
+    class OprWithOutputAccessor {
+        cg::OperatorNodeBase* m_opr;
+        using Accessor = thin_function<const VarNodeArray(const VarNodeArray&)>;
+        Accessor m_accessor;
+
+    public:
+        OprWithOutputAccessor(cg::OperatorNodeBase* opr);
+        OprWithOutputAccessor(cg::OperatorNodeBase* opr, Accessor accessor);
+        VarNode* output(size_t idx) const { return output().at(idx); }
+        VarNodeArray output() const { return m_accessor(m_opr->output()); }
+        VarNodeArray usable_output() const { return m_accessor(m_opr->usable_output()); }
+        cg::OperatorNodeBase* opr() { return m_opr; }
+    };
+
 
     //! dump opr internal params to OprDumpContext
     using OprDumper = thin_function<void(
             OprDumpContext &ctx, const cg::OperatorNodeBase &opr)>;
 
     //! load and restore operator from OprLoadContext
+    //! is also used by GraphLoadConfig.
     using OprLoader = thin_function<cg::OperatorNodeBase*(
+            OprLoadContext &ctx, const cg::VarNodeArray &inputs,
+            const OperatorNodeConfig &config)>;
+
+    //! loader that can change opr output map for compatibility
+    using OprLoaderWrapper = thin_function<OprWithOutputAccessor(
             OprLoadContext &ctx, const cg::VarNodeArray &inputs,
             const OperatorNodeConfig &config)>;
 
@@ -41,7 +61,7 @@ namespace serialization {
         uint64_t persist_type_id;
         std::string name;
         OprDumper dumper;
-        OprLoader loader;
+        OprLoaderWrapper loader;
         OprShallowCopy shallow_copy; //!< set to empty to use default impl
         uint64_t unversioned_type_id;
 

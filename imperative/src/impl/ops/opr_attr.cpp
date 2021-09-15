@@ -76,7 +76,7 @@ public:
     }
 };
 
-cg::OperatorNodeBase* apply_on_var_node(
+VarNodeArray apply_on_var_node(
         const OpDef& def, const VarNodeArray& inputs) {
     auto&& attr = def.cast_final_safe<OprAttr>();
     auto config = attr.config;
@@ -85,7 +85,7 @@ cg::OperatorNodeBase* apply_on_var_node(
     auto registry = serialization::OprRegistry::find_by_name(attr.type);
     mgb_assert(registry, "operator %s not found", attr.type.c_str());
     OprParamsLoadContext ctx{attr.param, inputs[0]->owner_graph()};
-    return registry->loader(ctx, inputs, config);
+    return registry->loader(ctx, inputs, config).usable_output();
 }
 
 std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {

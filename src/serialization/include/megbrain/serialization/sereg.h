@@ -167,16 +167,22 @@ namespace {  \
 /*!
  * \brief register opr serialization methods
  */
-#define MGB_SEREG_OPR(_cls, _arity) \
-    namespace { \
-        struct _OprReg##_cls { \
-            static void entry() { \
-                using Impl = ::mgb::serialization::OprLoadDumpImpl< \
-                    _cls, _arity>; \
-                MGB_SEREG_OPR_INTL_CALL_ADD(_cls, Impl::dump, Impl::load); \
-            } \
-        };  \
-    } \
+#define MGB_SEREG_OPR(_cls, _arity)                                            \
+    namespace {                                                                \
+    namespace ser = ::mgb::serialization;                                      \
+    struct _OprReg##_cls {                                                     \
+        using Impl = ser::OprLoadDumpImpl<_cls, _arity>;                       \
+        static ser::OprWithOutputAccessor wrap_loader(                         \
+                ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs, \
+                const mgb::cg::OperatorNodeConfig& config) {                   \
+            return ser::OprWithOutputAccessor(                                 \
+                    Impl::load(ctx, inputs, config));                          \
+        }                                                                      \
+        static void entry() {                                                  \
+            MGB_SEREG_OPR_INTL_CALL_ADD(_cls, Impl::dump, wrap_loader);        \
+        }                                                                      \
+    };                                                                         \
+    }                                                                          \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _OprReg##_cls)
 
 //! use to check type is complete or not, midout need a complete type
@@ -187,32 +193,34 @@ template <class T>
 struct IsComplete<T, decltype(void(sizeof(T)))> : std::true_type {};
 
 //! call OprRegistry::add with only loader, used for backward compatibility
-#define MGB_SEREG_OPR_COMPAT(_name, _load)                                  \
-    namespace {                                                             \
-    static_assert(IsComplete<_name>(),                                      \
-                  "need a complete type for MGB_SEREG_OPR_COMPAT");         \
-    struct _OprReg##_name {                                                 \
-        static cg::OperatorNodeBase* compat_loader(                         \
-                serialization::OprLoadContext& ctx,                         \
-                const cg::VarNodeArray& inputs,                             \
-                const OperatorNodeConfig& config) {                         \
-            return _load(                                                   \
-                    static_cast<serialization::OprLoadContextRawPOD&>(ctx), \
-                    inputs, config);                                        \
-        }                                                                   \
-        static void entry() {                                               \
-            ::mgb::serialization::OprRegistry::add(                         \
-                    {nullptr,                                               \
-                     MGB_HASH_STR(#_name),                                  \
-                     _MGB_SEREG_OPR_NAME_FROM_CLS(_name),                   \
-                     nullptr,                                               \
-                     compat_loader,                                         \
-                     {},                                                    \
-                     {}});                                                  \
-        }                                                                   \
-    };                                                                      \
-    }                                                                       \
+#define MGB_SEREG_OPR_COMPAT_WITH_ACCESSOR(_name, _load, _accessor)            \
+    namespace {                                                                \
+    static_assert(IsComplete<_name>(),                                         \
+                  "need a complete type for MGB_SEREG_OPR_COMPAT");            \
+    namespace ser = ::mgb::serialization;                                      \
+    struct _OprReg##_name {                                                    \
+        static ser::OprWithOutputAccessor compat_loader(                       \
+                ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs, \
+                const mgb::cg::OperatorNodeConfig& config) {                   \
+            auto&& ctx_ = static_cast<ser::OprLoadContextRawPOD&>(ctx);        \
+            return ser::OprWithOutputAccessor(_load(ctx_, inputs, config),     \
+                                              _accessor);                      \
+        }                                                                      \
+        static void entry() {                                                  \
+            ser::OprRegistry::add({nullptr,                                    \
+                                   MGB_HASH_STR(#_name),                       \
+                                   _MGB_SEREG_OPR_NAME_FROM_CLS(_name),        \
+                                   nullptr,                                    \
+                                   compat_loader,                              \
+                                   {},                                         \
+                                   {}});                                       \
+        }                                                                      \
+    };                                                                         \
+    }                                                                          \
     MGB_SEREG_OPR_INTL_CALL_ENTRY(_name, _OprReg##_name)
+
+#define MGB_SEREG_OPR_COMPAT(_name, _load) \
+    MGB_SEREG_OPR_COMPAT_WITH_ACCESSOR(_name, _load, nullptr)
 
 /*!
  * \brief use \p _copy to implement shallow copy for given operator

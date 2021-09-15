@@ -16,14 +16,13 @@
 #include "megbrain/opr/dnn/correlation.h"
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
-#include "megbrain/opr/dnn/sliding_window_transpose.h"
-#include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
+#include "megbrain/opr/dnn/sliding_window_transpose.h"
 #include "megbrain/opr/dnn/tqt.h"
 #include "megbrain/serialization/sereg.h"
 #include "megdnn/opr_param_defs.h"
@@ -390,6 +389,7 @@ struct OprMaker<opr::BatchNorm, 0> {
     }
 };
 
+// OprMaker in MGB_SEREG_OPR only support unique output opr
 template <>
 struct OprMaker<opr::BatchNormBackward, 6> {
     using Param = opr::BatchNormBackward::Param;
@@ -398,8 +398,8 @@ struct OprMaker<opr::BatchNormBackward, 6> {
                                       ComputingGraph& graph,
                                       const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
-        return opr::BatchNormBackward::make(i[0], i[1], i[2], i[3], i[4], i[5], param,
-                                            config)[0]
+        return opr::BatchNormBackward::make(i[0], i[1], i[2], i[3], i[4], i[5],
+                                            param, config)[0]
                 .node()
                 ->owner_opr();
     }
@@ -575,8 +575,10 @@ MGB_SEREG_OPR(Convolution3DBackwardFilter, 0);
 using ConvBiasForwardV4 = ConvBiasForward;
 MGB_SEREG_OPR(ConvBiasForwardV4, 0);
 
-MGB_SEREG_OPR(BatchNorm, 0);
-MGB_SEREG_OPR(BatchNormBackward, 6);
+using BatchNormV1 = BatchNorm;
+using BatchNormBackwardV1 = BatchNormBackward;
+MGB_SEREG_OPR(BatchNormV1, 0);
+MGB_SEREG_OPR(BatchNormBackwardV1, 6);
 
 using LocalShareForwardV1 = LocalShareForward;
 using LocalShareBackwardDataV1 = LocalShareBackwardData;
