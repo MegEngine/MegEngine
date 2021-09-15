@@ -15,6 +15,8 @@ from ..quantization.utils import QParams, QuantMode, fake_quant_tensor
 
 
 class FakeQuantize(_FakeQuantize, QParamsModuleMixin):
+    r"""A module to do quant and dequant according to :attr:`~.FakeQuantize.qparams`."""
+
     def __init__(
         self, dtype: Union[str, QuantDtypeMeta], enable: bool = True, **kwargs
     ):
@@ -35,9 +37,10 @@ class FakeQuantize(_FakeQuantize, QParamsModuleMixin):
         return self.qparams
 
     def set_qparams(self, qparams: QParams):
-        r"""
+        r"""Initialize :attr:`~.FakeQuantize.qparams`.
+        
         Args:
-          qparams: used to set initial scale.
+            qparams: used to set initial ``scale`` and ``zero_point``.
         """
         if qparams.scale is None:
             raise AssertionError("Can not get an initialized scale")

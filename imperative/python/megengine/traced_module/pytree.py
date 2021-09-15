@@ -150,6 +150,9 @@ def tree_flatten(
     is_leaf: Callable = _is_leaf,
     is_const_leaf: Callable = _is_const_leaf,
 ):
+    r"""Flattens a object into a list of values and a :calss:`TreeDef` that can be used
+    to reconstruct the object.
+    """
     if type(values) not in SUPPORTED_TYPE:
         assert is_leaf(values), values
         node = LeafDef(leaf_type(values))
@@ -169,6 +172,15 @@ def tree_flatten(
 
 
 class TreeDef:
+    r"""A ``TreeDef`` represents the structure of a pytree.
+
+    Args:
+        type: the type of root Node of the pytree.
+        aux_data: some const data that is useful in unflattening the pytree.
+        children_defs: ``TreeDef`` for each child of the root Node.
+        num_leaves: the number of leaves.
+    """
+
     def __init__(self, type, aux_data, children_defs):
         self.type = type
         self.aux_data = aux_data
@@ -176,6 +188,9 @@ class TreeDef:
         self.num_leaves = sum(ch.num_leaves for ch in children_defs)
 
     def unflatten(self, leaves):
+        r"""Given a list of values and a ``TreeDef``, builds a object.
+        This is the inverse operation of ``tree_flatten``.
+        """
         assert len(leaves) == self.num_leaves
         start = 0
         children = []
@@ -196,13 +211,10 @@ class TreeDef:
             )
         )
 
-    def __lt__(self, other):
-        return self.__hash__() < other.__hash__()
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
-    def __gt__(self, other):
-        return self.__hash__() > other.__hash__()
-
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return (
             self.type == other.type
             and self.aux_data == other.aux_data
@@ -226,6 +238,9 @@ class LeafDef(TreeDef):
         assert len(leaves) == 1
         assert isinstance(leaves[0], self.type), self.type
         return leaves[0]
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
     def __eq__(self, other):
         if isinstance(self.const_val, np.ndarray):

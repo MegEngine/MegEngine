@@ -11,29 +11,29 @@ from typing import Any, Dict, List, Tuple, Type
 
 import numpy
 
+from .. import get_logger
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..module import Module
 from ..tensor import Tensor
 
+logger = get_logger(__name__)
+
 
 class Node:
-    r"""``Node`` represents the variables （Tensor/Module/other python object) used in Module's forward method.
-    They are inputs/outputs of Expr(the operations on variables).
-
-    Args:
-        expr: the Expr which produces the node
-        name: the name of the node
+    r"""``Node`` represents the variables (``Tensor``, ``Module``) used in Module's forward method.
+    They are inputs/outputs of Expr (the operations on variables).
     """
 
-    expr = None
-    __total_id = 0
-    _id = None
+    expr = None  # type: Expr
+    r"""The Expr which produces the Node."""
+    __total_id = 0  # type: int
+    _id = None  # type: int
     _top_graph = None  # type: weakref.ReferenceType
-    _name = None
-    _orig_name = None
-    _format_spec = ""
+    _name = None  # type: str
+    _orig_name = None  # type: str
+    _format_spec = ""  # type: str
 
-    def __init__(self, expr: "Expr", name: str = None, orig_name: str = None):
+    def __init__(self, expr: "Expr", name: str, orig_name: str):
         self.expr = expr
         self.users = []  # List[Expr]
         self._id = Node.__total_id
@@ -74,31 +74,50 @@ class Node:
             return name if name else ("%d" % self._id)
 
     @property
+    def name(self):
+        r"""Return the name of this Node."""
+        return self._name
+
+    @name.setter
+    def name(self, new_name: str):
+        graph = self.top_graph
+        assert graph is not None, "The parent graph of this Node cannot be None."
+        assert new_name not in graph._used_names, (
+            "The name(%s) is already in use. Please try a different one again."
+            % (new_name)
+        )
+        new_name = graph._create_unique_name(new_name)
+        self._name = new_name
+        self._orig_name = new_name
+
+    @property
     def top_graph(self):
+        r"""Get the parent graph of this Node."""
         if self._top_graph:
             return self._top_graph()
         return None
 
     @classmethod
-    def set_format_spec(cls, str):
+    def _set_format_spec(cls, str):
         old_format_spec = cls._format_spec
         cls._format_spec = str
         return old_format_spec
 
     @classmethod
-    def get_total_id(cls):
+    def _get_next_id(cls):
         return cls.__total_id
 
     @classmethod
-    def set_total_id(cls, id: int = 0):
+    def _set_next_id(cls, id: int = 0):
         assert isinstance(id, int)
         cls.__total_id = id
 
 
 class ModuleNode(Node):
     r"""``ModuleNode`` represents the Module objects."""
-
+    
     module_type = Module  # type: Type[Module]
+    r"""The type of the Module correspending to the ModuleNode."""
     _owner = None  # type: weakref.ReferenceType
 
     def __init__(self, expr: "Expr", name: str = None, orig_name: str = None):
@@ -116,6 +135,11 @@ class ModuleNode(Node):
 
     @property
     def owner(self):
+        r"""Get the ``Module`` corresponding to this ``ModuleNode``.
+
+        Returns:
+            An :calss:`~.Module`.
+        """
         if self._owner:
             return self._owner()
         return None
@@ -145,6 +169,7 @@ class TensorNode(Node):
 
     @property
     def shape(self):
+        r"""Get the shape of this Node."""
         return self._shape
 
     @shape.setter
@@ -153,6 +178,7 @@ class TensorNode(Node):
 
     @property
     def dtype(self):
+        r"""Get the dtype of this Node."""
         return self._dtype
 
     @dtype.setter
@@ -161,6 +187,7 @@ class TensorNode(Node):
 
     @property
     def device(self):
+        r"""Get the device of this Node pointed Tensor."""
         return self._device
 
     @device.setter
@@ -169,6 +196,7 @@ class TensorNode(Node):
 
     @property
     def qparams(self):
+        r"""Get the :calss:`QParams` of this Node."""
         return self._qparams
 
     @qparams.setter
@@ -177,10 +205,16 @@ class TensorNode(Node):
 
     @property
     def value(self):
+        r"""Get the bound Tensor of this Node."""
         return self._value
 
     @value.setter
     def value(self, value):
+        r"""Bind a Tensor to this Node.
+
+        Args:
+            value: A :class:`Tensor`.
+        """
         if isinstance(value, RawTensor) and NodeMixin.get(value, None) is not None:
             setattr(value, "_NodeMixin__node", None)
         self._value = value
