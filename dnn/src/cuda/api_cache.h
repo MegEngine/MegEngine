@@ -20,7 +20,7 @@ class CudnnConvDescParam {
 public:
     cudnnConvolutionDescriptor_t value;
     Empty serialize(StringSerializer& ser, Empty) {
-        int nbDims = MEGDNN_MAX_NDIM;
+        constexpr int nbDims = MEGDNN_MAX_NDIM;
         int padA[MEGDNN_MAX_NDIM];
         int strideA[MEGDNN_MAX_NDIM];
         int dilationA[MEGDNN_MAX_NDIM];
@@ -59,7 +59,7 @@ class CudnnTensorDescParam {
 public:
     cudnnTensorDescriptor_t value;
     Empty serialize(StringSerializer& ser, Empty) {
-        int nbDims = MEGDNN_MAX_NDIM;
+        constexpr int nbDims = MEGDNN_MAX_NDIM;
         cudnnDataType_t dataType;
         int dimA[MEGDNN_MAX_NDIM];
         int strideA[MEGDNN_MAX_NDIM];
@@ -74,7 +74,7 @@ public:
         return Empty{};
     }
     Empty deserialize(StringSerializer& ser, Empty) {
-        int nbDims = MEGDNN_MAX_NDIM;
+        constexpr int nbDims = MEGDNN_MAX_NDIM;
         cudnnDataType_t dataType;
         int dimA[MEGDNN_MAX_NDIM];
         int strideA[MEGDNN_MAX_NDIM];
@@ -92,7 +92,7 @@ class CudnnFilterDescParam {
 public:
     cudnnFilterDescriptor_t value;
     Empty serialize(StringSerializer& ser, Empty) {
-        int nbDims = MEGDNN_MAX_NDIM;
+        constexpr int nbDims = MEGDNN_MAX_NDIM;
         cudnnDataType_t dataType;
         cudnnTensorFormat_t format;
         int filterDimA[MEGDNN_MAX_NDIM];
@@ -107,7 +107,7 @@ public:
         return Empty{};
     }
     Empty deserialize(StringSerializer& ser, Empty) {
-        int nbDims = MEGDNN_MAX_NDIM;
+        constexpr int nbDims = MEGDNN_MAX_NDIM;
         cudnnDataType_t dataType;
         cudnnTensorFormat_t format;
         int filterDimA[MEGDNN_MAX_NDIM];
