@@ -131,18 +131,12 @@ public:
     T read_plain() {
         static_assert(std::is_trivially_copyable<T>::value, "invalid type");
         T ret;
-        std::memcpy(&ret, m_buffer.data() + m_cursor, sizeof(T));
+        memcpy(&ret, m_buffer.data() + m_cursor, sizeof(T));
         m_cursor += sizeof(T);
         return ret;
     }
     template <typename T>
-    void read_plain(T* dest) {
-        static_assert(std::is_trivially_copyable<T>::value, "invalid type");
-        std::memcpy(dest, m_buffer.data() + m_cursor, sizeof(T));
-        m_cursor += sizeof(T);
-    }
-    template <typename T>
-    void write_plain(const T& value) {
+    void write_plain(T value) {
         static_assert(std::is_trivially_copyable<T>::value,
                       "type should be trivially copyable");
         m_buffer.append(reinterpret_cast<const char*>(&value), sizeof(T));
@@ -150,7 +144,7 @@ public:
     std::string take() { return std::move(m_buffer); }
     void reset(std::string new_buf) {
         m_cursor = 0;
-        m_buffer = std::move(new_buf);
+        m_buffer = new_buf;
     }
 };
 
@@ -159,7 +153,7 @@ struct Empty {};
 // in: seq[1, 2, ..., m]
 // out: seq[N+1, N+2, ... N+m]
 template <std::size_t N, std::size_t... Seq>
-inline std::index_sequence<N + Seq...> inc_index_sequence(
+static std::index_sequence<N + Seq...> inc_index_sequence(
         std::index_sequence<Seq...>) {
     return {};
 }
@@ -178,7 +172,7 @@ private:
 
     // deconstruct tuple and call functor
     template <typename TFunctor, size_t... Indices>
-    auto call_helper(TFunctor&& functor, std::index_sequence<Indices...>) {
+    auto call_helper(TFunctor functor, std::index_sequence<Indices...>) {
         return functor(std::get<Indices>(m_storage).value...);
     }
 
@@ -209,7 +203,7 @@ private:
     template <size_t Index, size_t... Indices, typename TArg, typename... TArgs>
     void set_values_helper(std::index_sequence<Index, Indices...>, TArg&& arg,
                            TArgs&&... args) {
-        std::get<Index>(m_storage).value = std::forward<TArg>(arg);
+        std::get<Index>(m_storage).value = arg;
         set_values_helper(std::index_sequence<Indices...>(),
                           std::forward<TArgs>(args)...);
     }
@@ -259,7 +253,7 @@ public:
     }
 
     Empty deserialize(StringSerializer& ser, Empty) {
-        ser.read_plain(&value);
+        value = ser.read_plain<T>();
         return Empty{};
     }
 };
@@ -291,8 +285,7 @@ private:
 
     template <size_t... Indices>
     static auto declbundle_helper(std::index_sequence<Indices...>)
-            -> ParamBundle<std::remove_reference_t<
-                    decltype(std::get<Indices>(declargs()))>...> {
+            -> ParamBundle<decltype(std::get<Indices>(declargs()))...> {
         return {};
     }
 
@@ -319,11 +312,9 @@ public:
     // declare new input
     template <typename TNewInput>
     auto input() {
-        static_assert(std::tuple_size<TOutputs>::value == 0,
-                      "input arg cannot be declared after output");
-        using TNewInputs =
-                decltype(std::tuple_cat(std::declval<TInputs>(),
-                                        std::declval<std::tuple<TNewInput>>()));
+        using TNewInputs = decltype(
+                std::tuple_cat(std::declval<TInputs>(),
+                               std::make_tuple(std::declval<TNewInput>())));
         return FunctionCacheBuilder<TRet, TNewInputs, TOutputs>{};
     }
     // declare new output
@@ -331,29 +322,31 @@ public:
     auto output() {
         using TNewOutputs = decltype(
                 std::tuple_cat(std::declval<TOutputs>(),
-                               std::declval<std::tuple<TNewOutput>>()));
+                               std::make_tuple(std::declval<TNewOutput>())));
         return FunctionCacheBuilder<TRet, TInputs, TNewOutputs>{};
     }
     // summary
     template <typename TFunctor>
-    function_t build(TFunctor&& func) {
-        constexpr size_t n_inputs = std::tuple_size<TInputs>::value;
-        constexpr size_t n_outputs = std::tuple_size<TOutputs>::value;
+    function_t build(TFunctor func) {
         auto cache = std::make_shared<FunctionCache<std::string(bundle_t)>>();
         // bundle -> ser(in args)
         cache->key_mapper = [](bundle_t bundle) {
             StringSerializer ser;
-            bundle.template serialize_params<0, n_inputs>(ser);
+            bundle.template serialize_params<0,
+                                             std::tuple_size<TInputs>::value>(
+                    ser);
             return ser.take();
         };
         // bundle -> ser(out args)
-        cache->value_mapper = [func](bundle_t bundle) {
+        cache->value_mapper = [=](bundle_t bundle) {
             StringSerializer ser;
             TRet ret;
             ret.value = bundle.call_by(func);
             ret.serialize(ser, Empty{});
-            bundle.template serialize_params<n_inputs, n_inputs + n_outputs>(
-                    ser);
+            bundle.template serialize_params<
+                    std::tuple_size<TInputs>::value,
+                    std::tuple_size<TInputs>::value +
+                            std::tuple_size<TOutputs>::value>(ser);
             return ser.take();
         };
         return [=](auto&&... args) mutable {
@@ -368,6 +361,8 @@ public:
                     std::forward<decltype(args)>(args)...);
             ser.reset((*cache)(bundle));
             ret.deserialize(ser, Empty{});
+            constexpr size_t n_inputs = std::tuple_size<TInputs>::value;
+            constexpr size_t n_outputs = std::tuple_size<TOutputs>::value;
             bundle.template deserialize_params<n_inputs, n_inputs + n_outputs>(
                     ser);
             return ret.value;
@@ -399,8 +394,7 @@ public:
         return *value;
     }
     T deserialize(StringSerializer& ser, Empty) {
-        ser.read_plain(value);
-        return *value;
+        return *value = ser.read_plain<T>();
     }
 };
 
@@ -408,20 +402,16 @@ public:
 template <typename TSize, typename TItem>
 class ArrayParam {
 public:
-    decltype(std::declval<TItem>().value)* value;
+    TItem* value;
     Empty serialize(StringSerializer& ser, TSize size) {
-        TItem param;
         for (TSize i = 0; i < size; ++i) {
-            param.value = value[i];
-            param.serialize(ser, Empty{});
+            ser.write_plain(value[i]);
         }
         return Empty{};
     }
     Empty deserialize(StringSerializer& ser, TSize size) {
-        TItem param;
         for (TSize i = 0; i < size; ++i) {
-            param.deserialize(ser, Empty{});
-            value[i] = param.value;
+            value[i] = ser.read_plain<TItem>();
         }
         return Empty{};
     }

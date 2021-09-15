@@ -20,16 +20,14 @@ class CudnnConvDescParam {
 public:
     cudnnConvolutionDescriptor_t value;
     Empty serialize(StringSerializer& ser, Empty) {
-        constexpr int maxNbDims = CUDNN_DIM_MAX - 2;
-        int nbDims = maxNbDims;
-        int padA[maxNbDims];
-        int strideA[maxNbDims];
-        int dilationA[maxNbDims];
+        int nbDims = MEGDNN_MAX_NDIM;
+        int padA[MEGDNN_MAX_NDIM];
+        int strideA[MEGDNN_MAX_NDIM];
+        int dilationA[MEGDNN_MAX_NDIM];
         cudnnConvolutionMode_t mode;
         cudnnDataType_t computeType;
-        cudnnGetConvolutionNdDescriptor(value, maxNbDims, &nbDims, padA,
-                                        strideA, dilationA, &mode,
-                                        &computeType);
+        cudnnGetConvolutionNdDescriptor(value, nbDims, &nbDims, padA, strideA,
+                                        dilationA, &mode, &computeType);
         ser.write_plain(nbDims);
         for (int i = 0; i < nbDims; ++i) {
             ser.write_plain(padA[i]);
@@ -40,8 +38,23 @@ public:
         ser.write_plain(computeType);
         return Empty{};
     }
+    Empty deserialize(StringSerializer& ser, Empty) {
+        int ndim = ser.read_plain<int>();
+        int padA[MEGDNN_MAX_NDIM];
+        int strideA[MEGDNN_MAX_NDIM];
+        int dilationA[MEGDNN_MAX_NDIM];
+        for (int i = 0; i < ndim; ++i) {
+            padA[i] = ser.read_plain<int>();
+            strideA[i] = ser.read_plain<int>();
+            dilationA[i] = ser.read_plain<int>();
+        }
+        cudnnConvolutionMode_t mode = ser.read_plain<cudnnConvolutionMode_t>();
+        cudnnDataType_t computeType = ser.read_plain<cudnnDataType_t>();
+        cudnnSetConvolutionNdDescriptor(value, ndim, padA, strideA, dilationA,
+                                        mode, computeType);
+        return Empty{};
+    }
 };
-
 class CudnnTensorDescParam {
 public:
     cudnnTensorDescriptor_t value;
@@ -50,8 +63,8 @@ public:
         cudnnDataType_t dataType;
         int dimA[MEGDNN_MAX_NDIM];
         int strideA[MEGDNN_MAX_NDIM];
-        cudnnGetTensorNdDescriptor(value, MEGDNN_MAX_NDIM, &dataType, &nbDims,
-                                   dimA, strideA);
+        cudnnGetTensorNdDescriptor(value, nbDims, &dataType, &nbDims, dimA,
+                                   strideA);
         ser.write_plain(nbDims);
         for (int i = 0; i < nbDims; ++i) {
             ser.write_plain(dimA[i]);
@@ -60,8 +73,21 @@ public:
         ser.write_plain(dataType);
         return Empty{};
     }
+    Empty deserialize(StringSerializer& ser, Empty) {
+        int nbDims = MEGDNN_MAX_NDIM;
+        cudnnDataType_t dataType;
+        int dimA[MEGDNN_MAX_NDIM];
+        int strideA[MEGDNN_MAX_NDIM];
+        nbDims = ser.read_plain<int>();
+        for (int i = 0; i < nbDims; ++i) {
+            dimA[i] = ser.read_plain<int>();
+            strideA[i] = ser.read_plain<int>();
+        }
+        dataType = ser.read_plain<cudnnDataType_t>();
+        cudnnSetTensorNdDescriptor(value, dataType, nbDims, dimA, strideA);
+        return Empty{};
+    }
 };
-
 class CudnnFilterDescParam {
 public:
     cudnnFilterDescriptor_t value;
@@ -80,29 +106,18 @@ public:
         ser.write_plain(format);
         return Empty{};
     }
-};
-
-template <typename T>
-class CudnnConvAlgoPerfParam {
-public:
-    T value;
-    Empty serialize(StringSerializer& ser, Empty) {
-        ser.write_plain(value.algo);
-        ser.write_plain(value.status);
-        ser.write_plain(value.time);
-        ser.write_plain(value.memory);
-        ser.write_plain(value.determinism);
-        ser.write_plain(value.mathType);
-        return Empty{};
-    }
-
     Empty deserialize(StringSerializer& ser, Empty) {
-        ser.read_plain(&value.algo);
-        ser.read_plain(&value.status);
-        ser.read_plain(&value.time);
-        ser.read_plain(&value.memory);
-        ser.read_plain(&value.determinism);
-        ser.read_plain(&value.mathType);
+        int nbDims = MEGDNN_MAX_NDIM;
+        cudnnDataType_t dataType;
+        cudnnTensorFormat_t format;
+        int filterDimA[MEGDNN_MAX_NDIM];
+        nbDims = ser.read_plain<int>();
+        for (int i = 0; i < nbDims; ++i) {
+            filterDimA[i] = ser.read_plain<int>();
+        }
+        dataType = ser.read_plain<cudnnDataType_t>();
+        format = ser.read_plain<cudnnTensorFormat_t>();
+        cudnnSetFilterNdDescriptor(value, dataType, format, nbDims, filterDimA);
         return Empty{};
     }
 };

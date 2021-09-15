@@ -168,8 +168,7 @@ HandleImpl::CUDNN::CUDNN(cudnnHandle_t handle) {
                     .input<CudnnTensorDescParam>()
                     .input<Param<int>>()
                     .output<RefArraySizeParam<int>>()
-                    .output<ArrayParam<int,
-                                       Param<cudnnConvolutionFwdAlgoPerf_t>>>()
+                    .output<ArrayParam<int, cudnnConvolutionFwdAlgoPerf_t>>()
                     .ret<Param<cudnnStatus_t>>()
                     .build(&cudnnGetConvolutionForwardAlgorithm_v7);
     GetConvolutionForwardAlgorithmMaxCount =
@@ -200,8 +199,8 @@ HandleImpl::CUDNN::CUDNN(cudnnHandle_t handle) {
                     .input<CudnnTensorDescParam>()
                     .input<Param<int>>()
                     .output<RefArraySizeParam<int>>()
-                    .output<ArrayParam<
-                            int, Param<cudnnConvolutionBwdDataAlgoPerf_t>>>()
+                    .output<ArrayParam<int,
+                                       cudnnConvolutionBwdDataAlgoPerf_t>>()
                     .ret<Param<cudnnStatus_t>>()
                     .build(&cudnnGetConvolutionBackwardDataAlgorithm_v7);
     GetConvolutionBackwardDataAlgorithmMaxCount =
@@ -232,8 +231,8 @@ HandleImpl::CUDNN::CUDNN(cudnnHandle_t handle) {
                     .input<CudnnFilterDescParam>()
                     .input<Param<int>>()
                     .output<RefArraySizeParam<int>>()
-                    .output<ArrayParam<
-                            int, Param<cudnnConvolutionBwdFilterAlgoPerf_t>>>()
+                    .output<ArrayParam<int,
+                                       cudnnConvolutionBwdFilterAlgoPerf_t>>()
                     .ret<Param<cudnnStatus_t>>()
                     .build(&cudnnGetConvolutionBackwardFilterAlgorithm_v7);
     GetConvolutionBackwardFilterAlgorithmMaxCount =
