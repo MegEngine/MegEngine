@@ -144,10 +144,13 @@ def get_mem_status_bytes(device: Optional[str] = None):
 
 
 def get_cuda_compute_capability(device: int, device_type=DeviceType.CUDA) -> int:
-    r"""
-    Get compute capability of the specified device.
+    r"""Gets compute capability of the specified device.
 
-    It returns a version number, or `SM version`.
+    Args:
+        device: device number.
+
+    Returns:
+        a version number, or `SM version`.
     """
     return _get_cuda_compute_capability(device, device_type)
 
