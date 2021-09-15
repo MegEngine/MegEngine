@@ -16,7 +16,7 @@
 # Build env prepare
 ## Prerequisites
 
-Most of the dependencies of MegBrain(MegEngine) are located in [third_party](third_party) directory, which can be prepared by executing:
+Most of the dependencies of MegBrain(MegEngine) are located in [third_party](../../third_party) directory, which can be prepared by executing:
 
 ```bash
 ./third_party/prepare.sh

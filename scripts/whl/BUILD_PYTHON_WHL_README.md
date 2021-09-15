@@ -6,7 +6,7 @@
 # Build env prepare
 ## Linux
 
-* refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md) Linux host build(CUDA env) section to init CUDA environment
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) Linux host build(CUDA env) section to init CUDA environment
 ```bash
 1: please refer to https://docs.docker.com/engine/security/rootless/ to enable rootless docker env
 2: cd ./scripts/whl/manylinux2014
@@ -24,14 +24,14 @@
 ```
 
 ## MacOS
-* refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md) MacOS section to init base build environment
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) MacOS section to init base build environment
 * init other wheel build depends env by command:
 ```bash
 ./scripts/whl/macos/macos_whl_env_prepare.sh
 ```
 
 ## Windows
-* refer to [BUILD_README.md](scripts/cmake-build/BUILD_README.md) Windows section to init base build environment
+* refer to [BUILD_README.md](../cmake-build/BUILD_README.md) Windows section to init base build environment
 
 # How to build
 Note: Guarantee the git repo is mounted in docker container, do not use `git submodule update --init` in to init Project repo
