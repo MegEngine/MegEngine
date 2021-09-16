@@ -1589,6 +1589,67 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
         return new_opr;
     };
 
+    auto replace_concat_opr = [&relayout_inp_to_chw](
+                                      OperatorNodeBase* opr,
+                                      const VarNodeArray& new_inp) {
+        //! map nchw axis to CD4 axis(n h c/4 w 4)
+        auto axis_nchw_to_cd4_map = [=](int32_t org_axis) -> int32_t {
+            mgb_assert(org_axis >= 0 && org_axis <= 3);
+            int32_t ret = 0;
+            if (0 == org_axis) {
+                ret = 0;
+            } else if (1 == org_axis) {
+                ret = 2;
+            } else if (2 == org_axis) {
+                ret = 1;
+            } else if (3 == org_axis) {
+                mgb_throw(InternalError,
+                          "Do not support axis=3 for concat bypass for CD4!");
+            } else {
+                mgb_throw(InternalError,
+                          "Do not support axis for concat pass, may input is "
+                          "not NCHW format!");
+            }
+
+            return ret;
+        };
+
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto nchw_axis = opr->cast_final_safe<opr::Concat>().param().axis;
+        if (nchw_axis < 0 || nchw_axis > 3) {
+            mgb_log_warn("concat pass fallback to relayout chw\n");
+            return relayout_inp_to_chw(opr, new_inp);
+        }
+        bool can_exec_cd4 = true;
+        //! only consider OpenCL CD4, if other backend has relayout performance
+        //! issue, may add other bypass format
+        for (size_t i = 0; i < opr->input().size(); i++) {
+            if (opr->input(i)->format().type() != TensorFormat::Type::DEFAULT ||
+                opr->input(i)->shape()[1] % 4 != 0 ||
+                new_inp[i]->shape().ndim != 5 ||
+                new_inp[i]->format().type() !=
+                        TensorFormat::Type::IMAGE2D_PACK4 ||
+                nchw_axis == 3) {
+                can_exec_cd4 = false;
+                break;
+            }
+        }
+
+        if (!can_exec_cd4) {
+            mgb_log_warn("concat pass fallback to relayout chw");
+            return relayout_inp_to_chw(opr, new_inp);
+        }
+
+        megdnn::param::Axis param;
+        //! now only support nchw bypass to CD4
+        mgb_log_warn("concat pass bypass to CD4");
+        param.axis = axis_nchw_to_cd4_map(nchw_axis);
+        return opr::Concat::make(VarNodeArrayView(new_inp), param,
+                                 opr->config())
+                .node()
+                ->owner_opr();
+    };
+
     auto replace_elemwise_opr = [&relayout_inp_to_chw](
                                         OperatorNodeBase* opr,
                                         const VarNodeArray& new_inp) {
@@ -1654,7 +1715,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::ConvolutionBackwardData::typeinfo()] = replace_deconv_opr;
     replace_func[opr::PoolingForward::typeinfo()] = replace_pooling_opr;
     replace_func[opr::Elemwise::typeinfo()] = replace_elemwise_opr;
-    replace_func[opr::Concat::typeinfo()] = relayout_inp_to_chw;
+    replace_func[opr::Concat::typeinfo()] = replace_concat_opr;
     replace_func[opr::Reshape::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::GetVarShape::typeinfo()] = relayout_inp_to_chw;
     replace_func[opr::Dimshuffle::typeinfo()] = relayout_inp_to_chw;

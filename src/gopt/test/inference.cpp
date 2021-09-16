@@ -1591,6 +1591,77 @@ TEST(TestGoptInference, ConvertFormatPadIC) {
     MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
 }
 
+TEST(TestGoptInference, concatbypass) {
+    // hwcd4 is only supported in naive handle
+    NaiveMegDNNHandleScope naive_megdnn_handle;
+
+    HostTensorGenerator<> gen;
+    auto cn = CompNode::load("cpu0");
+    auto graph = ComputingGraph::make();
+    graph->options().graph_opt_level = 0;
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
+                .rename(name);
+    };
+
+    auto host_inp1 = gen({1, 6, 16, 16}, cn),
+         host_inp2 = gen({1, 6, 32, 32}, cn);
+    auto inp1 = opr::Host2DeviceCopy::make(*graph, host_inp1),
+         inp2 = opr::Host2DeviceCopy::make(*graph, host_inp2);
+
+    auto shape_tmp = mkcvar("tmp", {32, 32});
+    auto shape_of = opr::GetVarShape::make(shape_tmp);
+    opr::Resize::Param param_resize;
+    param_resize.format = opr::Resize::Param::Format::NCHW;
+    auto resize = opr::ResizeForward::make(inp1, shape_of, param_resize);
+
+    //! this concat should forward to chw
+    auto concat = opr::Concat::make({inp2, resize}, 1);
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 1;
+    param.sparse = opr::Convolution::Param::Sparse::DENSE;
+    auto w1 = mkcvar("w1", {12, 12, 3, 3});
+    auto w2 = mkcvar("w1", {12, 24, 3, 3});
+    auto y = opr::Convolution::make(concat, w1, param);
+    //! this concat should bypass CD4
+    y = opr::Concat::make({y, y}, 0);
+    y = opr::Convolution::make(y, w1, param);
+    //! this concat should bypass CD4
+    y = opr::Concat::make({y, y}, 1);
+    y = opr::Convolution::make(y, w2, param);
+    //! this concat should bypass CD4
+    y = opr::Concat::make({y, y}, 2);
+    y = opr::Convolution::make(y, w1, param);
+    SymbolVar y_opt;
+    auto options = gopt::OptimizeForInferenceOptions{};
+    options.enable_nhwcd4();
+    unpack_vector(gopt::optimize_for_inference({y}, options), y_opt);
+
+    HostTensorND host_y_opt, host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y),
+                                make_callback_copy(y_opt, host_y_opt)});
+    size_t relayout_format_nr = 0;
+    auto cb = [&](cg::OperatorNodeBase* opr) {
+        if (opr->try_cast_final<opr::Convolution>()) {
+            auto conv_inputs = opr->input();
+            for (auto& input : conv_inputs) {
+                if (std::string::npos !=
+                    std::string(input->cname()).find("relayout_format")) {
+                    relayout_format_nr++;
+                }
+            }
+        }
+        return true;
+    };
+    func->iter_opr_seq(cb);
+    func->execute();
+    MGB_ASSERT_TENSOR_NEAR(host_y, host_y_opt, 1e-3);
+    ASSERT_EQ(opr::Convolution::Param::Format::NHWCD4,
+              find_opr<opr::Convolution>(y_opt).param().format);
+    ASSERT_EQ(1, relayout_format_nr);
+}
+
 TEST(TestGoptInference, ConvertBatchNormPass) {
     auto cn = CompNode::load("cpu0");
 
