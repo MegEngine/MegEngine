@@ -214,8 +214,12 @@ ShuffleRNGForward::ShuffleRNGForward(VarNode* data, const Param& param,
                                      const OperatorNodeConfig& config)
         : Super({data->owner_graph(), config, "shuffle_rng", {data}}, param) {
     add_input({data});
-    add_output(None)->dtype(data->dtype());
-    add_output(None)->dtype(dtype::Int32{});
+    add_output(None)
+            ->dtype(data->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    add_output(None)
+            ->dtype(dtype::Int32{})
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     cg::add_workspace_output(this);
     add_equivalence_component<ScalarHash<void*>>(this);
 }
@@ -266,10 +270,25 @@ void ShuffleRNGForward::add_input_layout_constraint() {
 };
 
 void ShuffleRNGForward::scn_do_execute() {
+    auto&& ret = output(0);
+    if (ret->layout().is_empty()) {
+        mgb_assert(ret->dev_tensor().empty());
+        return;
+    }
     m_dnn_opr->exec(input(0)->dev_tensor().as_megdnn(),
                     output(0)->dev_tensor().as_megdnn(),
                     output(1)->dev_tensor().as_megdnn(),
                     get_megdnn_workspace_from_var(output(2)));
+}
+
+cg::OperatorNodeBase::NodeProp* ShuffleRNGForward::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    prop->add_flag(NodeProp::Flag::IMPURE_FUNC);
+    for (auto i : input()) {
+        prop->add_dep_type_existing_var(i,
+                                        NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return prop;
 }
 
 #if MGB_ENABLE_GRAD

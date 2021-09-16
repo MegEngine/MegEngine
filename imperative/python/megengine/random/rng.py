@@ -225,7 +225,7 @@ def _shuffle(inp: Tensor, seed: int, handle: int) -> Tensor:
     assert inp.size > 0, "size needs to be greater than 0"
     op = ShuffleRNG(seed=seed, handle=handle)
     output, _ = apply(op, inp)
-    inp._reset(output)
+    return output
 
 
 class RNG:
@@ -554,12 +554,15 @@ class RNG:
         _seed = self._seed() if callable(self._seed) else self._seed
         return _poisson(lam=lam, size=size, seed=_seed, handle=self._handle)
 
-    def permutation(self, n: int, *, dtype: str = "int32"):
-        r"""Generates a random permutation of integers from :math:`0` to :math:`n - 1`.
+    def permutation(self, n: Union[int, Tensor], *, dtype: str = "int32"):
+        r"""Randomly permute a sequence, or return a permuted range.
+            If ``n`` is a multi-dimensional tensor, it is only shuffled along its first index.
 
         Args:
-            n: the upper bound. Must be larger than 0.
-            dtype: the output data type. int32, int16 and float32 are supported. Default: int32
+            n: If ``n`` is an integer, random permutation of integers from :math:`0` to :math:`n - 1`. 
+                If ``n`` is an tensor, make a copy and shuffle the elements randomly.
+            dtype: the output data type when ``n`` is an integer.
+                int32, int16 and float32 are supported. Default: int32
 
         Returns:
             the output tensor.
@@ -568,13 +571,18 @@ class RNG:
 
             .. testcode::
 
+                import numpy as np
                 import megengine as mge
                 import megengine.random as rand
 
-                x = rand.permutation(n=10, dtype="int32")
+                x = rand.permutation(10, dtype="int32")
                 print(x.numpy())
 
-                x = rand.permutation(n=10, dtype="float32")
+                x = rand.permutation(10, dtype="float32")
+                print(x.numpy())
+
+                x = mge.tensor(np.arange(18)).reshape(6,3)
+                x = rand.permutation(x)
                 print(x.numpy())
 
             Outputs:
@@ -584,11 +592,20 @@ class RNG:
 
                 [4 5 0 7 3 8 6 1 9 2]
                 [3. 4. 9. 0. 6. 8. 7. 1. 5. 2.]
+                [[12 13 14]
+                 [ 3  4  5]
+                 [15 16 17]
+                 [ 0  1  2]
+                 [ 9 10 11]
+                 [ 6  7  8]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
-        return _permutation(
-            n=n, seed=_seed, device=self._device, handle=self._handle, dtype=dtype
-        )
+        if isinstance(n, int):
+            return _permutation(
+                n=n, seed=_seed, device=self._device, handle=self._handle, dtype=dtype
+            )
+        assert isinstance(n, Tensor)
+        return _shuffle(inp=n, seed=_seed, handle=self._handle)
 
     def shuffle(self, inp: Tensor):
         r"""Modify a sequence in-place by shuffling its contents. 
@@ -627,7 +644,7 @@ class RNG:
                  [ 6.  7.  8.]]
         """
         _seed = self._seed() if callable(self._seed) else self._seed
-        _shuffle(inp=inp, seed=_seed, handle=self._handle)
+        inp._reset(_shuffle(inp=inp, seed=_seed, handle=self._handle))
 
     def __del__(self):
         if self._handle != 0:

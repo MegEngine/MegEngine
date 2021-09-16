@@ -28,6 +28,7 @@ from megengine.core.ops.builtin import (
     UniformRNG,
 )
 from megengine.device import get_device_count
+from megengine.jit import trace
 from megengine.random import RNG
 from megengine.random import seed as set_global_seed
 from megengine.random import uniform
@@ -370,21 +371,22 @@ def test_PoissonRNG():
 @pytest.mark.skipif(
     get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
-def test_PermutationRNG():
+@pytest.mark.parametrize("symbolic", [True, False])
+def test_PermutationRNG(symbolic):
     m1 = RNG(seed=111, device="xpu0")
     m2 = RNG(seed=111, device="xpu1")
     m3 = RNG(seed=222, device="xpu0")
-    out1 = m1.permutation(n=1000)
+    out1 = m1.permutation(1000)
     out1_ = m1.uniform(size=(1000,))
-    out2 = m2.permutation(n=1000)
-    out3 = m3.permutation(n=1000)
+    out2 = m2.permutation(1000)
+    out3 = m3.permutation(1000)
 
     np.testing.assert_equal(out1.numpy(), out2.numpy())
     assert out1.device == "xpu0" and out2.device == "xpu1"
     assert not (out1.numpy() == out3.numpy()).all()
     assert not (out1.numpy() == out1_.numpy()).all()
 
-    out = m1.permutation(n=1000)
+    out = m1.permutation(1000)
     out_shp = out.shape
     if isinstance(out_shp, tuple):
         assert out_shp == (1000,)
@@ -396,6 +398,24 @@ def test_PermutationRNG():
 
     assert sum_result(out, lambda x: x) < 500
     assert sum_result(out, np.sort) == 1000
+
+    def func():
+        out = m1.permutation(Tensor(7))
+        out_shp = out.shape
+        if isinstance(out_shp, tuple):
+            assert out_shp == (1,)
+        else:
+            assert all(out.shape.numpy() == np.array([1]))
+        n, m = 6, 3
+        out = m1.permutation(Tensor(np.arange(n * m), dtype="float32").reshape(n, m))
+        out_shp = out.shape
+        if isinstance(out_shp, tuple):
+            assert out_shp == (n, m)
+        else:
+            assert all(out.shape.numpy() == np.array([n, m]))
+
+    func = trace(symbolic=symbolic)(func)
+    func()
 
 
 @pytest.mark.skipif(
