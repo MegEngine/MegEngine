@@ -115,7 +115,7 @@ class Node:
 
 class ModuleNode(Node):
     r"""``ModuleNode`` represents the Module objects."""
-    
+
     module_type = Module  # type: Type[Module]
     r"""The type of the Module correspending to the ModuleNode."""
     _owner = None  # type: weakref.ReferenceType

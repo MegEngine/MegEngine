@@ -36,7 +36,7 @@ class Expr:
     r"""``Expr`` represents the operations (i.e. ``CallMethod``, ``CallFunction``, ``Apply``, 
     ``GetAttr``, ``Input``, ``Constant``) on ``Node``.
     """
-    
+
     inputs = None  # type: List[Node]
     r"""The input Nodes of this Expr."""
     outputs = None  # type: List[Node]
@@ -229,6 +229,7 @@ class GetAttr(Expr):
 
     name = None
     r"""name: the qualified name of the attribute to be retrieved."""
+
     def __init__(self, module, name, type=None, orig_name=None):
         super().__init__()
         assert isinstance(module, ModuleNode)
@@ -276,6 +277,7 @@ class CallMethod(Expr):
         method: the method name.
             Default: "__call__"
     """
+
     def __init__(self, node, method="__call__"):
         super().__init__()
         if isinstance(node, type):
@@ -351,6 +353,7 @@ class Apply(Expr):
         opdef: the applied :class:`OpDef`.
     """
     opdef = None
+
     def __init__(self, opdef):
         super().__init__()
         assert isinstance(opdef, OpDef)
@@ -422,6 +425,7 @@ class CallFunction(Expr):
     Args:
         func: a built-in function.
     """
+
     def __init__(self, func):
         super().__init__()
         assert isinstance(func, Callable)
