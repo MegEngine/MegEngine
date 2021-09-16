@@ -42,10 +42,6 @@ class Node:
         self._orig_name = orig_name
         self.actual_node = []  # type: List[Node]
 
-    def __setstate__(self, d):
-        self.__dict__ = d
-        Node.__total_id = max(Node.__total_id, self._id) + 1
-
     def __repr__(self):
         format_spec = Node._format_spec
         return self.__format__(format_spec)
@@ -88,6 +84,15 @@ class Node:
         old_format_spec = cls._format_spec
         cls._format_spec = str
         return old_format_spec
+
+    @classmethod
+    def get_total_id(cls):
+        return cls.__total_id
+
+    @classmethod
+    def set_total_id(cls, id: int = 0):
+        assert isinstance(id, int)
+        cls.__total_id = id
 
 
 class ModuleNode(Node):

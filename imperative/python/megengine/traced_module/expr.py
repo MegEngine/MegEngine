@@ -167,6 +167,15 @@ class Expr:
             state.pop("_top_graph")
         return state
 
+    @classmethod
+    def get_total_id(cls):
+        return cls.__total_id
+
+    @classmethod
+    def set_total_id(cls, id: int = 0):
+        assert isinstance(id, int)
+        cls.__total_id = id
+
 
 # expr: None (i.e. fake expression which is used to mark input)
 class Input(Expr):
