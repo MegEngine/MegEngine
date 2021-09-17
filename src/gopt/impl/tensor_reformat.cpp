@@ -1753,6 +1753,24 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
         }
     };
 
+    auto replace_reduce_opr = [=](OperatorNodeBase* opr,
+                                  const VarNodeArray& new_inp) {
+        mgb_assert(opr->input().size() == new_inp.size());
+        auto& reduce_opr = opr->cast_final_safe<opr::Reduce>();
+
+        VarNodeArray temp_inp = new_inp;
+        if (!opr->input(0)->shape().eq_shape(new_inp[0]->shape())) {
+            mgb_assert(opr->input(0)->shape().ndim == 4);
+            mgb_assert(new_inp[0]->shape().ndim == 5);
+            if (reduce_opr.param().axis != 2 && reduce_opr.param().axis != 3) {
+                auto new_var =
+                        RelayoutPlaceholder::make(new_inp[0], src_to_nchw_mode);
+                temp_inp[0] = new_var.node();
+            }
+        }
+        return serialization::copy_opr_shallow(*opr, temp_inp, opr->config());
+    };
+
     //! When input change and all input can convert to nchwxx, this opr will run
     //! in nchwxx mode, else it will run in nchw mode, for example concat and
     //! elemwise opr
@@ -1829,13 +1847,13 @@ void EnableNchwxxPass::fill_opr_convert_fun(size_t pack_c_size) {
     replace_func[opr::TypeCvt::typeinfo()] = replace_multi_inp_opr;
     replace_func[opr::ElemwiseMultiType::typeinfo()] = replace_multi_inp_opr;
     replace_func[opr::PowC::typeinfo()] = replace_multi_inp_opr;
+    replace_func[opr::Reduce::typeinfo()] = replace_reduce_opr;
     //! not support yet
     replace_func[opr::ConvolutionBackwardData::typeinfo()] =
             relayout_inp_to_nchw;
     replace_func[opr::Subtensor::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::GetVarShape::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::Dimshuffle::typeinfo()] = relayout_inp_to_nchw;
-    replace_func[opr::Reduce::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::AssertEqual::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::IncrSubtensor::typeinfo()] = relayout_inp_to_nchw;
     replace_func[opr::WarpPerspectiveForward::typeinfo()] =

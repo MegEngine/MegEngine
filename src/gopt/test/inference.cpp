@@ -3476,14 +3476,24 @@ TEST(TestGoptInference, ConvertFormatNCHW88) {
     //! group
     auto w3 = mkcvar("w3", {1, 8, 8, 3, 3}), b3 = mkcvar("b3", {1, 8, 1, 1}),
          conv3 = opr::ConvBias::make(conv2, w3, b3, param_conv_bias);
+    //! reduce
+    opr::Reduce::Param param_reduce1;
+    param_reduce1.axis = 2;
+    param_reduce1.mode = opr::Reduce::Mode::SUM;
+    opr::Reduce::Param param_reduce2;
+    param_reduce2.axis = 0;
+    param_reduce2.mode = opr::Reduce::Mode::MAX;
+    auto reduce1 = conv3 + opr::Reduce::make(conv3, param_reduce1) +
+                   opr::Reduce::make(conv3, param_reduce2);
 
-    auto shape_of = opr::GetVarShape::make(conv3);
+    auto shape_of = opr::GetVarShape::make(reduce1);
     auto subtensor = opr::Subtensor::make(
             shape_of, {opr::Subtensor::AxisIndexer::make_interval(
                               0, x.make_scalar(2), None, x.make_scalar(1))});
     opr::Resize::Param param_resize;
     param_resize.format = opr::Resize::Param::Format::NCHW;
-    auto resize = opr::ResizeForward::make(conv3, subtensor * 2, param_resize);
+    auto resize =
+            opr::ResizeForward::make(reduce1, subtensor * 2, param_resize);
     auto mat = mkcvar("mat", {2, 3, 3}),
          warp = opr::WarpPerspectiveForward::make(
                  resize, mat, nullptr, cg::var_from_tensor_shape(x, {4, 4}));
@@ -3586,14 +3596,24 @@ TEST(TestGoptInference, ConvertFormatNCHW44) {
     //! group
     auto w3 = mkcvar("w3", {2, 4, 4, 3, 3}), b3 = mkcvar("b3", {1, 8, 1, 1}),
          conv3 = opr::ConvBias::make(conv2, w3, b3, param_conv_bias);
+    //! reduce
+    opr::Reduce::Param param_reduce1;
+    param_reduce1.axis = 1;
+    param_reduce1.mode = opr::Reduce::Mode::MIN;
+    opr::Reduce::Param param_reduce2;
+    param_reduce2.axis = 3;
+    param_reduce2.mode = opr::Reduce::Mode::SUM_SQR;
+    auto reduce1 = conv3 + opr::Reduce::make(conv3, param_reduce1) +
+                   opr::Reduce::make(conv3, param_reduce2);
 
-    auto shape_of = opr::GetVarShape::make(conv3);
+    auto shape_of = opr::GetVarShape::make(reduce1);
     auto subtensor = opr::Subtensor::make(
             shape_of, {opr::Subtensor::AxisIndexer::make_interval(
                               0, x.make_scalar(2), None, x.make_scalar(1))});
     opr::Resize::Param param_resize;
     param_resize.format = opr::Resize::Param::Format::NCHW;
-    auto resize = opr::ResizeForward::make(conv3, subtensor * 2, param_resize);
+    auto resize =
+            opr::ResizeForward::make(reduce1, subtensor * 2, param_resize);
     auto mat = mkcvar("mat", {2, 3, 3}),
          warp = opr::WarpPerspectiveForward::make(
                  resize, mat, nullptr, cg::var_from_tensor_shape(x, {4, 4}));
