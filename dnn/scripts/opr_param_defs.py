@@ -43,15 +43,15 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           Doc('NCHW4_NCHW32 = 12', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
           Doc('NCHW32_NCHW4 = 13', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
           Doc('NCHW4_NCHW = 14', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'), 
-          Doc('NCHW4_NHWC = 15', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout'),
-          Doc('NHWC_NCHW = 16', 'NHWC_NCHW means input tensors are nhwc layout, '
+          Doc('NHWC_NCHW = 15', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
-          Doc('NHWC_NCHW4_IC_SMALL = 17', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
+          Doc('NHWC_NCHW4_IC_SMALL = 16', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
-          Doc('NCHW_NCHW4_IC_SMALL = 18', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
+          Doc('NCHW_NCHW4_IC_SMALL = 17', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
-          Doc('CHWN4 = 19', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
-              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'))
+          Doc('CHWN4 = 18', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
+              'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'),
+          Doc('NCHW4_NHWC = 19', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout'))
  )
 
 (pdef('Convolution', version=1, is_legacy=True).
@@ -100,17 +100,17 @@ pdef('Axis').add_fields('int32', 'axis', 0)
           Doc('NCHW4_NCHW32 = 9', 'NCHW4_NCHW32 means input tensors are nchw4 layout, output tensor is nchw32 layout'), 
           Doc('NCHW32_NCHW4 = 10', 'NCHW32_NCHW4 means input tensors are nchw32 layout, output tensor is nchw4 layout'), 
           Doc('NCHW4_NCHW = 11', 'NCHW4_NCHW means input tensors are nchw4 layout, output tensor is nchw layout'),
-          Doc('NCHW4_NHWC = 12', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout'),
-          Doc('NHWC_NCHW = 13', 'NHWC_NCHW means input tensors are nhwc layout, '
+          Doc('NHWC_NCHW = 12', 'NHWC_NCHW means input tensors are nhwc layout, '
               'output tensor is nchw layout'),
-          Doc('NHWC_NCHW4_IC_SMALL = 14', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
+          Doc('NHWC_NCHW4_IC_SMALL = 13', 'NHWC_NCHW4_IC_SMALL means input tensors are nhwc(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
-          Doc('NCHW_NCHW4_IC_SMALL = 15', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
+          Doc('NCHW_NCHW4_IC_SMALL = 14', 'NCHW_NCHW4_IC_SMALL means input tensors are nchw(c < 4) layout, '
               'output tensor is nchw4 layout, padding c=4'),
-          Doc('CHWN4 = 16', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
+          Doc('CHWN4 = 15', 'CHWN4 is currently only used on Nvidia platform for fast implementation '
               'of convolution using CUDA/SASS. The channels are splitted to groups of 4 channels.'), 
-          Doc('NCHW64 = 17', 'NCHW64 is designed for convolution implementation to utilizing TensorCore '
-              'instructions for 4-bit integers on Nvidia platforms')).
+          Doc('NCHW64 = 16', 'NCHW64 is designed for convolution implementation to utilizing TensorCore '
+              'instructions for 4-bit integers on Nvidia platforms'), 
+          Doc('NCHW4_NHWC = 17', 'NCHW4_NHWC means input tensors are nchw4 layout, output tensor is nhwc layout')).
  add_enum_alias('ComputeMode', 'ConvolutionV1',name_field='compute_mode')
  )
 
