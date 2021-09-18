@@ -1,5 +1,5 @@
 /**
- * \file example/user_allocator.cpp
+ * \file example/cpp_example/cpu_affinity.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -11,51 +11,30 @@
 
 #include "../example.h"
 #if LITE_BUILD_WITH_MGE
+
 using namespace lite;
 using namespace example;
 
-namespace {
-class CheckAllocator : public lite::Allocator {
-public:
-    //! allocate memory of size in the given device with the given align
-    void* allocate(LiteDeviceType, int, size_t size, size_t align) override {
-#ifdef WIN32
-        return _aligned_malloc(size, align);
-#elif defined(__ANDROID__) || defined(ANDROID)
-        return memalign(align, size);
-#else
-        void* ptr = nullptr;
-        auto err = posix_memalign(&ptr, align, size);
-        if (!err) {
-            printf("failed to malloc %zu bytes with align %zu", size, align);
-        }
-        return ptr;
-#endif
-    };
-
-    //! free the memory pointed by ptr in the given device
-    void free(LiteDeviceType, int, void* ptr) override {
-#ifdef WIN32
-        _aligned_free(ptr);
-#else
-        ::free(ptr);
-#endif
-    };
-};
-}  // namespace
-
-bool lite::example::config_user_allocator(const Args& args) {
+bool lite::example::cpu_affinity(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
-
-    auto allocator = std::make_shared<CheckAllocator>();
 
     //! create and load the network
     std::shared_ptr<Network> network = std::make_shared<Network>();
 
-    Runtime::set_memory_allocator(network, allocator);
+    //! run with multi theads
+    Runtime::set_cpu_threads_number(network, 4);
 
     network->load_model(network_path);
+
+    std::vector<int> core_ids = {0, 1, 2, 3};
+    auto affinity = [core_ids](int id) {
+        //! add user define affinity function
+        set_cpu_affinity({core_ids[id]});
+        printf("set thread id = %d with the affinity of core %d.\n", id,
+               core_ids[id]);
+    };
+    Runtime::set_runtime_thread_affinity(network, affinity);
 
     //! set input data to input tensor
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
@@ -88,4 +67,5 @@ bool lite::example::config_user_allocator(const Args& args) {
     return true;
 }
 #endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

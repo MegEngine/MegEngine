@@ -1,5 +1,5 @@
 /**
- * \file example/cpu_affinity.cpp
+ * \file example/cpp_example/network_share_weights.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -15,43 +15,48 @@
 using namespace lite;
 using namespace example;
 
-bool lite::example::cpu_affinity(const Args& args) {
+bool lite::example::network_share_same_weights(const Args& args) {
     std::string network_path = args.model_path;
     std::string input_path = args.input_path;
 
     //! create and load the network
     std::shared_ptr<Network> network = std::make_shared<Network>();
-
-    //! run with multi theads
-    Runtime::set_cpu_threads_number(network, 4);
-
     network->load_model(network_path);
 
-    std::vector<int> core_ids = {0, 1, 2, 3};
-    auto affinity = [core_ids](int id) {
-        //! add user define affinity function
-        set_cpu_affinity({core_ids[id]});
-        printf("set thread id = %d with the affinity of core %d.\n", id,
-               core_ids[id]);
-    };
-    Runtime::set_runtime_thread_affinity(network, affinity);
+    //! load a new network from the created network and share the same weights,
+    Config config_new;
+    config_new.options.const_shape = true;
+    NetworkIO network_io_new;
+    std::shared_ptr<Network> weight_shared_network =
+            std::make_shared<Network>(config_new, network_io_new);
+    Runtime::shared_weight_with_network(weight_shared_network, network);
 
     //! set input data to input tensor
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
+    void* dst_ptr = input_tensor->get_memory_ptr();
+    std::shared_ptr<Tensor> input_tensor2 =
+            weight_shared_network->get_input_tensor(0);
+    void* dst_ptr2 = input_tensor2->get_memory_ptr();
     //! copy or forward data to network
     size_t length = input_tensor->get_tensor_total_size_in_byte();
-    void* dst_ptr = input_tensor->get_memory_ptr();
     auto src_tensor = parse_npy(input_path);
     void* src = src_tensor->get_memory_ptr();
     memcpy(dst_ptr, src, length);
+    memcpy(dst_ptr2, src, length);
 
     //! forward
     network->forward();
     network->wait();
 
+    weight_shared_network->forward();
+    weight_shared_network->wait();
+
     //! get the output data or read tensor set in network_in
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+    std::shared_ptr<Tensor> output_tensor2 =
+            weight_shared_network->get_output_tensor(0);
     void* out_data = output_tensor->get_memory_ptr();
+    void* out_data2 = output_tensor2->get_memory_ptr();
     size_t out_length = output_tensor->get_tensor_total_size_in_byte() /
                         output_tensor->get_layout().get_elem_size();
     printf("length=%zu\n", length);
@@ -59,6 +64,11 @@ bool lite::example::cpu_affinity(const Args& args) {
     float sum = 0.0f;
     for (size_t i = 0; i < out_length; i++) {
         float data = static_cast<float*>(out_data)[i];
+        float data2 = static_cast<float*>(out_data2)[i];
+        if (data != data2) {
+            printf("the result between the origin network and weight share "
+                   "netwrok is different.\n");
+        }
         sum += data;
         if (max < data)
             max = data;
@@ -67,5 +77,4 @@ bool lite::example::cpu_affinity(const Args& args) {
     return true;
 }
 #endif
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

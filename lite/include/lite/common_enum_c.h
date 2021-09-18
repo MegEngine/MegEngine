@@ -15,18 +15,18 @@
 /*!
  * \brief The log level.
  */
-typedef enum LiteLogLevel {
+typedef enum {
     DEBUG = 0, /*!< The lowest level and most verbose */
     INFO = 1,  /*!< The lowest level and most verbose */
     WARN = 2,  /*!< Print only warning and errors */
     ERROR = 3, /*!< Print only errors */
 } LiteLogLevel;
 
-typedef enum LiteBackend {
+typedef enum {
     LITE_DEFAULT = 0, //! default backend is mge
 } LiteBackend;
 
-typedef enum LiteDeviceType {
+typedef enum {
     LITE_CPU = 0,
     LITE_CUDA = 1,
     LITE_ATLAS = 3,
@@ -36,7 +36,7 @@ typedef enum LiteDeviceType {
     LITE_DEVICE_DEFAULT = 5,
 } LiteDeviceType;
 
-typedef enum LiteDataType {
+typedef enum {
     LITE_FLOAT = 0,
     LITE_HALF = 1,
     LITE_INT = 2,
@@ -46,9 +46,9 @@ typedef enum LiteDataType {
     LITE_UINT = 6,
     LITE_UINT16 = 7,
     LITE_INT64 = 8,
-} LiteCDataType;
+} LiteDataType;
 
-typedef enum LiteTensorPhase {
+typedef enum {
     //! Tensor maybe input or output
     LITE_IO = 0,
     //! Tensor is input
@@ -61,7 +61,7 @@ typedef enum LiteTensorPhase {
  * \brief the input and output type, include SHAPE and VALUE
  * sometimes user only need the shape of the output tensor
  */
-typedef enum LiteIOType {
+typedef enum {
     LITE_IO_VALUE = 0,
     LITE_IO_SHAPE = 1,
 } LiteIOType;
@@ -88,7 +88,7 @@ typedef enum LiteIOType {
  * 5. LITE_ALGO_PROFILE | LITE_ALGO_OPTIMIZED | LITE_ALGO_REPRODUCIBLE means:
  * profile the best algorithm form the optimzed and reproducible algorithms
  */
-typedef enum LiteAlgoSelectStrategy {
+typedef enum {
     LITE_ALGO_HEURISTIC = 1 << 0,
     LITE_ALGO_PROFILE = 1 << 1,
     LITE_ALGO_REPRODUCIBLE = 1 << 2,

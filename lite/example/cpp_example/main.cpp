@@ -1,5 +1,5 @@
 /**
- * \file example/example.cpp
+ * \file example/cpp_example/cpp_example/example.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -133,7 +133,11 @@ int main(int argc, char** argv) {
     auto example = (*map)[args.example_name];
     if (example) {
         printf("Begin to run %s example.\n", args.example_name.c_str());
-        return example(args);
+        if (example(args)) {
+            return 0;
+        } else {
+            return -1;
+        }
     } else {
         printf("The example of %s is not registed.", args.example_name.c_str());
         return -1;

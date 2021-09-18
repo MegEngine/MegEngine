@@ -1,5 +1,5 @@
 /**
- * \file example/basic_c_interface.cpp
+ * \file example/cpp_example/basic_c_interface.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
