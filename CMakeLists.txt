@@ -167,7 +167,8 @@ if (NOT APPLE)
 endif()
 
 check_ipo_supported(RESULT IS_LTO_SUPPORT OUTPUT output_info)
-if(IS_LTO_SUPPORT)
+# LLVM on Windows report support LTO, but do not support -flto=full at link stage
+if(IS_LTO_SUPPORT AND NOT WIN32)
     message(STATUS "lto is supported in this compiler")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=full")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=full")
@@ -362,6 +363,14 @@ else()
         set(OPTIMIZE_LEVEL "-g -Ofast -DNDEBUG")
     else()
         set(OPTIMIZE_LEVEL "-g -O3 -DNDEBUG")
+    endif()
+    #remove finite-math-only opt from Ofast, caused by clang have a different
+    #runtime finite math logic, this issue do not find at g++, but as a unity
+    #build flags, we force add -fno-finite-math-only when compiler support
+    CHECK_CXX_COMPILER_FLAG("-fno-finite-math-only"  CXX_NO_FINITE_MATH_ONLY_SUPPORT)
+    if(CXX_NO_FINITE_MATH_ONLY_SUPPORT)
+        message(STATUS "force add -fno-finite-math-only for this compiler")
+        set(OPTIMIZE_LEVEL "${OPTIMIZE_LEVEL} -fno-finite-math-only")
     endif()
     set(CMAKE_C_FLAGS_RELEASE "${OPTIMIZE_LEVEL}")
     set(CMAKE_CXX_FLAGS_RELEASE "${OPTIMIZE_LEVEL}")
