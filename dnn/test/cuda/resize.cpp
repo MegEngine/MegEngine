@@ -52,6 +52,7 @@ TEST_F(CUDA, RESIZE_FORWARD) {
             checker.set_param(arg.param)
                     .set_dtype(0, dtype::Uint8())
                     .set_dtype(1, dtype::Uint8())
+                    .set_epsilon(1)
                     .execs({arg.src, arg.dst});
         }
 
@@ -67,7 +68,7 @@ TEST_F(CUDA, RESIZE_FORWARD) {
             checker.set_param(arg.param)
                     .set_dtype(0, dtype::Int8())
                     .set_dtype(1, dtype::Int8())
-                    .set_epsilon(1e-3)
+                    .set_epsilon(1)
                     .execs({arg.src, arg.dst});
         }
     }
