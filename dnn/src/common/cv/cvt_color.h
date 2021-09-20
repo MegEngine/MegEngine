@@ -45,7 +45,6 @@
     _cb(cvt_rgba2bgr, float) \
     _cb(cvt_rgba2gray, float) \
     _cb(cvt_rgb2bgr, float) \
-    _cb(cvt_bgr2gray, float) \
     _cb(cvt_bgr2rgb, float) \
     _cb(cvt_yuv2gray_nv21, float) \
     _cb(cvt_yuv2rgb_nv21, float) \

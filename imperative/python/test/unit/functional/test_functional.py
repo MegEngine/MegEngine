@@ -1057,11 +1057,18 @@ def test_cvt_color():
     def rgb2gray(rgb):
         return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
 
+    def bgr2gray(bgr):
+        return np.dot(bgr[..., :3], [0.114, 0.587, 0.299])
+
     inp = np.random.randn(3, 3, 3, 3).astype(np.float32)
     out = np.expand_dims(rgb2gray(inp), 3).astype(np.float32)
     x = tensor(inp)
     y = F.vision.cvt_color(x, mode="RGB2GRAY")
     np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+    out1 = np.expand_dims(bgr2gray(inp), 3).astype(np.float32)
+    y1 = F.vision.cvt_color(x, mode="BGR2GRAY")
+    np.testing.assert_allclose(y1.numpy(), out1, atol=1e-5)
 
 
 @pytest.mark.parametrize("val", [2, [2,], [2, 3]])

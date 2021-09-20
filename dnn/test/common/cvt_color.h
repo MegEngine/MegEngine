@@ -135,6 +135,9 @@ inline std::vector<TestArg> get_cuda_args() {
             cur_param.mode = Mode::RGB2GRAY;
             args.emplace_back(cur_param, TensorShape{1, i, j, 3},
                               dtype::Uint8());
+            cur_param.mode = Mode::BGR2GRAY;
+            args.emplace_back(cur_param, TensorShape{1, i, j, 3},
+                              dtype::Uint8());
             cur_param.mode = Mode::RGB2YUV;
             args.emplace_back(cur_param, TensorShape{1, i, j, 3},
                               dtype::Uint8());
@@ -146,6 +149,9 @@ inline std::vector<TestArg> get_cuda_args() {
                               dtype::Uint8());
             // float32 test
             cur_param.mode = Mode::RGB2GRAY;
+            args.emplace_back(cur_param, TensorShape{1, i, j, 3},
+                              dtype::Float32());
+            cur_param.mode = Mode::BGR2GRAY;
             args.emplace_back(cur_param, TensorShape{1, i, j, 3},
                               dtype::Float32());
             cur_param.mode = Mode::RGB2YUV;

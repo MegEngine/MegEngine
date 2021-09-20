@@ -748,11 +748,16 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
 
 }  // namespace
 
+template<bool rgb = true>
 void cvt_rgb2gray_32f_neon(const Mat32f& src, Mat32f& dst) {
     static const float coef[] = {0.299f, 0.587f, 0.114f};
     // load coef into neon types
-    const float32x4_t v_cr(vdupq_n_f32(coef[0])), v_cg(vdupq_n_f32(coef[1])),
-            v_cb(vdupq_n_f32(coef[2]));
+    float coef_c0 = rgb ? coef[0] : coef[2];
+    float coef_c1 = coef[1];
+    float coef_c2 = rgb ? coef[2] : coef[0];
+
+    const float32x4_t v_cr(vdupq_n_f32(coef_c0)), v_cg(vdupq_n_f32(coef_c1)),
+            v_cb(vdupq_n_f32(coef_c2));
 
 #define EXPAND(offset)                                                         \
     v_src = vld3q_f32(psrc + offset * 3);                                      \
@@ -796,7 +801,7 @@ void cvt_rgb2gray_32f_neon(const Mat32f& src, Mat32f& dst) {
         }
         // loop over left pixels
         for (; psrc < pend; psrc += 3, pdst += 1) {
-            *pdst = psrc[0] * coef[0] + psrc[1] * coef[1] + psrc[2] * coef[2];
+            *pdst = psrc[0] * coef_c0 + psrc[1] * coef_c1 + psrc[2] * coef_c2;
         }
     }
 #undef EXPAND
@@ -1187,7 +1192,7 @@ void cvt_rgb2gray<float>(const Mat32f& src, Mat32f& dst) {
     megdnn_assert(src.rows() == dst.rows());
     megdnn_assert(src.cols() == dst.cols());
 
-    return cvt_rgb2gray_32f_neon(src, dst);
+    return cvt_rgb2gray_32f_neon<true>(src, dst);
 }
 
 // gray2rgb
@@ -1379,6 +1384,16 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
                     (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
         }
     }
+}
+
+template <>
+void cvt_bgr2gray<float>(const Mat32f& src, Mat32f& dst) {
+    megdnn_assert(src.channels() == 3);
+    megdnn_assert(dst.channels() == 1);
+    megdnn_assert(src.rows() == dst.rows());
+    megdnn_assert(src.cols() == dst.cols());
+
+    return cvt_rgb2gray_32f_neon<false>(src, dst);
 }
 
 template <>

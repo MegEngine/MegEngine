@@ -145,6 +145,73 @@ __global__ void cvt_rgb2gray_32f_kernel(const float* src, float* dst,
     }
 }
 
+
+__global__ void cvt_bgr2gray_8u_kernel(const uchar* src, uchar* dst,
+                                       const size_t rows, const size_t cols,
+                                       const size_t src_step,
+                                       const size_t dst_step) {
+    size_t t = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (t < (rows * cols) / U8_PROCESS_PER_THREADS_X) {
+        size_t offset = t * U8_PROCESS_PER_THREADS_X;
+        src += 3 * offset;
+        dst += 1 * offset;
+
+        uchar temp_des[4];
+        uchar temp_src[12];
+        *((uint3*)temp_src) = *((uint3*)src);
+
+        temp_des[0] = (temp_src[0] * 1868 + temp_src[1] * 9617 +
+                       temp_src[2] * 4899 + (1 << 13)) >>
+                      14;
+        temp_des[1] = (temp_src[3] * 1868 + temp_src[4] * 9617 +
+                       temp_src[5] * 4899 + (1 << 13)) >>
+                      14;
+        temp_des[2] = (temp_src[6] * 1868 + temp_src[7] * 9617 +
+                       temp_src[8] * 4899 + (1 << 13)) >>
+                      14;
+        temp_des[3] = (temp_src[9] * 1868 + temp_src[10] * 9617 +
+                       temp_src[11] * 4899 + (1 << 13)) >>
+                      14;
+
+        *((uint32_t*)dst) = *((uint32_t*)temp_des);
+    } else if (t == (rows * cols) / U8_PROCESS_PER_THREADS_X) {
+        size_t rest = (rows * cols) % U8_PROCESS_PER_THREADS_X;
+        if (rest != 0) {
+            size_t offset = t * U8_PROCESS_PER_THREADS_X;
+            src += 3 * offset;
+            dst += 1 * offset;
+
+            for (int i = 0; i < rest; i++, src += 3, dst += 1)
+                dst[0] = (src[0] * 1868 + src[1] * 9617 + src[2] * 4899 +
+                          (1 << 13)) >>
+                         14;
+        }
+    }
+}
+
+__global__ void cvt_bgr2gray_32f_kernel(const float* src, float* dst,
+                                        const size_t rows, const size_t cols,
+                                        const size_t src_step,
+                                        const size_t dst_step) {
+    size_t t = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (t < rows * cols) {
+        size_t offset = t;
+        src += offset * 3;
+        dst += offset * 1;
+
+        float temp_src[3], temp_dst;
+        *((float3*)temp_src) = *((float3*)src);
+
+        temp_dst = temp_src[0] * 0.114f + temp_src[1] * 0.587f +
+                   temp_src[2] * 0.299f;
+
+        dst[0] = temp_dst;
+    }
+}
+
+
 __global__ void cvt_gray2rgb_8u_kernel(const uchar* src, uchar* dst,
                                        const size_t rows, const size_t cols,
                                        const size_t src_step,
@@ -683,6 +750,9 @@ void cvt_color_8u_proxy(const uchar* src, uchar* dst, const size_t src_rows,
         case CvtColor::Mode::RGB2GRAY:
             CALL_CVT_OPR_8U_KERNEL(rgb2gray)
             break;
+        case CvtColor::Mode::BGR2GRAY:
+            CALL_CVT_OPR_8U_KERNEL(bgr2gray)
+            break;
         case CvtColor::Mode::RGB2YUV:
             CALL_CVT_OPR_8U_KERNEL(rgb2yuv)
             break;
@@ -738,6 +808,9 @@ void cvt_color_32f_proxy(const float* src, float* dst, const size_t src_rows,
     switch (mode) {
         case CvtColor::Mode::RGB2GRAY:
             CALL_CVT_OPR_32F_KERNEL(rgb2gray)
+            break;
+        case CvtColor::Mode::BGR2GRAY:
+            CALL_CVT_OPR_32F_KERNEL(bgr2gray)
             break;
         case CvtColor::Mode::RGB2YUV:
             CALL_CVT_OPR_32F_KERNEL(rgb2yuv)

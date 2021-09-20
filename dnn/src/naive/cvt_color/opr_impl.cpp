@@ -685,6 +685,26 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
 }
 
 template <>
+void cvt_bgr2gray<float>(const Mat32f& src, Mat32f& dst) {
+    megdnn_assert(src.channels() == 3);
+    megdnn_assert(dst.channels() == 1);
+    megdnn_assert(src.rows() == dst.rows());
+    megdnn_assert(src.cols() == dst.cols());
+
+    const float coef_r = 0.299f, coef_g = 0.587f, coef_b = 0.114f;
+    for (size_t r = 0; r < src.rows(); ++r) {
+        for (size_t c = 0; c < src.cols(); ++c) {
+            float B = src.at(r, c, 0);
+            float G = src.at(r, c, 1);
+            float R = src.at(r, c, 2);
+            float& Y = dst.at(r, c, 0);
+            Y = R * coef_r + G * coef_g + B * coef_b;
+        }
+    }
+}
+
+
+template <>
 void cvt_bgr2rgb<uchar>(const Mat8u& src, Mat8u& dst) {
     return cvt_rgb2bgr<uchar>(src, dst);
 }

@@ -1312,6 +1312,41 @@ void cvt_rgb2gray_32f_SSE_4_2(const Mat32f& src, Mat32f& dst) {
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.2")
+void cvt_bgr2gray_32f_SSE_4_2(const Mat32f& src, Mat32f& dst) {
+    const float coef_r = 0.299f, coef_g = 0.587f, coef_b = 0.114f;
+    __m128 v_coef_r = _mm_set1_ps(coef_r);
+    __m128 v_coef_g = _mm_set1_ps(coef_g);
+    __m128 v_coef_b = _mm_set1_ps(coef_b);
+
+    for (size_t r = 0; r < src.rows(); ++r) {
+        const float* psrc = src.ptr(r);
+        float* pdst = dst.ptr(r);
+        const float* const pend = psrc + src.cols() * 3;
+        __m128 v_r, v_g, v_b, ans;
+        for (; psrc <= pend - 4 * 3; psrc += 4 * 3, pdst += 4) {
+            v_b = _mm_set_ps(psrc[9], psrc[6], psrc[3], psrc[0]);
+            v_b = _mm_mul_ps(v_b, v_coef_b);
+
+            v_g = _mm_set_ps(psrc[10], psrc[7], psrc[4], psrc[1]);
+            v_g = _mm_mul_ps(v_g, v_coef_g);
+
+            v_r = _mm_set_ps(psrc[11], psrc[8], psrc[5], psrc[2]);
+            v_r = _mm_mul_ps(v_r, v_coef_r);
+
+            ans = _mm_add_ps(v_r, _mm_add_ps(v_g, v_b));
+
+            _mm_storeu_ps(pdst, ans);
+        }
+
+        for (; psrc < pend; psrc += 3, pdst += 1) {
+            pdst[0] = psrc[1] * coef_g + psrc[0] * coef_b + psrc[2] * coef_r;
+        }
+    }
+}
+
+
+
+MEGDNN_ATTRIBUTE_TARGET("sse4.2")
 void cvt_rgba2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
     __m128i dst_data0, dst_data1, dst_data2;
     __m128i src_data0, src_data1, src_data2, src_data3;
@@ -1703,6 +1738,16 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
                     (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
         }
     }
+}
+
+template <>
+void cvt_bgr2gray<float>(const Mat32f& src, Mat32f& dst) {
+    megdnn_assert(src.channels() == 3);
+    megdnn_assert(dst.channels() == 1);
+    megdnn_assert(src.rows() == dst.rows());
+    megdnn_assert(src.cols() == dst.cols());
+
+    return cvt_bgr2gray_32f_SSE_4_2(src, dst);
 }
 
 template <>
