@@ -1177,3 +1177,74 @@ def test_pad():
     dst = np.pad(src, ((2, 2), (2, 2)), "reflect")
     res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "REFLECT")
     np.testing.assert_allclose(res, dst, atol=1e-5)
+
+
+def pixel_shuffle(data, r):
+    high_dim = data.shape[:-3]
+    data = data.reshape(-1, data.shape[-3], data.shape[-2], data.shape[-1])
+    inn, ic, ih, iw = data.shape
+    res = np.zeros((inn, int(ic / (r * r)), ih * r, iw * r))
+    for n in range(inn):
+        for c in range(ic):
+            for h in range(ih):
+                for w in range(iw):
+                    res[
+                        n,
+                        int(c / r / r),
+                        h * r + int((c % (r * r)) / r),
+                        w * r + c % r,
+                    ] = data[n, c, h, w]
+    if len(high_dim) > 0:
+        res = res.reshape((*high_dim, int(ic / r / r), ih * r, iw * r))
+    else:
+        res = res[0]
+    return res
+
+
+def test_pixel_shuffle():
+    # ndim = 3
+    inp = np.arange(16 * 3 * 3).reshape(16, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=4)
+    golden = pixel_shuffle(inp, 4)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 4
+    inp = np.arange(3 * 18 * 3 * 3).reshape(3, 18, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=3)
+    golden = pixel_shuffle(inp, 3)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 5
+    inp = np.arange(5 * 3 * 20 * 3 * 4).reshape(5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 6
+    inp = np.arange(6 * 5 * 3 * 25 * 3 * 4).reshape(6, 5, 3, 25, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=5)
+    golden = pixel_shuffle(inp, 5)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 7
+    inp = np.arange(2 * 3 * 5 * 3 * 20 * 3 * 4).reshape(2, 3, 5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+
+@pytest.mark.parametrize("is_symbolic", [False, True])
+def test_pixel_shuffle_symbolic(is_symbolic):
+    def fn(inp, upscale_factor):
+        return F.pixel_shuffle(inp, upscale_factor=upscale_factor)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
+    inp = tensor(np.arange(3 * 4 * 5 * 5).reshape(3, 4, 5, 5))
+    golden = pixel_shuffle(inp, 2)
+    for _ in range(3):
+        out = fn(inp, 2)
+        np.testing.assert_equal(out.numpy(), golden)
+        if is_symbolic is None:
+            break
