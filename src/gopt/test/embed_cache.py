@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
 #
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -95,7 +96,7 @@ static const std::vector<uint8_t> {} = {{
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='embed cache into cache header file',
+        description='embed cubin into cpp source file',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-o', '--output', help='output source file',
                         required=True)

@@ -47,7 +47,7 @@ private:
     struct Value {
         OperatorNodeBase* opr;
         const State* prev;
-        OprFormat opr_fmt;
+        OprFormatConfigID cfg_id;
         float time;
         ///! index in the topo order of the correspoding operator
         size_t opr_idx;
@@ -87,14 +87,15 @@ private:
     };
     /*!
      * \brief get the tensor formats configuration for the operator with
-     * particular op format \param[out] var2fmts hashmap that maps varnode to
-     * actual tensor formats of the op format configuration \param[in] opr given
-     * operator \param[in] opr_fmt given op format, an enum type argument which
-     * indicates the op format configuration. \param[in] ctx context
+     * particular op format
+     * \param[out] var2fmts hashmap that maps varnode to actual tensor formats of the op
+     * format configuration \param[in] opr given operator \param[in] opr_fmt given op
+     * format, an enum type argument which indicates the op format configuration.
+     * \param[in] ctx context
      */
     TensorFormats get_io_formats(
             ThinHashMap<VarNode*, TensorFormats>& var2fmts, const OperatorNodeBase* opr,
-            OprFormat opr_fmt, const Context& ctx);
+            OprFormatConfigID config_id, const Context& ctx);
     /*!
      * \brief compute the distace of two states of the given varnode
      * \param[in] from the source state
@@ -140,28 +141,35 @@ private:
 
 TensorFormats DynamicProgrammingSolver::Impl::get_io_formats(
         ThinHashMap<VarNode*, TensorFormats>& var2fmts, const OperatorNodeBase* opr,
-        OprFormat opr_fmt, const Context& ctx) {
+        OprFormatConfigID config_id, const Context& ctx) {
     auto&& rst = ctx.rst;
     auto&& opr_configs = ctx.opr_configs;
 
     auto iter = opr_configs.find(opr->dyn_typeinfo());
     Maybe<OprTensorFormatsConfiguration> fmtcfg = None;
+    Maybe<OprFormat> opr_fmt = None;
     if (iter != opr_configs.end()) {
-        fmtcfg = (*iter->second.at(opr_fmt))(opr);
+        fmtcfg = (*iter->second.at(config_id))(opr);
+    } else {
+        opr_fmt = OprTensorFormatsConfiguration::safe_cast_to_opr_format(config_id);
     }
     TensorFormats out_fmt;
     if (fmtcfg.valid())
         out_fmt = fmtcfg.val().output_tensor_formats[0];
-    else
-        out_fmt = opr_format_to_tensor_formats(opr_fmt);
+    else {
+        mgb_assert(opr_fmt.valid());
+        out_fmt = opr_format_to_tensor_formats(opr_fmt.val());
+    }
     for (size_t i = 0; i < opr->input().size(); ++i) {
         auto&& var = opr->input(i);
         auto iter = rst.var_record.find(var);
         if (iter != rst.var_record.end()) {
             if (fmtcfg.valid())
                 var2fmts[var] = fmtcfg.val().input_tensor_formats[i];
-            else
-                var2fmts[var] = opr_format_to_tensor_formats(opr_fmt);
+            else {
+                mgb_assert(opr_fmt.valid());
+                var2fmts[var] = opr_format_to_tensor_formats(opr_fmt.val());
+            }
         }
     }
     return out_fmt;
@@ -342,13 +350,13 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
         cuts.emplace_back(Cut{});
         auto& states = cuts.back().states;
         for (const auto& record : records) {
-            auto opr_fmt = record.first;
+            auto cfg_id = record.first;
             float opr_time = record.second;
             ThinHashMap<VarNode*, TensorFormats> ivar2fmts;
-            auto out_fmt = get_io_formats(ivar2fmts, opr, opr_fmt, ctx);
+            auto out_fmt = get_io_formats(ivar2fmts, opr, cfg_id, ctx);
             const auto& edge = edges[cur];
             State state(edge.size(), 0);
-            Value value{opr, nullptr, opr_fmt, 0.f, cur};
+            Value value{opr, nullptr, cfg_id, 0.f, cur};
             float ovar_time = 0.f;
             for (size_t i = 0; i < edge.size(); ++i) {
                 auto&& var = edge[i];
@@ -396,16 +404,16 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
         const auto& records = it->second.costs;
         StateTable states;
         for (const auto& record : records) {
-            auto opr_fmt = record.first;
+            auto cfg_id = record.first;
             float opr_time = record.second;
             ThinHashMap<VarNode*, TensorFormats> ivar2fmts;
-            auto out_fmt = get_io_formats(ivar2fmts, opr, opr_fmt, ctx);
+            auto out_fmt = get_io_formats(ivar2fmts, opr, cfg_id, ctx);
             for (const auto& kv : cuts.back().states) {
                 auto&& prev_state = kv.first;
                 float prev_time = kv.second.time;
                 const auto& edge = edges[cur];
                 State state(edge.size(), 0);
-                Value value{opr, &prev_state, opr_fmt, 0.f, cur};
+                Value value{opr, &prev_state, cfg_id, 0.f, cur};
                 float ovar_time = 0.f;
                 for (size_t i = 0; i < edge.size(); ++i) {
                     auto&& var = edge[i];
@@ -482,7 +490,7 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
     /// backward pass to generate the solution
     float min_time = std::numeric_limits<float>::max();
     OperatorNodeBase* cur_opr = nullptr;
-    OprFormat min_fmt = OprFormat::NCHW;
+    OprFormatConfigID min_cfg = OprFormatConfigID::NCHW;
     const State* pstate = nullptr;
     for (auto&& kv : cuts.back().states) {
         auto&& v = kv.second;
@@ -490,7 +498,7 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
             cur_opr = v.opr;
             pstate = v.prev;
             min_time = v.time;
-            min_fmt = v.opr_fmt;
+            min_cfg = v.cfg_id;
             ///! just to check the tensor formats of the output varnode
             auto&& k = kv.first;
             size_t opr_idx = v.opr_idx;
@@ -505,10 +513,10 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
     }
     mgb_assert(cur_opr != nullptr);
     mgb_log_debug(
-            "opr:%s;format:%s;time:%f", cur_opr->cname(), opr_format_to_string(min_fmt),
+            "opr:%s;config:%s;time:%f", cur_opr->cname(), config_id_to_string(min_cfg),
             min_time);
 
-    solution.insert({cur_opr, min_fmt});
+    solution.insert({cur_opr, min_cfg});
     cur = cuts.size() - 2;
     while (pstate) {
         auto val = cuts[cur].states[*pstate];
@@ -522,9 +530,9 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
             }
         }
         mgb_log_debug(
-                "opr:%s;format:%s;time:%f", val.opr->cname(),
-                opr_format_to_string(val.opr_fmt), val.time);
-        solution.insert({val.opr, val.opr_fmt});
+                "opr:%s;cofig:%s;time:%f", val.opr->cname(),
+                config_id_to_string(val.cfg_id), val.time);
+        solution.insert({val.opr, val.cfg_id});
         pstate = val.prev;
         cur--;
     }

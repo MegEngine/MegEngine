@@ -40,6 +40,37 @@ static inline const char* opr_format_to_string(
 #undef cb
 }
 
+static inline const char* config_id_to_string(
+        OprTensorFormatsConfiguration::OprFormatConfigID config_id) {
+    using OprFormatConfigID = OprTensorFormatsConfiguration::OprFormatConfigID;
+#define cb(_fmt)                  \
+    case OprFormatConfigID::_fmt: \
+        return #_fmt
+    switch (config_id) {
+        cb(NCHW);
+        cb(NHWC);
+        cb(NCHW4);
+        cb(NCHW8);
+        cb(NCHW4_NCHW32);
+        cb(NCHW4_NCHW);
+        cb(NCHW32);
+        cb(NCHW32_NCHW4);
+        cb(NCHW64);
+        cb(CHWN4);
+        cb(NCHW44);
+        cb(NCHW44_HYBRID);
+        cb(NCHW88);
+        cb(NCHW88_HYBRID);
+        cb(NCHW44_DOT);
+        cb(NCHW44_DOT_HYBRID);
+        default:
+            mgb_assert(
+                    false, "Invalid config id(got:%u)",
+                    static_cast<uint32_t>(config_id));
+    }
+#undef cb
+}
+
 static inline TensorFormats opr_format_to_tensor_formats(
         OprTensorFormatsConfiguration::OprFormat opr_format) {
     using OprFormat = OprTensorFormatsConfiguration::OprFormat;
@@ -60,6 +91,8 @@ static inline TensorFormats opr_format_to_tensor_formats(
             return TensorFormats::NCHWc8;
         case OprFormat::NCHW44:
             return TensorFormats::NCHWc4;
+        case OprFormat::NCHW8:
+            return TensorFormats::NCHWc8;
         default:
             mgb_throw(
                     AssertionError, "format(%s) is not supported",
@@ -124,9 +157,17 @@ static inline megdnn::NamedTensorShape tensor_formats_to_named_tensor_shape(
             return {{"G"}, {"K"}, {"C"}, {"R"}, {"S"}};
         case TensorFormats::C11RS:
             return {{"C"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}};
+        case TensorFormats::KRSC:
+            return {{"K"}, {"R"}, {"S"}, {"C"}};
+        case TensorFormats::KCRSc32:
+            return {{"K"}, {"C//32"}, {"R"}, {"S"}, {"C%32"}};
+        case TensorFormats::KCRSc64:
+            return {{"K"}, {"C//64"}, {"R"}, {"S"}, {"C%64"}};
+        case TensorFormats::CRSKc4:
+            return {{"C//4"}, {"R"}, {"S"}, {"K"}, {"C%4"}};
         default:
             mgb_throw(
-                    AssertionError, "invalid tensor formats(%u)",
+                    MegBrainError, "invalid tensor formats(%u)",
                     static_cast<uint32_t>(format));
     }
 }

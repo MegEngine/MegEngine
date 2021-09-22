@@ -22,6 +22,7 @@ using namespace gopt;
 
 namespace {
 using OprFormat = LayoutTransformContext::OprFormat;
+using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
 using OprList = LayoutTransformContext::OprList;
 using Attribute = LayoutTransformContext::Attribute;
 using Target = LayoutTransformContext::Target;
@@ -43,7 +44,7 @@ const char* target_to_string(Target target) {
 }
 
 std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
-        OprFormat base_opr_format, TensorFormats base_tensor_format) {
+        OprFormatConfigID base_config_id, TensorFormats base_tensor_format) {
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ConvolutionForward::typeinfo(),
@@ -58,34 +59,38 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-
     Attribute attribute = {
-            base_opr_format, base_tensor_format, Target::CUDA,
+            base_config_id, base_tensor_format, Target::CUDA,
             LayoutTransformContext::ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW32,
-                OprFormat::NCHW64, OprFormat::CHWN4})
+               {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW4_NCHW32, OprFormatConfigID::NCHW32_NCHW4,
+                OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::NCHW64, OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4})
             .add_opr_config(
                     opr::ConvolutionBackwardData::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW4, OprFormat::NHWC})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4,
+                     OprFormatConfigID::NHWC})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
-                     OprFormat::NCHW64, OprFormat::CHWN4})
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                     OprFormatConfigID::NHWC, OprFormatConfigID::NCHW64,
+                     OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::WarpPerspectiveForward::typeinfo(),
-                    {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
+                    {OprFormatConfigID::NHWC, OprFormatConfigID::NCHW4,
+                     OprFormatConfigID::NCHW64});
     return ctx;
 }
 
 std::unique_ptr<LayoutTransformContext> make_arm_ctx(
-        OprFormat base_opr_format, TensorFormats base_tensor_format) {
+        OprFormatConfigID base_config_id, TensorFormats base_tensor_format) {
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
             opr::ConvolutionForward::typeinfo(),
@@ -101,57 +106,64 @@ std::unique_ptr<LayoutTransformContext> make_arm_ctx(
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW, TensorFormats::NCHWc4,
             DNN_INC_FLOAT16(TensorFormats::NCHWc8)};
-    Attribute attribute = {base_opr_format, base_tensor_format, Target::ARM};
+    Attribute attribute = {base_config_id, base_tensor_format, Target::ARM};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NCHW44, DNN_INC_FLOAT16(OprFormat::NCHW88),
-                OprFormat::NCHW44_DOT})
+               {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
+                OprFormatConfigID::NCHW44_HYBRID,
+                DNN_INC_FLOAT16(OprFormatConfigID::NCHW88),
+                DNN_INC_FLOAT16(OprFormatConfigID::NCHW88_HYBRID),
+                OprFormatConfigID::NCHW44_DOT, OprFormatConfigID::NCHW44_DOT_HYBRID})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW44,
-                     DNN_INC_FLOAT16(OprFormat::NCHW88), OprFormat::NCHW44_DOT})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
+                     OprFormatConfigID::NCHW44_HYBRID,
+                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88),
+                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88_HYBRID),
+                     OprFormatConfigID::NCHW44_DOT,
+                     OprFormatConfigID::NCHW44_DOT_HYBRID})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW44,
-                     DNN_INC_FLOAT16(OprFormat::NCHW88)})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
+                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88)})
             .add_opr_config(
                     opr::ResizeForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW44,
-                     DNN_INC_FLOAT16(OprFormat::NCHW88)});
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
+                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88)});
     return ctx;
 }
 }  // namespace
 
 /* ================= LayoutTransformContext ==================*/
 LayoutTransformContext& LayoutTransformContext::add_opr_config(
-        Typeinfo* opr, OprFormat opr_format) {
+        Typeinfo* opr, OprFormatConfigID config_id) {
     auto& dispatchers = m_opr_configs[opr];
-    dispatchers[opr_format] =
+    dispatchers[config_id] =
             OprTensorFormatsConfiguration::find_dispatcher_by_type_format(
-                    opr, opr_format);
+                    opr, config_id);
     return *this;
 }
 
 LayoutTransformContext& LayoutTransformContext::add_opr_config(
-        Typeinfo* opr, SmallVector<OprFormat> opr_formats) {
+        Typeinfo* opr, SmallVector<OprFormatConfigID> config_ids) {
     auto& dispatchers = m_opr_configs[opr];
-    for (auto opr_fmt : opr_formats) {
-        dispatchers[opr_fmt] =
-                OprTensorFormatsConfiguration::find_dispatcher_by_type_format(
-                        opr, opr_fmt);
+    for (auto cfg : config_ids) {
+        dispatchers[cfg] =
+                OprTensorFormatsConfiguration::find_dispatcher_by_type_format(opr, cfg);
     }
     return *this;
 }
 
 std::unique_ptr<LayoutTransformContext> LayoutTransformContext::make(
-        Target target, OprFormat base_opr_format, TensorFormats base_tensor_format) {
+        Target target, OprFormatConfigID base_config_id,
+        TensorFormats base_tensor_format) {
     switch (target) {
         case Target::CUDA:
-            return make_cuda_ctx(base_opr_format, base_tensor_format);
+            return make_cuda_ctx(base_config_id, base_tensor_format);
         case Target::ARM:
-            return make_arm_ctx(base_opr_format, base_tensor_format);
+            return make_arm_ctx(base_config_id, base_tensor_format);
         default:
             mgb_assert(false, "unsupported target %s\n", target_to_string(target));
     }

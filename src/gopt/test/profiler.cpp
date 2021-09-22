@@ -26,7 +26,7 @@ using namespace serialization;
 #if MGB_CUDA
 namespace {
 std::unique_ptr<LayoutTransformContext> make_ctx() {
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using Attribute = LayoutTransformContext::Attribute;
     using Target = LayoutTransformContext::Target;
@@ -44,26 +44,29 @@ std::unique_ptr<LayoutTransformContext> make_ctx() {
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::CUDA};
+    Attribute attribute = {OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::CUDA};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW32,
-                OprFormat::NCHW64, OprFormat::CHWN4})
+               {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::NCHW64, OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4})
             .add_opr_config(
                     opr::ConvolutionBackwardData::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
-                     OprFormat::NCHW64, OprFormat::CHWN4})
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                     OprFormatConfigID::NHWC, OprFormatConfigID::NCHW64,
+                     OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::WarpPerspectiveForward::typeinfo(),
-                    {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
+                    {OprFormatConfigID::NHWC, OprFormatConfigID::NCHW4,
+                     OprFormatConfigID::NCHW64});
     return ctx;
 }
 }  // namespace

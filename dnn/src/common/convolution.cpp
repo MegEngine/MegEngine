@@ -830,9 +830,9 @@ typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Paramet
                 src[3], cflt.dilated_spatial[1], cflt.stride[1], cflt.padding[1]);
         dst[4] = 32;
     } else if (param().format == Param::Format::NCHW88) {
-        megdnn_assert(
-                src.ndim == 5 || (src.ndim == 4 && src[1] <= 8),
-                "invalid src ndim for NCHW88, expected=5 or 4, got=%zu", src.ndim);
+        megdnn_assert(src.ndim == 5 || src.ndim == 4,
+                      "invalid src ndim for NCHW88, expected=5 or 4, got=%zu",
+                      src.ndim);
         dst.ndim = 5;
         dst[0] = src[0];
         auto oc = cflt.ocpg * cflt.group;
@@ -850,12 +850,11 @@ typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Paramet
                     "%s icpg=%u group=%u", errmsg().c_str(), cflt.icpg, cflt.group);
         }
 
-    } else if (
-            param().format == Param::Format::NCHW44 ||
-            param().format == Param::Format::NCHW44_DOT) {
-        megdnn_assert(
-                src.ndim == 5 || (src.ndim == 4 && src[1] <= 4),
-                "invalid src ndim for NCHW44, expected=5 or 4, got=%zu", src.ndim);
+    } else if (param().format == Param::Format::NCHW44 ||
+               param().format == Param::Format::NCHW44_DOT) {
+        megdnn_assert(src.ndim == 5 || src.ndim == 4,
+                      "invalid src ndim for NCHW44, expected=5 or 4, got=%zu",
+                      src.ndim);
         dst.ndim = 5;
         dst[0] = src[0];
         auto oc = cflt.ocpg * cflt.group;

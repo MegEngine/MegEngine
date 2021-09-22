@@ -43,6 +43,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
     auto partitions = extractor.extract(opt.graph().endpoint_vars());
 
     using Solution = SolverBase::Solution;
+    using OprFormat = SolverBase::OprFormat;
     Solution solution;
     ThinHashSet<VarNode*> endpoint_vars;
     for (auto&& partition : partitions) {
@@ -60,7 +61,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
 
     auto&& opr_configs = m_ctx->opr_configs();
     auto&& base_fmt = m_ctx->attribute().base_tensor_formats;
-    auto&& base_opr_fmt = m_ctx->attribute().base_opr_format;
+    auto&& base_cfg_id = m_ctx->attribute().base_config_id;
     auto&& reformat_attribute = m_ctx->attribute().reformat_attribute;
     ThinHashMap<VarNode*, TensorFormats> var2fmts;
     static ThinHashSet<Typeinfo*> format_aware_oprs = {
@@ -69,18 +70,25 @@ void LayoutTransformPass::apply(OptState& opt) const {
 #undef cb
     };
     auto rewriter = opt.graph().make_rewriter();
-    auto on_opr = [&opr_configs, &base_fmt, &base_opr_fmt, &reformat_attribute,
+    auto on_opr = [&opr_configs, &base_fmt, &base_cfg_id, &reformat_attribute,
                    &rewriter, &solution, &var2fmts,
                    &endpoint_vars](OperatorNodeBase* opr) {
         auto it = solution.find(opr);
         if (it != solution.end()) {
-            auto opr_fmt = it->second;
+            auto cfg_id = it->second;
             auto find = opr_configs.find(opr->dyn_typeinfo());
             Maybe<OprTensorFormatsConfiguration> fmtcfg = None;
             Maybe<OprTensorFormatsConfiguration> basecfg = None;
+            Maybe<OprFormat> opr_fmt = None;
             if (find != opr_configs.end()) {
-                fmtcfg = (*find->second.at(opr_fmt))(opr);
-                basecfg = (*find->second.at(base_opr_fmt))(opr);
+                fmtcfg = (*find->second.at(cfg_id))(opr);
+                auto _ = OprTensorFormatsConfiguration::find_dispatcher_by_type_format(
+                        opr->dyn_typeinfo(), base_cfg_id);
+                basecfg = (*_)(opr);
+                opr_fmt = fmtcfg.val().opr_format;
+            } else {
+                opr_fmt =
+                        OprTensorFormatsConfiguration::safe_cast_to_opr_format(cfg_id);
             }
             VarNodeArray new_inp;
             size_t nr_inps = opr->input().size();
@@ -89,7 +97,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 nr_inps = std::min(fmtcfg.val().input_tensor_formats.size(), nr_inps);
                 out_fmt = fmtcfg.val().output_tensor_formats[0];
             } else {
-                out_fmt = opr_format_to_tensor_formats(opr_fmt);
+                out_fmt = opr_format_to_tensor_formats(opr_fmt.val());
             }
             new_inp.resize(nr_inps);
             for (size_t i = 0; i < nr_inps; ++i) {
@@ -103,7 +111,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
                     from = find->second;
                 }
                 auto to = fmtcfg.valid() ? fmtcfg.val().input_tensor_formats[i]
-                                         : opr_format_to_tensor_formats(opr_fmt);
+                                         : opr_format_to_tensor_formats(opr_fmt.val());
                 bool is_parameter =
                         fmtcfg.valid() &&
                         fmtcfg.val().input_tensor_types[i] == TensorType::WEIGHT;
@@ -119,7 +127,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
                             var->dtype().enumv()};
                     if (is_parameter) {
                         auto aligned_desc =
-                                ReformatManager::make_aligned_desc(base_fmt, out_fmt);
+                                ReformatManager::make_aligned_desc(from, out_fmt);
                         reformat = ReformatManager::instance()
                                            .auto_aligned_reformat_weight(
                                                    var, key, aligned_desc);
@@ -134,7 +142,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
             }
             VarNode* new_out;
             if (format_aware_oprs.count(opr->dyn_typeinfo()) > 0) {
-                new_out = intl::modify_opr_format(opr_fmt, new_inp, opr);
+                new_out = intl::modify_opr_format(opr_fmt.val(), new_inp, opr);
             } else {
                 new_out = serialization::copy_opr_shallow(*opr, new_inp, opr->config())
                                   ->output(0);
@@ -170,9 +178,8 @@ void LayoutTransformPass::apply(OptState& opt) const {
                         ovar, new_ovar,
                         mgb_cstr_log(ssprintf(
                                              "replace opr(%s) to new opr "
-                                             "format(%s)",
-                                             opr->cname(),
-                                             opr_format_to_string(opr_fmt))
+                                             "format config(%s)",
+                                             opr->cname(), config_id_to_string(cfg_id))
                                              .c_str()));
             }
         } else {

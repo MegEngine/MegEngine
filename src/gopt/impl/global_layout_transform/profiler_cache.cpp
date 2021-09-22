@@ -64,7 +64,7 @@ void ProfilerCache::Key::build_blob_from_opr() {
 
     // serialize opr_format
     m_blob_storage.append(
-            std::to_string(static_cast<uint32_t>(m_key_impl.opr_key.opr_format)));
+            std::to_string(static_cast<uint32_t>(m_key_impl.opr_key.config_id)));
 
     // serialize extra_attribute
     m_blob_storage.append(

@@ -33,9 +33,10 @@ class CachedProfiler;
 class ProfilerBase {
 public:
     using OprFormat = Problem::OprFormat;
+    using OprFormatConfigID = Problem::OprFormatConfigID;
     struct OperatorNodeRecord {
         const cg::OperatorNodeBase* opr;  ///< pointer to operator node
-        ThinHashMap<OprFormat, float>
+        ThinHashMap<OprFormatConfigID, float>
                 costs;  ///< costs of operator node, i.e. the elapsed device
                         ///< time of the operator node on different opr format
                         ///< (layout configuration).
@@ -199,6 +200,8 @@ protected:
     virtual float profile_var_node(
             const VarNode* var, TensorFormats base_format,
             const ReformatKey& key) const;
+    OprFormatConfigID tensor_formats_to_config_id(TensorFormats tensor_format) const;
+
     OprFootprint m_opr_footprint;
     float m_opr_threshold;       /// a threshold, when the computation of the newly
                                  /// created operator that is built in some opr
@@ -224,14 +227,14 @@ class ProfilerCache : public NonCopyableObj {
 public:
     using ReformatKey = ReformatManager::ReformatKey;
     using ReformatAttribute = ReformatKey::Attribute;
-    using OprFormat = ProfilerBase::OprFormat;
+    using OprFormatConfigID = ProfilerBase::OprFormatConfigID;
     class Key final : public NonCopyableObj {
         std::string m_blob_storage;
         std::string m_category;
 
         struct OprKey {
             const OperatorNodeBase* opr;
-            OprFormat opr_format;
+            OprFormatConfigID config_id;
             ReformatAttribute extra_attribute;
         };
 
@@ -254,9 +257,9 @@ public:
         void build_category(CompNode cn);
 
     public:
-        Key(const OperatorNodeBase* opr, OprFormat opr_format,
+        Key(const OperatorNodeBase* opr, OprFormatConfigID config_id,
             ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) {
-            m_key_impl.opr_key = {opr, opr_format, extra_attribute};
+            m_key_impl.opr_key = {opr, config_id, extra_attribute};
             build_blob_from_opr();
             mgb_assert(
                     opr->node_prop().contain(

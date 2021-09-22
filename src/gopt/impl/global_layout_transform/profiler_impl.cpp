@@ -29,30 +29,6 @@ using namespace gopt;
 using ReformatKey = ReformatManager::ReformatKey;
 
 namespace {
-using OprFormat = Problem::OprFormat;
-OprFormat tensor_formats_to_opr_format(TensorFormats tensor_format) {
-    switch (tensor_format) {
-        case TensorFormats::NCHW:
-            return OprFormat::NCHW;
-        case TensorFormats::NCHWc4:
-            return OprFormat::NCHW44;
-        case TensorFormats::NCHWc8:
-            return OprFormat::NCHW88;
-        case TensorFormats::NCHWc32:
-            return OprFormat::NCHW32;
-        case TensorFormats::NCHWc64:
-            return OprFormat::NCHW64;
-        case TensorFormats::NHWC:
-            return OprFormat::NHWC;
-        case TensorFormats::CHWNc4:
-            return OprFormat::CHWN4;
-        default:
-            mgb_throw(
-                    MegBrainError, "tensor format(%u) is not supported",
-                    static_cast<uint32_t>(tensor_format));
-    }
-}
-
 class GraphPartitionProfiler final : public PluginBase {
     using CompNodeEventPtr = std::unique_ptr<CompNode::Event>;
 
@@ -214,8 +190,8 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
     record.opr = opr;
     auto& costs = record.costs;
     for (auto&& f : available_tensor_formats) {
-        auto opr_format = tensor_formats_to_opr_format(f);
-        costs[opr_format] = profile_operator(opr, base_format, f, extra_attribute);
+        auto config_id = tensor_formats_to_config_id(f);
+        costs[config_id] = profile_operator(opr, base_format, f, extra_attribute);
     }
     return record;
 }
@@ -261,7 +237,7 @@ ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
     record.opr = opr;
     auto& costs = record.costs;
     for (auto&& i : available_configs) {
-        costs[i.opr_format] = profile_operator(opr, base_config, i, extra_attribute);
+        costs[i.config_id] = profile_operator(opr, base_config, i, extra_attribute);
     }
     return record;
 }
@@ -316,7 +292,6 @@ float ProfilerImpl::profile_operator(
         new_inps[i] = imm.node();
     }
     VarNode* y = mgb::gopt::intl::modify_opr_format(config.opr_format, new_inps, opr);
-#if 0
     static const ThinHashSet<Typeinfo*> multi_algo_oprs = {
             opr::Convolution::typeinfo(),
             opr::ConvBiasForward::typeinfo(),
@@ -326,7 +301,6 @@ float ProfilerImpl::profile_operator(
     if (multi_algo_oprs.count(opr->dyn_typeinfo()) &&
         !mgb::gopt::intl::has_available_algo(new_inps, y->owner_opr()))
         return PROFILE_TIME_OUT;
-#endif
     if (!m_opr_filter(opr, y->owner_opr()))
         return PROFILE_TIME_OUT;
     auto mark = MarkInputContiguous::make(SymbolVar(y));
@@ -494,6 +468,30 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(const Problem& problem) cons
     return profiling_result;
 }
 
+ProfilerImpl::OprFormatConfigID ProfilerImpl::tensor_formats_to_config_id(
+        TensorFormats tensor_format) const {
+    switch (tensor_format) {
+        case TensorFormats::NCHW:
+            return OprFormatConfigID::NCHW;
+        case TensorFormats::NCHWc4:
+            return OprFormatConfigID::NCHW4;
+        case TensorFormats::NCHWc8:
+            return OprFormatConfigID::NCHW8;
+        case TensorFormats::NCHWc32:
+            return OprFormatConfigID::NCHW32;
+        case TensorFormats::NCHWc64:
+            return OprFormatConfigID::NCHW64;
+        case TensorFormats::NHWC:
+            return OprFormatConfigID::NHWC;
+        case TensorFormats::CHWNc4:
+            return OprFormatConfigID::CHWN4;
+        default:
+            mgb_throw(
+                    MegBrainError, "tensor format(%u) is not supported",
+                    static_cast<uint32_t>(tensor_format));
+    }
+}
+
 /* ================== ProfilerBase =================*/
 std::string ProfilerBase::OperatorNodeRecord::to_string() const {
     auto str = ssprintf(
@@ -508,7 +506,7 @@ std::string ProfilerBase::OperatorNodeRecord::to_string() const {
             opr->output(0)->shape().to_string().c_str());
     for (auto&& cpair : costs) {
         str += ssprintf(
-                "\tformat: %s; cost:%f", opr_format_to_string(cpair.first),
+                "\tconfig: %s; cost:%f", config_id_to_string(cpair.first),
                 cpair.second);
     }
     return str;
@@ -557,7 +555,7 @@ float CachedProfiler::profile_operator(
         const OperatorNodeBase* opr, TensorFormats base_format,
         TensorFormats tensor_format, ReformatAttribute extra_attribute) const {
     ProfilerCache::Key key{
-            opr, tensor_formats_to_opr_format(tensor_format), extra_attribute};
+            opr, tensor_formats_to_config_id(tensor_format), extra_attribute};
     auto ret = ProfilerCache::inst().get(key);
     if (ret.valid())
         return ret.val();
@@ -571,7 +569,7 @@ float CachedProfiler::profile_operator(
         const OperatorNodeBase* opr, const OprTensorFormatsConfiguration& base_config,
         const OprTensorFormatsConfiguration& config,
         ReformatAttribute extra_attribute) const {
-    ProfilerCache::Key key{opr, config.opr_format, extra_attribute};
+    ProfilerCache::Key key{opr, config.config_id, extra_attribute};
     auto ret = ProfilerCache::inst().get(key);
     if (ret.valid())
         return ret.val();

@@ -45,6 +45,36 @@ SymbolVar Network::add_conv(
     return conv;
 }
 
+SymbolVar Network::add_group_conv(
+        SymbolVar f, size_t output_channels, size_t groups, KernSize kern_size,
+        DType out_dtype, bool has_relu, Stride stride, Padding padding) {
+    static int weight_idx = 0;
+    static int bias_idx = 0;
+
+    size_t input_channels = f.node()->shape()[1];
+    auto weight = add_cvar(
+            ssprintf("w%d", weight_idx).c_str(),
+            {groups, output_channels / groups, input_channels / groups, kern_size[0],
+             kern_size[1]});
+    auto bias = add_cvar(ssprintf("b%d", bias_idx).c_str(), {1, output_channels, 1, 1});
+    mgb_assert(out_dtype.category() == DTypeCategory::FLOAT);
+    opr::ConvBias::Param param;
+    param.sparse = opr::ConvBias::Param::Sparse::GROUP;
+    param.stride_h = stride[0], param.stride_w = stride[1];
+    param.pad_h = padding[0], param.pad_w = padding[1];
+    if (has_relu) {
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    } else {
+        param.nonlineMode = opr::ConvBias::Param::NonlineMode::IDENTITY;
+    }
+
+    auto conv = opr::ConvBias::make(
+            f, weight, bias, param, {}, OperatorNodeConfig{out_dtype});
+    weight_idx++;
+    bias_idx++;
+    return conv;
+}
+
 SymbolVar Network::add_deconv(
         SymbolVar f, size_t ratio, size_t output_channels, DType out_dtype) {
     static int weight_idx = 0;
@@ -208,6 +238,7 @@ SymbolVarArray fusion_pyramids_feature(
                 false, {1, 1}, {0, 0});
         if (!touch) {
             x = f;
+            touch = true;
         } else {
             x = network.add_deconv(x, 2, 16, dtype::QuantizedS8{1.f});
             x = network.add_elemwise(
@@ -234,6 +265,65 @@ SymbolVarArray mgb::make_det(Network& network, size_t batch, DType out_dtype) {
     outputs.insert(outputs.end(), fpn_hv.begin(), fpn_hv.end());
     outputs.insert(outputs.end(), fpn_plate.begin(), fpn_plate.end());
     return outputs;
+}
+
+SymbolVar mgb::bottleneck(
+        Network& network, SymbolVar f, size_t input_channels, size_t channels, size_t t,
+        size_t stride) {
+    size_t in_channels = f.node()->shape()[1];
+    SymbolVar x = f;
+    if (t != 1) {
+        x = network.add_conv(
+                f, input_channels * t, {1, 1}, dtype::Float32(), true, {1, 1}, {0, 0});
+    }
+    x = network.add_group_conv(
+            x, input_channels * t, input_channels * t, {3, 3}, dtype::Float32(), true,
+            {stride, stride}, {1, 1});
+    x = network.add_conv(x, channels, {1, 1}, dtype::Float32(), false, {1, 1}, {0, 0});
+    if (stride == 1 && in_channels == channels)
+        x = f + x;
+    return x;
+}
+
+SymbolVar mgb::bottleneck_group(
+        Network& network, SymbolVar f, size_t input_channels, size_t channels,
+        size_t stages, size_t s, size_t t) {
+    SymbolVar x = f;
+    for (size_t i = 0; i < stages; ++i) {
+        size_t stride = i == 0 ? s : 1;
+        x = bottleneck(network, x, input_channels, channels, t, stride);
+        input_channels = channels;
+    }
+    return x;
+}
+
+namespace {
+size_t make_divisible(size_t v, size_t divisor) {
+    size_t min_value = divisor;
+    size_t new_v = std::max(min_value, (v + divisor / 2) / divisor * divisor);
+    if (new_v < 0.9 * v)
+        new_v += divisor;
+    return new_v;
+}
+}  // namespace
+
+SymbolVar mgb::make_mobilenet_v2(Network& network, size_t batch) {
+    auto data = network.add_var("data", {batch, 3, 224, 224});
+    constexpr size_t round_nearest = 8;
+    auto x = network.add_conv(
+            data, make_divisible(32, round_nearest), {3, 3}, dtype::Float32(), true,
+            {2, 2}, {1, 1});
+    x = bottleneck(network, x, 32, make_divisible(16, round_nearest), 1, 1);
+    x = bottleneck_group(network, x, 16, make_divisible(24, round_nearest), 2, 2, 6);
+    x = bottleneck_group(network, x, 24, make_divisible(32, round_nearest), 3, 2, 6);
+    x = bottleneck_group(network, x, 32, make_divisible(64, round_nearest), 4, 2, 6);
+    x = bottleneck_group(network, x, 64, make_divisible(96, round_nearest), 3, 1, 6);
+    x = bottleneck_group(network, x, 96, make_divisible(160, round_nearest), 3, 2, 6);
+    x = bottleneck_group(network, x, 160, make_divisible(320, round_nearest), 1, 1, 6);
+    x = network.add_conv(
+            x, make_divisible(1280, round_nearest), {1, 1}, dtype::Float32(), true,
+            {1, 1}, {0, 0});
+    return x;
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

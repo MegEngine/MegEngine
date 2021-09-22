@@ -23,7 +23,7 @@
 #include "megbrain/plugin/profiler.h"
 #include "megbrain/serialization/serializer.h"
 
-#define MGB_WITH_CACHED_TEST 1
+#define MGB_WITH_CACHED_TEST 0
 
 #if MGB_WITH_CACHED_TEST
 #include "./cache_data.h"
@@ -60,30 +60,6 @@ size_t find_opr_num(SymbolVar endpoint) {
     return opr_num;
 }
 
-using OprFormat = Problem::OprFormat;
-OprFormat tensor_formats_to_opr_format(TensorFormats tensor_format) {
-    switch (tensor_format) {
-        case TensorFormats::NCHW:
-            return OprFormat::NCHW;
-        case TensorFormats::NCHWc4:
-            return OprFormat::NCHW4;
-        case TensorFormats::NCHWc8:
-            return OprFormat::NCHW8;
-        case TensorFormats::NCHWc32:
-            return OprFormat::NCHW32;
-        case TensorFormats::NCHWc64:
-            return OprFormat::NCHW64;
-        case TensorFormats::NHWC:
-            return OprFormat::NHWC;
-        case TensorFormats::CHWNc4:
-            return OprFormat::CHWN4;
-        default:
-            mgb_throw(
-                    MegBrainError, "tensor format(%u) is not supported",
-                    static_cast<uint32_t>(tensor_format));
-    }
-}
-
 class ProfilerMock : public ProfilerImpl {
 public:
     ProfilerMock(const uint8_t* bin, size_t size) {
@@ -105,7 +81,7 @@ private:
             ReformatAttribute extra_attribute =
                     ReformatAttribute::DEFAULT) const override {
         ProfilerCache::Key key{
-                opr, tensor_formats_to_opr_format(tensor_format), extra_attribute};
+                opr, tensor_formats_to_config_id(tensor_format), extra_attribute};
         auto ret = ProfilerCache::inst().get(key);
         if (ret.valid())
             return ret.val();
@@ -117,9 +93,7 @@ private:
             const OprTensorFormatsConfiguration& config,
             ReformatAttribute extra_attribute =
                     ReformatAttribute::DEFAULT) const override {
-        ProfilerCache::Key key{opr, config.opr_format, extra_attribute};
-        std::string tmp;
-        tmp.reserve(key.blob().size);
+        ProfilerCache::Key key{opr, config.config_id, extra_attribute};
         auto ret = ProfilerCache::inst().get(key);
         if (ret.valid())
             return ret.val();
@@ -161,7 +135,7 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
     auto func1 = network.graph->compile({make_callback_copy(output, t1)});
     func1->execute();
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using Target = LayoutTransformContext::Target;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
@@ -175,17 +149,18 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
             TensorFormats::NCHW, TensorFormats::NHWC, TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::CHWNc4};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC})
+               {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::CHWN4, OprFormatConfigID::NHWC})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
-                     OprFormat::CHWN4});
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                     OprFormatConfigID::NHWC, OprFormatConfigID::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Resnet18_QS8.data()),
@@ -253,7 +228,7 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
     auto func1 = network.graph->compile({make_callback_copy(output, t1)});
     func1->execute();
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using Attribute = LayoutTransformContext::Attribute;
     using Target = LayoutTransformContext::Target;
@@ -267,18 +242,20 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
-                OprFormat::NCHW64})
+               {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::CHWN4, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW64})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
-                     OprFormat::NHWC, OprFormat::CHWN4});
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                     OprFormatConfigID::NCHW64, OprFormatConfigID::NHWC,
+                     OprFormatConfigID::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Resnet18_QS4.data()),
@@ -375,7 +352,7 @@ TEST(TestLayoutTransform, Detection_QS8) {
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({outputs}, strategy);
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using Attribute = LayoutTransformContext::Attribute;
     using Target = LayoutTransformContext::Target;
@@ -389,18 +366,18 @@ TEST(TestLayoutTransform, Detection_QS8) {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
-                OprFormat::NCHW64})
+               {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::CHWN4, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW64})
             .add_opr_config(
-                    opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
-                     OprFormat::NHWC, OprFormat::CHWN4});
+                    opr::ConvolutionBackwardData::typeinfo(),
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NHWC});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Detection_QS8.data()),
@@ -452,7 +429,7 @@ TEST(TestLayoutTransform, Detection_QS4) {
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({outputs}, strategy);
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
@@ -466,18 +443,18 @@ TEST(TestLayoutTransform, Detection_QS4) {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
-                OprFormat::NCHW64})
+               {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::CHWN4, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW64})
             .add_opr_config(
-                    opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
-                     OprFormat::NHWC, OprFormat::CHWN4});
+                    opr::ConvolutionBackwardData::typeinfo(),
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NHWC});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Detection_QS4.data()),
@@ -538,7 +515,7 @@ TEST(TestLayoutTransform, Wide) {
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({y}, strategy);
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
@@ -550,12 +527,13 @@ TEST(TestLayoutTransform, Wide) {
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW, TensorFormats::NHWC};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::DEFAULT};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
-            opr::ConvBiasForward::typeinfo(), {OprFormat::NCHW, OprFormat::NHWC});
+            opr::ConvBiasForward::typeinfo(),
+            {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Wide.data()),
@@ -580,6 +558,8 @@ TEST(TestLayoutTransform, Wide) {
     auto func = network.graph->compile({{sym_o, {}}});
     func->execute();
     gprof.to_json_full(func.get())->writeto_fpath(output_file("wide.json"));
+    /// check global layout transform pass, no dimshuffle
+    /// disable the following check, to make ci stable.
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(sym_o);
     ASSERT_EQ(nr_dimshuffle, 0u);
     auto nr_param_merge = find_opr_num<opr::MultipleDeviceTensorHolder>(sym_o);
@@ -631,7 +611,7 @@ TEST(TestLayoutTransform, DetectionHead) {
     S strategy = S::PROFILE;
     gopt::modify_opr_algo_strategy_inplace({y}, strategy);
 
-    using OprFormat = LayoutTransformContext::OprFormat;
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
     using OprList = LayoutTransformContext::OprList;
     using Attribute = LayoutTransformContext::Attribute;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
@@ -650,27 +630,30 @@ TEST(TestLayoutTransform, DetectionHead) {
             TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
     Attribute attribute = {
-            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW32,
-                OprFormat::NCHW64, OprFormat::CHWN4})
+               {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC,
+                OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                OprFormatConfigID::NCHW64, OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NCHW4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4})
             .add_opr_config(
                     opr::ConvolutionBackwardData::typeinfo(),
-                    {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
-                     OprFormat::NCHW64, OprFormat::CHWN4})
+                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
+                     OprFormatConfigID::NHWC, OprFormatConfigID::NCHW64,
+                     OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::WarpPerspectiveForward::typeinfo(),
-                    {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
+                    {OprFormatConfigID::NHWC, OprFormatConfigID::NCHW4,
+                     OprFormatConfigID::NCHW64});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_DetectionHead.data()),
@@ -762,6 +745,186 @@ TEST(TestLayoutTransform, CanonicalizeLayoutTransform) {
     HostTensorND t2;
     auto func2 = network.graph->compile({make_callback_copy(another_x, t2)});
     func2->execute();
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+TEST(TestLayoutTransform, Resnet18_F32) {
+    auto cn = CompNode::load("cpu0");
+
+    Network network(cn);
+    auto output = make_resnet18(network, 1);
+
+    HostTensorND t1;
+    auto func1 = network.graph->compile({make_callback_copy(output, t1)});
+    func1->execute();
+
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
+    using OprList = LayoutTransformContext::OprList;
+    using Target = LayoutTransformContext::Target;
+    using Attribute = LayoutTransformContext::Attribute;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::Concat::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::WarpPerspectiveForward::typeinfo(),
+            opr::Resize::typeinfo(),
+    };
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW,
+            TensorFormats::NCHWc4,
+            TensorFormats::NCHWc8,
+    };
+    Attribute attribute = {
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {
+                       OprFormatConfigID::NCHW44,
+                       OprFormatConfigID::NCHW,
+                       OprFormatConfigID::NCHW44_HYBRID,
+               })
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {
+                            OprFormatConfigID::NCHW44,
+                            OprFormatConfigID::NCHW,
+                            OprFormatConfigID::NCHW44_HYBRID,
+                    })
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(), {
+                                                             OprFormatConfigID::NCHW,
+                                                             OprFormatConfigID::NCHW44,
+                                                     });
+#if MGB_WITH_CACHED_TEST
+    auto profiler = std::make_unique<ProfilerMock>(
+            static_cast<const uint8_t*>(TestLayoutTransform_Resnet18_F32.data()),
+            TestLayoutTransform_Resnet18_F32.size());
+#else
+    auto profiler = ProfilerBase::make_cached_profiler(
+            "TestLayoutTransform.Resnet18_F32.cache");
+#endif
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
+    auto new_out_var = new_output[0];
+    /// check global layout transform pass
+    auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
+    ASSERT_EQ(nr_dimshuffle, 1u);
+    /// check first conv format
+    const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
+    const auto& cast = first_conv.cast_final_safe<opr::ConvBiasForward>();
+    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NCHW44);
+
+    GraphProfiler gprof{network.graph.get()};
+    HostTensorND t2;
+    auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
+    func2->execute();
+    gprof.to_json_full(func2.get())->writeto_fpath(output_file("resnet18_f32.json"));
+    /// check correct
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+TEST(TestLayoutTransform, MobileNetV2) {
+    auto cn = CompNode::load("cpu0");
+
+    Network network(cn);
+    auto output = make_mobilenet_v2(network, 1);
+
+    HostTensorND t1;
+    auto func1 = network.graph->compile({make_callback_copy(output, t1)});
+    func1->execute();
+
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
+    using OprList = LayoutTransformContext::OprList;
+    using Target = LayoutTransformContext::Target;
+    using Attribute = LayoutTransformContext::Attribute;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::Concat::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::WarpPerspectiveForward::typeinfo(),
+            opr::Resize::typeinfo(),
+    };
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW,
+            TensorFormats::NCHWc4,
+            TensorFormats::NCHWc8,
+    };
+    Attribute attribute = {
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {
+                       OprFormatConfigID::NCHW44,
+                       OprFormatConfigID::NCHW,
+                       OprFormatConfigID::NCHW44_HYBRID,
+               })
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {
+                            OprFormatConfigID::NCHW44,
+                            OprFormatConfigID::NCHW,
+                            OprFormatConfigID::NCHW44_HYBRID,
+                    })
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(), {
+                                                             OprFormatConfigID::NCHW,
+                                                             OprFormatConfigID::NCHW44,
+                                                     });
+#if MGB_WITH_CACHED_TEST
+    auto profiler = std::make_unique<ProfilerMock>(
+            static_cast<const uint8_t*>(TestLayoutTransform_MobileNetV2_F32.data()),
+            TestLayoutTransform_MobileNetV2_F32.size());
+#else
+    auto profiler = ProfilerBase::make_cached_profiler(
+            "TestLayoutTransform.MobileNetV2_F32.cache");
+#endif
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
+    auto new_out_var = new_output[0];
+    /// check global layout transform pass
+    auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
+    ASSERT_EQ(nr_dimshuffle, 1u);
+    /// check first conv format
+    const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
+    const auto& cast = first_conv.cast_final_safe<opr::ConvBiasForward>();
+    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NCHW44);
+
+    GraphProfiler gprof{network.graph.get()};
+    HostTensorND t2;
+    auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
+    func2->execute();
+    gprof.to_json_full(func2.get())->writeto_fpath(output_file("mobilenet_v2_f32.json"));
+    /// check correct
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 

@@ -28,7 +28,8 @@ class ProfilerBase;
 class SolverBase {
 public:
     using OprFormat = Problem::OprFormat;
-    using Solution = ThinHashMap<cg::OperatorNodeBase*, OprFormat>;
+    using OprFormatConfigID = Problem::OprFormatConfigID;
+    using Solution = ThinHashMap<cg::OperatorNodeBase*, OprFormatConfigID>;
     SolverBase() = default;
     virtual ~SolverBase() = default;
     /*!

@@ -24,7 +24,7 @@ namespace intl {
 bool has_available_algo(const VarNodeArray& i, const cg::OperatorNodeBase* opr);
 
 VarNode* modify_opr_format(
-        opr::ConvBias::Param::Format opr_format, const VarNodeArray& i,
+        opr::Convolution::Param::Format opr_format, const VarNodeArray& i,
         const cg::OperatorNodeBase* opr);
 
 }  // namespace intl

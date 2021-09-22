@@ -48,7 +48,8 @@ ProfilingBasedSolver::ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profile
             };
 
     m_problem_filter = [](const Problem& problem) {
-        auto&& base_opr_format = problem.attribute().base_opr_format;
+        auto&& base_opr_format = OprTensorFormatsConfiguration::safe_cast_to_opr_format(
+                problem.attribute().base_config_id);
         bool has_format_aware_opr = false;
         for (auto&& opr : problem.graph_partition().all_oprs()) {
             auto iter = format_aware_opr_validators.find(opr->dyn_typeinfo());

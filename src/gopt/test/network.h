@@ -28,7 +28,7 @@
 namespace mgb {
 class Network {
 private:
-    HostTensorGenerator<> gen;
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{-0.01, 0.01};
     CompNode cn;
 
 public:
@@ -47,6 +47,10 @@ public:
 
     SymbolVar add_conv(
             SymbolVar f, size_t output_channels, KernSize kern_size,
+            DType out_dtype = dtype::Float32(), bool has_relu = true,
+            Stride stride = {1, 1}, Padding padding = {0, 0});
+    SymbolVar add_group_conv(
+            SymbolVar f, size_t output_channels, size_t groups, KernSize kern_size,
             DType out_dtype = dtype::Float32(), bool has_relu = true,
             Stride stride = {1, 1}, Padding padding = {0, 0});
     SymbolVar add_deconv(
@@ -72,6 +76,16 @@ SymbolVar make_resnet18(
 
 SymbolVarArray make_det(
         Network& network, size_t batch = 16, DType out_dtype = dtype::Float32());
+
+SymbolVar bottleneck(
+        Network& network, SymbolVar f, size_t input_channels, size_t channels, size_t t,
+        size_t stride);
+
+SymbolVar bottleneck_group(
+        Network& network, SymbolVar f, size_t input_channels, size_t channels,
+        size_t stages, size_t s, size_t t);
+
+SymbolVar make_mobilenet_v2(Network& network, size_t batch = 1);
 
 }  // namespace mgb
 
