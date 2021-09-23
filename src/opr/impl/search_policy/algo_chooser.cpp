@@ -304,8 +304,8 @@ static void serialize_write_pod(const Algorithm::Info::Desc& val,
     uint32_t name_size = val.name.size();
     megdnn::Algorithm::serialize_write_pod<uint32_t>(param_size, result);
     megdnn::Algorithm::serialize_write_pod<uint32_t>(name_size, result);
-    result += val.param;
-    result += val.name;
+    megdnn::Algorithm::serialize_write_pod(val.param, result);
+    megdnn::Algorithm::serialize_write_pod(val.name, result);
 }
 
 static Algorithm::Info::Desc deserialize_read_pod(const std::string& data,
@@ -325,11 +325,13 @@ static Algorithm::Info::Desc deserialize_read_pod(const std::string& data,
     cb(name_size, uint32_t);
 
     if (param_size > 0) {
-        ret.param = std::string(data.data() + offset, param_size);
+        ret.param = megdnn::Algorithm::deserialize_read_pod(data, offset,
+                                                            param_size);
         offset += param_size;
     }
     if (name_size > 0) {
-        ret.name = std::string(data.data() + offset, name_size);
+        ret.name = megdnn::Algorithm::deserialize_read_pod(data, offset,
+                                                           name_size);
         offset += name_size;
     }
     return ret;

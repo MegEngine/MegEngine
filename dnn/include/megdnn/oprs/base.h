@@ -212,6 +212,10 @@ public:
         result.append(val, strlen(val));
     }
 
+    static void serialize_write_pod(const std::string& val, std::string& result) {
+        result.append(val.data(), val.size());
+    }
+
     template <typename T>
     static T deserialize_read_pod(const std::string& data, size_t offset = 0) {
         static_assert(std::is_trivially_copyable<T>::value, "invalid type");
@@ -225,6 +229,12 @@ public:
         //!     *reinterpret_cast<const T*>(&data[offset]);
         memcpy(&ret, data.data() + offset, sizeof(T));
         return ret;
+    }
+
+    static std::string deserialize_read_pod(const std::string& data,
+                                            size_t offset = 0,
+                                            size_t size = 0) {
+        return std::string(data.data() + offset, size);
     }
 
     template <typename T>
