@@ -236,8 +236,7 @@ def test_empty_tensor(is_trace):
         elif nargs == 2:
             binary_func.append([op_name, op])
         else:
-            print(nargs)
-            raise NotImplementedError
+            raise NotImplementedError("nargs {}".format(nargs))
 
     def run_test(func, args, ref_shape, is_trace, sym=False):
         args = [tensor(t, dtype="float32") for t in args]
@@ -248,8 +247,7 @@ def test_empty_tensor(is_trace):
                 assert out.numpy().shape == ref_shape
         else:
             out = func(*args)
-            assert out.numpy().shape == ref_shape
-            print(out.numpy().shape)
+            assert out.numpy().shape == ref_shape, out.numpy().shape
 
     inps = [
         np.array([]).astype("float32"),

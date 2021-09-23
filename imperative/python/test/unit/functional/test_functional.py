@@ -922,8 +922,8 @@ def test_layer_norm():
 def test_batchnorm2d_autocast():
     """check amp's result is equal to manually converted result"""
     amp.enabled = True
-    tshape = (1, 224, 224, 3)
-    pshape = (1, 1, 1, 3)
+    tshape = (1, 3, 224, 224)
+    pshape = (1, 3, 1, 1)
     inp = tensor(np.random.randn(*tshape), dtype=np.float32)
     weight = tensor(np.ones(pshape, dtype=np.float32))
     bias = tensor(np.zeros(pshape, dtype=np.float32))
@@ -948,7 +948,6 @@ def test_conv3d():
     inp = tensor(np.ones((2, 2, 4, 4, 4), dtype=np.float32))
     weight = tensor(np.ones((3, 2, 2, 2, 2), dtype=np.float32))
     out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
-    print(out.numpy().shape)
     np.testing.assert_equal(
         out.numpy(), np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
     )

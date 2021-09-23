@@ -209,7 +209,6 @@ def test_dataloader_parallel_timeout():
     reason="dataloader do not support parallel on windows",
 )
 def test_dataloader_parallel_worker_exception():
-    print("in target")
     dataset = init_dataset()
 
     class FakeErrorTransform(Transform):
@@ -217,7 +216,7 @@ def test_dataloader_parallel_worker_exception():
             pass
 
         def apply(self, input):
-            y = x + 1
+            raise RuntimeError("test raise error")
             return input
 
     dataloader = DataLoader(

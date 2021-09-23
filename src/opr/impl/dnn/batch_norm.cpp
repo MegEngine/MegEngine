@@ -230,15 +230,21 @@ void BatchNormForward::get_output_var_shape(
     for (size_t i = 0; i < 4; ++ i) {
         out_shape[i] = inp_shape[1];
     }
-    out_shape[4] = {megdnn_opr()->get_reserve_in_bytes({inp_shape[0], input(0)->dtype()})};
     if (!need_stats()) {
         out_shape[0] = out_shape[1] = {0};
+    }
+    if (inp_shape[0].is_empty()) {
+        out_shape[4] = {0};
+    } else {
+        out_shape[4] = {megdnn_opr()->get_reserve_in_bytes({inp_shape[0], input(0)->dtype()})};
     }
 }
 
 size_t BatchNormForward::get_workspace_size_bytes(
         const TensorShapeArray &input_shapes,
         const TensorShapeArray &output_shapes) const {
+    if (input_shapes[0].is_empty())
+        return 0;
 #define in(x) {input_shapes[x], input(x)->dtype()}
 #define out(x) {output_shapes[x], output(x)->dtype()}
     return megdnn_opr()->get_workspace_in_bytes(
