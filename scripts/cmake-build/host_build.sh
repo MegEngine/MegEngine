@@ -267,13 +267,22 @@ function cmake_build_windows() {
     BUILD_DIR=$SRC_DIR/build_dir/host/build
     # ninja have compat issue with bash env, which fork from windows-git
     # which will map C: to /c/c/ dir, which will lead to install file to /c/c/..
-    # as a solution, we use relative path to INSTALL_DIR
-    INSTALL_DIR=../install
+    # as a solution, we map INSTALL_DIR to INSTALL_DIR_WIN (/c --> C:)
+    INSTALL_DIR=${BUILD_DIR}/../install
+
+    INSTALL_DIR_PREFIX=${INSTALL_DIR:0:2}
+    if [ ${INSTALL_DIR_PREFIX} = "/c" ];then
+        echo "INSTALL_DIR_PREFIX is ${INSTALL_DIR_PREFIX}, map to C:"
+        INSTALL_DIR_WIN="C:${INSTALL_DIR:2}"
+    else
+        INSTALL_DIR_WIN=${INSTALL_DIR}
+    fi
     MGE_WITH_CUDA=$1
     MGE_INFERENCE_ONLY=$2
     BUILD_TYPE=$3
     echo "build dir: $BUILD_DIR"
     echo "install dir: $INSTALL_DIR"
+    echo "install dir for ninja: $INSTALL_DIR_WIN"
     echo "build type: $BUILD_TYPE"
     echo "MGE_WITH_CUDA: $MGE_WITH_CUDA"
     echo "MGE_INFERENCE_ONLY: $MGE_INFERENCE_ONLY"
@@ -291,7 +300,7 @@ function cmake_build_windows() {
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-        -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIR  \
+        -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIR_WIN \
         -DCMAKE_C_COMPILER=clang-cl.exe \
         -DCMAKE_CXX_COMPILER=clang-cl.exe \
         -DCMAKE_MAKE_PROGRAM=ninja.exe \
