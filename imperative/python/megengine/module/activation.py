@@ -8,7 +8,7 @@
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import numpy as np
 
-from ..functional import gelu, leaky_relu, prelu, relu, sigmoid, silu, softmax
+from ..functional import gelu, leaky_relu, prelu, relu, sigmoid, silu, softmax, elu
 from ..tensor import Parameter
 from .module import Module
 
@@ -289,3 +289,42 @@ class LeakyReLU(Module):
 
     def forward(self, inputs):
         return leaky_relu(inputs, self.negative_slope)
+
+class ELU(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{ELU}(x) = \begin{cases}
+        x, & \text{ if } x > 0\\
+        \alpha * (\exp(x) - 1), & \text{ if } x \leq 0
+        \end{cases}
+
+    Args:
+        alpha: the :math:`\alpha` value for the ELU formulation. Default: 1.0
+
+    Examples:
+
+        .. testcode::
+
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+            data = mge.tensor(np.array([-2,-1,0,1,2]).astype(np.float32))
+            elu = M.ELU()
+            output = elu(data)
+            with np.printoptions(precision=6):
+                print(output.numpy())
+
+        Outputs:
+
+        .. testoutput::
+
+            [-0.864664 -0.632120 0.       1.       2.      ]
+    """
+
+    def __init__(self, alpha: float = 1., **kwargs):
+        super().__init__(**kwargs)
+        self.alpha = alpha
+
+    def forward(self, inputs):
+        return elu(inputs, self.alpha)

@@ -66,6 +66,7 @@ __all__ = [
     "hswish",
     "indexing_one_hot",
     "leaky_relu",
+    "elu",
     "linear",
     "local_conv2d",
     "logsigmoid",
@@ -826,6 +827,15 @@ def gelu(x):
     """
     return _elwise(x, mode=Elemwise.Mode.GELU)
 
+def elu(inp: Tensor, alpha: float = 1.0) -> Tensor:
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{ELU}(x) = \max(0,x) + \min(0, \alpha * (\exp(x) - 1)).
+
+    Refer to :class:`~.ELU` for more information.
+    """
+    return maximum(inp, 0) + minimum(alpha * (exp(inp) - 1), 0)
 
 def softplus(inp: Tensor) -> Tensor:
     r"""Applies the element-wise function:

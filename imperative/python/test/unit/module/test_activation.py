@@ -9,7 +9,7 @@
 import numpy as np
 
 import megengine as mge
-from megengine.module import LeakyReLU
+from megengine.module import LeakyReLU, ELU
 
 
 def test_leaky_relu():
@@ -20,4 +20,14 @@ def test_leaky_relu():
     output = leaky_relu(mge.tensor(data))
 
     np_output = np.maximum(0, data) + negative_slope * np.minimum(0, data)
+    np.testing.assert_equal(output.numpy(), np_output)
+
+def test_elu():
+    data = np.array([-2,-1,0,1,2]).astype(np.float32)
+    alpha = 1.0
+
+    elu = ELU(alpha)
+    output = elu(mge.tensor(data))
+
+    np_output = np.maximum(0, data) + np.minimum(0, alpha * (np.exp(data) - 1))
     np.testing.assert_equal(output.numpy(), np_output)
