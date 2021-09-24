@@ -170,6 +170,16 @@ def test_logical_oprs():
     np.testing.assert_equal(x ^ y, F.logical_xor(xx, yy).numpy())
 
 
+def test_logaddexp():
+    x = np.random.randn(2, 100)
+    y = np.random.randn(2, 100)
+    xx = tensor(x)
+    yy = tensor(y)
+    out_np = np.log(np.exp(x) + np.exp(y))
+    out_mge = F.logaddexp(xx, yy)
+    np.testing.assert_almost_equal(out_np, out_mge.numpy(), decimal=6)
+
+
 def test_qadd():
     inp_scale = 0.5
     outp_scale = 0.2

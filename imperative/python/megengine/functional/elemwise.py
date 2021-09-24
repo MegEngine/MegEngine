@@ -48,6 +48,7 @@ __all__ = [
     "logical_not",
     "logical_or",
     "logical_xor",
+    "logaddexp",
     "maximum",
     "minimum",
     "mod",
@@ -404,6 +405,12 @@ def logical_or(x, y):
 def logical_xor(x, y):
     r"""Element-wise `logical xor: x ^ y`."""
     return _elwise(x, y, mode=Elemwise.Mode.XOR)
+
+
+def logaddexp(x: Tensor, y: Tensor) -> Tensor:
+    r"""Element-wise `numerically stable log(exp(x) + exp(y)`
+    """
+    return _elwise(x, y, mode=Elemwise.Mode.LOG_SUM_EXP)
 
 
 # comparison functions
