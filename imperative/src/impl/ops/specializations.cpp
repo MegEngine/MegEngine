@@ -269,6 +269,17 @@ OP_TRAIT_REG(Argmin, Argmin).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
+namespace Tile {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& tile = static_cast<const Tile&>(def);
+    OperatorNodeConfig config{tile.make_name()};
+    return opr::Tile::make(inputs[0], tile.param(), config);
+}
+OP_TRAIT_REG(Tile, Tile).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace tile
+}  // namespace
+
+namespace {
 namespace warp_perspective {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& warp = static_cast<const WarpPerspective&>(def);

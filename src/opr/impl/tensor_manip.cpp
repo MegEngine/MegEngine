@@ -1626,6 +1626,27 @@ MGB_IMPL_OPR_GRAD(ParamPackSplit) {
 #endif
 // f}}}
 
+/* f{{{ ======================= TileForward ======================= */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(TileForward);
+MEGDNN_OPR_INIT1(TileForward, "tile")
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(TileForward) {
+    mgb_assert(opr.input().size() == 1);
+    if (wrt_idx == 0) {
+        SymbolVar grad = TileBackward::make(out_grad[0], opr.input(0), opr.param());
+        return grad.node();
+    } else
+        return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+// f}}}
+
+/* f{{{ ======================= TileBackward ======================= */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(TileBackward);
+MEGDNN_OPR_INIT2(TileBackward, "tile_backward", 1, false);
+
 /* f{{{ ======================= RelayoutFormat ======================= */
 namespace mgb {
 namespace opr {

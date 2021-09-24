@@ -657,6 +657,25 @@ MGB_DEFINE_OPR_CLASS(PaddingBackward, intl::MegDNNOprWrapperBwd<megdnn::PaddingB
         static SymbolVar make(SymbolVar src, SymbolVar in_for_shape, const Param &param = {}, const OperatorNodeConfig &config = {});
 };
 
+/*!
+ * \brief tile the src tensor to dst tensor
+ */
+MGB_DEFINE_OPR_CLASS(TileForward, intl::MegDNNOprWrapperFwd<megdnn::TileForward>) // {
+    public:
+        TileForward(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, const Param& param = {}, const OperatorNodeConfig &config = {});
+};
+using Tile = TileForward;
+
+/*!
+ * \brief tile backward
+ */
+MGB_DEFINE_OPR_CLASS(TileBackward, intl::MegDNNOprWrapperBwd<megdnn::TileBackward>) // {
+    public:
+        TileBackward(VarNode* src, VarNode* in_for_shape, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, SymbolVar in_for_shape, const Param &param = {}, const OperatorNodeConfig &config = {});
+};
+
 } // opr
 } // mgb
 

@@ -1239,20 +1239,23 @@ def tile(inp: Tensor, reps: Iterable[int]):
         l_reps >= l_shape
     ), "Number of dimensions of tiled dims can not be smaller than number of dimensions of tensor"
 
-    for i in range(l_shape):
-        rep = reps[i + (l_reps - l_shape)]
-        inp = _tile_one_dim(inp, rep, i)
+    # for i in range(l_shape):
+    #     rep = reps[i + (l_reps - l_shape)]
+    #     inp = _tile_one_dim(inp, rep, i)
 
-    if l_reps > l_shape:
-        shape = inp.shape
-        extra = reps[:-l_shape]
-        extra_ones = ones_like(extra)
-        base_shape = concat([extra_ones, shape])
-        bcast_shape = concat([extra, shape])
-        target_shape = concat([extra, shape])
-        inp = broadcast_to(inp.reshape(base_shape), bcast_shape).reshape(target_shape)
-
-    return inp
+    # if l_reps > l_shape:
+    #     shape = inp.shape
+    #     extra = reps[:-l_shape]
+    #     extra_ones = ones_like(extra)
+    #     base_shape = concat([extra_ones, shape])
+    #     bcast_shape = concat([extra, shape])
+    #     target_shape = concat([extra, shape])
+    #     inp = broadcast_to(inp.reshape(base_shape), bcast_shape).reshape(target_shape)
+    # times = [reps if i == axis else 1 for i in range(max_axis)]
+    times = reps
+    op = builtin.Tile(times=times)
+    (result,) = apply(op, inp)
+    return result
 
 
 def copy(inp, device=None):
