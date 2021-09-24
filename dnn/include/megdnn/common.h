@@ -32,13 +32,8 @@ namespace megdnn {
  */
 template <class Opr, typename... Args>
 bool has_available_algo(Opr* opr, Args&&... args) {
-    const typename Opr::AlgoBase::SizeArgs size_args(opr, std::forward<Args>(args)...);
-    for (auto i : Opr::algo_pack().all_algos) {
-        if (i->is_available(size_args)) {
-            return true;
-        }
-    }
-    return false;
+    auto&& all_algos = opr->get_all_algorithms_info(std::forward<Args>(args)...);
+    return !all_algos.empty();
 }
 
 }  // namespace megdnn

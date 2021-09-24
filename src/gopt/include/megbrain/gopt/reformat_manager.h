@@ -62,6 +62,16 @@ enum class TensorFormats : uint32_t {
     KCRS = 24,   ///< [K, C, R, S]
     GKCRS = 25,  ///< [G, K, C, R, S]
     C11RS = 26,  ///< [C, 1, 1, R, S]
+
+    // NHWC
+    KRSC = 27,  /// < [K, R, S, C]
+
+    // NCHW32
+    KCRSc32 = 28,  ///<[K, C/32, R, S, C%32]
+    // NCHW64
+    KCRSc64 = 29,  ///<[K, C/64, R, S, C%64]
+    // CHWN4
+    CRSKc4 = 30,  ///< [C/4, R, S, K, C%4]
 };
 
 class ReformatManager : public NonCopyableObj {

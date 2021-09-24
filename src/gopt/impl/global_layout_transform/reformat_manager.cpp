@@ -43,7 +43,8 @@ static inline size_t extra_alignment(
         size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
         size_t extra_alignment =
                 alignment_in_bits >= dtype_bits ? alignment_in_bits / dtype_bits : 1;
-        if (target_formats == TensorFormats::NHWC)
+        if (target_formats == TensorFormats::NHWC ||
+            target_formats == TensorFormats::KRSC)
             channel_alignment = extra_alignment * channel_alignment /
                                 gcd(channel_alignment, extra_alignment);
         return channel_alignment;
@@ -60,10 +61,12 @@ static inline std::tuple<size_t, size_t> extra_alignment(
         size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
         size_t extra_alignment =
                 alignment_in_bits >= dtype_bits ? alignment_in_bits / dtype_bits : 1;
-        if (key.input_format == TensorFormats::NHWC)
+        if (key.input_format == TensorFormats::NHWC ||
+            key.input_format == TensorFormats::KRSC)
             input_channel_alignment = input_channel_alignment * extra_alignment /
                                       gcd(input_channel_alignment, extra_alignment);
-        if (key.output_format == TensorFormats::NHWC)
+        if (key.output_format == TensorFormats::NHWC ||
+            key.output_format == TensorFormats::KRSC)
             output_channel_alignment = output_channel_alignment * extra_alignment /
                                        gcd(output_channel_alignment, extra_alignment);
         return std::make_tuple(input_channel_alignment, output_channel_alignment);

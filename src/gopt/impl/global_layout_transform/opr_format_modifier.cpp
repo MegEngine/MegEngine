@@ -157,7 +157,6 @@ struct ConvMaker<opr::BatchConvBiasForward>
                   MakeConvCaller4<megdnn::BatchConvBiasForward>,
                   megdnn::param::BatchConvBias> {};
 
-#if 0
 #include "../../opr/impl/internal/invoke.h"
 template <typename Opr>
 struct MultiAlgoOprTrait;
@@ -202,7 +201,6 @@ INST(ConvolutionBackwardData)
 INST(PoolingForward)
 #undef APPLY
 #undef INST
-#endif
 }  // namespace
 
 namespace mgb {
@@ -291,9 +289,7 @@ VarNode* modify_opr_format(
 #undef cb
 }
 
-#if 0
-bool has_available_algo(const VarNodeArray& i,
-                        const cg::OperatorNodeBase* opr) {
+bool has_available_algo(const VarNodeArray& i, const cg::OperatorNodeBase* opr) {
 #define cb(_Opr)                                                    \
     if (opr->dyn_typeinfo() == _Opr::typeinfo()) {                  \
         MGB_MARK_USED_VAR(MultiAlgoOprTrait<_Opr>::has_algo);       \
@@ -301,13 +297,12 @@ bool has_available_algo(const VarNodeArray& i,
         _.emplace_back(opr->output(0));                             \
         return MultiAlgoOprTrait<_Opr>::has_available_algo(_, opr); \
     } else
-    cb(Convolution) cb(ConvBiasForward) cb(ConvolutionBackwardData)
-            cb(PoolingForward) {
-        mgb_throw(InternalError, "invalid multi-algo operator(got:%s)",
-                  opr->dyn_typeinfo()->name);
+    cb(Convolution) cb(ConvBiasForward) cb(ConvolutionBackwardData) cb(PoolingForward) {
+        mgb_throw(
+                InternalError, "invalid multi-algo operator(got:%s)",
+                opr->dyn_typeinfo()->name);
     }
 }
-#endif
 
 }  // namespace intl
 }  // namespace gopt
