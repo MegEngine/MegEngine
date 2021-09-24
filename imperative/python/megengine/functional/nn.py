@@ -15,7 +15,6 @@ from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
 from ..core.ops.builtin import (
     BatchNorm,
-    Dimshuffle,
     Elemwise,
     GetVarShape,
     Identity,
@@ -87,7 +86,6 @@ __all__ = [
     "sync_batch_norm",
     "warp_affine",
     "warp_perspective",
-    "pixel_shuffle",
 ]
 
 
@@ -1733,69 +1731,6 @@ def pad(
     )
     (output,) = apply(op, src)
     return output
-
-
-@lru_cache(maxsize=None)
-def _get_layerPixelShuffle(device, dtype, dim_order):
-    @subgraph("LayerPixelShuffle", dtype, device, 3)
-    def layerPixelShuffle(inputs, f, c):
-        inp, shape_0, shape_1 = inputs
-        inp = f(Reshape(), inp, shape_0)
-        inp = f(Dimshuffle(dim_order), inp)
-        oup = f(Reshape(), inp, shape_1)
-        return (oup,), (True,)
-
-    return layerPixelShuffle
-
-
-def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
-    """
-    Rearranges elements in a tensor of shape (*, C x r^2, H, W) to a tensor of
-    shape (*, C, H x r, W x r), where r is an upscale factor, where * is zero
-    or more batch dimensions.
-
-    :param inp: input tensor.
-    :param upscale_factor: upscale factor of pixel_shuffle.
-    :return: output tensor.
-    """
-    assert upscale_factor > 0, "upscale_factor should larger than 0"
-    assert inp.ndim >= 3, "the input dimension of pixel_shuffle should be larger than 3"
-    assert (
-        inp.shape[-3] % (upscale_factor ** 2) == 0
-    ), "the -3 dimension should be divided by (upscale_factor ** 2)"
-
-    _device = inp.device
-    _dtype = inp.dtype
-    shape_ori = inp.shape
-    high_dim = shape_ori[:-3]
-    square = upscale_factor ** 2
-    n = 1
-    for item in high_dim:
-        n *= item
-    shape_0 = (
-        n,
-        int(shape_ori[-3] / square),
-        upscale_factor,
-        upscale_factor,
-        shape_ori[-2],
-        shape_ori[-1],
-    )
-    shape_1 = (
-        *high_dim,
-        shape_ori[-3] / square,
-        shape_ori[-2] * upscale_factor,
-        shape_ori[-1] * upscale_factor,
-    )
-
-    dim_order = (0, 1, 4, 2, 5, 3)
-
-    layerPixelShuffle = _get_layerPixelShuffle(_device, _dtype, dim_order)
-
-    shape_0 = convert_single_value(shape_0, dtype=inp.dtype, device=inp.device)
-    shape_1 = convert_single_value(shape_1, dtype=inp.dtype, device=inp.device)
-    outvar, *_ = apply(layerPixelShuffle(), inp, shape_0, shape_1)
-
-    return outvar
 
 
 from .quantized import conv_bias_activation  # isort:skip
