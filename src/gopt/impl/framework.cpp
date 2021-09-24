@@ -820,23 +820,26 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
         _passes need_param_fuse = true; \
     }
 
+    using Target = GraphTuningOptions::Target;
     cb(layout_transform, {
         add_pass<FuseConvBiasNonlinPass>();
-        add_pass<FuseConvBiasZPass>();
+        if (options.target == Target::CUDA)
+            add_pass<FuseConvBiasZPass>();
         add_pass(LayoutTransformPass::make(options.target));
         add_pass<ShuffleShuffleRemovePass>();
-        add_pass(FuseNCHW4Int8Preprocess::make());
-        add_pass<FuseWarpPerspectiveDimshufflePass>();
+        if (options.target == Target::CUDA) {
+            add_pass(FuseNCHW4Int8Preprocess::make());
+            add_pass<FuseWarpPerspectiveDimshufflePass>();
 #if CUDA_VERSION >= 10020
-        add_pass<FoldingConvBiasDimshufflePass>();
-        add_pass<FoldingConvBiasTypecvtPass>();
+            add_pass<FoldingConvBiasDimshufflePass>();
+            add_pass<FoldingConvBiasTypecvtPass>();
 #endif
+        }
     });
 #undef cb
 
     if (need_param_fuse) {
         add_pass<ParamFusePass>();
-        add_pass<ParamMergePass>();
     }
     return *this;
 }

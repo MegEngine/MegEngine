@@ -470,9 +470,9 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             in_channels = orig_var->shape()[i] * input_shape[i].stride();
             input_channel_idx = i;
-            //            mgb_assert(input_shape[i].stride() == 1,
-            //                       "unsupport weight format(got:%s)",
-            //                       input_shape.to_string().c_str());
+            mgb_assert(
+                    input_shape[i].stride() == 1, "unsupport weight format(got:%s)",
+                    input_shape.to_string().c_str());
         } else if (
                 (input_shape[i].name() == Dimension::Name::K ||
                  input_shape[i].name() == Dimension::Name::N) &&
@@ -485,13 +485,23 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
                     input_shape.to_string().c_str());
         }
     }
+    /* \notes: FIXME this is a hack. Since the layout of weight in channelwise
+     * convolution does not have output channel dimension, so we mannually modify the
+     * out_channel_name, out_channel_idx to bypass the following assertion statements. */
+    bool is_channelwise = key.input_format == TensorFormats::C11RS;
+    if (is_channelwise) {
+        out_channel_name = Dimension::Name::K;
+        out_channels = in_channels;
+        output_channel_idx = input_channel_idx;
+    }
     mgb_assert(
             out_channel_name == Dimension::Name::K ||
                     out_channel_name == Dimension::Name::N,
             "invalid out channel(shp:%s)", input_shape.to_string().c_str());
     mgb_assert(
-            input_channel_idx < input_shape.ndim &&
-                    output_channel_idx < input_shape.ndim,
+            (input_channel_idx < input_shape.ndim &&
+             output_channel_idx < input_shape.ndim) ||
+                    (is_channelwise && output_channel_idx == input_channel_idx),
             "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
             input_channel_idx, output_channel_idx, input_shape.to_string().c_str());
     size_t in_channel_alignment = 0, out_channel_alignment = 0;
@@ -505,6 +515,13 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
                 output_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             out_channel_alignment = output_shape[i].stride();
         }
+    }
+    /* \notes: FIXME this is a hack. Since the layout of weight in channelwise
+     * convolution does not have output channel dimension, so we mannually modify the
+     * out_channel_alignment to bypass the following assertion statements. */
+    if (is_channelwise) {
+        mgb_assert(out_channel_alignment == 0);
+        out_channel_alignment = 1;
     }
     mgb_assert(
             in_channel_alignment > 0 && out_channel_alignment > 0,

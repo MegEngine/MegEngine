@@ -15,6 +15,7 @@
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/nn_int.h"
+#include "megbrain/opr/tensor_manip.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -82,6 +83,44 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
                     {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
     return ctx;
 }
+
+std::unique_ptr<LayoutTransformContext> make_arm_ctx(
+        OprFormat base_opr_format, TensorFormats base_tensor_format) {
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::Resize::typeinfo(),
+            opr::PowC::typeinfo(), 
+            opr::Concat::typeinfo(), 
+    };
+
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW, TensorFormats::NCHWc4,
+            DNN_INC_FLOAT16(TensorFormats::NCHWc8)};
+    Attribute attribute = {base_opr_format, base_tensor_format, Target::ARM};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats),
+            attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW, OprFormat::NCHW44,
+                DNN_INC_FLOAT16(OprFormat::NCHW88), OprFormat::NCHW44_DOT})
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW44,
+                     DNN_INC_FLOAT16(OprFormat::NCHW88), OprFormat::NCHW44_DOT})
+            .add_opr_config(opr::PoolingForward::typeinfo(),
+                            {OprFormat::NCHW, OprFormat::NCHW44,
+                             DNN_INC_FLOAT16(OprFormat::NCHW88)})
+            .add_opr_config(opr::ResizeForward::typeinfo(),
+                            {OprFormat::NCHW, OprFormat::NCHW44,
+                             DNN_INC_FLOAT16(OprFormat::NCHW88)});
+    return ctx;
+}
 }  // namespace
 
 /* ================= LayoutTransformContext ==================*/
@@ -110,6 +149,8 @@ std::unique_ptr<LayoutTransformContext> LayoutTransformContext::make(
     switch (target) {
         case Target::CUDA:
             return make_cuda_ctx(base_opr_format, base_tensor_format);
+        case Target::ARM:
+            return make_arm_ctx(base_opr_format, base_tensor_format);
         default:
             mgb_assert(false, "unsupported target %s\n", target_to_string(target));
     }

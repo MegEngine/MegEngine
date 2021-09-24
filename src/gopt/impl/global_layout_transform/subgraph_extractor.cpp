@@ -263,20 +263,9 @@ std::vector<GraphPartition> SubGraphExtractor::extract(
     std::vector<GraphPartition> partitions;
     partitions.reserve(topo.size());
     ThinHashMap<OperatorNodeBase*, GraphPartition*> roots;
+    /// backward pass
     for (const auto& opr : reverse_adaptor(topo)) {
-        if (m_opr_list.count(opr->dyn_typeinfo()) == 0) {
-            for (const auto& i : opr->input()) {
-                if (m_opr_list.count(i->owner_opr()->dyn_typeinfo())) {
-                    auto root = union_find(i->owner_opr());
-                    GraphPartition* partition;
-                    auto find = roots.find(root);
-                    if (find != roots.end()) {
-                        partition = find->second;
-                        partition->output().insert(i);
-                    }
-                }
-            }
-        } else {
+        if (m_opr_list.count(opr->dyn_typeinfo()) > 0) {
             auto root = union_find(opr);
             auto find = roots.find(root);
             GraphPartition* partition = nullptr;
@@ -304,6 +293,23 @@ std::vector<GraphPartition> SubGraphExtractor::extract(
                 partition->input().insert(i);
         }
     }
+    /// forward pass
+    for (auto&& opr : topo) {
+        if (m_opr_list.count(opr->dyn_typeinfo()) == 0) {
+            for (const auto& i : opr->input()) {
+                if (m_opr_list.count(i->owner_opr()->dyn_typeinfo())) {
+                    auto root = union_find(i->owner_opr());
+                    GraphPartition* partition;
+                    auto find = roots.find(root);
+                    if (find != roots.end()) {
+                        partition = find->second;
+                        partition->output().insert(i);
+                    }
+                }
+            }
+        }
+    }
+
     for (auto&& partition : partitions) {
         auto& all_oprs = partition.all_oprs();
         std::reverse(all_oprs.begin(), all_oprs.end());

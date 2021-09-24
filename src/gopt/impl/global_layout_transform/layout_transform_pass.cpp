@@ -60,6 +60,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
 
     auto&& opr_configs = m_ctx->opr_configs();
     auto&& base_fmt = m_ctx->attribute().base_tensor_formats;
+    auto&& base_opr_fmt = m_ctx->attribute().base_opr_format;
     auto&& reformat_attribute = m_ctx->attribute().reformat_attribute;
     ThinHashMap<VarNode*, TensorFormats> var2fmts;
     static ThinHashSet<Typeinfo*> format_aware_oprs = {
@@ -68,15 +69,18 @@ void LayoutTransformPass::apply(OptState& opt) const {
 #undef cb
     };
     auto rewriter = opt.graph().make_rewriter();
-    auto on_opr = [&opr_configs, &base_fmt, &reformat_attribute, &rewriter, &solution,
-                   &var2fmts, &endpoint_vars](OperatorNodeBase* opr) {
+    auto on_opr = [&opr_configs, &base_fmt, &base_opr_fmt, &reformat_attribute,
+                   &rewriter, &solution, &var2fmts,
+                   &endpoint_vars](OperatorNodeBase* opr) {
         auto it = solution.find(opr);
         if (it != solution.end()) {
             auto opr_fmt = it->second;
             auto find = opr_configs.find(opr->dyn_typeinfo());
             Maybe<OprTensorFormatsConfiguration> fmtcfg = None;
+            Maybe<OprTensorFormatsConfiguration> basecfg = None;
             if (find != opr_configs.end()) {
                 fmtcfg = (*find->second.at(opr_fmt))(opr);
+                basecfg = (*find->second.at(base_opr_fmt))(opr);
             }
             VarNodeArray new_inp;
             size_t nr_inps = opr->input().size();
@@ -103,6 +107,10 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 bool is_parameter =
                         fmtcfg.valid() &&
                         fmtcfg.val().input_tensor_types[i] == TensorType::WEIGHT;
+                if (is_parameter) {
+                    mgb_assert(basecfg.valid());
+                    from = basecfg.val().input_tensor_formats[i];
+                }
                 // need relayout
                 if (from != to && !new_var->shape().is_scalar()) {
                     ReformatManager::ReformatImpl reformat;

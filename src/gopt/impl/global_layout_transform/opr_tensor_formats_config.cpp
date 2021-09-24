@@ -79,6 +79,48 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW> {
 };
 
 template <>
+struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW44> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW44;
+        bool available = true;
+        available &= opr->input(0)->dtype().enumv() == DTypeEnum::Float32;
+        config.input_dtypes = {opr->input(0)->dtype().enumv()};
+        config.input_tensor_types = {TensorType::FEATURE};
+        config.output_dtypes = {opr->output(0)->dtype().enumv()};
+        config.input_tensor_formats = {TensorFormats::NCHWc4};
+        config.output_tensor_formats = {TensorFormats::NCHWc4};
+        if (!available)
+            return None;
+        return config;
+    }
+};
+
+#if !MEGDNN_DISABLE_FLOAT16
+template <>
+struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW88> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW88;
+        bool available = true;
+        available &= opr->input(0)->dtype().enumv() == DTypeEnum::Float16;
+        config.input_dtypes = {opr->input(0)->dtype().enumv()};
+        config.input_tensor_types = {TensorType::FEATURE};
+        config.output_dtypes = {opr->output(0)->dtype().enumv()};
+        config.input_tensor_formats = {TensorFormats::NCHWc8};
+        config.output_tensor_formats = {TensorFormats::NCHWc8};
+        if (!available)
+            return None;
+        return config;
+    }
+};
+#endif
+
+template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW4> {
     static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
@@ -200,7 +242,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW> {
         // setup tensor formats
         if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
             config.input_tensor_formats = {
-                    TensorFormats::NCHW, TensorFormats::NCHW, TensorFormats::NCHW,
+                    TensorFormats::NCHW, TensorFormats::KCRS, TensorFormats::NCHW,
                     TensorFormats::NCHW};
         } else {
             mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
@@ -396,6 +438,145 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::CHWN4> {
     }
 };
 
+template <typename Opr>
+struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW44> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW44;
+        bool available = true;
+        // setup dtypes
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            available &= opr->input(i)->dtype().enumv() == DTypeEnum::Float32;
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type =
+                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        available &= opr->output(0)->dtype().enumv() == DTypeEnum::Float32;
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        // setup tensor formats
+        if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
+            config.input_tensor_formats = {
+                    TensorFormats::NCHWc4, TensorFormats::KCRSc4k4,
+                    TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+        } else {
+            mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
+            if (is_channel_wise_conv<Opr>(opr)) {
+                config.input_tensor_formats = {
+                        TensorFormats::NCHWc4, TensorFormats::C11RSc4,
+                        TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+            } else {
+                config.input_tensor_formats = {
+                        TensorFormats::NCHWc4, TensorFormats::GKCRSc4k4,
+                        TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+            }
+        }
+        config.output_tensor_formats = {TensorFormats::NCHWc4};
+        if (!available)
+            return None;
+        return config;
+    }
+};
+
+#if !MEGDNN_DISABLE_FLOAT16
+template <typename Opr>
+struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW88> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW88;
+        bool available = true;
+        // setup dtypes
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            available &= opr->input(i)->dtype().enumv() == DTypeEnum::Float16;
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type =
+                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        available &= opr->output(0)->dtype().enumv() == DTypeEnum::Float16;
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        // setup tensor formats
+        if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
+            config.input_tensor_formats = {
+                    TensorFormats::NCHWc8, TensorFormats::KCRSc8k8,
+                    TensorFormats::NCHWc8, TensorFormats::NCHWc8};
+        } else {
+            mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
+            if (is_channel_wise_conv<Opr>(opr)) {
+                config.input_tensor_formats = {
+                        TensorFormats::NCHWc8, TensorFormats::C11RSc8,
+                        TensorFormats::NCHWc8, TensorFormats::NCHWc8};
+            } else {
+                config.input_tensor_formats = {
+                        TensorFormats::NCHWc8, TensorFormats::GKCRSc8k8,
+                        TensorFormats::NCHWc8, TensorFormats::NCHWc8};
+            }
+        }
+        config.output_tensor_formats = {TensorFormats::NCHWc8};
+        if (!available)
+            return None;
+        return config;
+    }
+};
+#endif
+
+template <typename Opr>
+struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW44_DOT> {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(
+            const OperatorNodeBase* opr) {
+        const auto& conv = opr->cast_final_safe<Opr>();
+        OprTensorFormatsConfiguration config;
+        config.typeinfo = opr->dyn_typeinfo();
+        config.opr_format = OprFormat::NCHW44_DOT;
+        bool available = true;
+        // setup dtypes
+        for (size_t i = 0; i < opr->input().size(); ++i) {
+            if (i == 2) {
+                available &= opr->input(i)->dtype().enumv() ==
+                             DTypeEnum::QuantizedS32;
+            } else {
+                available &= opr->input(i)->dtype().enumv() ==
+                                     DTypeEnum::QuantizedS8 ||
+                             opr->input(i)->dtype().enumv() ==
+                                     DTypeEnum::Quantized8Asymm;
+            }
+            config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
+            TensorType tensor_type =
+                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            config.input_tensor_types.emplace_back(tensor_type);
+        }
+        available &=
+                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                opr->output(0)->dtype().enumv() == DTypeEnum::Quantized8Asymm;
+        config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
+        // setup tensor formats
+        if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
+            config.input_tensor_formats = {
+                    TensorFormats::NCHWc4, TensorFormats::KCRSk4c4,
+                    TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+        } else {
+            mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
+            if (is_channel_wise_conv<Opr>(opr)) {
+                available = false;
+            } else {
+                config.input_tensor_formats = {
+                        TensorFormats::NCHWc4, TensorFormats::GKCRSk4c4,
+                        TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+            }
+        }
+        config.output_tensor_formats = {TensorFormats::NCHWc4};
+        if (!available)
+            return None;
+        return config;
+    }
+};
+
 template <>
 struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData, OprFormat::NCHW> {
     using Opr = opr::ConvolutionBackwardData;
@@ -530,9 +711,19 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, CHWN4);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW32);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW64);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44);
+#if !MEGDNN_DISABLE_FLOAT16
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW88);
+#endif
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44_DOT);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW4);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44);
+#if !MEGDNN_DISABLE_FLOAT16
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW88);
+#endif
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44_DOT);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NCHW);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionBackwardData, NHWC);
@@ -549,6 +740,16 @@ StaticData::StaticData() {
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, CHWN4);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW32);
     OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW64);
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW44);
+#if !MEGDNN_DISABLE_FLOAT16
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(PoolingForward, NCHW88);
+#endif
+
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW);
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW44);
+#if !MEGDNN_DISABLE_FLOAT16 
+    OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG(ResizeForward, NCHW88);
+#endif
 
 #undef OPR_TENSOR_FORMATS_CONFIG_REG
 #undef OPR_SINGLE_IN_OUT_TENSOR_FORMATS_CONFIG_REG

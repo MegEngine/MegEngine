@@ -29,6 +29,9 @@ static inline const char* opr_format_to_string(
         cb(NCHW32);
         cb(NCHW64);
         cb(CHWN4);
+        cb(NCHW44);
+        cb(NCHW88);
+        cb(NCHW44_DOT);
         default:
             mgb_assert(
                     false, "Invalid opr format(got:%u)",
@@ -53,6 +56,10 @@ static inline TensorFormats opr_format_to_tensor_formats(
             return TensorFormats::NCHWc64;
         case OprFormat::CHWN4:
             return TensorFormats::CHWNc4;
+        case OprFormat::NCHW88:
+            return TensorFormats::NCHWc8;
+        case OprFormat::NCHW44:
+            return TensorFormats::NCHWc4;
         default:
             mgb_throw(
                     AssertionError, "format(%s) is not supported",

@@ -35,9 +35,9 @@ OprFormat tensor_formats_to_opr_format(TensorFormats tensor_format) {
         case TensorFormats::NCHW:
             return OprFormat::NCHW;
         case TensorFormats::NCHWc4:
-            return OprFormat::NCHW4;
+            return OprFormat::NCHW44;
         case TensorFormats::NCHWc8:
-            return OprFormat::NCHW8;
+            return OprFormat::NCHW88;
         case TensorFormats::NCHWc32:
             return OprFormat::NCHW32;
         case TensorFormats::NCHWc64:
@@ -424,11 +424,11 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(const Problem& problem) cons
             skip &= problem.graph_partition().input().count(i) > 0 ||
                     skip_oprs.count(i->owner_opr()) > 0;
         }
-        skip &= skip_opr_types.count(opr->dyn_typeinfo());
+        auto find = format_aware_input_tensors.find(opr->dyn_typeinfo());
+        skip &= find == format_aware_input_tensors.end();
         if (skip)
             skip_oprs.insert(opr);
         oprs.insert(opr);
-        auto find = format_aware_input_tensors.find(opr->dyn_typeinfo());
         if (find == format_aware_input_tensors.end()) {
             for (auto&& i : opr->input()) {
                 if (!cvprop.is_const(i)) {
