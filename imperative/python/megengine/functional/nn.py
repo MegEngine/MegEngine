@@ -69,6 +69,7 @@ __all__ = [
     "leaky_relu",
     "linear",
     "local_conv2d",
+    "local_response_norm",
     "logsigmoid",
     "logsumexp",
     "logsoftmax",
@@ -1743,6 +1744,53 @@ def pad(
         padding_mode=mode.upper(),
     )
     (output,) = apply(op, src)
+    return output
+
+
+def local_response_norm(
+    inp: Tensor,
+    kernel_size: int = 5,
+    k: float = 2.0,
+    alpha: float = 1e-4,
+    beta: float = 0.75,
+) -> Tensor:
+    r"""
+    Apply local response normalization to the input tensor.
+
+    Args:
+        kernel_size: the size of the kernel to apply LRN on.
+        k: hyperparameter k. The default vaule is 2.0.
+        alpha: hyperparameter alpha. The default value is 1e-4.
+        beta: hyperparameter beta. The default value is 0.75.
+
+    Example:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as f
+        import numpy as np
+
+        inp = tensor(np.arange(25, dtype=np.float32).reshape(1,1,5,5))
+        GT = np.array([[[[ 0.,         0.999925,   1.9994003,  2.9979765,  3.9952066],
+           [ 4.9906454,  5.983851,   6.974385,   7.961814,   8.945709 ],
+           [ 9.925651,  10.90122,   11.872011,  12.837625,  13.7976675],
+           [14.751757,  15.699524,  16.640602,  17.574642,  18.501305 ],
+           [19.420258,  20.331186,  21.233786,  22.127764,  23.012836 ]]]])
+
+        out = f.local_response_norm(inp, kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
+        np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
+        print('pass')
+
+    Outputs:
+
+    .. testoutput::
+
+        pass
+
+    """
+    op = builtin.LRN(n=kernel_size, k=k, alpha=alpha, beta=beta,)
+    (output,) = apply(op, inp)
     return output
 
 

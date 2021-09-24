@@ -21,6 +21,7 @@
 #include "megbrain/opr/dnn/fake_quant.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/local.h"
+#include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
@@ -654,4 +655,13 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 }
 OP_TRAIT_REG(Padding, Padding).apply_on_var_node(apply_on_var_node).fallback();
 } // namespace padding
+
+namespace lrn {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const LRN&>(def);
+    mgb_assert(inputs.size() == 1);
+    return opr::LRN::make(inputs[0], op.param());
+}
+OP_TRAIT_REG(LRN, LRN).apply_on_var_node(apply_on_var_node).fallback();
+} // namespace LRN
 } // namespace mgb::imperative
