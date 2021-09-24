@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -69,10 +70,11 @@ void print_log(LiteLogLevel level, const char* format = 0, ...)
 #if LITE_ENABLE_EXCEPTION
 #define LITE_THROW(msg) throw lite::Error(msg)
 #else
-#define LITE_THROW(msg)   \
-    do {                  \
-        LITE_ERROR(msg);  \
-        __builtin_trap(); \
+#define LITE_THROW(msg)              \
+    do {                             \
+        std::string msg_str(msg);    \
+        LITE_ERROR(msg_str.c_str()); \
+        __builtin_trap();            \
     } while (0)
 #endif
 
