@@ -191,8 +191,11 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormatConfigID::NHWC> {
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NHWC;
         config.config_id = OprFormatConfigID::NHWC;
-        bool available = opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+        bool f16_config = DNN_FLOAT16_SELECT(
+                (opr->input(0)->dtype().enumv() == DTypeEnum::Float16), true);
+        bool i4_config = opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
                          opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
+        bool available = f16_config || i4_config;
         config.input_dtypes = {opr->input(0)->dtype().enumv()};
         config.input_tensor_types = {TensorType::FEATURE};
         available &= opr->output(0)->dtype().enumv() == opr->input(0)->dtype().enumv();
@@ -275,16 +278,22 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NHWC> {
         config.opr_format = OprFormat::NHWC;
         config.config_id = OprFormatConfigID::NHWC;
         auto check_dtype = [](const DType& dt) {
+            bool f16_config =
+                    DNN_FLOAT16_SELECT((dt.enumv() == DTypeEnum::Float16), true);
             bool i4_config = dt.enumv() == DTypeEnum::Quantized4Asymm ||
                              dt.enumv() == DTypeEnum::QuantizedS4;
             bool i8_config = dt.enumv() == DTypeEnum::QuantizedS8;
-            return i4_config || i8_config;
+            return f16_config || i4_config || i8_config;
         };
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
-            if (i == 2)
-                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
-            else {
+            if (i == 2) {
+                available &=
+                        opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32 ||
+                        DNN_FLOAT16_SELECT(
+                                opr->input(i)->dtype().enumv() == DTypeEnum::Float16,
+                                true);
+            } else {
                 available &= check_dtype(opr->input(i)->dtype());
             }
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
@@ -866,12 +875,18 @@ struct ConvTensorFormatsDispatcherImpl<
         config.config_id = OprFormatConfigID::NHWC;
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
-            available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
+            available &=
+                    opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                    DNN_FLOAT16_SELECT(
+                            opr->input(i)->dtype().enumv() == DTypeEnum::Float16, true);
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
             TensorType tensor_type = i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
-        available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        available &=
+                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                DNN_FLOAT16_SELECT(
+                        opr->output(0)->dtype().enumv() == DTypeEnum::Float16, true);
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == opr::ConvBias::Param::Sparse::DENSE;
         config.input_tensor_formats = {
@@ -934,6 +949,7 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44_DOT_HYBRID);
 
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NHWC);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW4);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW44);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvolutionForward, NCHW88);

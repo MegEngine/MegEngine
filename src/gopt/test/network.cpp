@@ -38,8 +38,13 @@ SymbolVar Network::add_conv(
         param.nonlineMode = opr::ConvBias::Param::NonlineMode::IDENTITY;
     }
 
-    auto conv = opr::ConvBias::make(
-            f, weight, bias, param, {}, OperatorNodeConfig{out_dtype});
+    SymbolVar conv;
+    if (out_dtype.category() == DTypeCategory::QUANTIZED) {
+        conv = opr::ConvBias::make(
+                f, weight, bias, param, {}, OperatorNodeConfig{out_dtype});
+    } else {
+        conv = opr::ConvBias::make(f, weight, bias, param, {});
+    }
     weight_idx++;
     bias_idx++;
     return conv;

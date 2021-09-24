@@ -78,13 +78,13 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
                      OprFormatConfigID::NHWC})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
-                    {OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
-                     OprFormatConfigID::NHWC, OprFormatConfigID::NCHW64,
-                     OprFormatConfigID::CHWN4})
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4,
+                     OprFormatConfigID::NCHW32, OprFormatConfigID::NHWC,
+                     OprFormatConfigID::NCHW64, OprFormatConfigID::CHWN4})
             .add_opr_config(
                     opr::WarpPerspectiveForward::typeinfo(),
-                    {OprFormatConfigID::NHWC, OprFormatConfigID::NCHW4,
-                     OprFormatConfigID::NCHW64});
+                    {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC,
+                     OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW64});
     return ctx;
 }
 
