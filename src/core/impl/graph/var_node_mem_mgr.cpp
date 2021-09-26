@@ -401,9 +401,6 @@ bool VarNodeMemManager::update_static_alloc_plan() {
 
     // repeat allocating until plan_chunk_allocation() returns false
     for (;;) {
-        // kill profiling worker since shape is known
-        sys::TimedFuncInvoker::ins().kill_worker();
-
         for (auto opr : *m_opr_seq) {
             for (auto&& var : opr->output()) {
                 if (auto trait = get_var_node_mem_trait_nullable(var)) {
