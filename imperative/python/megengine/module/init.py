@@ -74,7 +74,7 @@ def calculate_gain(
 ) -> float:
     r"""Returns a recommended gain value (see the table below) for the given nonlinearity
     function.
-    
+
     ================= ====================================================
     nonlinearity      gain
     ================= ====================================================
@@ -126,6 +126,11 @@ def calculate_fan_in_and_fan_out(tensor: Tensor) -> Tuple[float, float]:
     r"""Calculates fan_in / fan_out value for given weight tensor. This function assumes
     input tensor is stored in ``NCHW`` format.
 
+    Note:
+        The group conv2d kernel shape in MegEngine is ``(G, O/G, I/G, K, K)``. This
+        function calculates ``fan_out = O/G * K * K`` as default, but PyTorch uses
+        ``fan_out = O * K * K``.
+
     Args:
         tensor: weight tensor in ``NCHW`` format.
     """
@@ -141,6 +146,10 @@ def calculate_fan_in_and_fan_out(tensor: Tensor) -> Tuple[float, float]:
         fan_in = shape[1]
         fan_out = shape[0]
     else:
+        if ndim >= 5:
+            # ignore the groups dimension of group conv2d and group conv3d
+            # FIXME: will be wrong for conv3d
+            shape = shape[1:]
         num_input_fmaps = shape[1]
         num_output_fmaps = shape[0]
         receptive_field_size = 1
@@ -154,7 +163,7 @@ def calculate_fan_in_and_fan_out(tensor: Tensor) -> Tuple[float, float]:
 def calculate_correct_fan(tensor: Tensor, mode: str) -> float:
     r"""Calculates fan_in / fan_out value for given weight tensor, depending on given
     ``mode``.
-    
+
     See :func:`calculate_fan_in_and_fan_out` for details.
 
     Args:
@@ -175,11 +184,11 @@ def calculate_correct_fan(tensor: Tensor, mode: str) -> float:
 def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
     r"""Fills tensor with random values sampled from :math:`\mathcal{U}(-a, a)`
     where
-    
+
     .. math::
 
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_in} + \text{fan_out}}}
-    
+
     Also known as Glorot initialization. Detailed information can be retrieved from
     `Understanding the difficulty of training deep feedforward neural networks` -
     Glorot, X. & Bengio, Y. (2010).
@@ -197,11 +206,11 @@ def xavier_uniform_(tensor: Tensor, gain: float = 1.0) -> None:
 def xavier_normal_(tensor: Tensor, gain: float = 1.0) -> None:
     r"""Fills tensor with random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
-    
+
     .. math::
 
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_in} + \text{fan_out}}}
-    
+
     Also known as Glorot initialization. Detailed information can be retrieved from
     `Understanding the difficulty of training deep feedforward neural networks` -
     Glorot, X. & Bengio, Y. (2010).
@@ -220,11 +229,11 @@ def msra_uniform_(
 ) -> None:
     r"""Fills tensor wilth random values sampled from
     :math:`\mathcal{U}(-\text{bound}, \text{bound})` where
-    
+
     .. math::
 
         \text{bound} = \sqrt{\frac{6}{(1 + a^2) \times \text{fan_in}}}
-    
+
     Detailed information can be retrieved from
     `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
     classification`
@@ -251,11 +260,11 @@ def msra_normal_(
 ) -> None:
     r"""Fills tensor wilth random values sampled from
     :math:`\mathcal{N}(0, \text{std}^2)` where
-    
+
     .. math::
 
         \text{std} = \sqrt{\frac{2}{(1 + a^2) \times \text{fan_in}}}
-    
+
     Detailed information can be retrieved from
     `Delving deep into rectifiers: Surpassing human-level performance on ImageNet
     classification`
