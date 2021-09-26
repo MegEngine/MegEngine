@@ -334,6 +334,7 @@ struct _InferLayout<true> {
         for (size_t i = 0; i < target_ndim; ++i) {
             out_layout.shape[i] = ptr[i];
         }
+        out_layout.init_contiguous_stride();
         return out_layout;
     }
 };
