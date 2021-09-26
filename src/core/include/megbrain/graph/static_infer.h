@@ -259,7 +259,7 @@ public:
  */
 class StaticInferUpdater : public NonCopyableObj {
 public:
-    static std::unique_ptr<StaticInferUpdater> make();
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<StaticInferUpdater> make();
 
     virtual ~StaticInferUpdater() = default;
 

@@ -76,6 +76,13 @@ struct SubgraphOp final : OpDefImplBase<SubgraphOp> {
             this->output_grad_mask.resize(graph->outputs.size(), true);
         }
     }
+    static std::shared_ptr<OpDef> wrap(std::string name, Subgraph graph) {
+        if (graph.is_single()) {
+            return graph.as_single();
+        } else {
+            return SubgraphOp::make(name, std::make_shared<Subgraph>(graph));
+        }
+    }
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 };
 
