@@ -16,6 +16,7 @@
 #include "megbrain/opr/internal/identical_fwd.h"
 #include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/internal/param_tag_defs.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/param_defs.h"
 #include "megbrain/serialization/sereg.h"
 
@@ -105,6 +106,28 @@ protected:
 
 private:
     callback_t m_callback;
+};
+
+MGB_DEFINE_OPR_CLASS(MutableTensor, cg::SingleCNOperatorNodeBase) // {
+public:
+    MutableTensor(
+            cg::ComputingGraph& graph, std::shared_ptr<DeviceTensorND> dev_tensor,
+            std::shared_ptr<HostTensorND> host_tensor,
+            const OperatorNodeConfig& config);
+    static SymbolVar make(
+            cg::ComputingGraph& graph, std::shared_ptr<DeviceTensorND> dev_tensor,
+            std::shared_ptr<HostTensorND> host_tensor = {},
+            const OperatorNodeConfig& config = {});
+
+protected:
+    void init_output_comp_node() override;
+    void init_output_static_infer_desc() override;
+    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;
+    void scn_do_execute() override;
+
+private:
+    std::shared_ptr<DeviceTensorND> m_dev_tensor;
+    std::shared_ptr<HostTensorND> m_host_tensor;
 };
 }  // namespace opr
 }  // namespace mgb
