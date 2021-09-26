@@ -12,6 +12,7 @@
 #include "megbrain/imperative/transformations/scalar.h"
 
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/utility.h"
 
 namespace mgb {
 namespace imperative {
@@ -320,6 +321,24 @@ std::vector<ValueRef> inplace_add_rule(
     }
 }
 
+template <typename T>
+std::vector<ValueRef> subgraph_op_rule(const T& op, Span<ValueRef> inputs) {
+    // TODO: add flag instead of assume
+    bool all_scalar = true;
+    for (auto&& input : inputs) {
+        if (!input.is<ScalarValue>()) {
+            all_scalar = false;
+        }
+    }
+    auto outputs = imperative::apply(op, unwrap_inputs(inputs));
+    if (all_scalar) {
+        for (auto& output : outputs) {
+            output = ScalarValue::make(output);
+        }
+    }
+    return outputs;
+}
+
 struct ScalarRuleRegistry {
     ScalarRuleRegistry() {
         register_scalar_rule(elemwise_rule);
@@ -339,6 +358,8 @@ struct ScalarRuleRegistry {
         register_scalar_rule(broadcast_rule);
         register_scalar_rule(copy_rule);
         register_scalar_rule(inplace_add_rule);
+        register_scalar_rule(subgraph_op_rule<SubgraphOp>);
+        register_scalar_rule(subgraph_op_rule<CompiledOp>);
     }
 } _;
 }  // namespace

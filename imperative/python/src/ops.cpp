@@ -577,21 +577,26 @@ void init_ops(py::module m) {
     struct PySubgraphBuilder {
         explicit PySubgraphBuilder(std::string name) : name{name} {}
         std::string name;
-        std::shared_ptr<Subgraph> graph_storage = std::make_shared<Subgraph>();
-        std::shared_ptr<UniqueKey> graph_key = std::make_shared<UniqueKey>();
-        Subgraph& graph = *graph_storage;
+        Subgraph graph;
         mgb::SmallVector<bool> output_grad_mask;
         Subgraph::var_t next_var = 1;
+        std::shared_ptr<mgb::Hashable> key = nullptr;
 
-        std::shared_ptr<OpDef> build() const {
-            return SubgraphOp::make(name, graph_storage, output_grad_mask, graph_key);
+        std::shared_ptr<OpDef> build() {
+            if (key == nullptr) {
+                key = std::make_shared<UniqueKey>();
+            }
+            return SubgraphOp::make(
+                    name, std::make_shared<Subgraph>(graph), output_grad_mask, key);
         }
     };
 
     py::class_<PySubgraphBuilder>(m, "SubgraphBuilder")
             .def(py::init<std::string>())
+            .def(py::init<PySubgraphBuilder>())
             .def("input",
                  [](PySubgraphBuilder& self) {
+                     mgb_assert(self.key == nullptr);
                      auto var = self.next_var++;
                      self.graph.inputs.push_back(var);
                      return var;
@@ -599,6 +604,7 @@ void init_ops(py::module m) {
             .def("apply",
                  [](PySubgraphBuilder& self, std::shared_ptr<OpDef> op,
                     Subgraph::vars_t inputs, size_t nr_outputs) {
+                     mgb_assert(self.key == nullptr);
                      Subgraph::vars_t outputs;
                      for (size_t i = 0; i < nr_outputs; ++i) {
                          outputs.push_back(self.next_var++);
@@ -609,6 +615,7 @@ void init_ops(py::module m) {
             .def("apply_const",
                  [](PySubgraphBuilder& self, py::object value, mgb::DType dtype,
                     mgb::CompNode cn) {
+                     mgb_assert(self.key == nullptr);
                      auto var = self.next_var++;
                      mgb::HostTensorND hvalue(cn);
                      npy::np2tensor(
@@ -619,11 +626,13 @@ void init_ops(py::module m) {
                  })
             .def("outputs",
                  [](PySubgraphBuilder& self, Subgraph::vars_t outputs) {
+                     mgb_assert(self.key == nullptr);
                      self.graph.outputs = outputs;
                      self.output_grad_mask.resize(outputs.size(), true);
                  })
             .def("outputs_has_grad",
                  [](PySubgraphBuilder& self, mgb::SmallVector<bool> outputs_has_grad) {
+                     mgb_assert(self.key == nullptr);
                      mgb_assert(
                              self.graph.outputs.size() == self.output_grad_mask.size());
                      self.output_grad_mask = outputs_has_grad;
@@ -632,10 +641,17 @@ void init_ops(py::module m) {
                  [](PySubgraphBuilder& self) {
                      return (std::shared_ptr<OpDef>)self.build();
                  })
-            .def("compile", [](PySubgraphBuilder& self, int gopt_level) {
+            .def("compile",
+                 [](PySubgraphBuilder& self, int gopt_level) {
+                     return (std::shared_ptr<OpDef>)CompiledOp::make(
+                             self.build(), gopt_level);
+                 })
+            .def("jit_fuse", [](PySubgraphBuilder& self) {
                 return (std::shared_ptr<OpDef>)CompiledOp::make(
-                        self.build(), gopt_level);
+                        JITFusionOp::make(self.build()));
             });
+
+    m.def("set_jit_enabled", &JITFusionOp::set_enabled);
 
     auto custom = submodule(m, "_custom");
     init_custom(custom);

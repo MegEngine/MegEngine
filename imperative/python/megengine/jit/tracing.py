@@ -33,6 +33,7 @@ from ..core._imperative_rt.ops import (
     ExternOpr,
     RemoteRecv,
     RemoteSend,
+    set_jit_enabled,
 )
 from ..core._trace_option import set_symbolic_shape
 from ..core.tensor import megbrain_graph as G
@@ -711,12 +712,14 @@ class trace:
 
         graph = G.Graph()
 
+        jit_enabled = set_jit_enabled(False)
         dest_vars = self._trace.dump(
             graph,
             input_bindings,
             [*zip(self._output_bindings, output_names)],
             prefer_input_names,
         )
+        set_jit_enabled(jit_enabled)
 
         # dest_vars = [i._node for i in dest_vars]
 
