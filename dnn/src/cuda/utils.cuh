@@ -24,12 +24,18 @@
 #include "src/cuda/atomic_add.cuh"
 #include "src/cuda/cudnn_with_check.h"
 
-#define cuda_check(_x)                                       \
-    do {                                                     \
-        cudaError_t _err = (_x);                             \
-        if (_err != cudaSuccess) {                           \
-            ::megdnn::cuda::__throw_cuda_error__(_err, #_x); \
-        }                                                    \
+#define cuda_check(_x)                                                        \
+    do {                                                                      \
+        cudaError_t _err = (_x);                                              \
+        if (_err != cudaSuccess) {                                            \
+            std::string x = std::string(#_x);                                 \
+            char line[10];                                                    \
+            sprintf(line, "%d", __LINE__);                                    \
+            ::megdnn::cuda::__throw_cuda_error__(                             \
+                    _err, (x + " error file:" + std::string(__FILE__) + ":" + \
+                           std::string(line))                                 \
+                                  .c_str());                                  \
+        }                                                                     \
     } while (0)
 
 #define cublas_check(_x)                                       \

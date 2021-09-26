@@ -20,6 +20,12 @@ using namespace convolution;
 
 bool ConvolutionBackwardDataImpl::AlgoChanwise::is_available(
         const SizeArgs& args) const {
+    auto kparam = chanwise::Param::from_fwd_args(args.as_fwd_args());
+    auto&& device_prop = cuda::current_device_prop();
+    if (device_prop.sharedMemPerBlock <
+        kparam.chl_mul * kparam.flt_h * kparam.flt_w * args.diff_layout->dtype.size()) {
+        return false;
+    }
     if (!args.grad_layout->is_contiguous() || !args.diff_layout->is_contiguous()) {
         return false;
     }
