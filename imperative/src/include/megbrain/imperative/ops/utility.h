@@ -111,4 +111,12 @@ struct CompiledOp final : OpDefImplBase<CompiledOp> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 };
 
+struct JITFusionOp final : OpDefImplBase<JITFusionOp> {
+    std::shared_ptr<OpDef> op;
+    JITFusionOp() = default;
+    JITFusionOp(std::shared_ptr<OpDef> op) : op{op} {}
+    static bool set_enabled(bool enabled);
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+};
+
 }  // namespace mgb::imperative
