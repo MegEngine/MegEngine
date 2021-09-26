@@ -178,7 +178,11 @@ TensorInfo* ChannelImpl::put_impl(
     auto _ = StackManager::Guard{"Put", &state.stack_manager};
     auto info = alloc();
     MGB_RECORD_EVENT(TensorCommandEvent, info->id, TensorCommandKind::Put);
+    constexpr int size_threshold = TensorShape::MAX_NDIM;
     init(info, {data.layout(), data.comp_node()});
+    if ((!hvalue.empty()) && info->desc.layout.total_nr_elems() <= size_threshold) {
+        info->desc.value = hvalue.proxy_to_default_cpu();
+    }
     info->ptr = Tensor::make(data, hvalue);
     MGB_RECORD_EVENT(
             TensorProduceEvent, info->id, info->desc.layout, info->desc.comp_node,
