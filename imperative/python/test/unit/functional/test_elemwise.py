@@ -166,7 +166,7 @@ def test_hsigmoid():
     x = np.random.randn(100).astype("float32")
     y_np = np.minimum(np.maximum(x + 3, 0), 6) / 6
     y_mge = F.hsigmoid(tensor(x)).numpy()
-    np.testing.assert_equal(y_np, y_mge)
+    np.testing.assert_almost_equal(y_np, y_mge, decimal=6)
 
 
 def test_logical_oprs():

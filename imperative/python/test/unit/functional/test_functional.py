@@ -27,6 +27,8 @@ from megengine.core.tensor.utils import make_shape_tuple
 from megengine.device import get_device_count
 from megengine.module import LayerNorm
 
+_assert_allclose = partial(np.testing.assert_allclose, atol=5e-6, rtol=5e-6)
+
 
 def test_where():
     maskv0 = np.array([[1, 0], [0, 1]], dtype=np.bool_)
@@ -627,6 +629,7 @@ def test_binary_cross_entropy():
         {"input": [data1, label1], "output": expect1,},
         {"input": [data2, label2], "output": expect2,},
     ]
+
     opr_test(cases, F.nn.binary_cross_entropy, compare_fn=compare_fn)
 
     cases = [

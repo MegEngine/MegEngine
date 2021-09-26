@@ -6,6 +6,7 @@
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+from functools import lru_cache
 from typing import Iterable, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -17,7 +18,14 @@ from ..core.ops import builtin
 from ..core.ops.builtin import Copy, Identity
 from ..core.ops.special import Const
 from ..core.tensor.array_method import _broadcast, _remove_axis
-from ..core.tensor.utils import astensor1d, convert_inputs, get_device
+from ..core.tensor.utils import (
+    astensor1d,
+    convert_inputs,
+    get_device,
+    isscalar,
+    setscalar,
+    subgraph_fn,
+)
 from ..device import get_default_device
 from ..tensor import Tensor
 from .elemwise import ceil
@@ -731,6 +739,29 @@ def scatter(inp: Tensor, axis: int, index: Tensor, source: Tensor) -> Tensor:
     return inp
 
 
+@lru_cache(maxsize=None)
+def _get_where_op(dtype=None, device=None):
+    @subgraph_fn(
+        "Where",
+        dtype=dtype,
+        device=device,
+        nr_inputs=3,
+        jit_fusion=True,
+        custom_grad=True,
+    )
+    def where(inputs, f, c):
+        (mask, x, y) = inputs[0:3]
+        oup = f("switch_gt0", mask, x)
+        ksam = f("-", c(1), mask)
+        oup = f("+", oup, f("switch_gt0", ksam, y))
+        (oup_grad,) = yield (oup,)
+        x_grad = f("switch_gt0", mask, oup_grad)
+        y_grad = f("switch_gt0", ksam, oup_grad)
+        yield (None, x_grad, y_grad)
+
+    return where
+
+
 def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
     r"""Selects elements either from Tensor x or Tensor y, according to mask.
 
@@ -780,20 +811,19 @@ def where(mask: Tensor, x: Tensor, y: Tensor) -> Tensor:
         raise ValueError("ambiguous device: {} vs {}".format(x.device, mask.device))
 
     dtype = dtype_promotion(x, y)
+    device = x.device
+
     if x.dtype != dtype:
         x = x.astype(dtype)
     if y.dtype != dtype:
         y = y.astype(dtype)
+    mask = mask.astype(dtype)
 
-    v0, index0 = cond_take(mask, x)
-    v1, index1 = cond_take(~mask, y)
-
-    out = concat([v0, v1])
-
-    out[index0] = v0
-    out[index1] = v1
-    out = out.reshape(x.shape)
-    return out
+    where = _get_where_op(dtype=dtype, device=device)
+    (oup,) = where(mask, x, y)
+    if isscalar(mask):
+        setscalar(oup)
+    return oup
 
 
 def cond_take(mask: Tensor, x: Tensor) -> Tensor:
