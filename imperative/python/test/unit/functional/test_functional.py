@@ -39,12 +39,6 @@ def test_where():
     xv1 = np.array([[1, np.inf, 2], [0, np.nan, 4], [1, 5, 7]], dtype=np.float32)
     yv1 = np.array([[5, 6, 9], [2, 7, 8], [2, 1, 9]], dtype=np.float32)
 
-    cases = [
-        {"input": [maskv0, xv0, yv0]},
-        {"input": [maskv1, xv1, yv1]},
-    ]
-    opr_test(cases, F.where, ref_fn=np.where, test_trace=False)
-
     maskv2 = np.array([1, 1, 1], dtype=np.bool_)
     xv2 = np.array([1, 3, 2], dtype=np.float32)
     yv2 = np.array([5, 6, 9], dtype=np.float32)
@@ -53,11 +47,18 @@ def test_where():
     xv3 = np.array([1, 3, 2], dtype=np.float32)
     yv3 = np.array([5, 6, 9], dtype=np.float32)
 
+    maskv4 = np.array(1, dtype=np.bool_)
+    xv4 = np.array(1, dtype=np.float32)
+    yv4 = np.array(0, dtype=np.float32)
+
     cases = [
+        {"input": [maskv0, xv0, yv0]},
+        {"input": [maskv1, xv1, yv1]},
         {"input": [maskv2, xv2, yv2]},
         {"input": [maskv3, xv3, yv3]},
+        {"input": [maskv4, xv4, yv4]},
     ]
-    opr_test(cases, F.where, ref_fn=np.where, test_trace=False)
+    opr_test(cases, F.where, ref_fn=np.where, test_trace=True)
 
 
 def test_dropout():
@@ -618,12 +619,12 @@ def test_binary_cross_entropy():
     np.random.seed(123)
     data1 = np.random.uniform(size=data1_shape).astype(np.float32)
     label1 = np.random.uniform(size=label1_shape).astype(np.float32)
-    expect1 = np.array([0.6361], dtype=np.float32)
+    expect1 = np.array(0.6361, dtype=np.float32)
 
     np.random.seed(123)
     data2 = np.random.uniform(size=data2_shape).astype(np.float32)
     label2 = np.random.uniform(size=label2_shape).astype(np.float32)
-    expect2 = np.array([0.6750], dtype=np.float32)
+    expect2 = np.array(0.6750, dtype=np.float32)
 
     cases = [
         {"input": [data1, label1], "output": expect1,},

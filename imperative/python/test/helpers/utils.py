@@ -11,12 +11,12 @@ from megengine.utils.network_node import VarNode
 
 
 def _default_compare_fn(x, y):
-    if isinstance(x, np.ndarray):
-        np.testing.assert_allclose(x, y, rtol=1e-6)
-    elif isinstance(x, tensor):
-        np.testing.assert_allclose(x.numpy(), y, rtol=1e-6)
-    else:
-        np.testing.assert_allclose(get_var_value(x), y, rtol=1e-6)
+    if isinstance(x, tensor):
+        x = x.numpy()
+    elif not isinstance(x, np.ndarray):
+        x = get_var_value(x)
+    assert isinstance(x, np.ndarray)
+    np.testing.assert_allclose(x, y, rtol=1e-6)
 
 
 def make_tensor(x, network=None, device=None):
@@ -69,12 +69,16 @@ def opr_test(
 
     """
 
-    def check_results(results, expected):
+    def check_results(results, expected, check_shape=True):
         if not isinstance(results, (tuple, list)):
             results = (results,)
         for r, e in zip(results, expected):
             if not isinstance(r, (tensor, VarNode)):
                 r = tensor(r)
+            if check_shape:
+                r_shape = r.numpy().shape
+                e_shape = e.shape if isinstance(e, np.ndarray) else ()
+                assert r_shape == e_shape
             compare_fn(r, e)
 
     def get_param(cases, idx):
@@ -127,10 +131,10 @@ def opr_test(
 
             # assume #outputs == 1
             loaded_results = list(infer_cg.run(inp_dict=inp_dict).values())[0]
-            check_results(loaded_results, outp)
+            check_results(loaded_results, outp, check_shape=False)  # scalar info lost
 
         results = func(*inp_tensor, **kwargs)
-        check_results(results, outp)
+        check_results(results, outp, check_shape=(network is None))
 
     if len(cases) == 0:
         raise ValueError("should give one case at least")
