@@ -67,7 +67,7 @@ void init_common(py::module m) {
                             [](const CompNode& cn) { return cn.to_string_logical(); })
                     .def_property_readonly(
                             "physical_name",
-                            [](const CompNode& cn) { return cn.to_string(); })
+                            [](const CompNode& cn) { return cn.to_string_physical(); })
                     .def_property_readonly(
                             "get_mem_status_bytes",
                             [](const CompNode& cn) {

@@ -230,7 +230,7 @@ for name, mode in [
 def subgraph(
     name, dtype, device, nr_inputs, gopt_level=None, jit_fusion=False, custom_grad=False
 ):
-    if device.physical_name.startswith("cpu"):
+    if not device.physical_name.startswith("gpu"):
         gopt_level = None  # disable jit and compile
         jit_fusion = False
 
@@ -370,7 +370,15 @@ def subgraph_fn(
                 jit_fusion=jit_fusion,
                 custom_grad=custom_grad,
             )(func)
-            return lambda *args: apply(op(), *args)
+
+            def wrapped_func(*args):
+                if custom_grad:
+                    outputs = op()(*args)
+                else:
+                    outputs = apply(op(), *args)
+                return outputs
+
+            return wrapped_func
         else:
             return interpret_subgraph(func, dtype, device)
 

@@ -988,7 +988,6 @@ def _get_softplus_op(dtype=None, device=None):
         device=device,
         nr_inputs=1,
         jit_fusion=True,
-        # gopt_level=0,
         custom_grad=True,
     )
     def softplus(inputs, f, c):
