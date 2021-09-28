@@ -669,7 +669,7 @@ struct ProxyGraph::GradGraph {
     cg::VarNode* grad;
 };
 
-EncodedSubraph
+EncodedSubgraph
 ProxyGraph::make_backward_graph(
         const OpDef& opdef,
         const SmallVector<LogicalTensorDesc>& input_descs,
@@ -704,7 +704,7 @@ ProxyGraph::make_backward_graph(
     }
     auto* gfunc = cg::lookup_grad_func(fwd->dyn_typeinfo());
 
-    EncodedSubraph result;
+    EncodedSubgraph result;
     auto&& igraph = result.graph;
 
     size_t nr_backward_graph_inputs = 0;

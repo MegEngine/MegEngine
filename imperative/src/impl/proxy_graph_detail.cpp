@@ -113,7 +113,7 @@ void execute(const OpDef& def,
 //     return graph->infer_output_attrs_fallible(def, inputs);
 // }
 
-EncodedSubraph
+EncodedSubgraph
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

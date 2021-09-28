@@ -16,7 +16,7 @@
 using namespace mgb;
 using namespace imperative;
 
-OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const EncodedSubraph& src)
+OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const EncodedSubgraph& src)
         : input_has_grad(src.output_mask) {
     if (src.graph.exprs.size() <= 1) {
         // backward graph only contains a single op

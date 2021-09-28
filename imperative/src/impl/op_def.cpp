@@ -80,12 +80,12 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> OpDef::infer_output_attrs_falli
     return def.trait()->infer_output_attrs_fallible(def, inputs);
 }
 
-EncodedSubraph OpDef::make_backward_graph(
+EncodedSubgraph OpDef::make_backward_graph(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs,
     const SmallVector<bool>& input_requires_grad,
     const SmallVector<bool>& output_has_grad) {
-    using BackwardGraphCache = OpMethResultCache<EncodedSubraph, SmallVector<bool>, SmallVector<bool>>;
+    using BackwardGraphCache = OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
     thread_local BackwardGraphCache cache;
     decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs, {input_requires_grad, output_has_grad}};
     auto iter = cache.find(cache_key);
@@ -100,10 +100,10 @@ std::vector<std::pair<const char*, std::string>> OpDef::props(
     return def.trait()->props(def);
 }
 
-EncodedSubraph OpDef::make_forward_graph(
+EncodedSubgraph OpDef::make_forward_graph(
     const OpDef& def,
     const SmallVector<LogicalTensorDesc>& inputs){
-    using ForwardGraphCache = OpMethResultCache<EncodedSubraph, SmallVector<bool>, SmallVector<bool>>;
+    using ForwardGraphCache = OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
     thread_local ForwardGraphCache cache;
     decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs};
     auto iter = cache.find(cache_key);

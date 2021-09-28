@@ -40,7 +40,7 @@ public:
             const SmallVector<Tensor*>& outputs,
             const SmallVector<Tensor*>& workspace);
 
-    EncodedSubraph make_backward_graph(
+    EncodedSubgraph make_backward_graph(
             const OpDef& opdef,
             const SmallVector<LogicalTensorDesc>& input_descs,
             const SmallVector<bool>& input_requires_grad,

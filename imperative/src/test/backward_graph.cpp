@@ -22,7 +22,7 @@ using namespace cg;
 using namespace imperative;
 
 template <typename T>
-T prepare_backward_graph_inputs(const EncodedSubraph& bg, const T& inputs,
+T prepare_backward_graph_inputs(const EncodedSubgraph& bg, const T& inputs,
                                 const T& outputs, const T& grads) {
     T ret;
     size_t i = 0;

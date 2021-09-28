@@ -87,7 +87,7 @@ public:
         const SmallVector<TensorPtr>& inputs_tensors,
         const SmallVector<MemoryDesc>& inputs_mems);
 
-    static EncodedSubraph make_backward_graph(
+    static EncodedSubgraph make_backward_graph(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
@@ -96,7 +96,7 @@ public:
     static std::vector<std::pair<const char*, std::string>> props(
         const OpDef& def);
 
-    static EncodedSubraph make_forward_graph(
+    static EncodedSubgraph make_forward_graph(
         const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
 

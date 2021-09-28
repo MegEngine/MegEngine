@@ -96,7 +96,7 @@ struct Subgraph {
     bool operator==(const Subgraph& rhs) const;
 };
 
-struct EncodedSubraph {
+struct EncodedSubgraph {
     Subgraph graph;
     SmallVector<bool> input_mask;
     SmallVector<bool> output_mask;
@@ -146,8 +146,8 @@ struct EncodedSubraph {
         return decoded_outputs;
     }
 
-    static EncodedSubraph make(Subgraph graph) {
-        EncodedSubraph result;
+    static EncodedSubgraph make(Subgraph graph) {
+        EncodedSubgraph result;
         result.input_mask = graph.gen_input_mask();
         result.output_mask = graph.gen_output_mask();
         graph.inputs = result.encode_inputs(graph.inputs);
@@ -156,11 +156,11 @@ struct EncodedSubraph {
         return result;
     }
 
-    static EncodedSubraph make_single(
+    static EncodedSubgraph make_single(
             std::shared_ptr<OpDef> op,
             SmallVector<bool> input_mask,
             SmallVector<bool> output_mask) {
-        EncodedSubraph result;
+        EncodedSubgraph result;
         result.input_mask = input_mask;
         result.output_mask = output_mask;
         Subgraph::var_t last_var = 0;

@@ -29,7 +29,7 @@ class Subgraph::Builder {
     using desc_t = TDesc;
     using descs_t = SmallVector<TDesc>;
     using infer_fn_t = std::function<descs_t(op_t, descs_t, size_t)>;
-    using encoded_graph_t = EncodedSubraph;
+    using encoded_graph_t = EncodedSubgraph;
     using var_map_t = std::unordered_map<var_t, var_t>;
     vars_t m_inputs;
     SmallVector<std::pair<var_t, TensorPtr>> m_constants;

@@ -143,7 +143,7 @@ LiteNetwork 主要为用户提供模型载入，运行等功能。使用的模�
 * CPU 基本模型载入运行的 example
 ```
 def test_network_basic():
-    source_dir = os.getenv("LITE_TEST_RESOUCE")
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
     input_data_path = os.path.join(source_dir, "input_data.npy")
     # read input to input_data
     input_data = np.load(input_data_path)
@@ -176,7 +176,7 @@ def test_network_basic():
 * CUDA 上使用 device 内存作为模型输入，需要在构造 network 候配置 config 和 IO 信息
 ```
 def test_network_device_IO():
-    source_dir = os.getenv("LITE_TEST_RESOUCE")
+    source_dir = os.getenv("LITE_TEST_RESOURCE")
     input_data_path = os.path.join(source_dir, "input_data.npy")
     model_path = os.path.join(source_dir, "shufflenet.mge")
     # read input to input_data

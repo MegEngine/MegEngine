@@ -24,7 +24,7 @@ apply_on_physical_tensor(const OpDef& def,
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs);
 
-EncodedSubraph
+EncodedSubgraph
 make_backward_graph(const OpDef& def,
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
@@ -35,7 +35,7 @@ apply_on_var_node(
         const OpDef& def,
         const VarNodeArray& inputs);
 
-EncodedSubraph make_backward_graph(
+EncodedSubgraph make_backward_graph(
         const OpDef& def, 
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,

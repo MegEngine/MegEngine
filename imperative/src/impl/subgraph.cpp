@@ -101,7 +101,7 @@ void Subgraph::replace_vars(
     }
 }
 
-std::string EncodedSubraph::repr() const {
+std::string EncodedSubgraph::repr() const {
     std::string buffer;
     buffer.push_back('|');
     for (size_t i = 0; i < input_mask.size(); ++i) {
@@ -118,7 +118,7 @@ std::string EncodedSubraph::repr() const {
     return buffer;
 }
 
-size_t EncodedSubraph::hash() const {
+size_t EncodedSubgraph::hash() const {
     return std::hash<std::string>{}(repr());
 }
 

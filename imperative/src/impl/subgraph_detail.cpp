@@ -76,11 +76,11 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return outputs;
 }
 
-static EncodedSubraph make_backward_graph_from_forward(
+static EncodedSubgraph make_backward_graph_from_forward(
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad,
-        EncodedSubraph forward_graph) {
+        EncodedSubgraph forward_graph) {
     using namespace std::placeholders;
     using var_t = Subgraph::var_t;
     using vars_t = Subgraph::vars_t;
@@ -149,7 +149,7 @@ static EncodedSubraph make_backward_graph_from_forward(
     return backward_graph;
 }
 
-EncodedSubraph make_backward_graph(
+EncodedSubgraph make_backward_graph(
         const OpDef& def, 
         const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
