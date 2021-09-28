@@ -652,6 +652,11 @@ void init_ops(py::module m) {
             });
 
     m.def("set_jit_enabled", &JITFusionOp::set_enabled);
+    bool jit_supported = false;
+#if MGB_JIT
+    jit_supported = true;
+#endif
+    m.attr("jit_supported") = jit_supported;
 
     auto custom = submodule(m, "_custom");
     init_custom(custom);

@@ -22,6 +22,7 @@ from .._imperative_rt.core2 import (
     make_shape_tuple,
 )
 from .._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
+from .._imperative_rt.ops import jit_supported
 from .._wrap import as_device
 from ..autodiff.grad import Function
 from ..ops import builtin
@@ -233,6 +234,10 @@ def subgraph(
     if not device.physical_name.startswith("gpu"):
         gopt_level = None  # disable jit and compile
         jit_fusion = False
+
+    if jit_fusion and not jit_supported:
+        jit_fusion = False  # jit unusable, fallback to graph compile
+        gopt_level = 2
 
     def as_op(op, nargs):
         if isinstance(op, str):

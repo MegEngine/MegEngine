@@ -216,11 +216,11 @@ void CudaExecutable::FuncCache::compile(
         ptx = NVRTCCompile(cuda_exe->m_source, major, minor);
         ptx_cache = PersistentCache::Blob{ptx.data(), ptx.size()};
         cache.put(cache_category, key, ptx_cache.val());
+        mgb_log("NVRTC JIT: compile %s for %d.%d: source_len=%zu ptx_len=%zu "
+                "time=%.3fms",
+                cuda_exe->m_name.c_str(), major, minor, key.size, ptx.size(),
+                timer.get_msecs());
     }
-    mgb_log("NVRTC JIT: compile %s for %d.%d: source_len=%zu ptx_len=%zu "
-            "time=%.3fms",
-            cuda_exe->m_name.c_str(), major, minor, key.size, ptx.size(),
-            timer.get_msecs());
 }
 
 void CudaExecutable::FuncCache::exec(
