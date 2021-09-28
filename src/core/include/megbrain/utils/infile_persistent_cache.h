@@ -1,5 +1,5 @@
 /**
- * \file sdk/load-and-run/src/infile_persistent_cache.h
+ * \file src/core/include/megbrain/utils/infile_persistent_cache.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -70,6 +70,7 @@ public:
     Maybe<Blob> get(const std::string& category, const Blob& key) override;
     void put(const std::string& category, const Blob& key,
              const Blob& value) override;
+    bool support_dump_cache() override { return true; }
 };
 }  // namespace mgb
 

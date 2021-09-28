@@ -10,7 +10,6 @@
  */
 
 #include "./mgblar.h"
-#include "./infile_persistent_cache.h"
 #include "./json_loader.h"
 #include "./npy.h"
 #include "./text_table.h"
@@ -30,6 +29,7 @@
 #include "megbrain/serialization/extern_c_opr.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/utils/debug.h"
+#include "megbrain/utils/infile_persistent_cache.h"
 
 #include "megbrain/system.h"
 #include "megbrain/version.h"

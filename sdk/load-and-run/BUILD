@@ -2,13 +2,11 @@ cc_library(
     name = "mgblar",
     copts = ["-std=c++14"],
     srcs = [
-        "src/infile_persistent_cache.cpp",
         "src/mgblar.cpp",
         "src/json_loader.cpp",
         "src/text_table.cpp",
     ],
     hdrs = [
-        "src/infile_persistent_cache.h",
         "src/mgblar.h",
         "src/json_loader.h",
         "src/text_table.h",
@@ -57,11 +55,9 @@ cc_megvii_binary(
 cc_library(
     name = "megbrain_ios_lar_lib",
     srcs = [
-        "src/infile_persistent_cache.cpp",
         "src/mgblar.cpp",
     ],
     hdrs = [
-        "src/infile_persistent_cache.h",
         "src/mgblar.h",
     ],
     copts = ["-DMGB_NO_MAIN=1"],

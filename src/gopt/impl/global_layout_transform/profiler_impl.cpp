@@ -154,69 +154,61 @@ void MarkInputContiguous::init_output_static_infer_desc() {
 }  // namespace
 
 /* ================== ProfilerImpl =================*/
-class ProfilerImpl final : public ProfilerBase {
-public:
-    ProfilerImpl(int runs = 10) : m_runs{runs} {};
-    ~ProfilerImpl() = default;
-    ProfilingResult profile(const Problem& problem) const override;
-
-private:
-    static constexpr float PROFILE_TIME_OUT = 1e7;
-    using ReformatAttribute = ReformatKey::Attribute;
-    /*!
-     * \brief profile opr format agnostic operators (like elemwise, elemwise
-     * multi type, typecvt etc.)
-     *
-     * \param opr pointer to the operator node to be profiled
-     * \param base_format the original tensor format of the operator node.
-     * \param available_tensor_formats the available tensor formats
-     * \return the operator node record
-     */
-    OperatorNodeRecord profile_operator(
-            const OperatorNodeBase* opr, TensorFormats base_format,
-            const SmallVector<TensorFormats>& available_tensor_formats,
-            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
-    float profile_operator(
-            const OperatorNodeBase* opr, TensorFormats base_format,
-            TensorFormats tensor_format,
-            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
-    /*!
-     * \brief profile opr format aware operators (like conv, deconv, conv_bias,
-     * etc.)
-     *
-     * \param opr pointer to the operator node to be profiled
-     * \param base_config the tensor formats configuration of base opr format
-     * \param config all the available configuration
-     * \return the operator node record
-     */
-    OperatorNodeRecord profile_operator(
-            const OperatorNodeBase* opr,
-            const OprTensorFormatsConfiguration& base_config,
-            const SmallVector<OprTensorFormatsConfiguration>& available_configs,
-            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
-    float profile_operator(
-            const OperatorNodeBase* opr,
-            const OprTensorFormatsConfiguration& base_config,
-            const OprTensorFormatsConfiguration& config,
-            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
-    /*!
-     * \brief profile layout transform of the var node
-     *
-     * \param var pointer to the var node to be profiled
-     * \param base_format the original tensor formats in which the var node is
-     * stored \param available_tensor_formats the available tensor formats
-     * \param extra_attribute the extra attributes (options) of the problem
-     * \return the var node record
-     */
-    VarNodeRecord profile_var_node(
-            const VarNode* var, TensorFormats base_format,
-            const SmallVector<TensorFormats>& available_tensor_formats,
-            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
-    float profile_var_node(
-            const VarNode* var, TensorFormats base_format,
-            const ReformatKey& key) const;
-    int m_runs;  /// sample times of the profiler
-};
+ProfilerImpl::ProfilerImpl(int runs, float opr_threshold,
+                           float var_node_threshold)
+        : m_opr_threshold{opr_threshold},
+          m_var_node_threshold{var_node_threshold},
+          m_runs{runs} {
+    m_opr_filter = [this](const OperatorNodeBase* opr,
+                          OperatorNodeBase* new_opr) {
+        /// \note: for the considerations of performance, we skip nchw(naive)
+        /// kernels for conv bias on CUDA platform. to remove this later
+        if (auto conv = try_cast_as_op<opr::ConvBiasForward>(new_opr)) {
+            if (conv->output(0)->comp_node().device_type() ==
+                        CompNode::DeviceType::CUDA &&
+                conv->input(0)->dtype().category() ==
+                        DTypeCategory::QUANTIZED &&
+                conv->param().format == OprFormat::NCHW) {
+                return false;
+            }
+        }
+        float comp1 = m_opr_footprint.get_computation(
+                const_cast<OperatorNodeBase*>(opr));
+        float comp2 = m_opr_footprint.get_computation(new_opr);
+        if (comp2 > m_opr_threshold * comp1)
+            return false;
+        return true;
+    };
+    m_var_node_filter = [this](const VarNode* var, TensorShape from,
+                               TensorShape to, ReformatKey key) {
+        /// \note: due to the alignment requirement of low-bit tensor, we skip
+        /// some layout transform for low-bit tensors. The skipped layout
+        /// transforms do not have corresponding dnn kernel and cannot be
+        /// implemented by tensor manip operators (like reshape, dimshuffle,
+        /// subtensor, etc.).
+        if (var->dtype().enumv() == DTypeEnum::QuantizedS4 ||
+            var->dtype().enumv() == DTypeEnum::Quantized4Asymm) {
+            if (key.input_format == TensorFormats::NCHW &&
+                key.output_format != TensorFormats::NHWC &&
+                key.output_format != TensorFormats::NCHWc64) {
+                return false;
+            }
+            if (key.output_format == TensorFormats::NCHW &&
+                key.input_format != TensorFormats::NHWC &&
+                key.input_format != TensorFormats::NCHWc64) {
+                return false;
+            }
+        }
+        TensorLayout orig_ly = {var->shape(), var->dtype()},
+                     from_ly = {from, var->dtype()}, to_ly = {to, var->dtype()};
+        float orig_memory = orig_ly.span().dist_byte() * 2.f;
+        float reformat_memory =
+                from_ly.span().dist_byte() + to_ly.span().dist_byte();
+        if (reformat_memory > orig_memory * m_var_node_threshold)
+            return false;
+        return true;
+    };
+}
 
 ProfilerImpl::OperatorNodeRecord ProfilerImpl::profile_operator(
         const OperatorNodeBase* opr, TensorFormats base_format,
@@ -507,56 +499,6 @@ ProfilerImpl::ProfilingResult ProfilerImpl::profile(const Problem& problem) cons
 }
 
 /* ================== ProfilerBase =================*/
-ProfilerBase::ProfilerBase(float opr_threshold, float var_node_threshold)
-        : m_opr_threshold{opr_threshold}, m_var_node_threshold{var_node_threshold} {
-    m_opr_filter = [this](const OperatorNodeBase* opr, OperatorNodeBase* new_opr) {
-        /// \note: for the considerations of performance, we skip nchw(naive)
-        /// kernels for conv bias on CUDA platform. to remove this later
-        if (auto conv = try_cast_as_op<opr::ConvBiasForward>(new_opr)) {
-            if (conv->output(0)->comp_node().device_type() ==
-                        CompNode::DeviceType::CUDA &&
-                conv->input(0)->dtype().category() == DTypeCategory::QUANTIZED &&
-                conv->param().format == OprFormat::NCHW) {
-                return false;
-            }
-        }
-        float comp1 =
-                m_opr_footprint.get_computation(const_cast<OperatorNodeBase*>(opr));
-        float comp2 = m_opr_footprint.get_computation(new_opr);
-        if (comp2 > m_opr_threshold * comp1)
-            return false;
-        return true;
-    };
-    m_var_node_filter = [this](const VarNode* var, TensorShape from, TensorShape to,
-                               ReformatKey key) {
-        /// \note: due to the alignment requirement of low-bit tensor, we skip
-        /// some layout transform for low-bit tensors. The skipped layout
-        /// transforms do not have corresponding dnn kernel and cannot be
-        /// implemented by tensor manip operators (like reshape, dimshuffle,
-        /// subtensor, etc.).
-        if (var->dtype().enumv() == DTypeEnum::QuantizedS4 ||
-            var->dtype().enumv() == DTypeEnum::Quantized4Asymm) {
-            if (key.input_format == TensorFormats::NCHW &&
-                key.output_format != TensorFormats::NHWC &&
-                key.output_format != TensorFormats::NCHWc64) {
-                return false;
-            }
-            if (key.output_format == TensorFormats::NCHW &&
-                key.input_format != TensorFormats::NHWC &&
-                key.input_format != TensorFormats::NCHWc64) {
-                return false;
-            }
-        }
-        TensorLayout orig_ly = {var->shape(), var->dtype()},
-                     from_ly = {from, var->dtype()}, to_ly = {to, var->dtype()};
-        float orig_memory = orig_ly.span().dist_byte() * 2.f;
-        float reformat_memory = from_ly.span().dist_byte() + to_ly.span().dist_byte();
-        if (reformat_memory > orig_memory * m_var_node_threshold)
-            return false;
-        return true;
-    };
-}
-
 std::string ProfilerBase::OperatorNodeRecord::to_string() const {
     auto str = ssprintf(
             "\nopr type: %s\nopr name: %s\ninputs:\n", opr->dyn_typeinfo()->name,
@@ -593,6 +535,70 @@ std::string ProfilerBase::VarNodeRecord::to_string() const {
 
 std::unique_ptr<ProfilerBase> ProfilerBase::make_profiler() {
     return std::make_unique<ProfilerImpl>();
+}
+
+std::unique_ptr<ProfilerBase> ProfilerBase::make_cached_profiler(
+        const char* path) {
+    return std::make_unique<CachedProfiler>(path);
+}
+
+/* ================== CachedProfiler =================*/
+CachedProfiler::CachedProfiler(const char* path, int runs, float opr_threshold,
+                               float var_node_threshold)
+        : ProfilerImpl(runs, opr_threshold, var_node_threshold), m_path{path} {
+    if (m_path != nullptr) {  // file cache
+        ProfilerCache::inst().set_impl(
+                std::make_unique<InFilePersistentCache>(m_path));
+    }
+}
+
+CachedProfiler::ProfilingResult CachedProfiler::profile(
+        const Problem& problem) const {
+    auto ret = ProfilerImpl::profile(problem);
+    if (m_path != nullptr)
+        ProfilerCache::inst().dump_cache(m_path);
+    return ret;
+}
+
+float CachedProfiler::profile_operator(
+        const OperatorNodeBase* opr, TensorFormats base_format,
+        TensorFormats tensor_format, ReformatAttribute extra_attribute) const {
+    ProfilerCache::Key key{opr, tensor_formats_to_opr_format(tensor_format),
+                           extra_attribute};
+    auto ret = ProfilerCache::inst().get(key);
+    if (ret.valid())
+        return ret.val();
+    auto rst = ProfilerImpl::profile_operator(opr, base_format, tensor_format,
+                                   extra_attribute);
+    ProfilerCache::inst().put(key, rst);
+    return rst;
+}
+
+float CachedProfiler::profile_operator(
+        const OperatorNodeBase* opr,
+        const OprTensorFormatsConfiguration& base_config,
+        const OprTensorFormatsConfiguration& config,
+        ReformatAttribute extra_attribute) const {
+    ProfilerCache::Key key{opr, config.opr_format, extra_attribute};
+    auto ret = ProfilerCache::inst().get(key);
+    if (ret.valid())
+        return ret.val();
+    auto rst = ProfilerImpl::profile_operator(opr, base_config, config,
+                                              extra_attribute);
+    ProfilerCache::inst().put(key, rst);
+    return rst;
+}
+
+float CachedProfiler::profile_var_node(const VarNode* var,
+                                       TensorFormats base_format,
+                                       const ReformatKey& key) const {
+    ProfilerCache::Key pf_key{var, key};
+    auto ret = ProfilerCache::inst().get(pf_key);
+    if (ret.valid())
+        return ret.val();
+    auto rst = ProfilerImpl::profile_var_node(var, base_format, key);
+    ProfilerCache::inst().put(pf_key, rst);
+    return rst;
 }
 
 // vim: syntax=cpp.doxygen
