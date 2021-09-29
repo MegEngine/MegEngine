@@ -47,7 +47,13 @@ namespace {
 
 constexpr uint32_t MGB_VERSION = (MGE_MAJOR * 1000 + MGE_MINOR) * 100 + MGE_PATCH;
 
-constexpr uint32_t MGB_MAGIC = 0x5342474D;
+constexpr uint32_t MGB_MAGIC = 0x4342474D;
+// In order to maintain compatibility and to allow old models to be loaded, we keep
+// the old magic(MAGIC_V0) value and creat a new magic(MGB_MAGIC)
+constexpr uint32_t MAGIC_V0 = 0x5342474D;
+// Used to judge whether Magic is old or new, the new magic(MGB_MAGIC) is true and the
+// old magic(MAGIC_V0) is false.
+bool magic_compare = true;
 
 template <typename T>
 bool contains_any_in_set(const SmallVector<T>& list, const ThinHashSet<T>& set) {
@@ -78,6 +84,18 @@ void check_tensor_value_valid(const std::string& name, const HostTensorND& tenso
         }
     }
 }
+
+//! feature bits for backward compatibility; default value should be 0
+struct FeatureBits64 {
+    //! reserved for new fields
+    uint64_t : 64;
+    static void write(OutputFile& fout) {
+        static_assert(sizeof(FeatureBits64) == 8, "bad feature bits");
+        FeatureBits64 fb64;
+        memset(&fb64, 0, sizeof(fb64));
+        fout.write(&fb64, 8);
+    }
+};
 
 }  // namespace
 
@@ -266,7 +284,7 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
     }
 
     fbs::OperatorBuilder builder(m_builder);
-    builder.add_type_id(registry->unversioned_type_id);
+    builder.add_type_id(registry->persist_type_id);
     builder.add_inputs(inputs);
     if (m_config.keep_opr_priority) {
         builder.add_priority(opr->node_prop().attribute().priority);
@@ -322,6 +340,8 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     uint32_t magic = MGB_MAGIC;
     m_file->write(&magic, sizeof(magic));
 
+    // write FeatureBits
+    FeatureBits64::write(*m_file);
     // Padding
     uint32_t reserved = 0;
     m_file->write(&reserved, sizeof(reserved));
@@ -459,6 +479,7 @@ void GraphDumperOSS::dump_buf_with_len(const void* data, uint32_t size) {
 class GraphLoaderOSS final : public GraphLoader {
     const LoadConfig* m_cur_load_config = nullptr;
     std::unique_ptr<InputFile> m_file;
+    FeatureBits64 m_feature_bits;
     SharedBuffer m_graph_buf{{}, 0};
     const fbs::Graph* m_graph;
     SharedTensorIDMap m_shared_tensor_map;
@@ -754,8 +775,12 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(const fbs::Operator* fb
         }
         config.comp_node_arr(comp_node_arr);
     }
-
-    auto registry = OprRegistry::find_by_unversioned_id(fbopr->type_id());
+    const OprRegistry* registry;
+    if (magic_compare) {
+        registry = OprRegistry::find_by_id(fbopr->type_id());
+    } else {
+        registry = OprRegistry::find_by_unversioned_id(fbopr->type_id());
+    }
     mgb_throw_if(
             !registry, SerializationError,
             "failed to find opr with type %s, use python env "
@@ -841,10 +866,17 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config, bool rewi
     uint32_t magic;
     m_file->read(&magic, sizeof(magic));
     mgb_throw_if(
-            magic != MGB_MAGIC, SerializationError,
-            "wrong magic: wanted %#08x, actual %#08x (not a invalid fbs "
+            (magic != MGB_MAGIC) && (magic != MAGIC_V0), SerializationError,
+            "wrong magic: wanted %#08x or %#08x, actual %#08x (not a invalid fbs "
             "model?)",
-            MGB_MAGIC, magic);
+            MGB_MAGIC, MAGIC_V0, magic);
+    if (magic == MGB_MAGIC) {
+        // read FeatureBits
+        magic_compare = true;
+        m_file->read(&m_feature_bits, 8);
+    } else {
+        magic_compare = false;
+    }
     m_file->skip(4);
 
     uint64_t offset_to_fbs;
@@ -929,7 +961,7 @@ bool is_fbs_file(InputFile& file) {
     uint64_t magic_with_reserved = 0;
     file.read(&magic_with_reserved, sizeof(magic_with_reserved));
     file.skip(-sizeof(magic_with_reserved));
-    return magic_with_reserved == MGB_MAGIC;
+    return (magic_with_reserved == MGB_MAGIC) || (magic_with_reserved == MAGIC_V0);
 }
 
 }  // namespace serialization

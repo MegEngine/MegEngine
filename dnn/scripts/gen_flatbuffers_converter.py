@@ -33,9 +33,6 @@ class ConverterWriter(IndentWriterBase):
         self._last_param = p
         self._param_fields = []
         self._fb_fields = ["builder"]
-        if p.is_legacy:
-            self._skip_current_param = True
-            return
         self._write("template<>\nstruct ParamConverter<megdnn::param::%s> {",
                     p.name, indent=1)
         self._write("using MegDNNType = megdnn::param::%s;", p.name)

@@ -52,9 +52,6 @@ class ConverterWriter(IndentWriterBase):
 
     def _on_param_begin(self, p):
         self._last_param = p
-        if p.is_legacy:
-            self._skip_current_param = True
-            return
         self._packed = True
         self._current_tparams = []
         self._const = set()

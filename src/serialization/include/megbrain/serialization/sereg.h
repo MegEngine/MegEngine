@@ -199,7 +199,7 @@ struct IsComplete<T, decltype(void(sizeof(T)))> : std::true_type {};
         static ser::OprWithOutputAccessor compat_loader(                               \
                 ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs,         \
                 const mgb::cg::OperatorNodeConfig& config) {                           \
-            auto&& ctx_ = static_cast<ser::OprLoadContextRawPOD&>(ctx);                \
+            auto&& ctx_ = static_cast<ser::OprLoadContext&>(ctx);                      \
             return ser::OprWithOutputAccessor(_load(ctx_, inputs, config), _accessor); \
         }                                                                              \
         static void entry() {                                                          \

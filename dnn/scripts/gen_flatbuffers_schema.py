@@ -80,9 +80,6 @@ class FlatBuffersWriter(IndentWriterBase):
     def _on_param_begin(self, p):
         self._last_param = p
         self._cur_const_val = {}
-        if p.is_legacy:
-            self._skip_current_param = True
-            return
         self._write_doc(p.name)
         self._write("table %s {", p.name, indent=1)
 

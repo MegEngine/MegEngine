@@ -62,6 +62,37 @@ struct PersistentAddUpdateParam {
 
 }  // namespace opr_add_update
 
+// Old SerializedDType used in MegBrain 7.22.0 - 7.23.1
+// Should be kept as-is even if there are new dtypes.
+struct SerializedDTypeV1 {
+    static constexpr uint32_t TAG = megdnn::param::FakeSerializedDType::TAG;
+    DTypeEnum enumv;
+    union {
+        megdnn::DTypeParam<dtype::Quantized8Asymm> Quantized8Asymm;
+        megdnn::DTypeParam<dtype::QuantizedS8> QuantizedS8;
+        megdnn::DTypeParam<dtype::QuantizedS32> QuantizedS32;
+    } param;
+
+    operator DType() const {
+        switch (enumv) {
+#define cb(_dt)          \
+    case DTypeEnum::_dt: \
+        return DType::from_enum(enumv);
+            MEGDNN_FOREACH_DTYPE_NAME(cb)
+#undef cb
+            case DTypeEnum::Quantized8Asymm:
+                return dtype::Quantized8Asymm{param.Quantized8Asymm};
+            case DTypeEnum::QuantizedS8:
+                return dtype::QuantizedS8{param.QuantizedS8};
+            case DTypeEnum::QuantizedS32:
+                return dtype::QuantizedS32{param.QuantizedS32};
+            default:
+                mgb_assert(
+                        false, "unexpected old serialized dtype: invalid enumv %d",
+                        static_cast<uint32_t>(enumv));
+        }
+    }
+};
 template <>
 struct OprPersistentParam<opr::AddUpdate> {
     using Param = opr_add_update::PersistentAddUpdateParam;
@@ -104,7 +135,18 @@ struct ParamConverter<megdnn::DType> {
         return fbs::intl::build_dtype(builder, dtype);
     }
 };
-}  // namespace fbs
+template <>
+struct ParamConverter<SerializedDTypeV1> {
+    using FlatBufferType = SerializedDTypeV1;
+    static SerializedDTypeV1 to_param(const FlatBufferType* fb) {
+        mgb_assert(
+                false,
+                "You are calling SerializedDTypeV1 in flatbuffer, you should not call "
+                "here, this code is just to avoid compiling errors, but not be used in "
+                "flatbuffer.");
+    }
+};
+};  // namespace fbs
 #endif
 
 template <>

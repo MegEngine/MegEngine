@@ -16,6 +16,7 @@
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/serialization/serializer.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
@@ -907,5 +908,39 @@ TEST(TestOprBlas, MatrixMulExePolicy) {
 }
 #endif
 
+#if MGB_ENABLE_FBS_SERIALIZATION
+TEST(TestOprDNN, MatrixMulSerialization) {
+    using namespace serialization;
+
+    auto fname = output_file("MatrixMulSerializationTest");
+    auto dump = [&]() {
+        opr::MatrixMul::Param param;
+
+        auto cn = CompNode::load("cpu0");
+        auto graph = ComputingGraph::make();
+        HostTensorND a_host{cn, {24, 24}, dtype::Float32()};
+        HostTensorND b_host{cn, {24, 24}, dtype::Float32()};
+        auto a = opr::ImmutableTensor::make(*graph, a_host);
+        auto b = opr::ImmutableTensor::make(*graph, b_host);
+        auto opr = opr::MatrixMul::make(a, b, param, {});
+        auto dumper = GraphDumper::make(
+                OutputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto rst = dumper->dump({opr});
+        ASSERT_EQ(rst.outputs.size(), 1u);
+    };
+
+    auto load = [&]() {
+        auto loader = GraphLoader::make(
+                InputFile::make_fs(fname.c_str()), GraphDumpFormat::FLATBUFFERS);
+        auto rst = loader->load();
+        ASSERT_EQ(rst.output_var_list.size(), 1u);
+        auto opr = rst.output_var_list[0].node()->owner_opr();
+        ASSERT_TRUE(opr->same_type<opr::MatrixMul>());
+    };
+
+    dump();
+    load();
+}
+#endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
 //
