@@ -28,7 +28,8 @@ struct AsyncError : std::nested_exception, std::exception {
 };
 
 struct Interpreter {
-    using Handle = void*;
+    struct HandleImpl{};
+    using Handle = HandleImpl*;
 
     struct Channel {
         virtual ~Channel() = default;

@@ -33,7 +33,7 @@ struct Expr {
 template <typename T>
 struct ToStringTrait<Expr<T>> {
     std::string operator()(const Expr<T>& expr) {
-        return ssprintf("%s = %s %s\n", to_string(expr.inputs).c_str(), to_string(expr.op.get()).c_str(), to_string(expr.outputs).c_str());
+        return ssprintf("%s = %s %s\n", to_string(expr.outputs).c_str(), to_string(expr.op.get()).c_str(), to_string(expr.inputs).c_str());
     }
 };
 

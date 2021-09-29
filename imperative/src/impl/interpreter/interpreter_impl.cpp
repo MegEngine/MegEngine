@@ -137,7 +137,7 @@ Handle ChannelImpl::put(const HostTensorND& value, bool no_cache) {
     auto& state = get_channel_state();
     auto _ = StackManager::Guard{"Put", &state.stack_manager};
     auto info = put_impl(value, no_cache);
-    return info;
+    return reinterpret_cast<Handle>(info);
 }
 
 TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
@@ -161,7 +161,7 @@ TensorInfo* ChannelImpl::put_impl(const HostTensorND& value, bool no_cache) {
 Handle ChannelImpl::put(const DeviceTensorND& data, const HostTensorND& hvalue) {
     MGB_LOCK_GUARD(m_spin);
     mgb_assert(check_available(), "Channel already closed");
-    return put_impl(data, hvalue);
+    return reinterpret_cast<Handle>(put_impl(data, hvalue));
 }
 TensorInfo* ChannelImpl::put_impl(const DeviceTensorND& data, const HostTensorND& hvalue) {
     auto& state = get_channel_state();
@@ -287,7 +287,7 @@ void ChannelImpl::dispatch_default_cpu(
         auto info = reinterpret_cast<TensorInfo*>(put_impl(host_tensornd, false));
         mgb_assert(info->desc.layout.ndim != 0);
         output_infos.push_back(info);
-        outputs->push_back(info);
+        outputs->push_back(reinterpret_cast<Handle>(info));
     }
     auto op_info_getter = [op]{
         std::unordered_map<std::string, std::string> op_info;
@@ -330,7 +330,7 @@ void ChannelImpl::dispatch_kernel(
                 .proxy_to_comp_node(desc.comp_node);
         }
         cmd.outputs.push_back(info);
-        outputs->push_back(info);
+        outputs->push_back(reinterpret_cast<Handle>(info));
     }
     auto op_info_getter = [op=cmd.op]{
         std::unordered_map<std::string, std::string> op_info;
@@ -519,7 +519,7 @@ TensorInfo* ChannelImpl::alloc() {
 }
 
 void ChannelImpl::init(TensorInfo* info, LogicalTensorDesc desc) {
-    m_valid_handle.insert(info);
+    m_valid_handle.insert(reinterpret_cast<Handle>(info));
     MGB_RECORD_EVENT(TensorDeclareEvent, info->id, info->name);
     info->status = TensorInfo::Allocated;
     info->desc = std::move(desc);
