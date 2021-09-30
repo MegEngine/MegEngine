@@ -50,7 +50,11 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
 
 #if (CUDNN_MAJOR == 8 && CUDNN_MINOR < 2)
     if (m_cudnn_enum == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM &&
-        param.format == param::ConvBias::Format::NCHW4 &&
+        (param.format == param::ConvBias::Format::NCHW4
+#if (CUDNN_VERSION == 8004)
+         || param.format == param::ConvBias::Format::NCHW32
+#endif
+         ) &&
         args.filter_meta.group * args.filter_meta.ocpg > 256 &&
         args.src_layout->dtype.enumv() == DTypeEnum::QuantizedS8 &&
         args.filter_layout->dtype.enumv() == DTypeEnum::QuantizedS8) {

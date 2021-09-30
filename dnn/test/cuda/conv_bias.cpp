@@ -1223,8 +1223,8 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_TENSORCORE_INT8) {
                     for (size_t fh : {3, 5, 7}) {
                         for (int ph : {static_cast<int>(fh / 2), 0}) {
                             for (int sh : {1, 2}) {
-                                for (size_t ih : {9, 11, 12, 13, 16}) {
-                                    for (size_t iw : {8, 27, 32, 40}) {
+                                for (size_t ih : {9, 11, 12}) {
+                                    for (size_t iw : {8, 27, 32}) {
                                         param.nonlineMode = mode;
                                         param.stride_h = param.stride_w = sh;
                                         param.pad_h = param.pad_w = ph;
@@ -1267,6 +1267,29 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_TENSORCORE_INT8) {
                 }
             }
         }
+    }
+    {  //! convbiasactivation algo crash when oc > 256 && cudnn v8.0.4
+        param.nonlineMode = NonlineMode::RELU;
+        param.stride_h = param.stride_w = 1;
+        param.pad_h = param.pad_w = 0;
+
+        checker.set_dtype(0, dtype::QuantizedS8(1.3f))
+                .set_dtype(1, dtype::QuantizedS8(1.3f))
+                .set_dtype(2, dtype::QuantizedS32(1.3f * 1.3f))
+                .set_dtype(3, dtype::QuantizedS8(1.7f))
+
+                .set_dtype(4, dtype::QuantizedS8(1.2f * 1.2f))
+                .set_rng(0, &int_rng)
+                .set_rng(1, &int_rng)
+                .set_rng(2, &int_rng)
+                .set_rng(3, &int_rng)
+                .set_epsilon(1 + 1e-3)
+                .set_param(param)
+                .execs({{2, 8, 12, 12, 32},
+                        {512, 8, 1, 1, 32},
+                        {1, 16, 1, 1, 32},
+                        {},
+                        {}});
     }
 }
 

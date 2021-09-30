@@ -498,7 +498,7 @@ const std::unordered_map<cudnnConvolutionFwdAlgo_t, CudnnAlgoPack::Attr> CudnnAl
     static const std::unordered_map<cudnnConvolutionFwdAlgo_t, CudnnAlgoPack::Attr>
             algos = {
                 DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, true, false),
-#if CUDNN_VERSION == 8004
+#if (CUDNN_VERSION >= 8000 && CUDNN_VERSION <= 8201)
                 DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true, true),
 #else
                 DEF_ALGO(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM, true, false),
