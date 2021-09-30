@@ -279,7 +279,7 @@ public:
         return m_mem_alloc->get_free_left_and_right(begin_ptr, end_ptr);
     }
 
-    size_t get_max_block_size_available() {
+    size_t get_max_block_size_available() override {
         activate();
         return m_mem_alloc->get_max_block_size_available();
     }
