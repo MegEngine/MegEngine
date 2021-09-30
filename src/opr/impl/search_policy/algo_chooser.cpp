@@ -508,15 +508,6 @@ AlgoChooser<Opr>::AlgoChooserHelper::AlgoChooserHelper(
                 m_fastrun_layouts, m_dnn_opr->param(), fastrun_batch_size);
     }
 
-    if (owner_graph()->options().no_profiling_on_shape_change) {
-        for (size_t i = 0; i < m_incache_layouts.size(); i++) {
-            for (size_t j = 0; j < m_incache_layouts.at(i).ndim; j++) {
-                m_incache_layouts.at(i)[j] = 0;
-                m_incache_layouts.at(i).stride[j] = 0;
-            }
-        }
-    }
-
     mgb_assert(m_fastrun_layouts.size() == layouts.size());
 
     static_assert(
@@ -570,6 +561,12 @@ typename AlgoChooser<Opr>::ImplExecutionPolicy AlgoChooser<Opr>::AlgoChooserHelp
         auto policy = m_dnn_opr->execution_policy();
         if (policy.algo.valid()) {
             return policy;
+        }
+        if (is_matmul<Opr>()) {
+            mgb_log_warn(
+                    "choose algo by heuristic, which may cause performance "
+                    "regression.");
+            return choose_by_heuristic(selected_strategy);
         }
     }
 
@@ -1016,8 +1013,6 @@ std::pair<AlgoAttribute, AlgoAttribute> AlgoChooser<Opr>::AlgoChooserHelper::
     }
 
     //! from graph option
-    // FIXME: no_profiling_on_shape_change extract USABLE_DEPEND_ON_SHAPE attribute when
-    // fixed usable
     if (owner_graph()->options().fast_run_config.shared_batch_size) {
         ret.second |= AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }

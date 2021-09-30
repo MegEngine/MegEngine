@@ -58,6 +58,13 @@ constexpr bool opr_contain_bias() {
     return std::is_same<Opr, megdnn::ConvBias>::value;
 }
 
+//! matmul and batchedMatrixMul
+template <typename Opr>
+constexpr bool is_matmul() {
+    return std::is_same<Opr, megdnn::MatrixMul>::value ||
+           std::is_same<Opr, megdnn::BatchedMatrixMul>::value;
+}
+
 template <typename Opr, bool has_prep>
 struct PreprocessFilterImpl {
     using T = union {};
