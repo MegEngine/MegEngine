@@ -19,19 +19,41 @@ using namespace mgb;
 using namespace gopt;
 using namespace opr;
 
+namespace {
+using OprFormat = SolverBase::OprFormat;
+template <typename Opr>
+bool check_format_aware_opr_valid(const OperatorNodeBase* opr_, OprFormat opr_format) {
+    auto&& opr = opr_->cast_final_safe<Opr>();
+    return opr.param().format == opr_format;
+}
+}  // namespace
+
 /* =================== ProfilingBasedSolverSolver ======================*/
 ProfilingBasedSolver::ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profiler)
         : m_profiler{std::move(profiler)} {
-    static const ThinHashSet<Typeinfo*> format_aware_oprs = {
-#define cb(_Opr) _Opr::typeinfo()
-            cb(Convolution),    cb(ConvBiasForward), cb(ConvolutionBackwardData),
-            cb(PoolingForward), cb(WarpPerspective), cb(Resize),
-    };
+    static const ThinHashMap<
+            Typeinfo*,
+            thin_function<bool(const OperatorNodeBase*, OprFormat opr_format)>>
+            format_aware_opr_validators = {
+#define cb(t)                                                          \
+    {opr::t::typeinfo(), std::bind(                                    \
+                                 check_format_aware_opr_valid<opr::t>, \
+                                 std::placeholders::_1, std::placeholders::_2)}
+                    cb(Convolution),
+                    cb(ConvBiasForward),
+                    cb(ConvolutionBackwardData),
+                    cb(PoolingForward),
+                    cb(WarpPerspective),
+                    cb(Resize),
+            };
 
-    m_graph_partition_filter = [](const GraphPartition& partition) {
+    m_problem_filter = [](const Problem& problem) {
+        auto&& base_opr_format = problem.attribute().base_opr_format;
         bool has_format_aware_opr = false;
-        for (auto&& opr : partition.all_oprs()) {
-            if (!has_format_aware_opr && format_aware_oprs.count(opr->dyn_typeinfo())) {
+        for (auto&& opr : problem.graph_partition().all_oprs()) {
+            auto iter = format_aware_opr_validators.find(opr->dyn_typeinfo());
+            if (iter != format_aware_opr_validators.end() &&
+                iter->second(opr, base_opr_format)) {
                 has_format_aware_opr = true;
                 break;
             }
@@ -42,8 +64,7 @@ ProfilingBasedSolver::ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profile
 
 ProfilingBasedSolver::Solution ProfilingBasedSolver::solve(
         const Problem& problem) const {
-    const auto& partition = problem.graph_partition();
-    if (!m_graph_partition_filter(partition))
+    if (!m_problem_filter(problem))
         return Solution{};
     return do_solve(problem);
 }

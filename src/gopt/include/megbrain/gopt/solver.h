@@ -49,18 +49,16 @@ public:
  */
 class ProfilingBasedSolver : public SolverBase {
 public:
-    using GraphPartitionFilter =
-            thin_function<bool(const GraphPartition& graph_partition)>;
+    using ProblemFilter = thin_function<bool(const Problem&)>;
     ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profiler);
     /*!
      * \note some graph partition (for example, graph partition without format
      * aware operators like conv, deconv, warp, resize etc.) will be filtered by
-     * the GraphPartitionFilter, which can reduce the profiling time. */
+     * the ProblemFilter, which can reduce the profiling time. */
     ProfilingBasedSolver(
-            std::unique_ptr<ProfilerBase> profiler,
-            GraphPartitionFilter graph_partition_filter)
+            std::unique_ptr<ProfilerBase> profiler, ProblemFilter problem_filter)
             : m_profiler{std::move(profiler)},
-              m_graph_partition_filter{std::move(graph_partition_filter)} {}
+              m_problem_filter{std::move(problem_filter)} {}
     virtual ~ProfilingBasedSolver() = default;
     Solution solve(const Problem& problem) const override;
     virtual Solution do_solve(const Problem& problem) const = 0;
@@ -69,7 +67,7 @@ protected:
     std::unique_ptr<ProfilerBase> m_profiler;
 
 private:
-    GraphPartitionFilter m_graph_partition_filter;
+    ProblemFilter m_problem_filter;
 };
 
 /*!
@@ -81,10 +79,8 @@ public:
     DynamicProgrammingSolver(std::unique_ptr<ProfilerBase> profiler)
             : ProfilingBasedSolver(std::move(profiler)){};
     DynamicProgrammingSolver(
-            std::unique_ptr<ProfilerBase> profiler,
-            GraphPartitionFilter graph_partition_filter)
-            : ProfilingBasedSolver(
-                      std::move(profiler), std::move(graph_partition_filter)){};
+            std::unique_ptr<ProfilerBase> profiler, ProblemFilter problem_filter)
+            : ProfilingBasedSolver(std::move(profiler), std::move(problem_filter)){};
     ~DynamicProgrammingSolver() noexcept = default;
     Solution do_solve(const Problem& problem) const override;
     bool can_solve(const Problem& problem) const override;

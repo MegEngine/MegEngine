@@ -221,6 +221,8 @@ void DynamicProgrammingSolver::Impl::analyze_edges(
         edges[cur].push_back(ov);
         edge2idx[cur].emplace(ov, idx++);
     }
+    if (cur == 0)
+        return;
     cur--;
     for (const auto& opr : reverse_adaptor(topo)) {
         for (const auto& i : opr->input()) {
