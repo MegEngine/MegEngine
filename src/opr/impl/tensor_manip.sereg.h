@@ -218,6 +218,10 @@ namespace opr {
     MGB_SEREG_OPR(Padding, 1);
 
     MGB_SEREG_OPR(PaddingBackward, 2);
+
+    MGB_SEREG_OPR(Repeat, 1);
+
+    MGB_SEREG_OPR(RepeatBackward, 2);
 } // namespace opr
 
 } // namespace mgb

@@ -269,6 +269,17 @@ OP_TRAIT_REG(Argmin, Argmin).apply_on_var_node(apply_on_var_node).fallback();
 }  // namespace
 
 namespace {
+namespace repeat {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& repeat = static_cast<const Repeat&>(def);
+    OperatorNodeConfig config{repeat.make_name()};
+    return opr::Repeat::make(inputs[0], repeat.param(), config);
+}
+OP_TRAIT_REG(Repeat, Repeat).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace repeat
+}  // namespace
+
+namespace {
 namespace warp_perspective {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& warp = static_cast<const WarpPerspective&>(def);
