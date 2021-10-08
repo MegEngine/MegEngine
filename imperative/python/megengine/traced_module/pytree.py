@@ -150,8 +150,8 @@ def tree_flatten(
     is_leaf: Callable = _is_leaf,
     is_const_leaf: Callable = _is_const_leaf,
 ):
-    r"""Flattens a object into a list of values and a :calss:`TreeDef` that can be used
-    to reconstruct the object.
+    r"""Flattens a pytree into a list of values and a :class:`TreeDef` that can be used
+    to reconstruct the pytree.
     """
     if type(values) not in SUPPORTED_TYPE:
         assert is_leaf(values), values
@@ -188,7 +188,7 @@ class TreeDef:
         self.num_leaves = sum(ch.num_leaves for ch in children_defs)
 
     def unflatten(self, leaves):
-        r"""Given a list of values and a ``TreeDef``, builds a object.
+        r"""Given a list of values and a ``TreeDef``, builds a pytree.
         This is the inverse operation of ``tree_flatten``.
         """
         assert len(leaves) == self.num_leaves

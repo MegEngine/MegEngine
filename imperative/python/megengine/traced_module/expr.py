@@ -159,13 +159,13 @@ class Expr:
 
     @property
     def kwargs(self):
-        r"""Get the the keyword arguments of the operation corresponding to this Expr."""
+        r"""Get the keyword arguments of the operation corresponding to this Expr."""
         _, kwargs = self.unflatten_args(self.inputs)
         return kwargs
 
     @property
     def args(self):
-        r"""Get the the positional arguments of the operation corresponding to this Expr."""
+        r"""Get the positional arguments of the operation corresponding to this Expr."""
         args, _ = self.unflatten_args(self.inputs)
         return args
 

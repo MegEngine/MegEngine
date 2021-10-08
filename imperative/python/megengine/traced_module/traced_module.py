@@ -453,7 +453,7 @@ class InternalGraph:
         r"""Get the list of output Nodes of this graph.
 
         Returns:
-            A list of Node.
+            A list of ``Node``.
         """
         return self._outputs
 
@@ -1937,7 +1937,7 @@ class TracedModule(Module):
 
     @property
     def graph(self) -> InternalGraph:
-        """Return the ``InternalGraph`` of this ``TracedModule``
+        """Return the ``InternalGraph`` of this ``TracedModule``.
         """
         if self._is_top:
             self._update_ref()
