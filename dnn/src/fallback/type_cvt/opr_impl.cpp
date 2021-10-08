@@ -309,7 +309,8 @@ void on_dest_ctype(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         break;                                                                         \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-        cb(::megdnn::dtype::Bool) case DTypeEnum::QuantizedS8
+        cb(::megdnn::dtype::Bool)
+                cb(::megdnn::dtype::Uint16) case DTypeEnum::QuantizedS8
                 : MIDOUT_BEGIN(
                           megdnn_fb_typecvt_src_dtype,
                           midout_iv(DTypeEnum::QuantizedS8)) {
@@ -467,7 +468,8 @@ void run_contiguous(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     }
 
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-        cb(::megdnn::dtype::Bool) case DTypeEnum::QuantizedS8
+        cb(::megdnn::dtype::Bool)
+                cb(::megdnn::dtype::Uint16) case DTypeEnum::QuantizedS8
                 : MIDOUT_BEGIN(
                           megdnn_fb_typecvt_dst_dtype,
                           midout_iv(DTypeEnum::QuantizedS8)) {

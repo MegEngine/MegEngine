@@ -42,8 +42,10 @@ using namespace arm_common;
 DECL_AVAILABLE(VecVecVec, BcastType::VEC_VEC_VEC);
 DECL_AVAILABLE(VecVecScalar, BcastType::VEC_VEC_SCALAR);
 DECL_AVAILABLE(Bcast101VecBcast101, BcastType::BCAST101_VEC_BCAST101);
+DECL_AVAILABLE(Bcast111CVecBcast111C, BcastType::BCAST111C_VEC_BCAST111C);
 DECL_AVAILABLE(Bcast101xXVecBcast101xX, BcastType::BCAST101xX_VEC_BCAST101xX);
 DECL_AVAILABLE(VecBcast101Vec, BcastType::VEC_BCAST101_VEC);
+DECL_AVAILABLE(VecBcast111CVec, BcastType::VEC_BCAST111C_VEC);
 DECL_AVAILABLE(VecBcast101xXVec, BcastType::VEC_BCAST101xX_VEC);
 DECL_AVAILABLE(VecScalarVec, BcastType::VEC_SCALAR_VEC);
 DECL_AVAILABLE(VecScalarScalar, BcastType::VEC_SCALAR_SCALAR);
@@ -164,6 +166,45 @@ void ElemwiseImpl::AlgoTernaryFma3Bcast101VecBcast101::exec(
     return;
 }
 
+void ElemwiseImpl::AlgoTernaryFma3Bcast111CVecBcast111C::exec(
+        const KernParam& kern_param) const {
+    auto& elparam = kern_param.ternary_elparam;
+    auto &src0 = elparam[0], &src1 = elparam[1], &src2 = elparam[2];
+
+    // Case 3: shape of src0 and src2 is {1, 1, 1, C}
+    BroadcastChannelInfo binfo;
+    is_NHWC_broadcasted_channel_like(src0.layout, binfo);
+#define DISPATCH_TERNARY(_mode, _case, _type, _type_midout_id, _op)                   \
+    case Mode::_mode:                                                                 \
+        MIDOUT_BEGIN(                                                                 \
+                megdnn_arm_common_elemwise_ternary, midout_iv(_case),                 \
+                midout_iv(Mode::_mode), _type_midout_id) {                            \
+            thin_function<void(                                                       \
+                    const _type*, const _type*, size_t, const _type*, _type*, DType,  \
+                    DType, DType, DType, size_t, size_t, size_t)>                     \
+                    run = OpCallerTernary<                                            \
+                            _op<_type, _type>,                                        \
+                            BcastType::BCAST111C_VEC_BCAST111C>::run;                 \
+            MEGDNN_DISPATCH_CPU_KERN(                                                 \
+                    static_cast<naive::HandleImpl*>(kern_param.handle),               \
+                    run(static_cast<const _type*>(src0.raw_ptr),                      \
+                        static_cast<const _type*>(src1.raw_ptr),                      \
+                        is_vector(src1.layout) ? 0 : src1.layout.stride[0] - binfo.z, \
+                        static_cast<const _type*>(src2.raw_ptr),                      \
+                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,          \
+                        src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,       \
+                        binfo.x, binfo.y, binfo.z));                                  \
+        }                                                                             \
+        MIDOUT_END();                                                                 \
+        return
+
+    auto&& dst = *(kern_param.m_dst);
+    DISPATCH_TYPE("AlgoTernaryFma3Bcast111CVecBcast111C::exec"_hash);
+#undef DISPATCH_TERNARY
+
+    return;
+}
+
 void ElemwiseImpl::AlgoTernaryFma3Bcast101xXVecBcast101xX::exec(
         const KernParam& kern_param) const {
     auto& elparam = kern_param.ternary_elparam;
@@ -277,6 +318,45 @@ void ElemwiseImpl::AlgoTernaryFma3VecBcast101Vec::exec(
 
     auto&& dst = *(kern_param.m_dst);
     DISPATCH_TYPE("AlgoTernaryFma3VecBcast101Vec::exec"_hash);
+#undef DISPATCH_TERNARY
+
+    return;
+}
+
+void ElemwiseImpl::AlgoTernaryFma3VecBcast111CVec::exec(
+        const KernParam& kern_param) const {
+    auto& elparam = kern_param.ternary_elparam;
+    auto &src0 = elparam[0], &src1 = elparam[1], &src2 = elparam[2];
+
+    // Case 4: shape of src1 is {1, 1, 1, C}, and src0 and src2 are contig
+    BroadcastChannelInfo binfo;
+    is_NHWC_broadcasted_channel_like(src1.layout, binfo);
+#define DISPATCH_TERNARY(_mode, _case, _type, _type_midout_id, _op)                   \
+    case Mode::_mode:                                                                 \
+        MIDOUT_BEGIN(                                                                 \
+                megdnn_arm_common_elemwise_ternary, midout_iv(_case),                 \
+                midout_iv(Mode::_mode), _type_midout_id) {                            \
+            thin_function<void(                                                       \
+                    const _type*, size_t, const _type*, const _type*, size_t, _type*, \
+                    DType, DType, DType, DType, size_t, size_t, size_t)>              \
+                    run = OpCallerTernary<                                            \
+                            _op<_type, _type>, BcastType::VEC_BCAST111C_VEC>::run;    \
+            MEGDNN_DISPATCH_CPU_KERN(                                                 \
+                    static_cast<naive::HandleImpl*>(kern_param.handle),               \
+                    run(static_cast<const _type*>(src0.raw_ptr),                      \
+                        is_vector(src0.layout) ? 0 : src0.layout.stride[0] - binfo.z, \
+                        static_cast<const _type*>(src1.raw_ptr),                      \
+                        static_cast<const _type*>(src2.raw_ptr),                      \
+                        is_vector(src2.layout) ? 0 : src2.layout.stride[0] - binfo.z, \
+                        static_cast<_type*>(dst.raw_ptr), src0.layout.dtype,          \
+                        src1.layout.dtype, src2.layout.dtype, dst.layout.dtype,       \
+                        binfo.x, binfo.y, binfo.z));                                  \
+        }                                                                             \
+        MIDOUT_END();                                                                 \
+        return
+
+    auto&& dst = *(kern_param.m_dst);
+    DISPATCH_TYPE("AlgoTernaryFma3VecBcast111CVec::exec"_hash);
 #undef DISPATCH_TERNARY
 
     return;

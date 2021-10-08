@@ -158,8 +158,9 @@ void copy_tensors(
         //! In order to avoid an unnecessary increase in binary size, we just
         //! use QuantizedS16 dtype in winograd_filter_preprocess now.
         cb(::megdnn::dtype::QuantizedS16) MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
+                cb(::megdnn::dtype::Uint16)
 #undef cb
-                default : megdnn_trap();
+                        default : megdnn_trap();
     }
 }
 

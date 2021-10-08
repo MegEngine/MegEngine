@@ -150,6 +150,19 @@ bool ElemwiseLayoutHelper::is_broadcasted_channel_like(
     return false;
 }
 
+bool ElemwiseLayoutHelper::is_NHWC_broadcasted_channel_like(
+        const TensorLayout& layout, BroadcastChannelInfo& info) {
+    if (layout.format.type() == TensorFormat::Type::DEFAULT) {
+        if (layout.ndim == 2 && layout.stride[1] == 1 && layout.stride[0] == 0) {
+            info.x = 1;
+            info.y = layout.shape[0];
+            info.z = layout.shape[1];
+            return true;
+        }
+    }
+    return false;
+}
+
 bool ElemwiseLayoutHelper::is_broadcasted_1x(
         const TensorLayout& layout, Broadcast1xInfo& binfo) {
     if (layout.ndim == 2 && layout.stride[0] == 0 && layout.stride[1] == 1) {

@@ -25,6 +25,11 @@ TEST_F(CUDA, TYPE_CVT) {
             TensorLayout src({10, 10}, sdtype), dst({10, 10}, ddtype);
             Checker<TypeCvt> checker(handle_cuda());
             checker.set_rng(0, &init).exec(TensorLayoutArray{src, dst});
+
+            TensorLayout non_contig_src(
+                    {1, 96, 64, 120}, {96 * 64 * 128, 64 * 128, 128, 1}, sdtype);
+            TensorLayout non_contig_dst({1, 96, 64, 120}, ddtype);
+            checker.exec(TensorLayoutArray{non_contig_src, non_contig_dst});
         }
 }
 

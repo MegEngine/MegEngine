@@ -88,6 +88,26 @@ TEST_F(ARM_COMMON, TYPE_CVT) {
             .execs({{1, 32, 24, 128}, {1, 32, 24, 128}});
 }
 
+TEST_F(ARM_COMMON, TYPE_CVT_16_F32) {
+    Checker<TypeCvt> checker(handle());
+    UniformIntRNG rng{INT16_MIN >> 1, INT16_MAX >> 1};
+
+    for (size_t size : {3, 7, 15, 33, 10000}) {
+        checker.set_rng(0, &rng);
+        checker.set_dtype(0, dtype::Int16()).execs({{size}, {size}});
+        checker.set_dtype(0, dtype::Uint16()).execs({{size}, {size}});
+    }
+    TensorLayout src_int16{
+            {1, 96, 64, 120}, {128 * 64 * 96, 128 * 64, 128, 1}, dtype::Int16()};
+    TensorLayout dst_int16{{1, 96, 64, 120}, dtype::Float32()};
+    checker.execl({src_int16, dst_int16});
+
+    TensorLayout src_uint16{
+            {1, 96, 64, 120}, {128 * 64 * 96, 128 * 64, 128, 1}, dtype::Uint16()};
+    TensorLayout dst_uint16{{1, 96, 64, 120}, dtype::Float32()};
+    checker.execl({src_uint16, dst_uint16});
+}
+
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(ARM_COMMON, BENCHMARK_TYPE_CVT) {
     auto run = [&](const TensorShapeArray& shapes) {

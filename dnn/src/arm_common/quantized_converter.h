@@ -50,6 +50,20 @@ inline dt_qint32 QConverter::convert(const float& src) {
             saturate<int32_t, float>(std::round(src), -2147483648, 2147483647));
 }
 
+template <>
+inline float32x4x2_t QConverter::convert(const int16x8_t& vsrc) {
+    int32x4_t vhi = vmovl_s16(vget_high_s16(vsrc));
+    int32x4_t vlo = vmovl_s16(vget_low_s16(vsrc));
+    return {{vcvtq_f32_s32(vlo), vcvtq_f32_s32(vhi)}};
+}
+
+template <>
+inline float32x4x2_t QConverter::convert(const uint16x8_t& vsrc) {
+    uint32x4_t vhi = vmovl_u16(vget_high_u16(vsrc));
+    uint32x4_t vlo = vmovl_u16(vget_low_u16(vsrc));
+    return {{vcvtq_f32_u32(vlo), vcvtq_f32_u32(vhi)}};
+}
+
 #if __ARM_ARCH >= 8
 template <>
 inline int8x8_t QConverter::convert(const float32x4x2_t& vsrc) {

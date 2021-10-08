@@ -38,12 +38,15 @@ private:
     class AlgoBinaryVecVec;
     class AlgoBinaryVecScalar;
     class AlgoBinaryVecBcast101;
+    class AlgoBinaryVecBcast111C;
     class AlgoBinaryVecBcast101xX;
     class AlgoTernaryFma3VecVecVec;
     class AlgoTernaryFma3VecVecScalar;
     class AlgoTernaryFma3Bcast101VecBcast101;
+    class AlgoTernaryFma3Bcast111CVecBcast111C;
     class AlgoTernaryFma3Bcast101xXVecBcast101xX;
     class AlgoTernaryFma3VecBcast101Vec;
+    class AlgoTernaryFma3VecBcast111CVec;
     class AlgoTernaryFma3VecBcast101xXVec;
     class AlgoTernaryFma3VecScalarVec;
     class AlgoTernaryFma3VecScalarScalar;

@@ -27,12 +27,15 @@ class ElemwiseImpl::AlgoPack {
     AlgoBinaryVecVec algo_binary_vec_vec;
     AlgoBinaryVecScalar algo_binary_vec_sca;
     AlgoBinaryVecBcast101 algo_binary_vec_bcast101;
+    AlgoBinaryVecBcast111C algo_binary_vec_bcast110;
     AlgoBinaryVecBcast101xX algo_binary_VEC_BCAST101xX;
     AlgoTernaryFma3VecVecVec algo_ternaryfma3_vec_vec_vec;
     AlgoTernaryFma3VecVecScalar algo_ternaryfma3_vec_vecsca;
     AlgoTernaryFma3Bcast101VecBcast101 algo_ternaryfma3_bcast101_vec_bcast101;
+    AlgoTernaryFma3Bcast111CVecBcast111C algo_ternaryfma3_bcast110_vec_bcast110;
     AlgoTernaryFma3Bcast101xXVecBcast101xX algo_ternaryfma3_bcast101xX_vec_bcast101xX;
     AlgoTernaryFma3VecBcast101Vec algo_ternaryfma3_vec_bcast101_vec;
+    AlgoTernaryFma3VecBcast111CVec algo_ternaryfma3_vec_bcast110_vec;
     AlgoTernaryFma3VecBcast101xXVec algo_ternaryfma3_vec_bcast101xX_vec;
     AlgoTernaryFma3VecScalarVec algo_ternaryfma3_vec_sca_vec;
     AlgoTernaryFma3VecScalarScalar algo_ternaryfma3_vec_sca_sca;
@@ -43,12 +46,15 @@ public:
         all_algos.emplace_back(&algo_binary_vec_vec);
         all_algos.emplace_back(&algo_binary_vec_sca);
         all_algos.emplace_back(&algo_binary_vec_bcast101);
+        all_algos.emplace_back(&algo_binary_vec_bcast110);
         all_algos.emplace_back(&algo_binary_VEC_BCAST101xX);
         all_algos.emplace_back(&algo_ternaryfma3_vec_vec_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_vecsca);
         all_algos.emplace_back(&algo_ternaryfma3_bcast101_vec_bcast101);
+        all_algos.emplace_back(&algo_ternaryfma3_bcast110_vec_bcast110);
         all_algos.emplace_back(&algo_ternaryfma3_bcast101xX_vec_bcast101xX);
         all_algos.emplace_back(&algo_ternaryfma3_vec_bcast101_vec);
+        all_algos.emplace_back(&algo_ternaryfma3_vec_bcast110_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_bcast101xX_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_sca_vec);
         all_algos.emplace_back(&algo_ternaryfma3_vec_sca_sca);
@@ -87,6 +93,14 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
     kern_param.mode = opr->param().mode;
     kern_param.handle = opr->handle();
 
+    auto is_legal_layout_for_nhwc = [](const TensorLayout& l) {
+        if (is_vector(l))
+            return true;
+        if (l.ndim == 2 && l.stride[1] == 1)
+            return true;
+        return false;
+    };
+
     if ((opr->m_src->size() == 3) && (opr->param().mode == Mode::FUSE_MUL_ADD3)) {
         kern_param.ternary_elparam = opr->make_elemwise_op_param<3>();
         bool c_is_scalar;
@@ -124,6 +138,20 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
         if (is_vector(src0.layout) && src0.layout.eq_layout(src2.layout) &&
             is_broadcasted_channel_like(src1.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::VEC_BCAST101_VEC;
+            return kern_param;
+        }
+
+        if (is_legal_layout_for_nhwc(src1.layout) &&
+            is_NHWC_broadcasted_channel_like(src0.layout, binfo) &&
+            src0.layout.eq_layout(src2.layout)) {
+            kern_param.broad_cast_type = BcastType::BCAST111C_VEC_BCAST111C;
+            return kern_param;
+        }
+
+        if (is_legal_layout_for_nhwc(src0.layout) &&
+            src2.layout.eq_layout(src0.layout) &&
+            is_NHWC_broadcasted_channel_like(src1.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::VEC_BCAST111C_VEC;
             return kern_param;
         }
 
@@ -171,6 +199,18 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
 
         if (is_vector(src1.layout) && is_broadcasted_channel_like(src0.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::BCAST101_VEC;
+            return kern_param;
+        }
+
+        if (is_legal_layout_for_nhwc(src1.layout) &&
+            is_NHWC_broadcasted_channel_like(src0.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::BCAST111C_VEC;
+            return kern_param;
+        }
+
+        if (is_legal_layout_for_nhwc(src0.layout) &&
+            is_NHWC_broadcasted_channel_like(src1.layout, binfo)) {
+            kern_param.broad_cast_type = BcastType::VEC_BCAST111C;
             return kern_param;
         }
 

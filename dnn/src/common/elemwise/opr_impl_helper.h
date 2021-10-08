@@ -81,6 +81,16 @@ public:
             const TensorLayout& layout, BroadcastChannelInfo& info);
 
     /*!
+     * \brief check whether layout matches BroadcastChannelInfo under NHWC
+     * layout
+     *
+     * Note that Input must be 2-dimensional, and must be [1, y] broadacsted
+     * into [z, y] and x would be set to 1.
+     */
+    static bool is_NHWC_broadcasted_channel_like(
+            const TensorLayout& layout, BroadcastChannelInfo& info);
+
+    /*!
      * \brief check whether layout matches BroadcastChannelInfo
      *
      * Note that Input can also be 3-dimensional, and must be [x, 1, z]

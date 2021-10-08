@@ -14,6 +14,7 @@
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 
+#include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/general.h"
 
 using namespace megdnn;
@@ -298,6 +299,63 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW88_FP) {
 #endif
 }
 
+TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NHWC_FP32_BCAST) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle());
+
+    UniformFloatRNG rng(1e-5, 7e1);
+    checker.set_rng(0, &rng);
+    checker.set_epsilon(1e-5);
+    checker.set_dtype(0, dtype::Float32());
+    checker.set_dtype(1, dtype::Float32());
+
+    //! 2 dim
+    auto run = [&](Mode mode) {
+        // VEC_BCAST111C
+        checker.set_param(mode).execs({{1, 2, 2, 12}, {1, 1, 1, 12}, {}});
+        checker.set_param(mode).execs({{2, 5, 3, 28}, {1, 1, 1, 28}, {}});
+        checker.set_param(mode).execs({{3, 5, 8, 32}, {1, 1, 1, 32}, {}});
+        // BCAST111C_VEC
+        checker.set_param(mode).execs({{1, 1, 1, 12}, {1, 2, 2, 12}, {}});
+        checker.set_param(mode).execs({{1, 1, 1, 28}, {2, 5, 3, 28}, {}});
+        checker.set_param(mode).execs({{1, 1, 1, 32}, {3, 5, 8, 32}, {}});
+    };
+    run(Mode::ADD);
+    run(Mode::MUL);
+    run(Mode::SUB);
+
+    //! 3 dim contig
+    auto run_3d_contig = [&](Mode mode) {
+        // BCAST111C_VEC_BCAST111C
+        checker.set_param(mode).execs(
+                {{1, 1, 1, 12}, {1, 2, 2, 12}, {1, 1, 1, 12}, {}});
+        checker.set_param(mode).execs(
+                {{1, 1, 1, 28}, {2, 5, 3, 28}, {1, 1, 1, 28}, {}});
+        checker.set_param(mode).execs(
+                {{1, 1, 1, 32}, {3, 5, 8, 32}, {1, 1, 1, 32}, {}});
+        // VEC_BCAST111C_VEC
+        checker.set_param(mode).execs(
+                {{1, 2, 2, 12}, {1, 1, 1, 12}, {1, 2, 2, 12}, {}});
+        checker.set_param(mode).execs(
+                {{2, 5, 3, 28}, {1, 1, 1, 28}, {2, 5, 3, 28}, {}});
+        checker.set_param(mode).execs(
+                {{3, 5, 8, 32}, {1, 1, 1, 32}, {3, 5, 8, 32}, {}});
+    };
+    run_3d_contig(Mode::FUSE_MUL_ADD3);
+
+    //! 3 dim incontig
+    auto run_3d_incontig = [&](Mode mode) {
+        megdnn::TensorLayout src0({1, 1, 1, 12}, dtype::Float32());
+        megdnn::TensorLayout src1({1, 2, 2, 12}, {80, 40, 20, 1}, dtype::Float32());
+
+        // BCAST111C_VEC_BCAST111C
+        checker.set_param(mode).execl({src0, src1, src0, {}});
+        // VEC_BCAST111C_VEC
+        checker.set_param(mode).execl({src1, src0, src1, {}});
+    };
+    run_3d_incontig(Mode::FUSE_MUL_ADD3);
+}
+
 #if MEGDNN_WITH_BENCHMARK
 namespace {
 void run_elemwise_benchmark(
@@ -353,6 +411,39 @@ void run_elemwise_benchmark(
            bench_flops / fallback_flops, bench_thr / fallback_thr);
 }
 }  // namespace
+
+TEST_F(ARM_COMMON, BENCHMARK_NCHW_VS_NHWC) {
+    Benchmarker<Elemwise> benchmarker(handle());
+    constexpr size_t RUN = 50;
+    benchmarker.set_times(RUN).set_display(false);
+
+    auto run = [&](size_t N, size_t C, size_t H, size_t W, param::Elemwise::Mode mode,
+                   const char* mode_name) {
+        megdnn::param::Elemwise param;
+        param.mode = mode;
+        benchmarker.set_param(param);
+        megdnn::TensorShape nhwc_src0{N, H, W, C};
+        megdnn::TensorShape nhwc_src1{1, 1, 1, C};
+
+        megdnn::TensorShape nchw_src0{N, C, H, W};
+        megdnn::TensorShape nchw_src1{1, C, 1, 1};
+
+        float computations = N * C * H * W;
+        auto nhwc_time = benchmarker.execs({nhwc_src1, nhwc_src0, {}}) / RUN;
+        auto nchw_time = benchmarker.execs({nchw_src1, nchw_src0, {}}) / RUN;
+        auto perf_nhwc = computations / nhwc_time / 1e6;
+        auto perf_nchw = computations / nchw_time / 1e6;
+        printf("Elemwise Mode : %s\nNHWC : %fms  %fGflops\nNCHW : %fms  "
+               "%fGflops\n",
+               mode_name, nhwc_time, perf_nhwc, nchw_time, perf_nchw);
+    };
+    run(1, 120, 16, 24, param::Elemwise::Mode::ADD, "ADD");
+    run(1, 120, 16, 24, param::Elemwise::Mode::MUL, "MUL");
+    run(1, 120, 32, 48, param::Elemwise::Mode::ADD, "ADD");
+    run(1, 120, 32, 48, param::Elemwise::Mode::MUL, "MUL");
+    run(1, 120, 64, 96, param::Elemwise::Mode::ADD, "ADD");
+    run(1, 120, 64, 96, param::Elemwise::Mode::MUL, "MUL");
+}
 
 #define INT_RUN(shape, mode)                                              \
     run_elemwise_benchmark(shape, mode, #mode, dtype::Int8{}, handle());  \

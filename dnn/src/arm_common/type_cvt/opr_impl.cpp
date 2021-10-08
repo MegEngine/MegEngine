@@ -17,6 +17,7 @@
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 
+MIDOUT_DECL(megdnn_arm_typecvt_fix2float)
 MIDOUT_DECL(megdnn_arm_typecvt_quantized)
 MIDOUT_DECL(megdnn_arm_typecvt_float)
 
@@ -325,6 +326,48 @@ struct FloatTypeCvter<float, __fp16> {
 };
 #endif
 
+template <typename ctype, typename dtype>
+struct Fix2FloatTypeCvter;
+template <>
+struct Fix2FloatTypeCvter<int16_t, float> {
+    using stype = int16_t;
+    using dst_type = float;
+    static constexpr size_t SIMD_WIDTH = 8;
+
+    Fix2FloatTypeCvter(DType src_dtype, DType dst_dtype) {
+        MEGDNN_MARK_USED_VAR(src_dtype);
+        MEGDNN_MARK_USED_VAR(dst_dtype);
+    }
+
+    void cvt(const int16_t* src, float* dst) {
+        int16x8_t vitem = vld1q_s16(src);
+        auto vres = QConverter::convert<float32x4x2_t, int16x8_t>(vitem);
+        vst1q_f32_x2(dst, vres);
+    }
+
+    void cvt_remain(const int16_t* src, float* dst) { *dst = *src; }
+};
+
+template <>
+struct Fix2FloatTypeCvter<uint16_t, float> {
+    using stype = uint16_t;
+    using dst_type = float;
+    static constexpr size_t SIMD_WIDTH = 8;
+
+    Fix2FloatTypeCvter(DType src_dtype, DType dst_dtype) {
+        MEGDNN_MARK_USED_VAR(src_dtype);
+        MEGDNN_MARK_USED_VAR(dst_dtype);
+    }
+
+    void cvt(const uint16_t* src, float* dst) {
+        uint16x8_t vitem = vld1q_u16(src);
+        auto vres = QConverter::convert<float32x4x2_t, uint16x8_t>(vitem);
+        vst1q_f32_x2(dst, vres);
+    }
+
+    void cvt_remain(const uint16_t* src, float* dst) { *dst = *src; }
+};
+
 template <typename TypeCvter>
 void do_typecvt(
         const typename TypeCvter::stype* src, typename TypeCvter::dst_type* dst,
@@ -347,6 +390,43 @@ void do_typecvt(
     }
 }
 
+template <typename TypeCvter>
+void do_typecvt(
+        const typename TypeCvter::stype* src, typename TypeCvter::dst_type* dst,
+        DType src_dtype, DType dst_dtype, const TensorLayout& src_layout) {
+    TypeCvter typecvt(src_dtype, dst_dtype);
+    size_t calc_num = 1;
+    size_t nr_elems = src_layout.total_nr_elems();
+    size_t src_stride = nr_elems;
+
+    //! adjust calc_num nr_elems and src_stride according to src_collapse_layout
+    auto src_collapse_layout = src_layout.collapse_contiguous();
+    if (src_collapse_layout.ndim == 2) {
+        calc_num = src_collapse_layout.shape[0];
+        nr_elems = src_collapse_layout.shape[1];
+        src_stride = src_collapse_layout.stride[0];
+    }
+
+    for (size_t c = 0; c < calc_num; ++c) {
+        size_t i = 0;
+        for (; i + TypeCvter::SIMD_WIDTH <= nr_elems; i += TypeCvter::SIMD_WIDTH) {
+            typecvt.cvt(src, dst);
+            src += TypeCvter::SIMD_WIDTH;
+            dst += TypeCvter::SIMD_WIDTH;
+        }
+#if MEGDNN_FIX_AARCH32_BUG
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
+#endif
+        for (; i < nr_elems; i++) {
+            typecvt.cvt_remain(src, dst);
+            src++;
+            dst++;
+        }
+        src += src_stride - nr_elems;
+    }
+}
+
 }  // anonymous namespace
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
@@ -354,7 +434,30 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     DType dst_dtype = dst.layout.dtype;
     size_t nr_elems = src.layout.total_nr_elems();
     bool execed = false;
-    if (src.layout.is_contiguous()) {
+    auto src_collapse_layout = src.layout.collapse_contiguous();
+    bool has_int16_special_impl =
+            (src.layout.dtype.enumv() == DTypeEnum::Int16 ||
+             src.layout.dtype.enumv() == DTypeEnum::Uint16) &&
+            (src.layout.is_contiguous() || src_collapse_layout.ndim == 2) &&
+            dst.layout.is_contiguous();
+    if (has_int16_special_impl) {
+        using namespace dtype;
+#define DISPATCH_FIX2FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                    \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                    \
+        MIDOUT_BEGIN(megdnn_arm_typecvt_fix2float, midout_iv(_midout_iv)) {        \
+            using _TypeCvter = Fix2FloatTypeCvter<_stype, _dtype>;                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                   \
+                    src.compatible_ptr<_stype>(), dst.compatible_ptr<_dtype>(),    \
+                    src_dtype, dst_dtype, src.layout));                            \
+            execed = true;                                                         \
+        }                                                                          \
+        MIDOUT_END();                                                              \
+    }
+        DISPATCH_FIX2FLOAT(Int16, int16_t, Float32, float, 0);
+        DISPATCH_FIX2FLOAT(Uint16, uint16_t, Float32, float, 1);
+#undef DISPATCH_FIX2FLOAT
+    } else if (src.layout.is_contiguous()) {
         using namespace dtype;
 #define DISPATCH_QUANTIZED(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
     if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                    \
@@ -377,6 +480,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         DISPATCH_QUANTIZED(QuantizedS32, int32_t, QuantizedS32, int32_t, 5);
         DISPATCH_QUANTIZED(float, float, QuantizedS8, int8_t, 6);
         DISPATCH_QUANTIZED(float, float, Quantized8Asymm, uint8_t, 7);
+#undef DISPATCH_QUANTIZED
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #define DISPATCH_FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv)    \
@@ -394,6 +498,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     }
         DISPATCH_FLOAT(dt_float16, __fp16, float, float, 0);
         DISPATCH_FLOAT(float, float, dt_float16, __fp16, 1);
+#undef DISPATCH_FLOAT
 #endif
     }
     if (!execed) {

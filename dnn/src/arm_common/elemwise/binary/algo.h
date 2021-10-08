@@ -33,6 +33,7 @@ namespace arm_common {
 DECL_CB(VecVec);
 DECL_CB(VecScalar);
 DECL_CB(VecBcast101);
+DECL_CB(VecBcast111C);
 DECL_CB(VecBcast101xX);
 #undef DECL_CB
 }  // namespace arm_common

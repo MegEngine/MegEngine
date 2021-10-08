@@ -772,8 +772,10 @@ void TypeCvt::perform(
 }
 
 void TypeCvt::add_input_layout_constraint() {
+    //! Because the implementation of typecvt on arm/x86/cuda/opencl support
+    //! non-contiguous memory. So we change constraint of typecvt to monotone
     for (auto i : input()) {
-        i->add_layout_constraint_contiguous();
+        i->add_layout_constraint_monotone();
     }
 }
 

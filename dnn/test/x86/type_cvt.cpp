@@ -37,8 +37,22 @@ TEST_F(X86, TYPE_CVT) {
             for (auto ddtype : dtypes) {
                 checker.set_dtype(0, sdtype).set_dtype(1, ddtype).execs(
                         {{size}, {size}});
+                TensorLayout non_contig_src(
+                        {1, 10, 10, 12}, {10 * 10 * 18, 10 * 18, 18, 1}, sdtype);
+                TensorLayout non_contig_dst({1, 10, 10, 12}, ddtype);
+                checker.exec(TensorLayoutArray{non_contig_src, non_contig_dst});
             }
     }
+
+    for (size_t size : {1, 7, 15, 33}) {
+        checker.set_dtype(0, dtype::Uint16())
+                .set_dtype(1, dtype::Float32())
+                .execs({{size}, {size}});
+    }
+    TensorLayout non_contig_src(
+            {1, 10, 10, 12}, {10 * 10 * 18, 10 * 18, 18, 1}, dtype::Uint16());
+    TensorLayout non_contig_dst({1, 10, 10, 12}, dtype::Float32());
+    checker.exec(TensorLayoutArray{non_contig_src, non_contig_dst});
 }
 
 TEST_F(X86, TYPE_CVT_NO_CONTIGUOUS) {
