@@ -6,6 +6,7 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 import pickle
+from itertools import chain
 
 import numpy as np
 
@@ -13,8 +14,8 @@ import megengine.functional as F
 import megengine.module as M
 from megengine.module.identity import Identity
 from megengine.traced_module import trace_module
-from megengine.traced_module.expr import CallFunction, Expr, GetAttr
-from megengine.traced_module.node import Node
+from megengine.traced_module.expr import CallFunction, CallMethod, Expr, GetAttr, Input
+from megengine.traced_module.node import ModuleNode, Node
 
 
 class IdentityMod(M.Module):
@@ -85,6 +86,34 @@ def test_search():
     relu_expr = graph.get_function_by_type(F.relu).as_unique()
     assert isinstance(relu_expr, CallFunction) and relu_expr.func == F.relu
 
+    conv_node = graph.get_module_by_type(M.Conv2d).as_unique()
+    assert isinstance(conv_node, ModuleNode) and conv_node.module_type == M.Conv2d
+
+    add_expr = graph.get_method_by_type("__add__").as_unique()
+    assert isinstance(add_expr, CallMethod) and add_expr.method == "__add__"
+
+    conv_node = graph.get_node_by_name("MyBlock_conv1").as_unique()
+    assert isinstance(conv_node, ModuleNode) and conv_node.module_type == M.Conv2d
+
+
+def test_producer_and_users():
+    traced_module, *_ = _init_module()
+
+    def _check(exprs):
+        for expr in exprs:
+            for n in chain(expr.inputs, expr.outputs):
+                if not isinstance(n.expr, Input):
+                    assert n.expr in exprs
+                for e in n.users:
+                    assert e in exprs
+                    assert n in e.inputs
+
+    for mod in traced_module.modules():
+        if not hasattr(mod, "argdef_graph_map"):
+            continue
+        for g in mod.argdef_graph_map.values():
+            _check(g._exprs)
+
 
 def test_insert():
     traced_module, x, expect = _init_block()
@@ -95,6 +124,54 @@ def test_insert():
     graph.replace_node({relu_out: neg_out})
     graph.compile()
     np.testing.assert_allclose(expect - 1, 1 - traced_module(x), atol=1e-6)
+
+
+def test_insert_module():
+    class Neg(M.Module):
+        def forward(self, x):
+            return F.neg(x)
+
+    traced_module, x, expect = _init_block()
+    graph = traced_module.graph
+    relu_out = graph.get_function_by_type(F.relu).as_unique().outputs[0]
+    self = graph.inputs[0]
+    setattr(traced_module, "neg", Neg())
+    with graph.insert_exprs():
+        neg_out = self.neg(relu_out)
+    graph.replace_node({relu_out: neg_out})
+    graph.compile()
+    np.testing.assert_allclose(expect - 1, 1 - traced_module(x), atol=1e-6)
+    assert traced_module.neg.graph is not None
+    assert len(traced_module.neg.graph._exprs) == 1
+
+
+def test_add_input_and_output():
+    traced_module, x, y = _init_module()
+
+    data_node = traced_module.graph.add_input_node(shape=(1, 3, 224, 224), name="data")
+    traced_module.graph.add_output_node(data_node)
+
+    assert data_node.name == "data"
+    assert traced_module.graph.inputs[-1] == data_node
+    assert len(traced_module.graph.inputs) == 3
+    assert len(traced_module.graph.outputs) == 2
+
+    y1, y2 = traced_module(x, x)
+    np.testing.assert_equal(y1.numpy(), y.numpy())
+    np.testing.assert_equal(y2.numpy(), x.numpy())
+
+    y1, y2 = traced_module(x, y)
+    np.testing.assert_equal(y2.numpy(), y.numpy())
+
+    traced_module.graph.reset_outputs(
+        ({"orig_out": traced_module.graph.outputs[0]}, traced_module.graph.outputs[1])
+    )
+
+    out = traced_module(x, x)
+    assert isinstance(out, tuple)
+    assert isinstance(out[0], dict)
+    np.testing.assert_equal(out[0]["orig_out"].numpy(), y.numpy())
+    np.testing.assert_equal(out[1].numpy(), x.numpy())
 
 
 def test_delete():
@@ -117,8 +194,10 @@ def test_delete():
 def test_flatten():
     traced_module, x, expect = _init_module()
     traced_module = traced_module.flatten()
-    traced_module.graph.compile()
-    assert all(not isinstance(i, GetAttr) for i in traced_module.graph._exprs)
+    assert len(traced_module.graph._exprs) == 12
+    np.testing.assert_equal(expect.numpy(), traced_module(x).numpy())
+
+    traced_module = traced_module.flatten()
     assert len(traced_module.graph._exprs) == 12
     np.testing.assert_equal(expect.numpy(), traced_module(x).numpy())
 
@@ -128,7 +207,7 @@ def test_id_and_name():
         _total_ids = traced_module.graph._total_ids
         node_ids = [n._id for n in traced_module.graph.nodes().as_list()]
         assert len(set(node_ids)) == len(node_ids)
-        assert max(node_ids) + 1 == len(node_ids)
+        assert max(node_ids) + 1 == _total_ids[0]
 
         expr_ids = [n._id for n in traced_module.graph.exprs().as_list()]
         assert len(set(expr_ids)) == len(expr_ids)
@@ -177,7 +256,7 @@ def test_id_and_name():
     _check_name(flattened_module)
 
 
-def test_set_name():
+def test_set_node_name():
     traced_module, x, expect = _init_module()
     graph = traced_module.graph
     output_node = graph.outputs[0]
@@ -188,6 +267,18 @@ def test_set_name():
     np.testing.assert_raises(AssertionError, rename, "block1_out")
     rename("output")
     np.testing.assert_equal(str(graph.outputs[0]), "output")
+
+
+def test_set_graph_name():
+    traced_module, x, expect = _init_module()
+    graph = traced_module.graph
+    output_node = graph.outputs[0]
+
+    node_name = output_node.name
+
+    graph.name = "Top"
+    node = graph.get_node_by_name("{}_{}".format("Top", node_name)).as_unique()
+    assert node is output_node
 
 
 def test_extra_block():

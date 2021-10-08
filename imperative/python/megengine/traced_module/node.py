@@ -29,17 +29,15 @@ class Node:
     __total_id = 0  # type: int
     _id = None  # type: int
     _top_graph = None  # type: weakref.ReferenceType
-    _name = None  # type: str
-    _orig_name = None  # type: str
     _format_spec = ""  # type: str
 
-    def __init__(self, expr, name: str, orig_name: str):
+    def __init__(self, expr, name: str, qualname: str):
         self.expr = expr
         self.users = []  # List[Expr]
         self._id = Node.__total_id
         Node.__total_id += 1
         self._name = name
-        self._orig_name = orig_name
+        self._qualname = qualname
         self.actual_node = []  # type: List[Node]
 
     def __repr__(self):
@@ -54,21 +52,10 @@ class Node:
             name = ""
         if format_spec in ["i", "p", "ip", "pi"]:
             if "p" in format_spec:
-                graph = self.top_graph
-                prefix_name = ""
-                if graph is not None:
-                    prefix_name = graph._name
-                    if graph._prefix_name:
-                        prefix_name = "{}_{}".format(
-                            graph._prefix_name, prefix_name.lstrip("_")
-                        )
-                if name:
-                    name = "_" + name.lstrip("_")
-                name = "{}{}".format(prefix_name, name)
+                prefix_name = self.top_graph._name
+                name = "{}_{}".format(prefix_name, name)
             if "i" in format_spec:
-                if name:
-                    name = "_" + name.lstrip("_")
-                name = "%{}{}".format(self._id, name)
+                name = "%{}_{}".format(self._id, name)
             return name
         else:
             return name if name else ("%d" % self._id)
@@ -80,15 +67,62 @@ class Node:
 
     @name.setter
     def name(self, new_name: str):
+        r"""Set a new name to this Node."""
         graph = self.top_graph
         assert graph is not None, "The parent graph of this Node cannot be None."
-        assert new_name not in graph._used_names, (
+        assert new_name not in graph._namespace.used_names, (
             "The name(%s) is already in use. Please try a different one again."
             % (new_name)
         )
-        new_name = graph._create_unique_name(new_name)
+        new_name = graph._namespace.create_unique_name(new_name)
         self._name = new_name
-        self._orig_name = new_name
+
+    @property
+    def qualname(self):
+        r"""Get the `qualname` of this Node. The `qualname` can be used to get the
+        submodule from the traced Module or Module.
+
+        Example:
+            .. code-block::
+
+                import megengine.module as M
+                import megengine.functional as F
+                import megengine.traced_module as tm
+                import megengine as mge
+
+                class block(M.Module):
+                    def __init__(self):
+                        super().__init__()
+                        self.param = mge.Tensor([1.])
+                        self.relu = M.ReLU()
+
+                    def forward(self, x):
+                        x = x + self.param
+                        return self.relu(F.relu(x))
+
+                class module(M.Module):
+                    def __init__(self):
+                        super().__init__()
+                        self.block = block()
+
+                    def forward(self, x):
+                        x = self.block(x)
+                        return x
+
+                net = module()
+                traced_net = tm.trace_module(net, mge.Tensor([0.]))
+                traced_net = traced_net.flatten()
+                out_node = traced_net.graph.outputs[0]
+
+                # qualname : "module.block.relu.[out]"
+                qualname = out_node.qualname
+                # qualname : "block.relu"
+                qualname = qualname.split(".", 1)[-1].rsplit(".", 1)[0]
+
+                assert qualname in list(map(lambda x: x[0], net.named_modules()))
+                assert qualname in list(map(lambda x: x[0], traced_net.named_modules()))
+        """
+        return self._qualname
 
     @property
     def top_graph(self):
@@ -120,8 +154,8 @@ class ModuleNode(Node):
     r"""The type of the Module correspending to the ModuleNode."""
     _owner = None  # type: weakref.ReferenceType
 
-    def __init__(self, expr, name: str = None, orig_name: str = None):
-        super().__init__(expr, name, orig_name)
+    def __init__(self, expr, name: str = None, qualname: str = None):
+        super().__init__(expr, name, qualname)
 
     def __getstate__(self):
         return {
@@ -129,9 +163,14 @@ class ModuleNode(Node):
             "users": self.users,
             "_id": self._id,
             "_name": self._name,
-            "_orig_name": self._orig_name,
+            "_qualname": self._qualname,
             "module_type": self.module_type,
         }
+
+    def __setstate__(self, state):
+        if "_orig_name" in state:
+            state["_qualname"] = state.pop("_orig_name")
+        self.__dict__.update(state)
 
     @property
     def owner(self):
@@ -161,8 +200,20 @@ class TensorNode(Node):
             "_dtype": self._dtype,
             "_device": self._device,
             "_name": self._name,
-            "_orig_name": self._orig_name,
+            "_qualname": self._qualname,
         }
+
+    def __setstate__(self, state):
+        if "_orig_name" in state:
+            qualname = state.pop("_orig_name")
+            modulepath, comma, qualname = qualname.rpartition(".")
+            expr_name = state["expr"].__class__.__name__
+            if expr_name not in ["GetAttr"]:
+                qualname = "[{}]".format(qualname)
+            if comma:
+                qualname = "{}.{}".format(modulepath, qualname)
+            state["_qualname"] = qualname
+        self.__dict__.update(state)
 
     @property
     def shape(self):

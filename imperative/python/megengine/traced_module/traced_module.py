@@ -8,7 +8,6 @@
 import builtins
 import collections
 import copy
-import ctypes
 import fnmatch
 import functools
 import inspect
@@ -31,8 +30,6 @@ from typing import (
     Union,
 )
 
-from megengine import tensor
-
 from .. import functional as F
 from .. import get_logger
 from .. import module as M
@@ -43,7 +40,6 @@ from ..core._imperative_rt.core2 import (
     unset_module_tracing,
 )
 from ..core._trace_option import set_symbolic_shape
-from ..core.tensor.array_method import ArrayMethodMixin
 from ..module import Module
 from ..module.qat import QATModule
 from ..quantization.fake_quant import LSQ, TQT, FakeQuantize, _FakeQuantize
@@ -57,7 +53,22 @@ from ..quantization.observer import (
     SyncMinMaxObserver,
 )
 from ..tensor import Tensor
-from .expr import Apply, CallFunction, CallMethod, Constant, Expr, GetAttr, Input
+from .expr import (
+    Apply,
+    CallFunction,
+    CallMethod,
+    Constant,
+    Expr,
+    GetAttr,
+    Input,
+    get_suffix_name,
+    is_apply_def,
+    is_call_function,
+    is_call_module,
+    is_call_tensor_method,
+    is_constant,
+    is_getattr,
+)
 from .fake_quant import FakeQuantize as TM_FakeQuant
 from .module_tracer import (
     PatchedFn,
@@ -192,36 +203,24 @@ def _wrap_mnode_getattr(orig_getattr):
     @functools.wraps(orig_getattr)
     def wraped_fn(self, name):
         obj = self.owner
+        current_graph = active_module_tracer().current_scope()
         if self.top_graph is not None:
-            active_module_tracer().current_scope()._add_input(self)
+            current_graph._add_input(self)
         attr = getattr(obj, name)
         node = attr
-        full_name = None
-        if id(attr) in active_module_tracer().id2name:
-            full_name = active_module_tracer().id2name[id(attr)]
-
         if not isinstance(attr, TracedModuleBuilder):
             if isinstance(attr, Module):
                 attr = TracedModuleBuilder(attr)
                 setattr(obj, name, attr)
-                active_module_tracer().id2name[id(attr)] = full_name
 
             if isinstance(attr, (NodeMixin, RawTensor)):
-                if full_name:
-                    scope_name = active_module_tracer().current_scope()._module_name
-                    if scope_name:
-                        full_name = full_name[len(scope_name) + 1 :]
-                    else:
-                        full_name = name
-                else:
-                    full_name = name
                 NodeMixin.wrap(
                     attr,
                     lambda: GetAttr.make(
                         self,
-                        name,
                         type=NodeMixin.get_wrapped_type(attr),
-                        orig_name=full_name,
+                        attr_name=name,
+                        name="",
                     ),
                 )
         if isinstance(attr, (NodeMixin, RawTensor)):
@@ -245,16 +244,6 @@ def _wrap_mnode_call(orig_call):
     return wraped_fn
 
 
-def _init_id2name(mod: Module, prefix: str = ""):
-    id2name = {
-        id(m): "%s.%s" % (prefix, key)
-        for key, m in chain(
-            mod.named_modules(), mod.named_parameters(), mod.named_buffers()
-        )
-    }
-    return id2name
-
-
 class _InsertExprs:
     def __init__(self, graph, expr: Optional[Expr] = None):
         self.graph = graph
@@ -262,10 +251,8 @@ class _InsertExprs:
             graph = graph.top_graph
         assert graph.inputs[0].owner._is_top
         self.root_graph = graph
-        self.global_scope = InternalGraph(
-            graph._name, graph._prefix_name, graph._module_name
-        )
-        self.global_scope._used_names.update(graph._used_names)
+        self.global_scope = InternalGraph(self.graph._name, self.graph._qualname)
+        self.global_scope._namespace.merge(self.graph._namespace)
         self.expr = expr
         self._tensor_method_patch = None
 
@@ -277,10 +264,8 @@ class _InsertExprs:
         set_module_tracing()
         _set_convert_node_flag(True)
         assert active_module_tracer() is None
-        module = self.graph.inputs[0].owner
-        _wrap_func = lambda x: _convert_node_and_tensor(_wrapped_function(x))
         set_active_module_tracer(
-            module_tracer(_wrap_func, _init_id2name(module, self.graph._module_name))
+            module_tracer(lambda x: _convert_node_and_tensor(_wrapped_function(x)))
         )
         active_module_tracer().patcher.__enter__()
         for cls, name, func in [
@@ -296,9 +281,10 @@ class _InsertExprs:
         if va is not None:
             return False
         set_symbolic_shape(self.use_sym_shape)
-        unset_module_tracing()
         active_module_tracer().patcher.__exit__(ty, va, tr)
         _set_convert_node_flag(False)
+        set_active_module_tracer(None)
+        unset_module_tracing()
 
         while self._tensor_method_patch:
             pf = self._tensor_method_patch.pop()
@@ -310,13 +296,14 @@ class _InsertExprs:
             name = mod._name
             if isinstance(mod, TracedModuleBuilder):
                 mod = mod.build()
-                if hasattr(mod, "graph"):
-                    for node in mod.graph.nodes():
-                        node.value = None
+                if hasattr(mod, "argdef_graph_map"):
+                    for g in mod.argdef_graph_map.values():
+                        for n in g.nodes(False):
+                            if isinstance(n, TensorNode):
+                                n.value = None
                 setattr(parent, name, mod)
-        set_active_module_tracer(None)
 
-        for node in self.global_scope.nodes():
+        for node in self.global_scope.nodes(False):
             node.value = None
 
         extra_inp_nodes = set(self.global_scope.inputs)
@@ -339,22 +326,85 @@ class _InsertExprs:
         if insert_index < max_inp_expr_idx:
             insert_index = max_inp_expr_idx
 
-        anchor_index = insert_index - 1
-        if anchor_index >= 0:
-            logger.info(
-                "The new expr will be inserted after ( {} )".format(
-                    self.graph._exprs[anchor_index]
-                )
-            )
-
         for expr in self.global_scope._exprs:
             self.graph._exprs.insert(insert_index, expr)
             insert_index += 1
 
-        self.graph._used_names.update(self.global_scope._used_names)
+        self.graph._namespace.merge(self.global_scope._namespace)
         self.root_graph._total_ids = (Node._get_next_id(), Expr._get_next_id())
         self.root_graph.inputs[0].owner._update_ref()
         return True
+
+
+class NameSpace:
+    def __init__(self, name, qualname):
+        self.name = name
+        self.qualname = qualname
+        self._used_names = {}
+
+    def create_unique_name(self, name: str) -> str:
+        assert isinstance(name, str), "The name must be a string"
+        name = re.sub("[^0-9a-zA-Z_]+", "_", name)
+        if name[0].isdigit():
+            name = "_{}".format(name)
+
+        while name in self._used_names or _is_builtin_name(name):
+            match = re.match(r"(.*)_(\d+)$", name)
+            if match is None:
+                name = name + "_1"
+            else:
+                base, num = match.group(1, 2)
+                name = "{}_{}".format(base, int(num) + 1)
+
+        self._used_names.setdefault(name)
+        return name
+
+    def auto_naming_for_outputs(self, expr: Expr):
+        _add_suffix = lambda x: x + "_out"
+        if is_call_module(expr):
+            call_node = expr.inputs[0]
+            qualname = "%s.[out]" % (call_node.qualname)
+            name = call_node.name
+        elif is_call_tensor_method(expr):
+            name = expr.method.strip("_")
+            qualname = "{}.[{}]".format(
+                self.qualname, self.create_unique_name("method_%s" % (name)),
+            )
+        elif is_call_function(expr):
+            name = expr.func.__name__
+            qualname = "{}.[{}]".format(
+                self.qualname, self.create_unique_name("func_%s" % name),
+            )
+        elif is_apply_def(expr):
+            name = str(expr.opdef).lower()
+            qualname = "{}.[{}]".format(
+                self.qualname, self.create_unique_name("def_%s" % name),
+            )
+        elif is_getattr(expr):
+            qualname = "{}.{}".format(expr.inputs[0].qualname, expr.name)
+            name = get_suffix_name(self.qualname, qualname)
+            _add_suffix = lambda x: x
+        elif is_constant(expr):
+            name = (
+                expr.name if expr.name else "const_" + type(expr.value).__name__.lower()
+            )
+            qualname = "{}.[{}]".format(self.qualname, name)
+            _add_suffix = lambda x: x
+
+        for node in expr.outputs:
+            if node._name == "" or node._name in self.used_names:
+                assert _add_suffix(name) == name or isinstance(node, TensorNode)
+                node._name = self.create_unique_name(_add_suffix(name))
+            if node._qualname == "":
+                node._qualname = qualname
+            assert get_suffix_name(self.qualname, qualname)
+
+    def merge(self, other: "NameSpace"):
+        self._used_names.update(other.used_names)
+
+    @property
+    def used_names(self):
+        return self._used_names
 
 
 class InternalGraph:
@@ -407,37 +457,78 @@ class InternalGraph:
     _top_graph = None  # type: InternalGraph
     _total_ids = None  # type: List[int]
 
-    def __init__(self, name: str = None, prefix_name: str = "", module_name: str = ""):
+    def __init__(self, name: str, qualname: str):
         self._exprs = []
         self._inputs = []
         self._outputs = []
         self._watch_point = []
         self._end_point = []
-        self._used_names = {}
+        self._namespace = NameSpace(name, qualname)
         self._rst = collections.defaultdict(list)
         self._name = name
-        self._prefix_name = prefix_name
-        self._module_name = module_name
+        self._qualname = qualname
 
     def _insert(self, expr):
         self._exprs.append(expr)
 
-    def _create_unique_name(self, name: str) -> str:
-        assert isinstance(name, str), "The name must be a str"
-        name = re.sub("[^0-9a-zA-Z_]+", "_", name)
-        if name[0].isdigit():
-            name = "_{}".format(name)
+    @property
+    def name(self) -> str:
+        r"""Get the name of this graph."""
+        return self._name
 
-        while name in self._used_names or _is_builtin_name(name):
-            match = re.match(r"(.*)_(\d+)$", name)
-            if match is None:
-                name = name + "_1"
-            else:
-                base, num = match.group(1, 2)
-                name = "{}_{}".format(base, int(num) + 1)
+    @name.setter
+    def name(self, new_name: str):
+        r"""Set a new name to this graph."""
+        mod = self.inputs[0].owner
+        graph = self.top_graph
+        assert graph is not None or mod._is_top, "The parent graph cannot be None."
+        if graph is not None:
+            assert new_name not in self._namespace.used_names, (
+                "The name(%s) is already in use. Please try a different one again."
+                % (new_name)
+            )
+            new_name = self._namespace.create_unique_name(new_name)
+        self._name = new_name
 
-        self._used_names.setdefault(name)
-        return name
+    @property
+    def qualname(self) -> str:
+        r"""Get the `qualname` of this graph. The `qualname` can be used to get the
+        submodule from the traced Module or Module.
+
+        Example:
+            .. code-block::
+
+                import megengine.module as M
+                import megengine.traced_module as tm
+                import megengine as mge
+
+                class block(M.Module):
+                    def __init__(self):
+                        super().__init__()
+                        self.relu = M.ReLU()
+
+                    def forward(self, x):
+                        return self.relu(x)
+
+                class module(M.Module):
+                    def __init__(self):
+                        super().__init__()
+                        self.block = block()
+
+                    def forward(self, x):
+                        x = self.block(x)
+                        return x
+
+                net = module()
+                traced_net = tm.trace_module(net, mge.Tensor([0.]))
+
+                qualname = traced_net.block.graph.qualname  # qualname = "module.block"
+                qualname = qualname.split(".", 1)[-1]  # qualname = "block"
+
+                assert qualname in list(map(lambda x: x[0], net.named_modules()))
+                assert qualname in list(map(lambda x: x[0], traced_net.named_modules()))
+        """
+        return self._qualname
 
     @property
     def inputs(self) -> List[Node]:
@@ -596,55 +687,6 @@ class InternalGraph:
     def _add_output(self, o):
         self._outputs.append(o)
 
-    def _replace_inputs_outputs(self, repl_dict, prefix_name="", module_name=""):
-        for node, repl_node in repl_dict.items():
-            assert node in self._inputs or node in self._outputs
-            for i in node.users:
-                if i not in repl_node.users:
-                    repl_node.users.append(i)
-
-        for idx, i in enumerate(self._inputs):
-            if i in repl_dict:
-                self._inputs[idx] = repl_dict[i]
-
-        for idx, o in enumerate(self._outputs):
-            if o in repl_dict:
-                repl_dict[o]._orig_name = "{}{}".format(module_name, o._orig_name)
-                self._outputs[idx] = repl_dict[o]
-
-        for expr in self._exprs:
-
-            for idx, i in enumerate(expr.inputs):
-                assert isinstance(
-                    i._name, str
-                ), "The node ({}) name must be a str".format(i)
-                if i in repl_dict:
-                    expr.inputs[idx] = repl_dict[i]
-                elif isinstance(i, TensorNode) and prefix_name not in i._name:
-                    if i.top_graph != active_module_tracer().current_scope():
-                        i._name = (
-                            active_module_tracer()
-                            .current_scope()
-                            ._create_unique_name(prefix_name + i._name.lstrip("_"))
-                        )
-                        i._orig_name = "{}{}".format(module_name, i._orig_name)
-
-            for idx, o in enumerate(expr.outputs):
-                assert isinstance(
-                    o._name, str
-                ), "The node ({}) name must be a str".format(i)
-                if o in repl_dict:
-                    expr.outputs[idx] = repl_dict[o]
-                    expr.outputs[idx].expr = expr
-                elif isinstance(o, TensorNode) and prefix_name not in i._name:
-                    if o.top_graph != active_module_tracer().current_scope():
-                        o._name = (
-                            active_module_tracer()
-                            .current_scope()
-                            ._create_unique_name(prefix_name + o._name.lstrip("_"))
-                        )
-                        o._orig_name = "{}{}".format(module_name, o._orig_name)
-
     def get_dep_exprs(self, nodes: Sequence[Node]) -> List[Expr]:
         r"""Get the dependent Exprs of the ``nodes``.
         
@@ -674,20 +716,16 @@ class InternalGraph:
 
     def reset_inputs(self, *args, **kwargs):
         forma_mnode = self.inputs[0]
-        actual_mnodes = forma_mnode.actual_node
-        call_nodes = []
-        for n in actual_mnodes:
-            for c_expr in n.users:
-                if isinstance(c_expr, CallMethod) and c_expr.method == "__call__":
-                    call_nodes.append((c_expr, n))
-
         moudle = forma_mnode.owner
-        assert moudle._is_top, "reset_inputs only support the top-level graph"
+        assert moudle._is_top, "reset_inputs only supports top graph"
 
         inputs, tree_def = tree_flatten(((moudle, *args), kwargs))
 
         def create_node(val: Tensor):
-            node = Input(type=TensorNode).outputs[0]
+            name = self._namespace.create_unique_name("args")
+            node = Input(
+                type=TensorNode, name=name, qualname="%s.[%s]" % (self._qualname, name)
+            ).outputs[0]
             node.shape = val.shape
             node.dtype = val.dtype
             return node
@@ -697,28 +735,10 @@ class InternalGraph:
         ]
 
         org_argdef = list(moudle.argdef_graph_map.keys())[0]
-        if call_nodes:
-            org_argdef = call_nodes[0][0].arg_def
 
         for v in inputs[1:]:
             assert isinstance(v, RawTensor)
             formal_node_inputs.append(create_node(v))
-
-        actual_nodes = []
-        for e, n in call_nodes:
-            e.arg_def = tree_def
-            actual_node_inputs = [
-                n,
-            ]
-            for v in inputs[1:]:
-                actual_node_inputs.append(create_node(v))
-
-            for org_n in e.inputs:
-                org_n.users.pop(e)
-
-            e.inputs[:] = actual_node_inputs
-            e.const_val = []
-            actual_nodes.append(actual_node_inputs[1:])
 
         self._inputs[:] = formal_node_inputs
         moudle.argdef_graph_map[tree_def] = moudle.argdef_graph_map.pop(org_argdef)
@@ -740,50 +760,26 @@ class InternalGraph:
              a suffix will be added to it.
         """
         forma_mnode = self.inputs[0]
-        actual_mnodes = forma_mnode.actual_node
-
         moudle = forma_mnode.owner
-        assert moudle._is_top, "add_input_node only support the top-level graph"
+        assert moudle._is_top, "add_input_node only supports top graph"
 
-        call_nodes = []
-        for n in actual_mnodes:
-            for c_expr in n.users:
-                if isinstance(c_expr, CallMethod) and c_expr.method == "__call__":
-                    call_nodes.append(c_expr)
-
-        def create_node(name=None, is_input: bool = True):
-            if is_input:
-                node = Input(type=TensorNode, name=name).outputs[0]
-            else:
-                node = TensorNode(expr=None, name=None)
+        def create_node(name=None):
+            node = Input(
+                type=TensorNode, name=name, qualname="%s.[%s]" % (self._qualname, name)
+            ).outputs[0]
             node.shape = shape
             node.dtype = dtype
             return node
 
         org_argdef = list(moudle.argdef_graph_map.keys())[0]
 
-        if call_nodes:
-            org_argdef = call_nodes[0].arg_def
-
         args, kwargs = org_argdef.unflatten(self._inputs)
-        formal_inp_node = create_node(self._create_unique_name(name), True)
+        formal_inp_node = create_node(self._namespace.create_unique_name(name))
         inputs, tree_def = tree_flatten(
             ((*args, formal_inp_node), kwargs),
             is_const_leaf=lambda x: not isinstance(x, (TensorNode, ModuleNode)),
         )
         self._inputs[:] = inputs[:]
-
-        actual_inp_nodes = []
-        for e in call_nodes:
-            args, kwargs = e.unflatten_args(e.inputs)
-            args = args + (create_node(False),)
-            inputs, tree_def = tree_flatten(
-                (args, kwargs),
-                is_const_leaf=lambda x: not isinstance(x, (TensorNode, ModuleNode)),
-            )
-            e.inputs[:] = inputs[:]
-            e.arg_def = tree_def
-            actual_inp_nodes.append(args[-1])
 
         moudle.argdef_graph_map[tree_def] = moudle.argdef_graph_map.pop(org_argdef)
         moudle.argdef_outdef_map[tree_def] = moudle.argdef_outdef_map.pop(org_argdef)
@@ -841,39 +837,13 @@ class InternalGraph:
             outputs, is_leaf=lambda x: isinstance(x, TensorNode),
         )
         forma_mnode = self.inputs[0]
-
         moudle = forma_mnode.owner
-        assert moudle._is_top, "reset_outputs only support the top graph"
-
-        actual_mnodes = forma_mnode.actual_node
-        call_nodes = []
-        for n in actual_mnodes:
-            for c_expr in n.users:
-                if isinstance(c_expr, CallMethod) and c_expr.method == "__call__":
-                    call_nodes.append((c_expr))
-
-        def create_node(val: TensorNode, expr: Expr):
-            node = TensorNode(expr)
-            node.shape = val.shape
-            node.dtype = val.dtype
-            return node
+        assert moudle._is_top, "reset_outputs only supports top graph"
 
         tree_def = list(moudle.argdef_graph_map.keys())[0]
-        if call_nodes:
-            tree_def = call_nodes[0].arg_def
-
-        actual_nodes = []
-        for e in call_nodes:
-            actual_node_outputs = []
-            for v in outputs:
-                actual_node_outputs.append(create_node(v, e))
-            e.outputs[:] = actual_node_outputs
-            e.out_def = out_def
-            actual_nodes.append(actual_node_outputs)
 
         self._outputs[:] = outputs
         moudle.argdef_outdef_map[tree_def] = out_def
-        return actual_nodes
 
     def add_output_node(self, node: TensorNode):
         r"""Add an output node to the Graph.
@@ -920,27 +890,10 @@ class InternalGraph:
             ((Tensor([1.], device=xpux:0), Tensor([0.], device=xpux:0)), Tensor([1.], device=xpux:0))
         """
         forma_mnode = self.inputs[0]
-
         moudle = forma_mnode.owner
-        assert moudle._is_top, "add_output_node only support the top graph"
-
-        actual_mnodes = forma_mnode.actual_node
-        call_nodes = []
-
-        for n in actual_mnodes:
-            for c_expr in n.users:
-                if isinstance(c_expr, CallMethod) and c_expr.method == "__call__":
-                    call_nodes.append((c_expr))
-
-        def create_node(val: TensorNode, expr: Expr):
-            node = TensorNode(expr)
-            node.shape = val.shape
-            node.dtype = val.dtype
-            return node
+        assert moudle._is_top, "add_output_node only supports top graph"
 
         tree_def = list(moudle.argdef_graph_map.keys())[0]
-        if call_nodes:
-            tree_def = call_nodes[0].arg_def
 
         org_out_def = moudle.argdef_outdef_map[tree_def]
         org_outs = org_out_def.unflatten(self._outputs)
@@ -948,21 +901,7 @@ class InternalGraph:
             (org_outs, node), is_leaf=lambda x: isinstance(x, TensorNode),
         )
         self._outputs[:] = outputs
-
-        actual_out_nodes = []
-        for e in call_nodes:
-            actual_node = create_node(node, e)
-            org_outs = org_out_def.unflatten(e.outputs)
-            outputs, out_def = tree_flatten(
-                (org_outs, actual_node), is_leaf=lambda x: isinstance(x, TensorNode),
-            )
-            e.outputs[:] = outputs
-            e.out_def = out_def
-            actual_out_nodes.append(actual_node)
-
         moudle.argdef_outdef_map[tree_def] = out_def
-
-        return actual_out_nodes
 
     def insert_exprs(self, expr: Optional[Expr] = None):
         r"""Initialize the trace mode and insertion position.
@@ -1029,8 +968,34 @@ class InternalGraph:
                 idx = n.inputs.index(node)
                 n.inputs[idx] = repl_node
 
+    def _merge_getattr_expr(self):
+        getattr_nodes_map = dict()
+        for expr in self._exprs:
+            if not isinstance(expr, GetAttr):
+                continue
+            attr_name = get_suffix_name(self.qualname, expr.outputs[0].qualname)
+            assert attr_name, '"{}" is not a prefix of "{}"'.format(
+                self.qualname, expr.outputs[0].qualname
+            )
+            if attr_name in getattr_nodes_map:
+                base_node = getattr_nodes_map[attr_name]
+                repl_node = expr.outputs[0]
+                for expr in repl_node.users:
+                    base_node.users.append(expr)
+                    idx = expr.inputs.index(repl_node)
+                    expr.inputs[idx] = base_node
+                repl_node.users = []
+            else:
+                if attr_name != expr.name:
+                    expr.name = attr_name
+                    expr.inputs[0].users.remove(expr)
+                    self.inputs[0].users.append(expr)
+                    expr.inputs[0] = self.inputs[0]
+                getattr_nodes_map[attr_name] = expr.outputs[0]
+
     def compile(self):
         r"""Delete unused expr."""
+        self._merge_getattr_expr()
         dep_exprs = self.get_dep_exprs(self.outputs)
         i = 0
         while i < len(self._exprs):
@@ -1121,6 +1086,29 @@ class InternalGraph:
             state.pop("_top_graph")
         return state
 
+    def __setstate__(self, state):
+        old_version = False
+        if "_module_name" in state:
+            old_version = True
+            state["_qualname"] = state.pop("_module_name")
+            prefix_name = state.pop("_prefix_name")
+            if prefix_name:
+                state["_name"] = "{}_{}".format(prefix_name, state["_name"])
+
+        self.__dict__.update(state)
+
+        if old_version:
+            for n in self.nodes(False):
+                qualname = self._qualname
+                if isinstance(n.expr, CallMethod) and isinstance(
+                    n.expr.inputs[0], ModuleNode
+                ):
+                    n._qualname = n.expr.inputs[0]._qualname + ".[out]"
+                    continue
+                if n._qualname:
+                    qualname = "{}.{}".format(qualname, n._qualname)
+                n._qualname = qualname
+
 
 def _get_meth_name(obj, func):
     tp = obj if isinstance(obj, type) else type(obj)
@@ -1158,7 +1146,8 @@ def _wrapped_function(orig_func):
                     if isinstance(args[1], RawTensor):
                         node = NodeMixin.get(inputs[1])
                         inputs[1] = copy.copy(inputs[1])
-                        # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor, which will cause they have same _NodeMixin__node in tracing.
+                        # copy inputs[1] to avoid tensor and Tensor(tensor) share same m_tensor,
+                        # which will cause they have same _NodeMixin__node in tracing.
                         NodeMixin.wrap_safe(inputs[1], node)
                         args, kwargs = tree_def.unflatten(inputs)
                     call_node = CallMethod.make(self, meth_name)
@@ -1363,21 +1352,36 @@ class TracedModuleBuilder(NodeMixin):
                 self._body = self._argdef_graph_map[tree_def]
             else:
                 self._mod._is_top = False
-                self._body = self._mod.graph
+                self._body = self._mod.argdef_graph_map[tree_def]
+                module_qualname = NodeMixin.get(self).qualname
+                if module_qualname != self._body.qualname:
+                    src_name, dst_name = self._body.qualname, module_qualname
+
+                    def replace_qualname(g):
+                        attr_name = get_suffix_name(src_name, g.qualname)
+                        if attr_name is not None:
+                            g._qualname = (
+                                ("%s.%s" % (dst_name, attr_name))
+                                if attr_name
+                                else dst_name
+                            )
+                        assert get_suffix_name(dst_name, g.qualname) is not None
+
+                    for mod in self._mod.modules():
+                        if not hasattr(mod, "argdef_graph_map"):
+                            continue
+                        for g in mod.argdef_graph_map.values():
+                            replace_qualname(g)
+                            for n in g.nodes(False):
+                                replace_qualname(n)
         else:
             self_node = None
             orig_self = NodeMixin.get(self)
-            top_graph = active_module_tracer().current_scope()
-            graph_prefix_name = top_graph._name
-            if top_graph._prefix_name:
-                graph_prefix_name = "{}_{}".format(
-                    top_graph._prefix_name, graph_prefix_name.lstrip("_")
-                )
-            module_name = orig_self._orig_name
-            if top_graph._module_name:
-                module_name = "{}.{}".format(top_graph._module_name, module_name)
+            parent_graph = active_module_tracer().current_scope()
+            module_qualname = orig_self._qualname
             self._body = InternalGraph(
-                orig_self._name, prefix_name=graph_prefix_name, module_name=module_name
+                name=parent_graph._namespace.create_unique_name(module_qualname),
+                qualname=module_qualname,
             )
             active_module_tracer().push_scope(self._body)
             # rebind self to new input node
@@ -1390,8 +1394,13 @@ class TracedModuleBuilder(NodeMixin):
                     self,
                     self_node
                     if self_node
-                    else Input.make("self", NodeMixin.get_wrapped_type(self), ""),
+                    else Input.make(
+                        name="self",
+                        qualname=module_qualname,
+                        type=NodeMixin.get_wrapped_type(self),
+                    ),
                 )
+
             origin_inp_node = [NodeMixin.get(i, None) for i in inputs[1:]]
             # prepare args and kwargs for inner graph
             index_args, index_kwargs = tree_def.unflatten(
@@ -1416,7 +1425,9 @@ class TracedModuleBuilder(NodeMixin):
                     NodeMixin.wrap(
                         x,
                         lambda: Input.make(
-                            type=NodeMixin.get_wrapped_type(x), name=name
+                            type=NodeMixin.get_wrapped_type(x),
+                            name=name,
+                            qualname="%s.[%s]" % (module_qualname, name),
                         ),
                     )
                 return x
@@ -1430,13 +1441,18 @@ class TracedModuleBuilder(NodeMixin):
                 getattr(getattr(self._mod, "forward", self._mod), "__globals__", {})
             )
             rst = type(self._mod).forward(*args, **kwargs)
+
             if _convert_node_flag():
                 rst = _node_to_tensor(rst)[0][0]
+
             outputs, out_def = tree_flatten(rst, is_leaf=_is_leaf)
+
             for i in (
                 outputs if isinstance(outputs, collections.abc.Sequence) else (outputs,)
             ):
+                mark_constant(i)
                 active_module_tracer().current_scope()._add_output(NodeMixin.get(i))
+
             NodeMixin.wrap_safe(self, orig_self)
             for arg, node in zip(inputs[1:], origin_inp_node):
                 if node:
@@ -1461,15 +1477,13 @@ class TracedModuleBuilder(NodeMixin):
             attr = getattr(type(self._mod), name).__get__(self, type(self))
         else:
             attr = getattr(self._mod, name)
-            full_name = None
+
             if (
                 isinstance(attr, FunctionType)
                 and id(attr) in active_module_tracer().patcher.patched_fn_ids
             ):
                 return active_module_tracer().patcher.wrap_fn(attr)
 
-            if id(attr) in active_module_tracer().id2name:
-                full_name = active_module_tracer().id2name[id(attr)]
             if isinstance(attr, (List, Dict)):
                 unset_module_tracing()
                 has_module, m_container = replace_container_with_module_container(attr)
@@ -1477,31 +1491,24 @@ class TracedModuleBuilder(NodeMixin):
                     attr = m_container
                 if has_module and not m_container:
                     raise ValueError(
-                        "Can not trace the module that uses the same container to store Module and Non-Module objects "
+                        "Can not trace the module that uses the same container to store"
+                        " Module and Non-Module objects."
                     )
                 set_module_tracing()
+
             if isinstance(attr, Module):
                 attr = TracedModuleBuilder(attr)
 
             if isinstance(attr, (Module, RawTensor)):
                 setattr(self, name, attr)
-                active_module_tracer().id2name[id(attr)] = full_name
 
-            if full_name:
-                scope_name = active_module_tracer().current_scope()._module_name
-                if scope_name:
-                    full_name = full_name[len(scope_name) + 1 :]
-                else:
-                    full_name = name
-            else:
-                full_name = name
             NodeMixin.wrap(
                 attr,
                 lambda: GetAttr.make(
                     NodeMixin.get(self),
-                    name,
                     type=NodeMixin.get_wrapped_type(attr),
-                    orig_name=full_name,
+                    attr_name=name,
+                    name="",
                 ),
             )
         return attr
@@ -1527,25 +1534,14 @@ class TracedModuleBuilder(NodeMixin):
                 else:
                     assert mod_attr is wrapped
 
-                full_name = None
-                if id(mod_attr) in active_module_tracer().id2name:
-                    full_name = active_module_tracer().id2name[id(mod_attr)]
-                    scope_name = active_module_tracer().current_scope()._module_name
-                    if full_name and scope_name:
-                        full_name = full_name[len(scope_name) + 1 :]
-                    else:
-                        full_name = name
-                else:
-                    full_name = name
-                # assert not self._is_builtin
                 if isinstance(wrapped, (NodeMixin, RawTensor)):
                     NodeMixin.wrap(
                         wrapped,
                         lambda: GetAttr.make(
                             NodeMixin.get(self),
-                            name,
                             type=NodeMixin.get_wrapped_type(wrapped),
-                            orig_name=full_name,
+                            attr_name=name,
+                            name="",
                         ),
                     )
 
@@ -1731,9 +1727,7 @@ class NodeFilterName(NodeFilter):
     def __iter__(self):
         for i in self._iter:
             graph = i.top_graph
-            name = "{}_{}".format(graph._name, i._name.lstrip("_"))
-            if graph._prefix_name:
-                name = "{}_{}".format(graph._prefix_name, name.lstrip("_"))
+            name = "{}_{}".format(graph._name, i._name)
             if self.pattern == name or self._re.match(name):
                 yield i
 
@@ -1967,7 +1961,7 @@ class TracedModule(Module):
                 if isinstance(expr, GetAttr) and isinstance(
                     expr.outputs[0], ModuleNode
                 ):
-                    obj = getattr(node2obj[expr.inputs[0]], expr.name)
+                    obj = expr.interpret(node2obj[expr.inputs[0]])[0]
                     expr.outputs[0]._owner = weakref.ref(obj)
                     node2obj[expr.outputs[0]] = obj
                 if isinstance(expr, Constant) and isinstance(
@@ -2001,47 +1995,29 @@ class TracedModule(Module):
             A new :class:`TracedModule`.
         """
         new_module = copy.deepcopy(self)
-        assert active_module_tracer() is None
-        id2name = _init_id2name(new_module, "self")
-        set_active_module_tracer(module_tracer(lambda x: x, {}))
-        active_module_tracer().push_scope(new_module.graph)
+
+        def _replace_inputs_and_outputs(expr: Expr, repl_dict: Dict[Node, Node]):
+            inputs, outputs = expr.inputs, expr.outputs
+            for i, node in enumerate(inputs):
+                if node in repl_dict:
+                    inputs[i] = repl_dict[node]
+            for i, node in enumerate(outputs):
+                if node in repl_dict:
+                    outputs[i] = repl_dict[node]
+                    outputs[i].expr = expr
 
         def _flatten_subgraph(
             parent_graph: InternalGraph,
             graph: InternalGraph,
+            call: CallMethod,
             module: Module,
-            call=None,
-            prefix_name="",
-            module_name="",
         ):
-            if isinstance(prefix_name, str) and prefix_name and prefix_name[-1] != "_":
-                prefix_name += "_"
-            if isinstance(module_name, str) and module_name:
-                module_name += "."
-            if graph is None or module.is_qat:
-                assert not isinstance(module, TracedModule) or module.is_qat
-                const = Constant(module, id2name[id(module)])
-                m_node = call.inputs[0]
-                if m_node.top_graph != active_module_tracer().current_scope():
-                    m_node._name = (
-                        active_module_tracer()
-                        .current_scope()
-                        ._create_unique_name(prefix_name)
-                    )
-                    m_node._orig_name = id2name[id(module)][5:]
-                const.outputs[0] = m_node
-                const.outputs[0].expr = const
-                return [const, call]
+            repl_dict, node2obj, rename_blacklist = {}, {}, []
+
             if call is not None:
                 graph = copy.deepcopy(graph)
-            exprs = []
-            node2obj = {}
-            node2obj[graph._inputs[0]] = module
-            if call:
                 node2obj[call.inputs[0]] = module
 
-            # replace inputs for submodule's exprx
-            if call:
                 repl_dict = dict(zip(graph._inputs, call.inputs))
                 for ind, out in enumerate(graph.outputs):
                     if isinstance(out.expr, Input):
@@ -2058,60 +2034,65 @@ class TracedModule(Module):
                                     parent_graph._outputs[index] = repl_dict[out]
                         continue
                     repl_dict[out] = call.outputs[ind]
+                    if isinstance(out, TensorNode):
+                        call.outputs[ind]._qualname = out._qualname
 
-                graph._replace_inputs_outputs(repl_dict, prefix_name, module_name)
+                for node, repl_node in repl_dict.items():
+                    assert node in graph._inputs or node in graph._outputs
+                    for i in node.users:
+                        if i not in repl_node.users:
+                            repl_node.users.append(i)
 
+                rename_blacklist = list(chain(call.inputs, call.outputs))
+
+            node2obj[graph._inputs[0]] = module
+            prefix_name = call.inputs[0]._name if call else ""
+            exprs = []
             for expr in graph._exprs:
-                if isinstance(expr, GetAttr):
-                    # replace GetAttr with Constant
-                    if isinstance(expr.outputs[0], TensorNode):
-                        const = Constant(getattr(node2obj[expr.inputs[0]], expr.name))
-                        const.outputs = expr.outputs
-                        const.outputs[0].expr = const
-                        exprs.append(const)
-                    elif isinstance(expr.outputs[0], ModuleNode):
-                        node2obj[expr.outputs[0]] = getattr(
-                            node2obj[expr.inputs[0]], expr.name
-                        )
 
-                elif isinstance(expr, CallMethod):
+                if call is not None:
+                    _replace_inputs_and_outputs(expr, repl_dict)
+
+                if isinstance(expr, GetAttr):
+                    mnode = expr.inputs[0]
+                    node2obj[expr.outputs[0]] = expr.interpret(node2obj[mnode])[0]
+
+                if isinstance(expr, CallMethod):
                     obj_node = expr.inputs[0]
-                    if isinstance(obj_node, ModuleNode):
-                        pre_expr = expr.inputs[0].expr
-                        if isinstance(pre_expr, GetAttr):
-                            (obj,) = pre_expr.interpret(node2obj[pre_expr.inputs[0]])
-                            expr_graph = (
-                                obj.argdef_graph_map[expr.arg_def]
-                                if hasattr(obj, "argdef_graph_map")
-                                else None
-                            )
+                    if isinstance(obj_node, ModuleNode) and isinstance(
+                        obj_node.expr, GetAttr
+                    ):
+                        obj = node2obj[obj_node]
+                        expr_graph = (
+                            obj.argdef_graph_map[expr.arg_def]
+                            if hasattr(obj, "argdef_graph_map")
+                            else None
+                        )
+                        if expr_graph is not None:
                             exprs.extend(
-                                _flatten_subgraph(
-                                    graph,
-                                    expr_graph,
-                                    obj,
-                                    expr,
-                                    prefix_name + obj_node._name.lstrip("_"),
-                                    module_name + obj_node._orig_name,
-                                )
+                                _flatten_subgraph(graph, expr_graph, expr, obj)
                             )
-                        else:
-                            # module has been replaced.
-                            assert isinstance(pre_expr, Constant)
-                            exprs.append(expr)
-                    else:
-                        exprs.append(expr)
-                else:
-                    exprs.append(expr)
+                            continue
+
+                if parent_graph is not None:
+                    for node in expr.outputs:
+                        if node in rename_blacklist:
+                            continue
+                        name = "{}_{}".format(prefix_name, node._name)
+                        node._name = parent_graph._namespace.create_unique_name(name)
+
+                exprs.append(expr)
 
             if call is not None:
                 for i in call.inputs:
                     i.users.remove(call)
+
             return exprs
 
-        new_module.graph._exprs = _flatten_subgraph(None, new_module.graph, new_module)
+        new_module.graph._exprs = _flatten_subgraph(
+            None, new_module.graph, None, new_module
+        )
         new_module.graph.compile()
-        set_active_module_tracer(None)
         new_module.graph._reset_ids()
         return new_module
 
@@ -2208,25 +2189,31 @@ def trace_module(
     assert active_module_tracer() is None
     assert isinstance(mod, Module)
     try:
+        net_name = mod._name if mod._name else mod.__class__.__name__
         use_sym_shape = set_symbolic_shape(True)
         set_module_tracing()
-        set_active_module_tracer(
-            module_tracer(_wrapped_function, _init_id2name(mod, "self"))
-        )
+        set_active_module_tracer(module_tracer(_wrapped_function))
         for cls in [Expr, Node]:
             cls._set_next_id(0)
         with active_module_tracer().patcher:
-            global_scope = InternalGraph(name="")
+            global_scope = InternalGraph(name="top", qualname=net_name)
             active_module_tracer().push_scope(global_scope)
             builder = TracedModuleBuilder(mod, True)
-            name = mod._name if mod._name else mod.__class__.__name__
-            NodeMixin.wrap_safe(builder, Input.make(name, ModuleNode, orig_name="self"))
+
+            NodeMixin.wrap_safe(
+                builder, Input.make(name="top", type=ModuleNode, qualname=net_name)
+            )
             inputs, _ = tree_flatten((args, kwargs))
             for _, i in enumerate(inputs):
                 # assert isinstance(i, Tensor), "not support "
                 if isinstance(i, RawTensor):
                     NodeMixin.wrap_safe(
-                        i, Input.make("arg_{}".format(_), NodeMixin.get_wrapped_type(i))
+                        i,
+                        Input.make(
+                            name="arg_{}".format(_),
+                            type=NodeMixin.get_wrapped_type(i),
+                            qualname="{}.[{}]".format(net_name, "arg_{}".format(_)),
+                        ),
                     )
             builder(*args, **kwargs)
             active_module_tracer().pop_scope()

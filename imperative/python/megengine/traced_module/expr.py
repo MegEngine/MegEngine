@@ -11,7 +11,7 @@ import collections
 import copy
 import inspect
 import re
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional, Union
 
 from ..core._imperative_rt import OpDef
 from ..core._imperative_rt.core2 import Tensor as RawTensor
@@ -30,6 +30,43 @@ def rstrip(s: str, __chars: str):
     __chars = re.escape(__chars)
     s = re.sub(r"^(?P<left>.*?)(?:%s)+$" % __chars, "\g<left>", s)
     return s
+
+
+def get_suffix_name(prefix: str, name: str):
+    if prefix == name:
+        return ""
+    matchd = re.compile("^%s\.(.*)" % prefix).match(name)
+    if matchd is None:
+        return None
+    return matchd.group(1)
+
+
+def is_call_module(expr):
+    return (
+        isinstance(expr, CallMethod)
+        and isinstance(expr.inputs[0], ModuleNode)
+        and expr.method == "__call__"
+    )
+
+
+def is_call_tensor_method(expr):
+    return isinstance(expr, CallMethod) and not is_call_module(expr)
+
+
+def is_call_function(expr):
+    return isinstance(expr, CallFunction)
+
+
+def is_constant(expr):
+    return isinstance(expr, Constant)
+
+
+def is_getattr(expr):
+    return isinstance(expr, GetAttr)
+
+
+def is_apply_def(expr):
+    return isinstance(expr, Apply)
 
 
 class Expr:
@@ -76,50 +113,19 @@ class Expr:
                 self.const_val.append((idx, val))
 
     def add_outputs(self, outputs):
+        assert active_module_tracer() is not None
         self.outputs = []
-        if outputs is not None:
-            if not isinstance(outputs, collections.Sequence):
-                outputs = (outputs,)
-
-            name = None
-            orig_name = None
-            if isinstance(self, CallMethod):
-                name = self.inputs[0]._name
-                orig_name = self.inputs[0]._orig_name
-                assert isinstance(name, str), "The name of ({}) must be a str".format(
-                    self.inputs[0]
-                )
-                assert isinstance(
-                    orig_name, str
-                ), "The orig_name of ({}) must be a str".format(self.inputs[0])
-                name = rstrip(name, "_out")
-                if self.method == "__call__":
-                    name += "_out"
-                    orig_name += "_out"
-                else:
-                    strip_method = self.method.strip("_")
-                    name = "%s_out" % strip_method
-                    orig_name = name
-            elif isinstance(self, CallFunction):
-                name = self.func.__name__ + "_out"
-            elif isinstance(self, Apply):
-                name = str(self.opdef).lower() + "_out"
-
-            for i in outputs:
-                assert isinstance(i, RawTensor), "The output must be a Tensor"
-                o_name = (
-                    active_module_tracer().current_scope()._create_unique_name(name)
-                )
-                self.outputs.append(
-                    NodeMixin.get_wrapped_type(i)(
-                        expr=self,
-                        name=o_name,
-                        orig_name=orig_name if orig_name else o_name,
-                    )
-                )
-
-            for i, node in zip(outputs, self.outputs,):
-                NodeMixin.wrap_safe(i, node)
+        if outputs is None:
+            return
+        current_graph = active_module_tracer().current_scope()
+        if not isinstance(outputs, collections.Sequence):
+            outputs = (outputs,)
+        for i in outputs:
+            assert isinstance(i, RawTensor), "The output must be a Tensor"
+            node = NodeMixin.get_wrapped_type(i)(expr=self, name="", qualname="",)
+            NodeMixin.wrap_safe(i, node)
+            self.outputs.append(node)
+        current_graph._namespace.auto_naming_for_outputs(self)
 
     def unflatten_args(self, inputs):
         if self.arg_def is not None:
@@ -152,9 +158,7 @@ class Expr:
             ), "({}) must be generated before ({})".format(repl_node, self)
             idx = self.inputs.index(node)
             self.inputs[idx] = repl_node
-            user_idx = node.users.index(self)
-            assert user_idx >= 0
-            node.users.pop(user_idx)
+            node.users.remove(self)
             repl_node.users.append(self)
 
     @property
@@ -197,26 +201,23 @@ class Input(Expr):
     r"""A fake Expr which is used to mark the input of graph."""
     name = None
 
-    def __init__(self, name=None, type=None, orig_name=None):
+    def __init__(self, type: List[Node], name: str = "args", qualname: str = ""):
         super().__init__()
+        assert type in [ModuleNode, TensorNode]
+        assert name and qualname
         self.inputs = []
         node_cls = type if type else Node
-        if orig_name is None:
-            orig_name = name
         self.outputs = [
-            node_cls(self, name=name, orig_name=orig_name),
+            node_cls(self, name=name, qualname=qualname),
         ]
         self.name = name
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
         expr = cls(*args, **kwargs)
-        oup_node = expr.outputs[0]
-        name = (
-            active_module_tracer().current_scope()._create_unique_name(oup_node._name)
-        )
-        oup_node._name = name
-        active_module_tracer().current_scope()._add_input(oup_node)
+        out_node = expr.outputs[0]
+        active_module_tracer().current_scope()._add_input(out_node)
         return expr.outputs[0]
 
     def __repr__(self):
@@ -230,34 +231,41 @@ class GetAttr(Expr):
     name = None
     r"""name: the qualified name of the attribute to be retrieved."""
 
-    def __init__(self, module, name, type=None, orig_name=None):
+    def __init__(
+        self, module: ModuleNode, type: Union[Node], attr_name: str, name: str = "",
+    ):
         super().__init__()
         assert isinstance(module, ModuleNode)
+        assert type in [TensorNode, ModuleNode]
         self.inputs = [
             module,
         ]
         module.users.append(self)
-        self.name = name
-        node_cls = type if type else Node
+        self.name = attr_name
         self.outputs = [
-            node_cls(self, name=name, orig_name=orig_name),
+            type(self, name=name, qualname="{}.{}".format(module.qualname, attr_name)),
         ]
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
+        current_graph = active_module_tracer().current_scope()
         expr = cls(*args, **kwargs)
-        module = expr.inputs[0]
-        oup_name = expr.name
-        while module._name != "self":
-            oup_name = module._name + "_" + oup_name
-            module = module.expr.inputs[0]
-        oup_name = active_module_tracer().current_scope()._create_unique_name(oup_name)
-        expr.outputs[0]._name = oup_name
-        active_module_tracer().current_scope()._insert(expr)
+        current_graph._namespace.auto_naming_for_outputs(expr)
+        current_graph._insert(expr)
         return expr.outputs[0]
 
     def interpret(self, *inputs):
-        return (getattr(inputs[0], self.name),)
+        mod = inputs[0]
+        module_path, _, name = self.name.rpartition(".")
+        if module_path == "":
+            return (getattr(mod, name),)
+        module_names = module_path.split(".")
+        for item in module_names:
+            mod = getattr(mod, item)
+            if not isinstance(mod, Module):
+                raise AttributeError("`{}` is not an Module".format(item))
+        return (getattr(mod, name),)
 
     def __repr__(self):
         out_type = "Tensor"
@@ -297,6 +305,7 @@ class CallMethod(Expr):
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
         expr = cls(*args, **kwargs)
         active_module_tracer().current_scope()._insert(expr)
         return expr
@@ -362,6 +371,7 @@ class Apply(Expr):
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
         expr = cls(*args, **kwargs)
         active_module_tracer().current_scope()._insert(expr)
         return expr
@@ -435,6 +445,7 @@ class CallFunction(Expr):
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
         expr = cls(*args, **kwargs)
         active_module_tracer().current_scope()._insert(expr)
         return expr
@@ -474,7 +485,7 @@ class Constant(Expr):
     # TODO: constant cache to reduce the size of dumped model
     _constant_cache = {}
 
-    def __init__(self, c, name=None):
+    def __init__(self, c, name: str = "", qualname: str = ""):
         super().__init__()
         assert isinstance(c, (RawTensor, Module))
         if isinstance(c, Module):
@@ -484,31 +495,16 @@ class Constant(Expr):
         self.inputs = []
         node_cls = NodeMixin.get_wrapped_type(c)
         self.outputs = [
-            node_cls(self, name=name, orig_name=name),
+            node_cls(self, name=name, qualname=qualname),
         ]
-        self.outputs[0]._name = name if name else "const_" + str(self._id)
 
     @classmethod
     def make(cls, *args, **kwargs):
+        assert active_module_tracer() is not None
         expr = cls(*args, **kwargs)
-        name = "const_module" if isinstance(expr.value, Module) else "const_tensor"
-        full_name = name
-        if (
-            isinstance(expr.value, RawTensor)
-            and id(expr.value) in active_module_tracer().id2name
-        ):
-            full_name = active_module_tracer().id2name[id(expr.value)]
-            scope_name = active_module_tracer().current_scope()._module_name
-            if full_name and scope_name:
-                full_name = ("self." + full_name)[len(scope_name) + 1 :]
-            else:
-                full_name = name
-        else:
-            full_name = name
-        name = active_module_tracer().current_scope()._create_unique_name(full_name)
-        expr.outputs[0]._name = name
-        expr.outputs[0]._orig_name = full_name
-        active_module_tracer().current_scope()._insert(expr)
+        current_graph = active_module_tracer().current_scope()
+        current_graph._namespace.auto_naming_for_outputs(expr)
+        current_graph._insert(expr)
         return expr.outputs[0]
 
     def interpret(self, *inputs):

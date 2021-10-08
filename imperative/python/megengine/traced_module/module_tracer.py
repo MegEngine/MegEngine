@@ -128,10 +128,9 @@ class module_tracer:
 
     _active_scopes = None
 
-    def __init__(self, wrap_fn, id2name):
+    def __init__(self, wrap_fn):
         self._active_scopes = []
         self.patcher = Patcher(wrap_fn)
-        self.id2name = id2name
 
     @classmethod
     def register_as_builtin(cls, mod):
