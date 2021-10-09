@@ -20,6 +20,7 @@
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/lsq.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/dnn/rnn.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/dnn/sliding_window_transpose.h"
@@ -292,6 +293,36 @@ struct OprMaker<opr::LSQBackward, 5> {
                 ->owner_opr();
     }
 };
+
+template <>
+struct OprMaker<opr::RNNBackward, 7> {
+    using Param = opr::RNNBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::RNNBackward::make(
+                       i[0], i[1], i[2], i[3], i[4], i[5], i[6], param, config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
+
+template <>
+struct OprMaker<opr::LSTMBackward, 9> {
+    using Param = opr::LSTMBackward::Param;
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
+        MGB_MARK_USED_VAR(graph);
+        return opr::LSTMBackward::make(
+                       i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], param,
+                       config)[0]
+                .node()
+                ->owner_opr();
+    }
+};
+
 template <>
 struct OprLoadDumpImpl<opr::AdaptivePoolingBackward, 0>
         : public GeneralOprLoadDumpImpl<
@@ -641,6 +672,10 @@ MGB_SEREG_OPR(TQT, 2);
 MGB_SEREG_OPR(TQTBackward, 3);
 MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
+MGB_SEREG_OPR(RNNForward, 3);
+MGB_SEREG_OPR(RNNBackward, 7);
+MGB_SEREG_OPR(LSTMForward, 4);
+MGB_SEREG_OPR(LSTMBackward, 9);
 }  // namespace opr
 
 }  // namespace mgb

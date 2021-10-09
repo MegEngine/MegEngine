@@ -92,8 +92,7 @@ std::unique_ptr<Handle> Handle::make(
         }
         MIDOUT_END();
 
-    }
-    else if (platform == megcorePlatformROCM) {
+    } else if (platform == megcorePlatformROCM) {
 #if MEGDNN_WITH_ROCM
         return make_rocm_handle(computing_handle);
 #else
@@ -111,8 +110,7 @@ std::unique_ptr<Handle> Handle::make(
 #else
         return nullptr;
 #endif
-    }
-    else {
+    } else {
         // CUDA
         megdnn_throw_if(
                 platform != megcorePlatformCUDA, megdnn_error,

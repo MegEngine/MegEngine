@@ -1936,6 +1936,198 @@ protected:
             const TensorLayout& grad_s, size_t workspace_in_bytes);
 };
 
+class RNNCellForward : public OperatorBase {
+    DEF_OPR_PARAM(RNNCell);
+    DEF_OPR_IMPL(RNNCellForward, OperatorBase, 6, 1);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in weight_ih,
+            _megdnn_tensor_in bias_ih, _megdnn_tensor_in hx,
+            _megdnn_tensor_in weight_hh, _megdnn_tensor_in bias_hh,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) = 0;
+    static void deduce_layout(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            const TensorLayout& dst, size_t workspace_in_bytes);
+};
+using RNNCell = RNNCellForward;
+
+class LSTMCellForward : public OperatorBase {
+    // DEF_OPR_PARAM(LSTMCell);
+    DEF_OPR_PARAM(Empty);
+    DEF_OPR_IMPL(LSTMCellForward, OperatorBase, 7, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in weight_ih,
+            _megdnn_tensor_in bias_ih, _megdnn_tensor_in hx,
+            _megdnn_tensor_in weight_hh, _megdnn_tensor_in bias_hh,
+            _megdnn_tensor_in cx, _megdnn_tensor_out h_new, _megdnn_tensor_out c_new,
+            _megdnn_tensor_out gates, _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            const TensorLayout& cx, TensorLayout& h_new, TensorLayout& c_new,
+            TensorLayout& gates);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            const TensorLayout& cx, const TensorLayout& h_new,
+            const TensorLayout& c_new, const TensorLayout& gates) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& weight_ih,
+            const TensorLayout& bias_ih, const TensorLayout& hx,
+            const TensorLayout& weight_hh, const TensorLayout& bias_hh,
+            const TensorLayout& cx, const TensorLayout& h_new,
+            const TensorLayout& c_new, const TensorLayout& gates,
+            size_t workspace_in_bytes);
+};
+using LSTMCell = LSTMCellForward;
+
+class RNNForward : public OperatorBase {
+    DEF_OPR_PARAM(RNN);
+    DEF_OPR_IMPL(RNNForward, OperatorBase, 3, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in hx,
+            _megdnn_tensor_in flatten_weights, _megdnn_tensor_out output,
+            _megdnn_tensor_out hy, _megdnn_tensor_out reserve_space,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& hx,
+            const TensorLayout& flatten_weights, TensorLayout& output, TensorLayout& hy,
+            TensorLayout& reserve_space);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& hx,
+            const TensorLayout& flatten_weights, const TensorLayout& output,
+            const TensorLayout& hy, const TensorLayout& reserve_space) = 0;
+    virtual size_t get_reserve_size_in_bytes(const TensorLayout& input) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& hx,
+            const TensorLayout& flatten_weights, const TensorLayout& output,
+            const TensorLayout& hy, const TensorLayout& reserve_space,
+            size_t workspace_in_bytes);
+};
+using RNN = RNNForward;
+
+class RNNBackward : public OperatorBase {
+    DEF_OPR_PARAM(RNN);
+    DEF_OPR_IMPL(RNNBackward, OperatorBase, 7, 3);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in x, _megdnn_tensor_in y, _megdnn_tensor_in hx,
+            _megdnn_tensor_in dy, _megdnn_tensor_in dhy,
+            _megdnn_tensor_in flatten_weights, _megdnn_tensor_in reserve_space,
+            _megdnn_tensor_out dx, _megdnn_tensor_out dhx, _megdnn_tensor_out dw,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& flatten_weights, const TensorLayout& reserve_space,
+            TensorLayout& dx, TensorLayout& dhx, TensorLayout& dw);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& flatten_weights, const TensorLayout& reserve_space,
+            const TensorLayout& dx, const TensorLayout& dhx,
+            const TensorLayout& dw) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& flatten_weights, const TensorLayout& reserve_space,
+            const TensorLayout& dx, const TensorLayout& dhx, const TensorLayout& dw,
+            size_t workspace_in_bytes);
+};
+
+class LSTMForward : public OperatorBase {
+    DEF_OPR_PARAM(LSTM);
+    DEF_OPR_IMPL(LSTMForward, OperatorBase, 4, 4);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in input, _megdnn_tensor_in hx, _megdnn_tensor_in cx,
+            _megdnn_tensor_in flatten_weights, _megdnn_tensor_out output,
+            _megdnn_tensor_out hy, _megdnn_tensor_out cy,
+            _megdnn_tensor_out reserve_space, _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& input, const TensorLayout& hx, const TensorLayout& cx,
+            const TensorLayout& flatten_weights, TensorLayout& output, TensorLayout& hy,
+            TensorLayout& cy, TensorLayout& reserve_space);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& input, const TensorLayout& hx, const TensorLayout& cx,
+            const TensorLayout& flatten_weights, const TensorLayout& output,
+            const TensorLayout& hy, const TensorLayout& cy,
+            const TensorLayout& reserve_space) = 0;
+    virtual size_t get_reserve_size_in_bytes(const TensorLayout& input) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& input, const TensorLayout& hx, const TensorLayout& cx,
+            const TensorLayout& flatten_weights, const TensorLayout& output,
+            const TensorLayout& hy, const TensorLayout& cy,
+            const TensorLayout& reserve_space, size_t workspace_in_bytes);
+};
+using LSTM = LSTMForward;
+
+class LSTMBackward : public OperatorBase {
+    DEF_OPR_PARAM(LSTM);
+    DEF_OPR_IMPL(LSTMBackward, OperatorBase, 9, 4);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in x, _megdnn_tensor_in y, _megdnn_tensor_in hx,
+            _megdnn_tensor_in cx, _megdnn_tensor_in dy, _megdnn_tensor_in dhy,
+            _megdnn_tensor_in dcy, _megdnn_tensor_in flatten_weights,
+            _megdnn_tensor_in reserve_space, _megdnn_tensor_out dx,
+            _megdnn_tensor_out dhx, _megdnn_tensor_out dcx, _megdnn_tensor_out dw,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& cx, const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& dcy, const TensorLayout& flatten_weights,
+            const TensorLayout& reserve_space, TensorLayout& dx, TensorLayout& dhx,
+            TensorLayout& dcx, TensorLayout& dw);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& cx, const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& dcy, const TensorLayout& flatten_weights,
+            const TensorLayout& reserve_space, const TensorLayout& dx,
+            const TensorLayout& dhx, const TensorLayout& dcx,
+            const TensorLayout& dw) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& x, const TensorLayout& y, const TensorLayout& hx,
+            const TensorLayout& cx, const TensorLayout& dy, const TensorLayout& dhy,
+            const TensorLayout& dcy, const TensorLayout& flatten_weights,
+            const TensorLayout& reserve_space, const TensorLayout& dx,
+            const TensorLayout& dhx, const TensorLayout& dcx, const TensorLayout& dw,
+            size_t workspace_in_bytes);
+};
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"
 

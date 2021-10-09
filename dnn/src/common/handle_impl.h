@@ -209,7 +209,13 @@ private:
     cb(LSQBackward) \
     cb(Fill) \
     cb(PaddingForward) \
-    cb(PaddingBackward)
+    cb(PaddingBackward) \
+    cb(RNNCell) \
+    cb(LSTMCell) \
+    cb(RNN) \
+    cb(RNNBackward) \
+    cb(LSTM) \
+    cb(LSTMBackward)
 // clang-format on
 
 /*!

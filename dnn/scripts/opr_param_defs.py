@@ -1203,3 +1203,28 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
           member_alias=[(i, 'PADDING_{}'.format(i)) for i in PADDING_MODES]
           )
 )
+
+(pdef('RNNCell').
+ add_enum('NonlineMode', 'IDENTITY = 0', 'RELU = 1', 'TANH = 2')
+ )
+
+(pdef('RNN').
+ add_fields('uint32', 'num_layers', '1').
+ add_fields('bool', 'bidirectional', 'false').
+ add_fields('bool', 'bias', 'true').
+ add_fields('uint32', 'hidden_size', '128').
+ add_fields('uint32', 'proj_size', '0').
+ add_fields('float32', 'dropout', '0.f').
+ add_enum_alias('NonlineMode', 'RNNCell').
+ add_enum_alias('FwdMode', 'BN', name_field='fwd_mode')
+ )
+
+(pdef('LSTM').
+ add_fields('uint32', 'num_layers', '1').
+ add_fields('bool', 'bidirectional', 'false').
+ add_fields('bool', 'bias', 'true').
+ add_fields('uint32', 'hidden_size', '128').
+ add_fields('uint32', 'proj_size', '0').
+ add_fields('float32', 'dropout', '0.f').
+ add_enum_alias('FwdMode', 'BN', name_field='fwd_mode')
+ )

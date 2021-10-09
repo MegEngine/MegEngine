@@ -431,4 +431,12 @@ def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 
 def LRN: MgbHashableOp<"LRN", [LRNParam]>;
 
+def RNNCell: MgbHashableOp<"RNNCell", [RNNCellParam]>;
+
+def LSTMCell: MgbHashableOp<"LSTMCell", [EmptyParam]>;
+
+def RNN: MgbHashableOp<"RNN", [RNNParam]>;
+
+def LSTM: MgbHashableOp<"LSTM", [LSTMParam]>;
+
 #endif // MGB_OPS

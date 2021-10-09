@@ -402,9 +402,8 @@ void RelayoutFormat::deduce_format(TensorFormat src, TensorFormat& dst) {
     }
 
     if (dst.type() == TensorFormat::Type::IMAGE2D_PACK4 &&
-        (
-                handle()->type() != Handle::HandleType::NAIVE &&
-                handle()->type() != Handle::HandleType::X86)) {
+        (handle()->type() != Handle::HandleType::NAIVE &&
+         handle()->type() != Handle::HandleType::X86)) {
         megdnn_throw(
                 "Dump with Image2DPack4TensorFormat is not available on CUDA compnode, "
                 "try export CUDA_VISIBLE_DEVICES=\'\'");

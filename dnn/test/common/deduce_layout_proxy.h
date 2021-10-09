@@ -68,6 +68,15 @@ struct DeduceLayoutProxy<Opr, 6, false> {
 };
 
 template <typename Opr>
+struct DeduceLayoutProxy<Opr, 6, true> {
+    static void deduce_layout(Opr* opr, TensorLayoutArray& layouts) {
+        megdnn_assert(layouts.size() == 6);
+        opr->deduce_layout(
+                layouts[0], layouts[1], layouts[2], layouts[3], layouts[4], layouts[5]);
+    }
+};
+
+template <typename Opr>
 struct DeduceLayoutProxy<Opr, 7, false> {
     static void deduce_layout(Opr*, TensorLayoutArray&) {}
 };

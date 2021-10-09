@@ -72,9 +72,7 @@ void RelayoutForwardImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst)
 
 void RelayoutForwardImpl::check_cpu_handle(Handle* handle) {
     megdnn_assert(
-            !handle ||
-                    handle == this->handle()
-                    || is_cpu_handle(handle),
+            !handle || handle == this->handle() || is_cpu_handle(handle),
             "relayout from non-CPU to CPU not supported");
 }
 

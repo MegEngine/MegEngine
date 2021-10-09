@@ -170,6 +170,16 @@ using MegDNNOprMethInvoker = _MegDNNOprMethInvoker<Opr::NR_INPUTS, Opr::NR_OUTPU
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _o(0)
 #include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 
+#define _NR_INPUTS          4
+#define _NR_OUTPUTS         4
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _o(0), _o(1), _o(2), _o(3)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
+#define _NR_INPUTS          5
+#define _NR_OUTPUTS         1
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _o(0)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
 #define _NR_INPUTS          5
 #define _NR_OUTPUTS         2
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _o(0), _o(1)
@@ -180,10 +190,33 @@ using MegDNNOprMethInvoker = _MegDNNOprMethInvoker<Opr::NR_INPUTS, Opr::NR_OUTPU
 #define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _o(0), _o(1), _o(2)
 #include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 
+#define _NR_INPUTS          6
+#define _NR_OUTPUTS         1
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _o(0)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
+#define _NR_INPUTS          6
+#define _NR_OUTPUTS         2
+#define _FOREACH_IO(_i, _o) _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _o(0), _o(1)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
 #define _NR_INPUTS  6
 #define _NR_OUTPUTS 3
 #define _FOREACH_IO(_i, _o) \
     _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _o(0), _o(1), _o(2)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
+#define _NR_INPUTS  7
+#define _NR_OUTPUTS 3
+#define _FOREACH_IO(_i, _o) \
+    _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _i(6), _o(0), _o(1), _o(2)
+#include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
+
+#define _NR_INPUTS  9
+#define _NR_OUTPUTS 4
+#define _FOREACH_IO(_i, _o)                                                      \
+    _i(0), _i(1), _i(2), _i(3), _i(4), _i(5), _i(6), _i(7), _i(8), _o(0), _o(1), \
+            _o(2), _o(3)
 #include "./megdnn_opr_wrapper_megdnn_opr_meth_invoker_impl.inl"
 }  // anonymous namespace
 

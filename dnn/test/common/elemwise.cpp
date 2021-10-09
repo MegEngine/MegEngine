@@ -248,7 +248,6 @@ DEF_TEST(fuse_mul_add4) {
 }
 
 DEF_TEST(rmulh) {
-
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle);
 
@@ -315,7 +314,7 @@ DEF_TEST(unary1) {
     // case float
     UniformFloatRNG rng(1e-2, 6e1);
     checker.set_rng(0, &rng);
-        checker.set_epsilon(1e-5);
+    checker.set_epsilon(1e-5);
     checker.set_dtype(0, dtype::Float32());
     BUILD_UNARY_TEST_CASE_FLOAT
 }
@@ -900,7 +899,7 @@ DEF_TEST(unary_negative_stride) {
 
     UniformFloatRNG rng(1e-2, 6e1);
     checker.set_rng(0, &rng);
-        checker.set_epsilon(1e-5);
+    checker.set_epsilon(1e-5);
     BUILD_UNARY_NEGATIVE_STRIDE_TEST_CASE_FLOAT;
 }
 

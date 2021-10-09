@@ -1,7 +1,3 @@
-# Build
-build/
-output/
-
 # Cache
 __pycache__/
 .ccls-cache/
@@ -11,5 +7,8 @@ __pycache__/
 .vs/
 .idea/
 
-# CMake
+# Make and Build Settings
+build/
+output/
 compile_commands.json
+imperative/python/megengine/core/*.so
