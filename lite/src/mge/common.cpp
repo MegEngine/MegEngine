@@ -83,9 +83,11 @@ LTensorLayout lite::to_impl_layout(const Layout& layout) {
         case LiteDataType::LITE_FLOAT:
             mge_layout.dtype = mgb::dtype::Float32();
             break;
+#if !MEGDNN_DISABLE_FLOAT16
         case LiteDataType::LITE_HALF:
             mge_layout.dtype = mgb::dtype::Float16();
             break;
+#endif
         case LiteDataType::LITE_INT:
             mge_layout.dtype = mgb::dtype::Int32();
             break;
@@ -120,9 +122,11 @@ Layout lite::to_lite_layout(const LTensorLayout& mge_layout) {
         case mgb::DTypeEnum::Float32:
             layout.data_type = LiteDataType::LITE_FLOAT;
             break;
+#if !MEGDNN_DISABLE_FLOAT16
         case mgb::DTypeEnum::Float16:
             layout.data_type = LiteDataType::LITE_HALF;
             break;
+#endif
         case mgb::DTypeEnum::Int32:
             layout.data_type = LiteDataType::LITE_INT;
             break;
