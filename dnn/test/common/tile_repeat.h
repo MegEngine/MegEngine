@@ -23,11 +23,6 @@ struct Arg {
             dst[i] *= times[i];
         }
     }
-    TileRepeatBase::Param param() {
-        TileRepeatBase::Param param;
-        param.times = times;
-        return param;
-    }
 };
 
 inline std::vector<Arg> get_args() {

@@ -17,19 +17,21 @@
 namespace megdnn {
 
 void TileRepeatBase::check_layout_fwd(const TensorLayout &src,
+        const TensorLayout &times,
         const TensorLayout &dst)
 {
     auto errmsg = megdnn_layout_msg(src) + ", " + megdnn_layout_msg(dst)
-        + ", " + "times=" + param().times.to_string();
+        + ", " + megdnn_layout_msg(times);
     auto errmsg_c = errmsg.c_str();
     MEGDNN_MARK_USED_VAR(errmsg_c);
     megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(times);
     megdnn_assert_contiguous(dst);
-    auto expected_ndim = param().times.ndim;
+    auto expected_ndim = times.ndim;
     megdnn_assert(expected_ndim == src.ndim, "%s", errmsg_c);
     megdnn_assert(expected_ndim == dst.ndim, "%s", errmsg_c);
     rep(i, expected_ndim) {
-        megdnn_assert(dst.shape[i] == param().times[i] * src.shape[i],
+        megdnn_assert(dst.shape[i] == times[i] * src.shape[i],
                 "%s", errmsg_c);
     }
 
@@ -37,20 +39,21 @@ void TileRepeatBase::check_layout_fwd(const TensorLayout &src,
 }
 
 void TileRepeatBase::deduce_layout_fwd(const TensorLayout &src,
+        const TensorLayout &times,
         TensorLayout &dst)
 {
     dst.ndim = src.ndim;
     rep(i, src.ndim) {
-        dst.shape[i] = src.shape[i] * param().times[i];
+        dst.shape[i] = src.shape[i] * times[i];
     }
     dst.dtype = src.dtype;
     dst.init_contiguous_stride();
-    check_layout_fwd(src, dst);
+    check_layout_fwd(src, times, dst);
 }
 
 size_t TileRepeatBase::get_workspace_in_bytes_fwd(const TensorShape & /* src */,
-        const TensorShape &dst,
         const TensorShape &times,
+        const TensorShape &dst,
         DType dtype)
 {
     size_t nr_workspace = 0;
@@ -79,11 +82,11 @@ size_t TileRepeatBase::get_workspace_in_bytes_fwd(const TensorShape & /* src */,
 }
 
 void TileBase::simplify_shape(const TensorShape &src,
-        const TensorShape &dst,
         const TensorShape &times,
+        const TensorShape &dst,
         TensorShape &src2,
-        TensorShape &dst2,
-        TensorShape &times2)
+        TensorShape &times2,
+        TensorShape &dst2)
 {
     size_t n = 0;
     for (size_t i = 0; i < src.ndim; ++i) {
@@ -101,42 +104,44 @@ void TileBase::simplify_shape(const TensorShape &src,
 }
 
 size_t TileBase::get_workspace_in_bytes_fwd(const TensorLayout &src_,
+        const TensorLayout &times_,
         const TensorLayout &dst_)
 {
     TensorShape src, dst, times;
-    simplify_shape(src_, dst_, param().times, src, dst, times);
-    return TileRepeatBase::get_workspace_in_bytes_fwd(src, dst, times,
+    simplify_shape(src_, times_, dst_, src, times, dst);
+    return TileRepeatBase::get_workspace_in_bytes_fwd(src, times, dst, 
             src_.dtype);
 }
 
 void TileForward::deduce_layout(const TensorLayout &src,
+        const TensorLayout &times,
         TensorLayout &dst)
 {
-    deduce_layout_fwd(src, dst);
+    deduce_layout_fwd(src, times, dst);
 }
 
-void TileForward::check_exec(const TensorLayout &src, const TensorLayout &dst,
+void TileForward::check_exec(const TensorLayout &src, const TensorLayout &times, const TensorLayout &dst,
         size_t workspace_in_bytes)
 {
-    check_layout_fwd(src, dst);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
+    check_layout_fwd(src, times, dst);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, times, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void TileBackward::check_exec(const TensorLayout &diff, const TensorLayout &grad,
+void TileBackward::check_exec(const TensorLayout &diff, const TensorLayout &times, const TensorLayout &grad,
         size_t workspace_in_bytes)
 {
-    check_layout_fwd(grad, diff);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(diff, grad);
+    check_layout_fwd(grad, times, diff);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(diff, times, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
 void RepeatBase::simplify_shape(const TensorShape &src,
-        const TensorShape & /* dst */,
         const TensorShape &times,
+        const TensorShape & /* dst */,
         TensorShape &src2,
-        TensorShape &dst2,
-        TensorShape &times2)
+        TensorShape &times2,
+        TensorShape &dst2)
 {
     auto n = 0u;
     size_t i = 0;
@@ -156,33 +161,35 @@ void RepeatBase::simplify_shape(const TensorShape &src,
 }
 
 size_t RepeatBase::get_workspace_in_bytes_fwd(const TensorLayout &src_,
+        const TensorLayout &times_,
         const TensorLayout &dst_)
 {
     TensorShape src, dst, times;
-    simplify_shape(src_, dst_, param().times, src, dst, times);
-    return TileRepeatBase::get_workspace_in_bytes_fwd(src, dst, times,
+    simplify_shape(src_, times_, dst_, src,  times, dst);
+    return TileRepeatBase::get_workspace_in_bytes_fwd(src, times, dst,
             src_.dtype);
 }
 
 void RepeatForward::deduce_layout(const TensorLayout &src,
+        const TensorLayout &times,
         TensorLayout &dst)
 {
-    deduce_layout_fwd(src, dst);
+    deduce_layout_fwd(src, times, dst);
 }
 
-void RepeatForward::check_exec(const TensorLayout &src, const TensorLayout &dst,
+void RepeatForward::check_exec(const TensorLayout &src, const TensorLayout &times, const TensorLayout &dst,
         size_t workspace_in_bytes)
 {
-    check_layout_fwd(src, dst);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
+    check_layout_fwd(src, times, dst);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, times, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void RepeatBackward::check_exec(const TensorLayout &diff,
+void RepeatBackward::check_exec(const TensorLayout &diff, const TensorLayout &times,
         const TensorLayout &grad, size_t workspace_in_bytes)
 {
-    check_layout_fwd(grad, diff);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(diff, grad);
+    check_layout_fwd(grad, times, diff);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(diff, times, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

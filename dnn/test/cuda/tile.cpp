@@ -22,9 +22,9 @@ TEST_F(CUDA, TILE_FORWARD)
     auto args = tile_repeat::get_args();
     for (auto &&arg: args) {
         checker.set_dtype(0, dtype::Float32()).
-            set_param(arg.param()).execs({arg.src, {}});
+            execs({arg.src, arg.times, {}});
         checker.set_dtype(0, dtype::Float16()).
-            set_param(arg.param()).execs({arg.src, {}});
+            execs({arg.src, arg.times, {}});
     }
 }
 
@@ -36,9 +36,9 @@ TEST_F(CUDA, TILE_BACKWARD)
     auto args = tile_repeat::get_args();
     for (auto &&arg: args) {
         checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32()).
-            set_param(arg.param()).execs({arg.dst, arg.src});
+            execs({arg.dst, arg.times, arg.src});
         checker.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16()).
-            set_param(arg.param()).execs({arg.dst, arg.src});
+            execs({arg.dst, arg.times, arg.src});
     }
 }
 

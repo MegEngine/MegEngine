@@ -20,14 +20,15 @@ namespace megdnn {
 namespace cuda {
 
 void RepeatForwardImpl::exec(_megdnn_tensor_in src,
+        _megdnn_tensor_in times,
         _megdnn_tensor_out dst,
         _megdnn_workspace workspace)
 {
-    check_exec(src.layout, dst.layout, workspace.size);
+    check_exec(src.layout, times.layout, dst.layout, workspace.size);
     auto stream = cuda_stream(this->handle());
     TensorShape sshape, dshape, tshape;
-    simplify_shape(src.layout, dst.layout, param().times,
-            sshape, dshape, tshape);
+    simplify_shape(src.layout, times.layout, dst.layout,
+            sshape, tshape, dshape);
 #define cb(DType) \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
         using ctype = typename DTypeTrait<DType>::ctype; \
@@ -48,11 +49,12 @@ RepeatBackwardImpl::RepeatBackwardImpl(Handle *handle):
 
 template <typename T>
 void RepeatBackwardImpl::exec_internal(_megdnn_tensor_in diff_,
+        _megdnn_tensor_in times_,
         _megdnn_tensor_out grad_,
         _megdnn_workspace workspace)
 {
     TensorShape grad, diff, times;
-    simplify_shape(grad_.layout, diff_.layout, param().times,
+    simplify_shape(grad_.layout, times_.layout, diff_.layout,
             grad, diff, times);
     auto stream = cuda_stream(this->handle());
     auto nr_reduces = count_not_ones_in_shape(times);
@@ -113,23 +115,25 @@ void RepeatBackwardImpl::exec_internal(_megdnn_tensor_in diff_,
 }
 
 void RepeatBackwardImpl::exec(_megdnn_tensor_in diff_,
+        _megdnn_tensor_in times_,
         _megdnn_tensor_out grad_,
         _megdnn_workspace workspace)
 {
-    check_exec(diff_.layout, grad_.layout, workspace.size);
+    check_exec(diff_.layout, times_.layout, grad_.layout, workspace.size);
 #define cb(DType) \
     if (diff_.layout.dtype == DType()) { \
         using ctype = typename DTypeTrait<DType>::ctype; \
-        exec_internal<ctype>(diff_, grad_, workspace); \
+        exec_internal<ctype>(diff_, times_, grad_, workspace); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
 }
 
 size_t RepeatBackwardImpl::get_workspace_in_bytes(const TensorLayout &diff,
+        const TensorLayout &times,
         const TensorLayout &grad)
 {
-    return get_workspace_in_bytes_fwd(grad, diff);
+    return get_workspace_in_bytes_fwd(grad, times, diff);
 }
 
 } // namespace cuda

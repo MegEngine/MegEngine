@@ -599,24 +599,20 @@ public:
 class TileRepeatBase: public OperatorBase {
     public:
         TileRepeatBase(Handle *handle):  OperatorBase(handle) {}
-        struct Param {
-            TensorShape times;
-        };
-        Param &param() { return m_param; }
-        const Param &param() const { return m_param; }
     protected:
         void check_layout_fwd(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst);
         void deduce_layout_fwd(const TensorLayout &src,
+                const TensorLayout &times,
                 TensorLayout &dst);
         /**
          * Assuming src/dst/times are already simplified on entrance.
          */
-        size_t get_workspace_in_bytes_fwd(const TensorShape &src,
-                const TensorShape &dst,
+        size_t get_workspace_in_bytes_fwd(const TensorShape &src, 
                 const TensorShape &times,
+                const TensorShape &dst,
                 DType dtype);
-        Param m_param;
 };
 
 class TileBase: public TileRepeatBase {
@@ -624,25 +620,27 @@ class TileBase: public TileRepeatBase {
         TileBase(Handle *handle): TileRepeatBase(handle) {}
     protected:
         void simplify_shape(const TensorShape &src,
-                const TensorShape &dst,
                 const TensorShape &times,
+                const TensorShape &dst,
                 TensorShape &src2,
-                TensorShape &dst2,
-                TensorShape &times2);
+                TensorShape &times2,
+                TensorShape &dst2);
         /**
          * This is a helper function that would facilitate other backends'
          * implementation.
          */
-        size_t get_workspace_in_bytes_fwd(const TensorLayout &src,
+        size_t get_workspace_in_bytes_fwd(const TensorLayout &src, const TensorLayout &times,
                 const TensorLayout &dst);
 };
 
 class TileForward: public TileBase {
-    DEF_OPR_IMPL(TileForward, TileBase, 1, 1);
+    DEF_OPR_IMPL(TileForward, TileBase, 2, 1);
+    DEF_OPR_PARAM(Empty);
     public:
         /**
          * \brief Tile src times to get dst.
          * \param[in] src input tensor
+         * \param[in] times repteat times tensor
          * \param[out] dst output tensor
          * \param[out] workspace temporary workspace
          *
@@ -657,33 +655,40 @@ class TileForward: public TileBase {
          *  yields `aabbcc'.
          */
         virtual void exec(_megdnn_tensor_in src,
+                _megdnn_tensor_in times,
                 _megdnn_tensor_out dst,
                 _megdnn_workspace workspace) = 0;
         void deduce_layout(const TensorLayout &src,
+                const TensorLayout &times,
                 TensorLayout &dst);
         virtual size_t get_workspace_in_bytes(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst) = 0;
     protected:
-        void check_exec(const TensorLayout &src, const TensorLayout &dst,
+        void check_exec(const TensorLayout &src, const TensorLayout &times, const TensorLayout &dst,
                 size_t workspace_in_bytes);
 };
 using Tile = TileForward;
 
 class TileBackward: public TileBase {
-    DEF_OPR_IMPL(TileBackward, TileBase, 1, 1);
+    DEF_OPR_IMPL(TileBackward, TileBase, 2, 1);
+    DEF_OPR_PARAM(Empty);
     public:
         /**
          * \param[in] diff the backpropagated gradient wrt. dst
+         * \param[in] times times tensor
          * \param[out] grad the backpropagated gradient wrt. src
          * \param[out] workspace temporary workspace
          */
         virtual void exec(_megdnn_tensor_in diff,
+                _megdnn_tensor_in times,
                 _megdnn_tensor_out grad,
                 _megdnn_workspace workspace) = 0;
         virtual size_t get_workspace_in_bytes(const TensorLayout &diff,
+                const TensorLayout &times,
                 const TensorLayout &grad) = 0;
     protected:
-        void check_exec(const TensorLayout &diff, const TensorLayout &grad,
+        void check_exec(const TensorLayout &diff, const TensorLayout &times, const TensorLayout &grad,
                 size_t workspace_in_bytes);
 };
 
@@ -692,25 +697,29 @@ class RepeatBase: public TileRepeatBase {
         RepeatBase(Handle *handle): TileRepeatBase(handle) {}
     protected:
         void simplify_shape(const TensorShape &src,
-                const TensorShape &dst,
                 const TensorShape &times,
+                const TensorShape &dst,
                 TensorShape &src2,
-                TensorShape &dst2,
-                TensorShape &times2);
+                TensorShape &times2,
+                TensorShape &dst2);
         /**
          * This is a helper function that would facilitate other backends'
          * implementation.
          */
         size_t get_workspace_in_bytes_fwd(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst);
 };
 
 class RepeatForward: public RepeatBase {
-    DEF_OPR_IMPL(RepeatForward, RepeatBase, 1, 1);
+    DEF_OPR_IMPL(RepeatForward, RepeatBase, 2, 1);
+    DEF_OPR_PARAM(Empty);
+
     public:
         /**
          * \brief Repeat src times to get dst.
          * \param[in] src input tensor
+         * \param[in] repeat times tensor
          * \param[out] dst output tensor
          * \param[out] workspace temporary workspace
          *
@@ -721,35 +730,44 @@ class RepeatForward: public RepeatBase {
          * \see http://docs.scipy.org/doc/numpy/reference/generated/numpy.repeat.html
          * \see TileForward
          */
-        virtual void exec(_megdnn_tensor_in src,
+        virtual void exec(_megdnn_tensor_in src, 
+                _megdnn_tensor_in times,
                 _megdnn_tensor_out dst,
                 _megdnn_workspace workspace) = 0;
         void deduce_layout(const TensorLayout &src,
+                const TensorLayout &times,
                 TensorLayout &dst);
         virtual size_t get_workspace_in_bytes(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst) = 0;
     protected:
         void check_exec(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst,
                 size_t workspace_in_bytes);
 };
 using Repeat = RepeatForward;
 
 class RepeatBackward: public RepeatBase {
-    DEF_OPR_IMPL(RepeatBackward, RepeatBase, 1, 1);
+    DEF_OPR_IMPL(RepeatBackward, RepeatBase, 2, 1);
+    DEF_OPR_PARAM(Empty);
     public:
         /**
          * \param[in] diff the backpropagated gradient wrt. dst
+         * \param[in] times times tensor
          * \param[out] grad the backpropagated gradient wrt. src
          * \param[out] workspace temporary workspace
          */
         virtual void exec(_megdnn_tensor_in diff,
+                _megdnn_tensor_in times,
                 _megdnn_tensor_out grad,
                 _megdnn_workspace workspace) = 0;
         virtual size_t get_workspace_in_bytes(const TensorLayout &diff,
+                const TensorLayout &times,
                 const TensorLayout &grad) = 0;
     protected:
         void check_exec(const TensorLayout &diff,
+                const TensorLayout &times,
                 const TensorLayout &grad,
                 size_t workspace_in_bytes);
 };

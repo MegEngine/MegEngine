@@ -20,20 +20,22 @@ namespace megdnn {
 namespace fallback {
 
 size_t TileImpl::get_workspace_in_bytes(const TensorLayout &src,
+        const TensorLayout &times,
         const TensorLayout &dst)
 {
-    auto workspace_size = get_workspace_in_bytes_fwd(src, dst);
+    auto workspace_size = get_workspace_in_bytes_fwd(src, times, dst);
     return workspace_size;
 }
 
 void TileImpl::exec(_megdnn_tensor_in src_,
+        _megdnn_tensor_in times_,
         _megdnn_tensor_out dst_,
         _megdnn_workspace workspace)
 {
-    check_exec(src_.layout, dst_.layout, workspace.size);
+    check_exec(src_.layout, times_.layout, dst_.layout, workspace.size);
     TensorShape src, dst, times;
-    simplify_shape(src_.layout, dst_.layout, param().times,
-            src, dst, times);
+    simplify_shape(src_.layout, times_.layout, dst_.layout,
+            src, times, dst);
     auto nr_reduces = count_not_ones_in_shape(times);
     if (nr_reduces == 0) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(std::memcpy(dst_.raw_ptr, src_.raw_ptr,

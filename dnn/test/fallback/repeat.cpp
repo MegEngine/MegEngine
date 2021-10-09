@@ -21,7 +21,7 @@ TEST_F(FALLBACK, REPEAT)
     Checker<RepeatForward> checker(handle());
     auto args = tile_repeat::get_args();
     for (auto &&arg: args) {
-        checker.set_param(arg.param()).execs({arg.src, {}});
+        checker.execs({arg.src, arg.times, {}});
     }
 }
 

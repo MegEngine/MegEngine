@@ -19,13 +19,14 @@ namespace naive {
 
 template <typename T>
 void RepeatForwardImpl::exec_internal(_megdnn_tensor_in src,
+        _megdnn_tensor_in times,
         _megdnn_tensor_out dst,
         _megdnn_workspace /* workspace */)
 {
     auto ndim = src.layout.ndim;
     auto sptr = src.ptr<T>(), dptr = dst.ptr<T>();
     auto sshape = src.layout.shape, dshape = dst.layout.shape;
-    auto tshape = param().times.shape;
+    auto tshape = times.layout.shape;
     size_t didx[TensorShape::MAX_NDIM];
     std::memset(didx, 0, sizeof(didx));
     do {
@@ -38,15 +39,16 @@ void RepeatForwardImpl::exec_internal(_megdnn_tensor_in src,
 }
 
 void RepeatForwardImpl::exec(_megdnn_tensor_in src,
+        _megdnn_tensor_in times,
         _megdnn_tensor_out dst,
         _megdnn_workspace workspace)
 {
-    check_exec(src.layout, dst.layout, workspace.size);
+    check_exec(src.layout, times.layout, dst.layout, workspace.size);
 #define cb(DType) \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
         using ctype = typename DTypeTrait<DType>::ctype; \
         MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(src, dst, workspace)); \
+                exec_internal<ctype>(src, times, dst, workspace)); \
         return; \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
@@ -57,13 +59,14 @@ void RepeatForwardImpl::exec(_megdnn_tensor_in src,
 
 template <typename T>
 void RepeatBackwardImpl::exec_internal(_megdnn_tensor_in diff,
+        _megdnn_tensor_in times,
         _megdnn_tensor_out grad,
         _megdnn_workspace /* workspace */)
 {
     auto ndim = diff.layout.ndim;
     auto hptr = diff.ptr<T>(), gptr = grad.ptr<T>();
     auto dshape = diff.layout.shape, sshape = grad.layout.shape;
-    auto tshape = param().times.shape;
+    auto tshape = times.layout.shape;
     size_t didx[TensorShape::MAX_NDIM], sidx[TensorShape::MAX_NDIM];
     std::memset(didx, 0, sizeof(didx));
     std::memset(sidx, 0, sizeof(sidx));
@@ -78,15 +81,16 @@ void RepeatBackwardImpl::exec_internal(_megdnn_tensor_in diff,
 }
 
 void RepeatBackwardImpl::exec(_megdnn_tensor_in diff,
+        _megdnn_tensor_in times,
         _megdnn_tensor_out grad,
         _megdnn_workspace workspace)
 {
-    check_exec(diff.layout, grad.layout, workspace.size);
+    check_exec(diff.layout, times.layout, grad.layout, workspace.size);
 #define cb(DType) \
     if (diff.layout.dtype == DType()) { \
         using ctype = typename DTypeTrait<DType>::ctype; \
         MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(diff, grad, workspace)); \
+                exec_internal<ctype>(diff, times, grad, workspace)); \
         return; \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)

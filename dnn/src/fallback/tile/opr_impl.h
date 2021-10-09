@@ -18,9 +18,11 @@ class TileImpl: public naive::TileForwardImpl {
     public:
         using TileForwardImpl::TileForwardImpl;
         void exec(_megdnn_tensor_in src,
+                _megdnn_tensor_in times,
                 _megdnn_tensor_out dst,
                 _megdnn_workspace workspace) override;
         size_t get_workspace_in_bytes(const TensorLayout &src,
+                const TensorLayout &times,
                 const TensorLayout &dst) override;
 };
 

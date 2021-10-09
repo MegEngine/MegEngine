@@ -21,10 +21,8 @@ TEST_F(CUDA, REPEAT_FORWARD)
     Checker<RepeatForward> checker(handle_cuda());
     auto args = tile_repeat::get_args();
     for (auto &&arg: args) {
-        checker.set_dtype(0, dtype::Float32()).
-            set_param(arg.param()).execs({arg.src, {}});
-        checker.set_dtype(0, dtype::Float16()).
-            set_param(arg.param()).execs({arg.src, {}});
+        checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32()).execs({arg.src, arg.times, {}});
+        checker.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16()).execs({arg.src, arg.times, {}});
     }
 }
 
@@ -35,10 +33,10 @@ TEST_F(CUDA, REPEAT_BACKWARD)
     checker.set_epsilon(1e-2).set_rng(0, &rng);;
     auto args = tile_repeat::get_args();
     for (auto &&arg: args) {
-        checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32()).
-            set_param(arg.param()).execs({arg.dst, arg.src});
-        checker.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16()).
-            set_param(arg.param()).execs({arg.dst, arg.src});
+        checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32()).set_dtype(2, dtype::Float32()).
+            execs({arg.dst, arg.times, arg.src});
+        checker.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16()).set_dtype(2, dtype::Float16()).
+            execs({arg.dst, arg.times, arg.src});
     }
 }
 
