@@ -657,6 +657,25 @@ MGB_DEFINE_OPR_CLASS(PaddingBackward, intl::MegDNNOprWrapperBwd<megdnn::PaddingB
         static SymbolVar make(SymbolVar src, SymbolVar in_for_shape, const Param &param = {}, const OperatorNodeConfig &config = {});
 };
 
+/*!
+ * \brief repeat the src tensor to dst tensor
+ */
+MGB_DEFINE_OPR_CLASS(RepeatForward, intl::MegDNNOprWrapperFwd<megdnn::RepeatForward>) // {
+    public:
+        RepeatForward(VarNode* src, VarNode* times, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, SymbolVar times, const Param& param = {}, const OperatorNodeConfig &config = {});
+};
+using Repeat = RepeatForward;
+
+/*!
+ * \brief repeat backward
+ */
+MGB_DEFINE_OPR_CLASS(RepeatBackward, intl::MegDNNOprWrapperBwd<megdnn::RepeatBackward>) // {
+    public:
+        RepeatBackward(VarNode* src, VarNode* times, const Param& param, const OperatorNodeConfig& config);
+        static SymbolVar make(SymbolVar src, SymbolVar times, const Param &param = {}, const OperatorNodeConfig &config = {});
+};
+
 } // opr
 } // mgb
 

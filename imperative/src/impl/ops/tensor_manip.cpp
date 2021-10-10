@@ -418,4 +418,16 @@ OP_TRAIT_REG(Split, Split, opr::Split)
 
 } // namespace split
 
+namespace {
+namespace repeat {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& repeat = static_cast<const Repeat&>(def);
+    OperatorNodeConfig config{repeat.make_name()};
+    mgb_assert(inputs.size() == 2);
+    return opr::Repeat::make(inputs[0], inputs[1], repeat.param(), config);
+}
+OP_TRAIT_REG(Repeat, Repeat).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace repeat
+}  // namespace
+
 } // namespace mgb::imperative

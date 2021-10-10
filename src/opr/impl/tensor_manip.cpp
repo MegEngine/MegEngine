@@ -1683,4 +1683,25 @@ MEGDNN_OPR_INIT2(PaddingBackward, "padding_backward", 1, false);
 
 // f}}}
 
+/* f{{{ ======================= RepeatForward ======================= */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
+MEGDNN_OPR_INIT2(RepeatForward, "repeat")
+
+#if MGB_ENABLE_GRAD
+MGB_IMPL_OPR_GRAD(RepeatForward) {
+    mgb_assert(opr.input().size() == 2);
+    if (wrt_idx == 0) {
+        SymbolVar grad = RepeatBackward::make(out_grad[0], opr.input(1), opr.param());
+        return grad.node();
+    } else
+        return InvalidGrad::make(opr, wrt_idx);
+}
+#endif
+
+// f}}}
+
+/* f{{{ ======================= RepeatBackward ======================= */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatBackward);
+MEGDNN_OPR_INIT2(RepeatBackward, "repeat_backward", 1, false);
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

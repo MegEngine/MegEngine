@@ -422,4 +422,6 @@ def Split: MgbHashableOp<"Split", [EmptyParam]> {
 
 def Padding: MgbHashableOp<"Padding", [PaddingParam]>;
 
+def Repeat: MgbHashableOp<"Repeat", [EmptyParam]>;
+
 #endif // MGB_OPS
