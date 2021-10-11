@@ -78,7 +78,7 @@ public:
             const VarNode*, TensorShape, TensorShape, ReformatManager::ReformatKey)>;
 
     ProfilerBase() = default;
-    
+
     virtual ~ProfilerBase() = default;
 
     virtual ProfilingResult profile(const Problem& problem) const = 0;
@@ -102,13 +102,12 @@ protected:
     VarNodeFilter m_var_node_filter;
 };
 
-
 /*! \brief A default profiler impl
  */
 class ProfilerImpl : public ProfilerBase {
 public:
-    ProfilerImpl(int runs = 10, float opr_threshold = 2.f,
-                 float var_node_threshold = 2.f);
+    ProfilerImpl(
+            int runs = 10, float opr_threshold = 2.f, float var_node_threshold = 2.f);
     ~ProfilerImpl() = default;
     ProfilingResult profile(const Problem& problem) const override;
 
@@ -128,22 +127,22 @@ protected:
     OperatorNodeRecord profile_operator(
             const OperatorNodeBase* opr, TensorFormats base_format,
             const SmallVector<TensorFormats>& available_tensor_formats,
-            ReformatAttribute extra_attribute =
-                    ReformatAttribute::DEFAULT) const;
+            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
     /*!
-     * \brief prfile opr format agnostic operators (like elemwise, elemwise multi type, typecvt etc.)
+     * \brief prfile opr format agnostic operators (like elemwise, elemwise multi type,
+     * typecvt etc.)
      *
      * \param opr pointer to the operator to be profiled
      * \param base_format the original tensor format of the operator node.
      * \param tensor_format the tensor format to be profiled
-     * \param extra_attribute identify whether to use image object for OpenCL or automatically padding nhwc layout
-     * \return elapsed time of operator in the given tensor format configuration
+     * \param extra_attribute identify whether to use image object for OpenCL or
+     * automatically padding nhwc layout \return elapsed time of operator in the given
+     * tensor format configuration
      */
     virtual float profile_operator(
             const OperatorNodeBase* opr, TensorFormats base_format,
             TensorFormats tensor_format,
-            ReformatAttribute extra_attribute =
-                    ReformatAttribute::DEFAULT) const;
+            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
     /*!
      * \brief profile opr format aware operators (like conv, deconv, conv_bias,
      * etc.)
@@ -157,28 +156,29 @@ protected:
             const OperatorNodeBase* opr,
             const OprTensorFormatsConfiguration& base_config,
             const SmallVector<OprTensorFormatsConfiguration>& available_configs,
-            ReformatAttribute extra_attribute =
-                    ReformatAttribute::DEFAULT) const;
+            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
     /*!
-     * \brief prfile opr format aware operators (like conv, deconv, conv_bias, resize, warp etc.)
+     * \brief prfile opr format aware operators (like conv, deconv, conv_bias, resize,
+     * warp etc.)
      *
      * \param opr pointer to the operator to be profiled
-     * \param base_config the original opr format configuration of the operator node, 
+     * \param base_config the original opr format configuration of the operator node,
      * \param config the opr format configuration to be profiled
-     * \param extra_attribute identify whether to use image object for OpenCL or automatically padding nhwc layout
-     * \return elapsed time of operator in the given opr format configuration
+     * \param extra_attribute identify whether to use image object for OpenCL or
+     * automatically padding nhwc layout \return elapsed time of operator in the given
+     * opr format configuration
      */
-    virtual float profile_operator(const OperatorNodeBase* opr,
-                           const OprTensorFormatsConfiguration& base_config,
-                           const OprTensorFormatsConfiguration& config,
-                           ReformatAttribute extra_attribute =
-                                   ReformatAttribute::DEFAULT) const;
+    virtual float profile_operator(
+            const OperatorNodeBase* opr,
+            const OprTensorFormatsConfiguration& base_config,
+            const OprTensorFormatsConfiguration& config,
+            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
     /*!
      * \brief profile layout transform of the var node
      *
      * \param var pointer to the var node to be profiled
      * \param base_format the original tensor formats in which the var node is
-     * stored 
+     * stored
      * \param available_tensor_formats the available tensor formats
      * \param extra_attribute the extra attributes (options) of the problem
      * \return the var node record
@@ -186,27 +186,26 @@ protected:
     VarNodeRecord profile_var_node(
             const VarNode* var, TensorFormats base_format,
             const SmallVector<TensorFormats>& available_tensor_formats,
-            ReformatAttribute extra_attribute =
-                    ReformatAttribute::DEFAULT) const;
+            ReformatAttribute extra_attribute = ReformatAttribute::DEFAULT) const;
     /*!
      * \brief profile layout transform of the var node
      *
      * \param var pointer to the var node to be profiled
      * \param base_format the original tensor formats in which the var node is
      * stored
-     * \param key type of ReformatKey, identify the information/attributes of the layout transoform
-     * \return elapsed time of the layout transform
+     * \param key type of ReformatKey, identify the information/attributes of the layout
+     * transoform \return elapsed time of the layout transform
      */
-    virtual float profile_var_node(const VarNode* var,
-                                   TensorFormats base_format,
-                                   const ReformatKey& key) const;
+    virtual float profile_var_node(
+            const VarNode* var, TensorFormats base_format,
+            const ReformatKey& key) const;
     OprFootprint m_opr_footprint;
-    float m_opr_threshold;  /// a threshold, when the computation of the newly
-                            /// created operator that is built in some opr
-                            /// format configuration is as greater as
-                            /// m_opr_threshold times of the original operator,
-                            /// the opr format configuration will be skipped
-                            /// (i.e. the cost is infinite)
+    float m_opr_threshold;       /// a threshold, when the computation of the newly
+                                 /// created operator that is built in some opr
+                                 /// format configuration is as greater as
+                                 /// m_opr_threshold times of the original operator,
+                                 /// the opr format configuration will be skipped
+                                 /// (i.e. the cost is infinite)
     float m_var_node_threshold;  /// a threshold, when the memory footprint of
                                  /// the layout transform of the var node is as
                                  /// larger as m_var_node_threshold as the var
@@ -298,23 +297,26 @@ private:
 
 class CachedProfiler final : public ProfilerImpl {
 public:
-    CachedProfiler(const char* path = nullptr, int runs = 10,
-                   float opr_threshold = 2.f, float var_node_threshold = 2.f);
+    CachedProfiler(
+            const char* path = nullptr, int runs = 10, float opr_threshold = 2.f,
+            float var_node_threshold = 2.f);
     ProfilingResult profile(const Problem& problem) const override;
 
 private:
-    float profile_operator(const OperatorNodeBase* opr,
-                           TensorFormats base_format,
-                           TensorFormats tensor_format,
-                           ReformatAttribute extra_attribute =
-                                   ReformatAttribute::DEFAULT) const override;
-    float profile_operator(const OperatorNodeBase* opr,
-                           const OprTensorFormatsConfiguration& base_config,
-                           const OprTensorFormatsConfiguration& config,
-                           ReformatAttribute extra_attribute =
-                                   ReformatAttribute::DEFAULT) const override;
-    float profile_var_node(const VarNode* var, TensorFormats base_format,
-                           const ReformatKey& key) const override;
+    float profile_operator(
+            const OperatorNodeBase* opr, TensorFormats base_format,
+            TensorFormats tensor_format,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const override;
+    float profile_operator(
+            const OperatorNodeBase* opr,
+            const OprTensorFormatsConfiguration& base_config,
+            const OprTensorFormatsConfiguration& config,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const override;
+    float profile_var_node(
+            const VarNode* var, TensorFormats base_format,
+            const ReformatKey& key) const override;
     const char* m_path;
 };
 

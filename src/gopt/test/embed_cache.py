@@ -7,19 +7,21 @@
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-# 为了保证全局图优化里的 profiling 结果不受到 ci 环境的影响，所以把写死的 profiling 结果存到了 cache 里去，
-# 每次跑测试会从内存里读取 cache 里的 profiling 结果，然后根据 profiling 结果去做全局图优化。
-# 这个脚本用来把 dump 出去的 cache 文件转化成 cache 的头文件，用于测试时读取数据。
-# 如果在 src/gopt/test/layout_transform_pass.cpp 里添加了全局图优化相关的测试，则需要考虑用这个脚本来
-# 处理一下 profiling 数据。
+# 为了保证全局图优化里的 profiling 结果不受到 ci 环境的影响，所以把写死的 profiling 数据存到了 cache 里去，
+# 每次跑测试会从内存 cache 里读取 profiling 结果，然后根据 profiling 结果去做全局图优化，这样确保每次运行
+# 结果都是一致的。
+# ProfilerCache 可以支持把内存中 cache 下来的 profiling 数据 dump 成文件。
+# 这个脚本就是用于把 dump 出去的 cache 文件打包成 cache 的头文件，用于测试时读取数据，构建 InMemory 的 ProfilerCache 。
+# 如果在 src/gopt/test/layout_transform_pass.cpp 里新添加了全局图优化相关的测试，则需要考虑用这个脚本来
+# 更新 cache 头文件中的 profiling 数据。
 # 1. 首先将 src/gopt/test/layout_transform_pass.cpp 中的 `#define MGB_WITH_CACHED_TEST 1` 修改为
 # `#define MGB_WITH_CACHED_TEST 0`
 # 2. 编译megbrain_test，并运行所有全局图优化相关测试：
 #    ./megbrain_test --gtest_filter="*LayoutTransform*"
 # 3. 用这个脚本把所有的cache文件打包在一起
 #    python3 embed_cache.py -o cache_data.h $(ls /path/to/cache/*.cache)
-# 4. 将步骤1中的 define 改回去，这样 profile 过程用到的是 cache 下来的数据。随后可以重新构建 megbrain_test ，
-#    验证测试是否正确。
+# 4. 将步骤1中的 define 语句改回原样，这样 profile 过程就会使用 cache 下来的数据。
+# 5. 最后可以重新构建一下 megbrain_test ，确保测试结果正确。
 import os.path
 import logging
 import hashlib

@@ -11,8 +11,8 @@
  */
 
 #include "./opr_safe_dump.h"
-#include "megbrain/gopt/profiler.h"
 #include "megbrain/comp_node_env.h"
+#include "megbrain/gopt/profiler.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -21,9 +21,6 @@ using ReformatKey = ReformatManager::ReformatKey;
 // =================== ProfilerCache ======================
 void ProfilerCache::Key::build_blob_from_opr() {
     auto&& opr = m_key_impl.opr_key.opr;
-    // process opr type
-    auto type = opr->dyn_typeinfo()->name;
-    size_t type_size = strlen(type);
 
     // process  opr param
     auto data = intl::opr_safe_dump(opr);
@@ -32,11 +29,7 @@ void ProfilerCache::Key::build_blob_from_opr() {
     size_t nr_inputs = opr->input().size();
     size_t nr_outputs = opr->usable_output().size();
     size_t nr_layouts = nr_inputs + nr_outputs;
-    m_blob_storage.reserve(sizeof(TensorLayout) * 3 * nr_layouts + type_size +
-                           param_size);
-
-    // serialize opr type
-    m_blob_storage.append(type, type_size);
+    m_blob_storage.reserve(sizeof(TensorLayout) * 3 * nr_layouts + param_size);
 
     // serialize param
     const char* data_ptr = reinterpret_cast<const char*>(data.data());
@@ -70,12 +63,12 @@ void ProfilerCache::Key::build_blob_from_opr() {
     }
 
     // serialize opr_format
-    m_blob_storage.append(std::to_string(
-            static_cast<uint32_t>(m_key_impl.opr_key.opr_format)));
+    m_blob_storage.append(
+            std::to_string(static_cast<uint32_t>(m_key_impl.opr_key.opr_format)));
 
     // serialize extra_attribute
-    m_blob_storage.append(std::to_string(
-            static_cast<uint32_t>(m_key_impl.opr_key.extra_attribute)));
+    m_blob_storage.append(
+            std::to_string(static_cast<uint32_t>(m_key_impl.opr_key.extra_attribute)));
 }
 
 void ProfilerCache::Key::build_category(CompNode cn) {
@@ -85,8 +78,8 @@ void ProfilerCache::Key::build_category(CompNode cn) {
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA: {
             auto&& prop = env.cuda_env().device_prop;
-            m_category += ssprintf("plat=cuda;dev=%s;cap=%d.%d", prop.name,
-                                   prop.major, prop.minor);
+            m_category += ssprintf(
+                    "plat=cuda;dev=%s;cap=%d.%d", prop.name, prop.major, prop.minor);
             break;
         }
 #endif
@@ -94,9 +87,10 @@ void ProfilerCache::Key::build_category(CompNode cn) {
             m_category += "plat=cpu";
             break;
         default:
-            mgb_throw(MegBrainError,
-                      "unsupported comp node for global layout transform "
-                      "profiler cache category");
+            mgb_throw(
+                    MegBrainError,
+                    "unsupported comp node for global layout transform "
+                    "profiler cache category");
     }
 }
 
@@ -151,9 +145,10 @@ ProfilerCache& ProfilerCache::set_impl(std::unique_ptr<PersistentCache> impl) {
 }
 
 void ProfilerCache::dump_cache(const char* path) {
-    mgb_assert(m_impl->support_dump_cache(),
-               "current impl of ProfilerCache does not support dump cache to "
-               "file.");
+    mgb_assert(
+            m_impl->support_dump_cache(),
+            "current impl of ProfilerCache does not support dump cache to "
+            "file.");
     auto cache = static_cast<InFilePersistentCache*>(m_impl.get());
     cache->dump_cache(path);
 }
@@ -165,8 +160,9 @@ Maybe<ProfilerCache::Result> ProfilerCache::get(const Key& key) {
     // data type of cost is float
     auto buf = static_cast<const uint8_t*>(raw_buf->ptr);
     auto size = raw_buf->size;
-    mgb_assert(buf && size == sizeof(float),
-               "ProfileCache invalid value: ptr=%p, size=%zu", buf, size);
+    mgb_assert(
+            buf && size == sizeof(float),
+            "ProfileCache invalid value: ptr=%p, size=%zu", buf, size);
     auto read_f32 = [&]() {
         auto ret = *reinterpret_cast<const float*>(buf);
         return ret;

@@ -13,7 +13,7 @@
 
 #if defined(_WIN32)
 #include <io.h>
-#define F_OK 0
+#define F_OK         0
 #define access(a, b) _access(a, b)
 #elif __linux__ || __unix__ || __APPLE__
 #include <unistd.h>
@@ -32,8 +32,9 @@ public:
 
     template <typename T>
     void read(T& val) {
-        static_assert(std::is_trivially_copyable<T>::value,
-                      "only support trivially copyable type");
+        static_assert(
+                std::is_trivially_copyable<T>::value,
+                "only support trivially copyable type");
         mgb_assert(m_offset + sizeof(T) <= m_size);
         memcpy(&val, m_ptr, sizeof(T));
         m_offset += sizeof(T);
@@ -42,8 +43,9 @@ public:
 
     template <typename T>
     void read(T* buf, size_t size) {
-        static_assert(std::is_trivially_copyable<T>::value && sizeof(T) == 1,
-                      "only support read bytes");
+        static_assert(
+                std::is_trivially_copyable<T>::value && sizeof(T) == 1,
+                "only support read bytes");
         mgb_assert(m_offset + size <= m_size);
         memcpy(buf, m_ptr, size);
         m_offset += size;
@@ -67,20 +69,21 @@ public:
 
     template <typename T>
     void read(T& val) {
-        static_assert(std::is_trivially_copyable<T>::value,
-                      "only support trivially copyable type");
+        static_assert(
+                std::is_trivially_copyable<T>::value,
+                "only support trivially copyable type");
         auto ret = fread(&val, sizeof(T), 1, m_fp);
         mgb_assert(ret == 1);
     }
 
     template <typename T>
     void read(T* buf, size_t size) {
-        static_assert(std::is_trivially_copyable<T>::value && sizeof(T) == 1,
-                      "only support read bytes");
+        static_assert(
+                std::is_trivially_copyable<T>::value && sizeof(T) == 1,
+                "only support read bytes");
         auto ret = fread(buf, size, 1, m_fp);
         mgb_assert(ret == 1);
     }
-
 };
 
 //////////////////////// InFilePersistentCache::OutputFile ///////////////
@@ -114,8 +117,8 @@ public:
 //////////////////////// InFilePersistentCache::BlobStorage ///////////////
 
 template <typename Input>
-InFilePersistentCache::BlobStorage&
-InFilePersistentCache::BlobStorage::init_from_input(Input& inp) {
+InFilePersistentCache::BlobStorage& InFilePersistentCache::BlobStorage::init_from_input(
+        Input& inp) {
     uint32_t data_size;
     inp.read(data_size);
     size = data_size;
@@ -125,15 +128,14 @@ InFilePersistentCache::BlobStorage::init_from_input(Input& inp) {
     return *this;
 }
 
-void InFilePersistentCache::BlobStorage::write_to_file(
-        OutputFile& out_file) const {
+void InFilePersistentCache::BlobStorage::write_to_file(OutputFile& out_file) const {
     uint32_t u_size = size;
     out_file.write(u_size);
     out_file.write(data_refhold.get(), u_size);
 }
 
-InFilePersistentCache::BlobStorage&
-InFilePersistentCache::BlobStorage::init_data_ref(const Blob& b) {
+InFilePersistentCache::BlobStorage& InFilePersistentCache::BlobStorage::init_data_ref(
+        const Blob& b) {
     data_refhold = std::make_unique<uint8_t[]>(b.size + 1);
     memcpy(data_refhold.get(), b.ptr, b.size);
     data_refhold.get()[b.size] = 0;  // for C-string safety
@@ -227,8 +229,8 @@ Maybe<InFilePersistentCache::Blob> InFilePersistentCache::get(
     return iter1->second;
 }
 
-void InFilePersistentCache::put(const std::string& category, const Blob& key,
-                                const Blob& value) {
+void InFilePersistentCache::put(
+        const std::string& category, const Blob& key, const Blob& value) {
     BlobStorage key_storage;
     key_storage.init_data_ref(key).init_hash();
 

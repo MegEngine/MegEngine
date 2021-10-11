@@ -40,7 +40,7 @@ public:
             const std::string& category, const Blob& key, const Blob& value) = 0;
 
     virtual bool support_dump_cache() { return false; }
-    
+
     //! set an implementation; return the original implementation
     static std::shared_ptr<PersistentCache> set_impl(
             std::shared_ptr<PersistentCache> impl);

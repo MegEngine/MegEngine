@@ -78,8 +78,9 @@ OprFormat tensor_formats_to_opr_format(TensorFormats tensor_format) {
         case TensorFormats::CHWNc4:
             return OprFormat::CHWN4;
         default:
-            mgb_throw(MegBrainError, "tensor format(%u) is not supported",
-                      static_cast<uint32_t>(tensor_format));
+            mgb_throw(
+                    MegBrainError, "tensor format(%u) is not supported",
+                    static_cast<uint32_t>(tensor_format));
     }
 }
 
@@ -92,28 +93,28 @@ public:
     }
     ~ProfilerMock() {
         // reset in memory cache
-        ProfilerCache::inst().set_impl(
-                std::make_unique<InMemoryPersistentCache>());
+        ProfilerCache::inst().set_impl(std::make_unique<InMemoryPersistentCache>());
     }
 
 private:
-    float profile_operator(const OperatorNodeBase* opr,
-                           TensorFormats base_format,
-                           TensorFormats tensor_format,
-                           ReformatAttribute extra_attribute =
-                                   ReformatAttribute::DEFAULT) const override {
-        ProfilerCache::Key key{opr, tensor_formats_to_opr_format(tensor_format),
-                               extra_attribute};
+    float profile_operator(
+            const OperatorNodeBase* opr, TensorFormats base_format,
+            TensorFormats tensor_format,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const override {
+        ProfilerCache::Key key{
+                opr, tensor_formats_to_opr_format(tensor_format), extra_attribute};
         auto ret = ProfilerCache::inst().get(key);
         if (ret.valid())
             return ret.val();
         mgb_assert(false);
     }
-    float profile_operator(const OperatorNodeBase* opr,
-                           const OprTensorFormatsConfiguration& base_config,
-                           const OprTensorFormatsConfiguration& config,
-                           ReformatAttribute extra_attribute =
-                                   ReformatAttribute::DEFAULT) const override {
+    float profile_operator(
+            const OperatorNodeBase* opr,
+            const OprTensorFormatsConfiguration& base_config,
+            const OprTensorFormatsConfiguration& config,
+            ReformatAttribute extra_attribute =
+                    ReformatAttribute::DEFAULT) const override {
         ProfilerCache::Key key{opr, config.opr_format, extra_attribute};
         std::string tmp;
         tmp.reserve(key.blob().size);
@@ -122,8 +123,9 @@ private:
             return ret.val();
         mgb_assert(false);
     }
-    float profile_var_node(const VarNode* var, TensorFormats base_format,
-                           const ReformatKey& key) const override {
+    float profile_var_node(
+            const VarNode* var, TensorFormats base_format,
+            const ReformatKey& key) const override {
         ProfilerCache::Key pf_key{var, key};
         auto ret = ProfilerCache::inst().get(pf_key);
         if (ret.valid())
@@ -174,18 +176,17 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
             OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4,
-                         OprFormat::NHWC})
-            .add_opr_config(opr::PoolingForward::typeinfo(),
-                            {OprFormat::NCHW4, OprFormat::NCHW32,
-                             OprFormat::NHWC, OprFormat::CHWN4});
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC})
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(),
+                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
+                     OprFormat::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
-            static_cast<const uint8_t*>(
-                    TestLayoutTransform_Resnet18_QS8.data()),
+            static_cast<const uint8_t*>(TestLayoutTransform_Resnet18_QS8.data()),
             TestLayoutTransform_Resnet18_QS8.size());
 #else
     auto profiler = ProfilerBase::make_cached_profiler(
@@ -278,8 +279,7 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
                      OprFormat::NHWC, OprFormat::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
-            static_cast<const uint8_t*>(
-                    TestLayoutTransform_Resnet18_QS4.data()),
+            static_cast<const uint8_t*>(TestLayoutTransform_Resnet18_QS4.data()),
             TestLayoutTransform_Resnet18_QS4.size());
 #else
     auto profiler = ProfilerBase::make_cached_profiler(
@@ -401,8 +401,7 @@ TEST(TestLayoutTransform, Detection_QS8) {
                      OprFormat::NHWC, OprFormat::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
-            static_cast<const uint8_t*>(
-                    TestLayoutTransform_Detection_QS8.data()),
+            static_cast<const uint8_t*>(TestLayoutTransform_Detection_QS8.data()),
             TestLayoutTransform_Detection_QS8.size());
 #else
     auto profiler = ProfilerBase::make_cached_profiler(
@@ -479,8 +478,7 @@ TEST(TestLayoutTransform, Detection_QS4) {
                      OprFormat::NHWC, OprFormat::CHWN4});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
-            static_cast<const uint8_t*>(
-                    TestLayoutTransform_Detection_QS4.data()),
+            static_cast<const uint8_t*>(TestLayoutTransform_Detection_QS4.data()),
             TestLayoutTransform_Detection_QS4.size());
 #else
     auto profiler = ProfilerBase::make_cached_profiler(
@@ -553,17 +551,16 @@ TEST(TestLayoutTransform, Wide) {
             OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
             ReformatAttribute::DEFAULT};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW, OprFormat::NHWC});
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+            opr::ConvBiasForward::typeinfo(), {OprFormat::NCHW, OprFormat::NHWC});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
             static_cast<const uint8_t*>(TestLayoutTransform_Wide.data()),
             TestLayoutTransform_Wide.size());
 #else
-    auto profiler = ProfilerBase::make_cached_profiler(
-            "TestLayoutTransform.Wide.cache");
+    auto profiler =
+            ProfilerBase::make_cached_profiler("TestLayoutTransform.Wide.cache");
 #endif
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
@@ -674,8 +671,7 @@ TEST(TestLayoutTransform, DetectionHead) {
                     {OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW64});
 #if MGB_WITH_CACHED_TEST
     auto profiler = std::make_unique<ProfilerMock>(
-            static_cast<const uint8_t*>(
-                    TestLayoutTransform_DetectionHead.data()),
+            static_cast<const uint8_t*>(TestLayoutTransform_DetectionHead.data()),
             TestLayoutTransform_DetectionHead.size());
 #else
     auto profiler = ProfilerBase::make_cached_profiler(

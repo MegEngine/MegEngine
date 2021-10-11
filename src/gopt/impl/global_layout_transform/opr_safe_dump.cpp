@@ -18,6 +18,7 @@
 #include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/tensor_manip.h"
 
+#include "megbrain/utils/hash_ct.h"
 #include "midout.h"
 MIDOUT_DECL(megbrain_opr_safe_dump)
 #define MIDOUT_B(...) MIDOUT_BEGIN(megbrain_opr_safe_dump, __VA_ARGS__) {
@@ -38,24 +39,34 @@ template <>
 void write_param(std::string& /* data */, const DType& /* dtype */) {}
 
 template <class Opr>
-struct OprDumpImpl {
-    static std::string dump(const cg::OperatorNodeBase* opr_) {
-        MIDOUT_B(Opr)
-        auto&& opr = opr_->cast_final_safe<Opr>();
-        std::string data;
-        write_param(data, opr.param());
-        return data;
-        MIDOUT_E
-    }
-};
+struct OprDumpImpl;
 
-#define INST(_Opr)                                                     \
+#define cb(_Opr)                                                    \
+    template <>                                                     \
+    struct OprDumpImpl<_Opr> {                                      \
+        static std::string dump(const cg::OperatorNodeBase* opr_) { \
+            MIDOUT_B(_Opr)                                          \
+            auto&& opr = opr_->cast_final_safe<_Opr>();             \
+            std::string data;                                       \
+            auto opr_hash = MGB_HASH_STR(#_Opr);                    \
+            write_param(data, opr_hash);                            \
+            write_param(data, opr.param());                         \
+            return data;                                            \
+            MIDOUT_E                                                \
+        }                                                           \
+    };
+FOREACH_SUPPORTED_OPR_WITHOUT_EXECUTION_POLICY(cb)
+#undef cb
+
+#define cb(_Opr)                                                       \
     template <>                                                        \
     struct OprDumpImpl<_Opr> {                                         \
         static std::string dump(const cg::OperatorNodeBase* opr_) {    \
             MIDOUT_B(_Opr)                                             \
             auto&& opr = opr_->cast_final_safe<_Opr>();                \
             std::string data;                                          \
+            auto opr_hash = MGB_HASH_STR(#_Opr);                       \
+            write_param(data, opr_hash);                               \
             write_param(data, opr.param());                            \
             using ExecutionPolicy = megdnn::param::ExecutionPolicy;    \
             ExecutionPolicy policy{                                    \
@@ -66,11 +77,8 @@ struct OprDumpImpl {
             MIDOUT_E                                                   \
         }                                                              \
     };
-INST(Convolution);
-INST(ConvBiasForward);
-INST(ConvolutionBackwardData);
-INST(PoolingForward);
-#undef INST
+FOREACH_SUPPORTED_OPR_WITH_EXECUTION_POLICY(cb)
+#undef cb
 }  // namespace
 
 namespace mgb {
@@ -83,8 +91,9 @@ std::string opr_safe_dump(const cg::OperatorNodeBase* opr) {
         return OprDumpImpl<_Opr>::dump(opr);       \
     } else
     FOREACH_SUPPORTED_OPR(cb) {
-        mgb_throw(InternalError, "unsupported operator(got:%s)",
-                  opr->dyn_typeinfo()->name);
+        mgb_throw(
+                InternalError, "unsupported operator(got:%s)",
+                opr->dyn_typeinfo()->name);
     }
 #undef cb
 }

@@ -154,33 +154,30 @@ void MarkInputContiguous::init_output_static_infer_desc() {
 }  // namespace
 
 /* ================== ProfilerImpl =================*/
-ProfilerImpl::ProfilerImpl(int runs, float opr_threshold,
-                           float var_node_threshold)
+ProfilerImpl::ProfilerImpl(int runs, float opr_threshold, float var_node_threshold)
         : m_opr_threshold{opr_threshold},
           m_var_node_threshold{var_node_threshold},
           m_runs{runs} {
-    m_opr_filter = [this](const OperatorNodeBase* opr,
-                          OperatorNodeBase* new_opr) {
+    m_opr_filter = [this](const OperatorNodeBase* opr, OperatorNodeBase* new_opr) {
         /// \note: for the considerations of performance, we skip nchw(naive)
         /// kernels for conv bias on CUDA platform. to remove this later
         if (auto conv = try_cast_as_op<opr::ConvBiasForward>(new_opr)) {
             if (conv->output(0)->comp_node().device_type() ==
                         CompNode::DeviceType::CUDA &&
-                conv->input(0)->dtype().category() ==
-                        DTypeCategory::QUANTIZED &&
+                conv->input(0)->dtype().category() == DTypeCategory::QUANTIZED &&
                 conv->param().format == OprFormat::NCHW) {
                 return false;
             }
         }
-        float comp1 = m_opr_footprint.get_computation(
-                const_cast<OperatorNodeBase*>(opr));
+        float comp1 =
+                m_opr_footprint.get_computation(const_cast<OperatorNodeBase*>(opr));
         float comp2 = m_opr_footprint.get_computation(new_opr);
         if (comp2 > m_opr_threshold * comp1)
             return false;
         return true;
     };
-    m_var_node_filter = [this](const VarNode* var, TensorShape from,
-                               TensorShape to, ReformatKey key) {
+    m_var_node_filter = [this](const VarNode* var, TensorShape from, TensorShape to,
+                               ReformatKey key) {
         /// \note: due to the alignment requirement of low-bit tensor, we skip
         /// some layout transform for low-bit tensors. The skipped layout
         /// transforms do not have corresponding dnn kernel and cannot be
@@ -202,8 +199,7 @@ ProfilerImpl::ProfilerImpl(int runs, float opr_threshold,
         TensorLayout orig_ly = {var->shape(), var->dtype()},
                      from_ly = {from, var->dtype()}, to_ly = {to, var->dtype()};
         float orig_memory = orig_ly.span().dist_byte() * 2.f;
-        float reformat_memory =
-                from_ly.span().dist_byte() + to_ly.span().dist_byte();
+        float reformat_memory = from_ly.span().dist_byte() + to_ly.span().dist_byte();
         if (reformat_memory > orig_memory * m_var_node_threshold)
             return false;
         return true;
@@ -537,23 +533,20 @@ std::unique_ptr<ProfilerBase> ProfilerBase::make_profiler() {
     return std::make_unique<ProfilerImpl>();
 }
 
-std::unique_ptr<ProfilerBase> ProfilerBase::make_cached_profiler(
-        const char* path) {
+std::unique_ptr<ProfilerBase> ProfilerBase::make_cached_profiler(const char* path) {
     return std::make_unique<CachedProfiler>(path);
 }
 
 /* ================== CachedProfiler =================*/
-CachedProfiler::CachedProfiler(const char* path, int runs, float opr_threshold,
-                               float var_node_threshold)
+CachedProfiler::CachedProfiler(
+        const char* path, int runs, float opr_threshold, float var_node_threshold)
         : ProfilerImpl(runs, opr_threshold, var_node_threshold), m_path{path} {
     if (m_path != nullptr) {  // file cache
-        ProfilerCache::inst().set_impl(
-                std::make_unique<InFilePersistentCache>(m_path));
+        ProfilerCache::inst().set_impl(std::make_unique<InFilePersistentCache>(m_path));
     }
 }
 
-CachedProfiler::ProfilingResult CachedProfiler::profile(
-        const Problem& problem) const {
+CachedProfiler::ProfilingResult CachedProfiler::profile(const Problem& problem) const {
     auto ret = ProfilerImpl::profile(problem);
     if (m_path != nullptr)
         ProfilerCache::inst().dump_cache(m_path);
@@ -563,35 +556,33 @@ CachedProfiler::ProfilingResult CachedProfiler::profile(
 float CachedProfiler::profile_operator(
         const OperatorNodeBase* opr, TensorFormats base_format,
         TensorFormats tensor_format, ReformatAttribute extra_attribute) const {
-    ProfilerCache::Key key{opr, tensor_formats_to_opr_format(tensor_format),
-                           extra_attribute};
+    ProfilerCache::Key key{
+            opr, tensor_formats_to_opr_format(tensor_format), extra_attribute};
     auto ret = ProfilerCache::inst().get(key);
     if (ret.valid())
         return ret.val();
-    auto rst = ProfilerImpl::profile_operator(opr, base_format, tensor_format,
-                                   extra_attribute);
+    auto rst = ProfilerImpl::profile_operator(
+            opr, base_format, tensor_format, extra_attribute);
     ProfilerCache::inst().put(key, rst);
     return rst;
 }
 
 float CachedProfiler::profile_operator(
-        const OperatorNodeBase* opr,
-        const OprTensorFormatsConfiguration& base_config,
+        const OperatorNodeBase* opr, const OprTensorFormatsConfiguration& base_config,
         const OprTensorFormatsConfiguration& config,
         ReformatAttribute extra_attribute) const {
     ProfilerCache::Key key{opr, config.opr_format, extra_attribute};
     auto ret = ProfilerCache::inst().get(key);
     if (ret.valid())
         return ret.val();
-    auto rst = ProfilerImpl::profile_operator(opr, base_config, config,
-                                              extra_attribute);
+    auto rst =
+            ProfilerImpl::profile_operator(opr, base_config, config, extra_attribute);
     ProfilerCache::inst().put(key, rst);
     return rst;
 }
 
-float CachedProfiler::profile_var_node(const VarNode* var,
-                                       TensorFormats base_format,
-                                       const ReformatKey& key) const {
+float CachedProfiler::profile_var_node(
+        const VarNode* var, TensorFormats base_format, const ReformatKey& key) const {
     ProfilerCache::Key pf_key{var, key};
     auto ret = ProfilerCache::inst().get(pf_key);
     if (ret.valid())
