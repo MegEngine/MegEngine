@@ -102,6 +102,8 @@ LiteLogLevel lite::get_log_level() {
 }
 
 std::string lite::ssprintf(const char* format, ...) {
+    if (!format)
+        return "";
     va_list ap;
     va_start(ap, format);
     auto ret = svsprintf(format, ap);
@@ -110,6 +112,8 @@ std::string lite::ssprintf(const char* format, ...) {
 }
 
 void lite::print_log(LiteLogLevel level, const char* format, ...) {
+    if (!format)
+        return;
     if (static_cast<uint32_t>(level) < static_cast<uint32_t>(get_log_level())) {
         return;
     }

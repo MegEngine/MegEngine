@@ -22,6 +22,7 @@ _lite_type_to_nptypes = {
     LiteDataType.LITE_UINT8: np.uint8,
     LiteDataType.LITE_INT8: np.int8,
     LiteDataType.LITE_INT16: np.int16,
+    LiteDataType.LITE_UINT16: np.uint16,
     LiteDataType.LITE_HALF: np.float16,
 }
 
@@ -33,6 +34,7 @@ _str_nptypes_to_lite_nptypes = {
     np.dtype("uint8"): LiteDataType.LITE_UINT8,
     np.dtype("int8"): LiteDataType.LITE_INT8,
     np.dtype("int16"): LiteDataType.LITE_INT16,
+    np.dtype("uint16"): LiteDataType.LITE_UINT16,
     np.dtype("float16"): LiteDataType.LITE_HALF,
 }
 
@@ -43,7 +45,7 @@ ctype_to_lite_dtypes = {
     c_ubyte: LiteDataType.LITE_UINT8,
     c_byte: LiteDataType.LITE_INT8,
     c_short: LiteDataType.LITE_INT16,
-    c_ushort: LiteDataType.LITE_INT16,
+    c_ushort: LiteDataType.LITE_UINT16,
 }
 
 
@@ -83,7 +85,7 @@ class LiteLayout(Structure):
 
     def __repr__(self):
         data = {
-            "shapes": list(self.shapes),
+            "shapes": list(self.shapes)[0 : self.ndim],
             "ndim": self.ndim,
             "data_type": _lite_type_to_nptypes[LiteDataType(self.data_type)],
         }

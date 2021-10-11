@@ -31,6 +31,7 @@ class LiteDataType(IntEnum):
     LITE_INT16 = 3
     LITE_INT8 = 4
     LITE_UINT8 = 5
+    LITE_UINT16 = 6
 
 
 class LiteTensorPhase(IntEnum):

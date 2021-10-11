@@ -90,6 +90,11 @@ TEST(TestNetWork, GetAllName) {
     auto input_names = network->get_all_input_name();
     auto output_names = network->get_all_output_name();
 
+    auto output_tensor = network->get_output_tensor(0);
+    auto out_layout = output_tensor->get_layout();
+    ASSERT_EQ(out_layout.ndim, 2);
+    ASSERT_EQ(out_layout.shapes[0], 1);
+    ASSERT_EQ(out_layout.shapes[1], 1000);
     ASSERT_EQ(input_names.size(), 1);
     ASSERT_EQ(output_names.size(), 1);
     ASSERT_TRUE(input_names[0] == "data");

@@ -488,6 +488,13 @@ public:
      */
     MemAllocPlan& init_mem_plan(const DeviceTensorND* fixed_alloc = nullptr);
 
+    /*!
+     * \brief get the shape and value infer trait
+     */
+    const std::tuple<void*, void*>& get_static_infer_trait() {
+        return m_static_infer_trait;
+    }
+
 private:
     //! whether its memory should be allocated by mgb system during graph
     //! execution; initialized in VarNodeMemManager::reset_opr_seq()

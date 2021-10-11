@@ -100,6 +100,9 @@ LTensorLayout lite::to_impl_layout(const Layout& layout) {
         case LiteDataType::LITE_INT16:
             mge_layout.dtype = mgb::dtype::Int16();
             break;
+        case LiteDataType::LITE_UINT16:
+            mge_layout.dtype = mgb::dtype::Uint16();
+            break;
         default:
             LITE_THROW(mgb::ssprintf(
                     "unsupport dtype in lite enum id is %d.",
@@ -132,6 +135,9 @@ Layout lite::to_lite_layout(const LTensorLayout& mge_layout) {
             break;
         case mgb::DTypeEnum::Int16:
             layout.data_type = LiteDataType::LITE_INT16;
+            break;
+        case mgb::DTypeEnum::Uint16:
+            layout.data_type = LiteDataType::LITE_UINT16;
             break;
         case mgb::DTypeEnum::Int8:
             layout.data_type = LiteDataType::LITE_INT8;

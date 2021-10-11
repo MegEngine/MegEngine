@@ -201,6 +201,10 @@ private:
     //! compile the graph to get the execute function
     void compile_graph();
 
+    //! try to infer output tensor layout
+    void try_infer_tensor_layout(
+            std::shared_ptr<Tensor> tensor, mgb::cg::SymbolVar var);
+
 private:
     bool m_async = false;
     bool m_is_cpu_inplace_mode = false;
