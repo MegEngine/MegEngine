@@ -1084,12 +1084,18 @@ def layer_norm(
     weight: Optional[Tensor] = None,
     bias: Optional[Tensor] = None,
     eps: float = 1e-5,
-    eps_mode="additive",
 ):
-
-    assert eps_mode.lower() in {"max", "additive"}, "unknown eps_mode: {}".format(
-        eps_mode
-    )
+    r"""Applies layer normalization to the input. Support tensor of any shape as input.
+    Reference: https://arxiv.org/pdf/1803.08494.pdf.
+    
+    Args:
+        inp: input tensor.
+        normalized_shape: the shape that you want to be normalizated 
+        affine: whether to use weight and bias
+        weight: must not be None when the affine is true
+        bias: must not be None when the bias is true
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+    """
 
     if amp._enabled:
         inp, weight, bias = cast_tensors(inp, weight, bias, promote=True)
