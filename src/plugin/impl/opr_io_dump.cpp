@@ -39,8 +39,8 @@ double as_double(megdnn::dt_qint32& a) {
 }
 
 template <typename ctype>
-void do_print_host_val(FILE* fout, size_t max_nr_print,
-                       const megdnn::TensorND& val, bool print_stat) {
+void do_print_host_val(
+        FILE* fout, size_t max_nr_print, const megdnn::TensorND& val, bool print_stat) {
     bool first = true;
     fprintf(fout, "[");
     size_t nr_print = 0;
@@ -60,8 +60,7 @@ void do_print_host_val(FILE* fout, size_t max_nr_print,
     if (!print_stat)
         return;
 
-    ctype min(megdnn::DTypeTrait<ctype>::max()),
-            max(megdnn::DTypeTrait<ctype>::min());
+    ctype min(megdnn::DTypeTrait<ctype>::max()), max(megdnn::DTypeTrait<ctype>::min());
     double sum1 = 0, sum2 = 0;
     auto update = [&](ctype i) {
         min = std::min(i, min);
@@ -80,8 +79,8 @@ void do_print_host_val(FILE* fout, size_t max_nr_print,
             update(i);
         }
     }
-    fprintf(fout, "min=%.3g max=%.3g mean=%.3g l2=%.3g", as_double(min),
-            as_double(max), sum1 / nr, std::sqrt(sum2 / nr));
+    fprintf(fout, "min=%.3g max=%.3g mean=%.3g l2=%.3g", as_double(min), as_double(max),
+            sum1 / nr, std::sqrt(sum2 / nr));
     if (nr > 1) {
         fprintf(fout, " sd=%.3g",
                 std::sqrt((sum2 * nr - sum1 * sum1) / (nr * (nr - 1))));
@@ -90,21 +89,23 @@ void do_print_host_val(FILE* fout, size_t max_nr_print,
     }
 };
 
-void print_host_val(FILE* fout, size_t max_nr_print,
-                    const megdnn::TensorND& val, bool print_stat = false) {
+void print_host_val(
+        FILE* fout, size_t max_nr_print, const megdnn::TensorND& val,
+        bool print_stat = false) {
     switch (val.layout.dtype.enumv()) {
-#define cb(_dt)                                                              \
-    case DTypeTrait<_dt>::enumv:                                             \
-        return do_print_host_val<DTypeTrait<_dt>::ctype>(fout, max_nr_print, \
-                                                         val, print_stat);
+#define cb(_dt)                                           \
+    case DTypeTrait<_dt>::enumv:                          \
+        return do_print_host_val<DTypeTrait<_dt>::ctype>( \
+                fout, max_nr_print, val, print_stat);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
         default:
-            mgb_throw(MegBrainError,
-                      "can not handle dtype %s in "
-                      "print_host_val",
-                      val.layout.dtype.name());
+            mgb_throw(
+                    MegBrainError,
+                    "can not handle dtype %s in "
+                    "print_host_val",
+                    val.layout.dtype.name());
     }
 };
 
@@ -123,10 +124,11 @@ struct OprIODumpBase::VarRecorderLazySync {
             if (!m_cn.valid()) {
                 m_cn = cn;
             } else {
-                mgb_assert(m_cn == cn,
-                           "there should be only one comp node in recorder "
-                           "mode, got %s vs %s",
-                           m_cn.to_string().c_str(), cn.to_string().c_str());
+                mgb_assert(
+                        m_cn == cn,
+                        "there should be only one comp node in recorder "
+                        "mode, got %s vs %s",
+                        m_cn.to_string().c_str(), cn.to_string().c_str());
             }
         }
 
@@ -142,8 +144,7 @@ struct OprIODumpBase::VarRecorderLazySync {
     HostTensorND val;
     std::string name;
 
-    explicit VarRecorderLazySync(VarNode* var)
-            : id{var->id()}, name{var->name()} {
+    explicit VarRecorderLazySync(VarNode* var) : id{var->id()}, name{var->name()} {
         sync_value_from(var);
     }
 
@@ -152,11 +153,12 @@ struct OprIODumpBase::VarRecorderLazySync {
         if (!prev_layout.ndim) {
             prev_layout = dv.layout();
         } else {
-            mgb_assert(prev_layout.eq_layout(dv.layout()),
-                       "tensor layout is not allowed to change in recording "
-                       "mode with OprIODump plugin: var=%s layout: %s vs %s",
-                       var->cname(), prev_layout.to_string().c_str(),
-                       dv.layout().to_string().c_str());
+            mgb_assert(
+                    prev_layout.eq_layout(dv.layout()),
+                    "tensor layout is not allowed to change in recording "
+                    "mode with OprIODump plugin: var=%s layout: %s vs %s",
+                    var->cname(), prev_layout.to_string().c_str(),
+                    dv.layout().to_string().c_str());
         }
         if (!dv.layout().is_contiguous()) {
             dv_contig.copy_from(dv);
@@ -173,8 +175,7 @@ OprIODumpBase::OprIODumpBase(cg::ComputingGraph* graph) : PluginBase(graph) {
         for (VarNode* var : event.opr->output()) {
             if (!var->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
                 auto run = [this, var]() {
-                    dump_var(var, m_owner_graph->options()
-                                          .comp_node_seq_record_level);
+                    dump_var(var, m_owner_graph->options().comp_node_seq_record_level);
                 };
                 event.env->dispatch_on_comp_node(var->comp_node(), run);
             }
@@ -231,8 +232,8 @@ public:
     void flush(TextOprIODump* iodump) const;
 };
 
-TextOprIODump::TextOprIODump(cg::ComputingGraph* graph,
-                             const std::shared_ptr<FILE>& fout)
+TextOprIODump::TextOprIODump(
+        cg::ComputingGraph* graph, const std::shared_ptr<FILE>& fout)
         : OprIODumpBase(graph), m_fout(fout) {}
 
 void TextOprIODump::LazyValueRecorder::flush(TextOprIODump* iodump) const {
@@ -245,8 +246,7 @@ void TextOprIODump::LazyValueRecorder::flush(TextOprIODump* iodump) const {
                 opr->type->name);
         for (auto&& ovar : opr->outputs) {
             fprintf(fout, "  var%zu: name=%s ", ovar.id, ovar.name.c_str());
-            print_host_val(fout, iodump->m_max_size, ovar.val.as_megdnn(),
-                           true);
+            print_host_val(fout, iodump->m_max_size, ovar.val.as_megdnn(), true);
             fprintf(fout, "\n");
         }
     }
@@ -272,11 +272,10 @@ void TextOprIODump::dump_var(VarNode* var, bool lazy_sync) {
     }
 
     if (print_var_produce) {
-        fprintf(fout,
-                "var%zd produced: name=%s layout=%s owner_opr=%s{%s} opr%zd\n",
+        fprintf(fout, "var%zd produced: name=%s layout=%s owner_opr=%s{%s} opr%zd\n",
                 var->id(), var->cname(),
-                valid ? var->layout().to_string().c_str() : "<invalid>",
-                opr->cname(), opr->dyn_typeinfo()->name, opr->id());
+                valid ? var->layout().to_string().c_str() : "<invalid>", opr->cname(),
+                opr->dyn_typeinfo()->name, opr->id());
     }
 
     if (!valid || !print_var_produce)
@@ -341,8 +340,7 @@ void TextOprIODump::dump_var(VarNode* var, bool lazy_sync) {
             } else if (dep_type & DT::HOST_VALUE) {
                 fprintf(fout, " <host value[%c]> ",
                         cg::is_static_var_value(var) ? 's' : 'd');
-                print_host_val(fout, m_max_size,
-                               mgr.infer_value(var).as_megdnn());
+                print_host_val(fout, m_max_size, mgr.infer_value(var).as_megdnn());
             } else {
                 mgb_assert(dep_type == DT::DEV_COMP_ORDER);
                 fprintf(fout, " <dev comp order>");
@@ -390,14 +388,12 @@ public:
         auto out_dir = iodump->m_output_dir.c_str();
         for (auto&& i : m_vals) {
             auto value = debug::dump_tensor(i.val, i.name);
-            debug::write_to_file(ssprintf("%s%06zx", out_dir, i.id).c_str(),
-                                 value);
+            debug::write_to_file(ssprintf("%s%06zx", out_dir, i.id).c_str(), value);
         }
     }
 };
 
-BinaryOprIODump::BinaryOprIODump(cg::ComputingGraph* graph,
-                                 std::string output_dir)
+BinaryOprIODump::BinaryOprIODump(cg::ComputingGraph* graph, std::string output_dir)
         : OprIODumpBase(graph), m_output_dir{std::move(output_dir)} {
     if (m_output_dir.back() != '/') {
         m_output_dir += '/';
@@ -405,12 +401,12 @@ BinaryOprIODump::BinaryOprIODump(cg::ComputingGraph* graph,
 }
 
 void BinaryOprIODump::dump_var(VarNode* var, bool lazy_sync) {
-    auto do_dump = [ this, fid = var->id(), lazy_sync ](
-            VarNode * var, const char* prefix, const char* suffix) {
-        auto title =
-                ssprintf("%svar=%s owner_opr_inputs=%s", prefix,
-                         cg::dump_var_info({var}).c_str(),
-                         cg::dump_var_info(var->owner_opr()->input()).c_str());
+    auto do_dump = [this, fid = var->id(), lazy_sync](
+                           VarNode* var, const char* prefix, const char* suffix) {
+        auto title = ssprintf(
+                "%svar=%s owner_opr_inputs=%s", prefix,
+                cg::dump_var_info({var}).c_str(),
+                cg::dump_var_info(var->owner_opr()->input()).c_str());
         if (lazy_sync) {
             if (!m_lazy_value) {
                 m_lazy_value = std::make_unique<LazyValueRecorder>();
@@ -420,8 +416,7 @@ void BinaryOprIODump::dump_var(VarNode* var, bool lazy_sync) {
         }
         auto value = debug::dump_tensor(var->dev_tensor(), title);
         debug::write_to_file(
-                ssprintf("%s%06zx%s", m_output_dir.c_str(), fid, suffix)
-                        .c_str(),
+                ssprintf("%s%06zx%s", m_output_dir.c_str(), fid, suffix).c_str(),
                 value);
     };
     if (var->dev_tensor_valid()) {

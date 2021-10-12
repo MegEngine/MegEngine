@@ -23,40 +23,34 @@ public:
     using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
     using NCBKernIndex = fallback::ConvBiasImpl::NCBKernIndex;
 
-    using kern_direct_conv_f32 =
-            std::function<void(const compute_ctype* src,
-                               const compute_ctype* filter, compute_ctype* dst,
-                               size_t, size_t, size_t, size_t, size_t, size_t)>;
+    using kern_direct_conv_f32 = std::function<void(
+            const compute_ctype* src, const compute_ctype* filter, compute_ctype* dst,
+            size_t, size_t, size_t, size_t, size_t, size_t)>;
     using kern_direct_conv_f32_stride = std::function<void(
-            const compute_ctype* src, const compute_ctype* filter,
-            compute_ctype* dst, size_t, size_t, size_t, size_t, size_t)>;
+            const compute_ctype* src, const compute_ctype* filter, compute_ctype* dst,
+            size_t, size_t, size_t, size_t, size_t)>;
 
-    static WorkspaceBundle get_bundle(const NCBKernSizeParam& param,
-                                      bool m_large_group);
-    static WorkspaceBundle get_bundle_stride(const NCBKernSizeParam& param,
-                                             bool m_large_group);
-    static void weight_flip_kern(const WorkspaceBundle& bundle,
-                                 const NCBKernParam& kern_param,
-                                 const NCBKernIndex& ncb_index,
-                                 const CpuNDRange& workspace_ids);
-    static void copy_padding_kern(const WorkspaceBundle& bundle,
-                                  const NCBKernParam& kern_param,
-                                  const NCBKernIndex& ncb_index,
-                                  const CpuNDRange& workspace_ids);
-    static void copy_padding_kern_stride(const WorkspaceBundle& bundle,
-                                         const NCBKernParam& kern_param,
-                                         const NCBKernIndex& ncb_index,
-                                         const CpuNDRange& workspace_ids);
-    static void do_conv_kern(const WorkspaceBundle& bundle,
-                             const NCBKernParam& kern_param,
-                             const NCBKernIndex& ncb_index,
-                             const kern_direct_conv_f32& fun,
-                             const CpuNDRange& workspace_ids);
-    static void do_conv_kern_stride(const WorkspaceBundle& bundle,
-                                    const NCBKernParam& kern_param,
-                                    const NCBKernIndex& ncb_index,
-                                    const kern_direct_conv_f32_stride& fun,
-                                    const CpuNDRange& workspace_ids);
+    static WorkspaceBundle get_bundle(
+            const NCBKernSizeParam& param, bool m_large_group);
+    static WorkspaceBundle get_bundle_stride(
+            const NCBKernSizeParam& param, bool m_large_group);
+    static void weight_flip_kern(
+            const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+            const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids);
+    static void copy_padding_kern(
+            const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+            const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids);
+    static void copy_padding_kern_stride(
+            const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+            const NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids);
+    static void do_conv_kern(
+            const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+            const NCBKernIndex& ncb_index, const kern_direct_conv_f32& fun,
+            const CpuNDRange& workspace_ids);
+    static void do_conv_kern_stride(
+            const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+            const NCBKernIndex& ncb_index, const kern_direct_conv_f32_stride& fun,
+            const CpuNDRange& workspace_ids);
 };
 
 }  // namespace arm_common

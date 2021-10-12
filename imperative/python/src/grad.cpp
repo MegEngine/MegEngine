@@ -12,9 +12,9 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 #include "./grad.h"
-#include "megbrain/imperative/proxy_graph_detail.h"
 #include "megbrain/imperative/backward_graph_opt.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/proxy_graph_detail.h"
 #include "megbrain/utils/mempool.h"
 
 #include "range/v3/all.hpp"
@@ -37,7 +37,8 @@ struct GradSlotWeakPtr {
 std::shared_ptr<OptimizedBackwardGraphResult> make_backward_graph(
         ApplyContext& ctx, const apply_result_t& outputs) {
     // hash
-    using OptimizedBackwardGraphCache = OpMethResultCache<std::shared_ptr<OptimizedBackwardGraphResult>, SmallVector<bool>>;
+    using OptimizedBackwardGraphCache = OpMethResultCache<
+            std::shared_ptr<OptimizedBackwardGraphResult>, SmallVector<bool>>;
     thread_local OptimizedBackwardGraphCache cache;
     decltype(cache)::key_t cache_key{ctx.op};
     SmallVector<LogicalTensorDesc>& input_descs = cache_key.inputs;
@@ -73,8 +74,9 @@ struct BackwardGraphWithClosure {
     size_t output_mask_offset;
     size_t grad_mask_offset;
 
-    BackwardGraphWithClosure(std::shared_ptr<OptimizedBackwardGraphResult> backward_graph_,
-                             ApplyContext& ctx, const apply_result_t& outputs)
+    BackwardGraphWithClosure(
+            std::shared_ptr<OptimizedBackwardGraphResult> backward_graph_,
+            ApplyContext& ctx, const apply_result_t& outputs)
             : backward_graph(backward_graph_),
               output_mask_offset(ctx.nargs),
               grad_mask_offset(ctx.nargs + outputs.size()) {
@@ -92,12 +94,11 @@ struct BackwardGraphWithClosure {
         //     b.requires_grad == False, save_for_backward = [0, 1, 0, 1]
         auto& save_for_backward = backward_graph->save_for_backward;
         mgb_assert(save_for_backward.size() == ctx.nargs + 2 * outputs.size());
-        size_t count = std::count_if(save_for_backward.begin(),
-                                     save_for_backward.end(),
-                                     ranges::identity{});
+        size_t count = std::count_if(
+                save_for_backward.begin(), save_for_backward.end(), ranges::identity{});
         if (!backward_graph->precomp.empty()) {
             auto&& irng = ranges::span(ctx.args, ctx.nargs);
-            auto&& orng = views::transform(outputs, [](auto&& i){return i.get();});
+            auto&& orng = views::transform(outputs, [](auto&& i) { return i.get(); });
             auto precomp = apply(backward_graph->precomp, views::concat(irng, orng));
             closure.reserve(precomp.size() + count);
             std::copy(precomp.begin(), precomp.end(), std::back_inserter(closure));
@@ -137,7 +138,8 @@ struct BackwardGraphWithClosure {
                 }
             }
         }
-        if (null_grad) return;
+        if (null_grad)
+            return;
 
         auto igrads = apply(backward_graph->backward, args, nargs);
         auto&& it = igrads.begin();
@@ -149,9 +151,7 @@ struct BackwardGraphWithClosure {
         }
     }
 
-    bool input_has_grad(size_t i) {
-        return backward_graph->input_has_grad[i];
-    }
+    bool input_has_grad(size_t i) { return backward_graph->input_has_grad[i]; }
 
     bool output_requires_grad(size_t i) {
         return backward_graph->save_for_backward[grad_mask_offset + i];
@@ -166,8 +166,7 @@ struct PythonBackward {
     py::object pyfunc;
     size_t input_size;
 
-    PythonBackward(py::object f, size_t nin)
-            : pyfunc(f), input_size(nin) {}
+    PythonBackward(py::object f, size_t nin) : pyfunc(f), input_size(nin) {}
 
     template <typename T, typename R>
     void operator()(BackwardContext& ctx, T&& grads, R&& receiver) {
@@ -176,12 +175,16 @@ struct PythonBackward {
             auto&& g = grads[i];
             args[i] = g ? ctx.wrap_tensor(g) : py::none();
         }
-        auto input_grads = py::reinterpret_steal<py::object>(PyObject_Call(pyfunc.ptr(), args.ptr(), nullptr));
-        if (!input_grads) throw py::error_already_set();
-        if (input_grads.is_none()) return;
+        auto input_grads = py::reinterpret_steal<py::object>(
+                PyObject_Call(pyfunc.ptr(), args.ptr(), nullptr));
+        if (!input_grads)
+            throw py::error_already_set();
+        if (input_grads.is_none())
+            return;
         if (auto* tw = TensorWrapper::try_cast(input_grads.ptr())) {
             if (input_size != 1) {
-                throw py::value_error("custom grad rule returned wrong number of grads");
+                throw py::value_error(
+                        "custom grad rule returned wrong number of grads");
             }
             if (!ctx.pytype) {
                 ctx.pytype = Py_TYPE(input_grads.ptr());
@@ -193,7 +196,8 @@ struct PythonBackward {
             throw py::value_error("custom grad rule returned wrong number of grads");
         }
         for (auto [i, g] : views::enumerate(input_grads)) {
-            if (g.is_none()) continue;
+            if (g.is_none())
+                continue;
             auto* tw = TensorWrapper::try_cast(g.ptr());
             if (!tw) {
                 throw py::type_error("custom grad rule returned non-tensor");
@@ -205,18 +209,19 @@ struct PythonBackward {
         }
     }
 
-    static constexpr bool input_has_grad(size_t) {return true;}
-    static constexpr bool output_requires_grad(size_t) {return true;}
-    static constexpr bool output_captured(size_t) {return true;}
+    static constexpr bool input_has_grad(size_t) { return true; }
+    static constexpr bool output_requires_grad(size_t) { return true; }
+    static constexpr bool output_captured(size_t) { return true; }
 };
 
-} // namespace
+}  // namespace
 
 struct GradProducerRecord : intrusive_list::Node<GradProducerRecord> {
     using Base = intrusive_list::Node<GradProducerRecord>;
 
     GradProducerRecord() = default;
-    GradProducerRecord(GradProducerRecord::head_t& head) : Base(intrusive_list::after_t{}, head) {}
+    GradProducerRecord(GradProducerRecord::head_t& head)
+            : Base(intrusive_list::after_t{}, head) {}
     // GradProducerRecord(GradProducerRecord&&) = default;
     // GradProducerRecord& operator=(GradProducerRecord&) = default;
     // GradProducerRecord& operator=(GradProducerRecord&&) = default;
@@ -232,7 +237,8 @@ struct GradSlotProducerPtr : GradSlotPtr {
     GradProducerRecord producer_record;
 
     GradSlotProducerPtr() = default;
-    GradSlotProducerPtr(GradInfo& info) : GradSlotPtr(info), producer_record(info->producer_head) {}
+    GradSlotProducerPtr(GradInfo& info)
+            : GradSlotPtr(info), producer_record(info->producer_head) {}
 };
 
 struct GradFn : std::enable_shared_from_this<GradFn> {
@@ -246,13 +252,13 @@ struct GradFn : std::enable_shared_from_this<GradFn> {
     // same length as inputs (of forward op)
     SmallVector<GradSlotProducerPtr> dsts;
     // encapsules actual function to compute gradient
-    std::variant<std::monostate, BackwardGraphWithClosure, PythonBackward, CustomBackward> backward;
+    std::variant<
+            std::monostate, BackwardGraphWithClosure, PythonBackward, CustomBackward>
+            backward;
     // a flag used during backward
     bool in_ref_keeper = false;
 
-    static void deleter(GradFn* ptr) {
-        pool.free(ptr);
-    }
+    static void deleter(GradFn* ptr) { pool.free(ptr); }
 
     static std::shared_ptr<GradFn> make() {
         return std::shared_ptr<GradFn>(pool.alloc(), &deleter);
@@ -289,7 +295,7 @@ class GradFnHelper {
     friend apply_result_t imperative::python::apply_grad(ApplyContext&);
 
 public:
-    template<typename T, typename... Args>
+    template <typename T, typename... Args>
     auto& emplace(Args&&... args) {
         return get()->backward.emplace<T>(std::forward<Args>(args)...);
     }
@@ -319,7 +325,8 @@ apply_result_t backward_graph_grad_rule(ApplyContext& ctx, GradFnHelper& ret_gra
     if (!backward_graph) {
         return outputs;
     }
-    ret_grad_fn.emplace<BackwardGraphWithClosure>(std::move(backward_graph), ctx_dup, outputs);
+    ret_grad_fn.emplace<BackwardGraphWithClosure>(
+            std::move(backward_graph), ctx_dup, outputs);
 
     return outputs;
 }
@@ -331,8 +338,10 @@ apply_result_t python_grad_rule(ApplyContext& ctx, GradFnHelper& ret_grad_fn) {
         pyin[i] = TensorWrapper::make(ctx.pytype, ctx.args[i]->shared_from_this());
     }
     auto grad_rule = py::getattr(op->obj, "_grad_rule");
-    auto pyret = py::reinterpret_steal<py::object>(PyObject_Call(grad_rule.ptr(), pyin.ptr(), nullptr));
-    if (!pyret) throw py::error_already_set();
+    auto pyret = py::reinterpret_steal<py::object>(
+            PyObject_Call(grad_rule.ptr(), pyin.ptr(), nullptr));
+    if (!pyret)
+        throw py::error_already_set();
     auto [outputs, backward] = py::cast<std::tuple<py::object, py::function>>(pyret);
     ret_grad_fn.emplace<PythonBackward>(std::move(backward), ctx.nargs);
     if (auto* tw = TensorWrapper::try_cast(outputs.ptr())) {
@@ -348,7 +357,7 @@ apply_result_t python_grad_rule(ApplyContext& ctx, GradFnHelper& ret_grad_fn) {
     return ret;
 }
 
-} // namespace
+}  // namespace
 
 apply_result_t apply_grad(ApplyContext& ctx) {
     std::unordered_set<std::shared_ptr<GradKey>> grad_keys;
@@ -356,9 +365,10 @@ apply_result_t apply_grad(ApplyContext& ctx) {
         auto* tensor = ctx.args[i];
         if (!tensor->m_grad_info_dict.empty()) {
             size_t grad_cnt = 0;
-            for (auto&& grad_info: tensor->m_grad_info_dict) {
+            for (auto&& grad_info : tensor->m_grad_info_dict) {
                 auto input_grad_key = grad_info.grad_fn->key.lock();
-                if (input_grad_key && input_grad_key->active && !input_grad_key->is_blocked()) {
+                if (input_grad_key && input_grad_key->active &&
+                    !input_grad_key->is_blocked()) {
                     grad_keys.insert(input_grad_key);
                     grad_cnt++;
                 }
@@ -406,45 +416,54 @@ apply_result_t apply_grad(ApplyContext& ctx) {
         return outputs;
     }
 
-    for (auto&& grad_key: grad_keys) {
+    for (auto&& grad_key : grad_keys) {
         auto grad_fn = std::make_shared<GradFn>();
         grad_fn->backward = grad_fn_holder.grad_fn->backward;
         grad_fn->key = grad_key;
         grad_fn->slots.resize(outputs.size());
         grad_fn->dsts.reserve(ctx.nargs);
 
-        std::visit([&](auto& backward) {
-            using T = std::decay_t<decltype(backward)>;
-            if constexpr (std::is_same_v<T, std::monostate>) {
-                mgb_assert(0);
-            } else {
-                for (size_t i = 0; i < ctx.nargs; ++i) {
-                    if (backward.input_has_grad(i) && input_requires_grad(ctx, i) && ctx.args[i]->m_grad_info_dict.count(grad_key.get())) {
-                        auto& input_grad_info = ctx.args[i]->m_grad_info_dict.at(grad_key.get());
-                        grad_fn->dsts.emplace_back(input_grad_info);
-                        // register as grad producer
-                        grad_fn->dsts.back().producer_record.insert_after(input_grad_info->producer_head);
+        std::visit(
+                [&](auto& backward) {
+                    using T = std::decay_t<decltype(backward)>;
+                    if constexpr (std::is_same_v<T, std::monostate>) {
+                        mgb_assert(0);
                     } else {
-                        grad_fn->dsts.emplace_back();
-                    }
-                }
-                for (size_t i = 0; i < outputs.size(); ++i) {
-                    if (backward.output_requires_grad(i)) {
-                        if (backward.output_captured(i)) {
-                            // avoid reference cycle [Tensor <-> GradFn]
-                            static std::shared_ptr<OpDef> op = std::make_shared<FastpathCopy>();
-                            outputs[i] = python::apply(op, outputs[i])[0];
+                        for (size_t i = 0; i < ctx.nargs; ++i) {
+                            if (backward.input_has_grad(i) &&
+                                input_requires_grad(ctx, i) &&
+                                ctx.args[i]->m_grad_info_dict.count(grad_key.get())) {
+                                auto& input_grad_info =
+                                        ctx.args[i]->m_grad_info_dict.at(
+                                                grad_key.get());
+                                grad_fn->dsts.emplace_back(input_grad_info);
+                                // register as grad producer
+                                grad_fn->dsts.back().producer_record.insert_after(
+                                        input_grad_info->producer_head);
+                            } else {
+                                grad_fn->dsts.emplace_back();
+                            }
                         }
-                        // populate grad info of output tensor
-                        auto& grad_info = outputs[i]->m_grad_info_dict[grad_key.get()];
-                        grad_info.grad_fn = grad_fn;
-                        grad_info.idx = i;
-                        grad_info.insert_after(grad_key->free_vars_head);
-                        outputs[i]->m_flags |= Flags::GRAD;
+                        for (size_t i = 0; i < outputs.size(); ++i) {
+                            if (backward.output_requires_grad(i)) {
+                                if (backward.output_captured(i)) {
+                                    // avoid reference cycle [Tensor <-> GradFn]
+                                    static std::shared_ptr<OpDef> op =
+                                            std::make_shared<FastpathCopy>();
+                                    outputs[i] = python::apply(op, outputs[i])[0];
+                                }
+                                // populate grad info of output tensor
+                                auto& grad_info =
+                                        outputs[i]->m_grad_info_dict[grad_key.get()];
+                                grad_info.grad_fn = grad_fn;
+                                grad_info.idx = i;
+                                grad_info.insert_after(grad_key->free_vars_head);
+                                outputs[i]->m_flags |= Flags::GRAD;
+                            }
+                        }
                     }
-                }
-            }
-        }, grad_fn->backward);
+                },
+                grad_fn->backward);
 
         // record forward history
         grad_key->tape.emplace_back(grad_fn);
@@ -461,7 +480,7 @@ void GradKeyWrapper::set_priority(pybind11::handle priority) {
     m_key->priority = py::cast<int>(priority);
 }
 
-void GradKeyWrapper::attach(PyObject*const* args, size_t nargs) {
+void GradKeyWrapper::attach(PyObject* const* args, size_t nargs) {
     if (nargs != 2) {
         throw py::type_error("expect 2 arguments");
     }
@@ -500,17 +519,19 @@ void GradKey::attach(Tensor* tensor, pybind11::object callback) {
     tensor->m_grad_info_dict.at(this).grad_fn->slots[0].callback = std::move(callback);
 }
 
-template<typename T>
+template <typename T>
 void accum_grad(std::shared_ptr<Tensor>& grad, T&& delta) {
     if (!grad) {
         grad = std::forward<T>(delta);
         return;
     }
-    static std::shared_ptr<OpDef> op = std::shared_ptr<OpDef>(new Elemwise(Elemwise::Mode::ADD));
+    static std::shared_ptr<OpDef> op =
+            std::shared_ptr<OpDef>(new Elemwise(Elemwise::Mode::ADD));
     grad = apply(op, grad, std::forward<T>(delta))[0];
 }
 
-void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
+void GradKey::backward(
+        std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
     if (!active) {
         throw py::value_error("finalized");
     }
@@ -533,7 +554,8 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
         }
     } _cleanup_guard(this);
 
-    if (tape.empty()) return;
+    if (tape.empty())
+        return;
 
     BackwardContext bctx;
     if (!grads.empty()) {
@@ -554,7 +576,8 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
     // back-propagation in reverse order
     for (std::ptrdiff_t k = tape.size() - 1; k >= 0; --k) {
         auto&& grad_fn = tape[k].lock();
-        if (!grad_fn) continue;
+        if (!grad_fn)
+            continue;
 
         auto grad_receiver = [&](size_t i, auto&& g) {
             auto& dst = grad_fn->dsts[i];
@@ -562,18 +585,25 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
                 accum_grad(dst->grad, std::forward<decltype(g)>(g));
             }
         };
-        std::visit([&](auto&& backward) {
-            using T = std::decay_t<decltype(backward)>;
-            if constexpr (std::is_same_v<T, std::monostate>) {
-                mgb_assert(0);
-            } else {
-                auto&& grads = views::transform(grad_fn->slots, [](auto&& slot) {return slot.grad.get();});
-                backward(bctx, std::forward<decltype(grads)>(grads), grad_receiver);
-            }
-        }, grad_fn->backward);
+        std::visit(
+                [&](auto&& backward) {
+                    using T = std::decay_t<decltype(backward)>;
+                    if constexpr (std::is_same_v<T, std::monostate>) {
+                        mgb_assert(0);
+                    } else {
+                        auto&& grads = views::transform(
+                                grad_fn->slots,
+                                [](auto&& slot) { return slot.grad.get(); });
+                        backward(
+                                bctx, std::forward<decltype(grads)>(grads),
+                                grad_receiver);
+                    }
+                },
+                grad_fn->backward);
 
         for (auto&& dst : grad_fn->dsts) {
-            if (!dst.grad_fn) continue;
+            if (!dst.grad_fn)
+                continue;
             if (!dst.grad_fn->in_ref_keeper) {
                 // after grad_fn is cleared, refcnt of subsequent grad_fn
                 // could drop to 0
@@ -586,7 +616,7 @@ void GradKey::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWr
             }
         }
         grad_fn->clear();
-    } // finish tape loop
+    }  // finish tape loop
 }
 
 void GradKey::cleanup() {
@@ -598,7 +628,8 @@ void GradKey::cleanup() {
     }
 }
 
-void GradKeyWrapper::backward(std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
+void GradKeyWrapper::backward(
+        std::vector<TensorWrapper*> tensors, std::vector<TensorWrapper*> grads) {
     m_key->backward(std::move(tensors), std::move(grads));
 }
 
@@ -610,7 +641,7 @@ void GradKeyWrapper::set_name(py::handle name) {
     m_key->name = py::cast<std::string>(name);
 }
 
-PyObject* GradKeyWrapper::is_attached_to(PyObject*const* args, size_t nargs) {
+PyObject* GradKeyWrapper::is_attached_to(PyObject* const* args, size_t nargs) {
     if (nargs != 1) {
         PyErr_SetString(PyExc_TypeError, "expect 1 argument");
         return nullptr;
@@ -638,14 +669,16 @@ std::unordered_map<Typeinfo*, GradRuleFn>& grad_rule_registry() {
 }
 
 void GradInfoCollection::_shrink() {
-    auto pred = [](GradInfo& info){ return !(info.grad_fn) || info.grad_fn->key.expired(); };
+    auto pred = [](GradInfo& info) {
+        return !(info.grad_fn) || info.grad_fn->key.expired();
+    };
     auto iter = std::remove_if(m_storage.begin(), m_storage.end(), pred);
     m_storage.erase(iter, m_storage.end());
 }
 
 bool GradInfoCollection::contains(GradKey* key) {
     _shrink();
-    for (auto&& grad_info: m_storage) {
+    for (auto&& grad_info : m_storage) {
         if (grad_info.grad_fn->key.lock().get() == key) {
             return true;
         }
@@ -655,7 +688,7 @@ bool GradInfoCollection::contains(GradKey* key) {
 
 GradInfo& GradInfoCollection::operator[](GradKey* key) {
     _shrink();
-    for (auto&& grad_info: m_storage) {
+    for (auto&& grad_info : m_storage) {
         if (grad_info.grad_fn->key.lock().get() == key) {
             return grad_info;
         }
@@ -666,7 +699,7 @@ GradInfo& GradInfoCollection::operator[](GradKey* key) {
 
 GradInfo& GradInfoCollection::at(GradKey* key) {
     _shrink();
-    for (auto&& grad_info: m_storage) {
+    for (auto&& grad_info : m_storage) {
         if (grad_info.grad_fn->key.lock().get() == key) {
             return grad_info;
         }
@@ -674,4 +707,4 @@ GradInfo& GradInfoCollection::at(GradKey* key) {
     mgb_assert(false);
 }
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

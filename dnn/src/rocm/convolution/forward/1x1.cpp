@@ -37,8 +37,7 @@ bool ConvolutionForwardImpl::Algo1x1::is_available(const SizeArgs& args) const {
 }
 
 void ConvolutionForwardImpl::Algo1x1::extract_matmul_layouts(
-        const SizeArgs& args, TensorLayout& A, TensorLayout& B,
-        TensorLayout& C) {
+        const SizeArgs& args, TensorLayout& A, TensorLayout& B, TensorLayout& C) {
     auto&& fm = args.filter_meta;
     A = {{fm.ocpg, fm.icpg}, fm.dtype};
     B.ndim = 2;
@@ -89,8 +88,7 @@ bool ConvolutionForwardImpl::Algo1x1LargeBatch::is_available(
 }
 
 void ConvolutionForwardImpl::Algo1x1LargeBatch::extract_matmul_layouts(
-        const SizeArgs& args, TensorLayout& A, TensorLayout& B,
-        TensorLayout& C) {
+        const SizeArgs& args, TensorLayout& A, TensorLayout& B, TensorLayout& C) {
     auto&& fm = args.filter_meta;
     // A {N, OC, IC}
     // B {N, IC, H * W}
@@ -117,8 +115,7 @@ size_t ConvolutionForwardImpl::Algo1x1LargeBatch::get_workspace_in_bytes(
     return args.handle->batched_matrix_mul()->get_workspace_in_bytes(A, B, C);
 }
 
-void ConvolutionForwardImpl::Algo1x1LargeBatch::exec(
-        const ExecArgs& args) const {
+void ConvolutionForwardImpl::Algo1x1LargeBatch::exec(const ExecArgs& args) const {
     TensorND A, B, C;
     extract_matmul_layouts(args, A.layout, B.layout, C.layout);
     A.raw_ptr = args.filter_tensor->raw_ptr;

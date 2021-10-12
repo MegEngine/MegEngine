@@ -1,5 +1,6 @@
 /**
- * \file dnn/src/cuda/local/cuda-convnet2/weight_acts/wet_act_mc_mf_kepler_sw_by_4_C_scale_f.cu
+ * \file
+ * dnn/src/cuda/local/cuda-convnet2/weight_acts/wet_act_mc_mf_kepler_sw_by_4_C_scale_f.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -25,7 +26,8 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "wet_act_mc_mf_kepler_sw.cuh"
@@ -34,5 +36,5 @@ namespace cuda {
 
 WET_ACT_MC_MF_KEPLER_SW_4_C(false)
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

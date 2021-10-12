@@ -63,13 +63,12 @@ auto run = [](const int flag) {
     for (size_t i = 1; i <= limit; ++i)
         add_layer(30, 5, 2);
 
-    auto loss = opr::Dot::make(conv_res[limit].flatten(),
-                               conv_res[limit].flatten());
+    auto loss = opr::Dot::make(conv_res[limit].flatten(), conv_res[limit].flatten());
     std::vector<HostTensorND> grad_kernels_get(kernels.size());
     ComputingGraph::OutputSpec out_spec;
     for (size_t i = 0; i < kernels.size(); ++i) {
-        out_spec.emplace_back(make_callback_copy(cg::grad(loss, kernels[i]),
-                                                 grad_kernels_get[i]));
+        out_spec.emplace_back(
+                make_callback_copy(cg::grad(loss, kernels[i]), grad_kernels_get[i]));
     }
     std::vector<HostTensorND> grad_kernels_expect(grad_kernels_get.size());
     for (bool swap : {false, true}) {
@@ -83,8 +82,7 @@ auto run = [](const int flag) {
     }
 
     for (size_t i = 0; i < grad_kernels_get.size(); ++i)
-        MGB_ASSERT_TENSOR_NEAR(grad_kernels_get[i], grad_kernels_expect[i],
-                               1e-3);
+        MGB_ASSERT_TENSOR_NEAR(grad_kernels_get[i], grad_kernels_expect[i], 1e-3);
     if (old_value) {
         setenv(KEY, old_value, 1);
     } else {

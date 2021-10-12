@@ -30,8 +30,7 @@ class BenchmarkerBase {
 public:
     using Param = typename Opr::Param;
     using TensorValueArray = TensorNDArray;
-    using BeforeExecCallback =
-            std::function<void(Opr*, const TensorValueArray&)>;
+    using BeforeExecCallback = std::function<void(Opr*, const TensorValueArray&)>;
     using TensorsConstriant = std::function<void(TensorValueArray& tensors)>;
 
     BenchmarkerBase(Handle* handle, T timer)
@@ -51,9 +50,7 @@ public:
      * Benchmarker would construct TensorLayout vectors from shapes and
      * dtypes and call exec(TensorLayoutArray &).
      */
-    float exec(const TensorShapeArray& shapes) {
-        return exec(make_layouts(shapes));
-    }
+    float exec(const TensorShapeArray& shapes) { return exec(make_layouts(shapes)); }
     float exec(TensorLayoutArray layouts);
 
     float exect(const TensorValueArray& testcase_in);
@@ -85,8 +82,8 @@ public:
     TensorLayoutArray make_layouts(const TensorShapeArray& shapes) {
         TensorLayoutArray layouts(shapes.size());
         for (size_t i = 0; i < shapes.size(); ++i) {
-            DType dt = (m_dtype.find(i) != m_dtype.end() ? m_dtype[i]
-                                                         : dtype::Float32());
+            DType dt =
+                    (m_dtype.find(i) != m_dtype.end() ? m_dtype[i] : dtype::Float32());
             if (m_fmt.find(i) == m_fmt.end()) {
                 layouts[i] = TensorLayout(shapes[i], dt);
                 layouts[i].init_contiguous_stride();
@@ -177,14 +174,13 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr = static_cast<uint8_t*>(
-                                  megdnn_malloc(handle, span.dist_byte())) +
-                          span.low_byte;
+            res.raw_ptr =
+                    static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
+                    span.low_byte;
             res.layout = layout;
             return res;
         };
-        std::transform(layouts.begin(), layouts.end(), tensors.begin(),
-                       trans_func);
+        std::transform(layouts.begin(), layouts.end(), tensors.begin(), trans_func);
         return tensors;
     };
     auto tensors_cur = allocate(m_handle);
@@ -205,8 +201,7 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
         if (tensor.layout.ndim == 0)
             continue;
         auto size = tensor.layout.span().high_byte;
-        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr,
-                          size);
+        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
     }
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
@@ -248,10 +243,9 @@ float BenchmarkerBase<Opr, T>::exec(TensorLayoutArray layouts) {
                   << "for " << m_times << " run(s)." << std::endl;
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
-        std::for_each(tensors.begin(), tensors.end(),
-                      [handle](const TensorND& tensor) {
-                          megdnn_free(handle, tensor.raw_ptr);
-                      });
+        std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
+            megdnn_free(handle, tensor.raw_ptr);
+        });
     };
     free(m_handle, tensors_cur);
     free(m_handle_naive.get(), tensors_cur_host);
@@ -288,14 +282,13 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
         auto trans_func = [handle](const TensorLayout& layout) {
             auto span = layout.span();
             TensorND res;
-            res.raw_ptr = static_cast<uint8_t*>(
-                                  megdnn_malloc(handle, span.dist_byte())) +
-                          span.low_byte;
+            res.raw_ptr =
+                    static_cast<uint8_t*>(megdnn_malloc(handle, span.dist_byte())) +
+                    span.low_byte;
             res.layout = layout;
             return res;
         };
-        std::transform(layouts.begin(), layouts.end(), tensors.begin(),
-                       trans_func);
+        std::transform(layouts.begin(), layouts.end(), tensors.begin(), trans_func);
         return tensors;
     };
     auto tensors_cur = allocate(m_handle);
@@ -305,8 +298,7 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
         auto size = tensor.layout.span().high_byte;
         if (tensor.layout.ndim == 0)
             continue;
-        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr,
-                          size);
+        megdnn_memcpy_H2D(m_handle, tensors_cur[i].raw_ptr, tensor.raw_ptr, size);
     }
     if (m_before_exec_callback) {
         m_before_exec_callback(opr, tensors_cur);
@@ -348,10 +340,9 @@ float BenchmarkerBase<Opr, T>::exect(const TensorValueArray& testcase_in) {
                   << "for " << m_times << " run(s)." << std::endl;
     }
     auto free = [](Handle* handle, TensorNDArray& tensors) {
-        std::for_each(tensors.begin(), tensors.end(),
-                      [handle](const TensorND& tensor) {
-                          megdnn_free(handle, tensor.raw_ptr);
-                      });
+        std::for_each(tensors.begin(), tensors.end(), [handle](const TensorND& tensor) {
+            megdnn_free(handle, tensor.raw_ptr);
+        });
     };
     free(m_handle, tensors_cur);
     if (m_adaptive_secs)
@@ -365,14 +356,14 @@ class Benchmarker;
 template <typename Opr>
 class Benchmarker<Opr, Timer> : public BenchmarkerBase<Opr, Timer> {
 public:
-    Benchmarker(Handle* handle)
-            : BenchmarkerBase<Opr, Timer>{handle, Timer{}} {}
+    Benchmarker(Handle* handle) : BenchmarkerBase<Opr, Timer>{handle, Timer{}} {}
 };
 
 ////////////////// Algo Benchmark ////////////////////////
 template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
-float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
-                     const std::string& algo_base) {
+float algo_benchmark(
+        Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
+        const std::string& algo_base) {
     Proxy proxy;
     auto opr = benchmark.opr();
     opr->param() = benchmark.param();
@@ -381,13 +372,12 @@ float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
     float min_used = std::numeric_limits<float>::max();
     bool execed = false;
     for (auto i : algos) {
-        if (std::regex_match(i.desc.name,
-                             std::regex("(" + algo_base + ")(.*)"))) {
+        if (std::regex_match(i.desc.name, std::regex("(" + algo_base + ")(.*)"))) {
             opr->execution_policy().algo = i.desc;
             auto used = benchmark.exec(layouts);
             min_used = std::min(min_used, used);
-            printf("run algo: %s used: %f ms min_used: %f ms\n",
-                   i.desc.name.c_str(), used, min_used);
+            printf("run algo: %s used: %f ms min_used: %f ms\n", i.desc.name.c_str(),
+                   used, min_used);
             execed = true;
         }
     }
@@ -396,8 +386,9 @@ float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorLayoutArray layouts,
 }
 
 template <typename Opr, typename Proxy = OprProxy<Opr>, typename T = Timer>
-float algo_benchmark(Benchmarker<Opr, T>& benchmark, TensorShapeArray shapes,
-                     const std::string& algo_base) {
+float algo_benchmark(
+        Benchmarker<Opr, T>& benchmark, TensorShapeArray shapes,
+        const std::string& algo_base) {
     return algo_benchmark(benchmark, benchmark.make_layouts(shapes), algo_base);
 }
 

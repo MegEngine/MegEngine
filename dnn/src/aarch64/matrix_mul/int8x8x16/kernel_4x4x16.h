@@ -34,9 +34,9 @@ namespace matmul_4x4x16 {
  *
  *                            Accumulator
  */
-static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 16;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -230,16 +230,14 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
             // Store back into memory
             STORE_C
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
-              [is_first_k] "+r"(is_first_k), [K] "+r"(K), [LDC] "+r"(LDC),
-              [outptr] "+r"(outptr), [m_remain] "+r"(m_remain),
-              [n_remain] "+r"(n_remain)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+              [K] "+r"(K), [LDC] "+r"(LDC), [outptr] "+r"(outptr),
+              [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain)
             :
-            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "v0", "v1", "v2",
-              "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
-              "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
-              "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30",
-              "v31");
+            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "v0", "v1", "v2", "v3",
+              "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
+              "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24",
+              "v25", "v26", "v27", "v28", "v29", "v30", "v31");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -247,9 +245,9 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_s8x8x16_4x4_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
-                                      int ldin, int y0, int ymax, int k0,
-                                      int kmax) {
+static void gemm_s8x8x16_4x4_pack_A_n(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -292,9 +290,11 @@ static void gemm_s8x8x16_4x4_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -309,9 +309,11 @@ static void gemm_s8x8x16_4x4_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -324,8 +326,8 @@ static void gemm_s8x8x16_4x4_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
     }
 }
 
-static void gemm_s8x8x16_4x4_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
-                                      int x0, int xmax, int k0, int kmax) {
+static void gemm_s8x8x16_4x4_pack_B_n(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
@@ -362,19 +364,26 @@ static void gemm_s8x8x16_4x4_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
                 if (remain >= 0) {
                     switch (remain) {
                         case 7:
-                            inptr0 = zerobuff; MEGDNN_FALLTHRU
+                            inptr0 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 6:
-                            inptr1 = zerobuff; MEGDNN_FALLTHRU
+                            inptr1 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 5:
-                            inptr2 = zerobuff; MEGDNN_FALLTHRU
+                            inptr2 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 4:
-                            inptr3 = zerobuff; MEGDNN_FALLTHRU
+                            inptr3 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 3:
-                            inptr4 = zerobuff; MEGDNN_FALLTHRU
+                            inptr4 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 2:
-                            inptr5 = zerobuff; MEGDNN_FALLTHRU
+                            inptr5 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 1:
-                            inptr6 = zerobuff; MEGDNN_FALLTHRU
+                            inptr6 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 0:
                             inptr7 = zerobuff;
                             break;
@@ -383,9 +392,9 @@ static void gemm_s8x8x16_4x4_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
                     }
                 }
 
-                transpose_4x16_1_b_helper(inptr0, inptr1, inptr2, inptr3,
-                                          inptr4, inptr5, inptr6, inptr7,
-                                          outptr_inner);
+                transpose_4x16_1_b_helper(
+                        inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                        outptr_inner);
                 outptr_inner += ksize4;
             }
 
@@ -393,19 +402,26 @@ static void gemm_s8x8x16_4x4_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
                 if (remain >= 0) {
                     switch (remain) {
                         case 7:
-                            inptr0 = zerobuff; MEGDNN_FALLTHRU
+                            inptr0 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 6:
-                            inptr1 = zerobuff; MEGDNN_FALLTHRU
+                            inptr1 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 5:
-                            inptr2 = zerobuff; MEGDNN_FALLTHRU
+                            inptr2 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 4:
-                            inptr3 = zerobuff; MEGDNN_FALLTHRU
+                            inptr3 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 3:
-                            inptr4 = zerobuff; MEGDNN_FALLTHRU
+                            inptr4 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 2:
-                            inptr5 = zerobuff; MEGDNN_FALLTHRU
+                            inptr5 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 1:
-                            inptr6 = zerobuff; MEGDNN_FALLTHRU
+                            inptr6 = zerobuff;
+                            MEGDNN_FALLTHRU
                         case 0:
                             inptr7 = zerobuff;
                             break;

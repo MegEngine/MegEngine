@@ -16,12 +16,12 @@
 #if MGB_CUSTOM_OP
 
 #include "megbrain/custom/custom.h"
-#include "megbrain/custom/manager.h"
 #include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/manager.h"
+#include "megbrain/graph/event.h"
+#include "megbrain/graph/helper.h"
 #include "megbrain/graph/operator_node.h"
 #include "megbrain/graph/symbol_var.h"
-#include "megbrain/graph/helper.h"
-#include "megbrain/graph/event.h"
 #include "megbrain/serialization/sereg.h"
 
 namespace mgb {
@@ -44,15 +44,18 @@ MGB_DEFINE_OPR_CLASS(CustomOpNode, cg::OperatorNodeBase) // {
     void infer_output_dtype(void);
     void infer_output_format(void);
     void infer_output_shape(void);
-    void infer_output_shape(const TensorShapeArray &input_shapes, TensorShapeArray &output_shapes);
+    void infer_output_shape(
+            const TensorShapeArray& input_shapes, TensorShapeArray& output_shapes);
 
     // called by computing_graph for each output varnode
-    bool infer_desc(size_t out_idx, TensorShape &output_shape, const StaticInferInpVal &input_vals);
+    bool infer_desc(
+            size_t out_idx, TensorShape& output_shape,
+            const StaticInferInpVal& input_vals);
 
     void init_output_dtype() override final;
     void init_output_format() override final;
     void init_output_comp_node() override final;
-    void do_execute(ExecEnv &env) override final;
+    void do_execute(ExecEnv& env) override final;
     void init_output_static_infer_desc() override final;
     void init_output_mem_plan(bool dynamic) override final;
 
@@ -71,7 +74,7 @@ MGB_DEFINE_OPR_CLASS(CustomOpNode, cg::OperatorNodeBase) // {
     // [TODO] return default ctor obj
     OprEventCallback get_opr_event_callback() override final;
 
-    // [TODO] 
+    // [TODO]
     void on_output_comp_node_stream_changed() override final;
 
     // [TODO]
@@ -79,18 +82,18 @@ MGB_DEFINE_OPR_CLASS(CustomOpNode, cg::OperatorNodeBase) // {
 
     // [TODO] default implementation
     bool update_priority() const override final;
-    
+
 public:
-    CustomOpNode(const std::shared_ptr<const custom::CustomOp> &op,
-                 VarNodeArray inputs, const custom::Param &param,
-                 const OperatorNodeConfig &config);
-    static VarNodeArray make(const std::shared_ptr<const custom::CustomOp> &op,
-                             VarNodeArray inputs, const custom::Param &param,
-                             const OperatorNodeConfig &config);
-    static SymbolVarArray make(const std::shared_ptr<const custom::CustomOp> &op,
-                               SymbolVarArray inputs, const custom::Param &param,
-                               const OperatorNodeConfig &config);
-    
+    CustomOpNode(
+            const std::shared_ptr<const custom::CustomOp>& op, VarNodeArray inputs,
+            const custom::Param& param, const OperatorNodeConfig& config);
+    static VarNodeArray make(
+            const std::shared_ptr<const custom::CustomOp>& op, VarNodeArray inputs,
+            const custom::Param& param, const OperatorNodeConfig& config);
+    static SymbolVarArray make(
+            const std::shared_ptr<const custom::CustomOp>& op, SymbolVarArray inputs,
+            const custom::Param& param, const OperatorNodeConfig& config);
+
     custom::RunTimeId runtime_id(void) const;
     uint32_t param_tag(void) const;
     custom::Param& param(void);
@@ -103,7 +106,7 @@ public:
     custom::ArgInfo output_info(size_t idx) const;
 };
 
-} // namespace opr
-}
+}  // namespace opr
+}  // namespace mgb
 
 #endif

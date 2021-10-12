@@ -25,8 +25,7 @@ public:
         }
     };
 
-    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo()
-            override;
+    SmallVector<fallback::MatrixMulImpl::AlgoBase*> get_all_packed_algo() override;
 
     MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(MatrixMulImpl);
 

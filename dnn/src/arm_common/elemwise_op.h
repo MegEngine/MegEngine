@@ -27,20 +27,18 @@ struct ParamElemVisitor;
 template <typename ctype>
 struct ParamElemVisitorDup;
 
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)         \
-    template <>                                                   \
-    struct ParamElemVisitor<_ctype> {                             \
-        _neon_type operator()(const _ctype* src) const {          \
-            return vld1q_##_fun_suffix(                           \
-                    reinterpret_cast<const _inner_ctype*>(src));  \
-        }                                                         \
-    };                                                            \
-    template <>                                                   \
-    struct ParamElemVisitorDup<_ctype> {                          \
-        _neon_type operator()(const _ctype* src) const {          \
-            return vdupq_n_##_fun_suffix(                         \
-                    *reinterpret_cast<const _inner_ctype*>(src)); \
-        }                                                         \
+#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                              \
+    template <>                                                                        \
+    struct ParamElemVisitor<_ctype> {                                                  \
+        _neon_type operator()(const _ctype* src) const {                               \
+            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src));    \
+        }                                                                              \
+    };                                                                                 \
+    template <>                                                                        \
+    struct ParamElemVisitorDup<_ctype> {                                               \
+        _neon_type operator()(const _ctype* src) const {                               \
+            return vdupq_n_##_fun_suffix(*reinterpret_cast<const _inner_ctype*>(src)); \
+        }                                                                              \
     }
 cb(dt_qint32, int32_t, int32x4_t, s32);
 cb(dt_qint8, int8_t, int8x16_t, s8);
@@ -57,14 +55,13 @@ cb(dt_int8, int8_t, int8x16_t, s8);
 
 template <typename ctype>
 struct ParamElemVisitorBcast101x4;
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix, rel_suffix)     \
-    template <>                                                           \
-    struct ParamElemVisitorBcast101x4<_ctype> {                           \
-        _neon_type operator()(const _ctype* src) const {                  \
-            return vreinterpretq_##_fun_suffix##_##rel_suffix(            \
-                    vld1q_dup_##rel_suffix(                               \
-                            reinterpret_cast<const _inner_ctype*>(src))); \
-        }                                                                 \
+#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix, rel_suffix)                 \
+    template <>                                                                       \
+    struct ParamElemVisitorBcast101x4<_ctype> {                                       \
+        _neon_type operator()(const _ctype* src) const {                              \
+            return vreinterpretq_##_fun_suffix##_##rel_suffix(vld1q_dup_##rel_suffix( \
+                    reinterpret_cast<const _inner_ctype*>(src)));                     \
+        }                                                                             \
     }
 
 cb(dt_qint8, int32_t, int8x16_t, s8, s32);
@@ -75,13 +72,12 @@ cb(dt_int16, int64_t, int16x8_t, s16, s64);
 cb(__fp16, uint64_t, float16x8_t, f16, u64);
 #endif
 #undef cb
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)        \
-    template <>                                                  \
-    struct ParamElemVisitorBcast101x4<_ctype> {                  \
-        _neon_type operator()(const _ctype* src) const {         \
-            return vld1q_##_fun_suffix(                          \
-                    reinterpret_cast<const _inner_ctype*>(src)); \
-        }                                                        \
+#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                           \
+    template <>                                                                     \
+    struct ParamElemVisitorBcast101x4<_ctype> {                                     \
+        _neon_type operator()(const _ctype* src) const {                            \
+            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
+        }                                                                           \
     }
 
 cb(dt_qint32, int32_t, int32x4_t, s32);
@@ -91,13 +87,12 @@ cb(dt_int32, int32_t, int32x4_t, s32);
 
 template <typename ctype>
 struct ParamElemVisitorBcast101x8;
-#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)        \
-    template <>                                                  \
-    struct ParamElemVisitorBcast101x8<_ctype> {                  \
-        _neon_type operator()(const _ctype* src) const {         \
-            return vld1q_##_fun_suffix(                          \
-                    reinterpret_cast<const _inner_ctype*>(src)); \
-        }                                                        \
+#define cb(_ctype, _inner_ctype, _neon_type, _fun_suffix)                           \
+    template <>                                                                     \
+    struct ParamElemVisitorBcast101x8<_ctype> {                                     \
+        _neon_type operator()(const _ctype* src) const {                            \
+            return vld1q_##_fun_suffix(reinterpret_cast<const _inner_ctype*>(src)); \
+        }                                                                           \
     }
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 cb(__fp16, __fp16, float16x8_t, f16);
@@ -134,9 +129,9 @@ struct OpCallerUnary;
 
 template <typename Op>
 struct OpCallerUnary<Op, VEC> {
-    static void run(const typename Op::src_ctype* src,
-                    typename Op::dst_ctype* dst, DType src_dtype,
-                    DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src, typename Op::dst_ctype* dst,
+            DType src_dtype, DType dst_dtype, size_t nr_elems) {
         Op op(src_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis;
         size_t i = 0;
@@ -164,10 +159,10 @@ struct OpCallerBinary;
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, VEC_VEC> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         size_t i = 0;
 #if MEGDNN_FIX_AARCH32_BUG
@@ -186,10 +181,10 @@ struct OpCallerBinary<PowOp<ctype, ctype>, VEC_VEC> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, VEC_SCALAR> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         size_t i = 0;
 #if MEGDNN_FIX_AARCH32_BUG
@@ -207,11 +202,10 @@ struct OpCallerBinary<PowOp<ctype, ctype>, VEC_SCALAR> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST101> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t channel, size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         for (size_t b = 0; b < batch; b++) {
             const typename Op::src_ctype* src1_ptr = src1;
@@ -235,10 +229,10 @@ struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST101> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, SCALAR_VEC> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         size_t i = 0;
 #if MEGDNN_FIX_AARCH32_BUG
@@ -256,11 +250,10 @@ struct OpCallerBinary<PowOp<ctype, ctype>, SCALAR_VEC> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, BCAST101_VEC> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t channel, size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
@@ -283,10 +276,10 @@ struct OpCallerBinary<PowOp<ctype, ctype>, BCAST101_VEC> {
 
 template <typename Op>
 struct OpCallerBinary<Op, VEC_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
@@ -313,11 +306,10 @@ struct OpCallerBinary<Op, VEC_VEC> {
 
 template <typename Op>
 struct OpCallerBinary<Op, VEC_BCAST101> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t channel, size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
@@ -351,20 +343,18 @@ struct OpCallerBinary<Op, VEC_BCAST101> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, BCAST101xX_VEC> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride,
-                    size_t channel_block_dim) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride, size_t channel_block_dim) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
                 for (size_t i = 0; i < channel_stride; i++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0_block_ptr + c_iter), *src1, dst);
                         src1++;
                         dst++;
@@ -378,17 +368,16 @@ struct OpCallerBinary<PowOp<ctype, ctype>, BCAST101xX_VEC> {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerBinaryBcast101xXVec {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
-                for (size_t img_index = 0; img_index < channel_stride;
-                     img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                for (size_t img_index = 0; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0_block_ptr + c_iter), *src1, dst);
                         src1++;
                         dst++;
@@ -402,10 +391,10 @@ struct OpCallerBinaryBcast101xXVec {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerBinaryBcast101xDVec {
     template <typename Op, typename Vis0, typename Vis1>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, const Vis0& vis0,
-                    const Vis1& vis1, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, const Vis0& vis0, const Vis1& vis1, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
@@ -422,8 +411,7 @@ struct OpCallerBinaryBcast101xDVec {
                 }
                 // TODO:all elemwise_multi_type op imp one simd mode
                 for (; img_index < channel_stride; img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0_block_ptr + c_iter), *src1, dst);
                         src1++;
                         dst++;
@@ -437,9 +425,10 @@ struct OpCallerBinaryBcast101xDVec {
 template <typename src_ctype>
 struct OpCallerBinaryBcast101xXVec<src_ctype, 4> {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         ParamElemVisitorBcast101x4<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
         OpCallerBinaryBcast101xDVec<src_ctype, 4>::run(
@@ -454,9 +443,10 @@ struct OpCallerBinaryBcast101xXVec<__fp16, 8> {
     using src_ctype = __fp16;
 
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         ParamElemVisitorBcast101x8<src_ctype> vis0;
         ParamElemVisitor<src_ctype> vis1;
         OpCallerBinaryBcast101xDVec<src_ctype, 8>::run(
@@ -468,23 +458,21 @@ struct OpCallerBinaryBcast101xXVec<__fp16, 8> {
 
 template <typename Op>
 struct OpCallerBinary<Op, BCAST101xX_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride,
-                    size_t channel_block_dim) {
-        megdnn_assert(channel_block_dim == 4 || channel_block_dim == 8,
-                      "only imp for nchw44/nchw88");
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride, size_t channel_block_dim) {
+        megdnn_assert(
+                channel_block_dim == 4 || channel_block_dim == 8,
+                "only imp for nchw44/nchw88");
         Op op(src0_dtype, src1_dtype, dst_dtype);
         if (channel_block_dim == 4) {
             OpCallerBinaryBcast101xXVec<typename Op::src_ctype, 4>::run(
-                    src0, src1, dst, op, batch, nr_channel_blocks,
-                    channel_stride);
+                    src0, src1, dst, op, batch, nr_channel_blocks, channel_stride);
         } else {
             OpCallerBinaryBcast101xXVec<typename Op::src_ctype, 8>::run(
-                    src0, src1, dst, op, batch, nr_channel_blocks,
-                    channel_stride);
+                    src0, src1, dst, op, batch, nr_channel_blocks, channel_stride);
         }
     }
 };
@@ -492,20 +480,18 @@ struct OpCallerBinary<Op, BCAST101xX_VEC> {
 template <typename ctype>
 struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST101xX> {
     using Op = PowOp<ctype, ctype>;
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride,
-                    size_t channel_block_dim) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride, size_t channel_block_dim) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         for (size_t b = 0; b < batch; b++) {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
                 for (size_t i = 0; i < channel_stride; i++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0), *(src1_block_ptr + c_iter), dst);
                         src0++;
                         dst++;
@@ -519,17 +505,16 @@ struct OpCallerBinary<PowOp<ctype, ctype>, VEC_BCAST101xX> {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerBinaryVecBcast101xX {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
-                for (size_t img_index = 0; img_index < channel_stride;
-                     img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                for (size_t img_index = 0; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*src0, *(src1_block_ptr + c_iter), dst);
                         src0++;
                         dst++;
@@ -543,10 +528,10 @@ struct OpCallerBinaryVecBcast101xX {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerBinaryVecBcast101xD {
     template <typename Op, typename Vis0, typename Vis1>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, const Vis0& vis0,
-                    const Vis1& vis1, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, const Vis0& vis0, const Vis1& vis1, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
@@ -563,8 +548,7 @@ struct OpCallerBinaryVecBcast101xD {
                 }
                 // TODO:all elemwise_multi_type op imp one simd mode
                 for (; img_index < channel_stride; img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*src0, *(src1_block_ptr + c_iter), dst);
                         src0++;
                         dst++;
@@ -578,9 +562,10 @@ struct OpCallerBinaryVecBcast101xD {
 template <typename src_ctype>
 struct OpCallerBinaryVecBcast101xX<src_ctype, 4> {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         ParamElemVisitor<src_ctype> vis0;
         ParamElemVisitorBcast101x4<src_ctype> vis1;
         OpCallerBinaryVecBcast101xD<src_ctype, 4>::run(
@@ -594,9 +579,10 @@ template <>
 struct OpCallerBinaryVecBcast101xX<__fp16, 8> {
     using src_ctype = __fp16;
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    typename Op::dst_ctype* dst, const Op& op, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, typename Op::dst_ctype* dst,
+            const Op& op, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         ParamElemVisitor<src_ctype> vis0;
         ParamElemVisitorBcast101x8<src_ctype> vis1;
         OpCallerBinaryVecBcast101xD<src_ctype, 8>::run(
@@ -608,41 +594,39 @@ struct OpCallerBinaryVecBcast101xX<__fp16, 8> {
 
 template <typename Op>
 struct OpCallerBinary<Op, VEC_BCAST101xX> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t nr_channel_blocks, size_t channel_stride,
-                    size_t channel_block_dim) {
-        megdnn_assert(channel_block_dim == 4 || channel_block_dim == 8,
-                      "only imp for nchw44/nchw88");
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride, size_t channel_block_dim) {
+        megdnn_assert(
+                channel_block_dim == 4 || channel_block_dim == 8,
+                "only imp for nchw44/nchw88");
         Op op(src0_dtype, src1_dtype, dst_dtype);
         if (channel_block_dim == 4) {
             OpCallerBinaryVecBcast101xX<typename Op::src_ctype, 4>::run(
-                    src0, src1, dst, op, batch, nr_channel_blocks,
-                    channel_stride);
+                    src0, src1, dst, op, batch, nr_channel_blocks, channel_stride);
         } else {
             OpCallerBinaryVecBcast101xX<typename Op::src_ctype, 8>::run(
-                    src0, src1, dst, op, batch, nr_channel_blocks,
-                    channel_stride);
+                    src0, src1, dst, op, batch, nr_channel_blocks, channel_stride);
         }
     }
 };
 
 template <typename Op>
 struct OpCallerBinary<Op, VEC_SCALAR> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
         auto vis1_neon = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1_neon, vis1_neon}}, dst);
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
+               dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -661,18 +645,18 @@ struct OpCallerBinary<Op, VEC_SCALAR> {
 //! this only for nonswap op, like SUB and DIV
 template <typename Op>
 struct OpCallerBinary<Op, SCALAR_VEC> {
-    static void run(const typename Op::src_ctype src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitorDup<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
         auto vis0_neon = vis0(&src0);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0_neon, vis0_neon}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, dst);
+            op({{vis0_neon, vis0_neon}}, {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
+               dst);
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }
@@ -690,11 +674,10 @@ struct OpCallerBinary<Op, SCALAR_VEC> {
 
 template <typename Op>
 struct OpCallerBinary<Op, BCAST101_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType dst_dtype, size_t batch,
-                    size_t channel, size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            typename Op::dst_ctype* dst, DType src0_dtype, DType src1_dtype,
+            DType dst_dtype, size_t batch, size_t channel, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, dst_dtype);
         ParamElemVisitorDup<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
@@ -730,12 +713,11 @@ struct OpCallerTernary;
 
 template <typename Op>
 struct OpCallerTernary<Op, VEC_VEC_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
@@ -767,12 +749,11 @@ struct OpCallerTernary<Op, VEC_VEC_VEC> {
 //! src0: vector, src1: vector, src2: scalar
 template <typename Op>
 struct OpCallerTernary<Op, VEC_VEC_SCALAR> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitor<typename Op::src_ctype> vis1;
@@ -781,8 +762,8 @@ struct OpCallerTernary<Op, VEC_VEC_SCALAR> {
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
             op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}},
-               {{vis2_neon, vis2_neon}}, dst);
+               {{vis1(src1), vis1(src1 + Op::SIMD_WIDTH)}}, {{vis2_neon, vis2_neon}},
+               dst);
             src0 += Op::SIMD_WIDTH * 2;
             src1 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
@@ -803,13 +784,11 @@ struct OpCallerTernary<Op, VEC_VEC_SCALAR> {
 //! src0: 1C11, src1: vector, src2:  1C11
 template <typename Op>
 struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t batch_size, size_t channel_size,
-                    size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t batch_size, size_t channel_size, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis1;
         ParamElemVisitorDup<typename Op::src_ctype> vis0;
@@ -848,20 +827,18 @@ struct OpCallerTernary<Op, BCAST101_VEC_BCAST101> {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerTernaryBcast101xXVecBcast101xX {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             auto src2_ptr = src2;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src0_block_ptr = src0_ptr + cb * channel_block_dim;
                 auto src2_block_ptr = src2_ptr + cb * channel_block_dim;
-                for (size_t img_index = 0; img_index < channel_stride;
-                     img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                for (size_t img_index = 0; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0_block_ptr + c_iter), *src1,
                            *(src2_block_ptr + c_iter), dst);
                         src1++;
@@ -876,11 +853,11 @@ struct OpCallerTernaryBcast101xXVecBcast101xX {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerTernaryBcast101xDVecBcast101xD {
     template <typename Op, typename Vis0, typename Vis1, typename Vis2>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, const Vis0& vis0, const Vis1& vis1,
-                    const Vis2& vis2, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, const Vis0& vis0,
+            const Vis1& vis1, const Vis2& vis2, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src0_ptr = src0;
             auto src2_ptr = src2;
@@ -901,8 +878,7 @@ struct OpCallerTernaryBcast101xDVecBcast101xD {
                 }
                 // TODO:all elemwise_multi_type op imp one simd mode
                 for (; img_index < channel_stride; img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*(src0_block_ptr + c_iter), *src1,
                            *(src2_block_ptr + c_iter), dst);
                         src1++;
@@ -918,16 +894,16 @@ struct OpCallerTernaryBcast101xDVecBcast101xD {
 template <typename src_ctype>
 struct OpCallerTernaryBcast101xXVecBcast101xX<src_ctype, 4> {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         ParamElemVisitorBcast101x4<src_ctype> vis0;
         ParamElemVisitor<src_ctype> vis1;
         ParamElemVisitorBcast101x4<src_ctype> vis2;
         OpCallerTernaryBcast101xDVecBcast101xD<src_ctype, 4>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch,
-                nr_channel_blocks, channel_stride);
+                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
+                channel_stride);
     }
 };
 
@@ -936,44 +912,40 @@ template <>
 struct OpCallerTernaryBcast101xXVecBcast101xX<__fp16, 8> {
     using src_ctype = __fp16;
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         ParamElemVisitorBcast101x8<src_ctype> vis0;
         ParamElemVisitor<src_ctype> vis1;
         ParamElemVisitorBcast101x8<src_ctype> vis2;
         OpCallerTernaryBcast101xDVecBcast101xD<src_ctype, 8>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch,
-                nr_channel_blocks, channel_stride);
+                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
+                channel_stride);
     }
 };
 #endif
 
 template <typename Op>
 struct OpCallerTernary<Op, BCAST101xX_VEC_BCAST101xX> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride, size_t channel_block_dim) {
-        megdnn_assert(channel_block_dim == 4 || channel_block_dim == 8,
-                      "only imp for nchw44/nchw88");
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t batch, size_t nr_channel_blocks, size_t channel_stride,
+            size_t channel_block_dim) {
+        megdnn_assert(
+                channel_block_dim == 4 || channel_block_dim == 8,
+                "only imp for nchw44/nchw88");
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         if (channel_block_dim == 4) {
-            OpCallerTernaryBcast101xXVecBcast101xX<typename Op::src_ctype,
-                                                   4>::run(src0, src1, src2,
-                                                           dst, op, batch,
-                                                           nr_channel_blocks,
-                                                           channel_stride);
+            OpCallerTernaryBcast101xXVecBcast101xX<typename Op::src_ctype, 4>::run(
+                    src0, src1, src2, dst, op, batch, nr_channel_blocks,
+                    channel_stride);
         } else {
-            OpCallerTernaryBcast101xXVecBcast101xX<typename Op::src_ctype,
-                                                   8>::run(src0, src1, src2,
-                                                           dst, op, batch,
-                                                           nr_channel_blocks,
-                                                           channel_stride);
+            OpCallerTernaryBcast101xXVecBcast101xX<typename Op::src_ctype, 8>::run(
+                    src0, src1, src2, dst, op, batch, nr_channel_blocks,
+                    channel_stride);
         }
     }
 };
@@ -981,13 +953,11 @@ struct OpCallerTernary<Op, BCAST101xX_VEC_BCAST101xX> {
 //! src1: 1C11, src0 and src2 are contig
 template <typename Op>
 struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t batch_size, size_t channel_size,
-                    size_t channel_stride) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t batch_size, size_t channel_size, size_t channel_stride) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
@@ -1025,18 +995,16 @@ struct OpCallerTernary<Op, VEC_BCAST101_VEC> {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerTernaryVecBcast101xXVec {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
                 auto src1_block_ptr = src1_ptr + cb * channel_block_dim;
-                for (size_t img_index = 0; img_index < channel_stride;
-                     img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                for (size_t img_index = 0; img_index < channel_stride; img_index++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*src0, *(src1_block_ptr + c_iter), *src2, dst);
                         src0++;
                         src2++;
@@ -1052,11 +1020,11 @@ struct OpCallerTernaryVecBcast101xXVec {
 template <typename src_ctype, size_t channel_block_dim>
 struct OpCallerTernaryVecBcast101xDVec {
     template <typename Op, typename Vis0, typename Vis1, typename Vis2>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, const Vis0& vis0, const Vis1& vis1,
-                    const Vis2& vis2, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, const Vis0& vis0,
+            const Vis1& vis1, const Vis2& vis2, size_t batch, size_t nr_channel_blocks,
+            size_t channel_stride) {
         for (size_t b = 0; b < batch; b++) {
             auto src1_ptr = src1;
             for (size_t cb = 0; cb < nr_channel_blocks; cb++) {
@@ -1075,8 +1043,7 @@ struct OpCallerTernaryVecBcast101xDVec {
                 }
                 // TODO:all elemwise_multi_type op imp one simd mode
                 for (; img_index < channel_stride; img_index++) {
-                    for (size_t c_iter = 0; c_iter < channel_block_dim;
-                         c_iter++) {
+                    for (size_t c_iter = 0; c_iter < channel_block_dim; c_iter++) {
                         op(*src0, *(src1_block_ptr + c_iter), *src2, dst);
                         src0++;
                         src2++;
@@ -1091,16 +1058,16 @@ struct OpCallerTernaryVecBcast101xDVec {
 template <typename src_ctype>
 struct OpCallerTernaryVecBcast101xXVec<src_ctype, 4> {
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         ParamElemVisitor<src_ctype> vis0;
         ParamElemVisitorBcast101x4<src_ctype> vis1;
         ParamElemVisitor<src_ctype> vis2;
         OpCallerTernaryVecBcast101xDVec<src_ctype, 4>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch,
-                nr_channel_blocks, channel_stride);
+                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
+                channel_stride);
     }
 };
 
@@ -1109,31 +1076,31 @@ template <>
 struct OpCallerTernaryVecBcast101xXVec<__fp16, 8> {
     using src_ctype = __fp16;
     template <typename Op>
-    static void run(const src_ctype* src0, const src_ctype* src1,
-                    const src_ctype* src2, typename Op::dst_ctype* dst,
-                    const Op& op, size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride) {
+    static void run(
+            const src_ctype* src0, const src_ctype* src1, const src_ctype* src2,
+            typename Op::dst_ctype* dst, const Op& op, size_t batch,
+            size_t nr_channel_blocks, size_t channel_stride) {
         ParamElemVisitor<src_ctype> vis0;
         ParamElemVisitorBcast101x8<src_ctype> vis1;
         ParamElemVisitor<src_ctype> vis2;
         OpCallerTernaryVecBcast101xDVec<src_ctype, 8>::run(
-                src0, src1, src2, dst, op, vis0, vis1, vis2, batch,
-                nr_channel_blocks, channel_stride);
+                src0, src1, src2, dst, op, vis0, vis1, vis2, batch, nr_channel_blocks,
+                channel_stride);
     }
 };
 #endif
 
 template <typename Op>
 struct OpCallerTernary<Op, VEC_BCAST101xX_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype* src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t batch, size_t nr_channel_blocks,
-                    size_t channel_stride, size_t channel_block_dim) {
-        megdnn_assert(channel_block_dim == 4 || channel_block_dim == 8,
-                      "only imp for nchw44/nchw88");
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype* src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t batch, size_t nr_channel_blocks, size_t channel_stride,
+            size_t channel_block_dim) {
+        megdnn_assert(
+                channel_block_dim == 4 || channel_block_dim == 8,
+                "only imp for nchw44/nchw88");
 
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         if (channel_block_dim == 4) {
@@ -1151,12 +1118,11 @@ struct OpCallerTernary<Op, VEC_BCAST101xX_VEC> {
 //! src1: scalar, src0 and src2 has the same shape
 template <typename Op>
 struct OpCallerTernary<Op, VEC_SCALAR_VEC> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype src1,
-                    const typename Op::src_ctype* src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype src1,
+            const typename Op::src_ctype* src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
@@ -1164,8 +1130,7 @@ struct OpCallerTernary<Op, VEC_SCALAR_VEC> {
         auto vis1_neon = vis1(&src1);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1_neon, vis1_neon}},
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
                {{vis2(src2), vis2(src2 + Op::SIMD_WIDTH)}}, dst);
             src0 += Op::SIMD_WIDTH * 2;
             src2 += Op::SIMD_WIDTH * 2;
@@ -1187,12 +1152,11 @@ struct OpCallerTernary<Op, VEC_SCALAR_VEC> {
 //! src1, src2: scalar, src0 is vector
 template <typename Op>
 struct OpCallerTernary<Op, VEC_SCALAR_SCALAR> {
-    static void run(const typename Op::src_ctype* src0,
-                    const typename Op::src_ctype src1,
-                    const typename Op::src_ctype src2,
-                    typename Op::dst_ctype* dst, DType src0_dtype,
-                    DType src1_dtype, DType src2_dtype, DType dst_dtype,
-                    size_t nr_elems) {
+    static void run(
+            const typename Op::src_ctype* src0, const typename Op::src_ctype src1,
+            const typename Op::src_ctype src2, typename Op::dst_ctype* dst,
+            DType src0_dtype, DType src1_dtype, DType src2_dtype, DType dst_dtype,
+            size_t nr_elems) {
         Op op(src0_dtype, src1_dtype, src2_dtype, dst_dtype);
         ParamElemVisitor<typename Op::src_ctype> vis0;
         ParamElemVisitorDup<typename Op::src_ctype> vis1;
@@ -1201,8 +1165,8 @@ struct OpCallerTernary<Op, VEC_SCALAR_SCALAR> {
         auto vis2_neon = vis2(&src2);
         size_t i = 0;
         for (; i + Op::SIMD_WIDTH * 2 <= nr_elems; i += Op::SIMD_WIDTH * 2) {
-            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}},
-               {{vis1_neon, vis1_neon}}, {{vis2_neon, vis2_neon}}, dst);
+            op({{vis0(src0), vis0(src0 + Op::SIMD_WIDTH)}}, {{vis1_neon, vis1_neon}},
+               {{vis2_neon, vis2_neon}}, dst);
             src0 += Op::SIMD_WIDTH * 2;
             dst += Op::SIMD_WIDTH * 2;
         }

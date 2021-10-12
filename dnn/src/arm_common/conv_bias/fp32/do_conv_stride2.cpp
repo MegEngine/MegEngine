@@ -13,8 +13,8 @@
 
 #include "./do_conv_stride2.h"
 #include "midout.h"
-#include "src/arm_common/simd_macro/neon_helper.h"
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#include "src/arm_common/simd_macro/neon_helper.h"
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_f32_convs2)
 
@@ -26,10 +26,9 @@ using namespace conv_stride2;
 using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 
-
-void conv_stride2::do_conv_2x2_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride2::do_conv_2x2_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
 
     rep(ic, IC) {
@@ -79,9 +78,9 @@ void conv_stride2::do_conv_2x2_stride2(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride2::do_conv_3x3_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride2::do_conv_3x3_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
 
     rep(ic, IC) {
@@ -157,9 +156,9 @@ void conv_stride2::do_conv_3x3_stride2(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride2::do_conv_5x5_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride2::do_conv_5x5_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
 
     rep(ic, IC) {
@@ -290,9 +289,9 @@ void conv_stride2::do_conv_5x5_stride2(const float* src, const float* filter, fl
     }
 }
 
-void conv_stride2::do_conv_7x7_stride2(const float* src, const float* filter, float* dst,
-                         size_t IH, size_t IW, size_t OH, size_t OW,
-                         size_t IC) {
+void conv_stride2::do_conv_7x7_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
 
     rep(ic, IC) {

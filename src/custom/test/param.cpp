@@ -13,32 +13,32 @@
 
 #if MGB_CUSTOM_OP
 
-#include "megbrain/custom/param.h"
-#include "gtest/gtest.h"
 #include <iostream>
+#include "gtest/gtest.h"
+#include "megbrain/custom/param.h"
 
 #define PARAM_TEST_LOG 0
 
 namespace custom {
 
-#define SchemaDef                                                                       \
-    ParamSchema schema_bool("param_bool", true, "bool");                                \
-    ParamSchema schema_flt("param_flt", 2.3f, "float");                                 \
-    ParamSchema schema_int("param_int", 4, "int");                                      \
-    ParamSchema schema_str("param_str", "test", "string");                              \
-    ParamSchema schema_bool_list("param_bl", {true, false, true}, "bool list");         \
-    ParamSchema schema_flt_list("param_fl", {1.1f, 2.2f, 3.3f}, "float list");          \
-    ParamSchema schema_int_list("param_il", {1, 2, 3}, "int list");                     \
+#define SchemaDef                                                               \
+    ParamSchema schema_bool("param_bool", true, "bool");                        \
+    ParamSchema schema_flt("param_flt", 2.3f, "float");                         \
+    ParamSchema schema_int("param_int", 4, "int");                              \
+    ParamSchema schema_str("param_str", "test", "string");                      \
+    ParamSchema schema_bool_list("param_bl", {true, false, true}, "bool list"); \
+    ParamSchema schema_flt_list("param_fl", {1.1f, 2.2f, 3.3f}, "float list");  \
+    ParamSchema schema_int_list("param_il", {1, 2, 3}, "int list");             \
     ParamSchema schema_str_list("param_sl", {"test1", "test2", "test3"}, "string list")
 
-#define InfoDef                                                                         \
-    info.meta().emplace_back(schema_bool);                                              \
-    info.meta().emplace_back(schema_flt);                                               \
-    info.meta().emplace_back(schema_int);                                               \
-    info.meta().emplace_back(schema_str);                                               \
-    info.meta().emplace_back(schema_bool_list);                                         \
-    info.meta().emplace_back(schema_flt_list);                                          \
-    info.meta().emplace_back(schema_int_list);                                          \
+#define InfoDef                                 \
+    info.meta().emplace_back(schema_bool);      \
+    info.meta().emplace_back(schema_flt);       \
+    info.meta().emplace_back(schema_int);       \
+    info.meta().emplace_back(schema_str);       \
+    info.meta().emplace_back(schema_bool_list); \
+    info.meta().emplace_back(schema_flt_list);  \
+    info.meta().emplace_back(schema_int_list);  \
     info.meta().emplace_back(schema_str_list)
 
 TEST(TestParam, TestParamScheme) {
@@ -50,19 +50,23 @@ TEST(TestParam, TestParamScheme) {
     std::cout << schema_flt.str() << std::endl;
     std::cout << schema_int.str() << std::endl;
     std::cout << schema_str.str() << std::endl;
-    std::cout << schema_bool_list.str() << "len: "<< schema_bool_list.default_val().size() << std::endl;
-    std::cout << schema_flt_list.str() << "len: "<< schema_flt_list.default_val().size() << std::endl;
-    std::cout << schema_int_list.str() << "len: "<< schema_int_list.default_val().size() << std::endl;
-    std::cout << schema_str_list.str() << "len: "<< schema_str_list.default_val().size() << std::endl;
+    std::cout << schema_bool_list.str()
+              << "len: " << schema_bool_list.default_val().size() << std::endl;
+    std::cout << schema_flt_list.str()
+              << "len: " << schema_flt_list.default_val().size() << std::endl;
+    std::cout << schema_int_list.str()
+              << "len: " << schema_int_list.default_val().size() << std::endl;
+    std::cout << schema_str_list.str()
+              << "len: " << schema_str_list.default_val().size() << std::endl;
 
     std::cout << new_schema.str() << std::endl;
 #endif
 }
 
 TEST(TestParam, TestParamVal) {
-    ParamVal pv1 = 1.2f, pv2 = true, pv3 = "test", pv4 = {0, 1, 2}, 
+    ParamVal pv1 = 1.2f, pv2 = true, pv3 = "test", pv4 = {0, 1, 2},
              pv5 = {true, false, true};
-            
+
 #if PARAM_TEST_LOG
     ParamVal pv6 = {"test1", "test2", "test3"};
     std::cout << pv1.str() << std::endl;
@@ -114,7 +118,6 @@ TEST(TestParam, TestParamVal) {
     ASSERT_TRUE(pv_manip == pv5);
     pv_manip = {false, true, false};
     ASSERT_TRUE(pv_manip != pv5);
-
 }
 
 TEST(TestParam, TestParamInfo) {
@@ -133,10 +136,10 @@ TEST(TestParam, TestParamInfo) {
     new_info2.meta() = info.meta();
 
 #if PARAM_TEST_LOG
-    for (auto ele: new_info1.meta()) {
+    for (auto ele : new_info1.meta()) {
         std::cout << ele.str() << std::endl;
     }
-    for (auto ele: new_info2.meta()) {
+    for (auto ele : new_info2.meta()) {
         std::cout << ele.str() << std::endl;
     }
 #endif
@@ -150,9 +153,12 @@ TEST(TestParam, TestParam) {
     Param param(info);
 
 #if PARAM_TEST_LOG
-    std::vector<std::string> names = {"param_bool", "param_flt", "param_int", "param_str", "param_bl", "param_fl", "param_il", "param_sl"};
-    for (auto &name: names) {
-        std::cout << param[name].str() << std::endl;;
+    std::vector<std::string> names = {"param_bool", "param_flt", "param_int",
+                                      "param_str",  "param_bl",  "param_fl",
+                                      "param_il",   "param_sl"};
+    for (auto& name : names) {
+        std::cout << param[name].str() << std::endl;
+        ;
     }
 #endif
     ASSERT_TRUE(param["param_bool"] == true);
@@ -189,11 +195,13 @@ TEST(TestParam, TestParam) {
     ASSERT_TRUE(param["param_bl"] == ParamVal({false, true, false, true}));
     ASSERT_TRUE(param["param_fl"] == ParamVal({7.6f, 6.5f}));
     ASSERT_TRUE(param["param_il"] == ParamVal({5, 4, 3, 2, 1}));
-    ASSERT_TRUE(param["param_sl"] == ParamVal({"1tset", "2tset", "3tset", "4tset", "5tset"}));
+    ASSERT_TRUE(
+            param["param_sl"] ==
+            ParamVal({"1tset", "2tset", "3tset", "4tset", "5tset"}));
 
 #if PARAM_TEST_LOG
     Param copy_param = param;
-    for (auto &name: names) {
+    for (auto& name : names) {
         std::cout << copy_param[name].str() << std::endl;
     }
 #endif
@@ -203,12 +211,12 @@ TEST(TestParam, TestParam) {
     loaded_param.from_bytes(bytes);
 
 #if PARAM_TEST_LOG
-    for (auto &kv: loaded_param.raw()) {
+    for (auto& kv : loaded_param.raw()) {
         std::cout << kv.first << ":\n" << kv.second.str() << std::endl;
     }
 #endif
 }
 
-}
+}  // namespace custom
 
 #endif

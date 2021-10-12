@@ -26,8 +26,8 @@ namespace test {
 
 //! get mean and variance
 template <typename ctype>
-std::pair<double, double> get_mean_var(const ctype* src, size_t size,
-                                       ctype expected_mean) {
+std::pair<double, double> get_mean_var(
+        const ctype* src, size_t size, ctype expected_mean) {
     double sum = 0, sum2 = 0;
     for (size_t i = 0; i < size; ++i) {
         auto cur = src[i] - expected_mean;

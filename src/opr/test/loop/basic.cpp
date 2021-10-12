@@ -9,21 +9,21 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/test/helper.h"
 #include "megbrain/test/autocheck.h"
+#include "megbrain/test/helper.h"
 #include "megbrain/test/host_static_calc.h"
 
-#include "megbrain/utils/timer.h"
-#include "megbrain/opr/loop.h"
-#include "megbrain/opr/indexing.h"
-#include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
-#include "megbrain/opr/utility.h"
+#include "megbrain/opr/indexing.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/loop.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
+#include "megbrain/utils/timer.h"
 
-#include "megbrain/gopt/framework.h"
 #include "megbrain/gopt/basic_arith.h"
+#include "megbrain/gopt/framework.h"
 
 #include <cmath>
 
@@ -33,27 +33,24 @@ namespace mgb {
 namespace opr {
 namespace intl {
 
-    class LoopTest {
-        public:
-            static bool is_static_loop_time(cg::OperatorNodeBase *opr) {
-                return static_cast<bool>(opr->cast_final_safe<Loop>().
-                        m_static_loop_time_infer);
-            }
+class LoopTest {
+public:
+    static bool is_static_loop_time(cg::OperatorNodeBase* opr) {
+        return static_cast<bool>(opr->cast_final_safe<Loop>().m_static_loop_time_infer);
+    }
 
-            static bool& check_output_recorder_sum_optimize_success() {
-                return Loop::LoopImpl::
-                    test_check_grad_output_recorder_sum_optimize_success();
-            }
+    static bool& check_output_recorder_sum_optimize_success() {
+        return Loop::LoopImpl::test_check_grad_output_recorder_sum_optimize_success();
+    }
 
-            static ThinHashMap<VarNode*, bool> var_rec_spec(
-                    cg::OperatorNodeBase *opr) {
-                return opr->cast_final_safe<Loop>().test_get_var_rec_spec();
-            }
-    };
+    static ThinHashMap<VarNode*, bool> var_rec_spec(cg::OperatorNodeBase* opr) {
+        return opr->cast_final_safe<Loop>().test_get_var_rec_spec();
+    }
+};
 
-} // namespace intl
-} // namespace opr
-} // namespace mgb
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
 
 using LoopDesc = opr::Loop::Desc;
 using OutputMode = opr::Loop::Desc::OutputMode;
@@ -65,8 +62,8 @@ void test_basic_fwd_with_grad(bool dyn) {
     HostTensorGenerator<> gen;
 
     auto host_x = gen({23});
-    auto host_loop_time = std::make_shared<HostTensorND>(
-            host_x->comp_node(), dtype::Int32());
+    auto host_loop_time =
+            std::make_shared<HostTensorND>(host_x->comp_node(), dtype::Int32());
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
@@ -76,10 +73,8 @@ void test_basic_fwd_with_grad(bool dyn) {
         return var;
     };
 
-    auto desc_maker =
-            [&, loop_time = opr::Host2DeviceCopy::make(*graph, host_loop_time)]
-            (LoopDesc &loop_desc) {
-
+    auto desc_maker = [&, loop_time = opr::Host2DeviceCopy::make(
+                                  *graph, host_loop_time)](LoopDesc& loop_desc) {
         auto xl = loop_desc.add_input_assignable(x).rename("xl"),
              x0 = d(loop_desc.add_input(x)).rename("x0"),
              xu = (opr::pow(d(xl), xl.make_scalar(0.9f)) * x0).rename("xu");
@@ -90,22 +85,19 @@ void test_basic_fwd_with_grad(bool dyn) {
     };
 
     auto y = opr::Loop::make(desc_maker, 3)[0],
-         loss = opr::reduce_sum(y, y.make_scalar(1)),
-         gx = cg::grad(loss, x);
+         loss = opr::reduce_sum(y, y.make_scalar(1)), gx = cg::grad(loss, x);
     HostTensorND host_y, host_gx;
-    auto func = graph->compile({
-            make_callback_copy(y, host_y),
-            make_callback_copy(gx, host_gx)
-            });
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(gx, host_gx)});
 
     int& loop_time = host_loop_time->resize({1}).ptr<int>()[0];
-    for (size_t sz: {12, 24}) {
+    for (size_t sz : {12, 24}) {
         *host_x = *gen({sz});
         auto px = host_x->ptr<float>();
-        for (size_t i = 0; i < sz; ++ i)
+        for (size_t i = 0; i < sz; ++i)
             px[i] = std::abs(px[i]);
 
-        for (loop_time = 1; loop_time <= 50; ++ loop_time) {
+        for (loop_time = 1; loop_time <= 50; ++loop_time) {
             func->execute();
             ASSERT_EQ(host_x->shape(), host_y.shape());
             ASSERT_EQ(host_x->shape(), host_gx.shape());
@@ -113,20 +105,19 @@ void test_basic_fwd_with_grad(bool dyn) {
             auto py = host_y.ptr<float>(), pgx = host_gx.ptr<float>();
 
             float dpow = 1;
-            for (int i = 0; i < loop_time; ++ i)
+            for (int i = 0; i < loop_time; ++i)
                 dpow = dpow * 0.9f + 1.f;
-            for (size_t i = 0; i < sz; ++ i) {
+            for (size_t i = 0; i < sz; ++i) {
                 auto x = px[i], y = py[i], gx = pgx[i];
                 MGB_ASSERT_FLOAT_NEAR(std::pow(x, dpow), y, 1e-5) << loop_time;
-                MGB_ASSERT_FLOAT_NEAR(
-                        dpow * std::pow(x, (dpow - 1.f)), gx, 1e-5)
-                    << loop_time;
+                MGB_ASSERT_FLOAT_NEAR(dpow * std::pow(x, (dpow - 1.f)), gx, 1e-5)
+                        << loop_time;
             }
         }
     }
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestOprLoop, APlusB) {
     HostTensorGenerator<> gen;
@@ -135,9 +126,8 @@ TEST(TestOprLoop, APlusB) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    auto desc_maker = [&](LoopDesc &loop_desc) {
-        auto xl = loop_desc.add_input_assignable(x).rename("xl"),
-             xu = xl * 2 + 1;
+    auto desc_maker = [&](LoopDesc& loop_desc) {
+        auto xl = loop_desc.add_input_assignable(x).rename("xl"), xu = xl * 2 + 1;
         loop_desc.assign(xl, xu);
         loop_desc.add_output(xu, OutputMode::LAST);
         loop_desc.set_loop_condition(loop_desc.get_counter_var() < 3);
@@ -149,9 +139,9 @@ TEST(TestOprLoop, APlusB) {
     func->execute();
     ASSERT_EQ(host_x->shape(), host_y.shape());
     auto px = host_x->ptr<float>(), py = host_y.ptr<float>();
-    for (size_t i = 0; i < 23; ++ i) {
+    for (size_t i = 0; i < 23; ++i) {
         auto yv = px[i];
-        for (int j = 0; j < 4; ++ j) {
+        for (int j = 0; j < 4; ++j) {
             yv = yv * 2 + 1;
         }
         ASSERT_EQ(yv, py[i]);
@@ -165,21 +155,21 @@ TEST(TestOprLoop, APlusBGrad) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto xl = loop_desc.add_input_assignable(x).rename("xl");
         loop_desc.assign(xl, xl * loop_desc.add_input(x).rename("x"));
         loop_desc.add_output(xl, OutputMode::LAST);
         loop_desc.set_loop_condition(loop_desc.get_counter_var() < 3);
     };
 
-    auto gx = cg::grad(opr::reduce_sum(opr::Loop::make(desc_maker, 3)[0],
-                x.make_scalar(1)), x);
+    auto gx = cg::grad(
+            opr::reduce_sum(opr::Loop::make(desc_maker, 3)[0], x.make_scalar(1)), x);
     HostTensorND host_gx;
     auto func = graph->compile({make_callback_copy(gx, host_gx)});
     func->execute();
     ASSERT_EQ(host_x->shape(), host_gx.shape());
     auto px = host_x->ptr<float>(), pgx = host_gx.ptr<float>();
-    for (size_t i = 0; i < 23; ++ i) {
+    for (size_t i = 0; i < 23; ++i) {
         auto x = px[i];
         ASSERT_EQ(4 * x * x * x, pgx[i]);
     }
@@ -192,20 +182,22 @@ TEST(TestOprLoop, APlusBGradWithShallowCopy) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    auto desc_maker = [x=x*2+1](LoopDesc &loop_desc) {
+    auto desc_maker = [x = x * 2 + 1](LoopDesc& loop_desc) {
         auto xl = loop_desc.add_input_assignable(x).rename("xl");
         loop_desc.assign(xl, xl * loop_desc.add_input(x).rename("x"));
         loop_desc.add_output(xl, OutputMode::LAST);
         loop_desc.set_loop_condition(loop_desc.get_counter_var() < 3);
     };
 
-    auto gx = cg::grad(opr::reduce_sum(opr::Loop::make(desc_maker, 3)[0],
-                x.make_scalar(1)), x);
+    auto gx = cg::grad(
+            opr::reduce_sum(opr::Loop::make(desc_maker, 3)[0], x.make_scalar(1)), x);
     auto gx0 = gx;
 
     unpack_vector(
-            gopt::GraphOptimizer{}.add_pass<gopt::ArithFusePass>().
-            apply({{gx}}).endpoint_vars(),
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{gx}})
+                    .endpoint_vars(),
             gx);
     ASSERT_NE(gx0.node(), gx.node());
 
@@ -216,7 +208,7 @@ TEST(TestOprLoop, APlusBGradWithShallowCopy) {
     func->execute();
     ASSERT_EQ(host_x->shape(), host_gx.shape());
     auto px = host_x->ptr<float>(), pgx = host_gx.ptr<float>();
-    for (size_t i = 0; i < 23; ++ i) {
+    for (size_t i = 0; i < 23; ++i) {
         auto x = px[i] * 2 + 1;
         ASSERT_EQ(4 * x * x * x * 2, pgx[i]);
     }
@@ -225,10 +217,9 @@ TEST(TestOprLoop, APlusBGradWithShallowCopy) {
 TEST(TestOprLoop, MultiReaderGrad) {
     using Checker = AutoOprChecker<1, 1>;
 
-    auto make_graph = [](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
+    auto make_graph = [](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         SymbolVar x = inputs[0];
-        auto desc_maker = [x](LoopDesc &loop_desc) {
+        auto desc_maker = [x](LoopDesc& loop_desc) {
             auto x0 = loop_desc.add_input_assignable(x).rename("x0"),
                  x1 = loop_desc.add_input_assignable(x).rename("x1"),
                  x2 = loop_desc.add_input_assignable(x).rename("x2"),
@@ -242,13 +233,13 @@ TEST(TestOprLoop, MultiReaderGrad) {
         return {opr::Loop::make(desc_maker)[0]};
     };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         auto nr = inp[0]->shape().total_nr_elems();
         auto px = inp[0]->ptr<float>();
         auto py = dest[0].resize(inp[0]->shape()).ptr<float>();
-        for (size_t i = 0; i < nr; ++ i) {
-            float x = px[i], x0 =  x, x1 = x, x2 = x, y = 0;
-            for (int j = 0; j <= 3; ++ j) {
+        for (size_t i = 0; i < nr; ++i) {
+            float x = px[i], x0 = x, x1 = x, x2 = x, y = 0;
+            for (int j = 0; j <= 3; ++j) {
                 auto xu = (x0 + x1 - x2) * x + 1;
                 y += x2;
                 x0 = xu;
@@ -258,11 +249,11 @@ TEST(TestOprLoop, MultiReaderGrad) {
             py[i] = y;
         }
     };
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        run({TensorShape{2}}).
-        run({TensorShape{3}}).
-        run({TensorShape{2, 3}});
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .run({TensorShape{2}})
+            .run({TensorShape{3}})
+            .run({TensorShape{2, 3}});
 }
 
 TEST(TestOprLoop, BasicFwdWithGrad) {
@@ -281,10 +272,9 @@ TEST(TestOprLoop, OutputCounter) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto xl = loop_desc.add_input_assignable(x).rename("xl"),
-             x0 = loop_desc.add_input(x).rename("x0"),
-             xu = (x0 * xl).rename("xu");
+             x0 = loop_desc.add_input(x).rename("x0"), xu = (x0 * xl).rename("xu");
         loop_desc.assign(xl, xu);
         loop_desc.add_output(xu, OutputMode::LAST);
         auto cnt = loop_desc.get_counter_var();
@@ -294,10 +284,8 @@ TEST(TestOprLoop, OutputCounter) {
 
     auto y = opr::Loop::make(desc_maker, 3);
     HostTensorND host_y0, host_y1;
-    auto func = graph->compile({
-            make_callback_copy(y[0], host_y0),
-            make_callback_copy(y[1], host_y1)
-            });
+    auto func = graph->compile(
+            {make_callback_copy(y[0], host_y0), make_callback_copy(y[1], host_y1)});
 
     func->execute();
     ASSERT_EQ(host_x->shape(), host_y0.shape());
@@ -307,7 +295,7 @@ TEST(TestOprLoop, OutputCounter) {
     auto py1 = host_y1.ptr<int>();
 
     constexpr double dpow = LOOP_TIME + 2;
-    for (size_t i = 0; i < host_x->shape(0); ++ i) {
+    for (size_t i = 0; i < host_x->shape(0); ++i) {
         MGB_ASSERT_FLOAT_EQ(std::pow(px[i], dpow), py0[i]);
     }
     ASSERT_EQ(LOOP_TIME, py1[0]);
@@ -323,7 +311,7 @@ TEST(TestOprLoop, InputDedup) {
     graph->options().var_sanity_check_first_run = false;
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
 
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto x_s0 = loop_desc.add_input_assignable(x).rename("x_s0"),
              x_s1 = loop_desc.add_input_assignable(x).rename("x_s1"),
              x0 = loop_desc.add_input(x).rename("x0"),
@@ -339,19 +327,16 @@ TEST(TestOprLoop, InputDedup) {
     };
     // sum(x + k + (x - k)*2 + 3*x + k*x, 0 <= k < LOOP_TIME)
 
-    auto y = opr::Loop::make(desc_maker)[0],
-         loss = opr::Dot::make(y, y),
+    auto y = opr::Loop::make(desc_maker)[0], loss = opr::Dot::make(y, y),
          gx = cg::grad(loss, x);
     HostTensorND host_y, host_gx;
-    auto func = graph->compile({
-            make_callback_copy(y, host_y),
-            make_callback_copy(gx, host_gx)
-            });
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(gx, host_gx)});
 
     float EQUIV_K = LOOP_TIME + 2.0 * LOOP_TIME + 3 * LOOP_TIME +
-                        LOOP_TIME * (LOOP_TIME - 1) / 2,
+                    LOOP_TIME * (LOOP_TIME - 1) / 2,
           EQUIV_B = LOOP_TIME * (LOOP_TIME - 1.0) / 2 * (1 - 2);
-    for (size_t sz: {12, 24}) {
+    for (size_t sz : {12, 24}) {
         *host_x = *gen({sz});
         func->execute();
         ASSERT_EQ(host_x->shape(), host_y.shape());
@@ -359,7 +344,7 @@ TEST(TestOprLoop, InputDedup) {
 
         auto px = host_x->ptr<float>(), py = host_y.ptr<float>(),
              pgx = host_gx.ptr<float>();
-        for (size_t i = 0; i < sz; ++ i) {
+        for (size_t i = 0; i < sz; ++i) {
             auto x = px[i], y = py[i], gx = pgx[i];
             MGB_ASSERT_FLOAT_EQ(x * EQUIV_K + EQUIV_B, y);
             MGB_ASSERT_FLOAT_EQ(EQUIV_K * 2 * y, gx);
@@ -375,11 +360,9 @@ TEST(TestOprLoop, OutputDedup) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          y = opr::Host2DeviceCopy::make(*graph, host_y);
-    auto desc_maker = [&](LoopDesc &loop_desc) {
-        auto loop_x = loop_desc.add_input(x),
-             loop_y = loop_desc.add_input(y);
-        loop_desc.set_loop_condition(
-                loop_desc.get_counter_var() < int(LOOP_TIME - 1));
+    auto desc_maker = [&](LoopDesc& loop_desc) {
+        auto loop_x = loop_desc.add_input(x), loop_y = loop_desc.add_input(y);
+        loop_desc.set_loop_condition(loop_desc.get_counter_var() < int(LOOP_TIME - 1));
         loop_desc.add_output(loop_x, OutputMode::SUM);
         loop_desc.add_output(loop_y, OutputMode::LAST);
         loop_desc.add_output(loop_x, OutputMode::SUM);
@@ -391,18 +374,16 @@ TEST(TestOprLoop, OutputDedup) {
     ASSERT_NE(rst[0].node(), rst[1].node());
 
     auto loss = opr::Dot::make(rst[0], rst[1]) + opr::Dot::make(rst[0], rst[2]),
-         gx = cg::grad(loss, x),
-         gy = cg::grad(loss, y);
+         gx = cg::grad(loss, x), gy = cg::grad(loss, y);
     HostTensorND host_gx, host_gy;
-    auto func = graph->compile({
-            make_callback_copy(gx, host_gx),
-            make_callback_copy(gy, host_gy)});
+    auto func = graph->compile(
+            {make_callback_copy(gx, host_gx), make_callback_copy(gy, host_gy)});
     func->execute();
     ASSERT_EQ(host_x->shape(), host_gx.shape());
     ASSERT_EQ(host_x->shape(), host_gy.shape());
 
     constexpr float K = LOOP_TIME;
-    for (size_t i = 0; i < host_x->shape().shape[0]; ++ i) {
+    for (size_t i = 0; i < host_x->shape().shape[0]; ++i) {
         auto x = host_x->ptr<float>()[i], y = host_y->ptr<float>()[i],
              gx = host_gx.ptr<float>()[i], gy = host_gy.ptr<float>()[i];
         MGB_ASSERT_FLOAT_EQ(K * x, gy);
@@ -419,7 +400,7 @@ TEST(TestOprLoop, CyclicUpdate) {
     auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
          y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y");
 
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto loop_x = loop_desc.add_input_assignable(x).rename("lx"),
              loop_y = loop_desc.add_input_assignable(y).rename("ly");
         loop_desc.assign(loop_x, loop_y);
@@ -434,28 +415,24 @@ TEST(TestOprLoop, CyclicUpdate) {
 
     HostTensorND host_r0, host_r1;
 
-    auto func = graph->compile({
-            make_callback_copy(rst[0], host_r0),
-            make_callback_copy(rst[1], host_r1)});
+    auto func = graph->compile(
+            {make_callback_copy(rst[0], host_r0), make_callback_copy(rst[1], host_r1)});
     func->execute();
 
     auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
          pr0 = host_r0.ptr<float>(), pr1 = host_r1.ptr<float>();
-    for (size_t i = 0; i < SIZE; i ++) {
-        ASSERT_EQ(px[i], pr1[i]) <<
-            ssprintf("fail at %zd: y=%.2f r0=%.2f",
-                    i, py[i], pr0[i]);
-        ASSERT_EQ(py[i], pr0[i]) <<
-            ssprintf("fail at %zd: x=%.2f r1=%.2f",
-                    i, px[i], pr1[i]);
+    for (size_t i = 0; i < SIZE; i++) {
+        ASSERT_EQ(px[i], pr1[i])
+                << ssprintf("fail at %zd: y=%.2f r0=%.2f", i, py[i], pr0[i]);
+        ASSERT_EQ(py[i], pr0[i])
+                << ssprintf("fail at %zd: x=%.2f r1=%.2f", i, px[i], pr1[i]);
     }
 }
 
 TEST(TestOprLoop, CyclicUpdateGradInpShapeOnly) {
     constexpr size_t SIZE = 1;
     HostTensorGenerator<> gen;
-    auto host_x = gen({SIZE}), host_y = gen({SIZE}),
-         host_loss_p0 = gen({SIZE}),
+    auto host_x = gen({SIZE}), host_y = gen({SIZE}), host_loss_p0 = gen({SIZE}),
          host_loss_p1 = gen({SIZE});
 
     auto graph = ComputingGraph::make();
@@ -465,7 +442,7 @@ TEST(TestOprLoop, CyclicUpdateGradInpShapeOnly) {
          loss_p1 = opr::Host2DeviceCopy::make(*graph, host_loss_p1);
 
     // grad only depends on input shape
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto loop_x = loop_desc.add_input_assignable(x).rename("lx"),
              loop_y = loop_desc.add_input_assignable(y).rename("ly");
         loop_desc.assign(loop_x, loop_y);
@@ -476,14 +453,13 @@ TEST(TestOprLoop, CyclicUpdateGradInpShapeOnly) {
     };
 
     auto rst = opr::Loop::make(desc_maker);
-    auto loss = opr::Dot::make(rst.at(0), loss_p0) +
-        opr::Dot::make(rst.at(1), loss_p1);
+    auto loss = opr::Dot::make(rst.at(0), loss_p0) + opr::Dot::make(rst.at(1), loss_p1);
 
     HostTensorND host_r0, host_r1;
 
-    auto func = graph->compile({
-            make_callback_copy(cg::grad(loss, x), host_r0),
-            make_callback_copy(cg::grad(loss, y), host_r1)});
+    auto func = graph->compile(
+            {make_callback_copy(cg::grad(loss, x), host_r0),
+             make_callback_copy(cg::grad(loss, y), host_r1)});
 
     auto run = [&](size_t size) {
         *host_x = *gen({size});
@@ -498,13 +474,11 @@ TEST(TestOprLoop, CyclicUpdateGradInpShapeOnly) {
 
         auto px = host_loss_p0->ptr<float>(), py = host_loss_p1->ptr<float>(),
              pr0 = host_r0.ptr<float>(), pr1 = host_r1.ptr<float>();
-        for (size_t i = 0; i < size; i ++) {
-            ASSERT_EQ(px[i], pr1[i]) <<
-                ssprintf("fail at %zd: y=%.2f r0=%.2f",
-                        i, py[i], pr0[i]);
-            ASSERT_EQ(py[i], pr0[i]) <<
-                ssprintf("fail at %zd: x=%.2f r1=%.2f",
-                        i, px[i], pr1[i]);
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_EQ(px[i], pr1[i])
+                    << ssprintf("fail at %zd: y=%.2f r0=%.2f", i, py[i], pr0[i]);
+            ASSERT_EQ(py[i], pr0[i])
+                    << ssprintf("fail at %zd: x=%.2f r1=%.2f", i, px[i], pr1[i]);
         }
     };
 
@@ -514,54 +488,50 @@ TEST(TestOprLoop, CyclicUpdateGradInpShapeOnly) {
 
 TEST(TestOprLoop, CyclicUpdateGrad) {
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
-            auto x0 = inputs[0], y0 = inputs[1];
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto x0 = inputs[0], y0 = inputs[1];
 
-            auto desc_maker = [&](LoopDesc &desc) {
-                auto x = desc.add_input_assignable(x0).rename("x"),
-                     y = desc.add_input_assignable(y0).rename("y");
-                desc.assign(x, x + y);
-                desc.assign(y, x * 3 + 1);
-                desc.set_loop_condition(desc.get_counter_var() < 3);
-                desc.add_output(y / 3, OutputMode::LAST);
-            };
-            // x0, y0 = x, y
-            // x1, y1 = x + y, x * 3 + 1
-            // x2, y2 = x * 4 + y + 1, x * 3 + y * 3 + 1
-            // y3 = x2 * 3 + 1
-            // out: x2 + 1 / 3
-
-            return {opr::Loop::make(desc_maker)[0]};
+        auto desc_maker = [&](LoopDesc& desc) {
+            auto x = desc.add_input_assignable(x0).rename("x"),
+                 y = desc.add_input_assignable(y0).rename("y");
+            desc.assign(x, x + y);
+            desc.assign(y, x * 3 + 1);
+            desc.set_loop_condition(desc.get_counter_var() < 3);
+            desc.add_output(y / 3, OutputMode::LAST);
         };
+        // x0, y0 = x, y
+        // x1, y1 = x + y, x * 3 + 1
+        // x2, y2 = x * 4 + y + 1, x * 3 + y * 3 + 1
+        // y3 = x2 * 3 + 1
+        // out: x2 + 1 / 3
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        return {opr::Loop::make(desc_maker)[0]};
+    };
+
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         auto oshp = inp[0]->shape();
         auto ix = inp[0]->ptr<float>(), iy = inp[1]->ptr<float>(),
              o = dest[0].resize(oshp).ptr<float>();
-        for (size_t i = 0, sz = oshp.total_nr_elems(); i < sz; ++ i) {
+        for (size_t i = 0, sz = oshp.total_nr_elems(); i < sz; ++i) {
             o[i] = ix[i] * 4 + iy[i] + 1 + 1.f / 3;
         }
     };
 
     Checker::RunOptions opt;
     opt.numdiff_eps = 1;
-    auto mki = [](const TensorShape &s) -> Checker::ShapeInpArray {
-        return {s, s};
-    };
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        run(mki({3}), opt).
-        run(mki({5}), opt).
-        run(mki({2, 3}), opt);
+    auto mki = [](const TensorShape& s) -> Checker::ShapeInpArray { return {s, s}; };
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .run(mki({3}), opt)
+            .run(mki({5}), opt)
+            .run(mki({2, 3}), opt);
 }
-
 
 TEST(TestOprLoop, BasicUpdate) {
     bool failed = false;
 
-    auto static_calc_opr = opr::intl::create_megdnn_opr<
-        megdnn::Elemwise>(CompNode::load("xpu0"));
+    auto static_calc_opr =
+            opr::intl::create_megdnn_opr<megdnn::Elemwise>(CompNode::load("xpu0"));
 
     auto run = [&](bool x_dynamic) {
         ASSERT_FALSE(failed);
@@ -577,16 +547,14 @@ TEST(TestOprLoop, BasicUpdate) {
             x = opr::MarkDynamicVar::make(x);
         x.rename("x");
 
-        float *y0_ptr = nullptr;
-        auto desc_maker = [&](LoopDesc &loop_desc) {
-            auto loop_x0 = loop_desc.add_input_assignable(
-                    x.fill_retain_dtype(1)).rename("x0");
+        float* y0_ptr = nullptr;
+        auto desc_maker = [&](LoopDesc& loop_desc) {
+            auto loop_x0 =
+                    loop_desc.add_input_assignable(x.fill_retain_dtype(1)).rename("x0");
 
             loop_desc.assign(loop_x0, loop_x0 * loop_desc.add_input(x));
             loop_desc.set_loop_condition(loop_desc.get_counter_var() < EXP);
-            auto cb = [&](DeviceTensorND &val) {
-                y0_ptr = val.ptr<float>();
-            };
+            auto cb = [&](DeviceTensorND& val) { y0_ptr = val.ptr<float>(); };
             auto y = opr::CallbackInjector::make(loop_x0, cb);
             loop_desc.add_output(y, OutputMode::LAST);
             loop_desc.add_output(y + 2, OutputMode::LAST);
@@ -597,15 +565,14 @@ TEST(TestOprLoop, BasicUpdate) {
         y[1].rename("y1");
 
         HostTensorND host_y, host_y1, expected,
-                     host_exp{host_x->comp_node(), host_x->dtype()}, host_bias;
+                host_exp{host_x->comp_node(), host_x->dtype()}, host_bias;
         host_exp.resize({1}).ptr<float>()[0] = EXP;
         host_bias.copy_from(host_exp).ptr<float>()[0] = 2;
 
-        auto func = graph->compile({
-                make_callback_copy(y[0], host_y),
-                make_callback_copy(y[1], host_y1)});
+        auto func = graph->compile(
+                {make_callback_copy(y[0], host_y), make_callback_copy(y[1], host_y1)});
 
-        for (size_t i = 0; i < 2; i ++) {
+        for (size_t i = 0; i < 2; i++) {
             func->execute();
 
             mgb::host_pow(expected, *host_x, host_exp);
@@ -626,14 +593,13 @@ TEST(TestOprLoop, BasicUpdate) {
 TEST(TestOprLoop, BenchmarkOverhead) {
     constexpr size_t LOOP_TIME = 100;
     double time_loop = -1, time_raw = -1;
-    auto zero = [&](ComputingGraph &graph) {
+    auto zero = [&](ComputingGraph& graph) {
         return SymbolVar::make_scalar(0, graph, CompNode::load("xpu0"));
     };
     auto run_loop = [&]() {
         auto graph = ComputingGraph::make();
-        auto desc_maker = [&](LoopDesc &loop_desc) {
-            auto x = loop_desc.add_input_assignable(zero(*graph)),
-                 xnext = x + 1;
+        auto desc_maker = [&](LoopDesc& loop_desc) {
+            auto x = loop_desc.add_input_assignable(zero(*graph)), xnext = x + 1;
             loop_desc.assign(x, xnext);
             loop_desc.add_output(xnext, OutputMode::LAST);
             auto cnt = loop_desc.get_counter_var();
@@ -654,9 +620,8 @@ TEST(TestOprLoop, BenchmarkOverhead) {
         HostTensorND host_delta{CompNode::load("xpu0"), dtype::Float32()};
         host_delta.resize({1}).ptr<float>()[0] = 1;
         dev_delta->copy_from(host_delta);
-        auto x = zero(*graph),
-             delta = opr::SharedDeviceTensor::make(*graph, dev_delta);
-        for (size_t i = 0; i < LOOP_TIME; ++ i)
+        auto x = zero(*graph), delta = opr::SharedDeviceTensor::make(*graph, dev_delta);
+        for (size_t i = 0; i < LOOP_TIME; ++i)
             x = x + delta;
         HostTensorND host_x;
         auto f = graph->compile({make_callback_copy(x, host_x)});
@@ -670,42 +635,40 @@ TEST(TestOprLoop, BenchmarkOverhead) {
 
     run_loop();
     run_raw();
-    mgb_log("time_loop/time_raw=%.3g/%.3g=%.3g overhead_per_loop=%.3gms",
-            time_loop, time_raw, time_loop / time_raw,
-            (time_loop - time_raw) / LOOP_TIME * 1000);
+    mgb_log("time_loop/time_raw=%.3g/%.3g=%.3g overhead_per_loop=%.3gms", time_loop,
+            time_raw, time_loop / time_raw, (time_loop - time_raw) / LOOP_TIME * 1000);
 }
 
 TEST(TestOprLoop, RecordOutputAll) {
     using Checker = AutoOprChecker<1, 4>;
     static constexpr int LOOP_TIME = 7;
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
-            auto x = inputs[0];
-            auto desc_maker = [&](LoopDesc &desc) {
-                auto xl = desc.add_input_assignable(x),
-                     xu = opr::pow(xl, xl.make_scalar(.7f)) * desc.add_input(x),
-                     cnt = desc.get_counter_var();
-                desc.assign(xl, xu);
-                desc.add_output(xl, OutputMode::ALL);
-                desc.add_output(xl * cnt, OutputMode::ALL);
-                desc.add_output(xu, OutputMode::ALL);
-                desc.add_output(xu * cnt, OutputMode::ALL);
-                desc.set_loop_condition(cnt < LOOP_TIME - 1);
-            };
-            auto y = opr::Loop::make(desc_maker);
-            return {y[0], y[1], y[2], y[3]};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto x = inputs[0];
+        auto desc_maker = [&](LoopDesc& desc) {
+            auto xl = desc.add_input_assignable(x),
+                 xu = opr::pow(xl, xl.make_scalar(.7f)) * desc.add_input(x),
+                 cnt = desc.get_counter_var();
+            desc.assign(xl, xu);
+            desc.add_output(xl, OutputMode::ALL);
+            desc.add_output(xl * cnt, OutputMode::ALL);
+            desc.add_output(xu, OutputMode::ALL);
+            desc.add_output(xu * cnt, OutputMode::ALL);
+            desc.set_loop_condition(cnt < LOOP_TIME - 1);
         };
+        auto y = opr::Loop::make(desc_maker);
+        return {y[0], y[1], y[2], y[3]};
+    };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
-        float *py[4];
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        float* py[4];
         size_t size = inp[0]->shape(0);
-        for (int i = 0; i < 4; ++ i) {
+        for (int i = 0; i < 4; ++i) {
             py[i] = dest[i].resize({LOOP_TIME, size}).ptr<float>();
         }
         auto px = inp[0]->ptr<float>();
-        for (size_t i = 0; i < size; ++ i) {
+        for (size_t i = 0; i < size; ++i) {
             float x = px[i], epow = 0;
-            for (int j = 0; j < LOOP_TIME; ++ j) {
+            for (int j = 0; j < LOOP_TIME; ++j) {
                 epow = epow * .7f + 1.f;
                 auto xl = std::pow(x, epow), xu = std::pow(xl, .7f) * x;
                 auto off = j * size + i;
@@ -717,54 +680,50 @@ TEST(TestOprLoop, RecordOutputAll) {
         }
     };
 
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
-        1e-2, 1};
-    auto genx = [&](HostTensorND &dest) {
-        dest = *gen(dest.shape());
-    };
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{1e-2, 1};
+    auto genx = [&](HostTensorND& dest) { dest = *gen(dest.shape()); };
     Checker::RunOptions opt;
     opt.numdiff_eps = 1e-3;
     opt.numdiff_max_err = 4e-3;
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        set_input_generator(0, genx).
-        run({TensorShape{2}}, opt).
-        run({TensorShape{3}}, opt).
-        run({TensorShape{23}}, opt);
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .set_input_generator(0, genx)
+            .run({TensorShape{2}}, opt)
+            .run({TensorShape{3}}, opt)
+            .run({TensorShape{23}}, opt);
 }
 
 TEST(TestOprLoop, RecordOutputSum) {
     using Checker = AutoOprChecker<1, 4>;
     static constexpr int LOOP_TIME = 7;
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
-            auto x = inputs[0];
-            auto desc_maker = [&](LoopDesc &desc) {
-                auto xl = desc.add_input_assignable(x),
-                     xu = opr::pow(xl, xl.make_scalar(.7f)) * desc.add_input(x),
-                     cnt = desc.get_counter_var();
-                desc.assign(xl, xu);
-                desc.add_output(xl, OutputMode::SUM);
-                desc.add_output(xl * cnt, OutputMode::SUM);
-                desc.add_output(xu, OutputMode::SUM);
-                desc.add_output(xu * cnt, OutputMode::SUM);
-                desc.set_loop_condition(cnt < LOOP_TIME - 1);
-            };
-            auto y = opr::Loop::make(desc_maker);
-            return {y[0], y[1], y[2], y[3]};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto x = inputs[0];
+        auto desc_maker = [&](LoopDesc& desc) {
+            auto xl = desc.add_input_assignable(x),
+                 xu = opr::pow(xl, xl.make_scalar(.7f)) * desc.add_input(x),
+                 cnt = desc.get_counter_var();
+            desc.assign(xl, xu);
+            desc.add_output(xl, OutputMode::SUM);
+            desc.add_output(xl * cnt, OutputMode::SUM);
+            desc.add_output(xu, OutputMode::SUM);
+            desc.add_output(xu * cnt, OutputMode::SUM);
+            desc.set_loop_condition(cnt < LOOP_TIME - 1);
         };
+        auto y = opr::Loop::make(desc_maker);
+        return {y[0], y[1], y[2], y[3]};
+    };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
-        float *py[4];
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        float* py[4];
         size_t size = inp[0]->shape(0);
-        for (int i = 0; i < 4; ++ i) {
+        for (int i = 0; i < 4; ++i) {
             py[i] = dest[i].resize({size}).ptr<float>();
             memset(py[i], 0, sizeof(float) * size);
         }
         auto px = inp[0]->ptr<float>();
-        for (size_t i = 0; i < size; ++ i) {
+        for (size_t i = 0; i < size; ++i) {
             float x = px[i], epow = 0;
-            for (int j = 0; j < LOOP_TIME; ++ j) {
+            for (int j = 0; j < LOOP_TIME; ++j) {
                 epow = epow * .7f + 1.f;
                 auto xl = std::pow(x, epow), xu = std::pow(xl, .7f) * x;
                 py[0][i] += xl;
@@ -775,20 +734,17 @@ TEST(TestOprLoop, RecordOutputSum) {
         }
     };
 
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
-        1e-2, 1};
-    auto genx = [&](HostTensorND &dest) {
-        dest = *gen(dest.shape());
-    };
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{1e-2, 1};
+    auto genx = [&](HostTensorND& dest) { dest = *gen(dest.shape()); };
     Checker::RunOptions opt;
     opt.numdiff_eps = 1e-3;
     opt.numdiff_max_err = 4e-3;
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        set_input_generator(0, genx).
-        run({TensorShape{2}}, opt).
-        run({TensorShape{3}}, opt).
-        run({TensorShape{23}}, opt);
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .set_input_generator(0, genx)
+            .run({TensorShape{2}}, opt)
+            .run({TensorShape{3}}, opt)
+            .run({TensorShape{23}}, opt);
 }
 
 TEST(TestOprLoop, DynamicCases) {
@@ -802,38 +758,37 @@ TEST(TestOprLoop, DynamicCases) {
         DeviceTensorND xdev_prev;
         constexpr ptrdiff_t LOOP_TIME = 4;
 
-        auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             auto glb_x = inputs.at(0);
             if (dyn_inp)
                 glb_x = opr::MarkDynamicVar::make(glb_x);
             glb_x.rename("glb_x");
 
-            auto desc_maker = [glb_x, dyn_inp, dyn_cnt, &xdev_prev](
-                    LoopDesc &desc) {
-
-                auto check_xsub = [&xdev_prev](DeviceTensorND &xsub) {
+            auto desc_maker = [glb_x, dyn_inp, dyn_cnt, &xdev_prev](LoopDesc& desc) {
+                auto check_xsub = [&xdev_prev](DeviceTensorND& xsub) {
                     mgb_assert(xsub.ptr<float>() >= xdev_prev.ptr<float>());
-                    mgb_assert(xsub.ptr<float>() <= xdev_prev.ptr<float>() +
-                            xdev_prev.layout().total_nr_elems());
+                    mgb_assert(
+                            xsub.ptr<float>() <=
+                            xdev_prev.ptr<float>() +
+                                    xdev_prev.layout().total_nr_elems());
                 };
 
                 using AIdx = opr::Subtensor::AxisIndexer;
                 auto x = desc.add_input_assignable(glb_x).rename("x"),
                      cnt = desc.get_counter_var(),
-                     xchk = opr::CallbackInjector::make(x,
-                        [&](DeviceTensorND &v){
-                            xdev_prev = v;
-                        }),
+                     xchk = opr::CallbackInjector::make(
+                             x, [&](DeviceTensorND&v) { xdev_prev = v; }),
                      xsub = opr::CallbackInjector::make(
-                             opr::Subtensor::make(xchk,
-                                 {AIdx::make_interval(0, cnt, cnt + 1, None)}
-                                 ), check_xsub).rename("xsub"),
+                                    opr::Subtensor::make(
+                                            xchk, {AIdx::make_interval(
+                                                          0, cnt, cnt + 1, None)}),
+                                    check_xsub)
+                                    .rename("xsub"),
                      y0 = (xsub + 1).rename("y0"),
                      y0o = opr::AxisAddRemove::make(
-                             y0,
-                             {opr::AxisAddRemove::AxisDesc::make_remove(0)}).
-                        rename("y0o"),
+                                   y0, {opr::AxisAddRemove::AxisDesc::make_remove(0)})
+                                   .rename("y0o"),
                      y1 = (y0 + 1).rename("y1"),
                      loop_time = x.make_scalar(int(LOOP_TIME)).rename("lt");
 
@@ -855,12 +810,11 @@ TEST(TestOprLoop, DynamicCases) {
             };
 
             auto loop_out = opr::Loop::make(desc_maker);
-            mgb_assert(dyn_inp ==
-                    !cg::is_static_var_shape(loop_out.at(3).node()));
+            mgb_assert(dyn_inp == !cg::is_static_var_shape(loop_out.at(3).node()));
             return {loop_out[0], loop_out[1], loop_out[2], loop_out[3]};
         };
 
-        auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+        auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
             HostTensorND x;
             x.copy_from(*inp[0]);
             auto x_shp = x.shape(), y0_shp = x.shape(), y1_shp = x.shape();
@@ -878,8 +832,8 @@ TEST(TestOprLoop, DynamicCases) {
                 // compute outputs
                 auto xsub = x[{{cnt, cnt + 1}}];
                 auto y0_dest = y0[{{cnt, cnt + 1}}];
-                for (ptrdiff_t i = 0, it = xsub.layout().total_nr_elems();
-                        i < it; ++ i) {
+                for (ptrdiff_t i = 0, it = xsub.layout().total_nr_elems(); i < it;
+                     ++i) {
                     auto xv = xsub.ptr<float>()[i];
                     y0_dest.ptr<float>()[i] = xv + 1;
                     y1.ptr<float>()[i] = xv + 2;
@@ -888,8 +842,7 @@ TEST(TestOprLoop, DynamicCases) {
                 HostTensorND tmp;
                 mgb::host_add(tmp, x, y0_dest);
                 mgb_assert(tmp.layout().eq_layout(y2.layout()));
-                for (ptrdiff_t i = 0, it = y2.layout().total_nr_elems();
-                        i < it; ++ i) {
+                for (ptrdiff_t i = 0, it = y2.layout().total_nr_elems(); i < it; ++i) {
                     y2.ptr<float>()[i] += tmp.ptr<float>()[i] * cnt / 3.0;
                     y3.ptr<float>()[i] += x.ptr<float>()[i] + cnt * cnt;
                 }
@@ -899,29 +852,28 @@ TEST(TestOprLoop, DynamicCases) {
                 // update
                 mgb::host_add(tmp, x, y1);
                 mgb_assert(tmp.layout().eq_layout(x.layout()));
-                for (ptrdiff_t i = 0, it = x.layout().total_nr_elems();
-                        i < it; ++ i) {
+                for (ptrdiff_t i = 0, it = x.layout().total_nr_elems(); i < it; ++i) {
                     x.ptr<float>()[i] = tmp.ptr<float>()[i] - cnt / 2.0;
                 }
-                ++ cnt;
+                ++cnt;
             } while (should_loop);
         };
 
         Checker::RunOptions opt;
         // large eps because all linear
         opt.numdiff_eps = 1;
-        Checker{make_graph, fwd}.
-            disable_multi_loss_check().
-            run({TensorShape{6, 1}}, opt).
-            run({TensorShape{8, 4}}, opt).
-            run({TensorShape{7, 2, 3}}, opt).
-            run({TensorShape{6, 2, 1, 2}}, opt);
+        Checker{make_graph, fwd}
+                .disable_multi_loss_check()
+                .run({TensorShape{6, 1}}, opt)
+                .run({TensorShape{8, 4}}, opt)
+                .run({TensorShape{7, 2, 3}}, opt)
+                .run({TensorShape{6, 2, 1, 2}}, opt);
 
         failed = false;
     };
 
-    for (int i = 0; i < 2; ++ i)
-        for (int j = 0; j < 2; ++ j)
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 2; ++j)
             run(i, j);
 }
 
@@ -934,7 +886,7 @@ TEST(TestOprLoop, UnusedOutput) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x");
 
-    auto desc_maker = [&](LoopDesc &desc) {
+    auto desc_maker = [&](LoopDesc& desc) {
         auto x0 = desc.add_input_assignable(x.fill_retain_dtype(1)).rename("x0");
 
         desc.assign(x0, x0 * desc.add_input(x));
@@ -948,14 +900,12 @@ TEST(TestOprLoop, UnusedOutput) {
     auto y = opr::Loop::make(desc_maker);
     ASSERT_EQ(3u, y.size());
 
-    HostTensorND host_y, expected,
-                 host_pow{host_x->comp_node(), host_x->dtype()};
+    HostTensorND host_y, expected, host_pow{host_x->comp_node(), host_x->dtype()};
     host_pow.resize({1}).ptr<float>()[0] = EXP;
 
     auto func = graph->compile({make_callback_copy(y[0], host_y)});
 
-    for (auto &&ishp: {TensorShape{5}, TensorShape{4, 3},
-            TensorShape{12, 3, 4}}) {
+    for (auto&& ishp : {TensorShape{5}, TensorShape{4, 3}, TensorShape{12, 3, 4}}) {
         *host_x = *gen(ishp);
 
         func->execute();
@@ -972,22 +922,17 @@ TEST(TestOprLoop, UnusedOutputGrad) {
     constexpr float EXP = 5;
     constexpr size_t SIZE0 = 4, SIZE1 = 7;
     HostTensorGenerator<> gen;
-    auto host_x = gen({SIZE0, SIZE1}),
-         host_loss_p = gen({SIZE0 * SIZE1});
+    auto host_x = gen({SIZE0, SIZE1}), host_loss_p = gen({SIZE0 * SIZE1});
 
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x");
 
     bool used = false;
-    auto used_cb = [&](DeviceTensorND &) {
-        used = true;
-    };
+    auto used_cb = [&](DeviceTensorND&) { used = true; };
 
-    auto desc_maker = [&](LoopDesc &desc) {
-        auto x0 = desc.add_input_assignable(
-                x.fill_retain_dtype(1)).rename("x0");
-        auto y0 = desc.add_input_assignable(
-                x.fill_retain_dtype(0)).rename("y0");
+    auto desc_maker = [&](LoopDesc& desc) {
+        auto x0 = desc.add_input_assignable(x.fill_retain_dtype(1)).rename("x0");
+        auto y0 = desc.add_input_assignable(x.fill_retain_dtype(0)).rename("y0");
         auto cur_x = desc.add_input(x);
 
         desc.assign(x0, x0 * cur_x);
@@ -1001,32 +946,29 @@ TEST(TestOprLoop, UnusedOutputGrad) {
     };
     auto y = opr::Loop::make(desc_maker)[1];
 
-    auto loss = opr::Dot::make(y.flatten(),
-            opr::Host2DeviceCopy::make(*graph, host_loss_p)),
+    auto loss = opr::Dot::make(
+                 y.flatten(), opr::Host2DeviceCopy::make(*graph, host_loss_p)),
          gx = cg::grad(loss, x);
 
-    HostTensorND host_y, host_gx,
-                 expected{host_x->comp_node(), host_x->dtype()};
+    HostTensorND host_y, host_gx, expected{host_x->comp_node(), host_x->dtype()};
 
-    auto func = graph->compile({
-            make_callback_copy(y, host_y),
-            make_callback_copy(gx, host_gx)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(gx, host_gx)});
 
-    for (auto &&ishp: {TensorShape{5}, TensorShape{4, 3},
-            TensorShape{12, 3, 4}}) {
+    for (auto&& ishp : {TensorShape{5}, TensorShape{4, 3}, TensorShape{12, 3, 4}}) {
         *host_x = *gen(ishp);
         *host_loss_p = *gen({ishp.total_nr_elems()});
 
         func->execute();
         expected.resize(ishp);
-        for (size_t i = 0, it = ishp.total_nr_elems(); i < it; ++ i) {
+        for (size_t i = 0, it = ishp.total_nr_elems(); i < it; ++i) {
             expected.ptr<float>()[i] = std::pow(host_x->ptr<float>()[i], EXP);
         }
         MGB_ASSERT_TENSOR_EQ(expected, host_y);
 
-        for (size_t i = 0, it = ishp.total_nr_elems(); i < it; ++ i) {
+        for (size_t i = 0, it = ishp.total_nr_elems(); i < it; ++i) {
             expected.ptr<float>()[i] = EXP * host_loss_p->ptr<float>()[i] *
-                std::pow(host_x->ptr<float>()[i], EXP - 1);
+                                       std::pow(host_x->ptr<float>()[i], EXP - 1);
         }
         MGB_ASSERT_TENSOR_EQ(expected, host_gx);
 
@@ -1039,15 +981,15 @@ TEST(TestOprLoop, ComputeWithoutCopyResult) {
     auto host_x = gen({23}), host_loss_p = gen({23 * 23});
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    auto cb = [x](LoopDesc &desc){
+    auto cb = [x](LoopDesc& desc) {
         auto xv = desc.add_input(x);
         desc.add_output(xv, OutputMode::ALL);
-        desc.set_loop_condition(desc.get_counter_var() <
-                opr::GetVarShape::make(xv, 0) - 1);
+        desc.set_loop_condition(
+                desc.get_counter_var() < opr::GetVarShape::make(xv, 0) - 1);
     };
     auto y = opr::Loop::make(cb)[0],
-         loss = opr::Dot::make(y.flatten(),
-                 opr::Host2DeviceCopy::make(*graph, host_loss_p)),
+         loss = opr::Dot::make(
+                 y.flatten(), opr::Host2DeviceCopy::make(*graph, host_loss_p)),
          gx = cg::grad(loss, x);
     auto func = graph->compile({{gx, {}}});
     func->execute();
@@ -1059,17 +1001,17 @@ TEST(TestOprLoop, StaticLoopTimeInfer) {
     auto graph = ComputingGraph::make();
     auto host_shp = gen({2});
     auto loop_time = opr::MarkDynamicVar::make(
-            opr::Host2DeviceCopy::make_no_value_infer(*graph, host_loop_time)),
+                 opr::Host2DeviceCopy::make_no_value_infer(*graph, host_loop_time)),
          shp = opr::Host2DeviceCopy::make(*graph, host_shp);
     // actual loop time is loop_time + shp
-    auto desc_maker = [&](LoopDesc &loop_desc) {
+    auto desc_maker = [&](LoopDesc& loop_desc) {
         auto x = loop_desc.add_input_assignable(loop_time.make_scalar(0)),
              xnext = x + 1;
         loop_desc.assign(x, xnext);
         loop_desc.add_output(xnext, OutputMode::LAST);
         auto cnt = loop_desc.get_counter_var(),
              dest = loop_desc.add_input(loop_time) - 1 +
-                 opr::GetVarShape::make(loop_desc.add_input(shp));
+                    opr::GetVarShape::make(loop_desc.add_input(shp));
         loop_desc.set_loop_condition(cnt < dest);
     };
     auto y = opr::Loop::make(desc_maker)[0];
@@ -1094,9 +1036,7 @@ TEST(TestOprLoop, StaticLoopTimeInfer) {
 TEST(TestOprLoop, StaticOutputShape) {
     auto run = [](bool dyn) {
         HostTensorGenerator<> gen;
-        auto host_loop_time = gen({1}),
-             host_delta = gen({1}),
-             host_x0 = gen({1});
+        auto host_loop_time = gen({1}), host_delta = gen({1}), host_x0 = gen({1});
 
         host_loop_time->ptr<float>()[0] = 1;
         auto graph = ComputingGraph::make();
@@ -1110,19 +1050,18 @@ TEST(TestOprLoop, StaticOutputShape) {
             loop_time = opr::MarkDynamicVar::make(loop_time);
 
         // actual loop time is loop_time + shp
-        auto desc_maker = [&](LoopDesc &loop_desc) {
+        auto desc_maker = [&](LoopDesc& loop_desc) {
             auto x = loop_desc.add_input_assignable(x0),
                  xnext = x + loop_desc.add_input(delta);
             loop_desc.assign(x, xnext);
             loop_desc.add_output(x, OutputMode::ALL);
             auto cnt = loop_desc.get_counter_var(),
                  dest = loop_desc.add_input(loop_time) - 1 +
-                     opr::GetVarShape::make(loop_desc.add_input(shp));
+                        opr::GetVarShape::make(loop_desc.add_input(shp));
             loop_desc.set_loop_condition(cnt < dest);
         };
         auto y = opr::Loop::make(desc_maker)[0],
-             loss = opr::Dot::make(y.flatten(), y.flatten()),
-             gx = cg::grad(loss, x0),
+             loss = opr::Dot::make(y.flatten(), y.flatten()), gx = cg::grad(loss, x0),
              gd = cg::grad(loss, delta);
 
         if (!dyn) {
@@ -1130,15 +1069,14 @@ TEST(TestOprLoop, StaticOutputShape) {
         }
 
         HostTensorND host_y, host_gx, host_gd;
-        auto f = graph->compile({
-                make_callback_copy(y, host_y),
-                make_callback_copy(gx, host_gx),
-                make_callback_copy(gd, host_gd)});
+        auto f = graph->compile(
+                {make_callback_copy(y, host_y), make_callback_copy(gx, host_gx),
+                 make_callback_copy(gd, host_gd)});
 
         ASSERT_TRUE(LoopTest::is_static_loop_time(y.node()->owner_opr()));
 
-        HostTensorND y_expect{host_loop_time->comp_node(), dtype::Float32()},
-                     gx_expect, gd_expect;
+        HostTensorND y_expect{host_loop_time->comp_node(), dtype::Float32()}, gx_expect,
+                gd_expect;
         gx_expect.copy_from(*host_x0);
         gd_expect.copy_from(gx_expect);
 
@@ -1154,7 +1092,7 @@ TEST(TestOprLoop, StaticOutputShape) {
             float delta = host_delta->ptr<float>()[0], x0 = host_x0->ptr<float>()[0],
                   gx = 0, gd = 0;
             auto n = sz0 + sz1;
-            for (size_t i = 0; i < n; ++ i) {
+            for (size_t i = 0; i < n; ++i) {
                 auto cur = x0 + delta * i;
                 y_expect.ptr<float>()[i] = cur;
                 gx += cur * 2;
@@ -1166,13 +1104,13 @@ TEST(TestOprLoop, StaticOutputShape) {
             f->execute();
         };
 
-#define RUN(sz0, sz1) \
-        do { \
-            run(sz0, sz1); \
-            MGB_ASSERT_TENSOR_EQ(y_expect, host_y); \
-            MGB_ASSERT_TENSOR_EQ(gx_expect, host_gx); \
-            MGB_ASSERT_TENSOR_EQ(gd_expect, host_gd); \
-        } while(0)
+#define RUN(sz0, sz1)                             \
+    do {                                          \
+        run(sz0, sz1);                            \
+        MGB_ASSERT_TENSOR_EQ(y_expect, host_y);   \
+        MGB_ASSERT_TENSOR_EQ(gx_expect, host_gx); \
+        MGB_ASSERT_TENSOR_EQ(gd_expect, host_gd); \
+    } while (0)
 
         RUN(1, 2);
         RUN(1, 5);
@@ -1184,12 +1122,11 @@ TEST(TestOprLoop, StaticOutputShape) {
 }
 
 TEST(TestOprLoop, CounterEdgeCases) {
-    auto run = [&](
-            thin_function<SymbolVar(SymbolVar)> cond, int expected_value) {
+    auto run = [&](thin_function<SymbolVar(SymbolVar)> cond, int expected_value) {
         auto graph = ComputingGraph::make();
-        auto desc_maker = [&](LoopDesc &desc) {
-            auto x = desc.add_input_assignable(SymbolVar::make_scalar(0, *graph,
-                        CompNode::load("xpu0"))),
+        auto desc_maker = [&](LoopDesc& desc) {
+            auto x = desc.add_input_assignable(
+                         SymbolVar::make_scalar(0, *graph, CompNode::load("xpu0"))),
                  xnext = x + 1;
             desc.set_loop_condition(cond(desc.get_counter_var()));
             desc.assign(x, xnext);
@@ -1202,32 +1139,31 @@ TEST(TestOprLoop, CounterEdgeCases) {
         ASSERT_EQ(expected_value, host_x.ptr<int>()[0]);
     };
 
-    run([](SymbolVar c){return c < 5;}, 6);
-    run([](SymbolVar c){return c <= 5;}, 7);
-    run([](SymbolVar c){return c < 5.f;}, 6);
-    run([](SymbolVar c){return c < 5.2f;}, 7);
-    run([](SymbolVar c){return c <= 5.f;}, 7);
-    run([](SymbolVar c){return c <= 5.2f;}, 7);
+    run([](SymbolVar c) { return c < 5; }, 6);
+    run([](SymbolVar c) { return c <= 5; }, 7);
+    run([](SymbolVar c) { return c < 5.f; }, 6);
+    run([](SymbolVar c) { return c < 5.2f; }, 7);
+    run([](SymbolVar c) { return c <= 5.f; }, 7);
+    run([](SymbolVar c) { return c <= 5.2f; }, 7);
 
-    run([](SymbolVar c){return c < -1;}, 1);
-    run([](SymbolVar c){return c <= -1;}, 1);
-    run([](SymbolVar c){return c < .2f;}, 2);
-    run([](SymbolVar c){return c <= .2f;}, 2);
+    run([](SymbolVar c) { return c < -1; }, 1);
+    run([](SymbolVar c) { return c <= -1; }, 1);
+    run([](SymbolVar c) { return c < .2f; }, 2);
+    run([](SymbolVar c) { return c <= .2f; }, 2);
 
-    run([](SymbolVar c){return c < 0;}, 1);
-    run([](SymbolVar c){return c <= 0;}, 2);
-    run([](SymbolVar c){return c < 0.f;}, 1);
-    run([](SymbolVar c){return c <= 0.f;}, 2);
+    run([](SymbolVar c) { return c < 0; }, 1);
+    run([](SymbolVar c) { return c <= 0; }, 2);
+    run([](SymbolVar c) { return c < 0.f; }, 1);
+    run([](SymbolVar c) { return c <= 0.f; }, 2);
 }
 
 TEST(TestOprLoop, OutputDType) {
     static constexpr int LOOP_TIME = 4;
     using Checker = AutoOprChecker<1, 1>;
 
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         using Cvt = opr::TypeCvt;
-        auto desc_maker = [xout=inputs[0]](LoopDesc &desc) {
+        auto desc_maker = [xout = inputs[0]](LoopDesc& desc) {
             auto x = desc.add_input_assignable(xout),
                  xnext = Cvt::make(x + 1, dtype::Int32());
             desc.add_output(xnext * desc.get_counter_var(), OutputMode::SUM);
@@ -1246,14 +1182,13 @@ TEST(TestOprLoop, OutputDType) {
         return {Cvt::make(y, dtype::Float32())};
     };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         dest[0].resize(inp[0]->shape());
         auto p0 = inp[0]->ptr<float>(), pt = dest[0].ptr<float>();
-        for (size_t i = 0, it = dest[0].layout().total_nr_elems();
-                i < it; ++ i) {
+        for (size_t i = 0, it = dest[0].layout().total_nr_elems(); i < it; ++i) {
             float v = p0[i];
             int ret = 0;
-            for (int j = 0; j <= LOOP_TIME; ++ j) {
+            for (int j = 0; j <= LOOP_TIME; ++j) {
                 int vnext = v + 1;
                 v = vnext;
                 ret += vnext * j;
@@ -1263,11 +1198,10 @@ TEST(TestOprLoop, OutputDType) {
     };
 
     HostTensorGenerator<> gen;
-    auto genx = [&](HostTensorND &dest) {
+    auto genx = [&](HostTensorND& dest) {
         dest = *gen(dest.shape());
         auto ptr = dest.ptr<float>();
-        for (size_t i = 0, it = dest.layout().total_nr_elems();
-                i < it; ++ i) {
+        for (size_t i = 0, it = dest.layout().total_nr_elems(); i < it; ++i) {
             float iv, fv;
             fv = std::modf(ptr[i] * 10, &iv);
             if (fv < 0) {
@@ -1282,50 +1216,44 @@ TEST(TestOprLoop, OutputDType) {
         }
     };
 
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        set_input_generator(0, genx).
-        run({TensorShape{2}}).
-        run({TensorShape{3}}).
-        run({TensorShape{2, 3, 5}});
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .set_input_generator(0, genx)
+            .run({TensorShape{2}})
+            .run({TensorShape{3}})
+            .run({TensorShape{2, 3, 5}});
 }
 
 TEST(TestOprLoop, MutableStateSaverOnlyNecessary) {
-
     using Checker = AutoOprChecker<2, 4>;
 
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
-        1e-2, 1};
-    auto genx = [&](HostTensorND &dest) {
-        dest = *gen(dest.shape());
-    };
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{1e-2, 1};
+    auto genx = [&](HostTensorND& dest) { dest = *gen(dest.shape()); };
 
-    auto host_loop_time = std::make_shared<HostTensorND>(
-            CompNode::load("xpu0"), dtype::Int32());
+    auto host_loop_time =
+            std::make_shared<HostTensorND>(CompNode::load("xpu0"), dtype::Int32());
     int& loop_time = host_loop_time->resize({1}).ptr<int>()[0];
     loop_time = 1;
 
     std::unordered_map<VarNode*, bool> expected_var_rec_spec;
-    cg::OperatorNodeBase *loop_opr = nullptr;
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
+    cg::OperatorNodeBase* loop_opr = nullptr;
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         auto loop_time = opr::Host2DeviceCopy::make(
                 *inputs[0].node()->owner_graph(), host_loop_time);
 
-        auto desc_maker = [&expected_var_rec_spec, loop_time,
-                xi=inputs[0], yi=inputs[1]](LoopDesc &desc) {
+        auto desc_maker = [&expected_var_rec_spec, loop_time, xi = inputs[0],
+                           yi = inputs[1]](LoopDesc& desc) {
             auto
-                // value unused in grad
-                x0 = desc.add_input_assignable(xi).rename("x0"),
-                // already output all
-                x1 = desc.add_input_assignable(xi).rename("x1"),
-                // normal
-                x2 = desc.add_input_assignable(xi).rename("x2"),
-                // grad not taken
-                y0 = desc.add_input_assignable(yi).rename("y0");
+                    // value unused in grad
+                    x0 = desc.add_input_assignable(xi).rename("x0"),
+                    // already output all
+                    x1 = desc.add_input_assignable(xi).rename("x1"),
+                    // normal
+                    x2 = desc.add_input_assignable(xi).rename("x2"),
+                    // grad not taken
+                    y0 = desc.add_input_assignable(yi).rename("y0");
 
-            auto x = desc.add_input(xi).rename("x"),
-                 y = desc.add_input(yi).rename("y"),
+            auto x = desc.add_input(xi).rename("x"), y = desc.add_input(yi).rename("y"),
                  cnt = desc.get_counter_var();
 
             desc.assign(x0, x0 + cnt);
@@ -1339,9 +1267,9 @@ TEST(TestOprLoop, MutableStateSaverOnlyNecessary) {
             desc.set_loop_condition(cnt < desc.add_input(loop_time) - 1);
 
             expected_var_rec_spec = {
-                {x0.node(), false},
-                {x2.node(), true},
-                {y0.node(), false},
+                    {x0.node(), false},
+                    {x2.node(), true},
+                    {y0.node(), false},
             };
         };
         auto y = opr::Loop::make(desc_maker);
@@ -1350,7 +1278,7 @@ TEST(TestOprLoop, MutableStateSaverOnlyNecessary) {
         return {y[0], y[1], y[2], y[3]};
     };
 
-    auto fwd = [&](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         dest[0].resize(inp[0]->shape());
         {
             TensorLayout shp1{inp[0]->shape(), dtype::Byte()};
@@ -1359,34 +1287,32 @@ TEST(TestOprLoop, MutableStateSaverOnlyNecessary) {
         }
         dest[2].resize(inp[0]->shape());
         dest.back().resize(inp[1]->shape());
-        auto px = inp[0]->ptr<float>(),
-             o0 = dest[0].ptr<float>(),
-             o1 = dest[1].ptr<float>(),
-             o2 = dest[2].ptr<float>();
+        auto px = inp[0]->ptr<float>(), o0 = dest[0].ptr<float>(),
+             o1 = dest[1].ptr<float>(), o2 = dest[2].ptr<float>();
         auto sx = inp[0]->shape().total_nr_elems();
-        for (size_t i = 0; i < sx; ++ i) {
+        for (size_t i = 0; i < sx; ++i) {
             auto x = px[i];
             o0[i] = 0;
             o1[i] = x;
             auto o0cur = x, o2cur = x;
-            for (int j = 0, cont = true; cont; ) {
+            for (int j = 0, cont = true; cont;) {
                 cont = j < loop_time - 1;
                 o0[i] += o0cur;
                 o0cur += j;
                 if (j)
-                    o1[j * sx + i] = std::pow(o1[(j-1) * sx + i], .1f) * x;
+                    o1[j * sx + i] = std::pow(o1[(j - 1) * sx + i], .1f) * x;
                 o2[i] = o2cur;
                 o2cur = std::pow(o2cur, .2f) * x;
 
-                ++ j;
+                ++j;
             }
         }
 
         auto py = inp[1]->ptr<float>(), o3 = dest[3].ptr<float>();
         auto sy = inp[1]->shape().total_nr_elems();
-        for (size_t i = 0; i < sy; ++ i) {
+        for (size_t i = 0; i < sy; ++i) {
             auto y = py[i], ans = y;
-            for (int j = 0; j < loop_time - 1; ++ j)
+            for (int j = 0; j < loop_time - 1; ++j)
                 ans = std::pow(ans, .3f) * y;
             o3[i] = ans;
         }
@@ -1399,39 +1325,36 @@ TEST(TestOprLoop, MutableStateSaverOnlyNecessary) {
     opt.numdiff_max_err = 5e-3;
 
     bool var_rec_spec_checked = false;
-    auto on_grad_computed = [&](cg::ComputingGraph *, cg::AsyncExecutable *) {
+    auto on_grad_computed = [&](cg::ComputingGraph*, cg::AsyncExecutable*) {
         auto var_rec_spec = LoopTest::var_rec_spec(loop_opr);
-#define CHK(a, b) \
-        do { \
-            for (auto &&i: a) { \
-                auto iter = b.find(i.first); \
-                ASSERT_TRUE(iter != b.end()) << \
-                    ssprintf("%s in %s, but not in %s", \
-                            i.first->cname(), #a, #b); \
-                ASSERT_TRUE(i.second == iter->second) << \
-                    ssprintf("var=%s %s=%d %s=%d", \
-                            i.first->cname(), #a, i.second, #b, iter->second); \
-            }; \
-        } while(0)
+#define CHK(a, b)                                                                     \
+    do {                                                                              \
+        for (auto&& i : a) {                                                          \
+            auto iter = b.find(i.first);                                              \
+            ASSERT_TRUE(iter != b.end())                                              \
+                    << ssprintf("%s in %s, but not in %s", i.first->cname(), #a, #b); \
+            ASSERT_TRUE(i.second == iter->second) << ssprintf(                        \
+                    "var=%s %s=%d %s=%d", i.first->cname(), #a, i.second, #b,         \
+                    iter->second);                                                    \
+        };                                                                            \
+    } while (0)
         CHK(var_rec_spec, expected_var_rec_spec);
         CHK(expected_var_rec_spec, var_rec_spec);
 #undef CHK
-        var_rec_spec_checked  = true;
+        var_rec_spec_checked = true;
     };
 
-    checker.
-        on_grad_computed(on_grad_computed).
-        set_input_allow_grad(1, false).
-        set_input_generator(0, genx).
-        set_input_generator(1, genx);
+    checker.on_grad_computed(on_grad_computed)
+            .set_input_allow_grad(1, false)
+            .set_input_generator(0, genx)
+            .set_input_generator(1, genx);
 
-    for (loop_time = 1; loop_time <= 4; ++ loop_time) {
+    for (loop_time = 1; loop_time <= 4; ++loop_time) {
         var_rec_spec_checked = false;
-        checker.
-            run({TensorShape{2}, {3}}, opt).
-            run({TensorShape{3}, {2}}, opt).
-            run({TensorShape{2, 3, 2}, {size_t(2 + loop_time)}}, opt).
-            run({TensorShape{2}, {3}}, opt);
+        checker.run({TensorShape{2}, {3}}, opt)
+                .run({TensorShape{3}, {2}}, opt)
+                .run({TensorShape{2, 3, 2}, {size_t(2 + loop_time)}}, opt)
+                .run({TensorShape{2}, {3}}, opt);
         ASSERT_TRUE(var_rec_spec_checked);
     }
 }
@@ -1449,39 +1372,35 @@ void test_null_grad(bool dyn) {
         return opr::SetGrad::make(var, opr::SetGrad::zero_grad);
     };
 
-    auto spow = [&](SymbolVar a, float p) {
-        return opr::pow(d(a), a.make_scalar(p));
-    };
+    auto spow = [&](SymbolVar a, float p) { return opr::pow(d(a), a.make_scalar(p)); };
 
     constexpr int LOOP_TIME = 1;
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{
-        1e-2, 1};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{1e-2, 1};
     constexpr size_t SIZE0 = 23, SIZE1 = 32;
-    auto host_x0 = gen({SIZE0}),
-         host_x1 = gen({SIZE1});
+    auto host_x0 = gen({SIZE0}), host_x1 = gen({SIZE1});
 
     auto graph = ComputingGraph::make();
     auto outgraph_x0 = opr::Host2DeviceCopy::make(*graph, host_x0),
          outgraph_x1 = opr::Host2DeviceCopy::make(*graph, host_x1);
 
-    auto desc_maker = [&](LoopDesc &desc) {
+    auto desc_maker = [&](LoopDesc& desc) {
         auto x0a = desc.add_input_assignable(outgraph_x0).rename("x0a"),
              x0b = desc.add_input_assignable(outgraph_x0).rename("x0b"),
 
              // one value as multiple assignors
-             val0 = (spow(x0a, 0.4) * spow(x0b, 0.5)).rename("val0"),
+                val0 = (spow(x0a, 0.4) * spow(x0b, 0.5)).rename("val0"),
 
              x0c = desc.add_input_assignable(outgraph_x0).rename("x0c"),
              x0c1 = desc.add_input(outgraph_x0).rename("x0c1"),
              // assignee null grad
-             val1 = (spow(zg(x0c), 0.5) * x0c1).rename("val1"),
+                val1 = (spow(zg(x0c), 0.5) * x0c1).rename("val1"),
 
              x0d = desc.add_input_assignable(outgraph_x0).rename("x0d"),
              // assignor null grad
-             val2 = (spow(x0d, 0.6) * x0c1).rename("val2"),
+                val2 = (spow(x0d, 0.6) * x0c1).rename("val2"),
 
              // null outgrad in par graph
-             x1 = desc.add_input(outgraph_x1).rename("x1"),
+                x1 = desc.add_input(outgraph_x1).rename("x1"),
              x1a = desc.add_input_assignable(outgraph_x1).rename("x1a"),
              val3 = (spow(x1a, 0.7) * x1).rename("val3");
 
@@ -1504,9 +1423,7 @@ void test_null_grad(bool dyn) {
     // multi grad
     cg::grad(opr::Dot::make(y[2], y[2]), outgraph_x0);
 
-    auto sum = [](SymbolVar x) {
-        return opr::reduce_sum(x, x.make_scalar(1));
-    };
+    auto sum = [](SymbolVar x) { return opr::reduce_sum(x, x.make_scalar(1)); };
     auto loss = sum(y[0]) + sum(y[1]) + sum(y[2]);
     auto gx0 = cg::grad(loss, outgraph_x0),
          gx1 = cg::grad(loss, outgraph_x1, true, false);
@@ -1521,10 +1438,10 @@ void test_null_grad(bool dyn) {
             make_callback_copy(y[1], host_y[1]),
             make_callback_copy(y[2], host_y[2]),
             make_callback_copy(y[3], host_y[3]),
-            });
+    });
     func->execute();
 
-    for (size_t i = 0; i < 3; ++ i)
+    for (size_t i = 0; i < 3; ++i)
         expect_y[i].copy_from(*host_x0);
     expect_y[3].copy_from(*host_x1);
 
@@ -1539,7 +1456,7 @@ void test_null_grad(bool dyn) {
         // y0
         auto p = expect_y[0].ptr<float>();
         float dpow = std::pow(0.9f, LOOP_TIME);
-        for (size_t i = 0; i < SIZE0; ++ i) {
+        for (size_t i = 0; i < SIZE0; ++i) {
             p[i] = std::pow(px0[i], dpow);
             pgx0[i] += dpow * std::pow(px0[i], dpow - 1.f);
         }
@@ -1547,9 +1464,9 @@ void test_null_grad(bool dyn) {
     {
         // y1
         auto p = expect_y[1].ptr<float>();
-        for (size_t i = 0; i < SIZE0; ++ i) {
+        for (size_t i = 0; i < SIZE0; ++i) {
             float x0c = px0[i], grad = 0;
-            for (int j = 0; j < LOOP_TIME; ++ j) {
+            for (int j = 0; j < LOOP_TIME; ++j) {
                 x0c = std::pow(x0c, .5f);
                 grad += x0c;
                 x0c *= px0[i];
@@ -1561,9 +1478,9 @@ void test_null_grad(bool dyn) {
     {
         // y2
         auto p = expect_y[2].ptr<float>();
-        for (size_t i = 0; i < SIZE0; ++ i) {
+        for (size_t i = 0; i < SIZE0; ++i) {
             float x0d = px0[i];
-            for (int j = 0; j < LOOP_TIME; ++ j) {
+            for (int j = 0; j < LOOP_TIME; ++j) {
                 x0d = std::pow(x0d, .6f) * px0[i];
             }
             p[i] = x0d;
@@ -1572,22 +1489,22 @@ void test_null_grad(bool dyn) {
     {
         // y3
         auto p = expect_y[3].ptr<float>();
-        for (size_t i = 0; i < SIZE1; ++ i) {
+        for (size_t i = 0; i < SIZE1; ++i) {
             float x1 = px1[i];
-            for (int j = 0; j < LOOP_TIME; ++ j) {
+            for (int j = 0; j < LOOP_TIME; ++j) {
                 x1 = std::pow(x1, .7f) * px1[i];
             }
             p[i] = x1;
         }
     }
 
-    for (size_t i = 0; i < 4; ++ i)
+    for (size_t i = 0; i < 4; ++i)
         MGB_ASSERT_TENSOR_EQ(expect_y[i], host_y[i]) << "fail at " << i;
 
     MGB_ASSERT_TENSOR_EQ(expect_gx0, host_gx0);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestOprLoop, NullGrad) {
     test_null_grad(false);
@@ -1601,9 +1518,8 @@ TEST(TestOprLoop, ImmutableTensorFwd) {
     auto graph = ComputingGraph::make();
     auto x = SymbolVar::make_scalar(132, *graph, CompNode::load("xpu0"));
 
-    auto desc_maker = [&](LoopDesc &desc) {
-        auto x0 = desc.add_input(x),
-             x1 = desc.add_input_assignable(x);
+    auto desc_maker = [&](LoopDesc& desc) {
+        auto x0 = desc.add_input(x), x1 = desc.add_input_assignable(x);
         ASSERT_TRUE(x0.node()->owner_opr()->same_type<opr::ImmutableTensor>());
         desc.add_output(x0, OutputMode::LAST);
         desc.add_output(x1, OutputMode::LAST);
@@ -1612,9 +1528,8 @@ TEST(TestOprLoop, ImmutableTensorFwd) {
     };
     auto y = opr::Loop::make(desc_maker);
     HostTensorND host_y[2];
-    auto func = graph->compile({
-            make_callback_copy(y[0], host_y[0]),
-            make_callback_copy(y[1], host_y[1])});
+    auto func = graph->compile(
+            {make_callback_copy(y[0], host_y[0]), make_callback_copy(y[1], host_y[1])});
     func->execute();
     ASSERT_EQ(132, host_y[0].ptr<int>()[0]);
     ASSERT_EQ(133, host_y[1].ptr<int>()[0]);
@@ -1625,11 +1540,9 @@ TEST(TestOprLoop, InputChangeCompStream) {
     HostTensorGenerator<> gen;
     auto graph = ComputingGraph::make();
     auto host_x = gen({23}, cns[0]);
-    auto cn1 = cns[1],
-         cn1_copy = cn1.change_stream(CompNode::Stream::COPY);
-    auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         x1 = opr::Copy::make(x, cn1);
-    auto desc_maker = [x1](LoopDesc &desc) {
+    auto cn1 = cns[1], cn1_copy = cn1.change_stream(CompNode::Stream::COPY);
+    auto x = opr::Host2DeviceCopy::make(*graph, host_x), x1 = opr::Copy::make(x, cn1);
+    auto desc_maker = [x1](LoopDesc& desc) {
         auto xsub = desc.add_input(x1);
         desc.add_output(xsub, OutputMode::SUM);
         desc.set_loop_condition(xsub.make_scalar(0));
@@ -1651,46 +1564,42 @@ TEST(TestOprLoop, VisitInpSub) {
 
     // sum(a[i:i+2]**2 for i in range(s.shape[0] - 1))
 
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
-        auto desc_maker = [xout=inputs[0]](LoopDesc &desc) {
-            auto x = desc.add_input(xout),
-                 i = desc.get_counter_var(),
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto desc_maker = [xout = inputs[0]](LoopDesc& desc) {
+            auto x = desc.add_input(xout), i = desc.get_counter_var(),
                  xsub = opr::Subtensor::make(
                          x, {opr::Subtensor::AxisIndexer::make_interval(
-                                 0, i, i + 2, None)});
+                                    0, i, i + 2, None)});
             desc.add_output(opr::pow(xsub, x.make_scalar(2)), OutputMode::SUM);
             desc.set_loop_condition(i < opr::GetVarShape::make(x, 0) - 2);
         };
         return {opr::Loop::make(desc_maker)[0]};
     };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
-        auto &&x = *inp[0];
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto&& x = *inp[0];
         auto dshp = x.shape();
         dshp[0] = 2;
         size_t nr_col = dshp.total_nr_elems() / dshp.shape[0];
-        auto px = x.ptr<float>(),
-             py0 = dest[0].resize(dshp).ptr<float>(),
+        auto px = x.ptr<float>(), py0 = dest[0].resize(dshp).ptr<float>(),
              py1 = py0 + nr_col;
         memset(py0, 0, sizeof(float) * nr_col * 2);
-        for (size_t i = 0; i < x.shape()[0] - 1; ++ i) {
-            auto xrow0 = px + i * nr_col,
-                 xrow1 = xrow0 + nr_col;
-            for (size_t j = 0; j < nr_col; ++ j) {
+        for (size_t i = 0; i < x.shape()[0] - 1; ++i) {
+            auto xrow0 = px + i * nr_col, xrow1 = xrow0 + nr_col;
+            for (size_t j = 0; j < nr_col; ++j) {
                 py0[j] += xrow0[j] * xrow0[j];
                 py1[j] += xrow1[j] * xrow1[j];
             }
         }
     };
 
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        run({TensorShape{3}}).
-        run({TensorShape{2}}).
-        run({TensorShape{4}}).
-        run({TensorShape{5}}).
-        run({TensorShape{10, 2, 3}});
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .run({TensorShape{3}})
+            .run({TensorShape{2}})
+            .run({TensorShape{4}})
+            .run({TensorShape{5}})
+            .run({TensorShape{10, 2, 3}});
 
     ASSERT_TRUE(LoopTest::check_output_recorder_sum_optimize_success());
 }
@@ -1701,11 +1610,9 @@ TEST(TestOprLoop, VisitInpSubMavi) {
 
     // sum(a[[i, i+2]]**2 for i in range(s.shape[0] - 2))
 
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
-        auto desc_maker = [xout=inputs[0]](LoopDesc &desc) {
-            auto x = desc.add_input(xout),
-                 i = desc.get_counter_var(),
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto desc_maker = [xout = inputs[0]](LoopDesc& desc) {
+            auto x = desc.add_input(xout), i = desc.get_counter_var(),
                  idx = opr::Concat::make({i, i + 2}, 0),
                  xsub = opr::IndexingMultiAxisVec::make(
                          x, {opr::Subtensor::AxisIndexer::make_index(0, idx)});
@@ -1715,30 +1622,28 @@ TEST(TestOprLoop, VisitInpSubMavi) {
         return {opr::Loop::make(desc_maker)[0]};
     };
 
-    auto fwd = [](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
-        auto &&x = *inp[0];
+    auto fwd = [](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto&& x = *inp[0];
         auto dshp = x.shape();
         dshp[0] = 2;
         size_t nr_col = dshp.total_nr_elems() / dshp.shape[0];
-        auto px = x.ptr<float>(),
-             py0 = dest[0].resize(dshp).ptr<float>(),
+        auto px = x.ptr<float>(), py0 = dest[0].resize(dshp).ptr<float>(),
              py1 = py0 + nr_col;
         memset(py0, 0, sizeof(float) * nr_col * 2);
-        for (size_t i = 0; i < x.shape()[0] - 2; ++ i) {
-            auto xrow0 = px + i * nr_col,
-                 xrow1 = xrow0 + nr_col * 2;
-            for (size_t j = 0; j < nr_col; ++ j) {
+        for (size_t i = 0; i < x.shape()[0] - 2; ++i) {
+            auto xrow0 = px + i * nr_col, xrow1 = xrow0 + nr_col * 2;
+            for (size_t j = 0; j < nr_col; ++j) {
                 py0[j] += xrow0[j] * xrow0[j];
                 py1[j] += xrow1[j] * xrow1[j];
             }
         }
     };
 
-    Checker{make_graph, fwd}.
-        disable_multi_loss_check().
-        run({TensorShape{3}}).
-        run({TensorShape{4}}).
-        run({TensorShape{10, 2, 3}});
+    Checker{make_graph, fwd}
+            .disable_multi_loss_check()
+            .run({TensorShape{3}})
+            .run({TensorShape{4}})
+            .run({TensorShape{10, 2, 3}});
 
     ASSERT_TRUE(LoopTest::check_output_recorder_sum_optimize_success());
 }
@@ -1756,9 +1661,8 @@ TEST(TestOprLoop, AsyncDispatch) {
         time_loop_finish = timer.get_secs();
     };
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
-    auto desc_maker = [x0=x](LoopDesc &desc) {
-        auto x = desc.add_input_assignable(x0),
-             i = desc.get_counter_var();
+    auto desc_maker = [x0 = x](LoopDesc& desc) {
+        auto x = desc.add_input_assignable(x0), i = desc.get_counter_var();
         i = opr::MarkDynamicVar::make(i);
         set_priority(i, -100);
         desc.add_output(x, OutputMode::SUM);
@@ -1781,29 +1685,28 @@ TEST(TestOprLoop, AsyncDispatch) {
     // XPU-226
     auto used = timer.get_secs();
     if (used <= LOOP_TIME * SLEEP_TIME) {
-        mgb_log_warn("expect time [%f > %f], got %f", used,
-                     LOOP_TIME * SLEEP_TIME, used);
+        mgb_log_warn(
+                "expect time [%f > %f], got %f", used, LOOP_TIME * SLEEP_TIME, used);
     }
 
     int bias = 0;
-    for (int cur = 0, i = 0; i < LOOP_TIME; ++ i) {
+    for (int cur = 0, i = 0; i < LOOP_TIME; ++i) {
         bias += cur;
         cur += i;
     }
 
     auto px = host_x->ptr<float>(), py = host_y.ptr<float>();
     auto sz = host_x->shape(0);
-    for (size_t i = 0; i < sz; ++ i) {
-        MGB_ASSERT_FLOAT_EQ(px[i] * LOOP_TIME + bias, py[i]) <<
-            ssprintf("failed at idx %zu: x=%g", i, px[i]);
+    for (size_t i = 0; i < sz; ++i) {
+        MGB_ASSERT_FLOAT_EQ(px[i] * LOOP_TIME + bias, py[i])
+                << ssprintf("failed at idx %zu: x=%g", i, px[i]);
     }
 }
 
 TEST(TestOprLoop, UnusedStaticInerCN) {
     REQUIRE_GPU(1);
 
-    auto cn0 = CompNode::load("gpu0"),
-         cn1 = CompNode::load("cpu0");
+    auto cn0 = CompNode::load("gpu0"), cn1 = CompNode::load("cpu0");
     auto graph = ComputingGraph::make();
     auto host_x = std::make_shared<HostTensorND>(cn0, dtype::Float32());
     host_x->resize({2}).ptr<float>()[0] = 2.3;
@@ -1812,10 +1715,9 @@ TEST(TestOprLoop, UnusedStaticInerCN) {
     host_idx->resize({1}).ptr<int>()[0] = 0;
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     // static dep on other comp node should be allowed
-    auto desc_maker = [x0=x, &host_idx, cn0](LoopDesc &desc) {
+    auto desc_maker = [x0 = x, &host_idx, cn0](LoopDesc& desc) {
         auto x = desc.add_input(x0);
-        auto idx = opr::Host2DeviceCopy::make(
-                *x.node()->owner_graph(), host_idx);
+        auto idx = opr::Host2DeviceCopy::make(*x.node()->owner_graph(), host_idx);
         idx = opr::Copy::make(idx, {cn0});
         auto y = opr::Subtensor::make(
                 x, {opr::Subtensor::AxisIndexer::make_index(0, idx)});
@@ -1839,12 +1741,9 @@ TEST(TestOprLoop, ExtraVarDeps) {
     auto host_x = gen({2, 3});
     auto x = opr::Host2DeviceCopy::make(*graph, host_x);
     int nr_call = 0;
-    auto cb = [&nr_call](DeviceTensorND&) {
-        ++ nr_call;
-    };
-    auto desc_maker = [&](LoopDesc &desc) {
-        auto xi = desc.add_input(x),
-             y = xi * 2 + 1;
+    auto cb = [&nr_call](DeviceTensorND&) { ++nr_call; };
+    auto desc_maker = [&](LoopDesc& desc) {
+        auto xi = desc.add_input(x), y = xi * 2 + 1;
         y.node()->owner_graph()->options().extra_vardeps[y.node()].push_back(
                 opr::CallbackInjector::make(xi * 3 + 1, cb).node());
         desc.set_loop_condition(y.make_scalar(0));
@@ -1852,12 +1751,11 @@ TEST(TestOprLoop, ExtraVarDeps) {
     };
     auto y = opr::Loop::make(desc_maker)[0];
     HostTensorND host_y, y_expect;
-    auto func = graph->compile({make_callback_copy(y, host_y),
-            make_callback_copy(x * 2 + 1, y_expect)});
+    auto func = graph->compile(
+            {make_callback_copy(y, host_y), make_callback_copy(x * 2 + 1, y_expect)});
     func->execute();
     MGB_ASSERT_TENSOR_EQ(y_expect, host_y);
     ASSERT_EQ(1, nr_call);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

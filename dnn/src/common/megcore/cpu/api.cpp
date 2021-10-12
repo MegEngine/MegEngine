@@ -11,22 +11,20 @@
 #include "megcore.h"
 #include "src/common/utils.h"
 
-#include "./default_computing_context.hpp"
 #include "../common/computing_context.hpp"
 #include "../public_api/computing.hpp"
+#include "./default_computing_context.hpp"
 
 using namespace megcore;
 
 CPUDispatcher::~CPUDispatcher() noexcept = default;
 
 megcoreStatus_t megcoreCreateComputingHandleWithCPUDispatcher(
-        megcoreComputingHandle_t *compHandle,
-        megcoreDeviceHandle_t devHandle,
-        const std::shared_ptr<CPUDispatcher>& dispatcher,
-        unsigned int flags) {
-    auto content = megdnn::make_unique<
-        megcore::cpu::DefaultComputingContext>(devHandle, flags);
-    auto &H = *compHandle;
+        megcoreComputingHandle_t* compHandle, megcoreDeviceHandle_t devHandle,
+        const std::shared_ptr<CPUDispatcher>& dispatcher, unsigned int flags) {
+    auto content = megdnn::make_unique<megcore::cpu::DefaultComputingContext>(
+            devHandle, flags);
+    auto& H = *compHandle;
     content->set_dispatcher(dispatcher);
     H = new megcoreComputingContext;
     H->content = std::move(content);
@@ -34,16 +32,17 @@ megcoreStatus_t megcoreCreateComputingHandleWithCPUDispatcher(
 }
 
 CPUDispatcher* megcoreGetCPUDispatcher(megcoreComputingHandle_t handle) {
-    auto &&H = handle;
+    auto&& H = handle;
     megdnn_assert(H);
     // Check device handle.
     megcoreDeviceHandle_t dev_handle = H->content->dev_handle();
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_throw_if(!(platform & megcorePlatformCPU), megdnn_error,
-                    "can not be default ComputingContext");
-    auto context = static_cast<megcore::cpu::DefaultComputingContext*>(
-            H->content.get());
+    megdnn_throw_if(
+            !(platform & megcorePlatformCPU), megdnn_error,
+            "can not be default ComputingContext");
+    auto context =
+            static_cast<megcore::cpu::DefaultComputingContext*>(H->content.get());
     return context->get_dispatcher();
 }
 

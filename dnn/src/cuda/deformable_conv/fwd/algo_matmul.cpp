@@ -11,10 +11,10 @@
 
 #include "src/cuda/handle.h"
 
+#include "src/common/algo_base.h"
 #include "src/cuda/batched_matrix_mul/algo.h"
 #include "src/cuda/deformable_conv/fwd/algo.h"
 #include "src/cuda/deformable_conv/kimpl/deformable_conv.cuh"
-#include "src/common/algo_base.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -23,10 +23,9 @@ using Algo = DeformableConvForwardImpl::AlgoMatmul;
 using OprParam = DeformableConvBase::Param;
 
 namespace {
-deformable_conv::Param create_param(const Algo::SizeArgs& args,
-                                    const OprParam& opr_param,
-                                    cublasHandle_t handle,
-                                    cudaStream_t stream) {
+deformable_conv::Param create_param(
+        const Algo::SizeArgs& args, const OprParam& opr_param, cublasHandle_t handle,
+        cudaStream_t stream) {
     deformable_conv::Param p;
     auto&& fm = args.filter_meta;
 
@@ -61,14 +60,12 @@ deformable_conv::Param create_param(const Algo::SizeArgs& args,
 
 std::pair<TensorLayoutArray, BatchedMatrixMulForward::Param> sub_opr_config(
         const DeformableConvForwardImpl::CanonizedFilterMeta& fm,
-        const TensorLayout& im,
-        const TensorLayout& dst) {
+        const TensorLayout& im, const TensorLayout& dst) {
     auto&& dt = im.dtype;
-    size_t batch_sz = im[0], OH = dst[2],
-           OW = dst[3], FH = fm.spatial[0], FW = fm.spatial[1];
+    size_t batch_sz = im[0], OH = dst[2], OW = dst[3], FH = fm.spatial[0],
+           FW = fm.spatial[1];
 
-    size_t M = fm.ocpg, N = OH * OW * batch_sz, K = fm.icpg * FH * FW,
-           batch = fm.group;
+    size_t M = fm.ocpg, N = OH * OW * batch_sz, K = fm.icpg * FH * FW, batch = fm.group;
     TensorLayout al = {{batch, M, K}, dt};
     TensorLayout bl = {{batch, K, N}, dt};
     TensorLayout cl = {{batch, M, N}, dt};
@@ -79,14 +76,13 @@ std::pair<TensorLayoutArray, BatchedMatrixMulForward::Param> sub_opr_config(
     return {{al, bl, cl}, param};
 }
 
-std::pair<TensorLayoutArray, std::unique_ptr<BatchedMatrixMulForward>>
-prepare_sub_opr(const DeformableConvForwardImpl::AlgoBase::SizeArgs& args) {
+std::pair<TensorLayoutArray, std::unique_ptr<BatchedMatrixMulForward>> prepare_sub_opr(
+        const DeformableConvForwardImpl::AlgoBase::SizeArgs& args) {
     auto bmatmul_opr = args.handle->create_operator<BatchedMatrixMulForward>();
     set_execution_policy<DeformableConvForward, BatchedMatrixMulForward*>(
             args.opr, bmatmul_opr.get());
 
-    auto&& config =
-            sub_opr_config(args.filter_meta, args.im_layout, args.dst_layout);
+    auto&& config = sub_opr_config(args.filter_meta, args.im_layout, args.dst_layout);
     bmatmul_opr->param() = config.second;
 
     return {config.first, std::move(bmatmul_opr)};
@@ -104,8 +100,7 @@ std::vector<Algorithm::SearchItem> Algo::get_subopr_list(
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::BATCHED_MATRIX_MUL_FORWARD, param_str,
-             config.first}};
+    return {{Algorithm::OprType::BATCHED_MATRIX_MUL_FORWARD, param_str, config.first}};
 }
 
 bool Algo::is_available(const SizeArgs&) const {
@@ -115,8 +110,8 @@ bool Algo::is_available(const SizeArgs&) const {
 WorkspaceBundle Algo::get_bundle(const SizeArgs& args) {
     auto&& fm = args.filter_meta;
     size_t batch_sz = args.im_layout[0], IC = fm.group * fm.icpg,
-           OC = args.dst_layout[1], OH = args.dst_layout[2],
-           OW = args.dst_layout[3], FH = fm.spatial[0], FW = fm.spatial[1];
+           OC = args.dst_layout[1], OH = args.dst_layout[2], OW = args.dst_layout[3],
+           FH = fm.spatial[0], FW = fm.spatial[1];
 
     auto config = prepare_sub_opr(args);
 
@@ -137,8 +132,7 @@ void Algo::exec(const ExecArgs& args) const {
     auto&& param = opr->param();
     auto&& handle = concrete_handle(opr->handle());
 
-    auto p = create_param(args, param, handle->cublas_handle(),
-                          handle->stream());
+    auto p = create_param(args, param, handle->cublas_handle(), handle->stream());
 
     const float* dev_im = args.im_tensor.ptr<float>();
     float* dev_filter = args.filter_tensor.ptr<float>();
@@ -153,8 +147,8 @@ void Algo::exec(const ExecArgs& args) const {
     void* bmm_ws = bundle.get(1);
     void* result_ws = bundle.get(2);
     // im2col
-    deformable_conv::im2col(dev_im, dev_offset, dev_mask,
-                            static_cast<float*>(col_ws), p);
+    deformable_conv::im2col(
+            dev_im, dev_offset, dev_mask, static_cast<float*>(col_ws), p);
 
     auto config = prepare_sub_opr(args);
 
@@ -165,8 +159,7 @@ void Algo::exec(const ExecArgs& args) const {
 
     size_t bmm_ws_size = bundle.get_size(1);
     config.second->exec(
-            A, B, C,
-            Workspace(static_cast<megdnn::dt_byte*>(bmm_ws), bmm_ws_size));
+            A, B, C, Workspace(static_cast<megdnn::dt_byte*>(bmm_ws), bmm_ws_size));
     // relayout
     auto&& dt = args.im_layout.dtype;
     size_t dim0 = p.OC, dim1 = p.batch_sz, dim2 = p.OH * p.OW;

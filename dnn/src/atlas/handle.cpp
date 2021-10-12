@@ -10,10 +10,10 @@
  * implied.
  */
 
-#include "megcore_atlas.h"
-#include "src/common/handle_impl.h"
 #include "src/atlas/handle.h"
+#include "megcore_atlas.h"
 #include "src/atlas/checksum/opr_impl.h"
+#include "src/common/handle_impl.h"
 
 #include <acl/acl.h>
 

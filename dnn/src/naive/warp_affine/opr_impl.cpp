@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/naive/warp_affine/opr_impl.h"
 #include "src/common/warp_common.h"
 #include "src/naive/handle.h"
-#include "src/naive/warp_affine/opr_impl.h"
 #include "src/naive/warp_affine/warp_affine_cv.h"
 
 #include "midout.h"
@@ -23,8 +23,8 @@ using namespace megdnn;
 using namespace naive;
 
 template <typename ctype, typename mtype>
-void WarpAffineImpl::kern_naive(const KernParam<ctype, mtype>& kern_param,
-                                size_t task_id) {
+void WarpAffineImpl::kern_naive(
+        const KernParam<ctype, mtype>& kern_param, size_t task_id) {
     if (kern_param.format == Format::NHWC) {
         kern_naive_nhwc(kern_param, task_id);
         return;
@@ -61,30 +61,24 @@ void WarpAffineImpl::kern_naive(const KernParam<ctype, mtype>& kern_param,
                 dptr[c * OH * OW + oh * OW + ow] = output_converter(
                         sptr[c * IH * IW + ih0 * IW + iw0] * (1.0f - alphaw) *
                                 (1.0f - alphah) +
-                        sptr[c * IH * IW + ih0 * IW + iw1] * alphaw *
-                                (1.0f - alphah) +
-                        sptr[c * IH * IW + ih1 * IW + iw0] * (1.0f - alphaw) *
-                                alphah +
+                        sptr[c * IH * IW + ih0 * IW + iw1] * alphaw * (1.0f - alphah) +
+                        sptr[c * IH * IW + ih1 * IW + iw0] * (1.0f - alphaw) * alphah +
                         sptr[c * IH * IW + ih1 * IW + iw1] * alphaw * alphah);
             }
         } else {
             rep(c, C) {
                 const float b = border_val;
-                auto val = (ih0 != -1 && iw0 != -1
-                                    ? sptr[c * IH * IW + ih0 * IW + iw0]
-                                    : b) *
+                auto val = (ih0 != -1 && iw0 != -1 ? sptr[c * IH * IW + ih0 * IW + iw0]
+                                                   : b) *
                                    (1.0f - alphaw) * (1.0f - alphah) +
-                           (ih0 != -1 && iw1 != -1
-                                    ? sptr[c * IH * IW + ih0 * IW + iw1]
-                                    : b) *
+                           (ih0 != -1 && iw1 != -1 ? sptr[c * IH * IW + ih0 * IW + iw1]
+                                                   : b) *
                                    alphaw * (1.0f - alphah) +
-                           (ih1 != -1 && iw0 != -1
-                                    ? sptr[c * IH * IW + ih1 * IW + iw0]
-                                    : b) *
+                           (ih1 != -1 && iw0 != -1 ? sptr[c * IH * IW + ih1 * IW + iw0]
+                                                   : b) *
                                    (1.0f - alphaw) * alphah +
-                           (ih1 != -1 && iw1 != -1
-                                    ? sptr[c * IH * IW + ih1 * IW + iw1]
-                                    : b) *
+                           (ih1 != -1 && iw1 != -1 ? sptr[c * IH * IW + ih1 * IW + iw1]
+                                                   : b) *
                                    alphaw * alphah;
                 dptr[c * OH * OW + oh * OW + ow] =
                         output_converter(std::isfinite(val) ? val : b);
@@ -120,38 +114,35 @@ void WarpAffineImpl::kern_naive_nhwcd4(
             rep(c, C) {
                 for (int i = 0; i < 4; i++) {
                     dptr[((oh * C + c) * OW + ow) * 4 + i] = output_converter(
-                            sptr[((ih0 * C + c) * IW + iw0) * 4 + i] *
-                                    (1.0f - alphaw) * (1.0f - alphah) +
+                            sptr[((ih0 * C + c) * IW + iw0) * 4 + i] * (1.0f - alphaw) *
+                                    (1.0f - alphah) +
                             sptr[((ih0 * C + c) * IW + iw1) * 4 + i] * alphaw *
                                     (1.0f - alphah) +
-                            sptr[((ih1 * C + c) * IW + iw0) * 4 + i] *
-                                    (1.0f - alphaw) * alphah +
-                            sptr[((ih1 * C + c) * IW + iw1) * 4 + i] * alphaw *
-                                    alphah);
+                            sptr[((ih1 * C + c) * IW + iw0) * 4 + i] * (1.0f - alphaw) *
+                                    alphah +
+                            sptr[((ih1 * C + c) * IW + iw1) * 4 + i] * alphaw * alphah);
                 }
             }
         } else {
             rep(c, C) {
                 const float b = border_val;
                 for (int i = 0; i < 4; i++) {
-                    auto val =
-                            (ih0 != -1 && iw0 != -1
-                                     ? sptr[(((ih0 * C + c) * IW + iw0)) * 4 +
-                                            i]
-                                     : b) *
-                                    (1.0f - alphaw) * (1.0f - alphah) +
-                            (ih0 != -1 && iw1 != -1
-                                     ? sptr[((ih0 * C + c) * IW + iw1) * 4 + i]
-                                     : b) *
-                                    alphaw * (1.0f - alphah) +
-                            (ih1 != -1 && iw0 != -1
-                                     ? sptr[((ih1 * C + c) * IW + iw0) * 4 + i]
-                                     : b) *
-                                    (1.0f - alphaw) * alphah +
-                            (ih1 != -1 && iw1 != -1
-                                     ? sptr[((ih1 * C + c) * IW + iw1) * 4 + i]
-                                     : b) *
-                                    alphaw * alphah;
+                    auto val = (ih0 != -1 && iw0 != -1
+                                        ? sptr[(((ih0 * C + c) * IW + iw0)) * 4 + i]
+                                        : b) *
+                                       (1.0f - alphaw) * (1.0f - alphah) +
+                               (ih0 != -1 && iw1 != -1
+                                        ? sptr[((ih0 * C + c) * IW + iw1) * 4 + i]
+                                        : b) *
+                                       alphaw * (1.0f - alphah) +
+                               (ih1 != -1 && iw0 != -1
+                                        ? sptr[((ih1 * C + c) * IW + iw0) * 4 + i]
+                                        : b) *
+                                       (1.0f - alphaw) * alphah +
+                               (ih1 != -1 && iw1 != -1
+                                        ? sptr[((ih1 * C + c) * IW + iw1) * 4 + i]
+                                        : b) *
+                                       alphaw * alphah;
                     dptr[((oh * C + c) * OW + ow) * 4 + i] =
                             output_converter(std::isfinite(val) ? val : b);
                 }
@@ -161,8 +152,8 @@ void WarpAffineImpl::kern_naive_nhwcd4(
 }
 
 template <typename ctype, typename mtype>
-void WarpAffineImpl::kern_naive_nhwc(const KernParam<ctype, mtype>& kern_param,
-                                     size_t task_id) {
+void WarpAffineImpl::kern_naive_nhwc(
+        const KernParam<ctype, mtype>& kern_param, size_t task_id) {
     UNPACK_WARP_AFFINE_FWD_KERN_PARAM(kern_param);
     MEGDNN_MARK_USED_VAR(N_SRC);
     MEGDNN_MARK_USED_VAR(N_MAT);
@@ -190,27 +181,21 @@ void WarpAffineImpl::kern_naive_nhwc(const KernParam<ctype, mtype>& kern_param,
                 dptr[(oh * OW + ow) * C + c] = output_converter(
                         sptr[(ih0 * IW + iw0) * C + c] * (1.0f - alphaw) *
                                 (1.0f - alphah) +
-                        sptr[(ih0 * IW + iw1) * C + c] * alphaw *
-                                (1.0f - alphah) +
-                        sptr[(ih1 * IW + iw0) * C + c] * (1.0f - alphaw) *
-                                alphah +
+                        sptr[(ih0 * IW + iw1) * C + c] * alphaw * (1.0f - alphah) +
+                        sptr[(ih1 * IW + iw0) * C + c] * (1.0f - alphaw) * alphah +
                         sptr[(ih1 * IW + iw1) * C + c] * alphaw * alphah);
             }
         } else {
             rep(c, C) {
                 const float b = border_val;
                 auto val =
-                        (ih0 != -1 && iw0 != -1 ? sptr[(ih0 * IW + iw0) * C + c]
-                                                : b) *
+                        (ih0 != -1 && iw0 != -1 ? sptr[(ih0 * IW + iw0) * C + c] : b) *
                                 (1.0f - alphaw) * (1.0f - alphah) +
-                        (ih0 != -1 && iw1 != -1 ? sptr[(ih0 * IW + iw1) * C + c]
-                                                : b) *
+                        (ih0 != -1 && iw1 != -1 ? sptr[(ih0 * IW + iw1) * C + c] : b) *
                                 alphaw * (1.0f - alphah) +
-                        (ih1 != -1 && iw0 != -1 ? sptr[(ih1 * IW + iw0) * C + c]
-                                                : b) *
+                        (ih1 != -1 && iw0 != -1 ? sptr[(ih1 * IW + iw0) * C + c] : b) *
                                 (1.0f - alphaw) * alphah +
-                        (ih1 != -1 && iw1 != -1 ? sptr[(ih1 * IW + iw1) * C + c]
-                                                : b) *
+                        (ih1 != -1 && iw1 != -1 ? sptr[(ih1 * IW + iw1) * C + c] : b) *
                                 alphaw * alphah;
                 dptr[(oh * OW + ow) * C + c] =
                         output_converter(std::isfinite(val) ? val : b);
@@ -219,15 +204,17 @@ void WarpAffineImpl::kern_naive_nhwc(const KernParam<ctype, mtype>& kern_param,
     }
 }
 
-void WarpAffineImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-                          _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+void WarpAffineImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, mat.layout, dst.layout, workspace.size);
 
-    if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
-                              param().format)) {
+    if (warp::is_cv_available(
+                src.layout, mat.layout, dst.layout, param().imode, param().format)) {
         MIDOUT_BEGIN(megdnn_naive_warpaffine, void) {
-            warp_affine_cv_exec(src, mat, dst, param().border_val,
-                                param().border_mode, param().imode, handle());
+            warp_affine_cv_exec(
+                    src, mat, dst, param().border_val, param().border_mode,
+                    param().imode, handle());
         }
         MIDOUT_END();
     } else {
@@ -236,8 +223,8 @@ void WarpAffineImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
         if (param().format == Format::NCHW) {
             oh = dst.layout[2];
         }
-        megdnn_assert(warp::is_dnn_available(src.layout, mat.layout, dst.layout,
-                                             param().imode, param().format));
+        megdnn_assert(warp::is_dnn_available(
+                src.layout, mat.layout, dst.layout, param().imode, param().format));
         // We currently use floating point for all WarpAffine computation,
         // so even if the input ctype is one of the integer type, mtype should
         // still be float32. However, if the input dtype is one of the floating
@@ -245,8 +232,8 @@ void WarpAffineImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
         // type.
 #define cb(dt, ct, mct, _midout_iv)                                          \
     case DTypeTrait<dt>::enumv: {                                            \
-        auto kparam = KernParam<ct, mct>::from_tensors(param().format, src,  \
-                                                       mat, dst, workspace); \
+        auto kparam = KernParam<ct, mct>::from_tensors(                      \
+                param().format, src, mat, dst, workspace);                   \
         MIDOUT_BEGIN(megdnn_naive_warpaffine_dtype, midout_iv(_midout_iv)) { \
             auto run = [kparam, this](size_t index, size_t) {                \
                 kern_naive(kparam, index);                                   \
@@ -265,10 +252,10 @@ void WarpAffineImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
             cb(dtype::Uint8, uint8_t, float, 4);
             cb(dtype::Quantized8Asymm, uint8_t, float, 5);
             default:
-                megdnn_throw(
-                        ssprintf("Unsupported input DType in WarpAffine: %s",
-                                 src.layout.dtype.name())
-                                .c_str());
+                megdnn_throw(ssprintf(
+                                     "Unsupported input DType in WarpAffine: %s",
+                                     src.layout.dtype.name())
+                                     .c_str());
                 return;
         }
 #undef cb

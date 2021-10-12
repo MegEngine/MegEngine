@@ -32,9 +32,9 @@
  */
 
 #pragma once
-#include <vector>
 #include <cstddef>
 #include <memory>
+#include <vector>
 #include "src/common/utils.h"
 
 namespace megdnn {
@@ -46,8 +46,7 @@ namespace winograd {
 class WinogradGenerator {
 public:
     WinogradGenerator(size_t m, size_t r, float interp = 0.5f);
-    WinogradGenerator(size_t m, size_t r,
-                      const std::vector<float>& interp_points);
+    WinogradGenerator(size_t m, size_t r, const std::vector<float>& interp_points);
     ~WinogradGenerator() = default;
 
     class Matrix {
@@ -120,8 +119,7 @@ template <typename ctype>
 class WinogradCoeff {
     std::unique_ptr<WinogradGenerator> m_generator;
 
-    std::vector<ctype> generate(float rescale,
-                                const WinogradGenerator::Matrix& m) {
+    std::vector<ctype> generate(float rescale, const WinogradGenerator::Matrix& m) {
         std::vector<ctype> ret;
         for (size_t r = 0; r < m.rows(); r++) {
             for (size_t c = 0; c < m.cols(); c++) {
@@ -146,17 +144,11 @@ public:
         m_generator = std::make_unique<WinogradGenerator>(m, r, interp_points);
     }
 
-    std::vector<ctype> A(float rescale) {
-        return generate(rescale, m_generator->A());
-    }
+    std::vector<ctype> A(float rescale) { return generate(rescale, m_generator->A()); }
 
-    std::vector<ctype> B(float rescale) {
-        return generate(rescale, m_generator->B());
-    }
+    std::vector<ctype> B(float rescale) { return generate(rescale, m_generator->B()); }
 
-    std::vector<ctype> G(float rescale) {
-        return generate(rescale, m_generator->G());
-    }
+    std::vector<ctype> G(float rescale) { return generate(rescale, m_generator->G()); }
 };
 
 }  // namespace winograd

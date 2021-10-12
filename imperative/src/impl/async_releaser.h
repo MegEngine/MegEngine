@@ -33,8 +33,7 @@ class AsyncReleaser : public CompNodeDepedentObject {
     public:
         // disable busy wait by set max_spin=0 to save CPU cycle
         Waiter(AsyncReleaser* releaser)
-                : AsyncQueueSC<WaiterParam, Waiter>(0),
-                  m_par_releaser(releaser) {}
+                : AsyncQueueSC<WaiterParam, Waiter>(0), m_par_releaser(releaser) {}
 
         void process_one_task(WaiterParam& param) {
             if (param.event->finished()) {
@@ -66,9 +65,7 @@ public:
         return &releaser;
     }
 
-    ~AsyncReleaser() {
-        m_waiter.wait_task_queue_empty();
-    }
+    ~AsyncReleaser() { m_waiter.wait_task_queue_empty(); }
 
     void add(BlobPtr blob, CompNode cn) { add(cn, std::move(blob), {}); }
 
@@ -76,12 +73,11 @@ public:
         add(hv.comp_node(), {}, hv.storage().raw_storage());
     }
 
-    void add(CompNode cn, BlobPtr blob,
-             HostTensorStorage::RawStorage storage = {}) {
+    void add(CompNode cn, BlobPtr blob, HostTensorStorage::RawStorage storage = {}) {
         auto event = EventPool::without_timer().alloc(cn);
         event->record();
         m_waiter.add_task({cn, event, std::move(blob), std::move(storage)});
     }
 };
-}
-}
+}  // namespace imperative
+}  // namespace mgb

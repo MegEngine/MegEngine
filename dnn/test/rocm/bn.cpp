@@ -36,16 +36,14 @@ TEST_F(ROCM, BN_FORWARD) {
         for (bool need_statistic : {false, true})
             checker.exec({
                     arg.src,
-                    arg.param_shape,  // bn_scale
-                    arg.param_shape,  // bn_bias
-                    need_statistic ? arg.param_shape
-                                   : TensorShape({0}),  // mean
-                    need_statistic ? arg.param_shape
-                                   : TensorShape({0}),  // variance
-                    arg.param_shape,                    // batch_mean
-                    arg.param_shape,                    // batch_inv_variance
-                    {0},                                // reserve
-                    arg.src                             // dst
+                    arg.param_shape,                                      // bn_scale
+                    arg.param_shape,                                      // bn_bias
+                    need_statistic ? arg.param_shape : TensorShape({0}),  // mean
+                    need_statistic ? arg.param_shape : TensorShape({0}),  // variance
+                    arg.param_shape,                                      // batch_mean
+                    arg.param_shape,  // batch_inv_variance
+                    {0},              // reserve
+                    arg.src           // dst
             });
     }
 }
@@ -62,8 +60,14 @@ TEST_F(ROCM, BN_BACKWARD) {
                 .set_dtype(1, arg.dtype)   // dy
                 .set_dtype(8, arg.dtype);  // dx
         checker.set_epsilon(1e-3).set_param(arg.param).exec(
-                {arg.src, arg.src, arg.param_shape, arg.param_shape,
-                 arg.param_shape, {0}, arg.param_shape, arg.param_shape,
+                {arg.src,
+                 arg.src,
+                 arg.param_shape,
+                 arg.param_shape,
+                 arg.param_shape,
+                 {0},
+                 arg.param_shape,
+                 arg.param_shape,
                  arg.src});
     }
 }

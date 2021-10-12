@@ -8,29 +8,26 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "hcc_detail/hcc_defs_prologue.h"
 #include "src/rocm/matrix_mul/opr_impl.h"
+#include "hcc_detail/hcc_defs_prologue.h"
 
-#include "src/rocm/utils.h"
-#include "src/rocm/handle.h"
 #include "./algos.h"
 #include "src/common/algo_chooser.h"
+#include "src/rocm/handle.h"
+#include "src/rocm/utils.h"
 
 using namespace megdnn;
 using namespace rocm;
 
-std::vector<MatrixMulForwardImpl::Algorithm*>
-MatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
-                                         const TensorLayout& B,
-                                         const TensorLayout& C) {
+std::vector<MatrixMulForwardImpl::Algorithm*> MatrixMulForwardImpl::get_all_algorithms(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     AlgoBase::SizeArgs args{this, A, B, C};
     return megdnn::get_all_algorithms<MatrixMulForwardImpl>(args);
 }
 
-std::vector<MatrixMulForwardImpl::Algorithm*>
-MatrixMulForwardImpl::get_all_algorithms_safe(const TensorLayout& A,
-                                         const TensorLayout& B,
-                                         const TensorLayout& C) {
+std::vector<MatrixMulForwardImpl::Algorithm*> MatrixMulForwardImpl::
+        get_all_algorithms_safe(
+                const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     AlgoBase::SizeArgs args{this, A, B, C};
     return megdnn::get_all_algorithms_safe<MatrixMulForwardImpl>(args);
 }
@@ -49,15 +46,14 @@ MatrixMulForwardImpl::Algorithm* MatrixMulForwardImpl::get_algorithm_heuristic(
             "matrix mul forward", positive_attr, negative_attr);
 }
 
-size_t MatrixMulForwardImpl::get_workspace_in_bytes(const TensorLayout& A,
-                                                    const TensorLayout& B,
-                                                    const TensorLayout& C) {
+size_t MatrixMulForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     return get_dnn_workspace(this, A, B, C);
 }
 
-void MatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                                _megdnn_tensor_out C,
-                                _megdnn_workspace workspace) {
+void MatrixMulForwardImpl::exec(
+        _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+        _megdnn_workspace workspace) {
     check_exec(A.layout, B.layout, C.layout, workspace.size);
     AlgoBase::ExecArgs args(this, A, B, C, workspace);
     auto&& algo = get_algorithm(this, A.layout, B.layout, C.layout);

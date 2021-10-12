@@ -36,8 +36,7 @@ struct TQTKernOp {
     }
 
 #if MEGDNN_CC_HOST
-    TQTKernOp(const TensorND& input, const TensorND& output,
-              const TQT::Param& param)
+    TQTKernOp(const TensorND& input, const TensorND& output, const TQT::Param& param)
             : input{input.ptr<ctype>()},
               output{output.ptr<ctype>()},
               qmin(param.qmin),
@@ -62,16 +61,15 @@ struct TQTBwdKernOp {
         bool mask_quant = !mask_clip;
 
         grad_x[idx] = diff[idx] * mask_quant;
-        ctype grad_quant =
-                diff[idx] * mask_quant * (rounded - scaled) * t * log(2.0);
+        ctype grad_quant = diff[idx] * mask_quant * (rounded - scaled) * t * log(2.0);
         ctype grad_clip = diff[idx] * mask_clip * rounded * t * log(2.0);
         grad_s[idx] = grad_quant + grad_clip;
     }
 
 #if MEGDNN_CC_HOST
-    TQTBwdKernOp(const TensorND& diff, const TensorND& input,
-                 const TensorND& grad_x, const TensorND& grad_s,
-                 const TQT::Param& param)
+    TQTBwdKernOp(
+            const TensorND& diff, const TensorND& input, const TensorND& grad_x,
+            const TensorND& grad_s, const TQT::Param& param)
             : diff{diff.ptr<ctype>()},
               input{input.ptr<ctype>()},
               grad_x{grad_x.ptr<ctype>()},
@@ -86,16 +84,14 @@ struct TQTKernOpNonContig {
     ctype qmin;
     ctype qmax;
 
-    __device__ void operator()(uint32_t, ctype& input, ctype& scale,
-                               ctype& output) {
+    __device__ void operator()(uint32_t, ctype& input, ctype& scale, ctype& output) {
         ctype t = powf(2, scale);
         ctype x = round(input / t);
         x = fmaxf(fminf(x, qmax), qmin);
         output = x * t;
     }
 #if MEGDNN_CC_HOST
-    TQTKernOpNonContig(const TQT::Param& param)
-            : qmin(param.qmin), qmax(param.qmax) {}
+    TQTKernOpNonContig(const TQT::Param& param) : qmin(param.qmin), qmax(param.qmax) {}
 #endif
 };
 
@@ -104,8 +100,9 @@ struct TQTBwdKernOpNonContig {
     ctype qmin;
     ctype qmax;
 
-    __device__ void operator()(uint32_t, ctype& diff, ctype& input,
-                               ctype& scale, ctype& grad_x, ctype& grad_s) {
+    __device__ void operator()(
+            uint32_t, ctype& diff, ctype& input, ctype& scale, ctype& grad_x,
+            ctype& grad_s) {
         ctype t = powf(2, scale);
         ctype scaled = input / t;
         ctype rounded = round(scaled);
@@ -114,8 +111,7 @@ struct TQTBwdKernOpNonContig {
         bool mask_quant = !mask_clip;
 
         grad_x = diff * mask_quant;
-        ctype grad_quant =
-                diff * mask_quant * (rounded - scaled) * t * log(2.0);
+        ctype grad_quant = diff * mask_quant * (rounded - scaled) * t * log(2.0);
         ctype grad_clip = diff * mask_clip * rounded * t * log(2.0);
         grad_s = grad_quant + grad_clip;
     }

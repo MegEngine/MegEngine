@@ -71,9 +71,7 @@ private:
 class FloatAST : public AST {
 public:
     FloatAST(float val) : m_val(val) {}
-    inline std::string code_gen() override {
-        return ssprintf("float(%.12e)", m_val);
-    }
+    inline std::string code_gen() override { return ssprintf("float(%.12e)", m_val); }
 
 private:
     float m_val;
@@ -93,8 +91,7 @@ public:
     BinaryAST(const std::string& op, const ASTPtr& lhs, const ASTPtr& rhs)
             : m_op(op), m_lhs(lhs), m_rhs(rhs) {}
     inline std::string code_gen() override {
-        return "(" + m_lhs->code_gen() + " " + m_op + " " + m_rhs->code_gen() +
-               ")";
+        return "(" + m_lhs->code_gen() + " " + m_op + " " + m_rhs->code_gen() + ")";
     }
 
 private:
@@ -126,8 +123,7 @@ private:
 
 class ArraySubscriptAST : public AST {
 public:
-    ArraySubscriptAST(const ASTPtr& lhs, const ASTPtr& rhs)
-            : m_lhs(lhs), m_rhs(rhs) {}
+    ArraySubscriptAST(const ASTPtr& lhs, const ASTPtr& rhs) : m_lhs(lhs), m_rhs(rhs) {}
     inline std::string code_gen() override {
         return m_lhs->code_gen() + "[" + m_rhs->code_gen() + "]";
     }
@@ -166,9 +162,7 @@ private:
 class DeclIntAST : public AST {
 public:
     DeclIntAST(const ASTPtr& var) : m_var(var) {}
-    inline std::string code_gen() override {
-        return "int " + m_var->code_gen() + ";";
-    }
+    inline std::string code_gen() override { return "int " + m_var->code_gen() + ";"; }
 
 private:
     ASTPtr m_var;

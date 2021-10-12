@@ -37,8 +37,7 @@ TEST_F(CUDA, LSQ) {
                 .set_dtype(2, dtype)
                 .set_dtype(3, dtype)
                 .set_dtype(4, dtype)
-                .execs({ishape, scale_shape, zeropoint_shape, gradscale_shape,
-                        ishape});
+                .execs({ishape, scale_shape, zeropoint_shape, gradscale_shape, ishape});
     }
     // test noncontiguous layout
     for (auto&& arg : args) {
@@ -53,11 +52,12 @@ TEST_F(CUDA, LSQ) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl({ilayout,
-                                        {sshape, dtype::Float32()},
-                                        {zeropoint_shape, dtype::Float32()},
-                                        {gradscale_shape, dtype::Float32()},
-                                        ilayout});
+        checker.set_param(param).execl(
+                {ilayout,
+                 {sshape, dtype::Float32()},
+                 {zeropoint_shape, dtype::Float32()},
+                 {gradscale_shape, dtype::Float32()},
+                 ilayout});
     }
 }
 
@@ -80,8 +80,8 @@ TEST_F(CUDA, LSQ_BACKWARD) {
                 .set_dtype(4, dtype)
                 .set_dtype(5, dtype)
                 .set_dtype(6, dtype)
-                .execs({ishape, ishape, scale_shape, zeropoint_shape,
-                        gradscale_shape, ishape, ishape});
+                .execs({ishape, ishape, scale_shape, zeropoint_shape, gradscale_shape,
+                        ishape, ishape});
     }
     // test noncontiguous layout
     for (auto&& arg : args) {
@@ -96,13 +96,14 @@ TEST_F(CUDA, LSQ_BACKWARD) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl({ilayout,
-                                        ilayout,
-                                        {sshape, dtype::Float32()},
-                                        {zeropoint_shape, dtype::Float32()},
-                                        {gradscale_shape, dtype::Float32()},
-                                        ilayout,
-                                        ilayout});
+        checker.set_param(param).execl(
+                {ilayout,
+                 ilayout,
+                 {sshape, dtype::Float32()},
+                 {zeropoint_shape, dtype::Float32()},
+                 {gradscale_shape, dtype::Float32()},
+                 ilayout,
+                 ilayout});
     }
 }
 

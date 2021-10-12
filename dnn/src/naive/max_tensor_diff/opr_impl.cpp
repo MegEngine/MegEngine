@@ -26,8 +26,9 @@ float exec_forward(const T* src1, const T* src2, const size_t nr_elem) {
     rep(i, nr_elem) {
         float x = src1[i];
         float y = src2[i];
-        float diff = std::isfinite(x) && std::isfinite(y) ? fabs(x-y) /
-            fmax(fmin(fabs(x),fabs(y)), 1) : INFINITY;
+        float diff = std::isfinite(x) && std::isfinite(y)
+                           ? fabs(x - y) / fmax(fmin(fabs(x), fabs(y)), 1)
+                           : INFINITY;
         maxerr = std::max(diff, maxerr);
     }
 
@@ -35,22 +36,21 @@ float exec_forward(const T* src1, const T* src2, const size_t nr_elem) {
 }
 }  // anonymous namespace
 
-float MaxTensorDiffImpl::exec(_megdnn_tensor_in src1, _megdnn_tensor_in src2,
-                              _megdnn_workspace workspace) {
+float MaxTensorDiffImpl::exec(
+        _megdnn_tensor_in src1, _megdnn_tensor_in src2, _megdnn_workspace workspace) {
     check_exec(src1.layout, src2.layout, workspace.size);
     float result = 0.f;
 
     auto run = [&]() {
 
-#define cb(DType)                                                          \
-    if (src1.layout.dtype == DType()) {                                    \
-        using ctype = typename DTypeTrait<DType>::ctype;                   \
-        result = exec_forward<ctype>(src1.ptr<ctype>(), src2.ptr<ctype>(), \
-                                     src1.layout.total_nr_elems());        \
+#define cb(DType)                                                                    \
+    if (src1.layout.dtype == DType()) {                                              \
+        using ctype = typename DTypeTrait<DType>::ctype;                             \
+        result = exec_forward<ctype>(                                                \
+                src1.ptr<ctype>(), src2.ptr<ctype>(), src1.layout.total_nr_elems()); \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
-
     };
 
     auto handle = static_cast<HandleImpl*>(this->handle());

@@ -11,8 +11,9 @@
 
 #include "megbrain/test/host_static_calc.h"
 
-void mgb::elemwise_static_calc(opr::Elemwise::Mode mode,
-        HostTensorND &dest, const std::vector<HostTensorND>& inputs) {
+void mgb::elemwise_static_calc(
+        opr::Elemwise::Mode mode, HostTensorND& dest,
+        const std::vector<HostTensorND>& inputs) {
 #if defined(ANDROID) || defined(IOS) || defined(__arm__)
     static opr::intl::UniqPtrWithCN<megdnn::Elemwise> opr_impl;
     static std::mutex mtx;
@@ -26,7 +27,7 @@ void mgb::elemwise_static_calc(opr::Elemwise::Mode mode,
     }
     DeviceTensorND dev_dest{cn};
     SmallVector<DeviceTensorND> dev_inp(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++ i) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
         dev_inp[i].comp_node(cn).copy_from(inputs[i]);
     }
     opr::Elemwise::perform(mode, dev_dest, dev_inp, opr_impl);
@@ -34,5 +35,3 @@ void mgb::elemwise_static_calc(opr::Elemwise::Mode mode,
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
-

@@ -20,7 +20,7 @@ using namespace reduce;
 
 #define COMMA ,
 
-#define INST(sctype, dctype, wtype)                                  \
+#define INST(sctype, dctype, wtype)                                \
     INST_REDUCE(SumOp<sctype COMMA dctype COMMA wtype>, false);    \
     INST_REDUCE(SumSqrOp<sctype COMMA dctype COMMA wtype>, false); \
     INST_REDUCE(ProdOp<sctype COMMA dctype COMMA wtype>, false);   \

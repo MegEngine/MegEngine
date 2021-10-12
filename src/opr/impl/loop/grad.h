@@ -12,8 +12,8 @@
 #pragma once
 
 #include "./impl.h"
-#include "megbrain/opr/loop.h"
 #include "megbrain/opr/internal/identical_fwd.h"
+#include "megbrain/opr/loop.h"
 
 namespace mgb {
 namespace opr {
@@ -39,28 +39,29 @@ MGB_DEFINE_OPR_CLASS(LoopGrad, LoopImpl) // {
 
     void init_output_static_infer_desc() override;
     void scn_do_execute() override;
-    NodeProp *do_make_node_prop() const override;
+    NodeProp* do_make_node_prop() const override;
     void add_input_layout_constraint() override;
 
-    public:
-        LoopGrad(Loop *loop_opr, std::unique_ptr<GradDesc> desc,
-                const OperatorNodeConfig &config);
+public:
+    LoopGrad(
+            Loop* loop_opr, std::unique_ptr<GradDesc> desc,
+            const OperatorNodeConfig& config);
 
-        /*!
-         * \param outgrad output grad in owner graph, only including the output
-         *      vars added by user
-         */
-        static LoopGrad* make(Loop *loop_opr, const VarNodeArray &outgrad,
-                const OperatorNodeConfig &config = {});
+    /*!
+     * \param outgrad output grad in owner graph, only including the output
+     *      vars added by user
+     */
+    static LoopGrad* make(
+            Loop* loop_opr, const VarNodeArray& outgrad,
+            const OperatorNodeConfig& config = {});
 
-        cg::OperatorNodeBase* shallow_copy(
-                const VarNodeArray &inputs,
-                const OperatorNodeConfig &config) const;
+    cg::OperatorNodeBase* shallow_copy(
+            const VarNodeArray& inputs, const OperatorNodeConfig& config) const;
 
-        /*!
-         * \brief get grad var for given input
-         */
-        VarNode* get_grad_var(size_t inp_idx);
+    /*!
+     * \brief get grad var for given input
+     */
+    VarNode* get_grad_var(size_t inp_idx);
 };
 
 /*!
@@ -73,27 +74,24 @@ MGB_DEFINE_OPR_CLASS(LoopGrad, LoopImpl) // {
  *
  * Note: we define assignee := assinor in loop fwd update.
  */
-MGB_DEFINE_OPR_CLASS(LoopGrad::AssignorGradOpr,
+MGB_DEFINE_OPR_CLASS(
+        LoopGrad::AssignorGradOpr,
         intl::ReadonlyFwdHelper<cg::SingleCNOperatorNodeBase>) // {
-
-    struct State: public std::enable_shared_from_this<State>,
-                  public NonCopyableObj {
+    struct State : public std::enable_shared_from_this<State>, public NonCopyableObj {
         DepTensorUpdator::AccumulatorState accum_state;
         //! sum of grads of assignees in previous run
         DeviceTensorND prev_gsum;
 
-        State() {
-            accum_state.dest = &prev_gsum;
-        }
+        State() { accum_state.dest = &prev_gsum; }
 
         auto accum_state_shared() {
             return std::shared_ptr<DepTensorUpdator::AccumulatorState>{
-                shared_from_this(), &accum_state};
+                    shared_from_this(), &accum_state};
         }
     };
 
-    VarNode * const m_assignor;
-    VarNode * const m_assignor_grad;     //!< original assignor grad
+    VarNode* const m_assignor;
+    VarNode* const m_assignor_grad;  //!< original assignor grad
     std::shared_ptr<State> const m_state;
 
     bool m_assignee_grads_init = false, m_assignee_grads_empty = false,
@@ -105,58 +103,53 @@ MGB_DEFINE_OPR_CLASS(LoopGrad::AssignorGradOpr,
     void mem_plan_fwd_in2out_writable() override;
     void scn_do_execute() override;
     void init_output_static_infer_desc() override;
-    NodeProp *do_make_node_prop() const override;
+    NodeProp* do_make_node_prop() const override;
 
-    public:
-
-        AssignorGradOpr(VarNode *assignor_grad, VarNode *assignor,
-                const std::shared_ptr<State> &state,
-                const OperatorNodeConfig &config):
-            Super{assignor->owner_graph(), config, "assignor_grad", {assignor}},
-            m_assignor{assignor},
-            m_assignor_grad{assignor_grad},
-            m_state{state}
-        {
-            mgb_assert(assignor);
-            if (assignor_grad) {
-                add_input({assignor_grad});
-            }
-            add_input({assignor});
-            add_output(None)->dtype(assignor->dtype());
-            add_equivalence_component<ScalarHash<void*>>(m_state.get());
+public:
+    AssignorGradOpr(
+            VarNode* assignor_grad, VarNode* assignor,
+            const std::shared_ptr<State>& state, const OperatorNodeConfig& config)
+            : Super{assignor->owner_graph(), config, "assignor_grad", {assignor}},
+              m_assignor{assignor},
+              m_assignor_grad{assignor_grad},
+              m_state{state} {
+        mgb_assert(assignor);
+        if (assignor_grad) {
+            add_input({assignor_grad});
         }
+        add_input({assignor});
+        add_output(None)->dtype(assignor->dtype());
+        add_equivalence_component<ScalarHash<void*>>(m_state.get());
+    }
 
-        static SymbolVar make(SymbolVar assignor_grad, SymbolVar assignor,
-                const std::shared_ptr<State> &state = std::make_shared<State>(),
-                const OperatorNodeConfig &config = {}) {
-            return assignor.insert_single_output_opr<AssignorGradOpr>(
-                    assignor_grad.node(), assignor.node(), state, config);
-        }
+    static SymbolVar make(
+            SymbolVar assignor_grad, SymbolVar assignor,
+            const std::shared_ptr<State>& state = std::make_shared<State>(),
+            const OperatorNodeConfig& config = {}) {
+        return assignor.insert_single_output_opr<AssignorGradOpr>(
+                assignor_grad.node(), assignor.node(), state, config);
+    }
 
-        void init_assignee_info(const VarNodeArray &assignees, SymbolVar loss);
+    void init_assignee_info(const VarNodeArray& assignees, SymbolVar loss);
 
-        //! shallow copy this opr
-        cg::OperatorNodeBase* shallow_copy(
-                const VarNodeArray &inputs,
-                const OperatorNodeConfig &config) const;
+    //! shallow copy this opr
+    cg::OperatorNodeBase* shallow_copy(
+            const VarNodeArray& inputs, const OperatorNodeConfig& config) const;
 
-        //! called when grad loop finishes
-        void on_grad_exec_finish() {
-            m_state->prev_gsum = {};
-            m_state->accum_state.reset();
-        }
+    //! called when grad loop finishes
+    void on_grad_exec_finish() {
+        m_state->prev_gsum = {};
+        m_state->accum_state.reset();
+    }
 
-        VarNode* assignor() const {
-            return m_assignor;
-        }
+    VarNode* assignor() const { return m_assignor; }
 
-        //! add extra compile output specs needed by this AssignorGradOpr
-        void add_extra_compile_output_spec(ComputingGraph::OutputSpec &spec);
+    //! add extra compile output specs needed by this AssignorGradOpr
+    void add_extra_compile_output_spec(ComputingGraph::OutputSpec& spec);
 };
 
-} // namespace intl
-} // namespace opr
-} // namespace mgb
+}  // namespace intl
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

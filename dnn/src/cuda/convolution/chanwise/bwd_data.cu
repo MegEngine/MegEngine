@@ -24,10 +24,9 @@ namespace {
 // grid idx is (inp_chl, worker_index)
 // each y-slice of a block works on an (N, IH, IW) spatial image at given
 // inp_chl
-template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SH_SET,
-          int SW_SET>
-__global__ void kern_bwd_data_float(T* src_grad, const T* dst_grad,
-                                    const T* flt_tot, Param param) {
+template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SH_SET, int SW_SET>
+__global__ void kern_bwd_data_float(
+        T* src_grad, const T* dst_grad, const T* flt_tot, Param param) {
     // extern __shared__ of dt_float16 does not work
     extern __shared__ uint8_t flt_storage[];
 
@@ -78,8 +77,7 @@ __global__ void kern_bwd_data_float(T* src_grad, const T* dst_grad,
                             const T* pd = dst_grad_base + oh * OW + ow;
                             const T* pf = flt + fh * FW + fw;
 #pragma unroll
-                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                                 ++chl_mul) {
+                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
                                 sum += *pd * *pf;
                                 pd += OH * OW;
                                 pf += FSIZE;
@@ -110,10 +108,9 @@ __global__ void kern_bwd_data_float(T* src_grad, const T* dst_grad,
 }
 
 #if CUDA_VERSION >= 9000
-template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SH_SET,
-          int SW_SET>
-__global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
-                                 const __half* flt_tot, Param param) {
+template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SH_SET, int SW_SET>
+__global__ void kern_bwd_data_hf(
+        __half* src_grad, const __half* dst_grad, const __half* flt_tot, Param param) {
     extern __shared__ uint8_t flt_storage[];
 
     __half* const flt = reinterpret_cast<__half*>(flt_storage);
@@ -141,8 +138,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
             out_idx = div_mod(out_idx, IH, ih);
             n = out_idx;
 
-            const __half* dst_grad_base =
-                    dst_grad + n * (IC * CHL_MUL * OH * OW);
+            const __half* dst_grad_base = dst_grad + n * (IC * CHL_MUL * OH * OW);
 
             __half2 sum{0.0, 0.0};
             __half2 pd2{0.0, 0.0};
@@ -167,10 +163,8 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
 
                         if (FW == 3) {
 #pragma unroll
-                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                                 ++chl_mul) {
-                                __half2 flt0 = {0.0, *(pf)},
-                                        flt1 = {*(pf), *(pf + 1)},
+                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
+                                __half2 flt0 = {0.0, *(pf)}, flt1 = {*(pf), *(pf + 1)},
                                         flt2 = {*(pf + 1), *(pf + 2)},
                                         flt3 = {*(pf + 2), 0.0};
                                 uint32_t ow = owmin;
@@ -209,10 +203,8 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                             }
                         } else if (FW == 5) {
 #pragma unroll
-                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                                 ++chl_mul) {
-                                __half2 flt0 = {0.0, *(pf)},
-                                        flt1 = {*(pf), *(pf + 1)},
+                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
+                                __half2 flt0 = {0.0, *(pf)}, flt1 = {*(pf), *(pf + 1)},
                                         flt2 = {*(pf + 1), *(pf + 2)},
                                         flt3 = {*(pf + 2), *(pf + 3)},
                                         flt4 = {*(pf + 3), *(pf + 4)},
@@ -272,8 +264,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                             }
                         } else {
 #pragma unroll
-                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                                 ++chl_mul) {
+                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
 #pragma unroll
                                 for (uint32_t dow = 0; dow <= FW; ++dow) {
                                     uint32_t ow = owmin + dow;
@@ -309,8 +300,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                         const __half* pd = dst_grad_base + oh * OW + owmin_x;
                         const __half* pf = flt + fh * FW + fw;
 #pragma unroll
-                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                             ++chl_mul) {
+                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
                             pd2.x = *pd;
                             pd2.y = 0.0;
                             pf2.x = *pf;
@@ -326,8 +316,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                         const __half* pd = dst_grad_base + oh * OW + owmax_y;
                         const __half* pf = flt + fh * FW + fw;
 #pragma unroll
-                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                             ++chl_mul) {
+                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
                             pd2.x = 0.0;
                             pd2.y = *pd;
                             pf2.x = 0.0;
@@ -346,8 +335,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                         const __half* pd = dst_grad_base + oh * OW + ow;
                         const __half* pf = flt + fh * FW + fw;
 #pragma unroll
-                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                             ++chl_mul) {
+                        for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
                             pd2.x = *pd;
                             pd2.y = *pd;
                             pf2.x = *pf;
@@ -371,8 +359,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                 out_idx = div_mod(out_idx, IH, ih);
                 n = out_idx;
 
-                const __half* dst_grad_base =
-                        dst_grad + n * (IC * CHL_MUL * OH * OW);
+                const __half* dst_grad_base = dst_grad + n * (IC * CHL_MUL * OH * OW);
 
                 __half sum(0);
 
@@ -391,12 +378,11 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                                 uint32_t ow = owmin + dow;
                                 if (ow <= owmax) {
                                     uint32_t fw = iw - ow * SW + PW;
-                                    const __half* pd =
-                                            dst_grad_base + oh * OW + ow;
+                                    const __half* pd = dst_grad_base + oh * OW + ow;
                                     const __half* pf = flt + fh * FW + fw;
 #pragma unroll
-                                    for (uint32_t chl_mul = 0;
-                                         chl_mul < CHL_MUL; ++chl_mul) {
+                                    for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
+                                         ++chl_mul) {
                                         sum = fma(*pd, *pf, sum);
                                         pd += OH * OW;
                                         pf += FSIZE;
@@ -415,8 +401,7 @@ __global__ void kern_bwd_data_hf(__half* src_grad, const __half* dst_grad,
                             const __half* pd = dst_grad_base + oh * OW + ow;
                             const __half* pf = flt + fh * FW + fw;
 #pragma unroll
-                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL;
-                                 ++chl_mul) {
+                            for (uint32_t chl_mul = 0; chl_mul < CHL_MUL; ++chl_mul) {
                                 sum = fma(*pd, *pf, sum);
                                 pd += OH * OW;
                                 pf += FSIZE;
@@ -500,31 +485,30 @@ namespace convolution {
 namespace chanwise {
 
 template <typename T>
-void run_bwd_data(T* src_grad, const T* dst_grad, const T* flt,
-                  const Param& param, cudaStream_t stream) {
+void run_bwd_data(
+        T* src_grad, const T* dst_grad, const T* flt, const Param& param,
+        cudaStream_t stream) {
     void (*kern)(T*, const T*, const T*, Param);
     kern = get_kern<T>(param).f;
 
     int nr_thread = query_blocksize_for_kernel(kern),
         nr_out_dimx = param.src_h * param.src_w * param.batch;
-    dim3 nr_block(param.src_chl,
-                  std::min(512, max(nr_out_dimx / (nr_thread * 4), 1)));
+    dim3 nr_block(param.src_chl, std::min(512, max(nr_out_dimx / (nr_thread * 4), 1)));
     uint32_t shared = param.chl_mul * param.flt_h * param.flt_w * sizeof(T);
-    kern<<<nr_block, nr_thread, shared, stream>>>(src_grad, dst_grad, flt,
-                                                  param);
+    kern<<<nr_block, nr_thread, shared, stream>>>(src_grad, dst_grad, flt, param);
     after_kernel_launch();
 }
 
-template void run_bwd_data(float*, const float*, const float*, const Param&,
-                           cudaStream_t);
+template void run_bwd_data(
+        float*, const float*, const float*, const Param&, cudaStream_t);
 
 #if CUDA_VERSION >= 9000
-template void run_bwd_data(__half*, const __half*, const __half*, const Param&,
-                           cudaStream_t);
+template void run_bwd_data(
+        __half*, const __half*, const __half*, const Param&, cudaStream_t);
 #endif
 
-template void run_bwd_data(dt_float16*, const dt_float16*, const dt_float16*,
-                           const Param&, cudaStream_t);
+template void run_bwd_data(
+        dt_float16*, const dt_float16*, const dt_float16*, const Param&, cudaStream_t);
 
 }  // namespace chanwise
 }  // namespace convolution
@@ -532,4 +516,3 @@ template void run_bwd_data(dt_float16*, const dt_float16*, const dt_float16*,
 }  // namespace megdnn
 
 // vim: syntax=cuda.doxygen
-

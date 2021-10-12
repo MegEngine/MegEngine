@@ -15,8 +15,9 @@
 namespace megdnn {
 namespace arm_common {
 
-void pooling_max_w2x2_s2x2(const int8_t* src, int8_t* dst, size_t N, size_t C,
-                           size_t IH, size_t IW, size_t OH, size_t OW) {
+void pooling_max_w2x2_s2x2(
+        const int8_t* src, int8_t* dst, size_t N, size_t C, size_t IH, size_t IW,
+        size_t OH, size_t OW) {
     for (size_t nc = 0; nc < N * C; ++nc) {
         for (size_t oh = 0; oh < OH; ++oh) {
             size_t ih = oh << 1;
@@ -35,8 +36,8 @@ void pooling_max_w2x2_s2x2(const int8_t* src, int8_t* dst, size_t N, size_t C,
                 dptr += 8;
             }
             for (; ow < OW; ++ow) {
-                dptr[0] = std::max(std::max(sptr0[0], sptr0[1]),
-                                   std::max(sptr1[0], sptr1[1]));
+                dptr[0] = std::max(
+                        std::max(sptr0[0], sptr0[1]), std::max(sptr1[0], sptr1[1]));
                 sptr0 += 2;
                 sptr1 += 2;
                 dptr += 1;
@@ -49,4 +50,3 @@ void pooling_max_w2x2_s2x2(const int8_t* src, int8_t* dst, size_t N, size_t C,
 }  // namespace arm_common
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen
-

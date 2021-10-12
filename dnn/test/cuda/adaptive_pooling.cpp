@@ -47,20 +47,17 @@ TEST_F(CUDA, ADAPTIVE_POOLING_BACKWARD) {
         TensorLayout ilayout = TensorLayout(arg.ishape, dtype::Float32());
         TensorLayout olayout = TensorLayout(arg.oshape, dtype::Float32());
 
-        auto constraint = [this,
-                           arg](CheckerHelper::TensorValueArray& tensors_orig) {
+        auto constraint = [this, arg](CheckerHelper::TensorValueArray& tensors_orig) {
             megdnn_assert(tensors_orig.size() == 4);
             auto opr = handle_cuda()->create_operator<AdaptivePoolingForward>();
             opr->param() = arg.param;
 
             auto tensors_cuda_storage = CheckerHelper::alloc_tensors(
-                    handle_cuda(),
-                    {tensors_orig[0].layout, tensors_orig[1].layout}, 0);
+                    handle_cuda(), {tensors_orig[0].layout, tensors_orig[1].layout}, 0);
             auto&& tensors_cuda = *tensors_cuda_storage;
 
             auto span = tensors_cuda[0].layout.span();
-            auto dst = static_cast<dt_byte*>(tensors_cuda[0].raw_ptr) +
-                       span.low_byte;
+            auto dst = static_cast<dt_byte*>(tensors_cuda[0].raw_ptr) + span.low_byte;
             auto src = static_cast<const dt_byte*>(tensors_orig[0].raw_ptr) +
                        span.low_byte;
             megdnn_memcpy_H2D(handle_cuda(), dst, src, span.dist_byte());
@@ -68,16 +65,13 @@ TEST_F(CUDA, ADAPTIVE_POOLING_BACKWARD) {
             auto workspace_size = opr->get_workspace_in_bytes(
                     tensors_cuda[0].layout, tensors_cuda[1].layout);
             auto workspace_cuda = megdnn_malloc(handle_cuda(), workspace_size);
-            Workspace workspace{static_cast<dt_byte*>(workspace_cuda),
-                                workspace_size};
+            Workspace workspace{static_cast<dt_byte*>(workspace_cuda), workspace_size};
             opr->exec(tensors_cuda[0], tensors_cuda[1], workspace);
             megdnn_free(handle_cuda(), workspace_cuda);
 
             span = tensors_cuda[1].layout.span();
-            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) +
-                  span.low_byte;
-            src = static_cast<const dt_byte*>(tensors_cuda[1].raw_ptr) +
-                  span.low_byte;
+            dst = static_cast<dt_byte*>(tensors_orig[1].raw_ptr) + span.low_byte;
+            src = static_cast<const dt_byte*>(tensors_cuda[1].raw_ptr) + span.low_byte;
             megdnn_memcpy_D2H(handle_cuda(), dst, src, span.dist_byte());
         };
 

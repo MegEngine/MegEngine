@@ -17,8 +17,9 @@
 
 namespace {
 using namespace megdnn;
-size_t get_index(const TensorND& t0, const TensorND& t1,
-                 const MeshIndexing::IndexDesc& desc, int* index) {
+size_t get_index(
+        const TensorND& t0, const TensorND& t1, const MeshIndexing::IndexDesc& desc,
+        int* index) {
     int* index_ptr[TensorShape::MAX_NDIM] = {nullptr};
     for (auto&& i : desc) {
         size_t stride = (i.vec.layout.ndim == 1 ? 0 : i.vec.layout.stride[0]);
@@ -45,15 +46,13 @@ namespace naive {
 /* =========================== MeshIndexing ============================ */
 
 template <typename T>
-void MeshIndexingImpl::exec_mesh_indexing(const TensorND& src_tensor,
-                                          const IndexDesc& desc,
-                                          const TensorND& dst_tensor) {
+void MeshIndexingImpl::exec_mesh_indexing(
+        const TensorND& src_tensor, const IndexDesc& desc, const TensorND& dst_tensor) {
     // normal mesh indexing.
     auto iter = tensor_iter<T>(dst_tensor).begin();
     size_t ndim = dst_tensor.layout.ndim;
     auto ptr = src_tensor.ptr<T>();
-    for (size_t dst_idx = 0; dst_idx < dst_tensor.layout.total_nr_elems();
-         ++dst_idx) {
+    for (size_t dst_idx = 0; dst_idx < dst_tensor.layout.total_nr_elems(); ++dst_idx) {
         int index[TensorShape::MAX_NDIM];
         std::copy(iter.idx(), iter.idx() + ndim, index);
         size_t src_idx = get_index(src_tensor, dst_tensor, desc, index);
@@ -62,17 +61,16 @@ void MeshIndexingImpl::exec_mesh_indexing(const TensorND& src_tensor,
     }
 }
 
-void MeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
-                            _megdnn_tensor_out dst,
-                            _megdnn_workspace workspace) {
+void MeshIndexingImpl::exec(
+        _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(src.layout, dst.layout, desc);
-#define cb(DType)                                               \
-    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
-        using ctype = typename DTypeTrait<DType>::ctype;        \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                           \
-                exec_mesh_indexing<ctype>(src, desc, dst));     \
-        return;                                                 \
+#define cb(DType)                                                                \
+    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                  \
+        using ctype = typename DTypeTrait<DType>::ctype;                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_mesh_indexing<ctype>(src, desc, dst)); \
+        return;                                                                  \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
@@ -83,14 +81,12 @@ void MeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
 /* ========================= BatchedMeshIndexing =========================== */
 
 template <typename T>
-void BatchedMeshIndexingImpl::do_exec(const TensorND& src_tensor,
-                                      const IndexDesc& desc,
-                                      const TensorND& dst_tensor) {
+void BatchedMeshIndexingImpl::do_exec(
+        const TensorND& src_tensor, const IndexDesc& desc, const TensorND& dst_tensor) {
     auto iter = tensor_iter<T>(dst_tensor).begin();
     size_t ndim = dst_tensor.layout.ndim;
     auto ptr = src_tensor.ptr<T>();
-    for (size_t dst_idx = 0; dst_idx < dst_tensor.layout.total_nr_elems();
-         ++dst_idx) {
+    for (size_t dst_idx = 0; dst_idx < dst_tensor.layout.total_nr_elems(); ++dst_idx) {
         int index[TensorShape::MAX_NDIM];
         std::copy(iter.idx(), iter.idx() + ndim, index);
         size_t src_idx = get_index(src_tensor, dst_tensor, desc, index);
@@ -99,12 +95,13 @@ void BatchedMeshIndexingImpl::do_exec(const TensorND& src_tensor,
     }
 }
 
-void BatchedMeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
-                                   _megdnn_tensor_out dst, _megdnn_workspace) {
+void BatchedMeshIndexingImpl::exec(
+        _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
+        _megdnn_workspace) {
     check_exec(src.layout, dst.layout, desc);
 
 #define cb(DType)                                                     \
-    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                                \
+    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {       \
         using ctype = typename DTypeTrait<DType>::ctype;              \
         MEGDNN_DISPATCH_CPU_KERN_OPR(do_exec<ctype>(src, desc, dst)); \
         return;                                                       \
@@ -118,8 +115,8 @@ void BatchedMeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
 /* ============================ Mesh ============================= */
 
 template <typename T>
-void IncrMeshIndexingImpl::do_exec(const TensorND& data, const TensorND& value,
-                                   const IndexDesc& desc) {
+void IncrMeshIndexingImpl::do_exec(
+        const TensorND& data, const TensorND& value, const IndexDesc& desc) {
     auto iter = tensor_iter<T>(value).begin();
     size_t ndim = value.layout.ndim;
     auto ptr = data.ptr<T>();
@@ -132,13 +129,13 @@ void IncrMeshIndexingImpl::do_exec(const TensorND& data, const TensorND& value,
     }
 }
 
-void IncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                _megdnn_tensor_in value, const IndexDesc& desc,
-                                _megdnn_workspace workspace) {
+void IncrMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                        \
-    if (data.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                                  \
+    if (data.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {         \
         using ctype = typename DTypeTrait<DType>::ctype;                 \
         MEGDNN_DISPATCH_CPU_KERN_OPR(do_exec<ctype>(data, value, desc)); \
         return;                                                          \
@@ -150,8 +147,8 @@ void IncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
 }
 
 template <typename T>
-void SetMeshIndexingImpl::do_exec(const TensorND& data, const TensorND& value,
-                                  const IndexDesc& desc) {
+void SetMeshIndexingImpl::do_exec(
+        const TensorND& data, const TensorND& value, const IndexDesc& desc) {
     auto iter = tensor_iter<T>(value).begin();
     size_t ndim = value.layout.ndim;
     auto ptr = data.ptr<T>();
@@ -164,9 +161,9 @@ void SetMeshIndexingImpl::do_exec(const TensorND& data, const TensorND& value,
     }
 }
 
-void SetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                               _megdnn_tensor_in value, const IndexDesc& desc,
-                               _megdnn_workspace workspace) {
+void SetMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                        \
@@ -185,9 +182,8 @@ void SetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
 /* =========================== BatchedMesh =========================== */
 
 template <typename T>
-void BatchedIncrMeshIndexingImpl::do_exec(const TensorND& data,
-                                          const TensorND& value,
-                                          const IndexDesc& desc) {
+void BatchedIncrMeshIndexingImpl::do_exec(
+        const TensorND& data, const TensorND& value, const IndexDesc& desc) {
     auto iter = tensor_iter<T>(value).begin();
     size_t ndim = value.layout.ndim;
     auto ptr = data.ptr<T>();
@@ -200,10 +196,9 @@ void BatchedIncrMeshIndexingImpl::do_exec(const TensorND& data,
     }
 }
 
-void BatchedIncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                       _megdnn_tensor_in value,
-                                       const IndexDesc& desc,
-                                       _megdnn_workspace workspace) {
+void BatchedIncrMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                        \
@@ -219,9 +214,8 @@ void BatchedIncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
 }
 
 template <typename T>
-void BatchedSetMeshIndexingImpl::do_exec(const TensorND& data,
-                                         const TensorND& value,
-                                         const IndexDesc& desc) {
+void BatchedSetMeshIndexingImpl::do_exec(
+        const TensorND& data, const TensorND& value, const IndexDesc& desc) {
     auto iter = tensor_iter<T>(value).begin();
     size_t ndim = value.layout.ndim;
     auto ptr = data.ptr<T>();
@@ -234,10 +228,9 @@ void BatchedSetMeshIndexingImpl::do_exec(const TensorND& data,
     }
 }
 
-void BatchedSetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                      _megdnn_tensor_in value,
-                                      const IndexDesc& desc,
-                                      _megdnn_workspace workspace) {
+void BatchedSetMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                        \

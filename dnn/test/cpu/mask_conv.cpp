@@ -41,20 +41,21 @@ TEST_F(CPU, MASK_PROPAGATE) {
                 handle(), mask_src.layout.total_nr_elems() * sizeof(float)));
         auto src = TensorND{
                 src_ptr,
-                TensorLayout{mask_src.layout.reshape({1, 1, mask_src.layout[0],
-                                                      mask_src.layout[1]}),
-                             dtype::Float32()}};
+                TensorLayout{
+                        mask_src.layout.reshape(
+                                {1, 1, mask_src.layout[0], mask_src.layout[1]}),
+                        dtype::Float32()}};
         for (size_t i = 0; i < src.layout.total_nr_elems(); ++i) {
             src_ptr[i] = static_cast<float>(mask_src.ptr<int>()[i]);
         }
 
         auto filter_ptr = static_cast<float*>(megdnn_malloc(
-                handle(),
-                mask_param.kernel_h * mask_param.kernel_w * sizeof(float)));
+                handle(), mask_param.kernel_h * mask_param.kernel_w * sizeof(float)));
         auto filter = TensorND{
                 static_cast<void*>(filter_ptr),
-                TensorLayout{{1, 1, mask_param.kernel_h, mask_param.kernel_w},
-                             dtype::Float32()}};
+                TensorLayout{
+                        {1, 1, mask_param.kernel_h, mask_param.kernel_w},
+                        dtype::Float32()}};
         for (size_t i = 0; i < mask_param.kernel_h * mask_param.kernel_w; ++i) {
             filter_ptr[i] = 1.0;
         }
@@ -76,8 +77,8 @@ TEST_F(CPU, MASK_PROPAGATE) {
                 handle(), mask_dst.layout.total_nr_elems() * sizeof(float)));
         auto dst = TensorND{dst_ptr, dst_layout};
         WorkspaceWrapper workspace{
-                handle(), opr->get_workspace_in_bytes(src.layout, filter.layout,
-                                                      dst.layout, nullptr)};
+                handle(), opr->get_workspace_in_bytes(
+                                  src.layout, filter.layout, dst.layout, nullptr)};
         opr->exec(src, filter, dst, nullptr, workspace.workspace());
         for (size_t i = 0; i < dst.layout.total_nr_elems(); ++i) {
             mask_dst.ptr<int>()[i] = dst_ptr[i] > 0;

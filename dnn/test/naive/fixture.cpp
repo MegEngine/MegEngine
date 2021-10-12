@@ -10,21 +10,19 @@
  */
 #include "test/naive/fixture.h"
 
-#include "test/common/utils.h"
 #include "test/common/memory_manager.h"
 #include "test/common/random_state.h"
+#include "test/common/utils.h"
 
 namespace megdnn {
 namespace test {
 
-void NAIVE::SetUp()
-{
+void NAIVE::SetUp() {
     RandomState::reset();
     m_handle = create_cpu_handle(2);
 }
 
-void NAIVE::TearDown()
-{
+void NAIVE::TearDown() {
     m_handle.reset();
     MemoryManagerHolder::instance()->clear();
 }
@@ -45,8 +43,6 @@ void NAIVE_MULTI_THREADS::TearDown() {
     MemoryManagerHolder::instance()->clear();
 }
 
-
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen
-

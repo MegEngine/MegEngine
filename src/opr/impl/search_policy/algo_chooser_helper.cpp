@@ -11,8 +11,8 @@
  */
 
 #include "megbrain/opr/search_policy/algo_chooser_helper.h"
-#include "megbrain/opr/search_policy/algo_chooser.h"
 #include "megbrain/graph/cg.h"
+#include "megbrain/opr/search_policy/algo_chooser.h"
 
 #include "../internal/megdnn_opr_wrapper.inl"
 

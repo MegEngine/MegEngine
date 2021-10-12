@@ -9,10 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "../impl/graph/var_node_mem_mgr/static_mem_alloc.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/utils/arith_helper.h"
 #include "megbrain/utils/timer.h"
-#include "../impl/graph/var_node_mem_mgr/static_mem_alloc.h"
 
 #include <random>
 
@@ -20,13 +20,11 @@ using namespace mgb;
 using namespace cg;
 
 #ifdef WIN32
-#pragma message "static_mem_alloc disabled because it causes the program to crash at startup"
+#pragma message \
+        "static_mem_alloc disabled because it causes the program to crash at startup"
 #else
 
-#define ITER_ALGO(cb) \
-    cb(INTERVAL_MOVE) \
-    cb(BEST_FIT) \
-    cb(PUSHDOWN)
+#define ITER_ALGO(cb) cb(INTERVAL_MOVE) cb(BEST_FIT) cb(PUSHDOWN)
 
 namespace {
 
@@ -37,18 +35,17 @@ struct TestParam {
     size_t align, padding, nr_rand_opr, rng_seed;
 
     static decltype(auto) make_values(
-            const std::vector<size_t> &aligns,
-            const std::vector<size_t> &paddings,
-            const std::vector<size_t> &nr_rand_opr) {
+            const std::vector<size_t>& aligns, const std::vector<size_t>& paddings,
+            const std::vector<size_t>& nr_rand_opr) {
         std::vector<TestParam> data;
         std::mt19937_64 rng(next_rand_seed());
-        //std::mt19937_64 rng(0);
+        // std::mt19937_64 rng(0);
 
-        for (auto nr: nr_rand_opr) {
+        for (auto nr : nr_rand_opr) {
             size_t seed = rng();
-            for (auto align: aligns) {
-                for (auto padding: paddings) {
-#define itcb(algo) data.push_back({Algo::algo, align, padding, nr, seed});
+            for (auto align : aligns) {
+                for (auto padding : paddings) {
+#define itcb(algo)    data.push_back({Algo::algo, align, padding, nr, seed});
                     ITER_ALGO(itcb)
 #undef itcb
                 }
@@ -58,13 +55,13 @@ struct TestParam {
     }
 };
 
-std::ostream& operator << (std::ostream &ostr, const TestParam &p) {
+std::ostream& operator<<(std::ostream& ostr, const TestParam& p) {
     std::string algo;
-#define itcb(a) \
-    do { \
-        if (p.algo == StaticMemAlloc::AllocatorAlgo::a)  \
-            algo = #a; \
-    } while(0);
+#define itcb(a)                                         \
+    do {                                                \
+        if (p.algo == StaticMemAlloc::AllocatorAlgo::a) \
+            algo = #a;                                  \
+    } while (0);
     ITER_ALGO(itcb);
 #undef itcb
 
@@ -74,50 +71,48 @@ std::ostream& operator << (std::ostream &ostr, const TestParam &p) {
     return ostr;
 }
 
-class BasicCorrectness: public ::testing::TestWithParam<TestParam> {
-    protected:
-        std::unique_ptr<cg::StaticMemAlloc> m_allocator;
+class BasicCorrectness : public ::testing::TestWithParam<TestParam> {
+protected:
+    std::unique_ptr<cg::StaticMemAlloc> m_allocator;
 
-        size_t padding() const {
-            return GetParam().padding;
-        }
+    size_t padding() const { return GetParam().padding; }
 
-        size_t align(size_t addr) const {
-            return get_aligned_power2(addr, GetParam().align);
-        }
+    size_t align(size_t addr) const {
+        return get_aligned_power2(addr, GetParam().align);
+    }
 
-    public:
-
-        void SetUp() override {
-            m_allocator = StaticMemAlloc::make(GetParam().algo);
-            m_allocator->alignment(GetParam().align);
-            m_allocator->padding(GetParam().padding);
-        }
+public:
+    void SetUp() override {
+        m_allocator = StaticMemAlloc::make(GetParam().algo);
+        m_allocator->alignment(GetParam().align);
+        m_allocator->padding(GetParam().padding);
+    }
 };
 
-class RandomOpr: public BasicCorrectness {
-};
+class RandomOpr : public BasicCorrectness {};
 
 decltype(auto) makeuk(int v) {
     return reinterpret_cast<cg::StaticMemAlloc::UserKeyType>(v);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST_P(BasicCorrectness, Alloc) {
-    cg::StaticMemAlloc *allocator = this->m_allocator.get();
+    cg::StaticMemAlloc* allocator = this->m_allocator.get();
     allocator->add(0, 1, 1, makeuk(0));
     allocator->add(0, 1, 1, makeuk(1));
     allocator->add(1, 2, 2, makeuk(2));
     allocator->solve();
-    ASSERT_EQ(std::max(align(2 + padding()), 2 * align(1 + padding())),
+    ASSERT_EQ(
+            std::max(align(2 + padding()), 2 * align(1 + padding())),
             allocator->tot_alloc());
-    ASSERT_EQ(std::max(align(2 + padding()), 2 * align(1 + padding())),
+    ASSERT_EQ(
+            std::max(align(2 + padding()), 2 * align(1 + padding())),
             allocator->tot_alloc_lower_bound());
 }
 
 TEST_P(BasicCorrectness, Overwrite) {
-    cg::StaticMemAlloc *allocator = this->m_allocator.get();
+    cg::StaticMemAlloc* allocator = this->m_allocator.get();
     auto id0 = allocator->add(0, 2, 3, makeuk(0));
     auto id1 = allocator->add(1, 3, 1, makeuk(1));
     auto id2 = allocator->add(2, 4, 1, makeuk(2));
@@ -130,7 +125,7 @@ TEST_P(BasicCorrectness, Overwrite) {
 }
 
 TEST_P(BasicCorrectness, OverwriteSameEnd) {
-    cg::StaticMemAlloc *allocator = this->m_allocator.get();
+    cg::StaticMemAlloc* allocator = this->m_allocator.get();
     auto id1 = allocator->add(1, 2, 1, makeuk(1));
     auto id0 = allocator->add(0, 2, 1, makeuk(0));
     allocator->add_overwrite_spec(id1, id0, 0);
@@ -140,31 +135,29 @@ TEST_P(BasicCorrectness, OverwriteSameEnd) {
     ASSERT_EQ(align(1 + padding()), allocator->tot_alloc_lower_bound());
 }
 
-INSTANTIATE_TEST_CASE_P(TestStaticMemAllocAlgo,
-        BasicCorrectness, TestParam::make_values({1, 2}, {1, 2}, {1}));
+INSTANTIATE_TEST_CASE_P(
+        TestStaticMemAllocAlgo, BasicCorrectness,
+        TestParam::make_values({1, 2}, {1, 2}, {1}));
 
-
-#ifdef  __OPTIMIZE__
+#ifdef __OPTIMIZE__
 constexpr size_t INTERVAL_MOVE_MAX_SIZE = 600;
 #else
 constexpr size_t INTERVAL_MOVE_MAX_SIZE = 400;
 #endif
 
 TEST_P(RandomOpr, Main) {
-    cg::StaticMemAlloc *allocator = this->m_allocator.get();
-    auto &&param = this->GetParam();
+    cg::StaticMemAlloc* allocator = this->m_allocator.get();
+    auto&& param = this->GetParam();
     std::mt19937_64 rng(param.rng_seed);
 
     if (param.algo == TestParam::Algo::INTERVAL_MOVE &&
-            param.nr_rand_opr > INTERVAL_MOVE_MAX_SIZE)
+        param.nr_rand_opr > INTERVAL_MOVE_MAX_SIZE)
         return;
 
     constexpr size_t MAX_SIZE = 4096;
 
     // [0, 1)
-    auto uniform = [&]() {
-        return rng() / (std::mt19937_64::max() + 1.0);
-    };
+    auto uniform = [&]() { return rng() / (std::mt19937_64::max() + 1.0); };
 
     // int [lo, hi)
     auto uniform_i = [&](size_t lo, size_t hi = 0) -> size_t {
@@ -182,8 +175,7 @@ TEST_P(RandomOpr, Main) {
     // indices in reqs that overwrite others
     std::vector<size_t> overwrite_src_idx;
 
-    for (size_t i = 0; i < param.nr_rand_opr; ++ i) {
-
+    for (size_t i = 0; i < param.nr_rand_opr; ++i) {
         bool overwrite = false;
         size_t begin, ov_dest, ov_offset, size;
         if (!reqs.empty() && uniform() <= 0.2) {
@@ -194,7 +186,7 @@ TEST_P(RandomOpr, Main) {
                 idx = uniform_i(0, reqs.size());
             begin = std::get<1>(reqs[idx]);
             if (begin) {
-                -- begin;
+                --begin;
                 auto tot_sz = std::get<2>(reqs[idx]);
                 if (tot_sz >= 2) {
                     ov_dest = std::get<3>(reqs[idx]);
@@ -221,29 +213,26 @@ TEST_P(RandomOpr, Main) {
     allocator->solve();
     std::ostringstream ostr;
     ostr << param;
-    auto sz_tot = allocator->tot_alloc(),
-         sz_lower = allocator->tot_alloc_lower_bound();
+    auto sz_tot = allocator->tot_alloc(), sz_lower = allocator->tot_alloc_lower_bound();
     mgb_log("%s: time=%.3f size=%zu/%zu cost=%.3f", ostr.str().c_str(),
             timer.get_secs(), sz_tot, sz_lower, double(sz_tot) / sz_lower - 1);
-
 }
 
-INSTANTIATE_TEST_CASE_P(TestStaticMemAllocAlgo,
-        RandomOpr, TestParam::make_values({1, 256}, {1, 32}, {
-            10, INTERVAL_MOVE_MAX_SIZE, 1000, 10000}));
+INSTANTIATE_TEST_CASE_P(
+        TestStaticMemAllocAlgo, RandomOpr,
+        TestParam::make_values(
+                {1, 256}, {1, 32}, {10, INTERVAL_MOVE_MAX_SIZE, 1000, 10000}));
 
 TEST(TestStaticMemAllocAlgo, PushdownChain) {
-    auto allocator = StaticMemAlloc::make(
-            StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
+    auto allocator = StaticMemAlloc::make(StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
     constexpr size_t NR = 5;
-    for (size_t i = 0; i < NR; ++ i)
+    for (size_t i = 0; i < NR; ++i)
         allocator->add(i, i + 2, i + 1, makeuk(i));
     allocator->solve();
     ASSERT_EQ(NR + NR - 1, allocator->tot_alloc_lower_bound());
     ASSERT_EQ(NR + NR - 1, allocator->tot_alloc());
 }
 
-#endif // WIN32
+#endif  // WIN32
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

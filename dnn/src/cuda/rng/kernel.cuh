@@ -29,29 +29,31 @@ namespace random {
 
 using Philox = curandStatePhilox4_32_10_t;
 
-QUALIFIERS float _curand_uniform(Philox *state){
+QUALIFIERS float _curand_uniform(Philox* state) {
     float r = curand_uniform(state);
-    if (r >= 1.0f) { 
+    if (r >= 1.0f) {
         r = 0.0f;
     }
     return r;
 }
 
-template<typename ctype, typename = void>
+template <typename ctype, typename = void>
 struct RandomKernel;
 
-template<typename ctype>
-using enable_64bit = typename std::enable_if<std::is_integral<ctype>::value && ((sizeof(ctype)) == 8)>::type;
+template <typename ctype>
+using enable_64bit = typename std::enable_if<
+        std::is_integral<ctype>::value && ((sizeof(ctype)) == 8)>::type;
 
-template<typename ctype>
-using enable_32bit = typename std::enable_if<std::is_integral<ctype>::value && ((sizeof(ctype)) <= 4)>::type;
+template <typename ctype>
+using enable_32bit = typename std::enable_if<
+        std::is_integral<ctype>::value && ((sizeof(ctype)) <= 4)>::type;
 
-template<typename ctype>
-struct RandomKernel<ctype, enable_64bit<ctype>>{
+template <typename ctype>
+struct RandomKernel<ctype, enable_64bit<ctype>> {
     ctype* output;
     uint64_t seed, offset;
     uint64_t mask = static_cast<uint64_t>(std::numeric_limits<ctype>::max());
-    __device__ void operator()(uint32_t idx){
+    __device__ void operator()(uint32_t idx) {
         Philox local_state;
         curand_init(seed, idx, offset, &local_state);
         uint4 rand = curand4(&local_state);
@@ -60,18 +62,16 @@ struct RandomKernel<ctype, enable_64bit<ctype>>{
     }
 #if MEGDNN_CC_HOST
     RandomKernel(const ctype* output, uint64_t seed, uint64_t offset)
-            : output{output},
-              seed{seed},
-              offset{offset}{}
+            : output{output}, seed{seed}, offset{offset} {}
 #endif
 };
 
-template<typename ctype>
-struct RandomKernel<ctype, enable_32bit<ctype>>{
+template <typename ctype>
+struct RandomKernel<ctype, enable_32bit<ctype>> {
     ctype* output;
     uint64_t seed, offset;
     uint32_t mask = static_cast<uint32_t>(std::numeric_limits<ctype>::max());
-    __device__ void operator()(uint32_t idx){
+    __device__ void operator()(uint32_t idx) {
         Philox local_state;
         curand_init(seed, idx, offset, &local_state);
         uint32_t val = curand(&local_state);
@@ -79,36 +79,32 @@ struct RandomKernel<ctype, enable_32bit<ctype>>{
     }
 #if MEGDNN_CC_HOST
     RandomKernel(const ctype* output, uint64_t seed, uint64_t offset)
-            : output{output},
-              seed{seed},
-              offset{offset}{}
+            : output{output}, seed{seed}, offset{offset} {}
 #endif
 };
 
-template<typename ctype>
-struct RangeKernel{
+template <typename ctype>
+struct RangeKernel {
     ctype* output;
-    __device__ void operator()(uint32_t idx){
-        output[idx] = static_cast<ctype>(idx);
-    }
+    __device__ void operator()(uint32_t idx) { output[idx] = static_cast<ctype>(idx); }
 #if MEGDNN_CC_HOST
-    RangeKernel(const ctype* output)
-            : output{output}{}
+    RangeKernel(const ctype* output) : output{output} {}
 #endif
 };
 
-template<typename ctype_src, typename ctype_dst>
-struct AsTypeKernel{
+template <typename ctype_src, typename ctype_dst>
+struct AsTypeKernel {
     ctype_src* input;
     ctype_dst* output;
-    using ctype_mask =typename std::conditional<std::is_integral<ctype_dst>::value, ctype_dst, ctype_src>::type;
+    using ctype_mask = typename std::conditional<
+            std::is_integral<ctype_dst>::value, ctype_dst, ctype_src>::type;
     ctype_src mask = static_cast<ctype_src>(std::numeric_limits<ctype_mask>::max());
-    __device__ void operator()(uint32_t idx){
+    __device__ void operator()(uint32_t idx) {
         output[idx] = static_cast<ctype_dst>(input[idx] & mask);
     }
 #if MEGDNN_CC_HOST
     AsTypeKernel(const ctype_src* input, const ctype_dst* output)
-            : input{input}, output{output}{}
+            : input{input}, output{output} {}
 #endif
 };
 
@@ -119,7 +115,7 @@ struct GammaKernel {
     ctype* scale;
     uint64_t seed, offset;
 
-    static __device__ float sample_gamma(float a, float b, Philox* state){
+    static __device__ float sample_gamma(float a, float b, Philox* state) {
         float scale = b;
         if (a <= 0)
             return 0.f;
@@ -155,59 +151,60 @@ struct GammaKernel {
     }
 
 #if MEGDNN_CC_HOST
-    GammaKernel(const TensorND& output, const TensorND& shape,
-                const TensorND& scale, uint64_t seed, uint64_t offset)
+    GammaKernel(
+            const TensorND& output, const TensorND& shape, const TensorND& scale,
+            uint64_t seed, uint64_t offset)
             : output{output.ptr<ctype>()},
               shape{shape.ptr<ctype>()},
               scale{scale.ptr<ctype>()},
               seed{seed},
-              offset{offset}{}
+              offset{offset} {}
 #endif
 };
 
-template<typename ctype>
-struct PoissonKernel{
+template <typename ctype>
+struct PoissonKernel {
     ctype* output;
     ctype* lambda;
     uint64_t seed, offset;
 
-    __device__ void operator()(uint32_t idx){
+    __device__ void operator()(uint32_t idx) {
         Philox local_state;
         curand_init(seed, idx, offset, &local_state);
         float lam = static_cast<float>(lambda[idx]);
         output[idx] = static_cast<ctype>(curand_poisson(&local_state, lam));
     }
-    
+
 #if MEGDNN_CC_HOST
-    PoissonKernel(const TensorND& output,const TensorND& lambda, 
-                                    uint64_t seed, uint64_t offset)
+    PoissonKernel(
+            const TensorND& output, const TensorND& lambda, uint64_t seed,
+            uint64_t offset)
             : output{output.ptr<ctype>()},
               lambda{lambda.ptr<ctype>()},
               seed{seed},
-              offset{offset}{}
+              offset{offset} {}
 #endif
 };
 
-template<typename ctype>
-struct BetaKernel{
+template <typename ctype>
+struct BetaKernel {
     ctype* output;
     ctype* alpha;
     ctype* beta;
     uint64_t seed, offset;
 
-    __device__ void operator()(uint32_t idx){
+    __device__ void operator()(uint32_t idx) {
         Philox local_state;
         curand_init(seed, idx, offset, &local_state);
-        float a = static_cast<float>(alpha[idx]); 
+        float a = static_cast<float>(alpha[idx]);
         float b = static_cast<float>(beta[idx]);
-        if(a <= 0 || b <= 0){
+        if (a <= 0 || b <= 0) {
             output[idx] = 0;
             return;
         }
-        if( a < 1.0f && b < 1.0f){
+        if (a < 1.0f && b < 1.0f) {
             float u, v, x, y;
-            while (true)
-            {
+            while (true) {
                 u = _curand_uniform(&local_state);
                 v = _curand_uniform(&local_state);
                 x = powf(u, 1.0f / a);
@@ -215,54 +212,55 @@ struct BetaKernel{
                 if (x + y < 1.0f) {
                     if (x + y > 0) {
                         output[idx] = static_cast<ctype>(x / (x + y));
-                        return ;
+                        return;
                     } else {
                         float logx = logf(u) / a;
                         float logy = logf(v) / b;
                         float log_max = logx > logy ? logx : logy;
                         logx -= log_max;
                         logy -= log_max;
-                        output[idx] = static_cast<ctype>(exp(logx - 
-                                            log(exp(logx) + exp(logy))));
-                        return ; 
+                        output[idx] = static_cast<ctype>(
+                                exp(logx - log(exp(logx) + exp(logy))));
+                        return;
                     }
                 }
             }
-        }else{
+        } else {
             float ga = GammaKernel<float>::sample_gamma(a, 1.0f, &local_state);
             float gb = GammaKernel<float>::sample_gamma(b, 1.0f, &local_state);
-            output[idx] = static_cast<ctype>(ga / ( ga + gb));
-            return ;
+            output[idx] = static_cast<ctype>(ga / (ga + gb));
+            return;
         }
     }
-    
+
 #if MEGDNN_CC_HOST
-    BetaKernel(const TensorND& output, const TensorND& alpha,
-             const TensorND& beta, uint64_t seed, uint64_t offset)
+    BetaKernel(
+            const TensorND& output, const TensorND& alpha, const TensorND& beta,
+            uint64_t seed, uint64_t offset)
             : output{output.ptr<ctype>()},
               alpha{alpha.ptr<ctype>()},
               beta{beta.ptr<ctype>()},
               seed{seed},
-              offset{offset}{}
+              offset{offset} {}
 #endif
 };
 
-template<typename ctype>
-void permutation_forward(ctype* dst, void* workspace, size_t size, uint64_t seed, 
-                    uint64_t offset, cudaStream_t stream);
+template <typename ctype>
+void permutation_forward(
+        ctype* dst, void* workspace, size_t size, uint64_t seed, uint64_t offset,
+        cudaStream_t stream);
 
 size_t get_permutation_workspace_in_bytes(size_t N);
 
-template<typename T>
-void shuffle_forward(T* sptr, T* dptr, dt_int32* iptr,
-                     size_t len, size_t step, cudaStream_t stream);
+template <typename T>
+void shuffle_forward(
+        T* sptr, T* dptr, dt_int32* iptr, size_t len, size_t step, cudaStream_t stream);
 
-template<typename T>
-void shuffle_backward(T* dptr, dt_int32* iptr, T* sptr,
-                     size_t len, size_t step, cudaStream_t stream);
+template <typename T>
+void shuffle_backward(
+        T* dptr, dt_int32* iptr, T* sptr, size_t len, size_t step, cudaStream_t stream);
 
-#define ARGSORT_FOREACH_CTYPE(cb) \
-        cb(float) cb(int32_t) DNN_INC_FLOAT16(cb(dt_float16))
+#define ARGSORT_FOREACH_CTYPE(cb) cb(float) cb(int32_t) DNN_INC_FLOAT16(cb(dt_float16))
 
 }  // namespace random
 }  // namespace cuda

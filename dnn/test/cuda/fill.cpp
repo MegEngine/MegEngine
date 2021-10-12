@@ -30,7 +30,7 @@ TEST_F(CUDA, FILL_F16) {
 }
 #endif
 
-} // namespace fill
-} // namespace test
-} // namespace megdnn
+}  // namespace fill
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

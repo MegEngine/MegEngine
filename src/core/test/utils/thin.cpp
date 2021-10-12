@@ -9,158 +9,133 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/test/helper.h"
 #include "megbrain/utils/thin/hash_table.h"
 #include "megbrain/utils/thin/nullable_hash_map.h"
-#include "megbrain/test/helper.h"
 
 using namespace mgb::thin_hash_table;
 using mgb::NullableHashMap;
 
 static_assert(ValueTrait<int>::can_embed_in_pair, "bad impl");
 static_assert(ValueTrait<void*>::can_embed_in_pair, "bad impl");
-static_assert(!ValueTrait<std::pair<int, void*>>::can_embed_in_pair,
-              "bad impl");
+static_assert(!ValueTrait<std::pair<int, void*>>::can_embed_in_pair, "bad impl");
 
 namespace {
-    size_t map_val_inst = 0;
+size_t map_val_inst = 0;
 
-    template<int extra_size>
-    class MapVal {
-        uint8_t m_data = 0;
-        char _[extra_size];
+template <int extra_size>
+class MapVal {
+    uint8_t m_data = 0;
+    char _[extra_size];
 
-        public:
+public:
+    MapVal() { ++map_val_inst; }
 
-            MapVal() {
-                ++ map_val_inst;
-            }
+    MapVal(const MapVal& r) : MapVal() { *this = r; }
 
-            MapVal(const MapVal &r):
-                MapVal()
-            {
-                *this = r;
-            }
+    MapVal(MapVal&& r) : MapVal() { *this = r; }
 
-            MapVal(MapVal &&r):
-                MapVal()
-            {
-                *this = r;
-            }
+    MapVal(uint8_t val) : MapVal() { m_data = val; }
 
-            MapVal(uint8_t val):
-                MapVal()
-            {
-                m_data = val;
-            }
+    MapVal& operator=(const MapVal&) = default;
+    MapVal& operator=(MapVal&&) = default;
 
-            MapVal& operator = (const MapVal &) = default;
-            MapVal& operator = (MapVal &&) = default;
+    ~MapVal() { --map_val_inst; }
 
-            ~MapVal() {
-                -- map_val_inst;
-            }
+    uint8_t get() { return m_data; }
+};
 
-            uint8_t get() {
-                return m_data;
-            }
-    };
+class MapValInplaceOnly : public mgb::NonCopyableObj {
+    int m_val;
 
-    class MapValInplaceOnly: public mgb::NonCopyableObj {
-        int m_val;
+public:
+    MapValInplaceOnly(int n) : m_val{n} {}
 
-        public:
-            MapValInplaceOnly(int n):
-                m_val{n}
-            {
-            }
+    int get() { return m_val; }
+};
 
-            int get() {
-                return m_val;
-            }
-    };
+template <class Val>
+void test_hash_map() {
+    ThinHashMap<int, Val> map;
+    ASSERT_TRUE(map.empty());
+    map[2] = 3;
+    ASSERT_FALSE(map.empty());
+    ASSERT_TRUE(map.emplace(1, 2).second);
+    ASSERT_FALSE(map.insert({2, Val(2)}).second);
+    ASSERT_EQ(2u, map.insert({1, Val(0)}).first->second.get());
+    ASSERT_EQ(1, map.insert({1, Val(0)}).first->first);
+    ASSERT_EQ(2u, map[1].get());
+    ASSERT_EQ(3u, map[2].get());
 
-    template<class Val>
-    void test_hash_map() {
-        ThinHashMap<int, Val> map;
-        ASSERT_TRUE(map.empty());
-        map[2] = 3;
-        ASSERT_FALSE(map.empty());
-        ASSERT_TRUE(map.emplace(1, 2).second);
-        ASSERT_FALSE(map.insert({2, Val(2)}).second);
-        ASSERT_EQ(2u, map.insert({1, Val(0)}).first->second.get());
-        ASSERT_EQ(1, map.insert({1, Val(0)}).first->first);
-        ASSERT_EQ(2u, map[1].get());
-        ASSERT_EQ(3u, map[2].get());
+    ASSERT_EQ(2u, map_val_inst);
+    ASSERT_EQ(2u, map.size());
 
-        ASSERT_EQ(2u, map_val_inst);
-        ASSERT_EQ(2u, map.size());
+    for (auto&& i : map)
+        i.second = 5;
+    ASSERT_EQ(5u, map[2].get());
 
-        for (auto &&i: map)
-            i.second = 5;
-        ASSERT_EQ(5u, map[2].get());
+    ASSERT_EQ(0u, map[-1].get());
+    ASSERT_EQ(map_val_inst, map.size());
 
-        ASSERT_EQ(0u, map[-1].get());
-        ASSERT_EQ(map_val_inst, map.size());
-
-        ASSERT_EQ(5u, map.at(2).get());
-        map.at(2) = 3;
-        ASSERT_EQ(3u, map.at(2).get());
-        ASSERT_EQ(1u, map.count(1));
-        ASSERT_EQ(0u, map.count(12));
-        ASSERT_EQ(map.end(), map.find(12));
-        ASSERT_NE(map.end(), map.find(1));
-        {
-            auto next = std::next(map.find(2));
-            ASSERT_EQ(next, map.erase(map.find(2)));
-        }
-        ASSERT_EQ(0u, map.erase(12));
-        ASSERT_EQ(1u, map.erase(-1));
-        ASSERT_EQ(1u, map_val_inst);
-        ASSERT_EQ(1u, map.size());
-        ASSERT_EQ(5u, map.at(1).get());
-
-        map.clear();
-        ASSERT_EQ(0u, map.size());
-        ASSERT_TRUE(map.empty());
-        ASSERT_EQ(map_val_inst, map.size());
-
-        map[0] = 2;
-        map.find(0)->second = 3;
-        ASSERT_EQ(3u, map[0].get());
-        // clear by dtor
+    ASSERT_EQ(5u, map.at(2).get());
+    map.at(2) = 3;
+    ASSERT_EQ(3u, map.at(2).get());
+    ASSERT_EQ(1u, map.count(1));
+    ASSERT_EQ(0u, map.count(12));
+    ASSERT_EQ(map.end(), map.find(12));
+    ASSERT_NE(map.end(), map.find(1));
+    {
+        auto next = std::next(map.find(2));
+        ASSERT_EQ(next, map.erase(map.find(2)));
     }
+    ASSERT_EQ(0u, map.erase(12));
+    ASSERT_EQ(1u, map.erase(-1));
+    ASSERT_EQ(1u, map_val_inst);
+    ASSERT_EQ(1u, map.size());
+    ASSERT_EQ(5u, map.at(1).get());
 
-    struct IncompleteValue {
-        class Value;
-        ThinHashMap<int, Value> map;
+    map.clear();
+    ASSERT_EQ(0u, map.size());
+    ASSERT_TRUE(map.empty());
+    ASSERT_EQ(map_val_inst, map.size());
 
-        void run();
-    };
-
-    class IncompleteValue::Value {
-        static int sm_inst;
-        int m_v;
-
-    public:
-        Value(int v = 0) : m_v{v} { ++sm_inst; }
-        ~Value() { --sm_inst; }
-        int v() const { return m_v; }
-        static int inst() { return sm_inst; }
-    };
-    int IncompleteValue::Value::sm_inst;
-
-    void IncompleteValue::run() {
-        map[0] = 23;
-        map[1] = 45;
-        ASSERT_EQ(2u, map.size());
-        ASSERT_EQ(23, map[0].v());
-        ASSERT_EQ(0, map[3].v());
-        ASSERT_EQ(3u, map.size());
-        ASSERT_EQ(1u, map.erase(0));
-        ASSERT_EQ(2u, map.size());
-        ASSERT_EQ(2, Value::inst());
-    }
+    map[0] = 2;
+    map.find(0)->second = 3;
+    ASSERT_EQ(3u, map[0].get());
+    // clear by dtor
 }
+
+struct IncompleteValue {
+    class Value;
+    ThinHashMap<int, Value> map;
+
+    void run();
+};
+
+class IncompleteValue::Value {
+    static int sm_inst;
+    int m_v;
+
+public:
+    Value(int v = 0) : m_v{v} { ++sm_inst; }
+    ~Value() { --sm_inst; }
+    int v() const { return m_v; }
+    static int inst() { return sm_inst; }
+};
+int IncompleteValue::Value::sm_inst;
+
+void IncompleteValue::run() {
+    map[0] = 23;
+    map[1] = 45;
+    ASSERT_EQ(2u, map.size());
+    ASSERT_EQ(23, map[0].v());
+    ASSERT_EQ(0, map[3].v());
+    ASSERT_EQ(3u, map.size());
+    ASSERT_EQ(1u, map.erase(0));
+    ASSERT_EQ(2u, map.size());
+    ASSERT_EQ(2, Value::inst());
+}
+}  // namespace
 
 TEST(TestThinHashTable, ThinHashSet) {
     ThinHashSet<int> set;
@@ -175,7 +150,7 @@ TEST(TestThinHashTable, ThinHashSet) {
     ASSERT_FALSE(set.empty());
 
     std::vector<int> get;
-    for (int i: set)
+    for (int i : set)
         get.push_back(i);
     ASSERT_EQ(2u, get.size());
 
@@ -213,8 +188,9 @@ TEST(TestThinHashTable, ThinHashMapBigVal) {
 
 TEST(TestThinHashTable, ThinHashMapInplaceOnly) {
     ThinHashMap<int, MapValInplaceOnly> map;
-    map.emplace(std::piecewise_construct,
-            std::forward_as_tuple(1), std::forward_as_tuple(23));
+    map.emplace(
+            std::piecewise_construct, std::forward_as_tuple(1),
+            std::forward_as_tuple(23));
     ASSERT_EQ(23, map.at(1).get());
 }
 
@@ -248,4 +224,3 @@ TEST(TestThin, HashMapIncompleteValue) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

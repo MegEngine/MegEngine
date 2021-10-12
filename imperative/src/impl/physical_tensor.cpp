@@ -13,8 +13,8 @@
 #include "megbrain/imperative/blob_manager.h"
 #include "megbrain/imperative/profiler.h"
 
-#include "./event_pool.h"
 #include "./async_releaser.h"
+#include "./event_pool.h"
 
 #include "./profiler/events.h"
 
@@ -28,6 +28,7 @@ namespace {
 class CompNodeSyncManager : public CompNodeDepedentObject {
     ThinHashMap<Blob*, std::unique_ptr<CompNode::Event>> m_blob2event;
     std::mutex m_mtx;
+
 public:
 #if MGB_CUDA && defined(WIN32)
     //! FIXME: windows cuda driver shutdown before call atexit function even
@@ -87,18 +88,18 @@ void EventDeleter::operator()(CompNode::Event* event) {
 }
 
 namespace {
-    std::atomic_uint64_t next_blob_id = 0;
+std::atomic_uint64_t next_blob_id = 0;
 }
 
-Blob::Blob(const DeviceTensorStorage& s):
-    m_comp_node{s.comp_node()}, m_storage{s.raw_storage()},
-    m_size{s.size() + s.offset()} {
+Blob::Blob(const DeviceTensorStorage& s)
+        : m_comp_node{s.comp_node()},
+          m_storage{s.raw_storage()},
+          m_size{s.size() + s.offset()} {
     m_id = next_blob_id++;
     BlobManager::inst()->register_blob(this);
 }
 
-Blob::Blob(CompNode cn, size_t sz):
-    m_comp_node{cn}, m_storage{}, m_size{sz} {
+Blob::Blob(CompNode cn, size_t sz) : m_comp_node{cn}, m_storage{}, m_size{sz} {
     m_id = next_blob_id++;
     BlobManager::inst()->register_blob(this);
 }
@@ -124,22 +125,25 @@ const Blob::RawStorage& Blob::storage() {
     return m_storage;
 }
 
-Tensor::Tensor(BlobPtr blob, const TensorLayout& layout, size_t offset, const HostTensorND& hv)
-        : m_layout(layout), m_blob(std::move(blob)), m_offset(offset), m_value(hv) {
-}
+Tensor::Tensor(
+        BlobPtr blob, const TensorLayout& layout, size_t offset, const HostTensorND& hv)
+        : m_layout(layout), m_blob(std::move(blob)), m_offset(offset), m_value(hv) {}
 
-Tensor::Tensor(const HostTensorND &hv)
-    : Tensor(hv.layout(), hv.comp_node()) {
+Tensor::Tensor(const HostTensorND& hv) : Tensor(hv.layout(), hv.comp_node()) {
     m_value = hv;
-    MGB_RECORD_EVENT(profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(), dev_tensor().raw_ptr());
+    MGB_RECORD_EVENT(
+            profiler::HostToDeviceEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(),
+            dev_tensor().raw_ptr());
     dev_tensor().copy_from_fixlayout(hv);
     // even though hv is saved in m_value, Tensor itself could be
     // released before copy completes
-    MGB_RECORD_EVENT(profiler::HostToDeviceFinishEvent, hv.layout(), hv.comp_node(), hv.raw_ptr(), dev_tensor().raw_ptr());
+    MGB_RECORD_EVENT(
+            profiler::HostToDeviceFinishEvent, hv.layout(), hv.comp_node(),
+            hv.raw_ptr(), dev_tensor().raw_ptr());
     AsyncReleaser::inst()->add(hv);
 }
 
-Tensor::Tensor(const DeviceTensorND &dv, const HostTensorND& hv) {
+Tensor::Tensor(const DeviceTensorND& dv, const HostTensorND& hv) {
     if (!hv.empty()) {
         mgb_assert(dv.comp_node() == hv.comp_node());
         mgb_assert(dv.dtype() == hv.dtype());
@@ -152,11 +156,12 @@ Tensor::Tensor(const DeviceTensorND &dv, const HostTensorND& hv) {
 }
 
 Tensor::Tensor(const TensorLayout& layout, const CompNode& cn)
-    : m_layout{layout}, m_blob{Blob::make(cn, layout.span().dist_byte())},
-    m_offset{0} {}
+        : m_layout{layout},
+          m_blob{Blob::make(cn, layout.span().dist_byte())},
+          m_offset{0} {}
 
 Tensor::Tensor(const BlobPtr blob, const size_t offset, const TensorLayout& layout)
-    : m_layout{layout}, m_blob{blob}, m_offset{offset} {}
+        : m_layout{layout}, m_blob{blob}, m_offset{offset} {}
 
 TensorPtr Tensor::make(const HostTensorND& hv) {
     auto&& blob = MultiCNConstTensorCache::inst().lookup(hv);

@@ -23,11 +23,9 @@
 
 using namespace megdnn;
 using namespace arm_common;
-using conv_fun =
-        std::function<void(const WorkspaceBundle& bundle,
-                           const ConvBiasImpl::NCBKernParam& kern_param,
-                           const ConvBiasImpl::NCBKernIndex& ncb_index,
-                           const CpuNDRange& workspace_ids)>;
+using conv_fun = std::function<void(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp16_nchw88)
 namespace {
 
@@ -47,10 +45,9 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     return {nullptr, {s}};
 }
 
-void copy_padding_kern(const WorkspaceBundle& bundle,
-                       const ConvBiasImpl::NCBKernParam& kern_param,
-                       const ConvBiasImpl::NCBKernIndex& ncb_index,
-                       const CpuNDRange& workspace_ids) {
+void copy_padding_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     auto fm = kern_param.filter_meta;
     size_t group = fm.group;
     size_t IH = kern_param.isz[0];
@@ -82,16 +79,16 @@ void copy_padding_kern(const WorkspaceBundle& bundle,
                             channel_id * IH2 * IW2 * 8;
     std::memset(sptr_base, 0, IH2 * IW2 * 8 * sizeof(dt_float16));
     rep(ih, IH) {
-        std::memcpy(sptr_base + (ih + PH) * IW2 * 8 + PW * 8,
-                    sptr + ih * IW * 8, IW * 8 * sizeof(dt_float16));
+        std::memcpy(
+                sptr_base + (ih + PH) * IW2 * 8 + PW * 8, sptr + ih * IW * 8,
+                IW * 8 * sizeof(dt_float16));
     }
 };
 
 template <size_t FH, size_t SH, BiasMode bias_mode, typename Op>
-static void do_conv_kern(const WorkspaceBundle& bundle,
-                         const ConvBiasImpl::NCBKernParam& kern_param,
-                         const ConvBiasImpl::NCBKernIndex& ncb_index,
-                         const CpuNDRange& workspace_ids) {
+static void do_conv_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     auto fm = kern_param.filter_meta;
     size_t group = fm.group;
     size_t OH = kern_param.osz[0];
@@ -136,8 +133,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 }  // namespace
 
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoF16DirectNCHW88::usable(const NCBKernSizeParam& param,
-                                               AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoF16DirectNCHW88::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto fh = fm.spatial[0];
     int oc = fm.ocpg;
@@ -159,16 +156,16 @@ bool ConvBiasImpl::AlgoF16DirectNCHW88::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoF16DirectNCHW88::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_nchw88_stride1,
-                 midout_iv("AlgoF16DirectNCHW88::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_fp16_nchw88_stride1,
+            midout_iv("AlgoF16DirectNCHW88::get_workspace"_hash)) {
         return get_bundle(param).total_size_in_bytes();
     }
     MIDOUT_END();
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF16DirectNCHW88::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF16DirectNCHW88::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     size_t batch = param.n;
@@ -178,11 +175,12 @@ ConvBiasImpl::AlgoF16DirectNCHW88::dispatch_kerns(
     conv_fun do_conv_fun = nullptr;
     // NOTE: remain_w is not used to gen hash of midout for compatible with
 // shape runtime
-#define DO_CONV_KERN_FUN(filter, bias_mode, op, stride)              \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp16_nchw88,            \
-                 midout_iv(#filter #bias_mode #stride #op##_hash)) { \
-        do_conv_fun = do_conv_kern<filter, stride, bias_mode, op>;   \
-    }                                                                \
+#define DO_CONV_KERN_FUN(filter, bias_mode, op, stride)            \
+    MIDOUT_BEGIN(                                                  \
+            megdnn_arm_common_conv_bias_fp16_nchw88,               \
+            midout_iv(#filter #bias_mode #stride #op##_hash)) {    \
+        do_conv_fun = do_conv_kern<filter, stride, bias_mode, op>; \
+    }                                                              \
     MIDOUT_END();
 
 #define GET_STRIDE_PARAM(filter, bias_mode, op)         \
@@ -277,12 +275,11 @@ ConvBiasImpl::AlgoF16DirectNCHW88::dispatch_kerns(
         size_t OC = fm.ocpg / 8;
         bundle.set(kern_param.workspace_ptr);
         for (size_t ic = 0; ic < IC; ic++) {
-            copy_padding_kern(bundle, kern_param, ncb_index,
-                              {ncb_index.thread_id, 0, ic});
+            copy_padding_kern(
+                    bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic});
         }
         for (size_t oc = 0; oc < OC; oc++) {
-            do_conv_fun(bundle, kern_param, ncb_index,
-                        {ncb_index.thread_id, 0, oc});
+            do_conv_fun(bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, oc});
         }
     };
     // TODO: large group only, further multithread optimization required

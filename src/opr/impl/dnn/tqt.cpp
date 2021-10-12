@@ -26,14 +26,13 @@ MEGDNN_OPR_INIT2(TQTForward, "tqt_fwd");
 
 #ifdef MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(TQTForward) {
-    SymbolVarArray grad = TQTBackward::make(out_grad[0], opr.input(0),
-                                            opr.input(1), opr.param());
+    SymbolVarArray grad =
+            TQTBackward::make(out_grad[0], opr.input(0), opr.input(1), opr.param());
 
     if (wrt_idx == 0) {
         return grad[0].node();
     } else if (wrt_idx == 1) {
-        return reduce_sum(grad[1], GetVarShape::make(opr.input(wrt_idx)))
-                .node();
+        return reduce_sum(grad[1], GetVarShape::make(opr.input(wrt_idx))).node();
     } else {
         return nullptr;
     }
@@ -42,21 +41,20 @@ MGB_IMPL_OPR_GRAD(TQTForward) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(TQTBackward);
 
-TQTBackward::TQTBackward(VarNode* y_grad, VarNode* x, VarNode* scale,
-                         const Param& param, const OperatorNodeConfig& config)
-        : Super({x->owner_graph(), config, "tqt_bwd", {y_grad, x, scale}}, 1,
-                true) {
+TQTBackward::TQTBackward(
+        VarNode* y_grad, VarNode* x, VarNode* scale, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super({x->owner_graph(), config, "tqt_bwd", {y_grad, x, scale}}, 1, true) {
     init_megdnn_opr(*this, param);
     add_input({y_grad, x, scale});
 }
 
-SymbolVarArray TQTBackward::make(SymbolVar y_grad, SymbolVar x, SymbolVar scale,
-                                 const Param& param,
-                                 const OperatorNodeConfig& config) {
+SymbolVarArray TQTBackward::make(
+        SymbolVar y_grad, SymbolVar x, SymbolVar scale, const Param& param,
+        const OperatorNodeConfig& config) {
     auto&& out = x.node()->owner_graph()
                          ->insert_opr(std::make_unique<TQTBackward>(
-                                 y_grad.node(), x.node(), scale.node(), param,
-                                 config))
+                                 y_grad.node(), x.node(), scale.node(), param, config))
                          ->output();
     SymbolVarArray ret(out.size());
     for (size_t i = 0; i < ret.size(); ++i) {
@@ -69,10 +67,8 @@ void TQTBackward::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
 
-    mgr.register_shape_infer(output(0),
-                             ShapeInferDesc::make_identity(input(1)));
-    mgr.register_shape_infer(output(1),
-                             ShapeInferDesc::make_identity(input(1)));
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(1)));
+    mgr.register_shape_infer(output(1), ShapeInferDesc::make_identity(input(1)));
     this->init_output_static_infer_desc_workspace(
             intl::AutoAddWorkspaceNeedLimitGetter<megdnn::TQTBackward>::val);
 }

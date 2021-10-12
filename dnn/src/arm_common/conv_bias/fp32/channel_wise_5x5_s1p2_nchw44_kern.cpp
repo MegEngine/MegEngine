@@ -57,8 +57,7 @@ static inline void load_filter(const float* filter, float32x4_t rfilter[5]) {
 }
 
 template <BiasMode bias_mode>
-static inline float32x4_t load_bias(const float* bias,
-                                    const float32x4_t& init) {
+static inline float32x4_t load_bias(const float* bias, const float32x4_t& init) {
     if (bias_mode == BiasMode::BIAS) {
         return vld1q_f32(bias);
     } else {
@@ -66,13 +65,12 @@ static inline float32x4_t load_bias(const float* bias,
     }
 }
 
-template <int BW, int bw, BiasMode bias_mode, bool need_load_bias,
-          bool need_do_op>
+template <int BW, int bw, BiasMode bias_mode, bool need_load_bias, bool need_do_op>
 struct compute_element {
     template <typename Op>
-    static inline void call(const float*& src, float*& dst, const float*& bias,
-                            const float32x4_t& init, float32x4_t rsrc[6],
-                            float32x4_t rfilter[5], const Op& op) {
+    static inline void call(
+            const float*& src, float*& dst, const float*& bias, const float32x4_t& init,
+            float32x4_t rsrc[6], float32x4_t rfilter[5], const Op& op) {
 #define RSRC(i) rsrc[((i) + bw) % 6]
         float32x4_t rdst;
         if (need_load_bias) {
@@ -96,9 +94,8 @@ struct compute_element {
         src += 4;
         dst += 4;
         bias += 4;
-        compute_element<BW, bw + 1, bias_mode, need_load_bias,
-                        need_do_op>::call(src, dst, bias, init, rsrc, rfilter,
-                                          op);
+        compute_element<BW, bw + 1, bias_mode, need_load_bias, need_do_op>::call(
+                src, dst, bias, init, rsrc, rfilter, op);
 #undef RSRC
     }
 };
@@ -109,13 +106,12 @@ struct compute_element<BW, BW, bias_mode, need_load_bias, need_do_op> {
     static inline void call(Types... args) {}
 };
 
-template <size_t padding, BiasMode bias_mode, bool need_load_bias,
-          bool need_do_op>
+template <size_t padding, BiasMode bias_mode, bool need_load_bias, bool need_do_op>
 struct compute_element_right {
     template <typename Op>
-    static inline void call(float*& dst, const float*& bias,
-                            const float32x4_t& init, float32x4_t rsrc[6],
-                            float32x4_t rfilter[5], const Op& op) {
+    static inline void call(
+            float*& dst, const float*& bias, const float32x4_t& init,
+            float32x4_t rsrc[6], float32x4_t rfilter[5], const Op& op) {
         float32x4_t rdst;
         if (need_load_bias) {
             rdst = load_bias<bias_mode>(bias, init);
@@ -146,9 +142,9 @@ struct compute_element_right {
 template <BiasMode bias_mode, bool need_load_bias, bool need_do_op>
 struct compute_row_src_1x5 {
     template <typename Op>
-    static inline void call(const float* src, float* dst, const float* bias,
-                            const float32x4_t& init, float32x4_t rsrc[6],
-                            float32x4_t rfilter[5], int W, const Op& op) {
+    static inline void call(
+            const float* src, float* dst, const float* bias, const float32x4_t& init,
+            float32x4_t rsrc[6], float32x4_t rfilter[5], int W, const Op& op) {
         rsrc[0] = vdupq_n_f32(0);
         rsrc[1] = vdupq_n_f32(0);
         rsrc[2] = vld1q_f32(src + 0);
@@ -192,10 +188,10 @@ struct compute_row_src_1x5 {
 template <size_t top_padding, size_t bottom_padding, BiasMode bias_mode>
 struct compute_row {
     template <typename Op>
-    static inline void call(const float*& src, float*& dst, const float* filter,
-                            const float*& bias, const float32x4_t& init,
-                            float32x4_t rsrc[6], float32x4_t rfilter[5], int W,
-                            const Op& op) {
+    static inline void call(
+            const float*& src, float*& dst, const float* filter, const float*& bias,
+            const float32x4_t& init, float32x4_t rsrc[6], float32x4_t rfilter[5], int W,
+            const Op& op) {
         if (top_padding < 1) {
             load_filter(filter + 0, rfilter);
             compute_row_src_1x5<bias_mode, top_padding == 0, false>::call(
@@ -210,10 +206,8 @@ struct compute_row {
 
         {
             load_filter(filter + 40, rfilter);
-            compute_row_src_1x5<bias_mode, top_padding == 2,
-                                bottom_padding == 2>::call(src, dst, bias, init,
-                                                           rsrc, rfilter, W,
-                                                           op);
+            compute_row_src_1x5<bias_mode, top_padding == 2, bottom_padding == 2>::call(
+                    src, dst, bias, init, rsrc, rfilter, W, op);
         }
 
         if (bottom_padding < 2) {
@@ -237,8 +231,8 @@ struct compute_row {
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2(
-        const float* src, float* dst, const float* filter, const float* bias,
-        int H, int W) {
+        const float* src, float* dst, const float* filter, const float* bias, int H,
+        int W) {
     Op op;
 
     float32x4_t init = vdupq_n_f32(0);
@@ -249,18 +243,18 @@ void channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2(
     float32x4_t rsrc[6];
     float32x4_t rfilter[5];
 
-    compute_row<2, 0, bias_mode>::call(src, dst, filter, bias, init, rsrc,
-                                       rfilter, W, op);
-    compute_row<1, 0, bias_mode>::call(src, dst, filter, bias, init, rsrc,
-                                       rfilter, W, op);
+    compute_row<2, 0, bias_mode>::call(
+            src, dst, filter, bias, init, rsrc, rfilter, W, op);
+    compute_row<1, 0, bias_mode>::call(
+            src, dst, filter, bias, init, rsrc, rfilter, W, op);
     for (int h = 2; h < H - 2; h += 1) {
-        compute_row<0, 0, bias_mode>::call(src, dst, filter, bias, init, rsrc,
-                                           rfilter, W, op);
+        compute_row<0, 0, bias_mode>::call(
+                src, dst, filter, bias, init, rsrc, rfilter, W, op);
     }
-    compute_row<0, 1, bias_mode>::call(src, dst, filter, bias, init, rsrc,
-                                       rfilter, W, op);
-    compute_row<0, 2, bias_mode>::call(src, dst, filter, bias, init, rsrc,
-                                       rfilter, W, op);
+    compute_row<0, 1, bias_mode>::call(
+            src, dst, filter, bias, init, rsrc, rfilter, W, op);
+    compute_row<0, 2, bias_mode>::call(
+            src, dst, filter, bias, init, rsrc, rfilter, W, op);
 }
 
 #define INSTANTIATION(bias, Op)                                             \

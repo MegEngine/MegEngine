@@ -15,10 +15,10 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
+#include "megbrain/comp_node.h"
+#include "megbrain/opr/param_defs.h"
 #include "megdnn/basic_types.h"
 #include "megdnn/opr_param_defs.h"
-#include "megbrain/opr/param_defs.h"
-#include "megbrain/comp_node.h"
 
 #include <mlir/IR/Dialect.h>
 #include <mlir/IR/Function.h>

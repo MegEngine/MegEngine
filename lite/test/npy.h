@@ -53,10 +53,10 @@ namespace npy {
    If your compiler does not define these per default, you may want to define
    one of these constants manually.
    Defaults to little endian order. */
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN ||                  \
-        defined(__BIG_ENDIAN__) || defined(__ARMEB__) ||                      \
-        defined(__THUMBEB__) || defined(__AARCH64EB__) || defined(_MIBSEB) || \
-        defined(__MIBSEB) || defined(__MIBSEB__)
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN ||                     \
+        defined(__BIG_ENDIAN__) || defined(__ARMEB__) || defined(__THUMBEB__) || \
+        defined(__AARCH64EB__) || defined(_MIBSEB) || defined(__MIBSEB) ||       \
+        defined(__MIBSEB__)
 const bool big_endian = true;
 #else
 const bool big_endian = false;
@@ -69,21 +69,20 @@ const char little_endian_char = '<';
 const char big_endian_char = '>';
 const char no_endian_char = '|';
 
-constexpr char host_endian_char =
-        (big_endian ? big_endian_char : little_endian_char);
+constexpr char host_endian_char = (big_endian ? big_endian_char : little_endian_char);
 
 /* npy array length */
 typedef unsigned long int ndarray_len_t;
 
-inline void write_magic(std::ostream& ostream, unsigned char v_major = 1,
-                        unsigned char v_minor = 0) {
+inline void write_magic(
+        std::ostream& ostream, unsigned char v_major = 1, unsigned char v_minor = 0) {
     ostream.write(magic_string, magic_string_length);
     ostream.put(v_major);
     ostream.put(v_minor);
 }
 
-inline void read_magic(std::istream& istream, unsigned char& v_major,
-                       unsigned char& v_minor) {
+inline void read_magic(
+        std::istream& istream, unsigned char& v_major, unsigned char& v_minor) {
     char buf[magic_string_length + 2];
     istream.read(buf, magic_string_length + 2);
 
@@ -119,9 +118,7 @@ public:
     Typestring(const std::vector<double>&)
             : c_endian{host_endian_char}, c_type{'f'}, len{sizeof(double)} {}
     Typestring(const std::vector<long double>&)
-            : c_endian{host_endian_char},
-              c_type{'f'},
-              len{sizeof(long double)} {}
+            : c_endian{host_endian_char}, c_type{'f'}, len{sizeof(long double)} {}
 
     Typestring(const std::vector<char>&)
             : c_endian{no_endian_char}, c_type{'i'}, len{sizeof(char)} {}
@@ -135,21 +132,13 @@ public:
             : c_endian{host_endian_char}, c_type{'i'}, len{sizeof(long long)} {}
 
     Typestring(const std::vector<unsigned char>&)
-            : c_endian{no_endian_char},
-              c_type{'u'},
-              len{sizeof(unsigned char)} {}
+            : c_endian{no_endian_char}, c_type{'u'}, len{sizeof(unsigned char)} {}
     Typestring(const std::vector<unsigned short>&)
-            : c_endian{host_endian_char},
-              c_type{'u'},
-              len{sizeof(unsigned short)} {}
+            : c_endian{host_endian_char}, c_type{'u'}, len{sizeof(unsigned short)} {}
     Typestring(const std::vector<unsigned int>&)
-            : c_endian{host_endian_char},
-              c_type{'u'},
-              len{sizeof(unsigned int)} {}
+            : c_endian{host_endian_char}, c_type{'u'}, len{sizeof(unsigned int)} {}
     Typestring(const std::vector<unsigned long>&)
-            : c_endian{host_endian_char},
-              c_type{'u'},
-              len{sizeof(unsigned long)} {}
+            : c_endian{host_endian_char}, c_type{'u'}, len{sizeof(unsigned long)} {}
     Typestring(const std::vector<unsigned long long>&)
             : c_endian{host_endian_char},
               c_type{'u'},
@@ -327,8 +316,9 @@ inline std::string write_tuple(const std::vector<T>& v) {
         const std::string delimiter = ", ";
         // v.size() > 1
         ss << "(";
-        std::copy(v.begin(), v.end() - 1,
-                  std::ostream_iterator<T>(ss, delimiter.c_str()));
+        std::copy(
+                v.begin(), v.end() - 1,
+                std::ostream_iterator<T>(ss, delimiter.c_str()));
         ss << v.back();
         ss << ")";
     }
@@ -387,9 +377,9 @@ inline void parse_header(std::string header, std::string& descr) {
     return;
 }
 
-inline void parse_header(std::string header, std::string& descr,
-                         bool& fortran_order,
-                         std::vector<ndarray_len_t>& shape) {
+inline void parse_header(
+        std::string header, std::string& descr, bool& fortran_order,
+        std::vector<ndarray_len_t>& shape) {
     /*
        The first 6 bytes are a magic string: exactly "x93NUMPY".
        The next 1 byte is an unsigned byte: the major version number of the file
@@ -450,9 +440,9 @@ inline void parse_header(std::string header, std::string& descr,
     }
 }
 
-inline std::string write_header_dict(const std::string& descr,
-                                     bool fortran_order,
-                                     const std::vector<ndarray_len_t>& shape) {
+inline std::string write_header_dict(
+        const std::string& descr, bool fortran_order,
+        const std::vector<ndarray_len_t>& shape) {
     std::string s_fortran_order = npy::pyparse::write_boolean(fortran_order);
     std::string shape_s = npy::pyparse::write_tuple(shape);
 
@@ -460,9 +450,9 @@ inline std::string write_header_dict(const std::string& descr,
            ", 'shape': " + shape_s + ", }";
 }
 
-inline void write_header(std::ostream& out, const std::string& descr,
-                         bool fortran_order,
-                         const std::vector<ndarray_len_t>& shape_v) {
+inline void write_header(
+        std::ostream& out, const std::string& descr, bool fortran_order,
+        const std::vector<ndarray_len_t>& shape_v) {
     std::string header_dict = write_header_dict(descr, fortran_order, shape_v);
 
     size_t length = magic_string_length + 2 + 2 + header_dict.length() + 1;
@@ -482,16 +472,16 @@ inline void write_header(std::ostream& out, const std::string& descr,
     // write header length
     if (version[0] == 1 && version[1] == 0) {
         char header_len_le16[2];
-        uint16_t header_len = static_cast<uint16_t>(header_dict.length() +
-                                                    padding.length() + 1);
+        uint16_t header_len =
+                static_cast<uint16_t>(header_dict.length() + padding.length() + 1);
 
         header_len_le16[0] = (header_len >> 0) & 0xff;
         header_len_le16[1] = (header_len >> 8) & 0xff;
         out.write(reinterpret_cast<char*>(header_len_le16), 2);
     } else {
         char header_len_le32[4];
-        uint32_t header_len = static_cast<uint32_t>(header_dict.length() +
-                                                    padding.length() + 1);
+        uint32_t header_len =
+                static_cast<uint32_t>(header_dict.length() + padding.length() + 1);
 
         header_len_le32[0] = (header_len >> 0) & 0xff;
         header_len_le32[1] = (header_len >> 8) & 0xff;
@@ -548,9 +538,9 @@ inline ndarray_len_t comp_size(const std::vector<ndarray_len_t>& shape) {
 }
 
 template <typename Scalar>
-inline void SaveArrayAsNumpy(const std::string& filename, bool fortran_order,
-                             unsigned int n_dims, const unsigned long shape[],
-                             const std::vector<Scalar>& data) {
+inline void SaveArrayAsNumpy(
+        const std::string& filename, bool fortran_order, unsigned int n_dims,
+        const unsigned long shape[], const std::vector<Scalar>& data) {
     Typestring typestring_o(data);
     std::string typestring = typestring_o.str();
 
@@ -564,22 +554,21 @@ inline void SaveArrayAsNumpy(const std::string& filename, bool fortran_order,
 
     auto size = static_cast<size_t>(comp_size(shape_v));
 
-    stream.write(reinterpret_cast<const char*>(data.data()),
-                 sizeof(Scalar) * size);
+    stream.write(reinterpret_cast<const char*>(data.data()), sizeof(Scalar) * size);
 }
 
 template <typename Scalar>
-inline void LoadArrayFromNumpy(const std::string& filename,
-                               std::vector<unsigned long>& shape,
-                               std::vector<Scalar>& data) {
+inline void LoadArrayFromNumpy(
+        const std::string& filename, std::vector<unsigned long>& shape,
+        std::vector<Scalar>& data) {
     bool fortran_order;
     LoadArrayFromNumpy<Scalar>(filename, shape, fortran_order, data);
 }
 
 template <typename Scalar>
-inline void LoadArrayFromNumpy(const std::string& filename,
-                               std::vector<unsigned long>& shape,
-                               bool& fortran_order, std::vector<Scalar>& data) {
+inline void LoadArrayFromNumpy(
+        const std::string& filename, std::vector<unsigned long>& shape,
+        bool& fortran_order, std::vector<Scalar>& data) {
     std::ifstream stream(filename, std::ifstream::binary);
     if (!stream) {
         fprintf(stderr, "io error: failed to open a file.");
@@ -607,10 +596,9 @@ inline void LoadArrayFromNumpy(const std::string& filename,
     stream.read(reinterpret_cast<char*>(data.data()), sizeof(Scalar) * size);
 }
 
-inline void LoadArrayFromNumpy(const std::string& filename,
-                               std::string& type_str,
-                               std::vector<ndarray_len_t>& shape,
-                               std::vector<int8_t>& data) {
+inline void LoadArrayFromNumpy(
+        const std::string& filename, std::string& type_str,
+        std::vector<ndarray_len_t>& shape, std::vector<int8_t>& data) {
     std::ifstream stream(filename, std::ifstream::binary);
     if (!stream) {
         fprintf(stderr, "io error: failed to open a file.");

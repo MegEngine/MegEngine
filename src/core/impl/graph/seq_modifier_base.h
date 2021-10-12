@@ -53,39 +53,23 @@ public:
 
     public:
         //! special creation time used for oprs duplicated from others
-        static constexpr size_t DUPOPR_TIME =
-                std::numeric_limits<size_t>::max() - 1;
+        static constexpr size_t DUPOPR_TIME = std::numeric_limits<size_t>::max() - 1;
 
-        auto& par_modifier() {
-            return m_par_modifier;
-        }
+        auto& par_modifier() { return m_par_modifier; }
 
-        auto& orig_opr_seq() {
-            return m_orig_opr_seq;
-        }
+        auto& orig_opr_seq() { return m_orig_opr_seq; }
 
-        MemPool<Var>& var_mempool() {
-            return m_var_mempool;
-        }
+        MemPool<Var>& var_mempool() { return m_var_mempool; }
 
-        MemPool<Opr>& opr_mempool() {
-            return m_opr_mempool;
-        }
+        MemPool<Opr>& opr_mempool() { return m_opr_mempool; }
 
-        std::vector<MemPool<Var>::UniquePtr>& var_storage() {
-            return m_var_storage;
-        }
+        std::vector<MemPool<Var>::UniquePtr>& var_storage() { return m_var_storage; }
 
-        std::vector<MemPool<Opr>::UniquePtr>& seq() {
-            return m_seq;
-        }
+        std::vector<MemPool<Opr>::UniquePtr>& seq() { return m_seq; }
 
-        size_t& nr_endpoint_oprs() {
-            return m_nr_endpoint_oprs;
-        }
+        size_t& nr_endpoint_oprs() { return m_nr_endpoint_oprs; }
 
-        ModifyActionPlannerBase(SeqModifierBase* par)
-                : m_par_modifier{par} {}
+        ModifyActionPlannerBase(SeqModifierBase* par) : m_par_modifier{par} {}
 
         ~ModifyActionPlannerBase() noexcept {
             m_opr_mempool.disable_freelist();
@@ -93,29 +77,25 @@ public:
         }
 
         //! init m_orig_opr_seq from opr_seq, should be called first.
-        void init_seq(const OprNodeArray& opr_seq, bool remove_unused_output=true);
+        void init_seq(const OprNodeArray& opr_seq, bool remove_unused_output = true);
     };
 
-    SeqModifierBase(ComputingGraphImpl* owner) : m_mem_opt(owner), m_owner_graph(owner) {}
+    SeqModifierBase(ComputingGraphImpl* owner)
+            : m_mem_opt(owner), m_owner_graph(owner) {}
 
-    MemoryOptimizerHelper& mem_opt() {
-        return m_mem_opt;
-    }
+    MemoryOptimizerHelper& mem_opt() { return m_mem_opt; }
 
-    auto& owner_graph() {
-        return m_owner_graph;
-    }
+    auto& owner_graph() { return m_owner_graph; }
 
-    ThinHashMap<VarNode*, VarNode*>& var_map() {
-        return m_var_map;
-    }
+    ThinHashMap<VarNode*, VarNode*>& var_map() { return m_var_map; }
 
     /*!
      * \brief copy opr and set inputs to m_new_inputs, and add outputs in
      *     m_var_map
      * \return new operator
      */
-    OperatorNodeBase* copy_opr_from_new_inputs(OperatorNodeBase* opr, bool recomp, size_t recomp_cnt=0);
+    OperatorNodeBase* copy_opr_from_new_inputs(
+            OperatorNodeBase* opr, bool recomp, size_t recomp_cnt = 0);
 
     /*!
      * \brief replace input vars according to m_var_map, and store results in
@@ -123,25 +103,23 @@ public:
      * \return whether any var is changed
      */
     bool replace_vars(const VarNodeArray& inputs);
-    
+
     //! see memory_optimizer set_priority_before_opt
     void set_priority_before_opt(const VarNodeArray& endpoints) {
         m_mem_opt.set_priority_before_opt(endpoints);
     }
-    
+
     //! see memory_optimizer restore_graph_option
-    void restore_graph_option() {
-        m_mem_opt.restore_graph_option();
-    }
+    void restore_graph_option() { m_mem_opt.restore_graph_option(); }
 
 private:
     MemoryOptimizerHelper m_mem_opt;
-    
+
     ComputingGraphImpl* const m_owner_graph = nullptr;
 
     //! map from original var to replaced var
     ThinHashMap<VarNode*, VarNode*> m_var_map;
-    
+
     VarNodeArray m_new_inputs;  //!< setup by replace_vars
 };
 
@@ -170,8 +148,7 @@ struct SeqModifierBase::Opr {
               time{t},
               is_endpoint{opr->owner_graph()
                                   ->options()
-                                  .opr_attribute.get_sublinear_memory_endpoint(
-                                          opr)} {}
+                                  .opr_attribute.get_sublinear_memory_endpoint(opr)} {}
 };
 
 struct SeqModifierBase::Var {
@@ -185,8 +162,7 @@ struct SeqModifierBase::Var {
         const size_t time;
         size_t stride;
 
-        explicit AccessRecord(Opr* o = nullptr)
-                : opr{o}, time{o->time}, stride{0} {}
+        explicit AccessRecord(Opr* o = nullptr) : opr{o}, time{o->time}, stride{0} {}
     };
 
     //! access_rec[0] is the creation opr, and others are reader oprs
@@ -211,13 +187,12 @@ struct SeqModifierBase::Var {
 
     AccessRecord* visit_discard_tailing_access() {
         return discard_tailing_access.valid()
-                       ? &access_rec.at(discard_tailing_access.val())
-                       : nullptr;
+                     ? &access_rec.at(discard_tailing_access.val())
+                     : nullptr;
     }
 
     AccessRecord* visit_next_access() {
-        return next_access.valid() ? &access_rec.at(next_access.val())
-                                   : nullptr;
+        return next_access.valid() ? &access_rec.at(next_access.val()) : nullptr;
     }
 
     auto owner_opr() const { return access_rec[0].opr; }
@@ -229,8 +204,8 @@ struct SeqModifierBase::Var {
     }
 };
 
-}   // namespace cg
-}   // namespace mgb
+}  // namespace cg
+}  // namespace mgb
 
 #endif  //  MGB_ENABLE_SUBLINEAR || MGB_ENABLE_DTR
 

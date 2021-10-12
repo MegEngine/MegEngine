@@ -12,15 +12,15 @@
 #pragma once
 
 #include "megcore_cdefs.h"
-#include "src/common/utils.h"
 #include "megdnn/handle.h"
+#include "src/common/utils.h"
 
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.cuh"
 
-#include "src/cuda/cudnn_with_check.h"
-#include <cuda_runtime_api.h>
 #include <cublas_v2.h>
+#include <cuda_runtime_api.h>
+#include "src/cuda/cudnn_with_check.h"
 
 namespace megdnn {
 namespace cuda {
@@ -45,8 +45,8 @@ static inline megcore::AsyncErrorInfo* async_error_info(Handle* handle) {
     return concrete_handle(handle)->megcore_context().error_info;
 }
 
-static inline void CUDART_CB callback_free(cudaStream_t /* stream */,
-                                           cudaError_t status, void* userData) {
+static inline void CUDART_CB
+callback_free(cudaStream_t /* stream */, cudaError_t status, void* userData) {
     cuda_check(status);
     free(userData);
 }

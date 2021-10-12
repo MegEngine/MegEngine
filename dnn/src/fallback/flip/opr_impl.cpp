@@ -23,13 +23,14 @@ namespace fallback {
 namespace flip_internal {
 
 template <typename T, size_t ch>
-void flip(const T *__restrict src, T *__restrict dst, const size_t rows,
-          const size_t cols, const size_t src_step, const size_t dst_step,
-          bool vertical, bool horizontal) {
+void flip(
+        const T* __restrict src, T* __restrict dst, const size_t rows,
+        const size_t cols, const size_t src_step, const size_t dst_step, bool vertical,
+        bool horizontal) {
     for (size_t sr = 0; sr < rows; ++sr) {
-        const T *sptr = src + sr * src_step;
+        const T* sptr = src + sr * src_step;
         size_t dr = (vertical ? rows - sr - 1 : sr);
-        T *dptr = dst + dr * dst_step;
+        T* dptr = dst + dr * dst_step;
         if (!horizontal) {
             memcpy(dptr, sptr, sizeof(T) * cols * ch);
         } else {
@@ -54,17 +55,17 @@ void flip(const T *__restrict src, T *__restrict dst, const size_t rows,
 
 }  // namespace flip_internal
 
-void FlipImpl::flip_exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                         _megdnn_workspace /*workspace*/) {
+void FlipImpl::flip_exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace /*workspace*/) {
     size_t rows = src.layout.shape[1], cols = src.layout.shape[2],
            channels = src.layout.shape[3], step = src.layout.stride[1],
            batch_step = step * rows;
 
-#define EXEC_FUNCTION(channel, datatype, batch)                           \
-    flip_internal::flip<datatype, channel>(                               \
-        src.ptr<datatype>() + batch * batch_step,                         \
-        dst.ptr<datatype>() + batch * batch_step, rows, cols, step, step, \
-        param().vertical, param().horizontal);
+#define EXEC_FUNCTION(channel, datatype, batch)                               \
+    flip_internal::flip<datatype, channel>(                                   \
+            src.ptr<datatype>() + batch * batch_step,                         \
+            dst.ptr<datatype>() + batch * batch_step, rows, cols, step, step, \
+            param().vertical, param().horizontal);
 
 #define DISPATCH_DTYPE(channel, batch)                          \
     do {                                                        \
@@ -100,8 +101,8 @@ void FlipImpl::flip_exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
 #undef EXEC_FUNCTION
 }
 
-void FlipImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                    _megdnn_workspace workspace) {
+void FlipImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     MEGDNN_DISPATCH_CPU_KERN_OPR(flip_exec(src, dst, workspace));
 }

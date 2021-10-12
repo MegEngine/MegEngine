@@ -40,11 +40,9 @@ template <>
 struct CudaPostProcess<dtype::Quantized8Asymm, dtype::QuantizedS8, false> {
     CudaDTypeParamImpl<dt_qint8> m_dst_type_cvt;
     CudaDTypeParamImpl<dt_quint8> m_src_type_cvt;
-    CudaPostProcess(float src_scale, uint8_t src_zero_point, float dst_scale,
-                    uint8_t) {
+    CudaPostProcess(float src_scale, uint8_t src_zero_point, float dst_scale, uint8_t) {
         m_dst_type_cvt = CudaDTypeParamImpl<dt_qint8>(dst_scale);
-        m_src_type_cvt =
-                CudaDTypeParamImpl<dt_quint8>(src_scale, src_zero_point);
+        m_src_type_cvt = CudaDTypeParamImpl<dt_quint8>(src_scale, src_zero_point);
     };
     inline __device__ int8_t operator()(uint8_t val) {
         float med_var = m_src_type_cvt.dequantize(dt_quint8(val));
@@ -58,9 +56,7 @@ struct CudaPostProcess<dtype::Quantized8Asymm, dtype::QuantizedS8, true> {
     CudaPostProcess(float, uint8_t src_zero_point, float, uint8_t) {
         m_src_zero_point = src_zero_point;
     };
-    inline __device__ int8_t operator()(uint8_t val) {
-        return val - m_src_zero_point;
-    }
+    inline __device__ int8_t operator()(uint8_t val) { return val - m_src_zero_point; }
 };
 
 template <>
@@ -133,12 +129,11 @@ struct CudaPostProcess<dtype::Quantized4Asymm, dtype::Quantized4Asymm, false> {
     using DstType = dtype::Quantized4Asymm;
     CudaDTypeParamImpl<dt_quint4> m_dst_type_cvt;
     CudaDTypeParamImpl<dt_quint4> m_src_type_cvt;
-    CudaPostProcess(float src_scale, uint8_t src_zero_point, float dst_scale,
-                    uint8_t dst_zero_point) {
-        m_dst_type_cvt =
-                CudaDTypeParamImpl<dt_quint4>(dst_scale, dst_zero_point);
-        m_src_type_cvt =
-                CudaDTypeParamImpl<dt_quint4>(src_scale, src_zero_point);
+    CudaPostProcess(
+            float src_scale, uint8_t src_zero_point, float dst_scale,
+            uint8_t dst_zero_point) {
+        m_dst_type_cvt = CudaDTypeParamImpl<dt_quint4>(dst_scale, dst_zero_point);
+        m_src_type_cvt = CudaDTypeParamImpl<dt_quint4>(src_scale, src_zero_point);
     };
     inline __device__ uint8_t operator()(uint8_t val) {
         float intermediate = m_src_type_cvt.dequantize(dt_quint4(val));
@@ -152,8 +147,7 @@ struct CudaPostProcess<dtype::Quantized4Asymm, dtype::Quantized4Asymm, true> {
     using DstType = dtype::Quantized4Asymm;
     uint8_t m_src_zero_point = 0;
     uint8_t m_dst_zero_point = 0;
-    CudaPostProcess(float, uint8_t src_zero_point, float,
-                    uint8_t dst_zero_point) {
+    CudaPostProcess(float, uint8_t src_zero_point, float, uint8_t dst_zero_point) {
         m_src_zero_point = src_zero_point;
         m_dst_zero_point = dst_zero_point;
     };

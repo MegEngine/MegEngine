@@ -32,9 +32,10 @@ bool ConvBiasImpl::AlgoF32ChannelWiseNCHW44::usable(
     size_t OC = fm.ocpg;
     size_t IC = fm.icpg;
     size_t GROUP = fm.group;
-    bool ok_type = (param.src_type.enumv() == DTypeEnum::Float32 &&
-                    param.filter_type.enumv() == DTypeEnum::Float32 &&
-                    (param.dst_type.enumv() == DTypeEnum::Float32));
+    bool ok_type =
+            (param.src_type.enumv() == DTypeEnum::Float32 &&
+             param.filter_type.enumv() == DTypeEnum::Float32 &&
+             (param.dst_type.enumv() == DTypeEnum::Float32));
     bool ok_format = OC == 1 && IC == 1 && GROUP % 4 == 0 &&
                      fm.format == param::Convolution::Format::NCHW44;
     bool ok_filter = fm.spatial_ndim == 2 && FH == fm.spatial[1] &&
@@ -52,9 +53,8 @@ size_t ConvBiasImpl::AlgoF32ChannelWiseNCHW44::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
-        const NCBKernSizeParam& param) const {
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32ChannelWiseNCHW44::
+        dispatch_kerns(const NCBKernSizeParam& param) const {
     const constexpr size_t pack_group_size = 4_z;
     auto fm = param.filter_meta;
     const int batch = param.n;
@@ -65,31 +65,31 @@ ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
     // NOTE: remain_w is not used to gen hash of midout for compatible with
 // shape runtime
 #define DO_CONV_KERN_FUN(_stride, filter, bias_mode, op)                     \
-    MIDOUT_BEGIN(conv_bias_fp32_channel_wise_nchw44,                         \
-                 midout_iv(#_stride #filter #bias_mode #op##_hash)) {        \
+    MIDOUT_BEGIN(                                                            \
+            conv_bias_fp32_channel_wise_nchw44,                              \
+            midout_iv(#_stride #filter #bias_mode #op##_hash)) {             \
         do_conv_fun = channel_wise_nchw44_float::                            \
                 do_conv_kern_##_stride##_##filter##x##filter<bias_mode, op>; \
     }                                                                        \
     MIDOUT_END();
 
-#define GET_OP_PARAM(_stride, filter, bias_mode)                               \
-    switch (param.nonlineMode) {                                               \
-        case param::ConvBias::NonlineMode::IDENTITY:                           \
-            DO_CONV_KERN_FUN(_stride, filter, bias_mode, NoneOp<dt_float32>)   \
-            break;                                                             \
-        case param::ConvBias::NonlineMode::RELU:                               \
-            DO_CONV_KERN_FUN(_stride, filter, bias_mode, ReluOp<dt_float32>)   \
-            break;                                                             \
-        case param::ConvBias::NonlineMode::SIGMOID:                            \
-            DO_CONV_KERN_FUN(_stride, filter, bias_mode,                       \
-                             SigmoidOp<dt_float32>)                            \
-            break;                                                             \
-        case param::ConvBias::NonlineMode::H_SWISH:                            \
-            DO_CONV_KERN_FUN(_stride, filter, bias_mode, HSwishOp<dt_float32>) \
-            break;                                                             \
-        default:                                                               \
-            megdnn_assert(0);                                                  \
-            break;                                                             \
+#define GET_OP_PARAM(_stride, filter, bias_mode)                                \
+    switch (param.nonlineMode) {                                                \
+        case param::ConvBias::NonlineMode::IDENTITY:                            \
+            DO_CONV_KERN_FUN(_stride, filter, bias_mode, NoneOp<dt_float32>)    \
+            break;                                                              \
+        case param::ConvBias::NonlineMode::RELU:                                \
+            DO_CONV_KERN_FUN(_stride, filter, bias_mode, ReluOp<dt_float32>)    \
+            break;                                                              \
+        case param::ConvBias::NonlineMode::SIGMOID:                             \
+            DO_CONV_KERN_FUN(_stride, filter, bias_mode, SigmoidOp<dt_float32>) \
+            break;                                                              \
+        case param::ConvBias::NonlineMode::H_SWISH:                             \
+            DO_CONV_KERN_FUN(_stride, filter, bias_mode, HSwishOp<dt_float32>)  \
+            break;                                                              \
+        default:                                                                \
+            megdnn_assert(0);                                                   \
+            break;                                                              \
     }
 
 #define GET_BIAS_MODE_PARAM(_stride, filter)                                \
@@ -144,10 +144,11 @@ ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
 
     SmallVector<ConvBiasImpl::NCBKern> ret_kerns;
 
-    CpuNDRange ncb_range = {static_cast<size_t>(batch),
-                            static_cast<size_t>(group / pack_group_size)};
-    auto do_conv = [do_conv_fun](const NCBKernParam& kern_param,
-                                 const NCBKernIndex& ncb_index) {
+    CpuNDRange ncb_range = {
+            static_cast<size_t>(batch), static_cast<size_t>(group / pack_group_size)};
+    auto do_conv = [do_conv_fun](
+                           const NCBKernParam& kern_param,
+                           const NCBKernIndex& ncb_index) {
         size_t PH = kern_param.filter_meta.padding[0];
         size_t PW = kern_param.filter_meta.padding[1];
         size_t OH = kern_param.osz[0];
@@ -160,8 +161,7 @@ ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
         const float* sptr =
                 kern_param.src<float>(batch_id, group_id, 0, pack_group_size);
         const float* fptr = kern_param.filter<float>(group_id, pack_group_size);
-        float* dst =
-                kern_param.dst<float>(batch_id, group_id, 0, pack_group_size);
+        float* dst = kern_param.dst<float>(batch_id, group_id, 0, pack_group_size);
         const float* bptr =
                 kern_param.bias<float>(batch_id, group_id, 0, pack_group_size);
         //! copy in case of illegal read src when padding is zero
@@ -171,4 +171,4 @@ ConvBiasImpl::AlgoF32ChannelWiseNCHW44::dispatch_kerns(
     return ret_kerns;
 }
 
-//vim: syntax=cpp.doxygen
+// vim: syntax=cpp.doxygen

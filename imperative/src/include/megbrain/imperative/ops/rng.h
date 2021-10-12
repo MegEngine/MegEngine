@@ -24,4 +24,4 @@ void set_global_rng_seed(uint64_t seed);
 uint64_t get_global_rng_seed();
 CompNode get_rng_handle_compnode(Handle handle);
 
-} // namespace mgb::imperative::rng
+}  // namespace mgb::imperative::rng

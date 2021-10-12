@@ -18,46 +18,47 @@ using namespace megdnn;
 using namespace test;
 using namespace warp_perspective;
 
-void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspective*,
-                                               TensorLayoutArray&) {}
-void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspectiveBackwardData*,
-                                               TensorLayoutArray&) {}
-void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspectiveBackwardMat*,
-                                               TensorLayoutArray&) {}
+void WarpPerspectiveMatIdxProxy::deduce_layout(WarpPerspective*, TensorLayoutArray&) {}
+void WarpPerspectiveMatIdxProxy::deduce_layout(
+        WarpPerspectiveBackwardData*, TensorLayoutArray&) {}
+void WarpPerspectiveMatIdxProxy::deduce_layout(
+        WarpPerspectiveBackwardMat*, TensorLayoutArray&) {}
 
-void WarpPerspectiveMatIdxProxy::exec(WarpPerspective* opr,
-                                      const TensorNDArray& tensors) {
+void WarpPerspectiveMatIdxProxy::exec(
+        WarpPerspective* opr, const TensorNDArray& tensors) {
     if (!W.valid()) {
         W = WorkspaceWrapper(opr->handle(), 0);
     }
     megdnn_assert(tensors.size() == 4);
-    W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout));
+    W.update(opr->get_workspace_in_bytes(
+            tensors[0].layout, tensors[1].layout, tensors[2].layout,
+            tensors[3].layout));
     opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], W.workspace());
 }
 
-void WarpPerspectiveMatIdxProxy::exec(WarpPerspectiveBackwardData* opr,
-                                      const TensorNDArray& tensors) {
+void WarpPerspectiveMatIdxProxy::exec(
+        WarpPerspectiveBackwardData* opr, const TensorNDArray& tensors) {
     if (!W.valid()) {
         W = WorkspaceWrapper(opr->handle(), 0);
     }
     megdnn_assert(tensors.size() == 4);
-    W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout));
+    W.update(opr->get_workspace_in_bytes(
+            tensors[0].layout, tensors[1].layout, tensors[2].layout,
+            tensors[3].layout));
     opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], W.workspace());
 }
 
-void WarpPerspectiveMatIdxProxy::exec(WarpPerspectiveBackwardMat* opr,
-                                      const TensorNDArray& tensors) {
+void WarpPerspectiveMatIdxProxy::exec(
+        WarpPerspectiveBackwardMat* opr, const TensorNDArray& tensors) {
     if (!W.valid()) {
         W = WorkspaceWrapper(opr->handle(), 0);
     }
     megdnn_assert(tensors.size() == 5);
-    W.update(opr->get_workspace_in_bytes(tensors[0].layout, tensors[1].layout,
-                                         tensors[2].layout, tensors[3].layout,
-                                         tensors[4].layout));
-    opr->exec(tensors[0], tensors[1], tensors[2], tensors[3], tensors[4],
-              W.workspace());
+    W.update(opr->get_workspace_in_bytes(
+            tensors[0].layout, tensors[1].layout, tensors[2].layout, tensors[3].layout,
+            tensors[4].layout));
+    opr->exec(
+            tensors[0], tensors[1], tensors[2], tensors[3], tensors[4], W.workspace());
 }
 
 std::vector<TestArg> warp_perspective::get_cv_args() {
@@ -84,26 +85,30 @@ std::vector<TestArg> warp_perspective::get_cv_args() {
                     cur_param.format = param::WarpPerspective::Format::NHWC;
 
                     cur_param.imode = imode;
-                    args.emplace_back(cur_param, TensorShape{1, i, i, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, i, i, ic});
-                    args.emplace_back(cur_param, TensorShape{1, i, i * 2, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, i, i * 2, ic});
-                    args.emplace_back(cur_param, TensorShape{1, i * 3, i, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, i * 3, i, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, i, ic}, TensorShape{1, 3, 3},
+                            TensorShape{1}, TensorShape{1, i, i, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, i * 2, ic},
+                            TensorShape{1, 3, 3}, TensorShape{1},
+                            TensorShape{1, i, i * 2, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i * 3, i, ic},
+                            TensorShape{1, 3, 3}, TensorShape{1},
+                            TensorShape{1, i * 3, i, ic});
 
                     cur_param.border_val = 0.78f;
-                    args.emplace_back(cur_param, TensorShape{1, i, i, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, 8, 8, ic});
-                    args.emplace_back(cur_param, TensorShape{1, i, i * 2, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, 8, 8, ic});
-                    args.emplace_back(cur_param, TensorShape{1, i * 3, i, ic},
-                                      TensorShape{1, 3, 3}, TensorShape{1},
-                                      TensorShape{1, 8, 8, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, i, ic}, TensorShape{1, 3, 3},
+                            TensorShape{1}, TensorShape{1, 8, 8, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, i * 2, ic},
+                            TensorShape{1, 3, 3}, TensorShape{1},
+                            TensorShape{1, 8, 8, ic});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i * 3, i, ic},
+                            TensorShape{1, 3, 3}, TensorShape{1},
+                            TensorShape{1, 8, 8, ic});
                 }
             }
         }
@@ -130,10 +135,10 @@ void warp_perspective::run_mat_idx_test(Handle* handle) {
 
     // test NHWC
     param.format = WarpPerspective::Param::Format::NHWC;
-        checker.set_param(param)
-               .set_rng(2, &mat_idx_rng)
-                   .set_epsilon(1e-1)
-                   .set_dtype(2, dtype::Int32());
+    checker.set_param(param)
+            .set_rng(2, &mat_idx_rng)
+            .set_epsilon(1e-1)
+            .set_dtype(2, dtype::Int32());
     checker.execs({{N_SRC, 10, 11, 3}, {2, 3, 3}, {2}, {2, 11, 12, 3}});
 }
 
@@ -146,9 +151,9 @@ void warp_perspective::run_int8_test(Handle* handle) {
         void gen(const TensorND& tensor_) override {
             float* ptr = tensor_.ptr<float>();
             auto N = tensor_.layout.shape[0];
-            megdnn_assert(tensor_.layout.is_contiguous() &&
-                          tensor_.layout.ndim == 3 && tensor_.layout[1] == 3 &&
-                          tensor_.layout[2] == 3);
+            megdnn_assert(
+                    tensor_.layout.is_contiguous() && tensor_.layout.ndim == 3 &&
+                    tensor_.layout[1] == 3 && tensor_.layout[2] == 3);
             for (size_t n = 0; n < N; ++n) {
                 //       | 1 0 0 |
                 // mat = | 0 1 0 |
@@ -171,8 +176,9 @@ void warp_perspective::run_int8_test(Handle* handle) {
             .set_dtype(0, dtype::Int8())
             .set_dtype(1, dtype::Float32())
             .set_dtype(2, dtype::Int8())
-            .set_param({Param::InterpolationMode::LINEAR,
-                        Param::BorderMode::CONSTANT, Param::Format::NCHW, 0.f});
+            .set_param(
+                    {Param::InterpolationMode::LINEAR, Param::BorderMode::CONSTANT,
+                     Param::Format::NCHW, 0.f});
     checker.execs({{99, 48, 17, 17}, {99, 3, 3}, {99, 48, 22, 22}})
             .execs({{12, 3, 224, 224}, {12, 3, 3}, {12, 3, 256, 256}});
 
@@ -190,9 +196,9 @@ void warp_perspective::run_quint8_test(Handle* handle) {
         void gen(const TensorND& tensor_) override {
             float* ptr = tensor_.ptr<float>();
             auto N = tensor_.layout.shape[0];
-            megdnn_assert(tensor_.layout.is_contiguous() &&
-                          tensor_.layout.ndim == 3 && tensor_.layout[1] == 3 &&
-                          tensor_.layout[2] == 3);
+            megdnn_assert(
+                    tensor_.layout.is_contiguous() && tensor_.layout.ndim == 3 &&
+                    tensor_.layout[1] == 3 && tensor_.layout[2] == 3);
             for (size_t n = 0; n < N; ++n) {
                 //       | 1 0 0 |
                 // mat = | 0 1 0 |
@@ -212,13 +218,12 @@ void warp_perspective::run_quint8_test(Handle* handle) {
     }
     checker.set_rng(0, &input_rng)
             .set_rng(1, &mat_rng)
-            .set_dtype(0,
-                       dtype::Quantized8Asymm(0.6f, static_cast<uint8_t>(127)))
+            .set_dtype(0, dtype::Quantized8Asymm(0.6f, static_cast<uint8_t>(127)))
             .set_dtype(1, dtype::Float32())
-            .set_dtype(2,
-                       dtype::Quantized8Asymm(0.6f, static_cast<uint8_t>(127)))
-            .set_param({Param::InterpolationMode::LINEAR,
-                        Param::BorderMode::CONSTANT, Param::Format::NCHW, 0.f});
+            .set_dtype(2, dtype::Quantized8Asymm(0.6f, static_cast<uint8_t>(127)))
+            .set_param(
+                    {Param::InterpolationMode::LINEAR, Param::BorderMode::CONSTANT,
+                     Param::Format::NCHW, 0.f});
     checker.execs({{99, 48, 17, 17}, {99, 3, 3}, {99, 48, 22, 22}})
             .execs({{12, 3, 224, 224}, {12, 3, 3}, {12, 3, 256, 256}});
 

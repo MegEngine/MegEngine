@@ -17,6 +17,6 @@ namespace mgb {
 
 using megdnn::thin_function;
 
-} // namespace mgb
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

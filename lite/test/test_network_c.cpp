@@ -80,8 +80,7 @@ int finish_callback() {
 }
 
 volatile bool start_checked = false;
-int start_callback(const LiteIO* inputs, const LiteTensor* input_tensors,
-                   size_t size) {
+int start_callback(const LiteIO* inputs, const LiteTensor* input_tensors, size_t size) {
     start_checked = true;
     auto check_func = [&]() {
         ASSERT_EQ(size, 1);
@@ -98,13 +97,14 @@ int start_callback(const LiteIO* inputs, const LiteTensor* input_tensors,
 }
 
 volatile bool finish_checked = false;
-int finish_callback(const LiteIO* outputs, const LiteTensor* output_tensors,
-                    size_t size) {
+int finish_callback(
+        const LiteIO* outputs, const LiteTensor* output_tensors, size_t size) {
     finish_checked = true;
     auto check_func = [&]() {
         ASSERT_EQ(size, 1);
-        ASSERT_EQ(std::string(outputs->name),
-                  "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+        ASSERT_EQ(
+                std::string(outputs->name),
+                "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
         LiteLayout layout;
         LITE_get_tensor_layout(*output_tensors, &layout);
         ASSERT_EQ(layout.shapes[1], 1000);
@@ -130,32 +130,31 @@ int finish_callback(const LiteIO* outputs, const LiteTensor* output_tensors,
     std::string model_path = "./shufflenet.mge";                               \
     auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor)
 
-#define MakeNetwork                                                  \
-    LiteNetwork c_network;                                           \
-    LITE_CAPI_CHECK(LITE_make_network(&c_network, *default_config(), \
-                                      *default_network_io()))
+#define MakeNetwork        \
+    LiteNetwork c_network; \
+    LITE_CAPI_CHECK(       \
+            LITE_make_network(&c_network, *default_config(), *default_network_io()))
 
 #define LoadNetwork \
     LITE_CAPI_CHECK(LITE_load_model_from_path(c_network, model_path.c_str()))
 
-#define SetInput                                                            \
-    LiteTensor c_input_tensor, c_output_tensor;                             \
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, "data", LITE_INPUT,       \
-                                       &c_input_tensor));                   \
-    LITE_CAPI_CHECK(LITE_reset_tensor_memory(c_input_tensor,                \
-                                             lite_tensor->get_memory_ptr(), \
-                                             data_length_in_byte))
+#define SetInput                                                                 \
+    LiteTensor c_input_tensor, c_output_tensor;                                  \
+    LITE_CAPI_CHECK(                                                             \
+            LITE_get_io_tensor(c_network, "data", LITE_INPUT, &c_input_tensor)); \
+    LITE_CAPI_CHECK(LITE_reset_tensor_memory(                                    \
+            c_input_tensor, lite_tensor->get_memory_ptr(), data_length_in_byte))
 
 #define ForwardNetwork                        \
     LITE_CAPI_CHECK(LITE_forward(c_network)); \
     LITE_CAPI_CHECK(LITE_wait(c_network))
 
-#define GetOutput                                                           \
-    const char* output_name;                                                \
-    LITE_CAPI_CHECK(LITE_get_output_name(c_network, 0, &output_name));      \
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_name, LITE_OUTPUT, \
-                                       &c_output_tensor));                  \
-    void* output_ptr;                                                       \
+#define GetOutput                                                      \
+    const char* output_name;                                           \
+    LITE_CAPI_CHECK(LITE_get_output_name(c_network, 0, &output_name)); \
+    LITE_CAPI_CHECK(LITE_get_io_tensor(                                \
+            c_network, output_name, LITE_OUTPUT, &c_output_tensor));   \
+    void* output_ptr;                                                  \
     LITE_CAPI_CHECK(LITE_get_tensor_memory(c_output_tensor, &output_ptr))
 
 #define CompareResult                                 \
@@ -191,16 +190,18 @@ TEST(TestCapiNetWork, GetAllName) {
 
     std::vector<const char*> output_names(output_size);
     LITE_get_all_output_name(c_network, nullptr, output_names.data());
-    ASSERT_TRUE(std::string(output_names[0]) ==
-                "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
+    ASSERT_TRUE(
+            std::string(output_names[0]) ==
+            "TRUE_DIV(EXP[12065],reduce0[12067])[12077]");
     ASSERT_EQ(output_names.size(), 1);
     LITE_destroy_network(c_network);
 }
 
 #if LITE_BUILD_WITH_RKNPU
 
-static int GetTop(float* pfProb, float* pfMaxProb, uint32_t* pMaxClass,
-                  uint32_t outputCount, uint32_t topNum) {
+static int GetTop(
+        float* pfProb, float* pfMaxProb, uint32_t* pMaxClass, uint32_t outputCount,
+        uint32_t topNum) {
     uint32_t i, j;
 
 #define MAX_TOP_NUM 20
@@ -229,8 +230,8 @@ static int GetTop(float* pfProb, float* pfMaxProb, uint32_t* pMaxClass,
 }
 
 TEST(TestCapiNetWork, rknntest_set_info) {
-#define SET_INFO_SIZE 2
-#define TENSOR_TYPE_UINT8 3
+#define SET_INFO_SIZE      2
+#define TENSOR_TYPE_UINT8  3
 #define TENSOR_FORMAT_NHWC 1
     LiteConfig config;
     config.backend = LiteBackend::LITE_RK_NPU;
@@ -239,7 +240,7 @@ TEST(TestCapiNetWork, rknntest_set_info) {
     auto lite_tensor = lite::get_input_data("./model/cat_224x224.npy");
     auto true_tensor = lite::get_input_data("./output_data.npy");
     auto rknn_model = "./model/mobilenet_v1.rknn";
-    
+
     LiteNetwork c_network;
     LITE_CAPI_CHECK(LITE_make_network_config(&c_network, config));
     LITE_CAPI_CHECK(LITE_load_model_from_path(c_network, rknn_model));
@@ -254,8 +255,8 @@ TEST(TestCapiNetWork, rknntest_set_info) {
 
     LITE_get_all_input_name(c_network, nullptr, input_names.data());
     LITE_get_all_output_name(c_network, nullptr, output_names.data());
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, input_names[0], LITE_IO,
-                                       &c_input_tensor));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, input_names[0], LITE_IO, &c_input_tensor));
 
     size_t input_length = 0;
     LITE_get_tensor_total_size_in_byte(c_input_tensor, &input_length);
@@ -265,43 +266,35 @@ TEST(TestCapiNetWork, rknntest_set_info) {
         LiteLayout input_layout;
         LITE_get_tensor_layout(c_input_tensor, &input_layout);
         ASSERT_TRUE(input_layout.data_type == LITE_INT8);
-        std::vector<int> input_shape={1,224,224,3};
+        std::vector<int> input_shape = {1, 224, 224, 3};
         for (size_t i = 0; i < input_layout.ndim; i++) {
-            ASSERT_TRUE(input_layout.shapes[i]=input_shape[i]);
+            ASSERT_TRUE(input_layout.shapes[i] = input_shape[i]);
         }
     }
 
     {
         int size_attr = 0;
-        LITE_CAPI_CHECK(LITE_get_tensor_attribute(c_input_tensor, nullptr, nullptr,
-                                                  &size_attr));
+        LITE_CAPI_CHECK(LITE_get_tensor_attribute(
+                c_input_tensor, nullptr, nullptr, &size_attr));
         ASSERT_TRUE(size_attr > 0);
         const char* keys[size_attr];
         void* values[size_attr];
-        LITE_CAPI_CHECK(LITE_get_tensor_attribute(c_input_tensor, keys, values,
-                                                  &size_attr));
+        LITE_CAPI_CHECK(
+                LITE_get_tensor_attribute(c_input_tensor, keys, values, &size_attr));
         ASSERT_TRUE(size_attr > 5);
         std::unordered_map<std::string, uint32_t> result_map = {
-                {"zp", 0},
-                {"index", 0},
-                {"size_with_stride", 150528},
-                {"stride", 224},
-                {"n_size", 150528},
-                {"n_elems", 150528},
-                {"qnt_type", 2},
-                {"n_dims", 4},
-                {"type", 2},
-                {"fmt", 1},
-                {"dims0", 1},
-                {"dims1", 224},
-                {"dims2", 224},
-                {"dims3", 3},
+                {"zp", 0},       {"index", 0},       {"size_with_stride", 150528},
+                {"stride", 224}, {"n_size", 150528}, {"n_elems", 150528},
+                {"qnt_type", 2}, {"n_dims", 4},      {"type", 2},
+                {"fmt", 1},      {"dims0", 1},       {"dims1", 224},
+                {"dims2", 224},  {"dims3", 3},
         };
         for (int i = 0; i < size_attr; i++) {
             std::string key(keys[i]);
             if (key == "names") {
-                ASSERT_TRUE(std::string("input") ==
-                            std::string(static_cast<const char*>(values[i])));
+                ASSERT_TRUE(
+                        std::string("input") ==
+                        std::string(static_cast<const char*>(values[i])));
             } else if (key == "scale") {
                 float scale = *static_cast<float*>(values[i]);
                 ASSERT_TRUE(std::fabs(scale - 0.007812) < 0.00001);
@@ -314,7 +307,7 @@ TEST(TestCapiNetWork, rknntest_set_info) {
                 }
             } else {
                 uint32_t val = *static_cast<uint32_t*>(values[i]);
-                ASSERT_TRUE(result_map[std::string(keys[i])]==val);
+                ASSERT_TRUE(result_map[std::string(keys[i])] == val);
             }
         }
     }
@@ -323,30 +316,29 @@ TEST(TestCapiNetWork, rknntest_set_info) {
     int type = TENSOR_TYPE_UINT8;
     int fmt = TENSOR_FORMAT_NHWC;
     void* values[] = {static_cast<void*>(&type), static_cast<void*>(&fmt)};
-    LITE_CAPI_CHECK(LITE_set_tensor_information(c_input_tensor, keys, values,
-                                                info_size));
-    ASSERT_TRUE(std::string(output_names[0]) ==
-                std::string("MobilenetV1/Predictions/Reshape_1"));
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_names[0], LITE_IO,
-                                       &c_output_tensor));
+    LITE_CAPI_CHECK(
+            LITE_set_tensor_information(c_input_tensor, keys, values, info_size));
+    ASSERT_TRUE(
+            std::string(output_names[0]) ==
+            std::string("MobilenetV1/Predictions/Reshape_1"));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, output_names[0], LITE_IO, &c_output_tensor));
 
-    LITE_CAPI_CHECK(LITE_reset_tensor_memory(c_input_tensor,
-                                             lite_tensor->get_memory_ptr(),
-                                             data_length_in_byte));
+    LITE_CAPI_CHECK(LITE_reset_tensor_memory(
+            c_input_tensor, lite_tensor->get_memory_ptr(), data_length_in_byte));
 
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_names[0], LITE_IO,
-                                       &c_output_tensor));
-    //LiteLayout tmp_output_layout;
-    //LITE_get_tensor_layout(c_output_tensor, &tmp_output_layout);
-    //tmp_output_layout.data_type = LiteDataType::LITE_FLOAT;
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, output_names[0], LITE_IO, &c_output_tensor));
+    // LiteLayout tmp_output_layout;
+    // LITE_get_tensor_layout(c_output_tensor, &tmp_output_layout);
+    // tmp_output_layout.data_type = LiteDataType::LITE_FLOAT;
 
-    //LITE_set_tensor_layout(c_output_tensor, tmp_output_layout);
+    // LITE_set_tensor_layout(c_output_tensor, tmp_output_layout);
     {
         const char* keys[] = {"want_float"};
         uint8_t want_float = 1;
         void* values[] = {static_cast<void*>(&want_float)};
-        LITE_CAPI_CHECK(
-                LITE_set_tensor_information(c_output_tensor, keys, values, 1));
+        LITE_CAPI_CHECK(LITE_set_tensor_information(c_output_tensor, keys, values, 1));
     }
 
     LITE_CAPI_CHECK(LITE_forward(c_network));
@@ -360,43 +352,36 @@ TEST(TestCapiNetWork, rknntest_set_info) {
         ASSERT_TRUE(output_layout.data_type == LITE_FLOAT);
         int size_attr = 0;
 
-        LITE_CAPI_CHECK(LITE_get_tensor_attribute(c_output_tensor, nullptr, nullptr,
-                                                  &size_attr));
+        LITE_CAPI_CHECK(LITE_get_tensor_attribute(
+                c_output_tensor, nullptr, nullptr, &size_attr));
         ASSERT_TRUE(size_attr > 0);
         const char* keys[size_attr];
         void* values[size_attr];
-        LITE_CAPI_CHECK(LITE_get_tensor_attribute(c_output_tensor, keys, values,
-                                                  &size_attr));
+        LITE_CAPI_CHECK(
+                LITE_get_tensor_attribute(c_output_tensor, keys, values, &size_attr));
         ASSERT_TRUE(size_attr > 5);
         std::unordered_map<std::string, uint32_t> result_map = {
-                {"zp", 0},
-                {"index", 0},
-                {"size_with_stride", 2002},
-                {"stride", 0},
-                {"n_size", 2002},
-                {"n_elems", 1001},
-                {"qnt_type", 2},
-                {"n_dims", 2},
-                {"type", 0},
-                {"fmt", 2},
-                {"dims0", 1},
-                {"dims1", 1001},
+                {"zp", 0},       {"index", 0},     {"size_with_stride", 2002},
+                {"stride", 0},   {"n_size", 2002}, {"n_elems", 1001},
+                {"qnt_type", 2}, {"n_dims", 2},    {"type", 0},
+                {"fmt", 2},      {"dims0", 1},     {"dims1", 1001},
         };
         for (int i = 0; i < size_attr; i++) {
             std::string key(keys[i]);
             if (key == "names") {
-                ASSERT_TRUE("MobilenetV1/Predictions/Reshape_1" ==
-                            std::string(static_cast<const char*>(values[i])));
+                ASSERT_TRUE(
+                        "MobilenetV1/Predictions/Reshape_1" ==
+                        std::string(static_cast<const char*>(values[i])));
 
             } else if (key == "scale") {
                 float scale = *static_cast<float*>(values[i]);
                 ASSERT_TRUE(std::fabs(scale - 1.0) < 0.00001);
             } else if (key == "fl" || key == "pass_through") {
                 uint8_t val = *static_cast<uint8_t*>(values[i]);
-                    ASSERT_TRUE(val == 0);
+                ASSERT_TRUE(val == 0);
             } else {
                 uint32_t val = *static_cast<uint32_t*>(values[i]);
-                ASSERT_TRUE(result_map[std::string(keys[i])]==val);
+                ASSERT_TRUE(result_map[std::string(keys[i])] == val);
             }
         }
     }
@@ -428,8 +413,7 @@ TEST(TestCapiNetWork, rknntest_set_info) {
         void* output_ptr;
         LITE_get_tensor_memory(c_output_tensor, &output_ptr);
         float* data1 = static_cast<float*>(output_ptr);
-        size_t length =
-                true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
+        size_t length = true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
         for (size_t i = 0; i < length; i++) {
             ASSERT_LT(std::abs(data1[i] - true_data[i]), 1e-3);
         }
@@ -441,8 +425,8 @@ TEST(TestCapiNetWork, rknntest_set_info) {
 }
 
 TEST(TestCapiNetWork, rknntest_set_info_two_input) {
-#define SET_INFO_SIZE 2
-#define TENSOR_TYPE_UINT8 3
+#define SET_INFO_SIZE      2
+#define TENSOR_TYPE_UINT8  3
 #define TENSOR_FORMAT_NHWC 1
     LiteConfig config;
     config.backend = LiteBackend::LITE_RK_NPU;
@@ -467,8 +451,8 @@ TEST(TestCapiNetWork, rknntest_set_info_two_input) {
 
     LITE_get_all_input_name(c_network, nullptr, input_names.data());
     LITE_get_all_output_name(c_network, nullptr, output_names.data());
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, input_names[0], LITE_IO,
-                                       &c_input_tensor));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, input_names[0], LITE_IO, &c_input_tensor));
 
     size_t input_length = 0;
     LITE_get_tensor_total_size_in_byte(c_input_tensor, &input_length);
@@ -489,32 +473,30 @@ TEST(TestCapiNetWork, rknntest_set_info_two_input) {
     int type = TENSOR_TYPE_UINT8;
     int fmt = TENSOR_FORMAT_NHWC;
     void* values[] = {static_cast<void*>(&type), static_cast<void*>(&fmt)};
-    LITE_CAPI_CHECK(LITE_set_tensor_information(c_input_tensor, keys, values,
-                                                info_size));
-    ASSERT_TRUE(std::string(output_names[0]) ==
-                std::string("MobilenetV1/Predictions/Reshape_1"));
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_names[0], LITE_IO,
-                                       &c_output_tensor));
+    LITE_CAPI_CHECK(
+            LITE_set_tensor_information(c_input_tensor, keys, values, info_size));
+    ASSERT_TRUE(
+            std::string(output_names[0]) ==
+            std::string("MobilenetV1/Predictions/Reshape_1"));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, output_names[0], LITE_IO, &c_output_tensor));
 
-    LITE_CAPI_CHECK(LITE_reset_tensor_memory(c_input_tensor,
-                                             lite_tensor->get_memory_ptr(),
-                                             data_length_in_byte));
+    LITE_CAPI_CHECK(LITE_reset_tensor_memory(
+            c_input_tensor, lite_tensor->get_memory_ptr(), data_length_in_byte));
 
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_names[0], LITE_IO,
-                                       &c_output_tensor));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, output_names[0], LITE_IO, &c_output_tensor));
     {
         const char* keys[] = {"want_float"};
         uint8_t want_float = 1;
         void* values[] = {static_cast<void*>(&want_float)};
-        LITE_CAPI_CHECK(
-                LITE_set_tensor_information(c_output_tensor, keys, values, 1));
+        LITE_CAPI_CHECK(LITE_set_tensor_information(c_output_tensor, keys, values, 1));
     }
 
     LITE_CAPI_CHECK(LITE_forward(c_network));
     LITE_CAPI_CHECK(LITE_wait(c_network));
 
-    ASSERT_TRUE(std::string(output_names[0]) ==
-                "MobilenetV1/Predictions/Reshape_1");
+    ASSERT_TRUE(std::string(output_names[0]) == "MobilenetV1/Predictions/Reshape_1");
     ASSERT_EQ(output_names.size(), 1);
     {
         uint32_t MaxClass[5];
@@ -522,8 +504,7 @@ TEST(TestCapiNetWork, rknntest_set_info_two_input) {
         void* output_ptr;
         LITE_get_tensor_memory(c_output_tensor, &output_ptr);
         float* buffer = (float*)output_ptr;
-        uint32_t sz =
-                true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
+        uint32_t sz = true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
 
         GetTop(buffer, fMaxProb, MaxClass, sz, 5);
 
@@ -545,20 +526,17 @@ TEST(TestCapiNetWork, rknntest_set_info_two_input) {
         void* output_ptr;
         LITE_get_tensor_memory(c_output_tensor, &output_ptr);
         float* data1 = static_cast<float*>(output_ptr);
-        size_t length =
-                true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
+        size_t length = true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
         for (size_t i = 0; i < length; i++) {
             ASSERT_LT(std::abs(data1[i] - true_data[i]), 1e-3);
         }
     }
 
-    LITE_CAPI_CHECK(LITE_reset_tensor_memory(c_input_tensor,
-                                             lite_tensor_dog->get_memory_ptr(),
-                                             data_length_in_byte));
+    LITE_CAPI_CHECK(LITE_reset_tensor_memory(
+            c_input_tensor, lite_tensor_dog->get_memory_ptr(), data_length_in_byte));
     LITE_CAPI_CHECK(LITE_forward(c_network));
     LITE_CAPI_CHECK(LITE_wait(c_network));
-    ASSERT_TRUE(std::string(output_names[0]) ==
-                "MobilenetV1/Predictions/Reshape_1");
+    ASSERT_TRUE(std::string(output_names[0]) == "MobilenetV1/Predictions/Reshape_1");
     ASSERT_EQ(output_names.size(), 1);
     {
         uint32_t MaxClass[5];
@@ -566,8 +544,7 @@ TEST(TestCapiNetWork, rknntest_set_info_two_input) {
         void* output_ptr;
         LITE_get_tensor_memory(c_output_tensor, &output_ptr);
         float* buffer = (float*)output_ptr;
-        uint32_t sz =
-                true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
+        uint32_t sz = true_tensor->get_tensor_total_size_in_byte() / sizeof(float);
 
         GetTop(buffer, fMaxProb, MaxClass, sz, 5);
 
@@ -594,14 +571,12 @@ TEST(TestCapiNetWork, BasicResetOutput) {
     LoadNetwork;
     SetInput;
     LiteLayout output_layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT};
-    std::shared_ptr<float> ptr(new float[1000],
-                               [](float* ptr) { delete[] ptr; });
+    std::shared_ptr<float> ptr(new float[1000], [](float* ptr) { delete[] ptr; });
     const char* output_name;
     LITE_CAPI_CHECK(LITE_get_output_name(c_network, 0, &output_name));
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_name, LITE_IO,
-                                       &c_output_tensor));
     LITE_CAPI_CHECK(
-            LITE_reset_tensor(c_output_tensor, output_layout, ptr.get()));
+            LITE_get_io_tensor(c_network, output_name, LITE_IO, &c_output_tensor));
+    LITE_CAPI_CHECK(LITE_reset_tensor(c_output_tensor, output_layout, ptr.get()));
 
     ForwardNetwork;
 
@@ -618,8 +593,8 @@ TEST(TestCapiNetWork, BasicInplaceAndSingleThreadAffinity) {
     LITE_CAPI_CHECK(LITE_set_cpu_inplace_mode(c_network));
     LoadNetwork;
     //! set single thread affinith callback
-    LITE_CAPI_CHECK(LITE_set_runtime_thread_affinity(c_network,
-                                                     single_thread_affinity));
+    LITE_CAPI_CHECK(
+            LITE_set_runtime_thread_affinity(c_network, single_thread_affinity));
     SetInput;
     ForwardNetwork;
     ASSERT_EQ(affinity_set, true);
@@ -649,8 +624,7 @@ TEST(TestCapiNetWork, BasicMultiThread) {
     MakeNetwork;
     LITE_CAPI_CHECK(LITE_set_cpu_threads_number(c_network, NUMBER_THREDS));
     LoadNetwork;
-    LITE_CAPI_CHECK(
-            LITE_set_runtime_thread_affinity(c_network, multi_thread_affinity));
+    LITE_CAPI_CHECK(LITE_set_runtime_thread_affinity(c_network, multi_thread_affinity));
     SetInput;
     ForwardNetwork;
     for (size_t i = 0; i < NUMBER_THREDS; i++) {
@@ -716,12 +690,10 @@ TEST(TestCapiNetWork, BasicCryptAes) {
     LiteConfig c_config = *default_config();
     c_config.bare_model_cryption_name = "AES_default";
     LiteNetwork c_network;
-    LITE_CAPI_CHECK(
-            LITE_make_network(&c_network, c_config, *default_network_io()));
+    LITE_CAPI_CHECK(LITE_make_network(&c_network, c_config, *default_network_io()));
     std::string model_crypt_path = "./shufflenet_crypt_aes.mge";
 
-    LITE_CAPI_CHECK(
-            LITE_load_model_from_path(c_network, model_crypt_path.c_str()));
+    LITE_CAPI_CHECK(LITE_load_model_from_path(c_network, model_crypt_path.c_str()));
 
     SetInput;
     ForwardNetwork;
@@ -735,8 +707,7 @@ TEST(TestCapiNetWork, PackedCryptRc4) {
     MakeNetwork;
 
     std::string model_crypt_path = "./test_packed_model_rc4.lite";
-    LITE_CAPI_CHECK(
-            LITE_load_model_from_path(c_network, model_crypt_path.c_str()));
+    LITE_CAPI_CHECK(LITE_load_model_from_path(c_network, model_crypt_path.c_str()));
 
     SetInput;
     ForwardNetwork;
@@ -751,8 +722,7 @@ TEST(TestCapiNetWork, AsyncExec) {
     LiteNetwork c_network;
     LiteConfig c_config = *default_config();
     c_config.options.var_sanity_check_first_run = false;
-    LITE_CAPI_CHECK(
-            LITE_make_network(&c_network, c_config, *default_network_io()));
+    LITE_CAPI_CHECK(LITE_make_network(&c_network, c_config, *default_network_io()));
     LITE_CAPI_CHECK(LITE_set_async_callback(c_network, finish_callback));
     LoadNetwork;
     SetInput;
@@ -779,15 +749,13 @@ TEST(TestCapiNetWork, OutputShapeOnly) {
     io_output.name = "TRUE_DIV(EXP[12065],reduce0[12067])[12077]";
     c_network_io.outputs = &io_output;
     c_network_io.output_size = 1;
-    LITE_CAPI_CHECK(
-            LITE_make_network(&c_network, *default_config(), c_network_io));
+    LITE_CAPI_CHECK(LITE_make_network(&c_network, *default_config(), c_network_io));
     LoadNetwork;
     SetInput;
     ForwardNetwork;
     GetOutput;
     size_t length = 0;
-    LITE_CAPI_CHECK(
-            LITE_get_tensor_total_size_in_byte(c_output_tensor, &length));
+    LITE_CAPI_CHECK(LITE_get_tensor_total_size_in_byte(c_output_tensor, &length));
     ASSERT_EQ(length / sizeof(float), 1000);
     LITE_CAPI_CHECK(LITE_destroy_network(c_network));
 }
@@ -795,8 +763,7 @@ TEST(TestCapiNetWork, OutputShapeOnly) {
 TEST(TestCapiNetWork, ProfileIOdump) {
     ForwardMgb;
     MakeNetwork;
-    LITE_CAPI_CHECK(
-            LITE_enable_profile_performance(c_network, "./profile.json"));
+    LITE_CAPI_CHECK(LITE_enable_profile_performance(c_network, "./profile.json"));
     LoadNetwork;
     SetInput;
     ForwardNetwork;
@@ -872,15 +839,14 @@ TEST(TestCapiNetWork, TestShareWeights) {
     ASSERT_EQ(is_cpu_inplace_mode, true);
 
     LiteTensor c_input_tensor2, c_output_tensor2;
-    LITE_CAPI_CHECK(
-            LITE_get_io_tensor(c_network2, "data", LITE_IO, &c_input_tensor2));
+    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network2, "data", LITE_IO, &c_input_tensor2));
     LITE_CAPI_CHECK(LITE_reset_tensor_memory(
             c_input_tensor2, lite_tensor->get_memory_ptr(),
             lite_tensor->get_tensor_total_size_in_byte()));
     LITE_CAPI_CHECK(LITE_forward(c_network2));
     LITE_CAPI_CHECK(LITE_wait(c_network2));
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network2, output_name, LITE_IO,
-                                       &c_output_tensor2));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network2, output_name, LITE_IO, &c_output_tensor2));
     void* output_ptr2;
     LITE_CAPI_CHECK(LITE_get_tensor_memory(c_output_tensor2, &output_ptr2));
 

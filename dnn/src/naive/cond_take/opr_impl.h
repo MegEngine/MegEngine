@@ -14,21 +14,20 @@
 namespace megdnn {
 namespace naive {
 
-class CondTakeImpl: public CondTake {
-    template<typename ctype>
-    void dispatch_genidx(size_t size, dt_int32 *dest, const ctype *inp);
+class CondTakeImpl : public CondTake {
+    template <typename ctype>
+    void dispatch_genidx(size_t size, dt_int32* dest, const ctype* inp);
 
-    public:
-        using CondTake::CondTake;
+public:
+    using CondTake::CondTake;
 
-        size_t get_workspace_in_bytes(const TensorLayout& data) override;
+    size_t get_workspace_in_bytes(const TensorLayout& data) override;
 
-        Output exec(
-                _megdnn_tensor_in data, _megdnn_tensor_in mask,
-                _megdnn_workspace workspace,
-                DynOutMallocPolicyCall malloc_policy) override;
+    Output exec(
+            _megdnn_tensor_in data, _megdnn_tensor_in mask, _megdnn_workspace workspace,
+            DynOutMallocPolicyCall malloc_policy) override;
 };
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

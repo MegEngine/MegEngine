@@ -22,9 +22,9 @@ using namespace cuda;
 
 using Algorithm = BatchedMatrixMulForwardImpl::Algorithm;
 
-void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                                       _megdnn_tensor_out C,
-                                       _megdnn_workspace workspace) {
+void BatchedMatrixMulForwardImpl::exec(
+        _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+        _megdnn_workspace workspace) {
     using namespace batched_matrix_mul;
     //!
     //! \Note (int8, int8) => int32 is supported
@@ -53,7 +53,7 @@ std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms(
 }
 std::vector<Algorithm*> BatchedMatrixMulForwardImpl::get_all_algorithms_safe(
         const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
-    auto ret_safe = get_all_algorithms(A,B,C);
+    auto ret_safe = get_all_algorithms(A, B, C);
     megdnn_assert(!ret_safe.empty(), "no usable batchedmatrixmulForward fwd algorithm");
     return ret_safe;
 }
@@ -64,22 +64,22 @@ Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
         const AlgoAttribute& negative_attr) {
     MEGDNN_MARK_USED_VAR(workspace_limit_in_bytes);
     AlgoBase::SizeArgs args(this, A, B, C);
-    if (sm_algo_pack.cublas.is_available_attribute(args, positive_attr,
-                                                   negative_attr)) {
+    if (sm_algo_pack.cublas.is_available_attribute(
+                args, positive_attr, negative_attr)) {
         return &sm_algo_pack.cublas;
     }
 #if CUDA_VERSION >= 10010
-    else if (sm_algo_pack.cublasLt.is_available_attribute(args, positive_attr,
-                                                          negative_attr)) {
+    else if (sm_algo_pack.cublasLt.is_available_attribute(
+                     args, positive_attr, negative_attr)) {
         return &sm_algo_pack.cublasLt;
     }
 #endif
-    else if (sm_algo_pack.int8x8x32.is_available_attribute(args, positive_attr,
-                                                           negative_attr)) {
+    else if (sm_algo_pack.int8x8x32.is_available_attribute(
+                     args, positive_attr, negative_attr)) {
         return &sm_algo_pack.int8x8x32;
     } else {
-        if (sm_algo_pack.brute_force.is_available_attribute(args, positive_attr,
-                                                            negative_attr)) {
+        if (sm_algo_pack.brute_force.is_available_attribute(
+                    args, positive_attr, negative_attr)) {
             return &sm_algo_pack.brute_force;
         }
     }
@@ -89,8 +89,8 @@ Algorithm* BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
             "attribute(%s) args(%s) and "
             "workspace limit (%zu bytes)",
             Algorithm::attribute_str(negative_attr).c_str(),
-            Algorithm::attribute_str(positive_attr).c_str(),
-            args.to_string().c_str(), workspace_limit_in_bytes));
+            Algorithm::attribute_str(positive_attr).c_str(), args.to_string().c_str(),
+            workspace_limit_in_bytes));
     return nullptr;
 };
 

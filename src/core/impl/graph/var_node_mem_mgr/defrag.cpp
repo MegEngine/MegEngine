@@ -16,9 +16,8 @@
 using namespace mgb;
 using namespace cg;
 
-void VarDevMemDefragmenter::alloc_direct(VarNode* var,
-                                         DeviceTensorStorage& storage,
-                                         size_t size) {
+void VarDevMemDefragmenter::alloc_direct(
+        VarNode* var, DeviceTensorStorage& storage, size_t size) {
     if (!storage.comp_node_valid())
         storage.comp_node(var->comp_node());
     if (size > storage.size()) {
@@ -45,9 +44,8 @@ void VarDevMemDefragmenter::clear_all() {
     m_cninfo_map.clear();
 }
 
-void VarDevMemDefragmenter::alloc_with_defrag(VarNode* var,
-                                              DeviceTensorStorage& storage,
-                                              size_t size) {
+void VarDevMemDefragmenter::alloc_with_defrag(
+        VarNode* var, DeviceTensorStorage& storage, size_t size) {
     CompNodeInfo* cninfo_ptr;
     {
         MGB_LOCK_GUARD(m_mtx);
@@ -62,19 +60,18 @@ void VarDevMemDefragmenter::alloc_with_defrag(VarNode* var,
 
     MGB_TRY { alloc_direct(var, storage, size); }
     MGB_CATCH(MemAllocError&, {
-        mgb_log_warn("memory allocation failed for var %s; try defragmenting",
-                     var->cname());
+        mgb_log_warn(
+                "memory allocation failed for var %s; try defragmenting", var->cname());
         defrag(var, *cninfo_ptr, size);
         alloc_direct(var, storage, size);
     });
 }
 
-void VarDevMemDefragmenter::defrag(VarNode* req_var,
-                                   const CompNodeInfo& cn_info,
-                                   size_t extra_size) {
+void VarDevMemDefragmenter::defrag(
+        VarNode* req_var, const CompNodeInfo& cn_info, size_t extra_size) {
     // pause all other comp nodes before calling defrag_impl()
-    auto exec_env = ComputingGraphImpl::downcast(req_var->owner_graph())
-                            ->current_exec_env();
+    auto exec_env =
+            ComputingGraphImpl::downcast(req_var->owner_graph())->current_exec_env();
     mgb_assert(exec_env);
     exec_env->pause_exec();
     m_mem_mgr->owner_graph()->event().signal_inplace<event::BeforeMemDefrag>();
@@ -82,9 +79,8 @@ void VarDevMemDefragmenter::defrag(VarNode* req_var,
     MGB_FINALLY(exec_env->resume_exec(););
 }
 
-void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
-                                        const CompNodeInfo& cn_info,
-                                        size_t extra_size) {
+void VarDevMemDefragmenter::defrag_impl(
+        VarNode* req_var, const CompNodeInfo& cn_info, size_t extra_size) {
     ThinHashMap<MemAllocPlan::Chunk*, ChunkInfo> chunkinfo;
     VarNodeSet non_movable_vars;
     if (!m_move_safe_oprs.count(req_var->owner_opr())) {
@@ -141,8 +137,9 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
                 // of owner_var have already been executed, but its tensor
                 // storage should not be released until the refcnt of chunk
                 // decreasing to zero (see release_chunk() for more details)
-                mgb_assert(tensor.storage().comp_node_valid() &&
-                    tensor.layout().eq_layout(mem_plan.layout()));
+                mgb_assert(
+                        tensor.storage().comp_node_valid() &&
+                        tensor.layout().eq_layout(mem_plan.layout()));
                 tensor.storage({});
             }
         } else {
@@ -157,10 +154,10 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
     CompNode::sync_all();
 
     CompNode::try_coalesce_all_free_memory();
-    mgb_log_debug("var defragment: vars=%zu chunks=%zu tot_size=%.3fMiB "
+    mgb_log_debug(
+            "var defragment: vars=%zu chunks=%zu tot_size=%.3fMiB "
             "refcnt_mismatch=%zu current_free=%.3fMiB",
-            nr_var, chunkinfo.size(), tot_size / 1024.0 / 1024,
-            nr_refcnt_mismatch,
+            nr_var, chunkinfo.size(), tot_size / 1024.0 / 1024, nr_refcnt_mismatch,
             cn.get_mem_status_bytes().second / 1024.0 / 1024);
 
     auto&& allocator = m_mem_mgr->static_device_memory_manager()->allocator();
@@ -170,8 +167,7 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
     size_t offset = 0;
     for (auto&& i : chunkinfo) {
         DeviceTensorStorage storage{cn};
-        allocator.alloc_dynamic(i.second.readers.at(0), storage,
-                                i.first->size());
+        allocator.alloc_dynamic(i.second.readers.at(0), storage, i.first->size());
         storage.copy_from(i.second.value, i.first->size());
         offset += get_aligned_power2(i.first->size(), alignment);
         for (auto var : i.second.readers) {
@@ -185,8 +181,7 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
         }
         auto owner_var = i.first->owner_var;
         if (!owner_var->mem_plan().valid()) {
-            owner_var->m_dev_tensor.reset(
-                storage, owner_var->mem_plan().layout());
+            owner_var->m_dev_tensor.reset(storage, owner_var->mem_plan().layout());
         }
     }
     mgb_assert(offset + extra_size == tot_size);
@@ -196,4 +191,3 @@ void VarDevMemDefragmenter::defrag_impl(VarNode* req_var,
 #endif  // MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

@@ -46,7 +46,6 @@ TEST_F(ROCM, BATCHED_MATRIX_MUL) {
         }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen
-

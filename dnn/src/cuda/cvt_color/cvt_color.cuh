@@ -69,17 +69,15 @@ namespace cvt_color {
 
 typedef unsigned char uchar;
 
-void cvt_color_8u_proxy(const uchar* src, uchar* dst, const size_t src_rows,
-                        const size_t src_cols, const size_t src_step,
-                        const size_t dst_rows, const size_t dst_cols,
-                        const size_t dst_step, const uint32_t mode,
-                        cudaStream_t stream);
+void cvt_color_8u_proxy(
+        const uchar* src, uchar* dst, const size_t src_rows, const size_t src_cols,
+        const size_t src_step, const size_t dst_rows, const size_t dst_cols,
+        const size_t dst_step, const uint32_t mode, cudaStream_t stream);
 
-void cvt_color_32f_proxy(const float* src, float* dst, const size_t src_rows,
-                         const size_t src_cols, const size_t src_step,
-                         const size_t dst_rows, const size_t dst_cols,
-                         const size_t dst_step, const uint32_t mode,
-                         cudaStream_t stream);
+void cvt_color_32f_proxy(
+        const float* src, float* dst, const size_t src_rows, const size_t src_cols,
+        const size_t src_step, const size_t dst_rows, const size_t dst_cols,
+        const size_t dst_step, const uint32_t mode, cudaStream_t stream);
 
 }  // namespace cvt_color
 }  // namespace cuda

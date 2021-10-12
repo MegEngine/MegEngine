@@ -179,8 +179,7 @@ void inverse_mat(value_type* A, value_type* B, uint32_t n) {
 /// C = A * B
 /// A, B must point to memory space different from C
 template <class value_type>
-void mat_mult(const value_type* A, const value_type* B, value_type* C,
-              uint32_t n) {
+void mat_mult(const value_type* A, const value_type* B, value_type* C, uint32_t n) {
 #define AT(A, i, j) A[(i)*n + (j)]
     memset(C, 0, n * n * sizeof(value_type));
     for (uint32_t k = 0; k < n; k++) {
@@ -192,8 +191,7 @@ void mat_mult(const value_type* A, const value_type* B, value_type* C,
 }
 
 template <class value_type>
-void transpose_mat(const value_type* A, value_type* B, uint32_t rows,
-                   uint32_t cols) {
+void transpose_mat(const value_type* A, value_type* B, uint32_t rows, uint32_t cols) {
     for (uint32_t i = 0; i < rows; i++)
         for (uint32_t j = 0; j < cols; j++)
             B[j * rows + i] = A[i * cols + j];
@@ -203,9 +201,9 @@ void transpose_mat(const value_type* A, value_type* B, uint32_t rows,
  * C_{dim0xdim2} = A_{dim0xdim1} * B_{dim1xdim2}
  */
 template <class value_type>
-void mat_mult_non_square(const value_type* A, const value_type* B,
-                         value_type* C, uint8_t dim0, uint32_t dim1,
-                         uint32_t dim2) {
+void mat_mult_non_square(
+        const value_type* A, const value_type* B, value_type* C, uint8_t dim0,
+        uint32_t dim1, uint32_t dim2) {
     memset(C, 0, dim0 * dim2 * sizeof(value_type));
     for (uint32_t k = 0; k < dim1; k++)
         for (uint32_t i = 0; i < dim0; i++)
@@ -223,8 +221,7 @@ void mat_mult_non_square(const value_type* A, const value_type* B,
  * @param buf sizeof (rows + cols + cols) * cols
  */
 template <class value_type>
-void pseudo_inverse_mat(value_type* A, uint32_t rows, uint32_t cols,
-                        value_type* buf) {
+void pseudo_inverse_mat(value_type* A, uint32_t rows, uint32_t cols, value_type* buf) {
     uint32_t &n = rows, &m = cols;
 
     value_type *B = buf,                       // m x n, A^T
@@ -247,8 +244,9 @@ void pseudo_inverse_mat(value_type* A, uint32_t rows, uint32_t cols,
  * for detail.
  */
 template <class value_type>
-void solve_pseudo(value_type* A, uint32_t rows, uint32_t cols,
-                  const value_type* b, value_type* x, value_type* buf) {
+void solve_pseudo(
+        value_type* A, uint32_t rows, uint32_t cols, const value_type* b, value_type* x,
+        value_type* buf) {
     pseudo_inverse_mat(A, rows, cols, buf);
     // A is actual A^{+} now
     mat_mult_non_square(A, b, x, cols, rows, 1);

@@ -13,38 +13,34 @@
 #include "src/common/utils.h"
 #include "src/cuda/utils.h"
 
-
 #include "./cuda_computing_context.hpp"
 
 using namespace megcore;
 using namespace megcore::cuda;
 
-CUDAComputingContext::CUDAComputingContext(megcoreDeviceHandle_t dev_handle,
-        unsigned int flags, const CudaContext& ctx):
-    ComputingContext(dev_handle, flags),
-    own_stream_{ctx.stream == nullptr},
-    context_{ctx}
-{
+CUDAComputingContext::CUDAComputingContext(
+        megcoreDeviceHandle_t dev_handle, unsigned int flags, const CudaContext& ctx)
+        : ComputingContext(dev_handle, flags),
+          own_stream_{ctx.stream == nullptr},
+          context_{ctx} {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
-    megdnn_throw_if(platform != megcorePlatformCUDA, megdnn_error,
-                    "platform should be CUDA Platform");
+    megdnn_throw_if(
+            platform != megcorePlatformCUDA, megdnn_error,
+            "platform should be CUDA Platform");
     if (own_stream_) {
-        cuda_check(cudaStreamCreateWithFlags(&context_.stream,
-                    cudaStreamNonBlocking));
+        cuda_check(cudaStreamCreateWithFlags(&context_.stream, cudaStreamNonBlocking));
     }
 }
 
-CUDAComputingContext::~CUDAComputingContext()
-{
+CUDAComputingContext::~CUDAComputingContext() {
     if (own_stream_) {
         cuda_check(cudaStreamDestroy(context_.stream));
     }
 }
 
-void CUDAComputingContext::memcpy(void *dst, const void *src,
-        size_t size_in_bytes, megcoreMemcpyKind_t kind)
-{
+void CUDAComputingContext::memcpy(
+        void* dst, const void* src, size_t size_in_bytes, megcoreMemcpyKind_t kind) {
     cudaMemcpyKind cuda_kind;
     switch (kind) {
         case megcoreMemcpyDeviceToHost:
@@ -59,19 +55,15 @@ void CUDAComputingContext::memcpy(void *dst, const void *src,
         default:
             megdnn_throw("bad cuda memcpy kind");
     }
-    cuda_check(cudaMemcpyAsync(dst, src, size_in_bytes, cuda_kind,
-                context_.stream));
+    cuda_check(cudaMemcpyAsync(dst, src, size_in_bytes, cuda_kind, context_.stream));
 }
 
-void CUDAComputingContext::memset(void *dst, int value, size_t size_in_bytes)
-{
+void CUDAComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
     cuda_check(cudaMemsetAsync(dst, value, size_in_bytes, context_.stream));
 }
 
-void CUDAComputingContext::synchronize()
-{
+void CUDAComputingContext::synchronize() {
     cuda_check(cudaStreamSynchronize(context_.stream));
 }
-
 
 // vim: syntax=cpp.doxygen

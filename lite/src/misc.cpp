@@ -130,12 +130,11 @@ void lite::print_log(LiteLogLevel level, const char* format, ...) {
     auto microsec = duration_cast<microseconds>(now - now_trunc_to_sec);
 
     char time_buffer[100];
-    snprintf(time_buffer, log_detail::countof(time_buffer),
-             "%02d:%02d:%02d.%06ld ", now_tm.tm_hour, now_tm.tm_min,
-             now_tm.tm_sec, long(microsec.count()));
+    snprintf(
+            time_buffer, log_detail::countof(time_buffer), "%02d:%02d:%02d.%06ld ",
+            now_tm.tm_hour, now_tm.tm_min, now_tm.tm_sec, long(microsec.count()));
 
-    const char* prefix[] = {"LITE[DBG] ", "LITE[INF] ", "LITE[WRN] ",
-                            "LITE[ERR] "};
+    const char* prefix[] = {"LITE[DBG] ", "LITE[INF] ", "LITE[WRN] ", "LITE[ERR] "};
     std::string out;
     out += prefix[int(level)];
     out += time_buffer;

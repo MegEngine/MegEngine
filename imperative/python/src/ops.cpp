@@ -16,11 +16,11 @@
 #include "megbrain/common.h"
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/graph_builder.h"
+#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/opr_attr.h"
-#include "megbrain/imperative/ops/utility.h"
-#include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/rng.h"
+#include "megbrain/imperative/ops/utility.h"
 
 #include <Python.h>
 #include <unordered_map>
@@ -36,46 +36,67 @@ auto normalize_enum(const std::string& in) {
     }
     return ret;
 }
-} // anonymous namespace
+}  // anonymous namespace
 
-#define CATCH_ALL(RETVAL) \
-    catch(py::error_already_set& e) { \
-        e.restore(); \
-        return RETVAL; \
-    } catch(py::builtin_exception& e) { \
-        e.set_error(); \
-        return RETVAL; \
-    } catch(std::exception& e) { \
+#define CATCH_ALL(RETVAL)                              \
+    catch (py::error_already_set & e) {                \
+        e.restore();                                   \
+        return RETVAL;                                 \
+    }                                                  \
+    catch (py::builtin_exception & e) {                \
+        e.set_error();                                 \
+        return RETVAL;                                 \
+    }                                                  \
+    catch (std::exception & e) {                       \
         PyErr_SetString(PyExc_RuntimeError, e.what()); \
-        return RETVAL; \
-    } \
+        return RETVAL;                                 \
+    }
 
 namespace {
-#define PyOp(name) Py##name
+#define PyOp(name)     Py##name
 #define PyOpType(name) PyOp(name)::py_type
 
-#define PyOpDefBegin(name) \
-struct PyOp(name) : PyOpDef { \
-    using Ty = name; \
-    Ty& inst() { return op->cast_final_safe<Ty>(); } \
-    static PyTypeObject py_type;
+#define PyOpDefBegin(name)                               \
+    struct PyOp(name) : PyOpDef {                        \
+        using Ty = name;                                 \
+        Ty& inst() { return op->cast_final_safe<Ty>(); } \
+        static PyTypeObject py_type;
 
 #define PyOpDefEnd(name) \
-}; \
-PyTypeObject PyOpType(name);
+    }                    \
+    ;                    \
+    PyTypeObject PyOpType(name);
 
-#define RETURN_RICHCOMPARE(val1, val2, op)                               \
-    do {                                                                    \
-        switch (op) {                                                       \
-        case Py_EQ: if ((val1) == (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;  \
-        case Py_NE: if ((val1) != (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;  \
-        case Py_LT: if ((val1) < (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;   \
-        case Py_GT: if ((val1) > (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;   \
-        case Py_LE: if ((val1) <= (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;  \
-        case Py_GE: if ((val1) >= (val2)) Py_RETURN_TRUE; Py_RETURN_FALSE;  \
-        default:                                                            \
-            Py_FatalError("Unreachable C code path reached");               \
-        }                                                                   \
+#define RETURN_RICHCOMPARE(val1, val2, op)                        \
+    do {                                                          \
+        switch (op) {                                             \
+            case Py_EQ:                                           \
+                if ((val1) == (val2))                             \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            case Py_NE:                                           \
+                if ((val1) != (val2))                             \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            case Py_LT:                                           \
+                if ((val1) < (val2))                              \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            case Py_GT:                                           \
+                if ((val1) > (val2))                              \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            case Py_LE:                                           \
+                if ((val1) <= (val2))                             \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            case Py_GE:                                           \
+                if ((val1) >= (val2))                             \
+                    Py_RETURN_TRUE;                               \
+                Py_RETURN_FALSE;                                  \
+            default:                                              \
+                Py_FatalError("Unreachable C code path reached"); \
+        }                                                         \
     } while (0)
 
 template <typename T>
@@ -88,26 +109,23 @@ PyObject* py_new_generic(PyTypeObject* type, PyObject*, PyObject*) {
     return obj;
 }
 
-template<typename T, typename SNIFAE=void>
+template <typename T, typename SNIFAE = void>
 struct serialization {
-    static T load(py::object obj) {
-        return py::cast<T>(obj);
-    }
-    template<typename U,
-        typename = std::enable_if_t<std::is_same_v<T, std::decay_t<U>>>>
+    static T load(py::object obj) { return py::cast<T>(obj); }
+    template <
+            typename U, typename = std::enable_if_t<std::is_same_v<T, std::decay_t<U>>>>
     static py::object dump(U&& t) {
         return py::cast(std::forward<U>(t));
     }
 };
 
-
-template<typename T>
+template <typename T>
 void py_dealloc_generic(PyObject* obj) {
     reinterpret_cast<T*>(obj)->op.reset();
     Py_TYPE(obj)->tp_free(obj);
 }
 
-template<typename T, typename U, U T::Ty::*attr>
+template <typename T, typename U, U T::Ty::*attr>
 PyObject* py_get_generic_impl(PyObject* obj, void* /* closure */) {
     auto& op = reinterpret_cast<T*>(obj)->inst();
     return py::cast(op.*attr).release().ptr();
@@ -115,7 +133,7 @@ PyObject* py_get_generic_impl(PyObject* obj, void* /* closure */) {
 #define py_get_generic(name, attr) \
     py_get_generic_impl<PyOp(name), decltype(std::declval<name>().attr), &name::attr>
 
-template<typename T, typename U, U T::Ty::*attr>
+template <typename T, typename U, U T::Ty::*attr>
 int py_set_generic_impl(PyObject* obj, PyObject* value, void* /* closure */) {
     if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the attribute");
@@ -126,34 +144,31 @@ int py_set_generic_impl(PyObject* obj, PyObject* value, void* /* closure */) {
         // TODO: remove this guard which is used for pybind11 implicit conversion
         py::detail::loader_life_support guard{};
         op.*attr = py::cast<U>(py::handle(value));
-    } CATCH_ALL(-1)
+    }
+    CATCH_ALL(-1)
     return 0;
 }
 #define py_set_generic(name, attr) \
     py_set_generic_impl<PyOp(name), decltype(std::declval<name>().attr), &name::attr>
 
 struct PyOpDef {
-    PyObject_HEAD
-    std::shared_ptr<OpDef> op;
+    PyObject_HEAD std::shared_ptr<OpDef> op;
     static PyTypeObject py_type;
     static std::unordered_map<mgb::Typeinfo*, PyTypeObject*> ctype2pytype;
     static PyGetSetDef py_getsetters[];
-    static Py_hash_t tp_hash(PyObject *obj);
-    static PyObject* tp_richcompare(PyObject *self, PyObject *other, int op);
+    static Py_hash_t tp_hash(PyObject* obj);
+    static PyObject* tp_richcompare(PyObject* self, PyObject* other, int op);
     static PyObject* py_repr(PyObject* self) {
-        return py::cast(
-                       reinterpret_cast<PyOpDef*>(self)->op->make_name())
+        return py::cast(reinterpret_cast<PyOpDef*>(self)->op->make_name())
                 .release()
                 .ptr();
     }
-
 };
 PyTypeObject PyOpType(OpDef);
 std::unordered_map<mgb::Typeinfo*, PyTypeObject*> PyOp(OpDef)::ctype2pytype;
 
 PyObject* py_get_scope(PyObject* obj, void* /* closure */) {
-    return py::cast(
-            reinterpret_cast<PyOp(OpDef)*>(obj)->op->scope()).release().ptr();
+    return py::cast(reinterpret_cast<PyOp(OpDef)*>(obj)->op->scope()).release().ptr();
 }
 
 int py_set_scope(PyObject* obj, PyObject* value, void* /* closure */) {
@@ -162,54 +177,53 @@ int py_set_scope(PyObject* obj, PyObject* value, void* /* closure */) {
         return -1;
     }
     try {
-        reinterpret_cast<PyOp(OpDef)*>(obj)->op
-            ->set_scope(py::cast<std::string>(py::handle(value)));
-    } CATCH_ALL(-1)
+        reinterpret_cast<PyOp(OpDef)*>(obj)->op->set_scope(
+                py::cast<std::string>(py::handle(value)));
+    }
+    CATCH_ALL(-1)
     return 0;
 }
 
 PyGetSetDef PyOp(OpDef)::py_getsetters[] = {
-    {const_cast<char*>("scope"), py_get_scope, py_set_scope, "scope", NULL},
-    {NULL}
-};
+        {const_cast<char*>("scope"), py_get_scope, py_set_scope, "scope", NULL},
+        {NULL}};
 
-Py_hash_t PyOp(OpDef)::tp_hash(PyObject *obj) {
-    return static_cast<Py_hash_t>(
-        reinterpret_cast<PyOp(OpDef)*>(obj)->op->hash());
+Py_hash_t PyOp(OpDef)::tp_hash(PyObject* obj) {
+    return static_cast<Py_hash_t>(reinterpret_cast<PyOp(OpDef)*>(obj)->op->hash());
 }
 
-PyObject* PyOp(OpDef)::tp_richcompare(PyObject *self, PyObject *other, int op) {
+PyObject* PyOp(OpDef)::tp_richcompare(PyObject* self, PyObject* other, int op) {
     bool same = reinterpret_cast<PyOp(OpDef)*>(self)->op->is_same(
-        *reinterpret_cast<PyOp(OpDef)*>(other)->op);
+            *reinterpret_cast<PyOp(OpDef)*>(other)->op);
     if (op == Py_EQ || op == Py_NE) {
         RETURN_RICHCOMPARE(same, true, op);
     }
     Py_RETURN_NOTIMPLEMENTED;
 }
 
-template<typename T>
+template <typename T>
 struct EnumTrait;
 
-#define PyEnumHead \
-    static_assert(std::is_enum_v<T>); \
-    PyObject_HEAD \
-    T value; \
-    constexpr static const char *name = EnumTrait<T>::name; \
-    static PyTypeObject* type; \
-    static const char* members[]; \
-    static std::unordered_map<std::string, T> mem2value; \
+#define PyEnumHead                                          \
+    static_assert(std::is_enum_v<T>);                       \
+    PyObject_HEAD T value;                                  \
+    constexpr static const char* name = EnumTrait<T>::name; \
+    static PyTypeObject* type;                              \
+    static const char* members[];                           \
+    static std::unordered_map<std::string, T> mem2value;    \
     static PyObject* pyobj_insts[];
 
-template<typename T>
+template <typename T>
 struct EnumWrapper {
-    PyEnumHead
-    std::string to_string() const {
+    PyEnumHead std::string to_string() const {
         return members[static_cast<size_t>(value)];
     }
     static PyObject* py_repr(PyObject* self) {
         return py::cast(
-            std::string(name) + "." + reinterpret_cast<EnumWrapper*>(self)->to_string())
-                .release().ptr();
+                       std::string(name) + "." +
+                       reinterpret_cast<EnumWrapper*>(self)->to_string())
+                .release()
+                .ptr();
     }
 
     static PyObject* py_dump(PyObject* self) {
@@ -218,7 +232,7 @@ struct EnumWrapper {
                 .ptr();
     }
 
-    static PyObject* tp_richcompare(PyObject *self, PyObject *other, int op) {
+    static PyObject* tp_richcompare(PyObject* self, PyObject* other, int op) {
         if (op == Py_EQ || op == Py_NE) {
             T lhs, rhs;
             if (load(other, rhs) && load(self, lhs)) {
@@ -236,8 +250,7 @@ struct EnumWrapper {
             return true;
         }
         if (py::isinstance<py::str>(src)) {
-            auto&& iter = mem2value.find(
-                normalize_enum(py::cast<std::string>(src)));
+            auto&& iter = mem2value.find(normalize_enum(py::cast<std::string>(src)));
             if (iter != mem2value.end()) {
                 value = iter->second;
                 return true;
@@ -256,10 +269,9 @@ struct EnumWrapper {
     }
 };
 
-template<typename T>
+template <typename T>
 struct BitCombinedEnumWrapper {
-    PyEnumHead
-    std::string to_string() const {
+    PyEnumHead std::string to_string() const {
         uint32_t value_int = static_cast<uint32_t>(value);
         if (value_int == 0) {
             return "None";
@@ -279,13 +291,13 @@ struct BitCombinedEnumWrapper {
             return ret;
         }
     }
-    static PyObject* py_new_combined_enum(PyTypeObject* type, PyObject* args, PyObject*) {
+    static PyObject* py_new_combined_enum(
+            PyTypeObject* type, PyObject* args, PyObject*) {
         if (!PyTuple_Size(args)) {
             PyObject* obj = type->tp_alloc(type, 0);
             reinterpret_cast<BitCombinedEnumWrapper*>(obj)->value = T();
             return obj;
-        }
-        else {
+        } else {
             PyObject* input;
             if (!PyArg_ParseTuple(args, "|O", &input)) {
                 return nullptr;
@@ -294,17 +306,20 @@ struct BitCombinedEnumWrapper {
             if (load(input, value)) {
                 return cast(value);
             } else {
-                PyErr_SetString(PyExc_RuntimeError,
-                    mgb::ssprintf("Cannot convert type %s to type %s\n",
-                        input->ob_type->tp_name, name).c_str());
+                PyErr_SetString(
+                        PyExc_RuntimeError,
+                        mgb::ssprintf(
+                                "Cannot convert type %s to type %s\n",
+                                input->ob_type->tp_name, name)
+                                .c_str());
                 return nullptr;
             }
         }
     }
     static PyObject* py_repr(PyObject* self) {
-        return py::cast(
-                reinterpret_cast<BitCombinedEnumWrapper*>(self)->to_string())
-                        .release().ptr();
+        return py::cast(reinterpret_cast<BitCombinedEnumWrapper*>(self)->to_string())
+                .release()
+                .ptr();
     }
 
     static PyObject* py_dump(PyObject* self) {
@@ -320,7 +335,7 @@ struct BitCombinedEnumWrapper {
     }
 
     static PyObject* py_or(PyObject* self, PyObject* other) {
-        if(!(self->ob_type == other->ob_type)){
+        if (!(self->ob_type == other->ob_type)) {
             return PyErr_Format(
                     PyExc_RuntimeError,
                     "Operand in or operator must be the same type.");
@@ -357,8 +372,7 @@ struct BitCombinedEnumWrapper {
             return true;
         }
         if (py::isinstance<py::str>(src)) {
-            auto&& iter = mem2value.find(
-                normalize_enum(py::cast<std::string>(src)));
+            auto&& iter = mem2value.find(normalize_enum(py::cast<std::string>(src)));
             if (iter != mem2value.end()) {
                 value = iter->second;
                 return true;
@@ -367,9 +381,9 @@ struct BitCombinedEnumWrapper {
             }
         }
         if (py::isinstance<py::tuple>(src)) {
-            auto params = py::cast<std::vector<std::string>>(src); 
+            auto params = py::cast<std::vector<std::string>>(src);
             bool first = true;
-            for (auto s : params){
+            for (auto s : params) {
                 auto&& iter = mem2value.find(normalize_enum(s));
                 if (iter != mem2value.end()) {
                     if (first) {
@@ -386,7 +400,7 @@ struct BitCombinedEnumWrapper {
         }
         if (py::isinstance<py::int_>(obj)) {
             auto v = py::cast<std::underlying_type_t<T>>(src);
-            if(v > EnumTrait<T>::max) {
+            if (v > EnumTrait<T>::max) {
                 return false;
             }
             value = static_cast<T>(v);
@@ -409,24 +423,19 @@ struct BitCombinedEnumWrapper {
     }
 };
 
-template<typename T>
-struct serialization<T,
-        std::enable_if_t<std::is_enum_v<std::decay_t<T>>>> {
+template <typename T>
+struct serialization<T, std::enable_if_t<std::is_enum_v<std::decay_t<T>>>> {
     static T load(py::object obj) {
         auto caster = pybind11::detail::type_caster<T>();
         if (caster.load(obj, true)) {
             return caster;
         } else {
-                PyErr_SetString(PyExc_RuntimeError,
-                 "load faild \n");
-                return caster;
+            PyErr_SetString(PyExc_RuntimeError, "load faild \n");
+            return caster;
         }
     }
-    static py::object dump(T t) {
-        return py::cast(t).attr("dump")();
-    }
+    static py::object dump(T t) { return py::cast(t).attr("dump")(); }
 };
-
 
 void _init_py_op_def(py::module m) {
     using py_op = PyOp(OpDef);
@@ -453,7 +462,7 @@ struct PyOpBase : PyOpDef {
         auto* obj = type->tp_alloc(type, 0);
         if (obj) {
             auto* self = reinterpret_cast<PyOpBase*>(obj);
-            new(&self->op) decltype(self->op);
+            new (&self->op) decltype(self->op);
         }
         return obj;
     }
@@ -481,7 +490,7 @@ void _init_py_op_base(py::module m) {
 #include "opdef.cpy.inl"
 
 #undef CATCH_ALL
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace PYBIND11_NAMESPACE {
 namespace detail {
@@ -504,9 +513,9 @@ handle type_caster<OpDef>::cast(const OpDef& op, return_value_policy, handle) {
     PyTypeObject* pytype;
     auto& c2p = PyOp(OpDef)::ctype2pytype;
     auto&& iter = c2p.find(op.dyn_typeinfo());
-    if (iter != c2p.end()) { // FIXME: should always meet this condition
+    if (iter != c2p.end()) {  // FIXME: should always meet this condition
         pytype = iter->second;
-    } else { // which means unregistered op type, jsut make it as an opaque op type
+    } else {  // which means unregistered op type, jsut make it as an opaque op type
         // currently, only OprAttr goes into this branch
         pytype = &PyOpType(OpDef);
     }
@@ -516,26 +525,26 @@ handle type_caster<OpDef>::cast(const OpDef& op, return_value_policy, handle) {
     return py::handle(obj);
 }
 
-#define ENUM_CASTER_IMPL(T) \
-bool type_caster<T>::load(handle src, bool) { \
-    return EnumWrapper<T>::load(src, value); \
-} \
-handle type_caster<T>::cast(const T& value, return_value_policy, handle) { \
-    return EnumWrapper<T>::cast(value); \
-}
+#define ENUM_CASTER_IMPL(T)                                                    \
+    bool type_caster<T>::load(handle src, bool) {                              \
+        return EnumWrapper<T>::load(src, value);                               \
+    }                                                                          \
+    handle type_caster<T>::cast(const T& value, return_value_policy, handle) { \
+        return EnumWrapper<T>::cast(value);                                    \
+    }
 FOR_EACH_ENUM_PARAM(ENUM_CASTER_IMPL)
 
-#define BIT_COMBINED_ENUM_CASTER_IMPL(T) \
-bool type_caster<T>::load(handle src, bool) { \
-    return BitCombinedEnumWrapper<T>::load(src, value); \
-} \
-handle type_caster<T>::cast(const T& value, return_value_policy, handle) { \
-    return BitCombinedEnumWrapper<T>::cast(value); \
-}
+#define BIT_COMBINED_ENUM_CASTER_IMPL(T)                                       \
+    bool type_caster<T>::load(handle src, bool) {                              \
+        return BitCombinedEnumWrapper<T>::load(src, value);                    \
+    }                                                                          \
+    handle type_caster<T>::cast(const T& value, return_value_policy, handle) { \
+        return BitCombinedEnumWrapper<T>::cast(value);                         \
+    }
 FOR_EACH_BIT_COMBINED_ENUM_PARAM(BIT_COMBINED_ENUM_CASTER_IMPL)
 
-} // detail
-} // PYBIND11_NAMESPACE
+}  // namespace detail
+}  // namespace PYBIND11_NAMESPACE
 
 void init_ops(py::module m) {
     _init_py_op_def(m);
@@ -543,22 +552,26 @@ void init_ops(py::module m) {
     INIT_ALL_OP(m)
 
     m.def("new_rng_handle", &rng::new_handle);
-    m.def("delete_rng_handle", [](size_t handle){
-        // RNG op might execute after handle released due to async dispatch, so
-        // we need sync before delete a handle to avoid memory leak or use-after-free
-        if(python::interpreter_for_py->check_available()){
-            python::interpreter_for_py->sync();
-        }
-        mgb::CompNode::sync_all();
-        py_task_q.wait_all_task_finish();
-        rng::delete_handle(handle);
-    }, py::call_guard<py::gil_scoped_release>());
+    m.def(
+            "delete_rng_handle",
+            [](size_t handle) {
+                // RNG op might execute after handle released due to async dispatch, so
+                // we need sync before delete a handle to avoid memory leak or
+                // use-after-free
+                if (python::interpreter_for_py->check_available()) {
+                    python::interpreter_for_py->sync();
+                }
+                mgb::CompNode::sync_all();
+                py_task_q.wait_all_task_finish();
+                rng::delete_handle(handle);
+            },
+            py::call_guard<py::gil_scoped_release>());
     m.def("set_global_rng_seed", &rng::set_global_rng_seed);
     m.def("get_global_rng_seed", &rng::get_global_rng_seed);
     m.def("get_rng_handle_compnode", &rng::get_rng_handle_compnode);
 
     struct PySubgraphBuilder {
-        explicit PySubgraphBuilder(std::string name) : name{name}{}
+        explicit PySubgraphBuilder(std::string name) : name{name} {}
         std::string name;
         std::shared_ptr<Subgraph> graph_storage = std::make_shared<Subgraph>();
         std::shared_ptr<UniqueKey> graph_key = std::make_shared<UniqueKey>();
@@ -572,83 +585,94 @@ void init_ops(py::module m) {
     };
 
     py::class_<PySubgraphBuilder>(m, "SubgraphBuilder")
-        .def(py::init<std::string>())
-        .def("input", [](PySubgraphBuilder& self){
-            auto var = self.next_var++;
-            self.graph.inputs.push_back(var);
-            return var;
-        })
-        .def("apply", [](PySubgraphBuilder& self, std::shared_ptr<OpDef> op, Subgraph::vars_t inputs, size_t nr_outputs){
-            Subgraph::vars_t outputs;
-            for (size_t i = 0; i < nr_outputs; ++i) {
-                outputs.push_back(self.next_var++);
-            }
-            self.graph.exprs.push_back({op, inputs, outputs});
-            return outputs;
-        })
-        .def("apply_const", [](PySubgraphBuilder& self, py::object value, mgb::DType dtype, mgb::CompNode cn){
-            auto var = self.next_var++;
-            mgb::HostTensorND hvalue(cn);
-            npy::np2tensor(value.cast<py::array>().ptr(), npy::Meth::copy_into(&hvalue), dtype);
-            self.graph.constants.push_back({var, Tensor::make(hvalue)});
-            return var;
-        })
-        .def("outputs", [](PySubgraphBuilder& self, Subgraph::vars_t outputs){
-            self.graph.outputs = outputs;
-            self.output_grad_mask.resize(outputs.size(), true);
-        })
-        .def("outputs_has_grad", [](PySubgraphBuilder& self, mgb::SmallVector<bool> outputs_has_grad){
-            mgb_assert(self.graph.outputs.size() == self.output_grad_mask.size());
-            self.output_grad_mask = outputs_has_grad;
-        })
-        .def("get", [](PySubgraphBuilder& self){
-            return (std::shared_ptr<OpDef>)self.build();
-        })
-        .def("compile", [](PySubgraphBuilder& self, int gopt_level){
-            return (std::shared_ptr<OpDef>)CompiledOp::make(self.build(), gopt_level);
-        });
-    
+            .def(py::init<std::string>())
+            .def("input",
+                 [](PySubgraphBuilder& self) {
+                     auto var = self.next_var++;
+                     self.graph.inputs.push_back(var);
+                     return var;
+                 })
+            .def("apply",
+                 [](PySubgraphBuilder& self, std::shared_ptr<OpDef> op,
+                    Subgraph::vars_t inputs, size_t nr_outputs) {
+                     Subgraph::vars_t outputs;
+                     for (size_t i = 0; i < nr_outputs; ++i) {
+                         outputs.push_back(self.next_var++);
+                     }
+                     self.graph.exprs.push_back({op, inputs, outputs});
+                     return outputs;
+                 })
+            .def("apply_const",
+                 [](PySubgraphBuilder& self, py::object value, mgb::DType dtype,
+                    mgb::CompNode cn) {
+                     auto var = self.next_var++;
+                     mgb::HostTensorND hvalue(cn);
+                     npy::np2tensor(
+                             value.cast<py::array>().ptr(),
+                             npy::Meth::copy_into(&hvalue), dtype);
+                     self.graph.constants.push_back({var, Tensor::make(hvalue)});
+                     return var;
+                 })
+            .def("outputs",
+                 [](PySubgraphBuilder& self, Subgraph::vars_t outputs) {
+                     self.graph.outputs = outputs;
+                     self.output_grad_mask.resize(outputs.size(), true);
+                 })
+            .def("outputs_has_grad",
+                 [](PySubgraphBuilder& self, mgb::SmallVector<bool> outputs_has_grad) {
+                     mgb_assert(
+                             self.graph.outputs.size() == self.output_grad_mask.size());
+                     self.output_grad_mask = outputs_has_grad;
+                 })
+            .def("get",
+                 [](PySubgraphBuilder& self) {
+                     return (std::shared_ptr<OpDef>)self.build();
+                 })
+            .def("compile", [](PySubgraphBuilder& self, int gopt_level) {
+                return (std::shared_ptr<OpDef>)CompiledOp::make(
+                        self.build(), gopt_level);
+            });
+
     auto custom = submodule(m, "_custom");
     init_custom(custom);
 }
 
-#define CUSTOM_CASE_TO_PARSE_NON_LIST(dyn_type, static_type)                \
-    case custom::ParamDynType::dyn_type: {                                  \
-        param_val = py::handle(kv.second).cast<static_type>();              \
-        break;                                                              \
+#define CUSTOM_CASE_TO_PARSE_NON_LIST(dyn_type, static_type)   \
+    case custom::ParamDynType::dyn_type: {                     \
+        param_val = py::handle(kv.second).cast<static_type>(); \
+        break;                                                 \
     }
 
-#define CUSTOM_CASE_TO_PARSE_LIST(dyn_type, static_type)                    \
-    case custom::ParamDynType::dyn_type: {                             \
-        auto pyvals = py::handle(kv.second).cast<py::list>();               \
-        static_type vals;                                                   \
-        using basic_type =                                                  \
-            custom::get_vector_template_arg_type<static_type>::type;        \
-        for (auto &pyval: pyvals) {                                         \
-            vals.push_back(py::handle(pyval).cast<basic_type>());           \
-        }                                                                   \
-        param_val = vals;                                                   \
-        break;                                                              \
+#define CUSTOM_CASE_TO_PARSE_LIST(dyn_type, static_type)                            \
+    case custom::ParamDynType::dyn_type: {                                          \
+        auto pyvals = py::handle(kv.second).cast<py::list>();                       \
+        static_type vals;                                                           \
+        using basic_type = custom::get_vector_template_arg_type<static_type>::type; \
+        for (auto& pyval : pyvals) {                                                \
+            vals.push_back(py::handle(pyval).cast<basic_type>());                   \
+        }                                                                           \
+        param_val = vals;                                                           \
+        break;                                                                      \
     }
 
-PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
+PyObject* make_custom_op(PyObject* self, PyObject** args, Py_ssize_t nargs) {
 #if MGB_CUSTOM_OP
     auto op_name = py::handle(args[0]).cast<std::string>();
     auto kwargs = py::handle(args[1]).cast<py::dict>();
 
     std::shared_ptr<OpDef> opdef = CustomOpDefFactory::inst()->create_opdef(op_name);
-    auto &custom_opdef = static_cast<mgb::imperative::CustomOpDef&>(*opdef);
-    auto &param = custom_opdef.param();
+    auto& custom_opdef = static_cast<mgb::imperative::CustomOpDef&>(*opdef);
+    auto& param = custom_opdef.param();
 
-    for (auto &&kv: kwargs) {
+    for (auto&& kv : kwargs) {
         std::string param_name = py::handle(kv.first).cast<std::string>();
         std::string type_name = py::handle(kv.second).ptr()->ob_type->tp_name;
-        
+
         if (!param.exist(param_name)) {
             mgb_log_warn(
-                "op %s have no param named %s, ignore this param parsed from python",
-                op_name.c_str(), param_name.c_str()
-            );
+                    "op %s have no param named %s, ignore this param parsed from "
+                    "python",
+                    op_name.c_str(), param_name.c_str());
             continue;
         }
 
@@ -661,9 +685,8 @@ PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
             CUSTOM_FOR_STRING_LIST_PARAMTYPE(CUSTOM_CASE_TO_PARSE_LIST)
             default: {
                 mgb_assert(
-                    false, "param dtype of %s:%s is invalid",
-                    op_name.c_str(), param_name.c_str()
-                );
+                        false, "param dtype of %s:%s is invalid", op_name.c_str(),
+                        param_name.c_str());
             }
         }
     }
@@ -672,10 +695,12 @@ PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
     pytype = &PyOpType(OpDef);
     PyObject* obj = pytype->tp_alloc(pytype, 0);
     reinterpret_cast<PyOp(OpDef)*>(obj)->op = opdef;
-    
+
     return obj;
 #else
-    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(
+            false,
+            "Custom Op is disabled now, please build megengine with Custom Op open");
     return nullptr;
 #endif
 }
@@ -683,26 +708,30 @@ PyObject *make_custom_op(PyObject *self, PyObject **args, Py_ssize_t nargs) {
 #undef CUSTOM_CASE_TO_PARSE_LIST
 #undef CUSTOM_CASE_TO_PARSE_NON_LIST
 
-py::list install_custom(const std::string &name, const std::string &path) {
+py::list install_custom(const std::string& name, const std::string& path) {
 #if MGB_CUSTOM_OP
     py::list ret;
-    const auto &ops_in_lib = custom::LibManager::inst()->install(name, path);
-    for (const auto &op: ops_in_lib) {
+    const auto& ops_in_lib = custom::LibManager::inst()->install(name, path);
+    for (const auto& op : ops_in_lib) {
         ret.append(op);
     }
     return ret;
 #else
-    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(
+            false,
+            "Custom Op is disabled now, please build megengine with Custom Op open");
     py::list ret;
     return ret;
 #endif
 }
 
-bool uninstall_custom(const std::string &name) {
+bool uninstall_custom(const std::string& name) {
 #if MGB_CUSTOM_OP
     return custom::LibManager::inst()->uninstall(name);
 #else
-    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(
+            false,
+            "Custom Op is disabled now, please build megengine with Custom Op open");
     return false;
 #endif
 }
@@ -711,23 +740,25 @@ py::list get_custom_op_list(void) {
 #if MGB_CUSTOM_OP
     std::vector<std::string> all_ops = CustomOpDefFactory::inst()->op_list();
     py::list ret;
-    for (auto &op: all_ops) {
+    for (auto& op : all_ops) {
         ret.append(op);
     }
     return ret;
 #else
-    mgb_assert(false, "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(
+            false,
+            "Custom Op is disabled now, please build megengine with Custom Op open");
     py::list ret;
     return ret;
 #endif
 }
 
 #ifndef METH_FASTCALL
-    PyObject* py35_make_custom_op(PyObject* self, PyObject* args) {
-        auto* arr = &PyTuple_GET_ITEM(args, 0);
-        auto size = PyTuple_GET_SIZE(args);
-        return make_custom_op(self, arr, size);
-    };
+PyObject* py35_make_custom_op(PyObject* self, PyObject* args) {
+    auto* arr = &PyTuple_GET_ITEM(args, 0);
+    auto size = PyTuple_GET_SIZE(args);
+    return make_custom_op(self, arr, size);
+};
 #endif
 
 void init_custom(pybind11::module m) {
@@ -737,9 +768,9 @@ void init_custom(pybind11::module m) {
 
     static PyMethodDef method_def = {
 #ifdef METH_FASTCALL
-        "_make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
+            "_make_custom_op", (PyCFunction)make_custom_op, METH_FASTCALL, ""
 #else
-        "_make_custom_op", (PyCFunction)py35_make_custom_op, METH_VARARGS, ""
+            "_make_custom_op", (PyCFunction)py35_make_custom_op, METH_VARARGS, ""
 #endif
     };
     auto* func = PyCFunction_NewEx(&method_def, nullptr, nullptr);

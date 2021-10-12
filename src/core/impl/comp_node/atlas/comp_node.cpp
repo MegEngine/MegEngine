@@ -31,7 +31,6 @@ using namespace mgb;
 #include <acl/acl.h>
 #include <limits>
 
-
 using AtlasCompNodeImpl = AtlasCompNode::CompNodeImpl;
 
 /* ===================== AtlasCompNodeImpl  ===================== */
@@ -101,32 +100,28 @@ public:
 
     void free_host(void* ptr) { MGB_ATLAS_CHECK(aclrtFreeHost(ptr)); }
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         activate();
 #if MGB_USE_ATLAS_ASYNC_API
-        MGB_ATLAS_CHECK(aclrtMemcpyAsync(host_ptr, size, device_ptr, size,
-                                         ACL_MEMCPY_DEVICE_TO_HOST,
-                                         m_env.atlas_env().stream));
+        MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST,
+                m_env.atlas_env().stream));
 #else
-        MGB_ATLAS_CHECK(aclrtMemcpy(host_ptr, size, device_ptr, size,
-                                    ACL_MEMCPY_DEVICE_TO_HOST));
+        MGB_ATLAS_CHECK(aclrtMemcpy(
+                host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST));
 #endif
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
         activate();
-        MGB_ATLAS_CHECK(aclrtMemcpy(device_ptr, size, host_ptr, size,
-                                    ACL_MEMCPY_HOST_TO_DEVICE));
+        MGB_ATLAS_CHECK(aclrtMemcpy(
+                device_ptr, size, host_ptr, size, ACL_MEMCPY_HOST_TO_DEVICE));
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override;
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override;
 
-    size_t get_mem_addr_alignment() override {
-        return m_env.property().mem_alignment;
-    }
+    size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
 
     std::unique_ptr<Event> create_event(size_t flags) override;
 
@@ -137,8 +132,7 @@ public:
     size_t get_mem_padding() override { return 32; }
 
     std::pair<size_t, size_t> get_mem_status_bytes() override {
-        return {std::numeric_limits<size_t>::max(),
-                std::numeric_limits<size_t>::max()};
+        return {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
     }
 
     Locator locator() override { return m_locator; }
@@ -156,11 +150,8 @@ struct AtlasCompNodeImpl::DeviceInfo {
         dev_num = atlas_env.device;
     }
 
-    void fini() {
-        MGB_ATLAS_CHECK(aclrtResetDevice(dev_num));
-    }
+    void fini() { MGB_ATLAS_CHECK(aclrtResetDevice(dev_num)); }
 };
-
 
 struct AtlasCompNodeImpl::StaticData {
     static constexpr int MAX_NR_COMP_NODE = 1024, MAX_NR_DEVICE = 64;
@@ -184,8 +175,7 @@ struct AtlasCompNodeImpl::StaticData {
 AtlasCompNodeImpl::StaticData* AtlasCompNodeImpl::sd = nullptr;
 Spinlock AtlasCompNodeImpl::sd_mtx;
 
-void AtlasCompNodeImpl::init(const Locator& locator,
-                             const Locator& locator_logical) {
+void AtlasCompNodeImpl::init(const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
@@ -209,7 +199,6 @@ void AtlasCompNodeImpl::init(const Locator& locator,
         ++sd->nr_dev_used;
     }
     m_device_info = dev_info;
-
 }
 
 void AtlasCompNodeImpl::fini() {
@@ -222,44 +211,42 @@ void AtlasCompNodeImpl::fini() {
     m_device_info = nullptr;
 }
 
-void AtlasCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
-                                     const void* src, size_t size) {
+void AtlasCompNodeImpl::peer_copy_to(
+        Impl* dest_impl, void* dest, const void* src, size_t size) {
     if (dest_impl->same_type<AtlasCompNodeImpl>()) {
-        auto&& dst_env =
-                static_cast<AtlasCompNodeImpl*>(dest_impl)->m_env.atlas_env();
+        auto&& dst_env = static_cast<AtlasCompNodeImpl*>(dest_impl)->m_env.atlas_env();
         auto&& src_env = m_env.atlas_env();
         activate();
         if (dst_env.device == src_env.device) {
-            // async d2d use SDMA which is faster than sync ctrl cpu d2d 
-            MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
-                                             ACL_MEMCPY_DEVICE_TO_DEVICE,
-                                             dst_env.stream));
+            // async d2d use SDMA which is faster than sync ctrl cpu d2d
+            MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                    dest, size, src, size, ACL_MEMCPY_DEVICE_TO_DEVICE,
+                    dst_env.stream));
         } else {
-            mgb_throw(MegBrainError,
-                      "Atlas does not support peer copy between differents "
-                      "device.");
+            mgb_throw(
+                    MegBrainError,
+                    "Atlas does not support peer copy between differents "
+                    "device.");
         }
         return;
-
     }
-    mgb_assert(dest_impl->env().property().type == DeviceType::CPU,
-               "cuda peer_copy_to only implemented for CPU");
+    mgb_assert(
+            dest_impl->env().property().type == DeviceType::CPU,
+            "cuda peer_copy_to only implemented for CPU");
     auto copy = [this, dest, src, size]() {
         m_env.atlas_env().activate();
 
 #if MGB_USE_ATLAS_ASYNC_API
         auto stream = m_env.atlas_env().stream;
-        MGB_ATLAS_CHECK(aclrtMemcpyAsync(dest, size, src, size,
-                                         ACL_MEMCPY_DEVICE_TO_HOST,
-                                         m_env.atlas_env().stream));
+        MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST,
+                m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
 #else
-        MGB_ATLAS_CHECK(
-                aclrtMemcpy(dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST));
+        MGB_ATLAS_CHECK(aclrtMemcpy(dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST));
 #endif
     };
     dest_impl->env().cpu_env().dispatch(copy);
-
 }
 
 MemNode AtlasCompNodeImpl::mem_node() {
@@ -285,17 +272,17 @@ void AtlasCompNodeImpl::sync() {
 void AtlasCompNodeImpl::enable_peer_access(int dev0, int dev1) {
     MGB_MARK_USED_VAR(dev0);
     MGB_MARK_USED_VAR(dev1);
-    mgb_throw(MegBrainError,
-              "Atlas does not support peer copy between differents "
-              "device.");
+    mgb_throw(
+            MegBrainError,
+            "Atlas does not support peer copy between differents "
+            "device.");
 }
 
 bool AtlasCompNodeImpl::check_global_finalized() {
     if (!sd) {
         static std::atomic_flag warn_printed = ATOMIC_FLAG_INIT;
         if (!warn_printed.test_and_set()) {
-            mgb_log_debug(
-                    "atlas comp node method called after global finalize");
+            mgb_log_debug("atlas comp node method called after global finalize");
         }
         return true;
     }
@@ -314,7 +301,7 @@ class AtlasCompNode::EventImpl final : public EventImplHelper {
 
     void do_record() override {
         m_comp_node_impl->activate();
-        auto &&env = m_comp_node_impl->m_env.atlas_env();
+        auto&& env = m_comp_node_impl->m_env.atlas_env();
         MGB_ATLAS_CHECK(aclrtRecordEvent(m_atlas_event, env.stream));
     }
 
@@ -336,10 +323,9 @@ class AtlasCompNode::EventImpl final : public EventImplHelper {
     double do_elapsed_time_until(EventImplHelper& end) override {
         m_comp_node_impl->activate();
         float ret = 0.0;
-        MGB_ATLAS_CHECK(aclrtEventElapsedTime(&ret, m_atlas_event,
-                    static_cast<EventImpl&>(end).m_atlas_event));
+        MGB_ATLAS_CHECK(aclrtEventElapsedTime(
+                &ret, m_atlas_event, static_cast<EventImpl&>(end).m_atlas_event));
         return static_cast<double>(ret) * 1e-3;
-
     }
 
     void do_device_wait_by(Impl* cn_impl) override;
@@ -400,8 +386,8 @@ void AtlasCompNode::finalize() {
     }
 }
 
-CompNode::Impl* AtlasCompNode::load_atlas(const Locator& locator,
-                                          const Locator& locator_logical) {
+CompNode::Impl* AtlasCompNode::load_atlas(
+        const Locator& locator, const Locator& locator_logical) {
     auto&& sdptr = AtlasCompNodeImpl::sd;
     {
         MGB_LOCK_GUARD(AtlasCompNodeImpl::sd_mtx);
@@ -429,10 +415,8 @@ CompNode::Impl* AtlasCompNode::load_atlas(const Locator& locator,
     }
 
     if (!available_node) {
-        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
-                   "too many CompNode allocated");
-        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE,
-                   "device number too large");
+        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE, "too many CompNode allocated");
+        mgb_assert(locator.device < sd.MAX_NR_COMP_NODE, "device number too large");
         available_node = &sd.node[sd.nr_node++];
     }
 
@@ -490,9 +474,9 @@ size_t AtlasCompNode::get_device_count() {
         uint32_t dev_cnt = 0;
         auto ret = aclrtGetDeviceCount(&dev_cnt);
         if (ret != ACL_ERROR_NONE) {
-            mgb_log_error("aclrtGetDeviceCountfaild: %s (err %d)",
-                          ::megcore::atlas::get_error_str(ret),
-                          static_cast<int>(ret));
+            mgb_log_error(
+                    "aclrtGetDeviceCountfaild: %s (err %d)",
+                    ::megcore::atlas::get_error_str(ret), static_cast<int>(ret));
             cnt = 0;
         }
         cnt = dev_cnt;

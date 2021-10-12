@@ -22,8 +22,9 @@ namespace {
 using Param = megdnn::Correlation::Param;
 
 template <typename T>
-void forward(_megdnn_tensor_in data1, _megdnn_tensor_in data2,
-             _megdnn_tensor_out dst, const Param& param) {
+void forward(
+        _megdnn_tensor_in data1, _megdnn_tensor_in data2, _megdnn_tensor_out dst,
+        const Param& param) {
     // data1 treat as no-padding tensor
     int total_nr_elems = dst.layout.total_nr_elems();
 
@@ -52,10 +53,8 @@ void forward(_megdnn_tensor_in data1, _megdnn_tensor_in data2,
         int y1 = y * stride1 + kernel_radius + max_displacement - pad_size;
 
         // get offset of center in image2
-        int s2o = (c % neighborhood_grid_width - neighborhood_grid_radius) *
-                  stride2;
-        int s2p = (c / neighborhood_grid_width - neighborhood_grid_radius) *
-                  stride2;
+        int s2o = (c % neighborhood_grid_width - neighborhood_grid_radius) * stride2;
+        int s2p = (c / neighborhood_grid_width - neighborhood_grid_radius) * stride2;
 
         int x2 = x1 + s2o;
         int y2 = y1 + s2p;
@@ -72,20 +71,16 @@ void forward(_megdnn_tensor_in data1, _megdnn_tensor_in data2,
                 for (int channel = 0; channel < bchannels; channel++) {
                     float tmp1 = 0.;
                     float tmp2 = 0.;
-                    if (in_x1 >= 0 && in_x1 < bwidth && in_y1 >= 0 &&
-                        in_y1 < bheight) {
+                    if (in_x1 >= 0 && in_x1 < bwidth && in_y1 >= 0 && in_y1 < bheight) {
                         int idx1 =
-                                ((n * bchannels + channel) * bheight + in_y1) *
-                                        bwidth +
+                                ((n * bchannels + channel) * bheight + in_y1) * bwidth +
                                 in_x1;
                         tmp1 = data1.ptr<T>()[idx1];
                     }
 
-                    if (in_x2 >= 0 && in_x2 < bwidth && in_y2 >= 0 &&
-                        in_y2 < bheight) {
+                    if (in_x2 >= 0 && in_x2 < bwidth && in_y2 >= 0 && in_y2 < bheight) {
                         int idx2 =
-                                ((n * bchannels + channel) * bheight + in_y2) *
-                                        bwidth +
+                                ((n * bchannels + channel) * bheight + in_y2) * bwidth +
                                 in_x2;
                         tmp2 = data2.ptr<T>()[idx2];
                     }
@@ -106,9 +101,9 @@ void forward(_megdnn_tensor_in data1, _megdnn_tensor_in data2,
 }
 
 template <typename T>
-void backward_data1(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
-                    _megdnn_tensor_in data2, _megdnn_tensor_out grad1,
-                    const Param& param) {
+void backward_data1(
+        _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+        _megdnn_tensor_out grad1, const Param& param) {
     // data1 treat as no-padding tensor
     // int total_nr_elems = diff.layout.total_nr_elems();
     int total_nr_elems = grad1.layout.total_nr_elems();
@@ -146,56 +141,50 @@ void backward_data1(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
         // we show cal the x_min,y_min,x_max,y_max of diff for grad1(x,y)
         // for diff_x_min, diff_y_min, x,y at the position of right-down
         // ceil (l - 2*kernel_radius - max_displacement + pad_size) / stride1
-        int xmin = (x + pad_size - 2 * kernel_radius - max_displacement +
-                    round_off_s1 - 1) /
-                           stride1 +
+        int xmin = (x + pad_size - 2 * kernel_radius - max_displacement + round_off_s1 -
+                    1) / stride1 +
                    1 - round_off;
-        int ymin = (y + pad_size - 2 * kernel_radius - max_displacement +
-                    round_off_s1 - 1) /
-                           stride1 +
+        int ymin = (y + pad_size - 2 * kernel_radius - max_displacement + round_off_s1 -
+                    1) / stride1 +
                    1 - round_off;
         // floor (l - max_displacement + pad_size) / stride1
-        int xmax = (x + pad_size - max_displacement + round_off_s1) / stride1 -
-                   round_off;
-        int ymax = (y + pad_size - max_displacement + round_off_s1) / stride1 -
-                   round_off;
+        int xmax =
+                (x + pad_size - max_displacement + round_off_s1) / stride1 - round_off;
+        int ymax =
+                (y + pad_size - max_displacement + round_off_s1) / stride1 - round_off;
 
         float sum = 0.;
-        if (xmax >= 0 && ymax >= 0 && (xmin <= twidth - 1) &&
-            (ymin <= theight - 1)) {
+        if (xmax >= 0 && ymax >= 0 && (xmin <= twidth - 1) && (ymin <= theight - 1)) {
             xmin = max(0, xmin);
             xmax = min(twidth - 1, xmax);
 
             ymin = max(0, ymin);
             ymax = min(theight - 1, ymax);
 
-            for (int p = -neighborhood_grid_radius;
-                 p <= neighborhood_grid_radius; p++) {
-                for (int o = -neighborhood_grid_radius;
-                     o <= neighborhood_grid_radius; o++) {
+            for (int p = -neighborhood_grid_radius; p <= neighborhood_grid_radius;
+                 p++) {
+                for (int o = -neighborhood_grid_radius; o <= neighborhood_grid_radius;
+                     o++) {
                     // Get bottom1 data:
                     int s2o = stride2 * o;
                     int s2p = stride2 * p;
                     int x2 = x + s2p, y2 = y + s2o;
 
-                    int idx2 =
-                            ((n * bchannels + c) * bheight + y2) * bwidth + x2;
+                    int idx2 = ((n * bchannels + c) * bheight + y2) * bwidth + x2;
                     float tmp2 = 0.;
 
                     if (x2 >= 0 && x2 < bwidth && y2 >= 0 && y2 < bheight) {
                         tmp2 = data2.ptr<T>()[idx2];
                     }
 
-                    int op = (p + neighborhood_grid_radius) *
-                                     neighborhood_grid_width +
+                    int op = (p + neighborhood_grid_radius) * neighborhood_grid_width +
                              (o + neighborhood_grid_radius);
                     int diff_channels_offset = (n * tchannels + op);
 
                     for (int diff_y = ymin; diff_y <= ymax; diff_y++) {
                         for (int diff_x = xmin; diff_x <= xmax; diff_x++) {
                             int idxtopdiff =
-                                    (diff_channels_offset * theight + diff_y) *
-                                            twidth +
+                                    (diff_channels_offset * theight + diff_y) * twidth +
                                     diff_x;
 
                             if (param.is_multiply) {
@@ -217,9 +206,9 @@ void backward_data1(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
 }
 
 template <typename T>
-void backward_data2(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
-                    _megdnn_tensor_in data2, _megdnn_tensor_out grad2,
-                    const Param& param) {
+void backward_data2(
+        _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+        _megdnn_tensor_out grad2, const Param& param) {
     // data1 treat as no-padding tensor
     int total_nr_elems = grad2.layout.total_nr_elems();
 
@@ -247,10 +236,9 @@ void backward_data2(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
 
         T sum = T(0.f);
 
-        for (int p = -neighborhood_grid_radius; p <= neighborhood_grid_radius;
-             p++) {
-            for (int o = -neighborhood_grid_radius;
-                 o <= neighborhood_grid_radius; o++) {
+        for (int p = -neighborhood_grid_radius; p <= neighborhood_grid_radius; p++) {
+            for (int o = -neighborhood_grid_radius; o <= neighborhood_grid_radius;
+                 o++) {
                 int s2o = o * stride2;
                 int s2p = p * stride2;
 
@@ -260,19 +248,17 @@ void backward_data2(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
                 const int round_off = ROUND_OFF;
                 const int round_off_s1 = stride1 * round_off;
 
-                int xmin = (x1 + pad_size - 2 * kernel_radius -
-                            max_displacement + round_off_s1 - 1) /
+                int xmin = (x1 + pad_size - 2 * kernel_radius - max_displacement +
+                            round_off_s1 - 1) /
                                    stride1 +
                            1 - round_off;
-                int ymin = (y1 + pad_size - 2 * kernel_radius -
-                            max_displacement + round_off_s1 - 1) /
+                int ymin = (y1 + pad_size - 2 * kernel_radius - max_displacement +
+                            round_off_s1 - 1) /
                                    stride1 +
                            1 - round_off;
-                int xmax = (x1 + pad_size - max_displacement + round_off_s1) /
-                                   stride1 -
+                int xmax = (x1 + pad_size - max_displacement + round_off_s1) / stride1 -
                            round_off;
-                int ymax = (y1 + pad_size - max_displacement + round_off_s1) /
-                                   stride1 -
+                int ymax = (y1 + pad_size - max_displacement + round_off_s1) / stride1 -
                            round_off;
 
                 if (xmax >= 0 && ymax >= 0 && (xmin <= twidth - 1) &&
@@ -283,22 +269,19 @@ void backward_data2(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
                     ymin = max(0, ymin);
                     ymax = min(theight - 1, ymax);
 
-                    int idx1 =
-                            ((n * bchannels + c) * bheight + y1) * bwidth + x1;
+                    int idx1 = ((n * bchannels + c) * bheight + y1) * bwidth + x1;
                     T tmp1 = T(0.f);
                     if (x1 >= 0 && x1 < bwidth && y1 >= 0 && y1 < bheight) {
                         tmp1 = data1.ptr<T>()[idx1];
                     }
 
-                    int op = (p + neighborhood_grid_radius) *
-                                     neighborhood_grid_width +
+                    int op = (p + neighborhood_grid_radius) * neighborhood_grid_width +
                              (o + neighborhood_grid_radius);
                     int diff_channels_offset = (n * tchannels + op);
                     for (int diff_y = ymin; diff_y <= ymax; diff_y++) {
                         for (int diff_x = xmin; diff_x <= xmax; diff_x++) {
                             int idxtopdiff =
-                                    (diff_channels_offset * theight + diff_y) *
-                                            twidth +
+                                    (diff_channels_offset * theight + diff_y) * twidth +
                                     diff_x;
 
                             if (param.is_multiply) {
@@ -324,30 +307,25 @@ void backward_data2(_megdnn_tensor_in diff, _megdnn_tensor_in data1,
 namespace megdnn {
 namespace naive {
 
-void CorrelationForwardImpl::exec(_megdnn_tensor_in data1,
-                                  _megdnn_tensor_in data2,
-                                  _megdnn_tensor_out dst,
-                                  _megdnn_workspace workspace) {
+void CorrelationForwardImpl::exec(
+        _megdnn_tensor_in data1, _megdnn_tensor_in data2, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(data1.layout, data2.layout, dst.layout, workspace.size);
-#define cb(DType)                                                             \
-    if (data1.layout.dtype == DType()) {                                      \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                         \
-                forward<typename DTypeTrait<DType>::ctype>(data1, data2, dst, \
-                                                           param()));         \
-        return;                                                               \
+#define cb(DType)                                                                \
+    if (data1.layout.dtype == DType()) {                                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<typename DTypeTrait<DType>::ctype>( \
+                data1, data2, dst, param()));                                    \
+        return;                                                                  \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
 }
 
-void CorrelationBackwardData1Impl::exec(_megdnn_tensor_in diff,
-                                        _megdnn_tensor_in data1,
-                                        _megdnn_tensor_in data2,
-                                        _megdnn_tensor_out grad1,
-                                        _megdnn_workspace workspace) {
-    check_exec(diff.layout, data1.layout, data2.layout, grad1.layout,
-               workspace.size);
+void CorrelationBackwardData1Impl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+        _megdnn_tensor_out grad1, _megdnn_workspace workspace) {
+    check_exec(diff.layout, data1.layout, data2.layout, grad1.layout, workspace.size);
 #define cb(DType)                                                  \
     if (diff.layout.dtype == DType()) {                            \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                              \
@@ -360,13 +338,10 @@ void CorrelationBackwardData1Impl::exec(_megdnn_tensor_in diff,
     megdnn_throw("bad dtype");
 }
 
-void CorrelationBackwardData2Impl::exec(_megdnn_tensor_in diff,
-                                        _megdnn_tensor_in data1,
-                                        _megdnn_tensor_in data2,
-                                        _megdnn_tensor_out grad2,
-                                        _megdnn_workspace workspace) {
-    check_exec(diff.layout, data1.layout, data2.layout, grad2.layout,
-               workspace.size);
+void CorrelationBackwardData2Impl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
+        _megdnn_tensor_out grad2, _megdnn_workspace workspace) {
+    check_exec(diff.layout, data1.layout, data2.layout, grad2.layout, workspace.size);
 #define cb(DType)                                                  \
     if (diff.layout.dtype == DType()) {                            \
         MEGDNN_DISPATCH_CPU_KERN_OPR(                              \

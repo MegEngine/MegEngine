@@ -18,9 +18,10 @@ namespace {
 using namespace megdnn;
 using namespace cuda;
 using namespace mesh_indexing;
-KernIndexer get_indexer(const TensorND& origin, const TensorND& indexed,
-                        const MeshBase::IndexDesc& desc, void* error_tracker,
-                        megcore::AsyncErrorInfo* error_info, bool batched) {
+KernIndexer get_indexer(
+        const TensorND& origin, const TensorND& indexed,
+        const MeshBase::IndexDesc& desc, void* error_tracker,
+        megcore::AsyncErrorInfo* error_info, bool batched) {
     int* tmp_ptrs[TensorShape::MAX_NDIM] = {nullptr};
     TensorLayout desc_layouts[TensorShape::MAX_NDIM];
     for (size_t i = 0; i < desc.size(); ++i) {
@@ -34,12 +35,11 @@ KernIndexer get_indexer(const TensorND& origin, const TensorND& indexed,
 }
 
 template <typename ctype, class Opr, bool batched>
-void do_exec(const TensorND& data, const TensorND& value,
-             const MeshBase::IndexDesc& desc, Handle* handle,
-             void* error_tracker) {
+void do_exec(
+        const TensorND& data, const TensorND& value, const MeshBase::IndexDesc& desc,
+        Handle* handle, void* error_tracker) {
     auto error_info = async_error_info(handle);
-    auto indexer =
-            get_indexer(data, value, desc, error_tracker, error_info, batched);
+    auto indexer = get_indexer(data, value, desc, error_tracker, error_info, batched);
 
     auto stream = cuda_stream(handle);
     mesh_indexing::mesh_indexing_proxy<ctype, Opr>(
@@ -53,8 +53,9 @@ namespace cuda {
 
 /* =========================== MeshIndexing ============================ */
 
-void MeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
-                            _megdnn_tensor_out dst, _megdnn_workspace) {
+void MeshIndexingImpl::exec(
+        _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
+        _megdnn_workspace) {
     check_exec(src.layout, dst.layout, desc);
 #define cb(DType)                                                    \
     if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {      \
@@ -70,8 +71,9 @@ void MeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
 
 /* ========================= BatchedMeshIndexing ========================== */
 
-void BatchedMeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
-                                   _megdnn_tensor_out dst, _megdnn_workspace) {
+void BatchedMeshIndexingImpl::exec(
+        _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
+        _megdnn_workspace) {
     check_exec(src.layout, dst.layout, desc);
 
 #define cb(DType)                                                   \
@@ -88,9 +90,9 @@ void BatchedMeshIndexingImpl::exec(_megdnn_tensor_in src, const IndexDesc& desc,
 
 /* ============================ Mesh ============================= */
 
-void IncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                _megdnn_tensor_in value, const IndexDesc& desc,
-                                _megdnn_workspace) {
+void IncrMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace) {
     check_exec(data.layout, value.layout, desc);
 
 #define cb(DType)                                                      \
@@ -107,9 +109,9 @@ void IncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
     megdnn_assert_internal(0);
 }
 
-void SetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                               _megdnn_tensor_in value, const IndexDesc& desc,
-                               _megdnn_workspace) {
+void SetMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace) {
     check_exec(data.layout, value.layout, desc);
 
 #define cb(DType)                                                    \
@@ -126,10 +128,9 @@ void SetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
 }
 
 /* ========================== BatchedMesh ============================= */
-void BatchedIncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                       _megdnn_tensor_in value,
-                                       const IndexDesc& desc,
-                                       _megdnn_workspace) {
+void BatchedIncrMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace) {
     check_exec(data.layout, value.layout, desc);
 
 #define cb(DType)                                                     \
@@ -145,10 +146,9 @@ void BatchedIncrMeshIndexingImpl::exec(_megdnn_tensor_inout data,
     megdnn_assert_internal(0);
 }
 
-void BatchedSetMeshIndexingImpl::exec(_megdnn_tensor_inout data,
-                                      _megdnn_tensor_in value,
-                                      const IndexDesc& desc,
-                                      _megdnn_workspace) {
+void BatchedSetMeshIndexingImpl::exec(
+        _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
+        _megdnn_workspace) {
     check_exec(data.layout, value.layout, desc);
 
 #define cb(DType)                                                   \

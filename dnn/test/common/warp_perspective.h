@@ -9,12 +9,12 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "test/common/rng.h"
 #include "test/common/random_state.h"
+#include "test/common/rng.h"
 #include "test/common/workspace_wrapper.h"
 
-#include "megdnn/oprs/imgproc.h"
 #include "megdnn/opr_param_defs.h"
+#include "megdnn/oprs/imgproc.h"
 
 namespace megdnn {
 namespace test {
@@ -68,9 +68,7 @@ public:
         auto rand_real = [&](double lo, double hi) {
             return rng() / (std::mt19937::max() + 1.0) * (hi - lo) + lo;
         };
-        auto rand_real2 = [&](double range) {
-            return rand_real(-range, range);
-        };
+        auto rand_real2 = [&](double range) { return rand_real(-range, range); };
         dt_float32 res = 0;
         switch (idx) {
             case 0:
@@ -120,10 +118,10 @@ struct TestArg {
     param::WarpPerspective param;
     TensorShape src;
     TensorShape trans;
-	TensorShape mat_idx;
+    TensorShape mat_idx;
     TensorShape dst;
-    TestArg(param::WarpPerspective param_, TensorShape src_, TensorShape trans_, TensorShape mat_idx_,
-            TensorShape dst_)
+    TestArg(param::WarpPerspective param_, TensorShape src_, TensorShape trans_,
+            TensorShape mat_idx_, TensorShape dst_)
             : param(param_), src(src_), trans(trans_), mat_idx(mat_idx_), dst(dst_) {}
 };
 

@@ -16,8 +16,7 @@
 namespace megdnn {
 namespace test {
 
-TEST_F(X86, LRN)
-{
+TEST_F(X86, LRN) {
     Checker<LRNForward> checker(handle());
     checker.execs({{2, 11, 12, 13}, {}});
     for (size_t w = 10; w <= 50; ++w) {
@@ -25,8 +24,7 @@ TEST_F(X86, LRN)
     }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

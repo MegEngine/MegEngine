@@ -13,9 +13,9 @@ namespace nms {
  *
  * See nms_kern.cuh for explanation on the parameters.
  */
-void cpu_kern(size_t nr_boxes, size_t max_output, float overlap_thresh,
-              const float* boxes, uint32_t* out_idx, uint32_t* out_size,
-              void* workspace);
+void cpu_kern(
+        size_t nr_boxes, size_t max_output, float overlap_thresh, const float* boxes,
+        uint32_t* out_idx, uint32_t* out_size, void* workspace);
 
 size_t cpu_kern_workspace(size_t nr_boxes);
 

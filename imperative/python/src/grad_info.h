@@ -27,16 +27,17 @@ struct GradSlotPtr {
     GradSlot* operator->();
 };
 
-struct GradInfo : GradSlotPtr, intrusive_list::Node<GradInfo, intrusive_list::before_t> {
+struct GradInfo : GradSlotPtr,
+                  intrusive_list::Node<GradInfo, intrusive_list::before_t> {
     GradInfo() = default;
     GradInfo(GradInfo&) = default;
     GradInfo(GradInfo&&) = default;
     GradInfo& operator=(GradInfo&) = default;
     GradInfo& operator=(GradInfo&&) = default;
-    GradInfo(const GradInfo& rhs): GradInfo(const_cast<GradInfo&>(rhs)){}
+    GradInfo(const GradInfo& rhs) : GradInfo(const_cast<GradInfo&>(rhs)) {}
     GradInfo& operator=(const GradInfo& rhs) {
         return *this = const_cast<GradInfo&>(rhs);
     }
 };
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

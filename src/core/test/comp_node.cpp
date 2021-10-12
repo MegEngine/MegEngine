@@ -12,11 +12,11 @@
 #include "./comp_node_helper.h"
 
 #include "megbrain/comp_node_env.h"
-#include "megbrain/utils/comp_node_sync_manager.h"
-#include "megbrain/utils/timer.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/system.h"
 #include "megbrain/test/helper.h"
-#include "megbrain/opr/utility.h"
+#include "megbrain/utils/comp_node_sync_manager.h"
+#include "megbrain/utils/timer.h"
 
 #include <chrono>
 #if MGB_HAVE_THREAD
@@ -58,8 +58,9 @@ TEST(TestCompNode, Parse) {
     ASSERT_EQ(L::parse("cpu:default"), make_lc(D::CPU, L::DEVICE_CPU_DEFAULT, 0));
     ASSERT_EQ(L::parse("multithread2:0"), make_lc(D::MULTITHREAD, 0, 2));
     ASSERT_EQ(L::parse("multithread1:3"), make_lc(D::MULTITHREAD, 3, 1));
-    ASSERT_EQ(L::parse("multithread:default:2"),
-              make_lc(D::MULTITHREAD, L::DEVICE_MULTITHREAD_DEFAULT, 2));
+    ASSERT_EQ(
+            L::parse("multithread:default:2"),
+            make_lc(D::MULTITHREAD, L::DEVICE_MULTITHREAD_DEFAULT, 2));
 
     ASSERT_THROW(L::parse("apu"), MegBrainError);
     ASSERT_THROW(L::parse("fpgbx"), MegBrainError);
@@ -91,11 +92,13 @@ TEST(TestCompNode, SetDefaultDev) {
     L::set_unspec_device_type(CUDA);
 
     auto run = [](int device) {
-        ASSERT_EQ(CompNode::load("xpu").locator(),
+        ASSERT_EQ(
+                CompNode::load("xpu").locator(),
                 L::parse("gpu" + std::to_string(device)));
     };
     auto run_cpu = [](int device) {
-        ASSERT_EQ(CompNode::load("cpux").locator(),
+        ASSERT_EQ(
+                CompNode::load("cpux").locator(),
                 L::parse("cpu" + std::to_string(device)));
     };
 
@@ -108,7 +111,8 @@ TEST(TestCompNode, SetDefaultDev) {
         run_cpu(2);
         L::set_device_map(CPU, -1, 1);
         run_cpu(1);
-    } MGB_FINALLY({
+    }
+    MGB_FINALLY({
         L::set_unspec_device_type(orig_dt.type);
         L::set_device_map(CUDA, -1, orig_gpu.device);
         L::set_device_map(CPU, -1, orig_cpu.device);
@@ -117,8 +121,7 @@ TEST(TestCompNode, SetDefaultDev) {
 }
 
 TEST(TestCompNode, Load) {
-    auto cn0 = CompNode::load("xpux"),
-         cn1 = CompNode::load("cpux");
+    auto cn0 = CompNode::load("xpux"), cn1 = CompNode::load("cpux");
     ASSERT_EQ(CompNode::DeviceType::UNSPEC, cn0.locator_logical().type);
     ASSERT_EQ(CompNode::DeviceType::CPU, cn1.locator_logical().type);
     ASSERT_EQ(CompNode::load("cpux"), cn1);
@@ -150,8 +153,7 @@ TEST(TestCompNode, Load) {
     ASSERT_EQ(CompNode::load("cpu1"), cnp);
     ASSERT_EQ(CompNode::load("cpu2"), cnq);
     if (check_gpu_available(2)) {
-        auto cn2 = CompNode::load("gpux"),
-             cn3 = CompNode::load("gpu1");
+        auto cn2 = CompNode::load("gpux"), cn3 = CompNode::load("gpu1");
         ASSERT_EQ(CompNode::DeviceType::CUDA, cn2.locator_logical().type);
         ASSERT_NE(cn2, cn3);
         ASSERT_EQ(CompNode::load("gpux"), cn2);
@@ -169,8 +171,7 @@ TEST(TestCompNode, FreeAfterFinalize) {
     CompNode::finalize();
     for (size_t i = 0; i < CompNode::NR_DEVICE_TYPE; ++i) {
         auto type = static_cast<CompNode::DeviceType>(i);
-        if (!check_device_type_avaiable(type) ||
-            !CompNode::get_device_count(type))
+        if (!check_device_type_avaiable(type) || !CompNode::get_device_count(type))
             continue;
         auto cn = CompNode::load(CompNode::Locator{type, -1, {0}});
         auto ptr = cn.alloc_device(123);
@@ -183,20 +184,21 @@ TEST(TestCompNode, CPUDispatchSync) {
     REQUIRE_THREAD();
     constexpr int LOOP = 160, tot_threads = 8;
     std::atomic_int started_threads{0};
-    auto worker = [&](int *shared_cnt, CompNode dest) {
+    auto worker = [&](int* shared_cnt, CompNode dest) {
         int nr_call = 0;
         RNGxorshf rng{next_rand_seed()};
         auto func = [&rng, &nr_call, shared_cnt]() {
-            ++ nr_call;
-            ++ *shared_cnt;
+            ++nr_call;
+            ++*shared_cnt;
             int volatile cnt = 0;
             while (rng() % 20)
-                ++ cnt;
+                ++cnt;
         };
-        auto &&env = CompNodeEnv::from_comp_node(dest).cpu_env();
-        ++ started_threads;
-        while (started_threads.load() != tot_threads);
-        for (int i = 0; i < LOOP; ++ i) {
+        auto&& env = CompNodeEnv::from_comp_node(dest).cpu_env();
+        ++started_threads;
+        while (started_threads.load() != tot_threads)
+            ;
+        for (int i = 0; i < LOOP; ++i) {
             env.dispatch(func);
             dest.sync();
             ASSERT_EQ(i + 1, nr_call);
@@ -205,12 +207,12 @@ TEST(TestCompNode, CPUDispatchSync) {
     auto cn0 = CompNode::load("cpu0"), cn1 = CompNode::load("cpu1");
     int cnt0 = 0, cnt1 = 0;
     std::vector<std::thread> wk_threads;
-    for (int i = 0; i < tot_threads / 2; ++ i) {
+    for (int i = 0; i < tot_threads / 2; ++i) {
         wk_threads.emplace_back(worker, &cnt0, cn0);
         wk_threads.emplace_back(worker, &cnt1, cn1);
     }
 
-    for (auto &&i: wk_threads)
+    for (auto&& i : wk_threads)
         i.join();
 
     ASSERT_EQ(LOOP * tot_threads / 2, cnt0);
@@ -229,7 +231,7 @@ TEST(TestCompNodeCPU, CoreAffinity) {
     CompNodeEnv::from_comp_node(cn0).cpu_env().dispatch(empty_task);
     cn0.sync();
 
-    auto binding1 = [&](size_t ) { data1 = 20; };
+    auto binding1 = [&](size_t) { data1 = 20; };
     CompNodeEnv::from_comp_node(cn1).cpu_env().set_affinity(binding1);
     CompNodeEnv::from_comp_node(cn1).cpu_env().dispatch(empty_task);
     cn1.sync();
@@ -288,8 +290,7 @@ TEST(TestCompNode, CPU_MULTI_THREAD) {
 TEST(TestCompNodeCuda, MemNode) {
     REQUIRE_GPU(2);
 
-    auto cn00 = CompNode::load("gpu0"),
-         cn1 = CompNode::load("gpu1"),
+    auto cn00 = CompNode::load("gpu0"), cn1 = CompNode::load("gpu1"),
          cn01 = CompNode::load("gpu0:1");
     ASSERT_EQ(cn00, CompNode::load("gpu0"));
     ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
@@ -299,10 +300,8 @@ TEST(TestCompNodeCuda, MemNode) {
 TEST(TestCompNodeCuda, Uid) {
     REQUIRE_GPU(2);
 
-    auto cn00 = CompNode::load("gpu0"),
-         cn1 = CompNode::load("gpu1"),
-         cn01 = CompNode::load("gpu0:0"),
-         cn02 = CompNode::load("gpu0:2");
+    auto cn00 = CompNode::load("gpu0"), cn1 = CompNode::load("gpu1"),
+         cn01 = CompNode::load("gpu0:0"), cn02 = CompNode::load("gpu0:2");
     ASSERT_EQ(cn00, CompNode::load("gpu0"));
     ASSERT_EQ(cn00.get_uid(), cn01.get_uid());
     ASSERT_NE(cn00.get_uid(), cn02.get_uid());
@@ -311,16 +310,14 @@ TEST(TestCompNodeCuda, Uid) {
 
 TEST(TestCompNodeCuda, set_prealloc_config) {
     CompNode::set_prealloc_config(
-        1024, 1024, 256 * 1024 * 1024,
-        4, CompNode::DeviceType::CUDA);
+            1024, 1024, 256 * 1024 * 1024, 4, CompNode::DeviceType::CUDA);
 }
 
 #if MGB_ROCM
 TEST(TestCompNodeROCm, MemNode) {
     REQUIRE_AMD_GPU(2);
 
-    auto cn00 = CompNode::load("rocm0"),
-         cn1 = CompNode::load("rocm1"),
+    auto cn00 = CompNode::load("rocm0"), cn1 = CompNode::load("rocm1"),
          cn01 = CompNode::load("rocm0:1");
     ASSERT_EQ(cn00, CompNode::load("rocm0"));
     ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
@@ -331,8 +328,7 @@ TEST(TestCompNodeROCm, MemNode) {
 #if MGB_CAMBRICON
 TEST(TestCompNodeCambricon, MemNode) {
     REQUIRE_CAMBRICON_DEVICE(2);
-    auto cn00 = CompNode::load("cambricon0"),
-         cn1 = CompNode::load("cambricon1"),
+    auto cn00 = CompNode::load("cambricon0"), cn1 = CompNode::load("cambricon1"),
          cn01 = CompNode::load("cambricon0:1");
     ASSERT_EQ(cn00, CompNode::load("cambricon0"));
     ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
@@ -342,8 +338,7 @@ TEST(TestCompNodeCambricon, MemNode) {
 
 #if MGB_ATLAS
 TEST(TestCompNodeAtlas, MemNode) {
-    auto cn00 = CompNode::load("atlas0"),
-         cn1 = CompNode::load("atlas1"),
+    auto cn00 = CompNode::load("atlas0"), cn1 = CompNode::load("atlas1"),
          cn01 = CompNode::load("atlas0:1");
     ASSERT_EQ(cn00, CompNode::load("atlas0"));
     ASSERT_EQ(cn00.mem_node(), cn01.mem_node());
@@ -358,8 +353,7 @@ TEST(TestCompNodeCPU, PhysicalDispatch) {
     L::set_device_map(DT, ID, 0);
     L::set_device_map(DT, ID + 1, 0);
     L::set_device_map(DT, ID + 2, 1);
-    auto cn0 = CompNode::load({DT, ID, {0}}),
-         cn1 = CompNode::load({DT, ID + 1, {0}}),
+    auto cn0 = CompNode::load({DT, ID, {0}}), cn1 = CompNode::load({DT, ID + 1, {0}}),
          cn2 = CompNode::load({DT, ID + 2, {0}});
 #if MGB_HAVE_THREAD
     ASSERT_NE(cn0, cn1);
@@ -388,8 +382,7 @@ TEST(TestCompNodeCPU, PhysicalDispatch) {
 TEST(TestCompNodeCPU, EventWait) {
     REQUIRE_THREAD();
     std::atomic_bool start = ATOMIC_VAR_INIT(false);
-    auto cn0 = CompNode::load("cpu0"),
-         cn1 = CompNode::load("cpu1");
+    auto cn0 = CompNode::load("cpu0"), cn1 = CompNode::load("cpu1");
     auto task0 = [&]() {
         while (!start)
             std::this_thread::yield();
@@ -400,9 +393,7 @@ TEST(TestCompNodeCPU, EventWait) {
     cn1.device_wait_event(*event);
 
     bool succ = false;
-    auto task1 = [&]() {
-        succ = start;
-    };
+    auto task1 = [&]() { succ = start; };
     CompNodeEnv::from_comp_node(cn1).cpu_env().dispatch(task1);
 
     using namespace std::literals;
@@ -416,26 +407,20 @@ TEST(TestCompNodeCPU, EventWait) {
 TEST(TestCompNodeCPU, EventRecOverwrite) {
     REQUIRE_THREAD();
     auto cn = CompNode::load("cpu0");
-    auto dispatcher = CompNodeEnv::from_comp_node(cn).
-        cpu_env().dispatcher.get();
-    auto dispatch = [&](MegcoreCPUDispatcher::Task &&t) {
+    auto dispatcher = CompNodeEnv::from_comp_node(cn).cpu_env().dispatcher.get();
+    auto dispatch = [&](MegcoreCPUDispatcher::Task&& t) {
         dispatcher->dispatch(std::move(t));
     };
     auto ev = cn.create_event();
-    auto wait_atomic = [](std::atomic_bool *var) {
-        while(!var->load())
+    auto wait_atomic = [](std::atomic_bool* var) {
+        while (!var->load())
             std::this_thread::yield();
     };
-    auto set_atomic = [](std::atomic_bool *var) {
-        var->store(true);
-    };
+    auto set_atomic = [](std::atomic_bool* var) { var->store(true); };
 
-    std::atomic_bool
-        s0 = ATOMIC_VAR_INIT(false),
-        s1 = ATOMIC_VAR_INIT(false),
-        t0 = ATOMIC_VAR_INIT(false),
-        t1 = ATOMIC_VAR_INIT(false),
-        t2 = ATOMIC_VAR_INIT(false);
+    std::atomic_bool s0 = ATOMIC_VAR_INIT(false), s1 = ATOMIC_VAR_INIT(false),
+                     t0 = ATOMIC_VAR_INIT(false), t1 = ATOMIC_VAR_INIT(false),
+                     t2 = ATOMIC_VAR_INIT(false);
 
     dispatch(std::bind(set_atomic, &t0));
     dispatch(std::bind(wait_atomic, &s0));
@@ -488,7 +473,7 @@ void test_peer_copy_from_device(const char* comp_node) {
 
     MGB_ASSERT_TENSOR_EQ(result, *c);
 }
-}
+}  // namespace
 
 TEST(TestCompNodeCPU, PeerCopyFromCUDA) {
     REQUIRE_GPU(1);
@@ -546,7 +531,7 @@ TEST(TestCompNodeSyncManager, HostWait) {
         mgb_log_debug("set_ready() called");
     };
 
-    for (int run = 0; run < 2; ++ run) {
+    for (int run = 0; run < 2; ++run) {
         std::thread th_run_set(run_set);
 
         RealTimer timer;
@@ -576,7 +561,7 @@ TEST(TestCompNodeSyncManager, DeviceWait) {
          ev_cn2_begin = cn2.create_event(Event::NEED_TIMER),
          ev_cn2_end = cn2.create_event(Event::NEED_TIMER);
 
-    for (int run = 0; run < 2; ++ run) {
+    for (int run = 0; run < 2; ++run) {
         RealTimer timer;
         mgr.clear_waiter_record();
         ASSERT_THROW(mgr.busy_wait_set_ready_and_get_event(), MegBrainError);
@@ -602,8 +587,7 @@ TEST(TestCompNodeSyncManager, DeviceWait) {
 TEST(TestCompNodeSyncManager, DeviceWaitCross) {
     REQUIRE_THREAD();
     auto cn0 = CompNode::load("xpu0:0"), cn1 = CompNode::load("xpu0:1");
-    auto ev_cn0 = cn0.create_event(),
-         ev_cn1 = cn1.create_event();
+    auto ev_cn0 = cn0.create_event(), ev_cn1 = cn1.create_event();
 
     RealTimer timer;
 
@@ -670,7 +654,7 @@ TEST(TestCompNode, MultipleLoad) {
 
 #if MGB_CAMBRICON
 TEST(TestCompNodeCambricon, D2DCopy) {
-auto run = [](CompNode cn) {
+    auto run = [](CompNode cn) {
         constexpr size_t size = 100 * 1024 * 1024;
         HostTensorND a(cn, {size}, dtype::Int32{}), b;
         auto pa = a.ptr<int>();
@@ -747,7 +731,7 @@ TEST(TestCompNodeCambricon, P2PCopy) {
     run(cn0, cn1);
 }
 #endif
-#endif // MGB_CAMBRICON
+#endif  // MGB_CAMBRICON
 
 #if MGB_ATLAS
 
@@ -785,8 +769,7 @@ class CompNodeDepedentObjectInst final : public CompNodeDepedentObject {
     }
 
 public:
-    CompNodeDepedentObjectInst(int* dst, int* timer)
-            : m_dst{dst}, m_timer{timer} {}
+    CompNodeDepedentObjectInst(int* dst, int* timer) : m_dst{dst}, m_timer{timer} {}
     void chk() { check_not_finalized(); }
 };
 }  // anonymous namespace

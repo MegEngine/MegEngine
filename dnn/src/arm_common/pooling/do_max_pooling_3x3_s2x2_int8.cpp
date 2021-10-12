@@ -10,25 +10,24 @@
  */
 #include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_int8.h"
 
-#include <vector>
 #include <algorithm>
-#include <limits>
-#include "src/arm_common/simd_macro/marm_neon.h"
 #include <cstring>
+#include <limits>
+#include <vector>
+#include "src/arm_common/simd_macro/marm_neon.h"
 
 namespace megdnn {
 namespace arm_common {
 
-void do_max_pooling_3x3_s2x2_int8_NEON(const int8_t* src, int8_t* dst,
-                                       size_t IH_, size_t IW_, size_t OH_,
-                                       size_t OW_, size_t PH_, size_t PW_,
-                                       const WorkspaceBundle& ws) {
+void do_max_pooling_3x3_s2x2_int8_NEON(
+        const int8_t* src, int8_t* dst, size_t IH_, size_t IW_, size_t OH_, size_t OW_,
+        size_t PH_, size_t PW_, const WorkspaceBundle& ws) {
     int IH = IH_, IW = IW_, OH = OH_, OW = OW_, PH = PH_, PW = PW_;
     // cache[i] stores the answer of the i-th line after
     // pooling along the W dimension.
-    int8_t* cache[3] = {static_cast<int8_t*>(ws.get(0)),
-                        static_cast<int8_t*>(ws.get(1)),
-                        static_cast<int8_t*>(ws.get(2))};
+    int8_t* cache[3] = {
+            static_cast<int8_t*>(ws.get(0)), static_cast<int8_t*>(ws.get(1)),
+            static_cast<int8_t*>(ws.get(2))};
     int8_t* odd = static_cast<int8_t*>(ws.get(3));
     int8_t* even = static_cast<int8_t*>(ws.get(4));
 
@@ -127,8 +126,7 @@ void do_max_pooling_3x3_s2x2_int8_NEON(const int8_t* src, int8_t* dst,
                 vst1q_s8(dptr + ow, d);
             }
             for (; ow < OW; ++ow) {
-                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]),
-                                    cache[2][ow]);
+                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]), cache[2][ow]);
             }
         } else {
             std::memcpy(dptr, cache[0], sizeof(int8_t) * OW);
@@ -149,16 +147,15 @@ void do_max_pooling_3x3_s2x2_int8_NEON(const int8_t* src, int8_t* dst,
     }
 }
 
-void do_max_pooling_3x3_s2x2_uint8_NEON(const uint8_t* src, uint8_t* dst,
-                                        size_t IH_, size_t IW_, size_t OH_,
-                                        size_t OW_, size_t PH_, size_t PW_,
-                                        const WorkspaceBundle& ws) {
+void do_max_pooling_3x3_s2x2_uint8_NEON(
+        const uint8_t* src, uint8_t* dst, size_t IH_, size_t IW_, size_t OH_,
+        size_t OW_, size_t PH_, size_t PW_, const WorkspaceBundle& ws) {
     int IH = IH_, IW = IW_, OH = OH_, OW = OW_, PH = PH_, PW = PW_;
     // cache[i] stores the answer of the i-th line after
     // pooling along the W dimension.
-    uint8_t* cache[3] = {static_cast<uint8_t*>(ws.get(0)),
-                         static_cast<uint8_t*>(ws.get(1)),
-                         static_cast<uint8_t*>(ws.get(2))};
+    uint8_t* cache[3] = {
+            static_cast<uint8_t*>(ws.get(0)), static_cast<uint8_t*>(ws.get(1)),
+            static_cast<uint8_t*>(ws.get(2))};
     uint8_t* odd = static_cast<uint8_t*>(ws.get(3));
     uint8_t* even = static_cast<uint8_t*>(ws.get(4));
 
@@ -257,8 +254,7 @@ void do_max_pooling_3x3_s2x2_uint8_NEON(const uint8_t* src, uint8_t* dst,
                 vst1q_u8(dptr + ow, d);
             }
             for (; ow < OW; ++ow) {
-                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]),
-                                    cache[2][ow]);
+                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]), cache[2][ow]);
             }
         } else {
             std::memcpy(dptr, cache[0], sizeof(uint8_t) * OW);

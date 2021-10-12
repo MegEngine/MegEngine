@@ -14,11 +14,12 @@
 namespace megdnn {
 namespace fallback {
 namespace conv1x1 {
-namespace utils{
+namespace utils {
 
 //! get_thread_bundle
-WorkspaceBundle get_thread_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
-                                  size_t matmul_c_size, size_t oc_tile_size) {
+WorkspaceBundle get_thread_bundle(
+        const ConvBiasImpl::NCBKernSizeParam& param, size_t matmul_c_size,
+        size_t oc_tile_size) {
     //! for some cases, matmul result need temp space to store
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
@@ -28,8 +29,7 @@ WorkspaceBundle get_thread_bundle(const ConvBiasImpl::NCBKernSizeParam& param,
                         param.dst_type.enumv() == DTypeEnum::Quantized8Asymm);
     size_t matmul_dst_bytes_per_thread =
             is_dst_8bit ? oc_tile_size * OH * OW * sizeof(param.bias_type) : 0;
-    return WorkspaceBundle{nullptr,
-                           {matmul_c_size, matmul_dst_bytes_per_thread}};
+    return WorkspaceBundle{nullptr, {matmul_c_size, matmul_dst_bytes_per_thread}};
 }
 
 //! get_matmul_kern_param
@@ -47,8 +47,7 @@ MatrixMulImpl::KernSizeParam get_matmul_kern_param(
     auto format = param::MatrixMul::Format::DEFAULT;
     if (param.filter_meta.format == param::ConvBias::Format::NCHW44) {
         format = param::MatrixMul::Format::MK4;
-    } else if (param.filter_meta.format ==
-               param::ConvBias::Format::NCHW44_DOT) {
+    } else if (param.filter_meta.format == param::ConvBias::Format::NCHW44_DOT) {
         format = param::MatrixMul::Format::MK4_DOT;
     }
 

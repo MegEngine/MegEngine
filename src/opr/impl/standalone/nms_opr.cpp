@@ -23,12 +23,11 @@ public:
     virtual ~Kern() = default;
 
     //! get workspace size in bytes
-    virtual size_t get_workspace_size(const NMSKeep* opr,
-                                      const TensorShape& boxes) = 0;
-    virtual void exec(const NMSKeep* opr, const DeviceTensorND& inp,
-                      const DeviceTensorND& out_idx,
-                      const DeviceTensorND& out_size,
-                      const DeviceTensorND& workspace) = 0;
+    virtual size_t get_workspace_size(const NMSKeep* opr, const TensorShape& boxes) = 0;
+    virtual void exec(
+            const NMSKeep* opr, const DeviceTensorND& inp,
+            const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
+            const DeviceTensorND& workspace) = 0;
 };
 
 // f{{{ cuda kernel begins
@@ -54,21 +53,20 @@ class NMSKeep::CUDAKern final : public Kern {
     }
 
 public:
-    size_t get_workspace_size(const NMSKeep* opr,
-                              const TensorShape& boxes) override {
+    size_t get_workspace_size(const NMSKeep* opr, const TensorShape& boxes) override {
         init(opr, boxes);
         return m_workspace_overlap_mask_bytes_align + m_workspace_rm_mask_bytes;
     }
 
-    void exec(const NMSKeep* opr, const DeviceTensorND& inp,
-              const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
-              const DeviceTensorND& workspace) override;
+    void exec(
+            const NMSKeep* opr, const DeviceTensorND& inp,
+            const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
+            const DeviceTensorND& workspace) override;
 };
 
-void NMSKeep::CUDAKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
-                             const DeviceTensorND& out_idx,
-                             const DeviceTensorND& out_size,
-                             const DeviceTensorND& workspace) {
+void NMSKeep::CUDAKern::exec(
+        const NMSKeep* opr, const DeviceTensorND& inp, const DeviceTensorND& out_idx,
+        const DeviceTensorND& out_size, const DeviceTensorND& workspace) {
     // NOTE: input comp node might be different from output comp node (for
     // example, CUDA stream may be modified to overlap computations); a
     // SingleCNOperatorNodeBase is expected to execute on a single comp node,
@@ -80,8 +78,9 @@ void NMSKeep::CUDAKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
 
     // CompNodeEnv contains platform-specific properties of a CompNode
     auto&& cuda_env = CompNodeEnv::from_comp_node(comp_node).cuda_env();
-    mgb_assert(cuda_env.device_prop.warpSize == 32, "invalid warp size: %d",
-               cuda_env.device_prop.warpSize);
+    mgb_assert(
+            cuda_env.device_prop.warpSize == 32, "invalid warp size: %d",
+            cuda_env.device_prop.warpSize);
     auto stream = cuda_env.stream;
 
     init(opr, inp.shape());
@@ -89,31 +88,31 @@ void NMSKeep::CUDAKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
     auto inp_ptr = inp.ptr<float>();
     void* workspace_ptr = workspace.raw_ptr();
     auto dev_overlap_mask = reinterpret_cast<uint64_t*>(workspace_ptr),
-         dev_rm_mask = (uint64_t*)(
-                 workspace.raw_ptr() + m_workspace_overlap_mask_bytes_align);
+         dev_rm_mask =
+                 (uint64_t*)(workspace.raw_ptr() + m_workspace_overlap_mask_bytes_align);
     auto out_idx_ptr = reinterpret_cast<uint32_t*>(out_idx.ptr<int32_t>()),
          out_size_ptr = reinterpret_cast<uint32_t*>(out_size.ptr<int32_t>());
     size_t batch = inp.shape(0), nr_boxes = inp.shape(1);
     if (nr_boxes == 0) {
-        MGB_CUDA_CHECK(cudaMemsetAsync(out_size_ptr, 0, batch*sizeof(uint32_t), stream));
+        MGB_CUDA_CHECK(
+                cudaMemsetAsync(out_size_ptr, 0, batch * sizeof(uint32_t), stream));
         return;
     }
-    MGB_CUDA_CHECK(cudaMemsetAsync(dev_overlap_mask, 0,
-                                   m_workspace_overlap_mask_bytes, stream));
+    MGB_CUDA_CHECK(cudaMemsetAsync(
+            dev_overlap_mask, 0, m_workspace_overlap_mask_bytes, stream));
 
     auto max_output = opr->param().max_output;
 
     for (size_t i = 0; i < batch; ++i) {
-        nms::launch_gen_mask(nr_boxes, opr->param().iou_thresh,
-                             inp_ptr + i * nr_boxes * 4, DIVUP(nr_boxes, 64),
-                             dev_overlap_mask, stream);
+        nms::launch_gen_mask(
+                nr_boxes, opr->param().iou_thresh, inp_ptr + i * nr_boxes * 4,
+                DIVUP(nr_boxes, 64), dev_overlap_mask, stream);
 
-        MGB_CUDA_CHECK(cudaMemsetAsync(dev_rm_mask, 0,
-                                       m_workspace_rm_mask_bytes, stream));
-        nms::launch_gen_indices(nr_boxes, max_output, DIVUP(nr_boxes, 64),
-                                dev_overlap_mask, dev_rm_mask,
-                                out_idx_ptr + i * max_output, out_size_ptr + i,
-                                stream);
+        MGB_CUDA_CHECK(
+                cudaMemsetAsync(dev_rm_mask, 0, m_workspace_rm_mask_bytes, stream));
+        nms::launch_gen_indices(
+                nr_boxes, max_output, DIVUP(nr_boxes, 64), dev_overlap_mask,
+                dev_rm_mask, out_idx_ptr + i * max_output, out_size_ptr + i, stream);
     }
 }
 
@@ -125,19 +124,18 @@ class NMSKeep::CPUKern final : public Kern {
 public:
     ~CPUKern() = default;
 
-    size_t get_workspace_size(const NMSKeep*,
-                              const TensorShape& boxes) override {
+    size_t get_workspace_size(const NMSKeep*, const TensorShape& boxes) override {
         return nms::cpu_kern_workspace(boxes.shape[1]);
     }
 
-    void exec(const NMSKeep* opr, const DeviceTensorND& inp,
-              const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
-              const DeviceTensorND& workspace) override;
+    void exec(
+            const NMSKeep* opr, const DeviceTensorND& inp,
+            const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
+            const DeviceTensorND& workspace) override;
 };
-void NMSKeep::CPUKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
-                            const DeviceTensorND& out_idx,
-                            const DeviceTensorND& out_size,
-                            const DeviceTensorND& workspace) {
+void NMSKeep::CPUKern::exec(
+        const NMSKeep* opr, const DeviceTensorND& inp, const DeviceTensorND& out_idx,
+        const DeviceTensorND& out_size, const DeviceTensorND& workspace) {
     // See CUDAKern::exec for more explanation on output comp nodes.
     CompNode comp_node = out_idx.comp_node();
 
@@ -159,10 +157,10 @@ void NMSKeep::CPUKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
     // be dispatched on a different thread
     auto kern = [=]() {
         for (size_t i = 0; i < batch; ++i) {
-            nms::cpu_kern(nr_boxes, param.max_output, param.iou_thresh,
-                          inp_ptr + i * nr_boxes * 4,
-                          out_idx_ptr + i * param.max_output, out_size_ptr + i,
-                          workspace_ptr);
+            nms::cpu_kern(
+                    nr_boxes, param.max_output, param.iou_thresh,
+                    inp_ptr + i * nr_boxes * 4, out_idx_ptr + i * param.max_output,
+                    out_size_ptr + i, workspace_ptr);
         }
     };
 
@@ -172,16 +170,18 @@ void NMSKeep::CPUKern::exec(const NMSKeep* opr, const DeviceTensorND& inp,
 
 // f}}} cpu kernel ends
 
-NMSKeep::NMSKeep(VarNode* boxes, const Param& param,
-                 const OperatorNodeConfig& config)
+NMSKeep::NMSKeep(
+        VarNode* boxes, const Param& param,
+        const OperatorNodeConfig& config)
         : Super(boxes->owner_graph(),  // owner graph
                 config,                // OperatorNodeConfig
-                "nms_keep",  // opr type name (used for generating opr name)
-                {boxes}      // input vars for generating opr name
+                "nms_keep",            // opr type name (used for generating opr name)
+                {boxes}                // input vars for generating opr name
                 ),
           m_param{param} {
-    mgb_assert(boxes->dtype() == dtype::Float32(),
-               "input should be float32; got %s", boxes->dtype().name());
+    mgb_assert(
+            boxes->dtype() == dtype::Float32(), "input should be float32; got %s",
+            boxes->dtype().name());
     // setup m_kern according to device type
     switch (boxes->comp_node().device_type()) {
 #if MGB_CUDA
@@ -193,13 +193,15 @@ NMSKeep::NMSKeep(VarNode* boxes, const Param& param,
             m_kern = std::make_unique<CPUKern>();
             break;
         default:
-            mgb_throw(MegBrainError, "NMSKeep: unsupported device type: %s",
-                      boxes->comp_node().to_string().c_str());
+            mgb_throw(
+                    MegBrainError, "NMSKeep: unsupported device type: %s",
+                    boxes->comp_node().to_string().c_str());
     }
 
     add_input({boxes});
-    add_output("indices")->dtype(dtype::Int32())
-        .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    add_output("indices")
+            ->dtype(dtype::Int32())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_output("sizes")->dtype(dtype::Int32());
     cg::add_workspace_output(this);  // workspace is also an output var
 
@@ -211,8 +213,8 @@ NMSKeep::NMSKeep(VarNode* boxes, const Param& param,
 // impl dtor after Kern is defined
 NMSKeep::~NMSKeep() noexcept = default;
 
-mgb::SymbolVar NMSKeep::make(SymbolVar boxes, const Param& param,
-                             const OperatorNodeConfig& config) {
+mgb::SymbolVar NMSKeep::make(
+        SymbolVar boxes, const Param& param, const OperatorNodeConfig& config) {
     // SymbolVar is just a wrapper of VarNode*, with overloaded methods such as
     // operator+()
     auto bvar = boxes.node();
@@ -220,11 +222,12 @@ mgb::SymbolVar NMSKeep::make(SymbolVar boxes, const Param& param,
     return boxes.insert_single_output_opr<NMSKeep>(bvar, param, config);
 }
 
-void NMSKeep::get_output_var_shape(const TensorShapeArray& inp_shape,
-                                   TensorShapeArray& out_shape) const {
+void NMSKeep::get_output_var_shape(
+        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
     auto boxes = inp_shape.at(0);
-    mgb_assert(boxes.ndim == 3 && boxes.shape[2] == 4, "invalid box shape: %s",
-               boxes.to_string().c_str());
+    mgb_assert(
+            boxes.ndim == 3 && boxes.shape[2] == 4, "invalid box shape: %s",
+            boxes.to_string().c_str());
 
     // out_shape should match the outputs added in the constructor
     mgb_assert(out_shape.size() == 3);
@@ -241,18 +244,17 @@ void NMSKeep::add_input_layout_constraint() {
 
 void NMSKeep::scn_do_execute() {
     DeviceTensorND empty_workspace;
-    m_kern->exec(this, input(0)->dev_tensor(), output(0)->dev_tensor(),
-                 output(1)->dev_tensor(),
-                 // if workspace size is 0, output(2) would be invalid and its
-                 // dev_tensor() can not be accessed
-                 output(2)->dev_tensor_valid() ? output(2)->dev_tensor()
-                                               : empty_workspace);
+    m_kern->exec(
+            this, input(0)->dev_tensor(), output(0)->dev_tensor(),
+            output(1)->dev_tensor(),
+            // if workspace size is 0, output(2) would be invalid and its
+            // dev_tensor() can not be accessed
+            output(2)->dev_tensor_valid() ? output(2)->dev_tensor() : empty_workspace);
 }
 
 NMSKeep::NodeProp* NMSKeep::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return ret;
 }
 

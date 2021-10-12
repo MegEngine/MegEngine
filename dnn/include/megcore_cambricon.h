@@ -34,8 +34,8 @@ megcoreStatus_t createComputingHandleWithCambriconContext(
         megcoreComputingHandle_t* compHandle, megcoreDeviceHandle_t devHandle,
         unsigned int flags, const CambriconContext& ctx);
 
-megcoreStatus_t getCambriconContext(megcoreComputingHandle_t handle,
-                                    CambriconContext* ctx);
+megcoreStatus_t getCambriconContext(
+        megcoreComputingHandle_t handle, CambriconContext* ctx);
 
 }  // namespace megcore
 
@@ -58,4 +58,3 @@ static inline megcoreStatus_t megcoreGetCNRTQueue(
 #include "megdnn/internal/visibility_epilogue.h"
 
 // vim: syntax=cpp.doxygen
-

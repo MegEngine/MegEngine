@@ -30,8 +30,7 @@ TEST_F(FALLBACK, TYPE_CVT) {
             dtype::Uint8(),
             dtype::QuantizedS8(0.5f),
             dtype::QuantizedS32(0.5f),
-            dtype::Quantized8Asymm(2.0f, static_cast<uint8_t>(3))
-    };
+            dtype::Quantized8Asymm(2.0f, static_cast<uint8_t>(3))};
 
     for (size_t size : {1, 7, 15, 33}) {
         for (auto sdtype : dtypes)
@@ -52,9 +51,8 @@ TEST_F(FALLBACK, BENCHMARK_TYPE_CVT) {
     constexpr size_t RUNS = 10;
     benchmarker_naive.set_times(RUNS);
     benchmarker.set_times(RUNS);
-    auto run = [&](const TensorShapeArray& shapes, DType src_type,
-                   DType dst_type, const char* msg) {
-
+    auto run = [&](const TensorShapeArray& shapes, DType src_type, DType dst_type,
+                   const char* msg) {
         benchmarker_naive.set_dtype(0, src_type).set_dtype(1, dst_type);
         benchmarker.set_dtype(0, src_type).set_dtype(1, dst_type);
         for (auto&& shape : shapes) {

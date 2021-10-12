@@ -18,7 +18,8 @@ struct after_t {};
 struct before_t {};
 struct disable_t {};
 
-template <typename T> struct Tail;
+template <typename T>
+struct Tail;
 
 // invariant: next->prev == this
 template <typename T>
@@ -80,32 +81,47 @@ struct Tail {
     }
 };
 
-template <typename T, typename policy> struct Node;
+template <typename T, typename policy>
+struct Node;
 
 template <typename T>
 class Iterator {
     T* ptr;
 
-    void inc() {ptr = static_cast<T*>(ptr->Head<T>::next);}
-    void dec() {ptr = static_cast<T*>(ptr->Head<T>::prev);}
+    void inc() { ptr = static_cast<T*>(ptr->Head<T>::next); }
+    void dec() { ptr = static_cast<T*>(ptr->Head<T>::prev); }
 
 public:
     Iterator(Head<T>& head) : ptr(static_cast<T*>(head.next)) {}
     Iterator(Tail<T>& tail) : ptr(static_cast<T*>(tail.prev)) {}
 
-    template<typename policy>
+    template <typename policy>
     Iterator(Node<T, policy>& node) : ptr(static_cast<T*>(&node)) {}
 
-    T& operator*() {return *static_cast<T*>(ptr);}
-    T* operator->() {return static_cast<T*>(ptr);}
+    T& operator*() { return *static_cast<T*>(ptr); }
+    T* operator->() { return static_cast<T*>(ptr); }
 
-    operator bool() {return ptr;}
-    bool operator==(const Iterator<T>& rhs) {return ptr == rhs.ptr;}
+    operator bool() { return ptr; }
+    bool operator==(const Iterator<T>& rhs) { return ptr == rhs.ptr; }
 
-    Iterator& operator++() {inc(); return *this;}
-    Iterator& operator--() {dec(); return *this;}
-    Iterator operator++(int) {auto ret = *this; inc(); return ret;}
-    Iterator operator--(int) {auto ret = *this; dec(); return ret;}
+    Iterator& operator++() {
+        inc();
+        return *this;
+    }
+    Iterator& operator--() {
+        dec();
+        return *this;
+    }
+    Iterator operator++(int) {
+        auto ret = *this;
+        inc();
+        return ret;
+    }
+    Iterator operator--(int) {
+        auto ret = *this;
+        dec();
+        return ret;
+    }
 };
 
 // Node in a doubly linked list. Unlike std::list, nodes are not owned by a container.
@@ -172,12 +188,16 @@ public:
         return *this;
     }
 
-    template<typename p = policy,
-             typename = std::enable_if_t<std::is_same_v<p, before_t> || std::is_same_v<p, after_t>, void>>
+    template <
+            typename p = policy,
+            typename = std::enable_if_t<
+                    std::is_same_v<p, before_t> || std::is_same_v<p, after_t>, void>>
     Node(this_t& rhs) : Node(policy{}, rhs) {}
 
-    template<typename p = policy,
-             typename = std::enable_if_t<std::is_same_v<p, before_t> || std::is_same_v<p, after_t>, void>>
+    template <
+            typename p = policy,
+            typename = std::enable_if_t<
+                    std::is_same_v<p, before_t> || std::is_same_v<p, after_t>, void>>
     this_t& operator=(this_t& rhs) {
         insert(policy{}, rhs);
         return *this;
@@ -216,12 +236,10 @@ public:
         }
     }
 
-    void insert_before(tail_t& node) {insert(before_t{}, node);}
-    void insert_after(head_t& node) {insert(after_t{}, node);}
+    void insert_before(tail_t& node) { insert(before_t{}, node); }
+    void insert_after(head_t& node) { insert(after_t{}, node); }
 
-    ~Node() {
-        unlink();
-    }
+    ~Node() { unlink(); }
 };
 
-} // namespace mgb::imperative::python::intrusive_list
+}  // namespace mgb::imperative::python::intrusive_list

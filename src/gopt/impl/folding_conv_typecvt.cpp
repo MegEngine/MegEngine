@@ -47,8 +47,7 @@ const char* FoldingConvBiasTypecvtPass::name() const {
 void FoldingConvBiasTypecvtPass::apply(OptState& opt) const {
     MIDOUT_B("FoldingConvBiasTypecvtPass::apply");
     using DepType = cg::OperatorNodeProp::DepType;
-    ThinHashMap<OperatorNodeBase*,
-                SmallVector<std::pair<OperatorNodeBase*, DepType>>>
+    ThinHashMap<OperatorNodeBase*, SmallVector<std::pair<OperatorNodeBase*, DepType>>>
             readers;
     static const ThinHashSet<Typeinfo*> opr_type_list = {
             opr::TypeCvt::typeinfo(), opr::ConvBias::typeinfo()};
@@ -73,36 +72,32 @@ void FoldingConvBiasTypecvtPass::apply(OptState& opt) const {
              out_dtype_typecvt = typecvt->output(0)->dtype();
         bool is_s82f32 = inp_dtype_typecvt.enumv() == DTypeEnum::QuantizedS8 &&
                          out_dtype_typecvt.enumv() == DTypeEnum::Float32;
-        bool is_s82s4 =
-                inp_dtype_typecvt.enumv() == DTypeEnum::QuantizedS8 &&
-                (out_dtype_typecvt.enumv() == DTypeEnum::QuantizedS4 ||
-                 out_dtype_typecvt.enumv() == DTypeEnum::Quantized4Asymm);
-        bool is_s42s8 =
-                (inp_dtype_typecvt.enumv() == DTypeEnum::QuantizedS4 ||
-                 inp_dtype_typecvt.enumv() == DTypeEnum::Quantized4Asymm) &&
-                out_dtype_typecvt.enumv() == DTypeEnum::QuantizedS8;
+        bool is_s82s4 = inp_dtype_typecvt.enumv() == DTypeEnum::QuantizedS8 &&
+                        (out_dtype_typecvt.enumv() == DTypeEnum::QuantizedS4 ||
+                         out_dtype_typecvt.enumv() == DTypeEnum::Quantized4Asymm);
+        bool is_s42s8 = (inp_dtype_typecvt.enumv() == DTypeEnum::QuantizedS4 ||
+                         inp_dtype_typecvt.enumv() == DTypeEnum::Quantized4Asymm) &&
+                        out_dtype_typecvt.enumv() == DTypeEnum::QuantizedS8;
 
         if (!(is_s82f32 || is_s82s4 || is_s42s8))
             return false;
         opr_set.insert(opr);
 
         // check conv bias
-        auto conv_bias =
-                try_cast_as_op<opr::ConvBias>(typecvt->input(0)->owner_opr());
+        auto conv_bias = try_cast_as_op<opr::ConvBias>(typecvt->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
         auto inp_dtype_conv = conv_bias->input(0)->dtype(),
              out_dtype_conv = conv_bias->input(0)->dtype();
-        bool is_s8nhwc = inp_dtype_conv.enumv() == DTypeEnum::QuantizedS8 &&
-                         out_dtype_conv.enumv() == inp_dtype_conv.enumv() &&
-                         conv_bias->param().format ==
-                                 megdnn::param::ConvBias::Format::NHWC;
+        bool is_s8nhwc =
+                inp_dtype_conv.enumv() == DTypeEnum::QuantizedS8 &&
+                out_dtype_conv.enumv() == inp_dtype_conv.enumv() &&
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NHWC;
         bool is_s4nhwc =
                 (inp_dtype_conv.enumv() == DTypeEnum::QuantizedS4 ||
                  inp_dtype_conv.enumv() == DTypeEnum::Quantized4Asymm) &&
                 out_dtype_conv.enumv() == inp_dtype_conv.enumv() &&
-                conv_bias->param().format ==
-                        megdnn::param::ConvBias::Format::NHWC;
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NHWC;
         if (!(is_s8nhwc || is_s4nhwc))
             return false;
         if (conv_bias->input().size() != 3)
@@ -121,18 +116,18 @@ void FoldingConvBiasTypecvtPass::apply(OptState& opt) const {
         auto src = rewriter.get_var(conv_bias->input(0)),
              filter = rewriter.get_var(conv_bias->input(1)),
              bias = rewriter.get_var(conv_bias->input(2));
-        auto new_bias =
-                (out_dtype_typecvt.enumv() == DTypeEnum::Float32)
-                        ? opr::TypeCvt::make(bias, dtype::Float32()).node()
-                        : bias;
+        auto new_bias = (out_dtype_typecvt.enumv() == DTypeEnum::Float32)
+                              ? opr::TypeCvt::make(bias, dtype::Float32()).node()
+                              : bias;
         auto new_param = conv_bias->param();
         new_param.format = megdnn::param::ConvBias::Format::NHWC;
         auto conv_bias_typecvt = opr::ConvBias::make(
                 src, filter, new_bias, new_param, conv_bias->execution_policy(),
                 OperatorNodeConfig{out_dtype_typecvt});
-        rewriter.replace_var(opr->output(0), conv_bias_typecvt.node(),
-                             mgb_cstr_log("replace conv_bias(NHWC) + typecvt "
-                                          "to conv_bias(NHWC)"));
+        rewriter.replace_var(
+                opr->output(0), conv_bias_typecvt.node(),
+                mgb_cstr_log("replace conv_bias(NHWC) + typecvt "
+                             "to conv_bias(NHWC)"));
         return true;
     };
 

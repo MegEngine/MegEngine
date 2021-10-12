@@ -21,8 +21,8 @@
 using namespace megcore;
 using namespace atlas;
 
-AtlasDeviceContext::AtlasDeviceContext(int device_id, unsigned int flags,
-                                       bool global_initialized)
+AtlasDeviceContext::AtlasDeviceContext(
+        int device_id, unsigned int flags, bool global_initialized)
         : DeviceContext(megcorePlatformAtlas, device_id, flags) {
     if (!global_initialized)
         init_status.init();

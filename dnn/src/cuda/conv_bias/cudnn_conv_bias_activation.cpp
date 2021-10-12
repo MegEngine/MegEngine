@@ -13,10 +13,10 @@
 
 #include "./algo.h"
 
+#include "src/common/conv_bias.h"
 #include "src/cuda/conv_bias/helper.h"
 #include "src/cuda/cudnn_wrapper.h"
 #include "src/cuda/utils.h"
-#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -26,8 +26,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         const SizeArgs& args) const {
     if (args.filter_meta.format != Param::Format::NCHW &&
         args.filter_meta.format != Param::Format::NHWC) {
-        if (!args.src_layout->is_contiguous() ||
-            !args.dst_layout->is_contiguous()) {
+        if (!args.src_layout->is_contiguous() || !args.dst_layout->is_contiguous()) {
             return false;
         }
     }
@@ -44,8 +43,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
     }
 
     if (args.bias_layout->ndim == 0 ||
-        !check_bias_share_in_channel(*(args.bias_layout),
-                                                args.opr->param().format)) {
+        !check_bias_share_in_channel(*(args.bias_layout), args.opr->param().format)) {
         return false;
     }
     auto&& param = args.opr->param();
@@ -111,8 +109,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             return false;
         // sm version
         auto&& device_prop = current_device_prop();
-        if (device_prop.major < 7 ||
-            (device_prop.major == 7 && device_prop.minor < 5))
+        if (device_prop.major < 7 || (device_prop.major == 7 && device_prop.minor < 5))
             return false;
     }
 
@@ -130,11 +127,10 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
             if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
                 return false;
             MEGDNN_FALLTHRU  // XXX: why?
-        case param::ConvBias::NonlineMode::IDENTITY:
-            if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
-                break;
-            if (m_cudnn_enum !=
-                    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM) {
+                    case param::ConvBias::NonlineMode::IDENTITY
+                    : if (args.src_layout->dtype.category() ==
+                          DTypeCategory::QUANTIZED) break;
+            if (m_cudnn_enum != CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM) {
                 // cudnn require algo to
                 // CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
                 // when activation if IDENTITY
@@ -151,8 +147,7 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
     size_t workspace_size;
     auto status = cudnnGetConvolutionForwardWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
-            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum,
-            &workspace_size);
+            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum, &workspace_size);
     return status == CUDNN_STATUS_SUCCESS;
 }
 
@@ -164,11 +159,11 @@ size_t ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::get_workspace_in_bytes(
     size_t workspace_size;
     auto status = cudnnGetConvolutionForwardWorkspaceSize(
             args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
-            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum,
-            &workspace_size);
-    megdnn_assert(status == CUDNN_STATUS_SUCCESS,
-                  "conv fwd get workspace failed: %s; info: %s",
-                  cudnnGetErrorString(status), args.to_string().c_str());
+            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum, &workspace_size);
+    megdnn_assert(
+            status == CUDNN_STATUS_SUCCESS,
+            "conv fwd get workspace failed: %s; info: %s", cudnnGetErrorString(status),
+            args.to_string().c_str());
     if (args.bias_layout && args.bias_layout->dtype != dtype::Float32() &&
         args.src_layout->dtype.category() != DTypeCategory::FLOAT) {
         // cudnn require bias to be float when executing CONFIG_INT
@@ -203,8 +198,7 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         }
     };
 
-    auto src_dtype = args.src_layout->dtype,
-         filter_dtype = args.filter_layout->dtype,
+    auto src_dtype = args.src_layout->dtype, filter_dtype = args.filter_layout->dtype,
          dst_dtype = args.dst_layout->dtype;
     megdnn_assert(
             (src_dtype.category() == dst_dtype.category()) ||
@@ -220,12 +214,12 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
             alpha /= get_scale(args.dst_layout->dtype);
         if (args.z_layout->ndim > 0 &&
             args.z_layout->dtype.category() == DTypeCategory::QUANTIZED) {
-            beta = get_scale(args.z_layout->dtype) /
-                   get_scale(args.dst_layout->dtype);
+            beta = get_scale(args.z_layout->dtype) / get_scale(args.dst_layout->dtype);
         }
         if (args.bias_layout->dtype.category() == DTypeCategory::QUANTIZED) {
-            megdnn_assert(fabs(expected_bias_scale -
-                               get_scale(args.bias_layout->dtype)) < 1e-4);
+            megdnn_assert(
+                    fabs(expected_bias_scale - get_scale(args.bias_layout->dtype)) <
+                    1e-4);
         }
     }
 
@@ -241,8 +235,9 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         float_bias_layout.dtype = dtype::Float32();
         auto bias_size_in_bytes = float_bias_layout.span().dist_byte();
         megdnn_assert(args.workspace.size >= bias_size_in_bytes);
-        cvt->exec({args.bias_tensor->raw_ptr, converted_bias_layout},
-                  TensorND{workspace_ptr, float_bias_layout});
+        cvt->exec(
+                {args.bias_tensor->raw_ptr, converted_bias_layout},
+                TensorND{workspace_ptr, float_bias_layout});
 
         bias_ptr = workspace_ptr;
         workspace_ptr += bias_size_in_bytes;
@@ -254,33 +249,30 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         status = cudnnConvolutionBiasActivationForward(
                 args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
                 args.src_tensor->raw_ptr, D.filter_desc.desc,
-                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc,
-                m_cudnn_enum, workspace_ptr, workspace_size, &beta,
-                D.dst_desc.desc, args.dst_tensor->raw_ptr, D.bias_desc.desc,
-                bias_ptr, D.conv_desc.act_desc, D.dst_desc.desc,
-                args.dst_tensor->raw_ptr);
+                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                workspace_ptr, workspace_size, &beta, D.dst_desc.desc,
+                args.dst_tensor->raw_ptr, D.bias_desc.desc, bias_ptr,
+                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr);
     } else {
         status = cudnnConvolutionBiasActivationForward(
                 args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
                 args.src_tensor->raw_ptr, D.filter_desc.desc,
-                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc,
-                m_cudnn_enum, workspace_ptr, workspace_size, &beta,
-                D.z_desc.desc, args.z_tensor->raw_ptr, D.bias_desc.desc,
-                bias_ptr, D.conv_desc.act_desc, D.dst_desc.desc,
-                args.dst_tensor->raw_ptr);
+                args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                workspace_ptr, workspace_size, &beta, D.z_desc.desc,
+                args.z_tensor->raw_ptr, D.bias_desc.desc, bias_ptr,
+                D.conv_desc.act_desc, D.dst_desc.desc, args.dst_tensor->raw_ptr);
     }
 
-    megdnn_assert(status == CUDNN_STATUS_SUCCESS,
-                  "conv fwd failed: %s; info: %s, algo %s",
-                  cudnnGetErrorString(status), args.to_string().c_str(),
-                  name());
+    megdnn_assert(
+            status == CUDNN_STATUS_SUCCESS, "conv fwd failed: %s; info: %s, algo %s",
+            cudnnGetErrorString(status), args.to_string().c_str(), name());
     // Noline
     switch (args.nonlinear_mode) {
         case param::ConvBias::NonlineMode::RELU:
             break;
         case param::ConvBias::NonlineMode::SIGMOID: {
-            megdnn_assert(args.dst_layout->dtype.category() !=
-                          DTypeCategory::QUANTIZED);
+            megdnn_assert(
+                    args.dst_layout->dtype.category() != DTypeCategory::QUANTIZED);
             auto&& elem_opr = args.handle->create_operator<ElemwiseForward>();
             elem_opr->param().mode = Elemwise::Param::Mode::SIGMOID;
             elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
@@ -289,21 +281,16 @@ void ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::exec(
         case param::ConvBias::NonlineMode::IDENTITY:
             break;
         case param::ConvBias::NonlineMode::H_SWISH: {
-            megdnn_assert(args.dst_layout->dtype.category() ==
-                                  DTypeCategory::QUANTIZED ||
-                          (args.dst_layout->dtype.category() ==
-                                   DTypeCategory::FLOAT &&
-                           args.opr->param().format ==
-                                   param::ConvBias::Format::NCHW4_NCHW));
+            megdnn_assert(
+                    args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED ||
+                    (args.dst_layout->dtype.category() == DTypeCategory::FLOAT &&
+                     args.opr->param().format == param::ConvBias::Format::NCHW4_NCHW));
             if (args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED) {
-                auto&& elem_opr =
-                        args.handle->create_operator<ElemwiseMultiType>();
-                elem_opr->param().mode =
-                        ElemwiseMultiType::Param::Mode::QH_SWISH;
+                auto&& elem_opr = args.handle->create_operator<ElemwiseMultiType>();
+                elem_opr->param().mode = ElemwiseMultiType::Param::Mode::QH_SWISH;
                 elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
             } else {
-                auto&& elem_opr =
-                        args.handle->create_operator<ElemwiseForward>();
+                auto&& elem_opr = args.handle->create_operator<ElemwiseForward>();
                 elem_opr->param().mode = ElemwiseForward::Param::Mode::H_SWISH;
                 elem_opr->exec({*(args.dst_tensor)}, *(args.dst_tensor));
             }

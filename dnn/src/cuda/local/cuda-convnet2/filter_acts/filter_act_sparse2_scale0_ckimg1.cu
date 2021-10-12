@@ -25,7 +25,8 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "filter_act_sparse2.cuh"
@@ -34,6 +35,5 @@ namespace cuda {
 
 FILTER_SPARSE2(false, true)
 
-
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

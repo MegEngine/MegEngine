@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "test/common/benchmarker.h"
 #include "test/common/elemwise_multi_type.h"
+#include "test/common/benchmarker.h"
 #include "test/fallback/fixture.h"
 
 using namespace megdnn;
@@ -39,16 +39,14 @@ TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_BENCHMARK_FMA3_INT16x32x32x32) {
     bench.set_adaptive_benchmark(0.8);
     constexpr size_t A = 32, B = 602, C = 103;
     auto time = bench.execs({{A, B, C}, {1, B, 1}, {1, B, 1}, {}}) * 1e-3;
-    printf("computation: %.2fGFLOPS/s memory: %.2fGiB/s\n",
-           A * B * C * 2 / time * 1e-9,
+    printf("computation: %.2fGFLOPS/s memory: %.2fGiB/s\n", A * B * C * 2 / time * 1e-9,
            (A * B * C * (2 + 4) + B * 8) / time / (1024.0 * 1024.0 * 1024.0));
 }
 
 TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_BENCHMARK_FMA3_IXxf32xf32xI8) {
     Benchmarker<ElemwiseMultiType> bench{handle()};
     bench.set_param({ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8});
-    std::array<DType, 3> src_types{
-            {dtype::Int8{}, dtype::Int16{}, dtype::Int32{}}};
+    std::array<DType, 3> src_types{{dtype::Int8{}, dtype::Int16{}, dtype::Int32{}}};
     bench.set_dtype(1, dtype::Float32());
     bench.set_dtype(2, dtype::Float32());
     UniformIntRNG rng{-100, 100};
@@ -58,8 +56,8 @@ TEST_F(FALLBACK, ELEMWISE_MULTI_TYPE_BENCHMARK_FMA3_IXxf32xf32xI8) {
     for (auto stype : src_types) {
         bench.set_dtype(0, stype);
         auto time = bench.execs({{A, B}, {1, B}, {1, B}, {}}) * 1e-3;
-        printf("stype: %s, computation: %.2fGFLOPS/s memory: %.2fGiB/s\n",
-               stype.name(), A * B * 2 / time * 1e-9,
+        printf("stype: %s, computation: %.2fGFLOPS/s memory: %.2fGiB/s\n", stype.name(),
+               A * B * 2 / time * 1e-9,
                (A * B * (stype.size() + 1) + B * 8) / time /
                        (1024.0 * 1024.0 * 1024.0));
     }

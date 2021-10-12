@@ -10,75 +10,73 @@
  */
 #include "test/cuda/fixture.h"
 
+#include <cuda_runtime_api.h>
+#include "megcore_cuda.h"
 #include "test/common/checker.h"
 #include "test/common/local.h"
 #include "test/cuda/local/local.h"
-#include <cuda_runtime_api.h>
-#include "megcore_cuda.h"
 
 namespace megdnn {
 namespace test {
 
-TEST_F(CUDA, LOCAL_FORWARD)
-{
+TEST_F(CUDA, LOCAL_FORWARD) {
     auto args = local::get_args_for_cuda();
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         Checker<LocalForward> checker(handle_cuda());
         cudaStream_t stream;
-        ASSERT_EQ(megcoreSuccess,
-                megcoreGetCUDAStream(handle_cuda()->megcore_computing_handle(),
-                    &stream));
+        ASSERT_EQ(
+                megcoreSuccess,
+                megcoreGetCUDAStream(
+                        handle_cuda()->megcore_computing_handle(), &stream));
         pollute_shared_mem(stream);
-        checker.set_param(arg.param).exec(TensorShapeArray{
-                arg.sshape(), arg.fshape(), arg.dshape()});
+        checker.set_param(arg.param).exec(
+                TensorShapeArray{arg.sshape(), arg.fshape(), arg.dshape()});
     }
 }
 
-
-
-TEST_F(CUDA, LOCAL_BACKWARD_DATA)
-{
+TEST_F(CUDA, LOCAL_BACKWARD_DATA) {
     using namespace local;
-    //std::vector<TestArg> args;
-    //args.emplace_back(param::Convolution{
+    // std::vector<TestArg> args;
+    // args.emplace_back(param::Convolution{
     //        param::Convolution::Mode::CROSS_CORRELATION,
     //        1, 1, 1, 1},
     //        64, 16, 8, 7, 16, 8, 7, 3, 3);
     auto args = local::get_args_bwd_data_for_cuda();
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         Checker<LocalBackwardData> checker(handle_cuda());
         cudaStream_t stream;
-        ASSERT_EQ(megcoreSuccess,
-                megcoreGetCUDAStream(handle_cuda()->megcore_computing_handle(),
-                    &stream));
+        ASSERT_EQ(
+                megcoreSuccess,
+                megcoreGetCUDAStream(
+                        handle_cuda()->megcore_computing_handle(), &stream));
         pollute_shared_mem(stream);
-        checker.set_param(arg.param).exec(TensorShapeArray{
-                arg.fshape(), arg.dshape(), arg.sshape()});
-        }
+        checker.set_param(arg.param).exec(
+                TensorShapeArray{arg.fshape(), arg.dshape(), arg.sshape()});
+    }
 }
 
-TEST_F(CUDA, LOCAL_BACKWARD_FILTER)
-{
+TEST_F(CUDA, LOCAL_BACKWARD_FILTER) {
     using namespace local;
-    //std::vector<TestArg> args;
-    //args.emplace_back(param::Convolution{
+    // std::vector<TestArg> args;
+    // args.emplace_back(param::Convolution{
     //        param::Convolution::Mode::CROSS_CORRELATION,
     //        1, 1, 1, 1},
     //        64, 16, 8, 7, 16, 8, 7, 3, 3);
     auto args = local::get_args_bwd_filter_for_cuda();
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         Checker<LocalBackwardFilter> checker(handle_cuda());
         cudaStream_t stream;
-        ASSERT_EQ(megcoreSuccess,
-                megcoreGetCUDAStream(handle_cuda()->megcore_computing_handle(),
-                    &stream));
+        ASSERT_EQ(
+                megcoreSuccess,
+                megcoreGetCUDAStream(
+                        handle_cuda()->megcore_computing_handle(), &stream));
         pollute_shared_mem(stream);
-        checker.set_param(arg.param).exec(TensorShapeArray{
-                arg.sshape(), arg.dshape(), arg.fshape()});
+        checker.set_param(arg.param).exec(
+                TensorShapeArray{arg.sshape(), arg.dshape(), arg.fshape()});
     }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

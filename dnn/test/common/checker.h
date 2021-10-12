@@ -70,8 +70,7 @@ protected:
     std::unordered_map<size_t, DType> m_dtype;
     std::unordered_map<size_t, TensorFormat> m_fmt;
     std::set<size_t> m_bypass;
-    float_t m_epsilon = 1e-3, m_max_avg_error = 1e-3,
-            m_max_avg_biased_error = 1e-3;
+    float_t m_epsilon = 1e-3, m_max_avg_error = 1e-3, m_max_avg_biased_error = 1e-3;
     float_t m_perf_check_threshold = -1;
     bool m_perf_check = false;
     ExtraOprImpl m_extra_opr_impl;
@@ -96,43 +95,43 @@ protected:
 
     using OprExec = std::function<void(const TensorValueArray&)>;
 
-    void do_exec_with_testcases(const TensorValueArray& testcase_in,
-                                const TensorValueArray& testcase_out,
-                                const OprExec& exec_opr);
+    void do_exec_with_testcases(
+            const TensorValueArray& testcase_in, const TensorValueArray& testcase_out,
+            const OprExec& exec_opr);
 
-    void do_exec(const TensorLayoutArray& user_layouts,
-                 const TensorLayoutArray& deduced_layouts,
-                 const OprExec& exec_naive, const OprExec& exec_opr);
+    void do_exec(
+            const TensorLayoutArray& user_layouts,
+            const TensorLayoutArray& deduced_layouts, const OprExec& exec_naive,
+            const OprExec& exec_opr);
 
     void enable_contig_naive() { m_enable_contig_naive = true; }
 
-    void copy_tensors_to_device(const TensorValueArray& dest,
-                                const TensorValueArray& src);
-    void copy_tensors_from_device(const TensorValueArray& dest,
-                                  const TensorValueArray& src);
+    void copy_tensors_to_device(
+            const TensorValueArray& dest, const TensorValueArray& src);
+    void copy_tensors_from_device(
+            const TensorValueArray& dest, const TensorValueArray& src);
 
 private:
     std::shared_ptr<TensorValueArray> m_tensors_naive;
 
     void init_naive_values();
-    void check_tensors(const TensorValueArray& expected,
-                       const TensorValueArray& computed);
+    void check_tensors(
+            const TensorValueArray& expected, const TensorValueArray& computed);
 };
 
 template <typename Opr, typename Proxy = OprProxy<Opr>>
 class Checker : public CheckerHelper {
 public:
     using Param = typename Opr::Param;
-    using BeforeExecCallback =
-            std::function<void(Opr*, const TensorValueArray&)>;
+    using BeforeExecCallback = std::function<void(Opr*, const TensorValueArray&)>;
     Checker(Handle* handle, bool check_dispatch = true)
             : CheckerHelper(handle, check_dispatch), m_param(Param()) {}
 
     TensorLayoutArray make_layouts(const TensorShapeArray& shapes) {
         TensorLayoutArray layouts(shapes.size());
         for (size_t i = 0; i < shapes.size(); ++i) {
-            DType dt = (m_dtype.find(i) != m_dtype.end() ? m_dtype[i]
-                                                         : dtype::Float32());
+            DType dt =
+                    (m_dtype.find(i) != m_dtype.end() ? m_dtype[i] : dtype::Float32());
             if (m_fmt.find(i) == m_fmt.end()) {
                 layouts[i] = TensorLayout(shapes[i], dt);
             } else
@@ -165,8 +164,8 @@ public:
         return *this;
     }
 
-    Checker& exect(const TensorValueArray& testcase_in,
-                   const TensorValueArray& testcase_out);
+    Checker& exect(
+            const TensorValueArray& testcase_in, const TensorValueArray& testcase_out);
 
     Checker& set_param(Param param) {
         m_param = param;
@@ -284,8 +283,7 @@ public:
 
     //! set a tensors constraints function, for the purpose of manipulating
     //! tensors when testing.
-    Checker& set_tensors_constraint(
-            const TensorsConstriant& tensor_constraint) {
+    Checker& set_tensors_constraint(const TensorsConstriant& tensor_constraint) {
         m_tensor_constraint = tensor_constraint;
         return *this;
     }
@@ -348,21 +346,21 @@ private:
         const TensorND& v0, const TensorND& v1, float maxerr, float maxerr_avg,
         float maxerr_avg_biased);
 
-#define MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG(v0, v1, maxerr, maxerr_avg,         \
-                                        maxerr_avg_biased)                  \
-    ASSERT_PRED_FORMAT5(::megdnn::test::__assert_tensor_eq, v0, v1, maxerr, \
-                        maxerr_avg, maxerr_avg_biased)
+#define MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG(v0, v1, maxerr, maxerr_avg, maxerr_avg_biased) \
+    ASSERT_PRED_FORMAT5(                                                               \
+            ::megdnn::test::__assert_tensor_eq, v0, v1, maxerr, maxerr_avg,            \
+            maxerr_avg_biased)
 
 #define MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG_ALLOW_INVALID(                        \
         v0, v1, maxerr, maxerr_avg, maxerr_avg_biased)                        \
-    ASSERT_PRED_FORMAT5(::megdnn::test::__assert_tensor_eq_allow_invalid, v0, \
-                        v1, maxerr, maxerr_avg, maxerr_avg_biased)
+    ASSERT_PRED_FORMAT5(                                                      \
+            ::megdnn::test::__assert_tensor_eq_allow_invalid, v0, v1, maxerr, \
+            maxerr_avg, maxerr_avg_biased)
 
 #define MEGDNN_ASSERT_TENSOR_EQ_EPS(v0, v1, maxerr) \
     MEGDNN_ASSERT_TENSOR_EQ_EPS_AVG(v0, v1, maxerr, maxerr, maxerr)
 
-#define MEGDNN_ASSERT_TENSOR_EQ(v0, v1) \
-    MEGDNN_ASSERT_TENSOR_EQ_EPS(v0, v1, 1e-3)
+#define MEGDNN_ASSERT_TENSOR_EQ(v0, v1) MEGDNN_ASSERT_TENSOR_EQ_EPS(v0, v1, 1e-3)
 
 template <typename Opr, typename Proxy>
 void Checker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
@@ -388,16 +386,16 @@ void Checker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
                         static_cast<const TensorShape&>(layout), layout.dtype});
             }
             m_naive_proxy.deduce_layout(opr_naive.get(), contig_layouts);
-            tensors_naive_contig_storage = alloc_tensors(
-                    m_handle_naive.get(), contig_layouts, m_offset);
+            tensors_naive_contig_storage =
+                    alloc_tensors(m_handle_naive.get(), contig_layouts, m_offset);
             contig_values = *tensors_naive_contig_storage;
             //! relayout value to the contig_values
             for (size_t i = 0; i < contig_values.size(); ++i) {
                 if (real_values[i].layout.ndim == 0)
                     continue;
                 real_values[i].layout.format = {};
-                opr_relayout->exec(real_values[i], contig_values[i],
-                                   m_handle_naive.get());
+                opr_relayout->exec(
+                        real_values[i], contig_values[i], m_handle_naive.get());
             }
         }
 
@@ -408,8 +406,8 @@ void Checker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
             for (size_t i = 0; i < contig_values.size(); ++i) {
                 if (real_values[i].layout.ndim == 0)
                     continue;
-                opr_relayout->exec(contig_values[i], real_values[i],
-                                   m_handle_naive.get());
+                opr_relayout->exec(
+                        contig_values[i], real_values[i], m_handle_naive.get());
             }
         }
     };
@@ -425,8 +423,7 @@ void Checker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
 
 template <typename Opr, typename Proxy>
 Checker<Opr, Proxy>& Checker<Opr, Proxy>::exect(
-        const TensorValueArray& testcase_in,
-        const TensorValueArray& testcase_out) {
+        const TensorValueArray& testcase_in, const TensorValueArray& testcase_out) {
     auto opr_cur = this->opr();
     opr_cur->param() = m_param;
     auto exec_opr = [this, opr_cur](const TensorValueArray& values) {
@@ -440,14 +437,14 @@ Checker<Opr, Proxy>& Checker<Opr, Proxy>::exect(
 }
 
 template <typename T, typename U>
-TensorND TensorValue(const TensorShape& shape, T dtype,
-                     std::initializer_list<U> values) {
+TensorND TensorValue(
+        const TensorShape& shape, T dtype, std::initializer_list<U> values) {
     TensorND tensor;
     tensor.layout = {shape, dtype};
-    tensor.raw_ptr =
-            static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
-    megdnn_assert(values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
-                  values.size(), tensor.layout.total_nr_elems());
+    tensor.raw_ptr = static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+    megdnn_assert(
+            values.size() == tensor.layout.total_nr_elems(), "%zu == %zu",
+            values.size(), tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
     for (const auto& v : values) {
         *ptr++ = typename DTypeTrait<T>::ctype(v);
@@ -456,12 +453,10 @@ TensorND TensorValue(const TensorShape& shape, T dtype,
 }
 
 template <typename T, typename U>
-TensorND TensorValueLowbit4(const TensorShape& shape, T dtype,
-                            std::vector<U> values) {
+TensorND TensorValueLowbit4(const TensorShape& shape, T dtype, std::vector<U> values) {
     TensorND tensor;
     tensor.layout = {shape, dtype};
-    tensor.raw_ptr =
-            static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
+    tensor.raw_ptr = static_cast<dt_byte*>(malloc(tensor.layout.span().dist_byte()));
     megdnn_assert(values.size() == tensor.layout.total_nr_elems());
     auto ptr = tensor.ptr<typename DTypeTrait<T>::ctype>();
     auto layout = tensor.layout;
@@ -511,8 +506,7 @@ struct ExecutionPolicyAlgoName {
     ExecutionPolicyAlgoName(const char* name) : name{name} {}
 
     ExecutionPolicyAlgoName(
-            const char* name,
-            const std::vector<ExecutionPolicyAlgoName>& sub_policy)
+            const char* name, const std::vector<ExecutionPolicyAlgoName>& sub_policy)
             : name{name}, sub_policy_names{sub_policy} {}
 };
 /*!
@@ -538,8 +532,7 @@ public:
         ExecutionPolicy ret;
         megdnn_assert(layouts.size() == OprTrait<Opr>::arity);
         auto opr = handle->create_operator<Opr>();
-        opr->param() =
-                Algorithm::deserialize_read_pod<typename Opr::Param>(param);
+        opr->param() = Algorithm::deserialize_read_pod<typename Opr::Param>(param);
         for (auto algo_info :
              AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info_safe(
                      opr.get(), layouts)) {
@@ -564,8 +557,8 @@ public:
             FOREACH_OPR_TYPE_DISPATCH(sub_items, {
                 ExecutionPolicy policy =
                         AlgoChecker<_Opr>::construct_execution_policy_from_name(
-                                policy_name.sub_policy_names[_item_idx],
-                                _item.layouts, _item.param, handle);
+                                policy_name.sub_policy_names[_item_idx], _item.layouts,
+                                _item.param, handle);
                 ret.sub_policy.push_back(policy);
             });
             return ret;
@@ -587,10 +580,10 @@ public:
                     << "algorithm " << m_policy_name.name << " not found";
         }
         if (m_require_algo && *m_require_algo) {
-            auto algo =
-                    OprAlgoProxy::get_algorithm_info_heuristic(opr, layouts);
-            ASSERT_STREQ(opr->get_algorithm_from_desc(m_policy.algo)->name(),
-                         algo.desc.name.c_str());
+            auto algo = OprAlgoProxy::get_algorithm_info_heuristic(opr, layouts);
+            ASSERT_STREQ(
+                    opr->get_algorithm_from_desc(m_policy.algo)->name(),
+                    algo.desc.name.c_str());
         } else {
             opr->execution_policy() = m_policy;
         }
@@ -603,17 +596,17 @@ private:
 };
 
 template <typename Opr>
-void construct_sub_execution_policy_heuristic(ExecutionPolicy& policy,
-                                              const TensorLayoutArray& layouts,
-                                              const std::string& param,
-                                              Handle* handle) {
+void construct_sub_execution_policy_heuristic(
+        ExecutionPolicy& policy, const TensorLayoutArray& layouts,
+        const std::string& param, Handle* handle) {
     megdnn_assert(layouts.size() == OprTrait<Opr>::arity);
     auto opr = handle->create_operator<Opr>();
     opr->param() = Algorithm::deserialize_read_pod<typename Opr::Param>(param);
     if (!policy.algo.valid()) {
-        policy.algo = AlgoProxy<Opr, OprTrait<Opr>::arity>::
-                              get_algorithm_info_heuristic(opr.get(), layouts)
-                                      .desc;
+        policy.algo =
+                AlgoProxy<Opr, OprTrait<Opr>::arity>::get_algorithm_info_heuristic(
+                        opr.get(), layouts)
+                        .desc;
     }
 
     Algorithm* algo = opr->get_algorithm_from_desc(policy.algo);

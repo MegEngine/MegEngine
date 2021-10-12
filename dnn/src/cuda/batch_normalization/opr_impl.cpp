@@ -17,9 +17,8 @@ namespace cuda {
 
 namespace batch_normalization {
 
-BNTensorDescHolder::BNTensorDescHolder(const TensorLayout& x,
-                                       const ParamDim& param_dim,
-                                       const FwdMode& fwd_mode) {
+BNTensorDescHolder::BNTensorDescHolder(
+        const TensorLayout& x, const ParamDim& param_dim, const FwdMode& fwd_mode) {
     TensorShape xy_shape(x);
     Format xy_format = Format::NCHW;
 
@@ -52,8 +51,8 @@ BNTensorDescHolder::BNTensorDescHolder(const TensorLayout& x,
     param_desc.set(xy_desc.desc, bn_mode);
 }
 
-size_t get_reserve_size(const cudnnHandle_t& handle,
-                        const BNTensorDescHolder& tensor_desc) {
+size_t get_reserve_size(
+        const cudnnHandle_t& handle, const BNTensorDescHolder& tensor_desc) {
 #if CUDNN_VERSION >= 7410
     size_t reserve_size;
     cudnn_check(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
@@ -95,59 +94,55 @@ size_t BNForwardImpl::get_workspace_in_bytes(
 
 size_t BNForwardImpl::get_reserve_in_bytes(const TensorLayout& src) {
     BNTensorDescHolder tensor_desc(src, m_param.param_dim, m_param.fwd_mode);
-    return batch_normalization::get_reserve_size(cudnn_handle(this->handle()),
-                                                 tensor_desc);
+    return batch_normalization::get_reserve_size(
+            cudnn_handle(this->handle()), tensor_desc);
 }
 
-void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
-                         _megdnn_tensor_in bn_bias, _megdnn_tensor_out mean,
-                         _megdnn_tensor_out variance,
-                         _megdnn_tensor_out batch_mean,
-                         _megdnn_tensor_out batch_inv_variance,
-                         _megdnn_tensor_out reserve, _megdnn_tensor_out dst,
-                         _megdnn_workspace workspace) {
-    check_exec(src.layout, bn_scale.layout, bn_bias.layout, mean.layout,
-               variance.layout, batch_mean.layout, batch_inv_variance.layout,
-               dst.layout, workspace.size, reserve.layout.access_bytes());
+void BNForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in bn_scale, _megdnn_tensor_in bn_bias,
+        _megdnn_tensor_out mean, _megdnn_tensor_out variance,
+        _megdnn_tensor_out batch_mean, _megdnn_tensor_out batch_inv_variance,
+        _megdnn_tensor_out reserve, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
+    check_exec(
+            src.layout, bn_scale.layout, bn_bias.layout, mean.layout, variance.layout,
+            batch_mean.layout, batch_inv_variance.layout, dst.layout, workspace.size,
+            reserve.layout.access_bytes());
     auto handle = cudnn_handle(this->handle());
-    BNTensorDescHolder tensor_desc(src.layout, m_param.param_dim,
-                                   m_param.fwd_mode);
+    BNTensorDescHolder tensor_desc(src.layout, m_param.param_dim, m_param.fwd_mode);
 
     float alpha = 1.0f, beta = 0.0f;
     switch (m_param.fwd_mode) {
         case param::BN::FwdMode::TRAINING:
 #if CUDNN_VERSION >= 7410
             cudnn_check(cudnnBatchNormalizationForwardTrainingEx(
-                    handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN,
-                    &alpha, &beta,                          // one & zero
+                    handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN, &alpha,
+                    &beta,                                  // one & zero
                     tensor_desc.xy_desc.desc, src.raw_ptr,  // xDesc & x
                     nullptr, nullptr,                       // zDesc & z
                     tensor_desc.xy_desc.desc, dst.raw_ptr,  // yDesc & y
-                    tensor_desc.param_desc.desc,  // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor,
-                    mean.raw_ptr, variance.raw_ptr, m_param.epsilon,
-                    batch_mean.raw_ptr, batch_inv_variance.raw_ptr, nullptr,
-                    workspace.raw_ptr, workspace.size, reserve.raw_ptr,
-                    reserve.layout.access_bytes()));
+                    tensor_desc.param_desc.desc,            // bnScaleBiasMeanVarDesc
+                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
+                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
+                    batch_inv_variance.raw_ptr, nullptr, workspace.raw_ptr,
+                    workspace.size, reserve.raw_ptr, reserve.layout.access_bytes()));
 #else
             cudnn_check(cudnnBatchNormalizationForwardTraining(
                     handle, tensor_desc.bn_mode, &alpha, &beta,
                     tensor_desc.xy_desc.desc, src.raw_ptr,  // xDesc & x
                     tensor_desc.xy_desc.desc, dst.raw_ptr,  // yDesc & y
-                    tensor_desc.param_desc.desc,  // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor,
-                    mean.raw_ptr, variance.raw_ptr, m_param.epsilon,
-                    batch_mean.raw_ptr, batch_inv_variance.raw_ptr));
+                    tensor_desc.param_desc.desc,            // bnScaleBiasMeanVarDesc
+                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
+                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
+                    batch_inv_variance.raw_ptr));
 #endif  // CUDNN_VERSION >= 7410
             break;
         case param::BN::FwdMode::INFERENCE:
             cudnn_check(cudnnBatchNormalizationForwardInference(
                     handle, tensor_desc.bn_mode, &alpha, &beta,
-                    tensor_desc.xy_desc.desc, src.raw_ptr,
-                    tensor_desc.xy_desc.desc, dst.raw_ptr,
-                    tensor_desc.param_desc.desc, bn_scale.raw_ptr,
-                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr,
-                    m_param.epsilon));
+                    tensor_desc.xy_desc.desc, src.raw_ptr, tensor_desc.xy_desc.desc,
+                    dst.raw_ptr, tensor_desc.param_desc.desc, bn_scale.raw_ptr,
+                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr, m_param.epsilon));
             break;
         default:
             megdnn_throw("Unknown forward mode type of batch normalization.");
@@ -181,30 +176,28 @@ size_t BNBackwardImpl::get_workspace_in_bytes(
 
 size_t BNBackwardImpl::get_reserve_in_bytes(const TensorLayout& src) {
     BNTensorDescHolder tensor_desc(src, m_param.param_dim, m_param.fwd_mode);
-    return batch_normalization::get_reserve_size(cudnn_handle(this->handle()),
-                                                 tensor_desc);
+    return batch_normalization::get_reserve_size(
+            cudnn_handle(this->handle()), tensor_desc);
 }
 
-void BNBackwardImpl::exec(_megdnn_tensor_in x, _megdnn_tensor_in dy,
-                          _megdnn_tensor_in saved_batch_mean,
-                          _megdnn_tensor_in saved_batch_inv_variance,
-                          _megdnn_tensor_in bn_scale, _megdnn_tensor_in reserve,
-                          _megdnn_tensor_out d_bn_scale,
-                          _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx,
-                          _megdnn_workspace workspace) {
-    check_exec(x.layout, dy.layout, saved_batch_mean.layout,
-               saved_batch_inv_variance.layout, bn_scale.layout,
-               d_bn_scale.layout, d_bn_bias.layout, dx.layout, workspace.size,
-               reserve.layout.access_bytes());
+void BNBackwardImpl::exec(
+        _megdnn_tensor_in x, _megdnn_tensor_in dy, _megdnn_tensor_in saved_batch_mean,
+        _megdnn_tensor_in saved_batch_inv_variance, _megdnn_tensor_in bn_scale,
+        _megdnn_tensor_in reserve, _megdnn_tensor_out d_bn_scale,
+        _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx,
+        _megdnn_workspace workspace) {
+    check_exec(
+            x.layout, dy.layout, saved_batch_mean.layout,
+            saved_batch_inv_variance.layout, bn_scale.layout, d_bn_scale.layout,
+            d_bn_bias.layout, dx.layout, workspace.size, reserve.layout.access_bytes());
     auto handle = cudnn_handle(this->handle());
-    BNTensorDescHolder tensor_desc(x.layout, m_param.param_dim,
-                                   m_param.fwd_mode);
+    BNTensorDescHolder tensor_desc(x.layout, m_param.param_dim, m_param.fwd_mode);
 
     float alpha = 1.0, beta = 0.0;
 #if CUDNN_VERSION >= 7410
     cudnn_check(cudnnBatchNormalizationBackwardEx(
-            handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN, &alpha, &beta,
-            &alpha, &beta, tensor_desc.xy_desc.desc,
+            handle, tensor_desc.bn_mode, CUDNN_BATCHNORM_OPS_BN, &alpha, &beta, &alpha,
+            &beta, tensor_desc.xy_desc.desc,
             x.raw_ptr,                                      // xDesc & x
             nullptr, nullptr,                               // yDesc & y
             tensor_desc.xy_desc.desc, dy.raw_ptr,           // dyDesc & dy
@@ -213,9 +206,9 @@ void BNBackwardImpl::exec(_megdnn_tensor_in x, _megdnn_tensor_in dy,
             tensor_desc.param_desc.desc, bn_scale.raw_ptr,  // bnScale
             nullptr,                                        // bnBias
             d_bn_scale.raw_ptr, d_bn_bias.raw_ptr,          // dScale, dBias
-            m_param.epsilon, saved_batch_mean.raw_ptr,
-            saved_batch_inv_variance.raw_ptr, nullptr, workspace.raw_ptr,
-            workspace.size, reserve.raw_ptr, reserve.layout.access_bytes()));
+            m_param.epsilon, saved_batch_mean.raw_ptr, saved_batch_inv_variance.raw_ptr,
+            nullptr, workspace.raw_ptr, workspace.size, reserve.raw_ptr,
+            reserve.layout.access_bytes()));
 #else
     cudnn_check(cudnnBatchNormalizationBackward(
             handle, tensor_desc.bn_mode, &alpha, &beta, &alpha, &beta,

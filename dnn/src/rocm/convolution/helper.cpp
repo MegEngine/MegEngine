@@ -10,10 +10,10 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
-#include "./helper.h"
-#include "./forward/algo.h"
 #include "./backward_data/algo.h"
 #include "./backward_filter/algo.h"
+#include "./forward/algo.h"
+#include "./helper.h"
 
 using namespace megdnn;
 using namespace rocm;
@@ -67,24 +67,24 @@ INST(ConvolutionForwardImpl, miopenConvFwdAlgorithm_t);
 INST(ConvolutionBackwardDataImpl, miopenConvBwdDataAlgorithm_t);
 INST(ConvolutionBackwardFilterImpl, miopenConvBwdWeightsAlgorithm_t);
 
-WorkspaceBundle convolution::matmul_get_workspace_bundle(
-        const ForwardSizeArgs& args) {
+WorkspaceBundle convolution::matmul_get_workspace_bundle(const ForwardSizeArgs& args) {
     auto dtype = args.src_layout->dtype;
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1);
     auto N = args.src_layout->shape[0];
     auto OC = fm.ocpg, IC = fm.icpg, FH = fm.spatial[0], FW = fm.spatial[1];
     auto OH = args.dst_layout->shape[2], OW = args.dst_layout->shape[3];
-    SmallVector<size_t> sizes{dtype.size() * args.dst_layout->total_nr_elems(),
-                              dtype.size() * IC * FH * FW * OH * OW * N};
+    SmallVector<size_t> sizes{
+            dtype.size() * args.dst_layout->total_nr_elems(),
+            dtype.size() * IC * FH * FW * OH * OW * N};
     if (args.filter_meta.should_flip) {
         sizes.push_back(dtype.size() * OC * IC * FH * FW);
     }
     return {nullptr, std::move(sizes)};
 }
 
-void convolution::flip_filter(const ForwardSizeArgs& args,
-                              const Workspace& workspace, void*& raw_ptr) {
+void convolution::flip_filter(
+        const ForwardSizeArgs& args, const Workspace& workspace, void*& raw_ptr) {
     auto&& fm = args.filter_meta;
     megdnn_assert(fm.group == 1 && fm.spatial_ndim == 2);
     auto OC = fm.ocpg, IC = fm.icpg, FH = fm.spatial[0], FW = fm.spatial[1];

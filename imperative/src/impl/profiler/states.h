@@ -1,9 +1,9 @@
 #pragma once
 
-#include <set>
 #include <any>
-#include <typeindex>
+#include <set>
 #include <sstream>
+#include <typeindex>
 
 #include "nlohmann/json.hpp"
 
@@ -34,7 +34,9 @@ struct ProfileTensorState {
     std::string info(HostTime current_time) {
         std::string shape = layout.TensorShape::to_string();
         std::string dtype = layout.dtype.name();
-        return ssprintf("%s(%s:%s:%s)", name.c_str(), shape.c_str(), dtype.c_str(), device.to_string().c_str());
+        return ssprintf(
+                "%s(%s:%s:%s)", name.c_str(), shape.c_str(), dtype.c_str(),
+                device.to_string().c_str());
     }
 
     nlohmann::json detail(HostTime current_time) {
@@ -46,7 +48,10 @@ struct ProfileTensorState {
         args["nr_elements"] = layout.total_nr_elems();
         args["device"] = device.to_string();
         if (produced != produced.min()) {
-            double ms_count = std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(current_time - produced + living_time).count();
+            double ms_count = std::chrono::duration_cast<
+                                      std::chrono::duration<double, std::micro>>(
+                                      current_time - produced + living_time)
+                                      .count();
             args["living_time"] = ssprintf("%lf ms", ms_count);
         }
         return args;
@@ -72,7 +77,7 @@ struct ProfileOperatorState {
 
     nlohmann::json detail() {
         nlohmann::json args;
-        for (auto&& [name, value]: params) {
+        for (auto&& [name, value] : params) {
             args[name] = value;
         }
         args["__id__"] = id;
@@ -112,7 +117,8 @@ struct ProfileState {
 
     std::vector<uint64_t> top_k_tensor_in_device(CompNode device, size_t k) {
         std::vector<uint64_t> results;
-        for (auto iter = tensors_by_size.rbegin(); iter != tensors_by_size.rend(); ++iter) {
+        for (auto iter = tensors_by_size.rbegin(); iter != tensors_by_size.rend();
+             ++iter) {
             if (!k) {
                 break;
             }
@@ -125,27 +131,29 @@ struct ProfileState {
     }
 };
 
-template<typename T, typename = void>
-struct is_op_event : std::false_type { };
+template <typename T, typename = void>
+struct is_op_event : std::false_type {};
 
-template<typename T>
-struct is_op_event<T, decltype(std::declval<T>().op_id, void())> : std::true_type { };
+template <typename T>
+struct is_op_event<T, decltype(std::declval<T>().op_id, void())> : std::true_type {};
 
-template<typename T, typename = void>
-struct is_tensor_event : std::false_type { };
+template <typename T, typename = void>
+struct is_tensor_event : std::false_type {};
 
-template<typename T>
-struct is_tensor_event<T, decltype(std::declval<T>().tensor_id, void())> : std::true_type { };
-template<typename T, typename = void>
-struct is_trace_event : std::false_type { };
-template<typename T>
-struct is_trace_event<T, decltype(std::declval<T>().trace, void())> : std::true_type { };
+template <typename T>
+struct is_tensor_event<T, decltype(std::declval<T>().tensor_id, void())>
+        : std::true_type {};
+template <typename T, typename = void>
+struct is_trace_event : std::false_type {};
+template <typename T>
+struct is_trace_event<T, decltype(std::declval<T>().trace, void())> : std::true_type {};
 
 template <typename... TItems>
 class AnyToVariantConverter {
 public:
     using any_t = AnyPtr;
     using variant_t = std::variant<TItems...>;
+
 private:
     std::unordered_map<std::type_index, std::function<variant_t(const any_t&)>> m_table;
 
@@ -155,10 +163,9 @@ private:
             return variant_t(*input.as<TItem>());
         };
     }
+
 public:
-    AnyToVariantConverter() {
-        (register_converter<TItems>(), ...);
-    }
+    AnyToVariantConverter() { (register_converter<TItems>(), ...); }
     variant_t operator()(const any_t& input) {
         return m_table[input.type()](std::move(input));
     }
@@ -173,13 +180,16 @@ private:
     HostTime m_start_time;
     CompNode::UnorderedMap<size_t> m_device_tid_table;
     std::unordered_map<std::thread::id, size_t> m_host_tid_table;
-    CompNode::UnorderedMap<std::map<profiler::HostTime, profiler::RealDuration>> m_device_timeline;
+    CompNode::UnorderedMap<std::map<profiler::HostTime, profiler::RealDuration>>
+            m_device_timeline;
     std::unordered_map<std::thread::id, std::vector<Trace>> m_trace_stack;
     std::unordered_map<std::string, int64_t> m_counter_table;
+
 protected:
     Profiler::Record* current;
     ProfileOperatorState* current_op;
     ProfileTensorState* current_tensor;
+
 protected:
     profiler::Duration since_start(profiler::HostTime time) {
         return time - m_start_time;
@@ -193,7 +203,8 @@ protected:
                 return time;
             } else {
                 --upper;
-                return time + std::chrono::duration_cast<profiler::Duration>(upper->second);
+                return time +
+                       std::chrono::duration_cast<profiler::Duration>(upper->second);
             }
         } else if (upper->first == time) {
             return time + std::chrono::duration_cast<profiler::Duration>(upper->second);
@@ -201,26 +212,26 @@ protected:
             return time + std::chrono::duration_cast<profiler::Duration>(upper->second);
         }
         auto lower = upper;
-        -- lower;
-        double ratio = ((double)(time - lower->first).count() / (double)(upper->first - lower->first).count());
+        --lower;
+        double ratio =
+                ((double)(time - lower->first).count() /
+                 (double)(upper->first - lower->first).count());
         mgb_assert(ratio > 0 && ratio < 1, "invalid ratio");
-        mgb_assert(lower->first + lower->second <= upper->first + upper->second, "device time corr");
+        mgb_assert(
+                lower->first + lower->second <= upper->first + upper->second,
+                "device time corr");
         auto shift = lower->second + ratio * (upper->second - lower->second);
         auto result = time + std::chrono::duration_cast<profiler::Duration>(shift);
         return result;
     }
 
-    size_t to_tid(std::thread::id host_tid) {
-        return m_host_tid_table.at(host_tid);
-    }
+    size_t to_tid(std::thread::id host_tid) { return m_host_tid_table.at(host_tid); }
 
-    size_t to_tid(CompNode device) {
-        return m_device_tid_table.at(device);
-    }
+    size_t to_tid(CompNode device) { return m_device_tid_table.at(device); }
 
     SmallVector<std::thread::id> host_threads() {
         SmallVector<std::thread::id> host_threads;
-        for (auto&& [host, _]: m_host_tid_table) {
+        for (auto&& [host, _] : m_host_tid_table) {
             host_threads.push_back(host);
         }
         return host_threads;
@@ -228,7 +239,7 @@ protected:
 
     SmallVector<CompNode> devices() {
         SmallVector<CompNode> devices;
-        for (auto&& [device, _]: m_device_tid_table) {
+        for (auto&& [device, _] : m_device_tid_table) {
             devices.push_back(device);
         }
         return devices;
@@ -242,24 +253,30 @@ protected:
         static_cast<TSelf&>(*this).notify_counter(key, value, value + delta);
         value += delta;
     }
+
 public:
     void process_events(Profiler::bundle_t& bundle) {
         m_start_time = bundle.start_at;
 
         auto& self = static_cast<TSelf&>(*this);
-        AnyToVariantConverter<OpDispatchEvent, OpExecuteEvent, OpExecuteFinishEvent,
-                KernelLaunchEvent, KernelLaunchFinishEvent,
-                OpInputEvent, OpInputFinishEvent, OpOutputEvent, OpOutputFinishEvent,
-                TensorDeclareEvent, TensorProduceEvent, TensorUsageEvent, TensorReleaseEvent, TensorEraseEvent,
-                TensorGetPropEvent, TensorNotifyPropEvent, TensorWaitPropEvent, TensorWaitPropFinishEvent,
-                SampleDeviceEvent, SampleDeviceFinishEvent, WorkerExceptionEvent, ShapeInferEvent, SyncEvent, SyncFinishEvent,
-                StartProfileEvent, StartProfileFinishEvent, StopProfileEvent, StopProfileFinishEvent,
-                TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent, AutoEvictFinishEvent,
-                CustomEvent, CustomFinishEvent, RecordDeviceEvent, ScopeEvent, ScopeFinishEvent,
-                HostToDeviceEvent, HostToDeviceFinishEvent> converter;
+        AnyToVariantConverter<
+                OpDispatchEvent, OpExecuteEvent, OpExecuteFinishEvent,
+                KernelLaunchEvent, KernelLaunchFinishEvent, OpInputEvent,
+                OpInputFinishEvent, OpOutputEvent, OpOutputFinishEvent,
+                TensorDeclareEvent, TensorProduceEvent, TensorUsageEvent,
+                TensorReleaseEvent, TensorEraseEvent, TensorGetPropEvent,
+                TensorNotifyPropEvent, TensorWaitPropEvent, TensorWaitPropFinishEvent,
+                SampleDeviceEvent, SampleDeviceFinishEvent, WorkerExceptionEvent,
+                ShapeInferEvent, SyncEvent, SyncFinishEvent, StartProfileEvent,
+                StartProfileFinishEvent, StopProfileEvent, StopProfileFinishEvent,
+                TensorCommandEvent, TensorCommandFinishEvent, AutoEvictEvent,
+                AutoEvictFinishEvent, CustomEvent, CustomFinishEvent, RecordDeviceEvent,
+                ScopeEvent, ScopeFinishEvent, HostToDeviceEvent,
+                HostToDeviceFinishEvent>
+                converter;
 
         auto for_each_entry = [&](auto&& handler) {
-            for (auto& entry: bundle.entries) {
+            for (auto& entry : bundle.entries) {
                 current = &entry;
                 std::visit(handler, converter(entry.data));
             }
@@ -273,28 +290,35 @@ public:
         };
         CompNode::UnorderedMap<DeviceStartPair> device_start_table;
 
-        for_each_entry([&](auto&& event){
+        for_each_entry([&](auto&& event) {
             using T = std::decay_t<decltype(event)>;
             if constexpr (std::is_same_v<T, RecordDeviceEvent>) {
                 using namespace std::chrono_literals;
-                DeviceStartPair& device_start = device_start_table[event.event->comp_node()];
+                DeviceStartPair& device_start =
+                        device_start_table[event.event->comp_node()];
                 if (!device_start.device) {
-                    device_start = { current->time, event.event };
+                    device_start = {current->time, event.event};
                 }
                 event.event->host_wait();
-                auto device_time = (device_start.host - current->time) + std::chrono::duration_cast<profiler::RealDuration>(device_start.device->elapsed_time_until(*event.event) * 1s);
-                m_device_timeline[event.event->comp_node()][current->time] = device_time;
+                auto device_time =
+                        (device_start.host - current->time) +
+                        std::chrono::duration_cast<profiler::RealDuration>(
+                                device_start.device->elapsed_time_until(*event.event) *
+                                1s);
+                m_device_timeline[event.event->comp_node()][current->time] =
+                        device_time;
             }
         });
 
         // register host threads
-        for_each_entry([&](auto&& event){
+        for_each_entry([&](auto&& event) {
             if (!m_host_tid_table.count(current->tid)) {
-                m_host_tid_table[current->tid] = {m_device_tid_table.size() + m_host_tid_table.size()};
+                m_host_tid_table[current->tid] = {
+                        m_device_tid_table.size() + m_host_tid_table.size()};
             }
         });
 
-        for_each_entry([&](auto&& event){
+        for_each_entry([&](auto&& event) {
             using T = std::decay_t<decltype(event)>;
             if constexpr (std::is_same_v<T, OpDispatchEvent>) {
                 auto& op = m_operators[event.op_id];
@@ -305,7 +329,7 @@ public:
                 op.inputs = event.inputs;
                 op.outputs = event.outputs;
                 op.trace = event.trace;
-                for (auto&& output: event.outputs) {
+                for (auto&& output : event.outputs) {
                     m_tensors[output].source = op.id;
                 }
             } else if constexpr (std::is_same_v<T, TensorDeclareEvent>) {
@@ -316,7 +340,8 @@ public:
             } else if constexpr (std::is_same_v<T, TensorProduceEvent>) {
                 auto& tensor = m_tensors[event.tensor_id];
                 if (!m_device_tid_table.count(event.device)) {
-                    m_device_tid_table[event.device] = {m_device_tid_table.size() + m_host_tid_table.size()};
+                    m_device_tid_table[event.device] = {
+                            m_device_tid_table.size() + m_host_tid_table.size()};
                 }
                 tensor.device = event.device;
                 tensor.layout = event.layout;
@@ -325,7 +350,7 @@ public:
 
         // replay execution
         using namespace std::placeholders;
-        for_each_entry([&](auto&& event){
+        for_each_entry([&](auto&& event) {
             using T = std::decay_t<decltype(event)>;
             // update current_op/tensor
             if constexpr (is_op_event<T>::value) {
@@ -370,8 +395,13 @@ public:
             } else if constexpr (std::is_same_v<T, KernelLaunchFinishEvent>) {
                 auto& execution = current_op->executions.back();
                 if (execution.reason == "dtr") {
-                    auto overhead = to_device_time(current->time, event.device) - to_device_time(execution.begin, event.device);
-                    inc_counter("dtr_overhead_us", std::chrono::duration_cast<std::chrono::microseconds>(overhead).count());
+                    auto overhead = to_device_time(current->time, event.device) -
+                                    to_device_time(execution.begin, event.device);
+                    inc_counter(
+                            "dtr_overhead_us",
+                            std::chrono::duration_cast<std::chrono::microseconds>(
+                                    overhead)
+                                    .count());
                 }
             }
             // visit_event_impl
@@ -386,4 +416,4 @@ public:
     }
 };
 
-}
+}  // namespace mgb::imperative::profiler

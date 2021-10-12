@@ -17,11 +17,13 @@ using namespace serialization;
 
 MGB_TYPEINFO_OBJ_IMPL(OprLoadContext);
 
-OprLoader OprLoadContext::make_opr_loader(const std::string &id) {
-    auto &&maker = config().opr_loader_maker;
-    mgb_throw_if(!maker, SerializationError,
+OprLoader OprLoadContext::make_opr_loader(const std::string& id) {
+    auto&& maker = config().opr_loader_maker;
+    mgb_throw_if(
+            !maker, SerializationError,
             "opr_loader_maker not set in LoadConfig; but opr loader with "
-            "id %s is needed", id.c_str());
+            "id %s is needed",
+            id.c_str());
     return maker(id);
 }
 
@@ -31,9 +33,8 @@ void OprDumpContextRawPOD::write_param(const DType& param) {
         uint32_t tag = megdnn::param::FakeSerializedDType::TAG;
         write_raw(&tag, sizeof(tag));
     }
-    serialization::serialize_dtype(param, [this](const void* data, size_t len) {
-        write_raw(data, len);
-    });
+    serialization::serialize_dtype(
+            param, [this](const void* data, size_t len) { write_raw(data, len); });
 }
 
 template <>
@@ -41,8 +42,9 @@ DType OprLoadContextRawPOD::read_param() {
     if (m_check_param_tag) {
         uint32_t tag;
         read_raw(&tag, sizeof(tag));
-        mgb_throw_if(tag != megdnn::param::FakeSerializedDType::TAG,
-                     MegBrainError, "ERROR tag");
+        mgb_throw_if(
+                tag != megdnn::param::FakeSerializedDType::TAG, MegBrainError,
+                "ERROR tag");
     }
     return serialization::deserialize_dtype(
             [this](void* data, size_t len) { read_raw(data, len); });
@@ -64,14 +66,14 @@ SharedBuffer OprLoadContextRawPOD::load_shared_buf_with_len() {
 }
 
 void GraphDumpConfig::default_tensor_value_dumper(
-        OutputFile &fout, const cg::OperatorNodeBase &/*opr*/,
-        const HostTensorND &tensor) {
+        OutputFile& fout, const cg::OperatorNodeBase& /*opr*/,
+        const HostTensorND& tensor) {
     auto size = tensor.layout().span().high_byte;
     fout.write(tensor.raw_ptr(), size);
 }
 
 void GraphLoadConfig::default_tensor_value_loader(
-        void *ptr, const TensorLayout &layout, InputFile &fin) {
+        void* ptr, const TensorLayout& layout, InputFile& fin) {
     auto sz = layout.span().high_byte;
     if (ptr) {
         fin.read(ptr, sz);
@@ -81,8 +83,7 @@ void GraphLoadConfig::default_tensor_value_loader(
 }
 
 SharedBuffer OprLoadContextRawPOD::load_shared_buf(size_t size) {
-    std::shared_ptr<uint8_t> shptr{new uint8_t[size],
-                                   [](uint8_t* p) { delete[] p; }};
+    std::shared_ptr<uint8_t> shptr{new uint8_t[size], [](uint8_t* p) { delete[] p; }};
     read_raw(shptr.get(), size);
     return {std::move(shptr), size};
 }

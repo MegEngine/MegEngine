@@ -20,4 +20,3 @@
 #endif
 
 // vim: syntax=cpp.doxygen
-

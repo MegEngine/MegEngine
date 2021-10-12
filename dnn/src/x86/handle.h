@@ -20,8 +20,9 @@ namespace x86 {
 
 class HandleImpl : public fallback::HandleImpl {
 public:
-    HandleImpl(megcoreComputingHandle_t computing_handle,
-               HandleType type = HandleType::X86);
+    HandleImpl(
+            megcoreComputingHandle_t computing_handle,
+            HandleType type = HandleType::X86);
 
     template <typename Opr>
     std::unique_ptr<Opr> create_operator();

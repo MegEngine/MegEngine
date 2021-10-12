@@ -18,16 +18,16 @@ namespace mgb {
 namespace gopt {
 namespace intl {
 
-#define FOREACH_FORMAT_AWARE_OPR(cb)                                \
-    cb(Convolution) cb(ConvBiasForward) cb(ConvolutionBackwardData) \
-            cb(PoolingForward) cb(WarpPerspective) cb(Resize)
+#define FOREACH_FORMAT_AWARE_OPR(cb)                                                   \
+    cb(Convolution) cb(ConvBiasForward) cb(ConvolutionBackwardData) cb(PoolingForward) \
+            cb(WarpPerspective) cb(Resize)
 #if 0
 bool has_available_algo(const VarNodeArray& i, const cg::OperatorNodeBase* opr);
 #endif
 
-VarNode* modify_opr_format(opr::ConvBias::Param::Format opr_format,
-                           const VarNodeArray& i,
-                           const cg::OperatorNodeBase* opr);
+VarNode* modify_opr_format(
+        opr::ConvBias::Param::Format opr_format, const VarNodeArray& i,
+        const cg::OperatorNodeBase* opr);
 
 }  // namespace intl
 }  // namespace gopt

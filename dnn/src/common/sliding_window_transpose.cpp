@@ -14,9 +14,8 @@
 
 namespace megdnn {
 
-void SlidingWindowTransposeBase::deduce_layout_fwd(const TensorLayout &src,
-        TensorLayout &dst)
-{
+void SlidingWindowTransposeBase::deduce_layout_fwd(
+        const TensorLayout& src, TensorLayout& dst) {
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " +
                "out_h=" + std::to_string(param().out_h) + ", " +
@@ -38,38 +37,32 @@ void SlidingWindowTransposeBase::deduce_layout_fwd(const TensorLayout &src,
     dst = TensorLayout(TensorShape({n, ic, oh, ow}), src.dtype);
 }
 
-void SlidingWindowTransposeBase::check_layout_fwd(const TensorLayout &src,
-        const TensorLayout &dst)
-{
+void SlidingWindowTransposeBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& dst) {
     TensorLayout dst_expected;
     deduce_layout_fwd(src, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
 }
 
-void SlidingWindowTransposeForward::deduce_layout(const TensorLayout &src,
-        TensorLayout &dst)
-{
+void SlidingWindowTransposeForward::deduce_layout(
+        const TensorLayout& src, TensorLayout& dst) {
     deduce_layout_fwd(src, dst);
 }
 
-void SlidingWindowTransposeForward::check_exec(const TensorLayout &src,
-        const TensorLayout &dst,
-        size_t workspace_in_bytes)
-{
+void SlidingWindowTransposeForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     check_layout_fwd(src, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void SlidingWindowTransposeBackward::check_exec(const TensorLayout &diff,
-        const TensorLayout &grad,
-        size_t workspace_in_bytes)
-{
+void SlidingWindowTransposeBackward::check_exec(
+        const TensorLayout& diff, const TensorLayout& grad, size_t workspace_in_bytes) {
     check_layout_fwd(grad, diff);
     auto required_workspace_in_bytes = get_workspace_in_bytes(grad, diff);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

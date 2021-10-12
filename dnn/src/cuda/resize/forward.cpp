@@ -22,27 +22,25 @@ using namespace cuda;
 
 namespace {
 
-void resize_cv_proxy(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                     InterpolationMode imode, void* workspace,
-                     cudaStream_t stream) {
+void resize_cv_proxy(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, InterpolationMode imode,
+        void* workspace, cudaStream_t stream) {
     using namespace megcv;
     for (size_t i = 0; i < src.layout.shape[0]; ++i) {
         if (dst.layout.dtype == dtype::Float32()) {
             Mat<float> src_mat = TensorND2Mat<float>(src, i);
             Mat<float> dst_mat = TensorND2Mat<float>(dst, i);
             resize::resize_cv<float>(
-                    src_mat.ptr(), dst_mat.ptr(), src_mat.rows(),
-                    src_mat.cols(), dst_mat.rows(), dst_mat.cols(),
-                    src_mat.step(), dst_mat.step(), src_mat.channels(), imode,
-                    workspace, stream);
+                    src_mat.ptr(), dst_mat.ptr(), src_mat.rows(), src_mat.cols(),
+                    dst_mat.rows(), dst_mat.cols(), src_mat.step(), dst_mat.step(),
+                    src_mat.channels(), imode, workspace, stream);
         } else if (dst.layout.dtype == dtype::Uint8()) {
             Mat<uchar> src_mat = TensorND2Mat<uchar>(src, i);
             Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, i);
             resize::resize_cv<uchar>(
-                    src_mat.ptr(), dst_mat.ptr(), src_mat.rows(),
-                    src_mat.cols(), dst_mat.rows(), dst_mat.cols(),
-                    src_mat.step(), dst_mat.step(), src_mat.channels(), imode,
-                    workspace, stream);
+                    src_mat.ptr(), dst_mat.ptr(), src_mat.rows(), src_mat.cols(),
+                    dst_mat.rows(), dst_mat.cols(), src_mat.step(), dst_mat.step(),
+                    src_mat.channels(), imode, workspace, stream);
         } else {
             megdnn_throw("Unsupported datatype of WarpAffine optr.");
         }
@@ -51,8 +49,8 @@ void resize_cv_proxy(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 
 }  // anonymous namespace
 
-size_t ResizeImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                          const TensorLayout& dst) {
+size_t ResizeImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
     InterpolationMode imode = param().imode;
     if (param().format == Param::Format::NCHW ||
         (imode != Param::InterpolationMode::CUBIC &&
@@ -104,8 +102,8 @@ size_t ResizeImpl::get_workspace_in_bytes(const TensorLayout& src,
     return 0;
 }
 
-void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_workspace workspace) {
+void ResizeImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     auto stream = cuda_stream(this->handle());
     bool is_nhwc = param().format == param::Resize::Format::NHWC;
@@ -114,8 +112,9 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
     if (is_nhwc) {
         if (param().imode != Param::InterpolationMode::LINEAR &&
             is_nhwc_contig_wc(src.layout)) {
-            resize_cv_proxy(src, dst, resize::get_imode(param().imode),
-                            workspace.raw_ptr, stream);
+            resize_cv_proxy(
+                    src, dst, resize::get_imode(param().imode), workspace.raw_ptr,
+                    stream);
             return;
         }
         C = src.layout.shape[3];
@@ -134,17 +133,18 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
         S_IH = src.layout.stride[2];
         S_IW = src.layout.stride[3];
     } else {
-        megdnn_assert(param().format == param::Resize::Format::NCHW4,
-                      "invalid resize format");
+        megdnn_assert(
+                param().format == param::Resize::Format::NCHW4,
+                "invalid resize format");
         megdnn_assert(src.layout.dtype.enumv() == DTypeEnum::QuantizedS8);
         C = src.layout.shape[1] * 4;
         IH = src.layout.shape[2];
         IW = src.layout.shape[3];
         OH = dst.layout.shape[2];
         OW = dst.layout.shape[3];
-        resize::forward_proxy_nchw4(src.compatible_ptr<int8_t>(),
-                                    dst.compatible_ptr<int8_t>(), src.layout[0],
-                                    C, IH, IW, OH, OW, stream);
+        resize::forward_proxy_nchw4(
+                src.compatible_ptr<int8_t>(), dst.compatible_ptr<int8_t>(),
+                src.layout[0], C, IH, IW, OH, OW, stream);
         return;
     }
     megdnn_assert(
@@ -154,23 +154,22 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
             "unsupported interpolation mode for NCHW format");
 
     if (src.layout.dtype == dtype::Float32{}) {
-        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
-                              src.ptr<dt_float32>(), dst.ptr<dt_float32>(),
-                              src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
-                              S_IH, S_IW, stream);
+        resize::forward_proxy(
+                is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_float32>(),
+                dst.ptr<dt_float32>(), src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
+                S_IH, S_IW, stream);
     } else if (src.layout.dtype == dtype::Uint8()) {
-        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
-                              src.ptr<dt_uint8>(), dst.ptr<dt_uint8>(),
-                              src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
-                              S_IH, S_IW, stream);
+        resize::forward_proxy(
+                is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_uint8>(),
+                dst.ptr<dt_uint8>(), src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC, S_IH,
+                S_IW, stream);
     } else if (src.layout.dtype == dtype::Int8()) {
-        resize::forward_proxy(is_nhwc, resize::get_imode((param().imode)),
-                              src.ptr<dt_int8>(), dst.ptr<dt_int8>(),
-                              src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC,
-                              S_IH, S_IW, stream);
+        resize::forward_proxy(
+                is_nhwc, resize::get_imode((param().imode)), src.ptr<dt_int8>(),
+                dst.ptr<dt_int8>(), src.layout[0], C, IH, IW, OH, OW, S_IN, S_IC, S_IH,
+                S_IW, stream);
     } else {
-        megdnn_throw(
-                ssprintf("unsupported dtype: %s", src.layout.dtype.name()));
+        megdnn_throw(ssprintf("unsupported dtype: %s", src.layout.dtype.name()));
     }
 }
 

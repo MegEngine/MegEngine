@@ -15,8 +15,7 @@
 namespace megdnn {
 namespace test {
 
-TEST_F(FALLBACK, SPLIT)
-{
+TEST_F(FALLBACK, SPLIT) {
     Checker<Split> checker(handle());
     using Param = Split::Param;
     for (size_t axis = 0; axis < 4; ++axis) {
@@ -31,7 +30,7 @@ TEST_F(FALLBACK, SPLIT)
     }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

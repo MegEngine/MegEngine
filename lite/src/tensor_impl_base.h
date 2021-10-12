@@ -91,8 +91,9 @@ public:
         LITE_ASSERT(tensor);
         return tensor->m_tensor_impl;
     }
-    static inline void implement(const std::shared_ptr<Tensor> tensor,
-                                 std::shared_ptr<Tensor::TensorImplBase> impl) {
+    static inline void implement(
+            const std::shared_ptr<Tensor> tensor,
+            std::shared_ptr<Tensor::TensorImplBase> impl) {
         LITE_ASSERT(tensor);
         tensor->m_tensor_impl = impl;
     }

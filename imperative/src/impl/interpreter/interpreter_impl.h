@@ -19,14 +19,14 @@
 #include <unordered_set>
 #include <variant>
 #include "megbrain/comp_node.h"
-#include "megbrain/utils/mempool.h"
 #include "megbrain/imperative/interpreter.h"
 #include "megbrain/imperative/profiler.h"
+#include "megbrain/utils/mempool.h"
 
 #include "./commands.h"
-#include "./tensor_info.h"
 #include "./option_manager.h"
 #include "./stack_manager.h"
+#include "./tensor_info.h"
 
 #include "../profiler/events.h"
 
@@ -51,8 +51,7 @@ struct ChannelImpl : Interpreter::Channel {
     void drop(Handle) override;
 
     SmallVector<Handle> apply_op(
-            std::shared_ptr<OpDef> op,
-            const SmallVector<Handle>& inputs) override;
+            std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs) override;
 
     HostTensorND get_value(Handle) override;
     TensorShape get_shape(Handle) override;
@@ -73,6 +72,7 @@ struct ChannelImpl : Interpreter::Channel {
 
     void push_scope(std::string) override;
     void pop_scope(std::string) override;
+
 private:
     struct WorkQueue;
     struct State;
@@ -90,8 +90,7 @@ private:
     void del_impl(Handle);
     void sync_impl();
     SmallVector<Handle> apply_op_impl(
-            std::shared_ptr<OpDef> op,
-            const SmallVector<Handle>& inputs);
+            std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs);
     TensorPtr wait_tensor(TensorInfo* info, profiler::TensorProp prop);
     void notify_tensor_unsafe(TensorInfo* info);
 
@@ -106,22 +105,20 @@ private:
     void regenerate(TensorInfo* dest);
     void flush_apply_stack();
     void do_apply_op(const ApplyOp& cmd, std::string reason);
-    
-    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>> init_output_and_workspace(
-        const OpDef& def,
-        SmallVector<TensorPtr> inputs,
-        SmallVector<MemoryDesc> inputs_mem_desc);
+
+    std::tuple<SmallVector<MemoryDesc>, SmallVector<TensorPtr>, SmallVector<TensorPtr>>
+    init_output_and_workspace(
+            const OpDef& def, SmallVector<TensorPtr> inputs,
+            SmallVector<MemoryDesc> inputs_mem_desc);
 
     void dispatch_default_cpu(
-        std::shared_ptr<OpDef> op,
-        const SmallVector<TensorInfo*>& input_infos,
-        const SmallVector<LogicalTensorDesc>& input_descs,
-        SmallVector<Handle>* outputs);
+            std::shared_ptr<OpDef> op, const SmallVector<TensorInfo*>& input_infos,
+            const SmallVector<LogicalTensorDesc>& input_descs,
+            SmallVector<Handle>* outputs);
     void dispatch_kernel(
-        std::shared_ptr<OpDef> op,
-        const SmallVector<TensorInfo*>& input_infos,
-        const SmallVector<LogicalTensorDesc>& input_descs,
-        SmallVector<Handle>* outputs);
+            std::shared_ptr<OpDef> op, const SmallVector<TensorInfo*>& input_infos,
+            const SmallVector<LogicalTensorDesc>& input_descs,
+            SmallVector<Handle>* outputs);
 
     void push_scope(std::string, State&);
     void pop_scope(std::string, State&);
@@ -158,25 +155,26 @@ private:
     struct WorkQueue : AsyncQueueSC<Command, WorkQueue> {
         // set max_spin=0 to prevent Queue fetch task in busy wait manner.
         // this won't affect throughput when python interpreter is sending enough task,
-        // but will significantly save CPU time when waiting for task, e.g. wait for data input
-        // limit pending tasks to 10000
+        // but will significantly save CPU time when waiting for task, e.g. wait for
+        // data input limit pending tasks to 10000
         WorkQueue(ChannelImpl* owner)
                 : AsyncQueueSC<Command, WorkQueue>(0, 10000), m_owner(owner) {
             sys::set_thread_name("interpreter");
             if (const char* env_val = MGB_GETENV("MEGENGINE_ASYNC_QUEUE_SIZE")) {
                 int len = strlen(env_val);
-                for (int i = 0; i < len; i ++) {
-                    mgb_assert(env_val[i] >= '0' && env_val[i] <= '9', "async queue size should be an integer");
+                for (int i = 0; i < len; i++) {
+                    mgb_assert(
+                            env_val[i] >= '0' && env_val[i] <= '9',
+                            "async queue size should be an integer");
                 }
                 size_t val;
                 sscanf(env_val, "%zu", &val);
                 update_max_items(val);
             }
         }
-        void process_one_task(Command& icmd) {
-            m_owner->process_one_task(icmd);
-        }
+        void process_one_task(Command& icmd) { m_owner->process_one_task(icmd); }
         void on_async_queue_worker_thread_start() override;
+
     private:
         ChannelImpl* m_owner;
     } m_worker;
@@ -191,15 +189,15 @@ private:
      *     ---------------------------------------------------------------------
      *     | ..., Apply{in: (i0, i1), out: (o0, o1), del: (i0, i1)}, ...       |
      *     ---------------------------------------------------------------------
-     *     Then the fused Apply may be invoked inplace. see: ChannelImpl::process_one_task
+     *     Then the fused Apply may be invoked inplace. see:
+     * ChannelImpl::process_one_task
      */
     struct CommandBuffer {
         CommandBuffer(ChannelImpl* owner) : m_owner(owner) {}
         void enqueue(CommandData cmd);
-        bool empty() const {
-            return m_commands.empty();
-        }
+        bool empty() const { return m_commands.empty(); }
         void flush();
+
     private:
         ChannelImpl* m_owner;
         std::deque<Command> m_commands;
@@ -214,7 +212,8 @@ private:
         Handle flush_pos_for(const Command& cmd);
         // Fuse del command into suitable ApplyOp
         bool fuse_del(const Del& cmd);
-        // Returns the last handle that dest is used within range. If dest is not used, returns range[1]
+        // Returns the last handle that dest is used within range. If dest is not used,
+        // returns range[1]
         Handle find_last_usage(TensorInfo* dest, Range range);
         // Returns the produce position of dest. If not found, returns range[1]
         Handle find_produce(TensorInfo* dest, Range range);
@@ -231,11 +230,11 @@ private:
         OptionManager options;
     };
 
-    struct ChannelState: State {
+    struct ChannelState : State {
         StackManager stack_manager;
     };
 
-    struct WorkerState: State {};
+    struct WorkerState : State {};
 
     ChannelState m_channel_state;
     WorkerState m_worker_state;
@@ -255,7 +254,7 @@ private:
          * (2) is in memory, (3) is not pinned. Evaluation function refers to:
          * @see: TensorInfo::eval_func.
          *
-         * \return the pointer of the best tensor; nullptr is returned if no 
+         * \return the pointer of the best tensor; nullptr is returned if no
          * available tensor is found
          */
         TensorInfo* find_best_tensor(bool);
@@ -277,13 +276,13 @@ private:
          * \brief merge the two specified sets (the set in which the element x
          * is located, and the set in which the element y is located)
          */
-        void merge(std::shared_ptr<DsuNode> &x, std::shared_ptr<DsuNode> &y);
+        void merge(std::shared_ptr<DsuNode>& x, std::shared_ptr<DsuNode>& y);
 
         /*!
          * \brief return the representative of the set that contains the
          * element x
          */
-        std::shared_ptr<DsuNode> find_father(std::shared_ptr<DsuNode> &x);
+        std::shared_ptr<DsuNode> find_father(std::shared_ptr<DsuNode>& x);
 
         /*!
          * \brief update DSU after recomputing tensor ptr
@@ -339,12 +338,14 @@ private:
         std::unordered_set<TensorInfo*> candidates;
 
         bool is_bad_op(std::string op_name) {
-            return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) != op_blacklist.end();
+            return std::find(op_blacklist.begin(), op_blacklist.end(), op_name) !=
+                   op_blacklist.end();
         }
 
-        std::vector<std::string> op_blacklist = {"CollectiveComm", "InplaceAdd",
-                                "ParamPackSplit", "ParamPackConcat", "GaussianRNG", "UniformRNG",
-                                "GammaRNG", "PermutationRNG", "PoissonRNG", "BetaRNG"};
+        std::vector<std::string> op_blacklist = {
+                "CollectiveComm", "InplaceAdd", "ParamPackSplit", "ParamPackConcat",
+                "GaussianRNG",    "UniformRNG", "GammaRNG",       "PermutationRNG",
+                "PoissonRNG",     "BetaRNG"};
     } m_dtr;
 
     //! automatically evict an optimal tensor
@@ -357,4 +358,4 @@ private:
     WorkerState& get_worker_state();
 };
 
-} // namespace mgb::imperative::interpreter::intl
+}  // namespace mgb::imperative::interpreter::intl

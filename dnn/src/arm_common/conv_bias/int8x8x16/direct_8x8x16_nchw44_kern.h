@@ -43,13 +43,13 @@ static inline void nchw44_pack_src(const int8_t* src, int8_t* dst, int length) {
 
 template <BiasMode bias_mode, int filter_size, int stride>
 struct ConvDirectInt8Nchw44Choose {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int16_t* bias, int16_t* dst, const size_t oc,
-                     const size_t ic, const size_t ih, const size_t iw,
-                     const size_t oh, const size_t ow);
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+            const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+            const size_t oh, const size_t ow);
 };
 
-}  // namespace int8_direct_nchw44
+}  // namespace int8x8x16_direct_nchw44
 }  // namespace arm_common
 }  // namespace megdnn
 

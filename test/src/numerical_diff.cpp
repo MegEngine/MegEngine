@@ -8,32 +8,30 @@
  */
 
 #include "megbrain/test/numerical_diff.h"
-#include "megbrain/utils/timer.h"
 #include "megbrain/common.h"
+#include "megbrain/utils/timer.h"
 
-#include <limits>
 #include <cmath>
+#include <limits>
 
 using namespace mgb;
 
 std::vector<HostTensorND> mgb::numerical_diff_pt2(
-        const std::vector<HostTensorND*> &input,
-        std::function<float()> cost,
-        const std::vector<Maybe<float>> &eps) {
+        const std::vector<HostTensorND*>& input, std::function<float()> cost,
+        const std::vector<Maybe<float>>& eps) {
     std::vector<HostTensorND> result;
     if (!eps.empty())
         mgb_assert(eps.size() == input.size());
 
-    for (size_t cur_inp_idx = 0; cur_inp_idx < input.size(); ++ cur_inp_idx)
-    {
+    for (size_t cur_inp_idx = 0; cur_inp_idx < input.size(); ++cur_inp_idx) {
         result.emplace_back();
         if (!input[cur_inp_idx])
             continue;
-        auto &&cur_inp = input[cur_inp_idx];
-        auto &&dest = result.back();
-        dest.comp_node(cur_inp->comp_node()).
-            dtype(cur_inp->dtype()).
-            resize(cur_inp->shape());
+        auto&& cur_inp = input[cur_inp_idx];
+        auto&& dest = result.back();
+        dest.comp_node(cur_inp->comp_node())
+                .dtype(cur_inp->dtype())
+                .resize(cur_inp->shape());
         auto dptr = dest.ptr<float>();
 
         mgb_assert(cur_inp->layout().is_contiguous() || cur_inp->layout().is_empty());
@@ -41,13 +39,12 @@ std::vector<HostTensorND> mgb::numerical_diff_pt2(
 
         mgb::RealTimer timer;
         double prev_record = 0.0;
-        for (size_t i = 0, it = cur_inp->layout().total_nr_elems();
-                i < it; ++ i) {
+        for (size_t i = 0, it = cur_inp->layout().total_nr_elems(); i < it; ++i) {
             auto orig = cur_inp_ptr[i];
             float delta;
             if (eps.empty() || !eps[cur_inp_idx].valid()) {
                 delta = std::sqrt(std::numeric_limits<float>::epsilon()) *
-                    std::max<float>(std::fabs(orig), 1);
+                        std::max<float>(std::fabs(orig), 1);
             } else {
                 delta = eps[cur_inp_idx].val();
             }
@@ -62,7 +59,8 @@ std::vector<HostTensorND> mgb::numerical_diff_pt2(
                 prev_record = cur_time;
                 mgb_log_warn(
                         "numerical diff running for more than %.3f secs, "
-                        "consider to reduce the tensor size", cur_time);
+                        "consider to reduce the tensor size",
+                        cur_time);
             }
 
             dptr[i] = (c1 - c0) / (delta * 2);
@@ -72,8 +70,8 @@ std::vector<HostTensorND> mgb::numerical_diff_pt2(
 }
 
 namespace mgb {
-    // explicit inst to avoid link error for Maybe::Maybe()
-    template class Maybe<float>;
-}
+// explicit inst to avoid link error for Maybe::Maybe()
+template class Maybe<float>;
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

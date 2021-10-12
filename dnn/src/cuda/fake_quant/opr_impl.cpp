@@ -16,13 +16,12 @@
 namespace megdnn {
 namespace cuda {
 
-void FakeQuantForwardImpl::exec(_megdnn_tensor_in input,
-                                _megdnn_tensor_in scale,
-                                _megdnn_tensor_in zero_point,
-                                _megdnn_tensor_out output,
-                                _megdnn_workspace workspace) {
-    check_exec(input.layout, scale.layout, zero_point.layout, output.layout,
-               workspace.size);
+void FakeQuantForwardImpl::exec(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+        _megdnn_tensor_out output, _megdnn_workspace workspace) {
+    check_exec(
+            input.layout, scale.layout, zero_point.layout, output.layout,
+            workspace.size);
 
     if (!input.layout.is_contiguous() || !output.layout.is_contiguous()) {
         return exec_noncontig(input, scale, zero_point, output);
@@ -35,21 +34,20 @@ void FakeQuantForwardImpl::exec(_megdnn_tensor_in input,
     ele_param.init_from_given_tensor();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                         \
-    if (input.layout.dtype == DType()) {                                  \
-        using T = typename DTypeTrait<DType>::ctype;                      \
-        run_elemwise<FakeQuantKernOp<T>, T, 2>(ele_param, stream,         \
-                                               {input, output, m_param}); \
-        return;                                                           \
+#define cb(DType)                                             \
+    if (input.layout.dtype == DType()) {                      \
+        using T = typename DTypeTrait<DType>::ctype;          \
+        run_elemwise<FakeQuantKernOp<T>, T, 2>(               \
+                ele_param, stream, {input, output, m_param}); \
+        return;                                               \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void FakeQuantForwardImpl::exec_noncontig(_megdnn_tensor_in input,
-                                          _megdnn_tensor_in scale,
-                                          _megdnn_tensor_in zero_point,
-                                          _megdnn_tensor_out output) {
+void FakeQuantForwardImpl::exec_noncontig(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+        _megdnn_tensor_out output) {
     ElemwiseOpParamN<4> ele_param;
     ele_param[0] = output;
     ele_param[1] = input;
@@ -60,25 +58,23 @@ void FakeQuantForwardImpl::exec_noncontig(_megdnn_tensor_in input,
     ele_param.init_from_given_tensor();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                          \
-    if (input.layout.dtype == DType()) {                                   \
-        using T = typename DTypeTrait<DType>::ctype;                       \
-        run_elemwise<FakeQuantKernOpNonContig<T>, T, 4>(ele_param, stream, \
-                                                        {m_param});        \
-        return;                                                            \
+#define cb(DType)                                                                      \
+    if (input.layout.dtype == DType()) {                                               \
+        using T = typename DTypeTrait<DType>::ctype;                                   \
+        run_elemwise<FakeQuantKernOpNonContig<T>, T, 4>(ele_param, stream, {m_param}); \
+        return;                                                                        \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void FakeQuantBackwardImpl::exec(_megdnn_tensor_in diff,
-                                 _megdnn_tensor_in input,
-                                 _megdnn_tensor_in scale,
-                                 _megdnn_tensor_in zero_point,
-                                 _megdnn_tensor_out grad,
-                                 _megdnn_workspace workspace) {
-    check_exec(diff.layout, input.layout, scale.layout, zero_point.layout,
-               grad.layout, workspace.size);
+void FakeQuantBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_in zero_point, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
+    check_exec(
+            diff.layout, input.layout, scale.layout, zero_point.layout, grad.layout,
+            workspace.size);
 
     if (!input.layout.is_contiguous() || !diff.layout.is_contiguous() ||
         !grad.layout.is_contiguous()) {
@@ -103,11 +99,9 @@ void FakeQuantBackwardImpl::exec(_megdnn_tensor_in diff,
 #undef cb
 }
 
-void FakeQuantBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
-                                           _megdnn_tensor_in input,
-                                           _megdnn_tensor_in scale,
-                                           _megdnn_tensor_in zero_point,
-                                           _megdnn_tensor_out grad) {
+void FakeQuantBackwardImpl::exec_noncontig(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_in zero_point, _megdnn_tensor_out grad) {
     ElemwiseOpParamN<5> ele_param;
     ele_param[0] = grad;
     ele_param[1] = diff;
@@ -119,12 +113,12 @@ void FakeQuantBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
     ele_param.init_from_given_tensor();
     auto m_param = param();
     auto stream = cuda_stream(handle());
-#define cb(DType)                                                             \
-    if (grad.layout.dtype == DType()) {                                       \
-        using T = typename DTypeTrait<DType>::ctype;                          \
-        run_elemwise<FakeQuantBwdKernOpNonContig<T>, T, 5>(ele_param, stream, \
-                                                           {m_param});        \
-        return;                                                               \
+#define cb(DType)                                           \
+    if (grad.layout.dtype == DType()) {                     \
+        using T = typename DTypeTrait<DType>::ctype;        \
+        run_elemwise<FakeQuantBwdKernOpNonContig<T>, T, 5>( \
+                ele_param, stream, {m_param});              \
+        return;                                             \
     }
     cb(megdnn::dtype::Float32)
 #undef cb

@@ -12,8 +12,8 @@
 #pragma once
 
 #include "megdnn/dtype.h"
-#include "src/common/utils.cuh"
 #include "src/common/elemwise_helper.cuh"
+#include "src/common/utils.cuh"
 
 #include <cmath>
 
@@ -30,7 +30,7 @@ struct Fma3iXxf32xf32xiYOp {
     }
 };
 
-template <typename stype, typename dtype> 
+template <typename stype, typename dtype>
 MEGDNN_HOST MEGDNN_DEVICE dtype round_shr_saturate(stype x, int k) {
     stype result = rounding_shift_right_away_from_zero(x, k);
     if (!is_same<stype, dtype>::value) {

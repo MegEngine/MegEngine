@@ -12,25 +12,25 @@
 #include "megbrain/plugin/opr_footprint.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/adaptive_pooling.h"
+#include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
 #include "megbrain/opr/dnn/pooling.h"
-#include "megbrain/opr/dnn/adaptive_pooling.h"
-#include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
+#include "megbrain/opr/dnn/roi_pooling.h"
 #include "megbrain/opr/imgproc.h"
-#include "megbrain/opr/standalone/nms_opr.h"
-#include "megbrain/opr/io.h"
-#include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/rand.h"
-#include "megbrain/opr/dnn/batch_norm.h"
-#include "megbrain/opr/misc.h"
 #include "megbrain/opr/indexing.h"
 #include "megbrain/opr/internal/indexing_helper.h"
+#include "megbrain/opr/io.h"
+#include "megbrain/opr/misc.h"
 #include "megbrain/opr/nn_int.h"
+#include "megbrain/opr/rand.h"
+#include "megbrain/opr/standalone/nms_opr.h"
 #include "megbrain/opr/tensor_gen.h"
+#include "megbrain/opr/tensor_manip.h"
 #if MGB_ENABLE_JSON
 #include "megdnn/opr_param_json.h"
 #endif
@@ -39,8 +39,7 @@
 #include "midout.h"
 
 MIDOUT_DECL(megbrain_opr_footprint)
-#define MIDOUT_B(...) \
-    MIDOUT_BEGIN(megbrain_opr_footprint, __VA_ARGS__) {
+#define MIDOUT_B(...) MIDOUT_BEGIN(megbrain_opr_footprint, __VA_ARGS__) {
 #define MIDOUT_E \
     }            \
     MIDOUT_END();
@@ -62,17 +61,15 @@ uint64_t opr_footprint_func<opr::Elemwise>(cg::OperatorNodeBase* opr) {
 // AddUpdate
 template <>
 uint64_t opr_footprint_func<opr::AddUpdate>(cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2,
-               "AddUpdate opr should have two inputs");
+    mgb_assert(opr->input().size() == 2, "AddUpdate opr should have two inputs");
     auto&& out_shape = opr->output()[0]->shape();
     return out_shape.total_nr_elems() * 3;
 }
 
 template <class Conv>
-uint64_t eval_conv_computation(const TensorShape& src_shape,
-                               const TensorShape& filter_shape,
-                               const TensorShape& dst_shape,
-                               cg::OperatorNodeBase* opr) {
+uint64_t eval_conv_computation(
+        const TensorShape& src_shape, const TensorShape& filter_shape,
+        const TensorShape& dst_shape, cg::OperatorNodeBase* opr) {
     using Param = opr::ConvolutionForward::Param;
     auto&& param = opr->cast_final_safe<Conv>().param();
 
@@ -94,8 +91,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
                 group *= 4;
             }
         }
-        return dst_shape.total_nr_elems() * fh * fw *
-            src_shape[2] * 4 / group * 2;
+        return dst_shape.total_nr_elems() * fh * fw * src_shape[2] * 4 / group * 2;
     }
     auto eval_conv_computation_nchwx = [&param, &src_shape, &filter_shape,
                                         &dst_shape]() -> uint64_t {
@@ -124,8 +120,8 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
             if (filter_shape[1] == 1 && filter_shape[2] == 1) {
                 group *= 8;
             }
-            size_t computation = dst_shape.total_nr_elems() * fh * fw *
-                                 src_shape[1] / group * 2;
+            size_t computation =
+                    dst_shape.total_nr_elems() * fh * fw * src_shape[1] / group * 2;
             return hybird_nchwx ? computation : computation * 8;
         }
         if (param.format == Param::Format::NCHW44 ||
@@ -135,27 +131,29 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
                 filter_shape.ndim == 6) {
                 group *= 4;
             }
-            size_t computation = dst_shape.total_nr_elems() * fh * fw *
-                                 src_shape[1] / group * 2;
+            size_t computation =
+                    dst_shape.total_nr_elems() * fh * fw * src_shape[1] / group * 2;
             return hybird_nchwx ? computation : computation * 4;
         }
         size_t packed_size;
         if (param.format == Param::Format::NCHW64) {
             packed_size = 64;
-        } else if (param.format == Param::Format::NCHW32 ||
-                   param.format == Param::Format::NCHW32_NCHW4) {
+        } else if (
+                param.format == Param::Format::NCHW32 ||
+                param.format == Param::Format::NCHW32_NCHW4) {
             packed_size = 32;
         } else {
-            mgb_assert(param.format == Param::Format::NCHW4 ||
-                               param.format == Param::Format::NCHW4_NHWC ||
-                               param.format == Param::Format::NCHW4_NCHW ||
-                               param.format == Param::Format::NCHW4_NCHW32,
-                       "format should be "
-                       "NCHW4/NCHW4_NCHW/NCHW4_NHWC/NCHW4_NCHW32");
+            mgb_assert(
+                    param.format == Param::Format::NCHW4 ||
+                            param.format == Param::Format::NCHW4_NHWC ||
+                            param.format == Param::Format::NCHW4_NCHW ||
+                            param.format == Param::Format::NCHW4_NCHW32,
+                    "format should be "
+                    "NCHW4/NCHW4_NCHW/NCHW4_NHWC/NCHW4_NCHW32");
             packed_size = 4;
         }
-        return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * packed_size / group *
-               2;
+        return dst_shape.total_nr_elems() * fh * fw * src_shape[1] * packed_size /
+               group * 2;
     };
     auto eval_conv_computation_chwn4 = [&param, &src_shape, &filter_shape,
                                         &dst_shape]() -> uint64_t {
@@ -171,8 +169,7 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
             fw = filter_shape[3];
             group = filter_shape[0];
         }
-        return dst_shape.total_nr_elems() * fh * fw * src_shape[0] * 4 / group *
-               2;
+        return dst_shape.total_nr_elems() * fh * fw * src_shape[0] * 4 / group * 2;
     };
     if (param.format == Param::Format::NCHW4 ||
         param.format == Param::Format::NCHW4_NCHW ||
@@ -206,14 +203,16 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
     }
     switch (param.sparse) {
         case Param::Sparse::DENSE:
-            mgb_assert(filter_shape.ndim == 4 || filter_shape.ndim == 6,
-                       "DENSE conv filter shape dimension should be "
-                       "4/6(winograd mk4)");
+            mgb_assert(
+                    filter_shape.ndim == 4 || filter_shape.ndim == 6,
+                    "DENSE conv filter shape dimension should be "
+                    "4/6(winograd mk4)");
             break;
         case Param::Sparse::GROUP:
-            mgb_assert(filter_shape.ndim == 5 || filter_shape.ndim == 7,
-                       "GROUP conv filter shape dimension should be "
-                       "5/7(winograd mk4)");
+            mgb_assert(
+                    filter_shape.ndim == 5 || filter_shape.ndim == 7,
+                    "GROUP conv filter shape dimension should be "
+                    "5/7(winograd mk4)");
             spatial_start++;
             group = filter_shape[0];
             break;
@@ -232,10 +231,8 @@ uint64_t eval_conv_computation(const TensorShape& src_shape,
 
 // ConvolutionForward
 template <>
-uint64_t opr_footprint_func<opr::ConvolutionForward>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2,
-               "ConvolutionFwd opr should have two inputs");
+uint64_t opr_footprint_func<opr::ConvolutionForward>(cg::OperatorNodeBase* opr) {
+    mgb_assert(opr->input().size() == 2, "ConvolutionFwd opr should have two inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& src_shape = opr->input()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
@@ -243,11 +240,11 @@ uint64_t opr_footprint_func<opr::ConvolutionForward>(
             src_shape, filter_shape, out_shape, opr);
 }
 template <>
-uint64_t opr_footprint_func<opr::ConvBiasForward>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2 || opr->input().size() == 3 ||
-                       opr->input().size() == 4,
-               "ConvBiasForward opr should have two/three/four inputs");
+uint64_t opr_footprint_func<opr::ConvBiasForward>(cg::OperatorNodeBase* opr) {
+    mgb_assert(
+            opr->input().size() == 2 || opr->input().size() == 3 ||
+                    opr->input().size() == 4,
+            "ConvBiasForward opr should have two/three/four inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& src_shape = opr->input()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
@@ -261,10 +258,10 @@ uint64_t opr_footprint_func<opr::ConvBiasForward>(
 
 // ConvolutionBackwardData
 template <>
-uint64_t opr_footprint_func<opr::ConvolutionBackwardData>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2 || opr->input().size() == 3,
-               "ConvolutionBackwardData opr should have two or three inputs");
+uint64_t opr_footprint_func<opr::ConvolutionBackwardData>(cg::OperatorNodeBase* opr) {
+    mgb_assert(
+            opr->input().size() == 2 || opr->input().size() == 3,
+            "ConvolutionBackwardData opr should have two or three inputs");
     auto&& filter_shape = opr->input()[0]->shape();
     auto&& diff_shape = opr->input()[1]->shape();
     auto&& grad_shape = opr->output()[0]->shape();
@@ -274,10 +271,10 @@ uint64_t opr_footprint_func<opr::ConvolutionBackwardData>(
 
 // ConvolutionBackwardFilter
 template <>
-uint64_t opr_footprint_func<opr::ConvolutionBackwardFilter>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 3,
-               "ConvolutionBackwardData opr should have three inputs");
+uint64_t opr_footprint_func<opr::ConvolutionBackwardFilter>(cg::OperatorNodeBase* opr) {
+    mgb_assert(
+            opr->input().size() == 3,
+            "ConvolutionBackwardData opr should have three inputs");
     auto&& filter_shape = opr->input()[2]->shape();
     auto&& diff_shape = opr->input()[1]->shape();
     auto&& src_shape = opr->input()[0]->shape();
@@ -305,8 +302,7 @@ uint64_t opr_footprint_func<opr::MatrixMul>(cg::OperatorNodeBase* opr) {
 
 template <>
 uint64_t opr_footprint_func<opr::LocalShareForward>(cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2,
-               "LocalShare opr should have two inputs");
+    mgb_assert(opr->input().size() == 2, "LocalShare opr should have two inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& src_shape = opr->input()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
@@ -319,15 +315,15 @@ uint64_t opr_footprint_func<opr::LocalShareForward>(cg::OperatorNodeBase* opr) {
         groups = filter_shape[0];
         kern_spatial_pos = 4;
     }
-    size_t fh = filter_shape[kern_spatial_pos],
-           fw = filter_shape[kern_spatial_pos + 1];
+    size_t fh = filter_shape[kern_spatial_pos], fw = filter_shape[kern_spatial_pos + 1];
     return out_shape.total_nr_elems() * fh * fw * src_shape[1] * 2 / groups;
 }
 
 template <>
 uint64_t opr_footprint_func<opr::LocalShareBackwardData>(cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 3,
-               "LocalShareBackwardData opr should have three inputs");
+    mgb_assert(
+            opr->input().size() == 3,
+            "LocalShareBackwardData opr should have three inputs");
     auto&& filter_shape = opr->input()[0]->shape();
     auto&& diff_shape = opr->input()[1]->shape();
     auto&& grad_shape = opr->output()[0]->shape();
@@ -340,15 +336,15 @@ uint64_t opr_footprint_func<opr::LocalShareBackwardData>(cg::OperatorNodeBase* o
         groups = filter_shape[0];
         kern_spatial_pos = 4;
     }
-    size_t fh = filter_shape[kern_spatial_pos],
-           fw = filter_shape[kern_spatial_pos + 1];
+    size_t fh = filter_shape[kern_spatial_pos], fw = filter_shape[kern_spatial_pos + 1];
     return diff_shape.total_nr_elems() * fh * fw * grad_shape[1] * 2 / groups;
 }
 
 template <>
 uint64_t opr_footprint_func<opr::LocalShareBackwardFilter>(cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 3,
-               "LocalShareBackwardFilter opr should have three inputs");
+    mgb_assert(
+            opr->input().size() == 3,
+            "LocalShareBackwardFilter opr should have three inputs");
     auto&& src_shape = opr->input()[0]->shape();
     auto&& diff_shape = opr->input()[1]->shape();
     auto&& grad_shape = opr->output()[0]->shape();
@@ -361,16 +357,15 @@ uint64_t opr_footprint_func<opr::LocalShareBackwardFilter>(cg::OperatorNodeBase*
         groups = grad_shape[0];
         kern_spatial_pos = 4;
     }
-    size_t fh = grad_shape[kern_spatial_pos],
-           fw = grad_shape[kern_spatial_pos + 1];
+    size_t fh = grad_shape[kern_spatial_pos], fw = grad_shape[kern_spatial_pos + 1];
     return diff_shape.total_nr_elems() * fh * fw * src_shape[1] * 2 / groups;
 }
 
 template <>
-uint64_t opr_footprint_func<opr::DeformableConvForward>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 4,
-               "DeformableConvForward opr should have four inputs");
+uint64_t opr_footprint_func<opr::DeformableConvForward>(cg::OperatorNodeBase* opr) {
+    mgb_assert(
+            opr->input().size() == 4,
+            "DeformableConvForward opr should have four inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
     using Param = opr::DeformableConvForward::Param;
@@ -391,8 +386,9 @@ uint64_t opr_footprint_func<opr::DeformableConvForward>(
 template <>
 uint64_t opr_footprint_func<opr::DeformableConvBackwardFilter>(
         cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 5,
-               "DeformableConvBackwardFilter opr should have four inputs");
+    mgb_assert(
+            opr->input().size() == 5,
+            "DeformableConvBackwardFilter opr should have four inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
     using Param = opr::DeformableConvBackwardFilter::Param;
@@ -414,8 +410,9 @@ uint64_t opr_footprint_func<opr::DeformableConvBackwardFilter>(
 template <>
 uint64_t opr_footprint_func<opr::DeformableConvBackwardData>(
         cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 5,
-               "DeformableConvBackwardData opr should have four inputs");
+    mgb_assert(
+            opr->input().size() == 5,
+            "DeformableConvBackwardData opr should have four inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
     using Param = opr::DeformableConvForward::Param;
@@ -435,11 +432,11 @@ uint64_t opr_footprint_func<opr::DeformableConvBackwardData>(
 }
 
 template <>
-uint64_t opr_footprint_func<opr::BatchConvBiasForward>(
-        cg::OperatorNodeBase* opr) {
-    mgb_assert(opr->input().size() == 2 || opr->input().size() == 3 ||
-                       opr->input().size() == 4,
-               "BatchConvBias opr should have two/three/four inputs");
+uint64_t opr_footprint_func<opr::BatchConvBiasForward>(cg::OperatorNodeBase* opr) {
+    mgb_assert(
+            opr->input().size() == 2 || opr->input().size() == 3 ||
+                    opr->input().size() == 4,
+            "BatchConvBias opr should have two/three/four inputs");
     auto&& out_shape = opr->output()[0]->shape();
     auto&& src_shape = opr->input()[0]->shape();
     auto&& filter_shape = opr->input()[1]->shape();
@@ -450,10 +447,8 @@ uint64_t opr_footprint_func<opr::BatchConvBiasForward>(
     if (param.format == Param::Format::NCHW4) {
         packed_channels = 4;
     }
-    size_t fh = filter_shape[kern_spatial_pos],
-           fw = filter_shape[kern_spatial_pos + 1];
-    return out_shape.total_nr_elems() * fh * fw * src_shape[1] *
-           packed_channels * 2;
+    size_t fh = filter_shape[kern_spatial_pos], fw = filter_shape[kern_spatial_pos + 1];
+    return out_shape.total_nr_elems() * fh * fw * src_shape[1] * packed_channels * 2;
 }
 
 // Pooling
@@ -504,12 +499,11 @@ uint64_t opr_footprint_func<opr::Host2DeviceCopy>(cg::OperatorNodeBase* opr) {
 template <class T>
 std::shared_ptr<json::Value> opr_param_json_func(cg::OperatorNodeBase* opr);
 
-#define REGISTE_PARAM_JSON_FUNC(cls)                            \
-    template <>                                                 \
-    std::shared_ptr<json::Value> opr_param_json_func<opr::cls>( \
-            cg::OperatorNodeBase * opr) {                       \
-        return opr::opr_param_to_json(                          \
-                opr->cast_final_safe<opr::cls>().param());      \
+#define REGISTE_PARAM_JSON_FUNC(cls)                                             \
+    template <>                                                                  \
+    std::shared_ptr<json::Value> opr_param_json_func<opr::cls>(                  \
+            cg::OperatorNodeBase * opr) {                                        \
+        return opr::opr_param_to_json(opr->cast_final_safe<opr::cls>().param()); \
     }
 
 REGISTE_PARAM_JSON_FUNC(Elemwise)
@@ -562,43 +556,41 @@ REGISTE_PARAM_JSON_FUNC(Linspace)
 REGISTE_PARAM_JSON_FUNC(Eye)
 REGISTE_PARAM_JSON_FUNC(CvtColor)
 
-
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::Dimshuffle>(
-    cg::OperatorNodeBase * opr) {
-        auto param = opr->cast_final_safe<opr::Dimshuffle>().param();
+        cg::OperatorNodeBase* opr) {
+    auto param = opr->cast_final_safe<opr::Dimshuffle>().param();
 
-        auto pattern = json::Array::make();
-        for (size_t i = 0; i < param.pattern_len; i++)
-            pattern->add(json::NumberInt::make(param.pattern[i]));
+    auto pattern = json::Array::make();
+    for (size_t i = 0; i < param.pattern_len; i++)
+        pattern->add(json::NumberInt::make(param.pattern[i]));
 
-        return json::Object::make({
+    return json::Object::make({
             {"ndim", json::NumberInt::make(param.ndim)},
             {"pattern", pattern},
-        });
-    }
+    });
+}
 
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::AxisAddRemove>(
-    cg::OperatorNodeBase * opr) {
-        auto param = opr->cast_final_safe<opr::AxisAddRemove>().param();
+        cg::OperatorNodeBase* opr) {
+    auto param = opr->cast_final_safe<opr::AxisAddRemove>().param();
 
-        auto desc = json::Array::make();
-        for (size_t i = 0; i < param.nr_desc; i++) {
-            auto axisdesc = param.desc[i];
-            desc->add(
-                json::Object::make({
-                    {"method", json::NumberInt::make(
-                        static_cast<int32_t>(axisdesc.method))},
-                    {"axisnum", json::NumberInt::make(axisdesc.axis.get_raw())},
-                }));
-        }
+    auto desc = json::Array::make();
+    for (size_t i = 0; i < param.nr_desc; i++) {
+        auto axisdesc = param.desc[i];
+        desc->add(json::Object::make({
+                {"method",
+                 json::NumberInt::make(static_cast<int32_t>(axisdesc.method))},
+                {"axisnum", json::NumberInt::make(axisdesc.axis.get_raw())},
+        }));
+    }
 
-        return json::Object::make({
+    return json::Object::make({
             {"nr_desc", json::NumberInt::make(param.nr_desc)},
             {"desc", desc},
-        });
-    }
+    });
+}
 
 std::shared_ptr<json::Value> indexing_param_to_json(
         const std::vector<opr::indexing::AxisIndexer>& indices) {
@@ -606,11 +598,9 @@ std::shared_ptr<json::Value> indexing_param_to_json(
     for (auto& index : indices) {
         desc->add(json::Object::make({
                 {"axis", json::NumberInt::make(index.axis.get_raw())},
-                {"begin",
-                    json::NumberInt::make(index.begin.node() != nullptr)},
+                {"begin", json::NumberInt::make(index.begin.node() != nullptr)},
                 {"end", json::NumberInt::make(index.end.node() != nullptr)},
-                {"step",
-                    json::NumberInt::make(index.step.node() != nullptr)},
+                {"step", json::NumberInt::make(index.step.node() != nullptr)},
                 {"idx", json::NumberInt::make(index.idx.node() != nullptr)},
         }));
     }
@@ -622,7 +612,7 @@ std::shared_ptr<json::Value> indexing_param_to_json(
     std::shared_ptr<json::Value> opr_param_json_func<opr::cls>(       \
             cg::OperatorNodeBase * opr) {                             \
         auto indices = opr->cast_final_safe<opr::cls>().index_desc(); \
-        return indexing_param_to_json(indices);                  \
+        return indexing_param_to_json(indices);                       \
     }
 
 REGISTE_INDEXING_PARAM_JSON_FUNC(Subtensor);
@@ -640,53 +630,52 @@ REGISTE_INDEXING_PARAM_JSON_FUNC(BatchedSetMeshIndexing);
 
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::Reshape>(
-    cg::OperatorNodeBase * opr) {
-        auto desc = json::Array::make();
-        auto axis_param = opr->cast_final_safe<opr::Reshape>().param();
-        if (axis_param.axis != axis_param.MAX_NDIM){
-            return json::Object::make({
+        cg::OperatorNodeBase* opr) {
+    auto desc = json::Array::make();
+    auto axis_param = opr->cast_final_safe<opr::Reshape>().param();
+    if (axis_param.axis != axis_param.MAX_NDIM) {
+        return json::Object::make({
                 {"axis", json::NumberInt::make(axis_param.axis)},
-            });
-        } else {
-            return json::Object::make();
-        }
+        });
+    } else {
+        return json::Object::make();
     }
+}
 
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::GetVarShape>(
-    cg::OperatorNodeBase * opr) {
-        auto desc = json::Array::make();
-        auto axis_param = opr->cast_final_safe<opr::GetVarShape>().param();
-        if (axis_param.axis != axis_param.MAX_NDIM){
-            return json::Object::make({
+        cg::OperatorNodeBase* opr) {
+    auto desc = json::Array::make();
+    auto axis_param = opr->cast_final_safe<opr::GetVarShape>().param();
+    if (axis_param.axis != axis_param.MAX_NDIM) {
+        return json::Object::make({
                 {"axis", json::NumberInt::make(axis_param.axis)},
-            });
-        } else {
-            return json::Object::make();
-        }
+        });
+    } else {
+        return json::Object::make();
     }
+}
 
 template <>
 std::shared_ptr<json::Value> opr_param_json_func<opr::standalone::NMSKeep>(
-    cg::OperatorNodeBase * opr) {
-        auto nms_param = opr->cast_final_safe<opr::standalone::NMSKeep>().param();
-        return json::Object::make({
-                {"iou_thresh", json::Number::make(nms_param.iou_thresh)},
-                {"max_output", json::Number::make(nms_param.max_output)},
-            });
-    }
+        cg::OperatorNodeBase* opr) {
+    auto nms_param = opr->cast_final_safe<opr::standalone::NMSKeep>().param();
+    return json::Object::make({
+            {"iou_thresh", json::Number::make(nms_param.iou_thresh)},
+            {"max_output", json::Number::make(nms_param.max_output)},
+    });
+}
 
-
-#endif // MGB_ENABLE_JSON
+#endif  // MGB_ENABLE_JSON
 
 }  // namespace
 
 template <class OprType>
 void OprFootprint::add_single_comp_footprint() {
-    MIDOUT_B(OprType,
-             midout_iv(MGB_HASH_STR("OprFootprint::add_single_comp_footprint")))
-    auto&& record = m_type2comp_footprint.emplace(OprType::typeinfo(),
-                                                  opr_footprint_func<OprType>);
+    MIDOUT_B(
+            OprType, midout_iv(MGB_HASH_STR("OprFootprint::add_single_comp_footprint")))
+    auto&& record = m_type2comp_footprint.emplace(
+            OprType::typeinfo(), opr_footprint_func<OprType>);
     mgb_assert(record.second, "duplicate opr typeinfo");
     MIDOUT_E
 }
@@ -694,8 +683,8 @@ void OprFootprint::add_single_comp_footprint() {
 #if MGB_ENABLE_JSON
 template <class OprType>
 void OprFootprint::add_single_param_json() {
-    auto&& record = m_type2param_json.emplace(OprType::typeinfo(),
-                                              opr_param_json_func<OprType>);
+    auto&& record = m_type2param_json.emplace(
+            OprType::typeinfo(), opr_param_json_func<OprType>);
     mgb_assert(record.second, "duplicate opr typeinfo");
 }
 #endif
@@ -801,8 +790,7 @@ OprFootprint::Result OprFootprint::calc_footprint(cg::OperatorNodeBase* opr) {
             rst.inp_layout.push_back(inp->layout());
         else
             rst.inp_layout.push_back({inp->shape(), inp->dtype()});
-        if (cg::OperatorNodeBase::NodeProp::is_device_value_dep(
-                    dep_map.at(inp))) {
+        if (cg::OperatorNodeBase::NodeProp::is_device_value_dep(dep_map.at(inp))) {
             rst.memory += inp->dtype().size(inp->shape().total_nr_elems());
         }
     }
@@ -829,8 +817,7 @@ uint64_t OprFootprint::get_computation(cg::OperatorNodeBase* opr) {
 }
 
 #if MGB_ENABLE_JSON
-std::shared_ptr<json::Value> OprFootprint::get_param_json(
-        cg::OperatorNodeBase* opr) {
+std::shared_ptr<json::Value> OprFootprint::get_param_json(cg::OperatorNodeBase* opr) {
     auto param_trait = m_type2param_json.find(opr->dyn_typeinfo());
     if (param_trait != m_type2param_json.end()) {
         return (param_trait->second)(opr);
@@ -882,11 +869,12 @@ std::shared_ptr<json::Value> OprFootprint::Result::to_json() const {
     TensorShapeArray inp_shape;
     for (auto&& i : inp_layout)
         inp_shape.push_back(i);
-    auto ret = Object::make({{"computation", std::move(comp)},
-                             {"memory", NumberInt::make(memory)},
-                             {"in_shapes", format_shape_arr(inp_shape)},
-                             {"out_shapes", format_shape_arr(out_shape)},
-                             {"param", param}});
+    auto ret = Object::make(
+            {{"computation", std::move(comp)},
+             {"memory", NumberInt::make(memory)},
+             {"in_shapes", format_shape_arr(inp_shape)},
+             {"out_shapes", format_shape_arr(out_shape)},
+             {"param", param}});
     if (auto inp_layout_json = format_layout_arr(inp_layout)) {
         ret->operator[]("in_layouts") = std::move(inp_layout_json);
     }

@@ -18,8 +18,8 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <cstring>
+#include <ctime>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -56,32 +56,32 @@ LogLevel min_log_level = config_default_log_level();
 
 #if MGB_EXTERN_API_TIME
 extern "C" {
-    void mgb_extern_api_get_time(int64_t *sec, int64_t *nsec);
+void mgb_extern_api_get_time(int64_t* sec, int64_t* nsec);
 }
 #endif
 
 namespace {
-void default_log_handler(LogLevel level,
-        const char *file, const char *func, int line, const char *fmt,
+void default_log_handler(
+        LogLevel level, const char* file, const char* func, int line, const char* fmt,
         va_list ap) {
     if (level < min_log_level)
         return;
 
-#define HDR_FMT	"[%s %s@%s:%d]%s"
+#define HDR_FMT "[%s %s@%s:%d]%s"
     fmt = convert_fmt_str(fmt);
 
     // we have to use a Spinlock here, since log handler might be called during
     // global finalization when mtx has been destructed
     static Spinlock mtx;
 
-    static const char *hdr_fmt = nullptr;
+    static const char* hdr_fmt = nullptr;
     if (!hdr_fmt) {
         if (sys::stderr_ansi_color())
             hdr_fmt = "\x1b[32m" HDR_FMT "\x1b[0m ";
         else
             hdr_fmt = HDR_FMT " ";
     }
-    const char *warn_reminder = "";
+    const char* warn_reminder = "";
     switch (level) {
         case LogLevel::ERROR:
             if (sys::stderr_ansi_color())
@@ -119,10 +119,11 @@ void default_log_handler(LogLevel level,
         sec -= sec_start;
         nsec -= nsec_start;
         if (nsec < 0) {
-            -- sec;
+            --sec;
             nsec += 1000000000;
         }
-        snprintf(timestr, sizeof(timestr), "%.3f",
+        snprintf(
+                timestr, sizeof(timestr), "%.3f",
                 static_cast<int>(sec) + static_cast<int>(nsec) * 1e-9);
     }
 #else
@@ -139,8 +140,8 @@ void default_log_handler(LogLevel level,
         auto f0 = file;
         file = f0 + strlen(f0) - 1;
         while (file >= f0 && *file != '/' && *file != '\\')
-            -- file;
-        ++ file;
+            --file;
+        ++file;
     }
     {
         MGB_LOCK_GUARD(mtx);
@@ -173,9 +174,9 @@ void default_log_handler(LogLevel level,
 LogHandler log_handler = default_log_handler;
 
 class MegDNNLogHandler {
-    static void dnn_log_handler(megdnn::LogLevel dnn_level, const char* file,
-                                const char* func, int line, const char* fmt,
-                                va_list ap) {
+    static void dnn_log_handler(
+            megdnn::LogLevel dnn_level, const char* file, const char* func, int line,
+            const char* fmt, va_list ap) {
         mgb::LogLevel mgb_level;
         switch (dnn_level) {
             case megdnn::LogLevel::DEBUG:
@@ -205,8 +206,9 @@ public:
 MegDNNLogHandler g_megdnn_log_handler_init;
 }  // anonymous namespace
 
-void mgb::__log__(LogLevel level,
-        const char *file, const char *func, int line, const char *fmt, ...) {
+void mgb::__log__(
+        LogLevel level, const char* file, const char* func, int line, const char* fmt,
+        ...) {
     if (level < min_log_level)
         return;
 
@@ -220,31 +222,29 @@ void mgb::__log__(LogLevel level,
 // common::Log is a weak symbol in megwave
 namespace common {
 enum class LogLevel { kInfo, kWarn, kDebug, kFatal };
-void Log(LogLevel level, char const* file, int line, char const* func,
-        char const *fmt, ...) {
-
+void Log(
+        LogLevel level, char const* file, int line, char const* func, char const* fmt,
+        ...) {
     std::string new_fmt("[wave] ");
     new_fmt.append(fmt);
     va_list ap;
     va_start(ap, fmt);
-    log_handler(level == LogLevel::kWarn ? mgb::LogLevel::WARN :
-            mgb::LogLevel::DEBUG,
-            file, func, line, new_fmt.c_str(), ap);
+    log_handler(
+            level == LogLevel::kWarn ? mgb::LogLevel::WARN : mgb::LogLevel::DEBUG, file,
+            func, line, new_fmt.c_str(), ap);
     va_end(ap);
 }
-}
+}  // namespace common
 
-#else // MGB_ENABLE_LOGGING
+#else  // MGB_ENABLE_LOGGING
 
 namespace {
-    void default_log_handler(LogLevel ,
-        const char *, const char *, int , const char *,
-        va_list ) {
-    }
-    LogHandler log_handler = default_log_handler;
-}
+void default_log_handler(
+        LogLevel, const char*, const char*, int, const char*, va_list) {}
+LogHandler log_handler = default_log_handler;
+}  // namespace
 
-#endif // MGB_ENABLE_LOGGING
+#endif  // MGB_ENABLE_LOGGING
 
 LogLevel mgb::set_log_level(LogLevel level) {
     if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
@@ -274,11 +274,10 @@ LogHandler mgb::set_log_handler(LogHandler handler) {
 }
 
 void mgb::__assert_fail__(
-        const char *file, int line, const char *func,
-        const char *expr, const char *msg_fmt, ...) {
-
-    std::string msg = ssprintf("assertion `%s' failed at %s:%d: %s",
-            expr, file, line, func);
+        const char* file, int line, const char* func, const char* expr,
+        const char* msg_fmt, ...) {
+    std::string msg =
+            ssprintf("assertion `%s' failed at %s:%d: %s", expr, file, line, func);
     if (msg_fmt) {
         msg_fmt = convert_fmt_str(msg_fmt);
         va_list ap;
@@ -291,22 +290,22 @@ void mgb::__assert_fail__(
 }
 
 #if MGB_ENABLE_LOGGING && !MGB_ENABLE_EXCEPTION
-void mgb::__on_exception_throw__(const std::exception &exc) {
+void mgb::__on_exception_throw__(const std::exception& exc) {
     mgb_log_error("exception thrown: %s", exc.what());
     mgb_log_error("abort now due to previous error");
     mgb_trap();
 }
 #endif
 
-std::string mgb::svsprintf(const char *fmt, va_list ap_orig) {
+std::string mgb::svsprintf(const char* fmt, va_list ap_orig) {
     fmt = convert_fmt_str(fmt);
-    int size = 100;     /* Guess we need no more than 100 bytes */
-    char *p;
+    int size = 100; /* Guess we need no more than 100 bytes */
+    char* p;
 
     if ((p = (char*)malloc(size)) == nullptr)
         goto err;
 
-    for (; ;) {
+    for (;;) {
         va_list ap;
         va_copy(ap, ap_orig);
         int n = vsnprintf(p, size, fmt, ap);
@@ -330,7 +329,7 @@ std::string mgb::svsprintf(const char *fmt, va_list ap_orig) {
 
         size = n + 1;
 
-        char *np = (char*)realloc(p, size);
+        char* np = (char*)realloc(p, size);
         if (!np) {
             free(p);
             goto err;
@@ -339,18 +338,16 @@ std::string mgb::svsprintf(const char *fmt, va_list ap_orig) {
     }
 
 err:
-    fprintf(stderr, "could not allocate memory for svsprintf; fmt=%s\n",
-            fmt);
+    fprintf(stderr, "could not allocate memory for svsprintf; fmt=%s\n", fmt);
     mgb_trap();
 }
 
-std::string mgb::ssprintf(const char *fmt, ...) {
+std::string mgb::ssprintf(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     auto rst = svsprintf(fmt, ap);
     va_end(ap);
     return rst;
 }
-
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -18,8 +18,8 @@
 
 #include "megbrain/plugin/opr_footprint.h"
 
-#include "./function_hook.h"
 #include "./event_pool.h"
+#include "./function_hook.h"
 #include "./op_trait.h"
 
 #include "./profiler/formats.h"
@@ -50,17 +50,18 @@ std::atomic_size_t Profiler::sm_preferred_capacity;
 
 auto Profiler::get_thread_dict() -> thread_dict_t {
     thread_dict_t thread_dict;
-    for (auto&& [tid, profiler]: sm_profilers) {
+    for (auto&& [tid, profiler] : sm_profilers) {
         thread_dict[tid] = sys::get_thread_name(tid);
     }
     return thread_dict;
 }
 
 void Profiler::dump_profile(std::string basename, std::string format, bundle_t result) {
-    static std::unordered_map<std::string, void(*)(std::string, bundle_t)> format_table = {
-        {"chrome_timeline.json", profiler::dump_chrome_timeline},
-        {"memory_flow.svg", profiler::dump_memory_flow},
-    };
+    static std::unordered_map<std::string, void (*)(std::string, bundle_t)>
+            format_table = {
+                    {"chrome_timeline.json", profiler::dump_chrome_timeline},
+                    {"memory_flow.svg", profiler::dump_memory_flow},
+            };
     auto iter = format_table.find(format);
     if (iter == format_table.end()) {
         mgb_log_error("unsupported profiling format %s", format.c_str());

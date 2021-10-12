@@ -30,8 +30,8 @@ constexpr int filter_next_col =
         IC_PACK_SIZE * OC_PACK_SIZE;  //! [OC/4, IC/4, FH, FW, 4OC, 4IC]
 
 template <int row, BiasMode bias_mode>
-MEGDNN_ALWAYS_INLINE void init_ocx_ow8(int32x4_t c[][8],
-                                       const int32_t* bias_ptr, int oc_step) {
+MEGDNN_ALWAYS_INLINE void init_ocx_ow8(
+        int32x4_t c[][8], const int32_t* bias_ptr, int oc_step) {
     static_assert(row == 1 || row == 2 || row == 3, "Invalid OC number.");
     if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
 #define BIAS_INIT(step, i) c[i][step] = vld1q_s32(bias_ptr + i * oc_step);
@@ -58,20 +58,17 @@ MEGDNN_ALWAYS_INLINE void init_ocx_ow8(int32x4_t c[][8],
     }
 }
 
-#define cb11(col) \
-    op(res[0][col], reinterpret_cast<dt_qint8*>(dst_ptr + col / 2 * 8));
+#define cb11(col) op(res[0][col], reinterpret_cast<dt_qint8*>(dst_ptr + col / 2 * 8));
 
 #define cb21(col)                                                        \
     op(res[0][col], reinterpret_cast<dt_qint8*>(dst_ptr + col / 2 * 8)); \
-    op(res[1][col],                                                      \
-       reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + col / 2 * 8));
+    op(res[1][col], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + col / 2 * 8));
 
-#define cb31(col)                                                        \
-    op(res[0][col], reinterpret_cast<dt_qint8*>(dst_ptr + col / 2 * 8)); \
-    op(res[1][col],                                                      \
-       reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + col / 2 * 8));  \
-    op(res[2][col], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc +    \
-                                                ld_dst_oc + col / 2 * 8));
+#define cb31(col)                                                                    \
+    op(res[0][col], reinterpret_cast<dt_qint8*>(dst_ptr + col / 2 * 8));             \
+    op(res[1][col], reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + col / 2 * 8)); \
+    op(res[2][col],                                                                  \
+       reinterpret_cast<dt_qint8*>(dst_ptr + ld_dst_oc + ld_dst_oc + col / 2 * 8));
 
 #define cb12(step)                                 \
     op({{res[0][2 * step], res[0][2 * step + 1]}}, \
@@ -93,14 +90,14 @@ MEGDNN_ALWAYS_INLINE void init_ocx_ow8(int32x4_t c[][8],
 
 template <int row, int ow_remain, typename Op, typename T>
 struct StoreOCxOWx {
-    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
-                                          T* dst_ptr, const int ld_dst_oc);
+    static MEGDNN_ALWAYS_INLINE void impl(
+            int32x4_t res[][8], const Op& op, T* dst_ptr, const int ld_dst_oc);
 };
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<1, ow_remain, Op, T> {
-    static void impl(int32x4_t res[][8], const Op& op, T* dst_ptr,
-                     const int ld_dst_oc) {
+    static void impl(
+            int32x4_t res[][8], const Op& op, T* dst_ptr, const int ld_dst_oc) {
         MEGDNN_MARK_USED_VAR(ld_dst_oc);
         switch (ow_remain) {
             case 8:
@@ -131,8 +128,8 @@ struct StoreOCxOWx<1, ow_remain, Op, T> {
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<2, ow_remain, Op, T> {
-    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
-                                          T* dst_ptr, const int ld_dst_oc) {
+    static MEGDNN_ALWAYS_INLINE void impl(
+            int32x4_t res[][8], const Op& op, T* dst_ptr, const int ld_dst_oc) {
         switch (ow_remain) {
             case 8:
                 UNROLL_CALL_RAW(4, cb22);
@@ -162,8 +159,8 @@ struct StoreOCxOWx<2, ow_remain, Op, T> {
 
 template <int ow_remain, typename Op, typename T>
 struct StoreOCxOWx<3, ow_remain, Op, T> {
-    static MEGDNN_ALWAYS_INLINE void impl(int32x4_t res[][8], const Op& op,
-                                          T* dst_ptr, const int ld_dst_oc) {
+    static MEGDNN_ALWAYS_INLINE void impl(
+            int32x4_t res[][8], const Op& op, T* dst_ptr, const int ld_dst_oc) {
         switch (ow_remain) {
             case 8:
                 UNROLL_CALL_RAW(4, cb32);
@@ -199,45 +196,47 @@ struct StoreOCxOWx<3, ow_remain, Op, T> {
 #undef cb32
 
 template <int row, int ow_remain, typename Op, typename T>
-MEGDNN_ALWAYS_INLINE void store_ocx_owx_remain_static(int32x4_t res[][8],
-                                                      const Op& op, T* dst_ptr,
-                                                      const int ld_dst_oc) {
+MEGDNN_ALWAYS_INLINE void store_ocx_owx_remain_static(
+        int32x4_t res[][8], const Op& op, T* dst_ptr, const int ld_dst_oc) {
     StoreOCxOWx<row, ow_remain, Op, T>::impl(res, op, dst_ptr, ld_dst_oc);
 }
 
-template <int res_row, int src_row, int src_start_idx, int weight_idx,
-          typename T, typename T2, typename T3>
+template <
+        int res_row, int src_row, int src_start_idx, int weight_idx, typename T,
+        typename T2, typename T3>
 struct ShiftCalHelper {
     MEGDNN_ATTRIBUTE_TARGET("dotprod")
     static MEGDNN_ALWAYS_INLINE void impl(T& res, T2& src, T3& weight) {
-#define cb(step)                                                      \
-    res[res_row][step] =                                              \
-            vdotq_laneq_s32(res[res_row][step], weight[weight_idx],   \
-                            src[src_row][(src_start_idx + step) / 4], \
-                            (src_start_idx + step) % 4);
+#define cb(step)                                    \
+    res[res_row][step] = vdotq_laneq_s32(           \
+            res[res_row][step], weight[weight_idx], \
+            src[src_row][(src_start_idx + step) / 4], (src_start_idx + step) % 4);
         UNROLL_CALL_RAW(8, cb);
 #undef cb
     }
 };
 
-template <int res_row, int src_row, int src_start_idx, int weight_idx,
-          typename T, typename T2, typename T3>
+template <
+        int res_row, int src_row, int src_start_idx, int weight_idx, typename T,
+        typename T2, typename T3>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 MEGDNN_ALWAYS_INLINE void cal_helper(T& res, T2& src, T3& weight) {
-    ShiftCalHelper<res_row, src_row, src_start_idx, weight_idx, T, T2,
-                   T3>::impl(res, src, weight);
+    ShiftCalHelper<res_row, src_row, src_start_idx, weight_idx, T, T2, T3>::impl(
+            res, src, weight);
 };
 
 /**
  *  oc12_owx(m = 12, n = x) and oc8_owx(m = 8, n = x) and oc4_owx(m = 4, n = x)
  * gemm like kernel
  * */
-template <typename dst_type, int stride, BiasMode bias_mode, typename Op,
-          int ow_remain, int filter_size, int oc_interval, int ow_interval>
+template <
+        typename dst_type, int stride, BiasMode bias_mode, typename Op, int ow_remain,
+        int filter_size, int oc_interval, int ow_interval>
 struct KernNeonSdotNCHW44 {
-    static void impl(dst_type* dst, const int dst_step, const int8_t* src,
-                     const int ih, const int iw, const int8_t* filter,
-                     const int32_t* bias, const int ic, const Op& op);
+    static void impl(
+            dst_type* dst, const int dst_step, const int8_t* src, const int ih,
+            const int iw, const int8_t* filter, const int32_t* bias, const int ic,
+            const Op& op);
 };
 
 }  // namespace direct_dotprod_nchw44

@@ -10,8 +10,8 @@
  */
 
 #include "megbrain/utils/thread.h"
-#include <thread>
 #include <atomic>
+#include <thread>
 
 using namespace mgb;
 
@@ -27,23 +27,23 @@ RecursiveSpinlock::RecursiveSpinlock() {
 void RecursiveSpinlock::lock() {
     auto tid = std::this_thread::get_id();
     if (m_owner.load(std::memory_order_relaxed) != tid) {
-        for (; ;) {
+        for (;;) {
             auto id = sm_none_owner;
-            if (m_owner.compare_exchange_weak(id, tid,
-                        std::memory_order_acquire,
+            if (m_owner.compare_exchange_weak(
+                        id, tid, std::memory_order_acquire,
                         std::memory_order_relaxed)) {
                 break;
             }
         }
     }
-    ++ m_recur_count;
+    ++m_recur_count;
 }
 
 void RecursiveSpinlock::unlock() {
-    mgb_assert(m_recur_count &&
-            m_owner.load(std::memory_order_relaxed) ==
-            std::this_thread::get_id());
-    if (! (-- m_recur_count)) {
+    mgb_assert(
+            m_recur_count &&
+            m_owner.load(std::memory_order_relaxed) == std::this_thread::get_id());
+    if (!(--m_recur_count)) {
         m_owner.store(sm_none_owner, std::memory_order_release);
     }
 }
@@ -54,22 +54,19 @@ void RecursiveSpinlock::unlock() {
 #endif
 
 #if MGB_HAVE_THREAD
-#include "megbrain/utils/timer.h"
 #include <ctime>
+#include "megbrain/utils/timer.h"
 
 namespace {
-    class SpinlockReleaser {
-        std::atomic_flag &m_lock;
-        public:
-            SpinlockReleaser(std::atomic_flag &lock):
-                m_lock{lock}
-            {}
+class SpinlockReleaser {
+    std::atomic_flag& m_lock;
 
-            ~SpinlockReleaser() {
-                m_lock.clear(std::memory_order_release);
-            }
-    };
-}
+public:
+    SpinlockReleaser(std::atomic_flag& lock) : m_lock{lock} {}
+
+    ~SpinlockReleaser() { m_lock.clear(std::memory_order_release); }
+};
+}  // namespace
 
 /* =============== SCQueueSynchronizer ===============  */
 size_t SCQueueSynchronizer::cached_default_max_spin = 0;
@@ -102,7 +99,7 @@ size_t SCQueueSynchronizer::get_default_max_spin() {
         volatile size_t cntv = 0;
         RealTimer timer;
         while (!stop.load() && (cntv < (1 << 24))) {
-            ++ cntv;
+            ++cntv;
         }
         cnt_time = timer.get_msecs();
         cnt = cntv;
@@ -162,8 +159,7 @@ void SCQueueSynchronizer::producer_add() {
 void SCQueueSynchronizer::producer_wait() {
     auto wait_target = m_tot_task.load(std::memory_order_relaxed);
     if (m_worker_started &&
-            m_finished_task.load(std::memory_order_acquire) < wait_target) {
-
+        m_finished_task.load(std::memory_order_acquire) < wait_target) {
         std::unique_lock<std::mutex> lock(m_mtx_finished);
         // update wait_target again in this critical section
         wait_target = m_tot_task.load(std::memory_order_relaxed);
@@ -178,7 +174,7 @@ void SCQueueSynchronizer::producer_wait() {
         }
 
         size_t done;
-        for (; ;) {
+        for (;;) {
             // ensure that m_waiter_target is visible in consumer
             std::atomic_thread_fence(std::memory_order_seq_cst);
 
@@ -207,29 +203,27 @@ void SCQueueSynchronizer::producer_wait() {
 
 size_t SCQueueSynchronizer::consumer_fetch(size_t max, size_t min) {
     mgb_assert(max >= min && min >= 1);
-    size_t spin = 0,
-           cur_finished = m_finished_task.load(std::memory_order_relaxed);
+    size_t spin = 0, cur_finished = m_finished_task.load(std::memory_order_relaxed);
 
     // relaxed mem order suffices because acquire would be called for ret
     while (m_tot_task.load(std::memory_order_relaxed) < cur_finished + min) {
-        ++ spin;
+        ++spin;
         if (spin >= m_max_spin) {
-            while (m_consumer_waiting.test_and_set(std::memory_order_relaxed));
+            while (m_consumer_waiting.test_and_set(std::memory_order_relaxed))
+                ;
             SpinlockReleaser releaser(m_consumer_waiting);
 
             std::unique_lock<std::mutex> lock(m_mtx_more_task);
             if (m_should_exit.load(std::memory_order_relaxed))
                 return 0;
-            if (m_tot_task.load(std::memory_order_relaxed) >=
-                    cur_finished + min)
+            if (m_tot_task.load(std::memory_order_relaxed) >= cur_finished + min)
                 break;
             m_cv_more_task.wait(lock);
         }
         if (m_should_exit.load(std::memory_order_relaxed))
             return 0;
     }
-    auto ret = std::min(
-            m_tot_task.load(std::memory_order_acquire) - cur_finished, max);
+    auto ret = std::min(m_tot_task.load(std::memory_order_acquire) - cur_finished, max);
     mgb_assert(ret >= min);
     return ret;
 }
@@ -255,17 +249,16 @@ void SyncableCounter::incr(int delta) {
         m_cv.notify_all();
 }
 
-
 void SyncableCounter::wait_zero() {
     std::unique_lock<std::mutex> lk{m_mtx};
-    for (; ; ) {
+    for (;;) {
         if (!m_val)
             return;
         m_cv.wait(lk);
     }
 }
 
-#else   // MGB_HAVE_THREAD
+#else  // MGB_HAVE_THREAD
 #pragma message "threading support is disabled"
 #if MGB_CUDA
 #error "cuda must be disabled if threading is not available"
@@ -273,4 +266,3 @@ void SyncableCounter::wait_zero() {
 #endif  // MGB_HAVE_THREAD
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

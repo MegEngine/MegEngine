@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 
 #include "megbrain/tensor.h"
 
@@ -31,25 +31,20 @@ public:
     Blob(CompNode cn, size_t sz);
     ~Blob();
 
-    template<typename ...Args>
-    static BlobPtr make(Args&& ...args) {
+    template <typename... Args>
+    static BlobPtr make(Args&&... args) {
         return std::make_shared<Blob>(std::forward<Args>(args)...);
     }
 
     using RawStorage = DeviceTensorStorage::RawStorage;
     const RawStorage& storage();
 
-    const CompNode& comp_node() const {
-        return m_comp_node;
-    }
+    const CompNode& comp_node() const { return m_comp_node; }
 
-    size_t size() const {
-        return m_size;
-    }
+    size_t size() const { return m_size; }
 
-    size_t id() const {
-        return m_id;
-    }
+    size_t id() const { return m_id; }
+
 private:
     friend class BlobManagerImpl;
     CompNode m_comp_node;
@@ -68,24 +63,27 @@ using TensorPtr = std::shared_ptr<Tensor>;
 class Tensor : public NonCopyableObj {
 public:
     Tensor() = default;
-    Tensor(BlobPtr blob, const TensorLayout& layout, size_t offset = 0, const HostTensorND& hv = {});
+    Tensor(BlobPtr blob, const TensorLayout& layout, size_t offset = 0,
+           const HostTensorND& hv = {});
     Tensor(BlobPtr blob, const TensorLayout& layout, const HostTensorND& hv = {})
-        : Tensor(std::move(blob), layout, 0, hv) {};
-    Tensor(const HostTensorND &hv);
-    Tensor(const DeviceTensorND &dv, const HostTensorND& hv = {});
+            : Tensor(std::move(blob), layout, 0, hv){};
+    Tensor(const HostTensorND& hv);
+    Tensor(const DeviceTensorND& dv, const HostTensorND& hv = {});
     Tensor(const TensorLayout& layout, const CompNode& cn);
     Tensor(const BlobPtr blob, const size_t offset, const TensorLayout& layout);
 
     static TensorPtr make(const HostTensorND& hv);
 
-    template<typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, HostTensorND>>>
+    template <
+            typename T,
+            typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, HostTensorND>>>
     static TensorPtr make(T&& hv) {
         TensorPtr (*f)(const HostTensorND&) = &make;
         return f(std::forward<T>(hv));
     };
 
-    template<typename ...Args>
-    static TensorPtr make(Args&& ...args) {
+    template <typename... Args>
+    static TensorPtr make(Args&&... args) {
         return std::make_shared<Tensor>(std::forward<Args>(args)...);
     }
 
@@ -94,21 +92,13 @@ public:
         return m_blob->comp_node();
     }
 
-    DType dtype() const {
-        return m_layout.dtype;
-    }
+    DType dtype() const { return m_layout.dtype; }
 
-    TensorLayout layout() const {
-        return m_layout;
-    }
+    TensorLayout layout() const { return m_layout; }
 
-    const TensorShape& shape() const {
-        return m_layout;
-    }
+    const TensorShape& shape() const { return m_layout; }
 
-    size_t offset() const {
-        return m_offset;
-    }
+    size_t offset() const { return m_offset; }
 
     DeviceTensorND dev_tensor();
 
@@ -119,9 +109,7 @@ public:
         return make_scalar(value, m_blob->comp_node());
     }
 
-    BlobPtr& blob() {
-        return m_blob;
-    }
+    BlobPtr& blob() { return m_blob; }
 
     void fetch_value();
     bool value_fetched();
@@ -140,8 +128,8 @@ public:
     // construction. All static storage duration object that holds tensors must
     // call this method before their constructors completes.
     static void static_initialize();
-private:
 
+private:
     TensorLayout m_layout;
     BlobPtr m_blob;
     size_t m_offset;
@@ -152,7 +140,8 @@ private:
 
 // Cache for small blobs
 // 1. A blob has to be seen twice (within a window) to be eligible for cache
-// 2. Cache eviction occurs when cache size reaches a threshold, in least frequently used order
+// 2. Cache eviction occurs when cache size reaches a threshold, in least frequently
+// used order
 class ConstTensorCache {
 public:
     struct Entry {
@@ -178,17 +167,14 @@ public:
     bool check(const HostTensorND& hv) {
         auto&& layout = hv.layout();
         auto&& span = layout.span();
-        return hv.format().is_default() && !hv.empty() &&
-            layout.is_contiguous() && span.low_byte == 0 &&
-            span.high_byte <= max_bytes;
+        return hv.format().is_default() && !hv.empty() && layout.is_contiguous() &&
+               span.low_byte == 0 && span.high_byte <= max_bytes;
     }
 
     // hash storage; does not check input
     static uint64_t hash(const HostTensorND& hv) {
         auto&& span = hv.layout().span();
-        return XXHash{}
-            .update(hv.raw_ptr(), span.high_byte)
-            .digest();
+        return XXHash{}.update(hv.raw_ptr(), span.high_byte).digest();
     }
 
     BlobPtr lookup(const HostTensorND& hv) {
@@ -229,7 +215,8 @@ public:
     }
 
     std::mutex mtx;
-    const size_t hwm = 1024, lwm = 512, max_bytes = TensorShape::MAX_NDIM * 8, window = 65536;
+    const size_t hwm = 1024, lwm = 512, max_bytes = TensorShape::MAX_NDIM * 8,
+                 window = 65536;
 
 private:
     void maybe_collect_g0() {
@@ -239,15 +226,18 @@ private:
         }
     }
     void maybe_collect_g1() {
-        if (g1.size() < hwm) return;
+        if (g1.size() < hwm)
+            return;
 
         tmp.clear();
         for (auto&& kv : g1) {
             tmp.emplace_back(kv.first, std::move(kv.second));
         }
-        std::nth_element(tmp.begin(), tmp.begin() + lwm, tmp.end(), [](const KV& lhs, const KV& rhs) {
-                return lhs.second.hitcnt > rhs.second.hitcnt;
-            });
+        std::nth_element(
+                tmp.begin(), tmp.begin() + lwm, tmp.end(),
+                [](const KV& lhs, const KV& rhs) {
+                    return lhs.second.hitcnt > rhs.second.hitcnt;
+                });
         tmp.resize(lwm);
         g1.clear();
         for (auto&& kv : tmp) {
@@ -296,7 +286,7 @@ struct MultiCNConstTensorCache : CompNodeDepedentObject {
 struct LogicalTensorDesc {
     TensorLayout layout;
     CompNode comp_node;
-    DeviceTensorND value; // cpu:default
+    DeviceTensorND value;  // cpu:default
 };
 
 struct StorageIdentifier;
@@ -315,28 +305,20 @@ struct StorageIdentifier {
     };
     TensorPtr ptr;
     StorageIdentifier() = default;
-    StorageIdentifier(size_t id): tag(SYS_ALLOC), id(id) {}
-    StorageIdentifier(const MemoryDesc* desc): tag(FROM_OTHER), desc(desc->id->desc) {}
-    StorageIdentifier(TensorPtr dev_ptr): tag(DEVICE_PTR), ptr(dev_ptr) {}
+    StorageIdentifier(size_t id) : tag(SYS_ALLOC), id(id) {}
+    StorageIdentifier(const MemoryDesc* desc) : tag(FROM_OTHER), desc(desc->id->desc) {}
+    StorageIdentifier(TensorPtr dev_ptr) : tag(DEVICE_PTR), ptr(dev_ptr) {}
 
-    template<typename ...Args>
-    static std::shared_ptr<StorageIdentifier> make(Args&& ...args) {
+    template <typename... Args>
+    static std::shared_ptr<StorageIdentifier> make(Args&&... args) {
         return std::make_shared<StorageIdentifier>(std::forward<Args>(args)...);
     }
-    bool is_sys_alloc() {
-        return tag == SYS_ALLOC;
-    }
-    bool is_from_other() {
-        return tag == FROM_OTHER;
-    }
-    bool is_device_ptr() {
-        return tag == DEVICE_PTR;
-    }
-    bool is_invalid() {
-        return tag == INVALID;
-    }
+    bool is_sys_alloc() { return tag == SYS_ALLOC; }
+    bool is_from_other() { return tag == FROM_OTHER; }
+    bool is_device_ptr() { return tag == DEVICE_PTR; }
+    bool is_invalid() { return tag == INVALID; }
 };
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

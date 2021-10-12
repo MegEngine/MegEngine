@@ -36,8 +36,9 @@ void ElemwiseImpl::unary_kern(const ElemwiseOpParamN<1>& param) {
 
         // only specialize for the most common 1-dim case
         if (param.max_ndim == 1) {
-            MIDOUT_BEGIN(megdnn_fallback_elemwise_unary, ctype, midout_iv(mode),
-                         midout_iv(1)) {
+            MIDOUT_BEGIN(
+                    megdnn_fallback_elemwise_unary, ctype, midout_iv(mode),
+                    midout_iv(1)) {
                 auto tot = param.size;
                 auto stride = param[0].layout.stride[0];
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
@@ -65,11 +66,11 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
         ctype* __restrict dst = m_dst->ptr<ctype>();
 
         if (param.max_ndim == 1) {
-            MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype,
-                         midout_iv(mode), midout_iv(1)) {
+            MIDOUT_BEGIN(
+                    megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
+                    midout_iv(1)) {
                 auto tot = param.size;
-                auto as = param[0].layout.stride[0],
-                     bs = param[1].layout.stride[0];
+                auto as = param[0].layout.stride[0], bs = param[1].layout.stride[0];
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
                     for (size_t i = 0; i < tot; ++i) {
                         dst[i] = Kern::apply(a[i * as], b[i * bs]);
@@ -86,19 +87,19 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
 
         if (param.max_ndim == 2) {
             if (param[0].layout.ndim == 1) {
-                MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype,
-                             midout_iv(mode), midout_iv(21)) {
+                MIDOUT_BEGIN(
+                        megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
+                        midout_iv(21)) {
                     auto as = param[0].layout.stride[0],
                          bs0 = param[1].layout.stride[0],
                          bs1 = param[1].layout.stride[1];
-                    auto n0 = param[1].layout.shape[0],
-                         n1 = param[1].layout.shape[1];
+                    auto n0 = param[1].layout.shape[0], n1 = param[1].layout.shape[1];
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
                         ptrdiff_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
-                                dst[toff] = Kern::apply(a[as * toff],
-                                                        b[bs0 * i + bs1 * j]);
+                                dst[toff] =
+                                        Kern::apply(a[as * toff], b[bs0 * i + bs1 * j]);
                                 ++toff;
                             }
                         }
@@ -108,21 +109,19 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                 MIDOUT_END();
             }
 
-            MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype,
-                         midout_iv(mode), midout_iv(22)) {
+            MIDOUT_BEGIN(
+                    megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
+                    midout_iv(22)) {
                 megdnn_assert(param[1].layout.ndim == 1);
-                auto bs = param[1].layout.stride[0],
-                     as0 = param[0].layout.stride[0],
+                auto bs = param[1].layout.stride[0], as0 = param[0].layout.stride[0],
                      as1 = param[0].layout.stride[1];
-                auto n0 = param[0].layout.shape[0],
-                     n1 = param[0].layout.shape[1];
+                auto n0 = param[0].layout.shape[0], n1 = param[0].layout.shape[1];
 
                 MEGDNN_DISPATCH_CPU_KERN_OPR({
                     ptrdiff_t toff = 0;
                     for (size_t i = 0; i < n0; ++i) {
                         for (size_t j = 0; j < n1; ++j) {
-                            dst[toff] = Kern::apply(a[as0 * i + as1 * j],
-                                                    b[toff * bs]);
+                            dst[toff] = Kern::apply(a[as0 * i + as1 * j], b[toff * bs]);
                             ++toff;
                         }
                     }
@@ -138,20 +137,18 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                 return l.ndim == 3 && l.stride[0] == 0 && l.stride[2] == 0;
             };
             if (param[0].layout.ndim == 1 && brd_101(param[1])) {
-                MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype,
-                             midout_iv(mode), midout_iv(31)) {
-                    auto as = param[0].layout.stride[0],
-                         bs = param[1].layout.stride[1];
-                    auto n0 = param[1].layout.shape[0],
-                         n1 = param[1].layout.shape[1],
+                MIDOUT_BEGIN(
+                        megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
+                        midout_iv(31)) {
+                    auto as = param[0].layout.stride[0], bs = param[1].layout.stride[1];
+                    auto n0 = param[1].layout.shape[0], n1 = param[1].layout.shape[1],
                          n2 = param[1].layout.shape[2];
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
                         size_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
                                 for (size_t k = 0; k < n2; ++k) {
-                                    dst[toff] = Kern::apply(a[as * toff],
-                                                            b[bs * j]);
+                                    dst[toff] = Kern::apply(a[as * toff], b[bs * j]);
                                     ++toff;
                                 }
                             }
@@ -162,20 +159,18 @@ void ElemwiseImpl::binary_kern(const ElemwiseOpParamN<2>& param) {
                 MIDOUT_END();
             }
             if (param[1].layout.ndim == 1 && brd_101(param[0])) {
-                MIDOUT_BEGIN(megdnn_fallback_elemwise_binary, ctype,
-                             midout_iv(mode), midout_iv(32)) {
-                    auto as = param[0].layout.stride[1],
-                         bs = param[1].layout.stride[0];
-                    auto n0 = param[0].layout.shape[0],
-                         n1 = param[0].layout.shape[1],
+                MIDOUT_BEGIN(
+                        megdnn_fallback_elemwise_binary, ctype, midout_iv(mode),
+                        midout_iv(32)) {
+                    auto as = param[0].layout.stride[1], bs = param[1].layout.stride[0];
+                    auto n0 = param[0].layout.shape[0], n1 = param[0].layout.shape[1],
                          n2 = param[0].layout.shape[2];
                     MEGDNN_DISPATCH_CPU_KERN_OPR({
                         size_t toff = 0;
                         for (size_t i = 0; i < n0; ++i) {
                             for (size_t j = 0; j < n1; ++j) {
                                 for (size_t k = 0; k < n2; ++k) {
-                                    dst[toff] = Kern::apply(a[as * j],
-                                                            b[bs * toff]);
+                                    dst[toff] = Kern::apply(a[as * j], b[bs * toff]);
                                     ++toff;
                                 }
                             }
@@ -200,14 +195,14 @@ void ElemwiseImpl::exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) {
     m_dst = &dst;
 
 #define CONCAT2(a, b, c) a##_##b##_##c
-#define CONCAT(a, b, c) CONCAT2(a, b, c)
-#define SWITCH_MODE_CB(_mode)                                           \
-    case Mode::_mode:                                                   \
-        MIDOUT_BEGIN(CONCAT(megdnn_fallback_elemwise_exec, ARITY, CAT), \
-                     midout_iv(Mode::_mode)) {                          \
-            return CONCAT(exec, ARITY,                                  \
-                          CAT)<param_enumv::Elemwise::Mode::_mode>();   \
-        }                                                               \
+#define CONCAT(a, b, c)  CONCAT2(a, b, c)
+#define SWITCH_MODE_CB(_mode)                                                      \
+    case Mode::_mode:                                                              \
+        MIDOUT_BEGIN(                                                              \
+                CONCAT(megdnn_fallback_elemwise_exec, ARITY, CAT),                 \
+                midout_iv(Mode::_mode)) {                                          \
+            return CONCAT(exec, ARITY, CAT)<param_enumv::Elemwise::Mode::_mode>(); \
+        }                                                                          \
         MIDOUT_END();
 #define SWITCH_MODE                                          \
     switch (m_param.mode) {                                  \

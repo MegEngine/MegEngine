@@ -35,12 +35,11 @@ int basic_c_interface(const char* mode_path) {
 
     //! set input data to input tensor
     LiteTensor c_input_tensor;
-    LITE_CAPI_CHECK(
-            LITE_get_io_tensor(c_network, "data", LITE_IO, &c_input_tensor));
+    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, "data", LITE_IO, &c_input_tensor));
     void* dst_ptr;
     size_t length_in_byte;
-    LITE_CAPI_CHECK(LITE_get_tensor_total_size_in_byte(c_input_tensor,
-                                                       &length_in_byte));
+    LITE_CAPI_CHECK(
+            LITE_get_tensor_total_size_in_byte(c_input_tensor, &length_in_byte));
     LITE_CAPI_CHECK(LITE_get_tensor_memory(c_input_tensor, &dst_ptr));
     //! copy or forward data to network
     memset(dst_ptr, 5, length_in_byte);
@@ -54,13 +53,13 @@ int basic_c_interface(const char* mode_path) {
     LiteTensor c_output_tensor;
     //! get the first output tensor name
     LITE_CAPI_CHECK(LITE_get_output_name(c_network, 0, &output_name));
-    LITE_CAPI_CHECK(LITE_get_io_tensor(c_network, output_name, LITE_IO,
-                                       &c_output_tensor));
+    LITE_CAPI_CHECK(
+            LITE_get_io_tensor(c_network, output_name, LITE_IO, &c_output_tensor));
     void* output_ptr;
     size_t length_output_in_byte;
     LITE_CAPI_CHECK(LITE_get_tensor_memory(c_output_tensor, &output_ptr));
-    LITE_CAPI_CHECK(LITE_get_tensor_total_size_in_byte(c_output_tensor,
-                                                       &length_output_in_byte));
+    LITE_CAPI_CHECK(LITE_get_tensor_total_size_in_byte(
+            c_output_tensor, &length_output_in_byte));
 
     size_t out_length = length_output_in_byte / sizeof(float);
     printf("length=%zu\n", out_length);

@@ -35,9 +35,8 @@ static inline typename simd_helper::simd_type compute_linear_element(
 
 template <typename simd_helper, bool has_right, bool has_bottom>
 static inline void compute_linear_2x2_element(
-        const typename simd_helper::ctype* src,
-        typename simd_helper::ctype* dst, size_t IW, size_t OW,
-        const typename simd_helper::simd_type alpha[2][2]) {
+        const typename simd_helper::ctype* src, typename simd_helper::ctype* dst,
+        size_t IW, size_t OW, const typename simd_helper::simd_type alpha[2][2]) {
     constexpr size_t PC = simd_helper::simd_width;
     const typename simd_helper::ctype* src_ptr[4] = {src, src, src, src};
 
@@ -75,8 +74,8 @@ static inline void compute_linear_2x2_element(
 }
 
 template <typename ctype>
-void linear_upsample2_nchwxx(const ctype* src_ptr, ctype* dst_ptr, size_t N,
-                             size_t IH, size_t IW) {
+void linear_upsample2_nchwxx(
+        const ctype* src_ptr, ctype* dst_ptr, size_t N, size_t IH, size_t IW) {
     using simd_helper = SIMDHelper<ctype>;
     size_t OW = IW * 2;
     constexpr size_t PC = simd_helper::simd_width;
@@ -88,19 +87,17 @@ void linear_upsample2_nchwxx(const ctype* src_ptr, ctype* dst_ptr, size_t N,
     alpha[1][1] = simd_helper::dup(0.25 * 0.25);
 
     for (size_t i = 0; i < N; ++i) {
-        compute_linear_2x2_element<simd_helper, false, false>(src_ptr, dst_ptr,
-                                                              IW, OW, alpha);
+        compute_linear_2x2_element<simd_helper, false, false>(
+                src_ptr, dst_ptr, IW, OW, alpha);
 
         {
             for (size_t iw = 0; iw + 1 < IW; ++iw) {
                 compute_linear_2x2_element<simd_helper, true, false>(
-                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW,
-                        alpha);
+                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW, alpha);
             }
         }
         compute_linear_2x2_element<simd_helper, false, false>(
-                src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW,
-                alpha);
+                src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW, alpha);
         dst_ptr += OW * PC;
 
         for (size_t ih = 0; ih + 1 < IH; ++ih) {
@@ -108,38 +105,34 @@ void linear_upsample2_nchwxx(const ctype* src_ptr, ctype* dst_ptr, size_t N,
                     src_ptr, dst_ptr, IW, OW, alpha);
             for (size_t iw = 0; iw + 1 < IW; ++iw) {
                 compute_linear_2x2_element<simd_helper, true, true>(
-                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW,
-                        alpha);
+                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW, alpha);
             }
             compute_linear_2x2_element<simd_helper, false, true>(
-                    src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW,
-                    alpha);
+                    src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW, alpha);
 
             src_ptr += IW * PC;
             dst_ptr += 2 * OW * PC;
         }
 
-        compute_linear_2x2_element<simd_helper, false, false>(src_ptr, dst_ptr,
-                                                              IW, OW, alpha);
+        compute_linear_2x2_element<simd_helper, false, false>(
+                src_ptr, dst_ptr, IW, OW, alpha);
         {
             for (size_t iw = 0; iw + 1 < IW; ++iw) {
                 compute_linear_2x2_element<simd_helper, true, false>(
-                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW,
-                        alpha);
+                        src_ptr + iw * PC, dst_ptr + (iw * 2 + 1) * PC, IW, OW, alpha);
             }
         }
 
         compute_linear_2x2_element<simd_helper, false, false>(
-                src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW,
-                alpha);
+                src_ptr + (IW - 1) * PC, dst_ptr + (OW - 1) * PC, IW, OW, alpha);
         src_ptr += IW * PC;
         dst_ptr += OW * PC;
     }
 }
 
 template <typename ctype>
-void nearest_upsample2_nchwxx(const ctype* src_ptr, ctype* dst_ptr, size_t N,
-                              size_t IH, size_t IW) {
+void nearest_upsample2_nchwxx(
+        const ctype* src_ptr, ctype* dst_ptr, size_t N, size_t IH, size_t IW) {
     using simd_helper = SIMDHelper<ctype>;
     size_t OW = IW * 2;
     constexpr size_t PC = simd_helper::simd_width;
@@ -164,16 +157,16 @@ void nearest_upsample2_nchwxx(const ctype* src_ptr, ctype* dst_ptr, size_t N,
 
 void megdnn::arm_common::resize_linear_upsample2_nchw44_fp32(
         const ResizeImpl::KernParam<float>& kern_param) {
-    linear_upsample2_nchwxx(kern_param.sptr, kern_param.dptr,
-                            kern_param.n * kern_param.c / 4, kern_param.ih,
-                            kern_param.iw);
+    linear_upsample2_nchwxx(
+            kern_param.sptr, kern_param.dptr, kern_param.n * kern_param.c / 4,
+            kern_param.ih, kern_param.iw);
 }
 
 void megdnn::arm_common::resize_nearest_upsample2_nchw44_fp32(
         const ResizeImpl::KernParam<float>& kern_param) {
-    nearest_upsample2_nchwxx(kern_param.sptr, kern_param.dptr,
-                             kern_param.n * kern_param.c / 4, kern_param.ih,
-                             kern_param.iw);
+    nearest_upsample2_nchwxx(
+            kern_param.sptr, kern_param.dptr, kern_param.n * kern_param.c / 4,
+            kern_param.ih, kern_param.iw);
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -182,16 +175,16 @@ void megdnn::arm_common::resize_linear_upsample2_nchw88_fp16(
         const ResizeImpl::KernParam<dt_float16>& kern_param) {
     auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
     auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
-    linear_upsample2_nchwxx(sptr, dptr, kern_param.n * kern_param.c / 8,
-                            kern_param.ih, kern_param.iw);
+    linear_upsample2_nchwxx(
+            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih, kern_param.iw);
 }
 
 void megdnn::arm_common::resize_nearest_upsample2_nchw88_fp16(
         const ResizeImpl::KernParam<dt_float16>& kern_param) {
     auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
     auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
-    nearest_upsample2_nchwxx(sptr, dptr, kern_param.n * kern_param.c / 8,
-                             kern_param.ih, kern_param.iw);
+    nearest_upsample2_nchwxx(
+            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih, kern_param.iw);
 }
 
 #endif

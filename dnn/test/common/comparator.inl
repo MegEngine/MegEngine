@@ -18,18 +18,16 @@ namespace megdnn {
 namespace test {
 
 template <typename T>
-bool DefaultComparator<T>::is_same(T expected, T actual) const
-{
+bool DefaultComparator<T>::is_same(T expected, T actual) const {
     return expected == actual;
 }
 
 template <>
 class DefaultComparator<dt_float32> {
-    public:
-        bool is_same(dt_float32 expected, dt_float32 actual) const
-        {
-            return std::abs(diff(expected, actual)) < 1e-3;
-        }
+public:
+    bool is_same(dt_float32 expected, dt_float32 actual) const {
+        return std::abs(diff(expected, actual)) < 1e-3;
+    }
 };
 
 template <>
@@ -48,8 +46,7 @@ public:
     }
 };
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

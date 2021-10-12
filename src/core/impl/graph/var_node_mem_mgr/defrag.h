@@ -25,8 +25,7 @@ namespace cg {
  */
 class VarDevMemDefragmenter {
 public:
-    explicit VarDevMemDefragmenter(VarNodeMemManager* mem_mgr)
-            : m_mem_mgr{mem_mgr} {}
+    explicit VarDevMemDefragmenter(VarNodeMemManager* mem_mgr) : m_mem_mgr{mem_mgr} {}
 
 private:
     bool m_enable;
@@ -51,8 +50,7 @@ private:
     }
 
     //! allocate storage and call defrag() if fails
-    void alloc_with_defrag(VarNode* var, DeviceTensorStorage& storage,
-                           size_t size);
+    void alloc_with_defrag(VarNode* var, DeviceTensorStorage& storage, size_t size);
 
     /*!
      * \brief perform defragmenting
@@ -62,11 +60,9 @@ private:
      * \param extra_size size needed to be allocated after defragmenting
      * \return a tensor storage of \p extra_size
      */
-    void defrag(VarNode* req_var, const CompNodeInfo& cn_info,
-                size_t extra_size);
+    void defrag(VarNode* req_var, const CompNodeInfo& cn_info, size_t extra_size);
 
-    void defrag_impl(VarNode* req_var, const CompNodeInfo& cn_info,
-                     size_t extra_size);
+    void defrag_impl(VarNode* req_var, const CompNodeInfo& cn_info, size_t extra_size);
 
 public:
     /*!
@@ -76,8 +72,7 @@ public:
      *
      * \param storage tensor storage associated with the var
      */
-    void alloc_var_storage(VarNode* var, DeviceTensorStorage& storage,
-                           size_t size) {
+    void alloc_var_storage(VarNode* var, DeviceTensorStorage& storage, size_t size) {
         if (!m_enable || !enable_for_device(var->comp_node().device_type())) {
             alloc_direct(var, storage, size);
         } else {
@@ -92,8 +87,7 @@ public:
     void clear_all();
 #else  // MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER
 public:
-    void alloc_var_storage(VarNode* var, DeviceTensorStorage& storage,
-                           size_t size) {
+    void alloc_var_storage(VarNode* var, DeviceTensorStorage& storage, size_t size) {
         alloc_direct(var, storage, size);
     }
 
@@ -111,4 +105,3 @@ public:
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

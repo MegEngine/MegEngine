@@ -9,24 +9,22 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/common/conv_bias.h"
 #include "src/cuda/conv_bias/algo.h"
 #include "src/cuda/cudnn_wrapper.h"
 #include "src/cuda/utils.h"
-#include "src/common/conv_bias.h"
 
 using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;
 
-bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
-        const SizeArgs& args) const {
+bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(const SizeArgs& args) const {
     if (args.z_layout->ndim > 0)
         return false;
 
     if (args.filter_meta.format != Param::Format::NCHW &&
         args.filter_meta.format != Param::Format::NHWC) {
-        if (!args.src_layout->is_contiguous() ||
-            !args.dst_layout->is_contiguous()) {
+        if (!args.src_layout->is_contiguous() || !args.dst_layout->is_contiguous()) {
             return false;
         }
     }
@@ -48,9 +46,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
     auto dst_layout = *args.dst_layout;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();
-        args.opr->check_or_deduce_dtype_fwd(args.src_layout->dtype,
-                                            args.filter_layout->dtype,
-                                            dst_layout.dtype);
+        args.opr->check_or_deduce_dtype_fwd(
+                args.src_layout->dtype, args.filter_layout->dtype, dst_layout.dtype);
     }
     SizeArgs conv_args = args;
     conv_args.dst_layout = &dst_layout;
@@ -62,9 +59,8 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(
 
     size_t workspace_size;
     auto status = cudnnGetConvolutionForwardWorkspaceSize(
-            conv_args.handle->cudnn_handle(), D.src_desc.desc,
-            D.filter_desc.desc, D.conv_desc.conv_desc, D.dst_desc.desc,
-            m_cudnn_enum, &workspace_size);
+            conv_args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
+            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum, &workspace_size);
     return status == CUDNN_STATUS_SUCCESS;
 }
 
@@ -74,9 +70,8 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoCUDNNConv::get_workspace_bundle(
     SmallVector<size_t> sizes;
     if (dst_layout.dtype.enumv() != args.bias_layout->dtype.enumv()) {
         dst_layout.dtype = DType();
-        args.opr->check_or_deduce_dtype_fwd(args.src_layout->dtype,
-                                            args.filter_layout->dtype,
-                                            dst_layout.dtype);
+        args.opr->check_or_deduce_dtype_fwd(
+                args.src_layout->dtype, args.filter_layout->dtype, dst_layout.dtype);
         sizes.push_back(dst_layout.span().dist_byte());
     }
 
@@ -88,12 +83,12 @@ WorkspaceBundle ConvBiasForwardImpl::AlgoCUDNNConv::get_workspace_bundle(
 
     size_t conv_workspace_size;
     auto status = cudnnGetConvolutionForwardWorkspaceSize(
-            conv_args.handle->cudnn_handle(), D.src_desc.desc,
-            D.filter_desc.desc, D.conv_desc.conv_desc, D.dst_desc.desc,
-            m_cudnn_enum, &conv_workspace_size);
-    megdnn_assert(status == CUDNN_STATUS_SUCCESS,
-                  "conv fwd get workspace failed: %s; info: %s",
-                  cudnnGetErrorString(status), args.to_string().c_str());
+            conv_args.handle->cudnn_handle(), D.src_desc.desc, D.filter_desc.desc,
+            D.conv_desc.conv_desc, D.dst_desc.desc, m_cudnn_enum, &conv_workspace_size);
+    megdnn_assert(
+            status == CUDNN_STATUS_SUCCESS,
+            "conv fwd get workspace failed: %s; info: %s", cudnnGetErrorString(status),
+            args.to_string().c_str());
     sizes.insert(sizes.begin(), conv_workspace_size);
     return {ptr, std::move(sizes)};
 }
@@ -109,9 +104,9 @@ void ConvBiasForwardImpl::AlgoCUDNNConv::exec(const ExecArgs& args) const {
     if (args.dst_layout->dtype.enumv() != args.bias_layout->dtype.enumv()) {
         conv_dst_tensor.raw_ptr = bundle.get(1);
         conv_dst_tensor.layout.dtype = DType();
-        args.opr->check_or_deduce_dtype_fwd(args.src_layout->dtype,
-                                            args.filter_layout->dtype,
-                                            conv_dst_tensor.layout.dtype);
+        args.opr->check_or_deduce_dtype_fwd(
+                args.src_layout->dtype, args.filter_layout->dtype,
+                conv_dst_tensor.layout.dtype);
     }
 
     ExecArgs conv_args = args;
@@ -126,17 +121,17 @@ void ConvBiasForwardImpl::AlgoCUDNNConv::exec(const ExecArgs& args) const {
         auto status = cudnnConvolutionForward(
                 conv_args.handle->cudnn_handle(), &alpha, D.src_desc.desc,
                 conv_args.src_tensor->raw_ptr, D.filter_desc.desc,
-                conv_args.filter_tensor->raw_ptr, D.conv_desc.conv_desc,
-                m_cudnn_enum, conv_workspace.raw_ptr, conv_workspace.size,
-                &beta, D.dst_desc.desc, conv_args.dst_tensor->raw_ptr);
-        megdnn_assert(status == CUDNN_STATUS_SUCCESS,
-                      "conv fwd failed: %s; info: %s", cudnnGetErrorString(status),
-                      conv_args.to_string().c_str());
+                conv_args.filter_tensor->raw_ptr, D.conv_desc.conv_desc, m_cudnn_enum,
+                conv_workspace.raw_ptr, conv_workspace.size, &beta, D.dst_desc.desc,
+                conv_args.dst_tensor->raw_ptr);
+        megdnn_assert(
+                status == CUDNN_STATUS_SUCCESS, "conv fwd failed: %s; info: %s",
+                cudnnGetErrorString(status), conv_args.to_string().c_str());
     }
 
-    handle_bias_and_nonlinear(args.handle, args.nonlinear_mode,
-                              &conv_dst_tensor, args.dst_tensor,
-                              args.bias_tensor);
+    handle_bias_and_nonlinear(
+            args.handle, args.nonlinear_mode, &conv_dst_tensor, args.dst_tensor,
+            args.bias_tensor);
 }
 
 // vim: syntax=cpp.doxygen

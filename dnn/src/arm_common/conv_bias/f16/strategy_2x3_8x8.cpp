@@ -13,16 +13,16 @@
 #include "src/fallback/conv_bias/winograd/winograd.h"
 #include "src/naive/matrix_mul/matrix_mul_helper.h"
 
-#include "src/arm_common/elemwise_helper/op_unary.h"
-#include "src/arm_common/conv_bias/f16/strategy.h"
 #include "src/arm_common/conv_bias/f16/helper.h"
+#include "src/arm_common/conv_bias/f16/strategy.h"
+#include "src/arm_common/elemwise_helper/op_unary.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/arm_common/utils.h"
 
-#include "src/common/winograd/winograd_generator.h"
+#include "midout.h"
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
-#include "midout.h"
+#include "src/common/winograd/winograd_generator.h"
 
 #include "src/common/winograd/winograd_helper.h"
 
@@ -63,16 +63,15 @@ void transpose_8x4(const __fp16* src, __fp16* dst, int lda, int ldb) {
 
 struct InputTransform2X3_8x8 {
     template <bool inner>
-    static void prepare(const __fp16* input, __fp16* patch, __fp16* patchT,
-                        int ih_start, int iw_start, size_t IH, size_t IW,
-                        size_t ic, size_t IC) {
+    static void prepare(
+            const __fp16* input, __fp16* patch, __fp16* patchT, int ih_start,
+            int iw_start, size_t IH, size_t IW, size_t ic, size_t IC) {
         constexpr size_t alpha = 2 + 3 - 1;
         if (!(inner && ic + 8 < IC)) {
             memset(patch, 0, sizeof(__fp16) * 8 * alpha * alpha);
         }
         if (inner) {
-            const __fp16* input_ptr =
-                    input + ic * IH * IW + ih_start * IW + iw_start;
+            const __fp16* input_ptr = input + ic * IH * IW + ih_start * IW + iw_start;
             for (size_t ico = 0; ico < 8; ++ico) {
                 if (ic + ico < IC) {
                     auto v0 = vld1_f16(input_ptr);
@@ -112,14 +111,13 @@ struct InputTransform2X3_8x8 {
         transpose_8x4(patch + 4 * 3, patchT + 32 * 3, 16, 4);
     }
 
-    static void transform(const __fp16* patchT, __fp16* input_transform_buf,
-                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
-                          size_t IC) {
+    static void transform(
+            const __fp16* patchT, __fp16* input_transform_buf, size_t unit_idx,
+            size_t nr_units_in_tile, size_t ic, size_t IC) {
         constexpr size_t alpha = 2 + 3 - 1;
         // BT * d * B
-#define cb(m, n)                \
-    Vector<__fp16, 8> d##m##n = \
-            Vector<__fp16, 8>::load(patchT + 8 * (m * 4 + n));
+#define cb(m, n) \
+    Vector<__fp16, 8> d##m##n = Vector<__fp16, 8>::load(patchT + 8 * (m * 4 + n));
 
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
@@ -148,10 +146,10 @@ struct InputTransform2X3_8x8 {
 
         size_t ICB = IC / 8;
         size_t icb = ic / 8;
-#define cb(m, n)                                                \
-    d##m##n.save(input_transform_buf +                          \
-                 (m * alpha + n) * nr_units_in_tile * ICB * 8 + \
-                 icb * nr_units_in_tile * 8 + unit_idx * 8);
+#define cb(m, n)                                                                 \
+    d##m##n.save(                                                                \
+            input_transform_buf + (m * alpha + n) * nr_units_in_tile * ICB * 8 + \
+            icb * nr_units_in_tile * 8 + unit_idx * 8);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
     }
@@ -159,20 +157,18 @@ struct InputTransform2X3_8x8 {
 
 template <BiasMode bmode, typename Op>
 struct OutputTransform2X3_8x8 {
-    static void transform(const dt_float16* output_transform_buf,
-                          const dt_float16* bias, dt_float16* output,
-                          dt_float16* transform_mid_buf, size_t oh_start,
-                          size_t ow_start, size_t OH, size_t OW,
-                          size_t oc_start, size_t oc_end, size_t oc_index,
-                          size_t unit_idx, size_t nr_units_in_tile,
-                          const DType& src_dtype, const DType& dst_dtype) {
+    static void transform(
+            const dt_float16* output_transform_buf, const dt_float16* bias,
+            dt_float16* output, dt_float16* transform_mid_buf, size_t oh_start,
+            size_t ow_start, size_t OH, size_t OW, size_t oc_start, size_t oc_end,
+            size_t oc_index, size_t unit_idx, size_t nr_units_in_tile,
+            const DType& src_dtype, const DType& dst_dtype) {
         Op op(src_dtype, dst_dtype);
         const __fp16* output_transform_ptr =
                 reinterpret_cast<const __fp16*>(output_transform_buf);
         const __fp16* bias_ptr = reinterpret_cast<const __fp16*>(bias);
         __fp16* output_ptr = reinterpret_cast<__fp16*>(output);
-        __fp16* transform_mid_ptr =
-                reinterpret_cast<__fp16*>(transform_mid_buf);
+        __fp16* transform_mid_ptr = reinterpret_cast<__fp16*>(transform_mid_buf);
 
         //! AT * m * A
         constexpr size_t alpha = 2 + 3 - 1;
@@ -180,11 +176,10 @@ struct OutputTransform2X3_8x8 {
         size_t oc = oc_start + oc_index;
         size_t OCB = (oc_end - oc_start) / 8;
         size_t ocb = oc_index / 8;
-        
-#define cb(m, n)                                           \
-    auto v##m##n = Vector<__fp16, 8>::load(                \
-            output_transform_ptr +                         \
-            (m * alpha + n) * OCB * nr_units_in_tile * 8 + \
+
+#define cb(m, n)                                                                  \
+    auto v##m##n = Vector<__fp16, 8>::load(                                       \
+            output_transform_ptr + (m * alpha + n) * OCB * nr_units_in_tile * 8 + \
             ocb * nr_units_in_tile * 8 + unit_idx * 8);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
@@ -249,22 +244,21 @@ namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_2x3_8x8_f16)
 
-void winograd_2x3_8x8_f16::filter(const dt_float16* filter,
-                                  dt_float16* filter_transform_buf,
-                                  dt_float16* transform_mid_buf, size_t OC,
-                                  size_t IC, size_t oc_start, size_t oc_end) {
+void winograd_2x3_8x8_f16::filter(
+        const dt_float16* filter, dt_float16* filter_transform_buf,
+        dt_float16* transform_mid_buf, size_t OC, size_t IC, size_t oc_start,
+        size_t oc_end) {
     constexpr int alpha = 2 + 3 - 1;
     //! G * g * GT
-    __fp16* filter_transbuf_ptr =
-            reinterpret_cast<__fp16*>(filter_transform_buf);
+    __fp16* filter_transbuf_ptr = reinterpret_cast<__fp16*>(filter_transform_buf);
     __fp16* filter_transmid_ptr = reinterpret_cast<__fp16*>(transform_mid_buf);
 
     size_t OCB = OC / 8;
     size_t ICB = IC / 8;
     for (size_t oc = oc_start; oc < oc_end; oc++) {
         rep(ic, IC) {
-            const __fp16* filter_ptr = reinterpret_cast<const __fp16*>(filter) +
-                                       (oc * IC + ic) * 3 * 3;
+            const __fp16* filter_ptr =
+                    reinterpret_cast<const __fp16*>(filter) + (oc * IC + ic) * 3 * 3;
             /**
              * origin: (4x3) * (3 x 3) * (3 x 4)
              * pack to G and g to times of 4
@@ -313,19 +307,19 @@ void winograd_2x3_8x8_f16::filter(const dt_float16* filter,
             size_t icb = (ic) / 8;
             size_t ic8 = (ic) % 8;
             rep(i, alpha) rep(j, alpha) {
-                filter_transbuf_ptr[(i * alpha + j) * OCB * ICB * 8 * 8 +
-                                    ocb * ICB * 8 * 8 + icb * 8 * 8 + ic8 * 8 +
-                                    oc8] = filter_transmid_ptr[i * alpha + j];
+                filter_transbuf_ptr
+                        [(i * alpha + j) * OCB * ICB * 8 * 8 + ocb * ICB * 8 * 8 +
+                         icb * 8 * 8 + ic8 * 8 + oc8] =
+                                filter_transmid_ptr[i * alpha + j];
             }
         }
     }
 }
 
-void winograd_2x3_8x8_f16::input(const dt_float16* input,
-                                 dt_float16* input_transform_buf,
-                                 dt_float16* transform_mid_buf, size_t IH,
-                                 size_t IW, size_t IC, size_t PH, size_t PW,
-                                 size_t unit_start_idx, size_t nr_units_in_tile) {
+void winograd_2x3_8x8_f16::input(
+        const dt_float16* input, dt_float16* input_transform_buf,
+        dt_float16* transform_mid_buf, size_t IH, size_t IW, size_t IC, size_t PH,
+        size_t PW, size_t unit_start_idx, size_t nr_units_in_tile) {
     megdnn_assert(IC % 8 == 0);
     constexpr int alpha = 3 + 2 - 1;
 
@@ -346,38 +340,35 @@ void winograd_2x3_8x8_f16::input(const dt_float16* input,
                 InputTransform2X3_8x8::prepare<true>(
                         reinterpret_cast<const __fp16*>(input),
                         reinterpret_cast<__fp16*>(patch),
-                        reinterpret_cast<__fp16*>(patchT), ih_start, iw_start,
-                        IH, IW, ic, IC);
+                        reinterpret_cast<__fp16*>(patchT), ih_start, iw_start, IH, IW,
+                        ic, IC);
                 InputTransform2X3_8x8::transform(
                         reinterpret_cast<const __fp16*>(patchT),
-                        reinterpret_cast<__fp16*>(input_transform_buf),
-                        unit_idx, nr_units_in_tile, ic, IC);
+                        reinterpret_cast<__fp16*>(input_transform_buf), unit_idx,
+                        nr_units_in_tile, ic, IC);
 
             } else {
                 InputTransform2X3_8x8::prepare<false>(
                         reinterpret_cast<const __fp16*>(input),
                         reinterpret_cast<__fp16*>(patch),
-                        reinterpret_cast<__fp16*>(patchT), ih_start, iw_start,
-                        IH, IW, ic, IC);
+                        reinterpret_cast<__fp16*>(patchT), ih_start, iw_start, IH, IW,
+                        ic, IC);
                 InputTransform2X3_8x8::transform(
                         reinterpret_cast<const __fp16*>(patchT),
-                        reinterpret_cast<__fp16*>(input_transform_buf),
-                        unit_idx, nr_units_in_tile, ic, IC);
+                        reinterpret_cast<__fp16*>(input_transform_buf), unit_idx,
+                        nr_units_in_tile, ic, IC);
             }
         }
     }
 }
 
-void winograd_2x3_8x8_f16::output(const dt_float16* output_transform_buf,
-                                  const dt_float16* bias, dt_float16* output,
-                                  dt_float16* transform_mid_buf, BiasMode bmode,
-                                  NonlineMode nonline_mode, size_t OH,
-                                  size_t OW, size_t oc_start, size_t oc_end,
-                                  size_t unit_start_idx,
-                                  size_t nr_units_in_tile) {
-#define cb(_bmode, _nonline_op, ...)                                    \
-    OutputTransform2X3_8x8<_bmode MEGDNN_COMMA _nonline_op>::transform( \
-            __VA_ARGS__);
+void winograd_2x3_8x8_f16::output(
+        const dt_float16* output_transform_buf, const dt_float16* bias,
+        dt_float16* output, dt_float16* transform_mid_buf, BiasMode bmode,
+        NonlineMode nonline_mode, size_t OH, size_t OW, size_t oc_start, size_t oc_end,
+        size_t unit_start_idx, size_t nr_units_in_tile) {
+#define cb(_bmode, _nonline_op, ...) \
+    OutputTransform2X3_8x8<_bmode MEGDNN_COMMA _nonline_op>::transform(__VA_ARGS__);
 
     auto units_w = div_ceil<size_t>(OW, OUTPUT_BLOCK_SIZE);
 
@@ -390,10 +381,10 @@ void winograd_2x3_8x8_f16::output(const dt_float16* output_transform_buf,
             size_t oh_start = nh * OUTPUT_BLOCK_SIZE;
             size_t ow_start = nw * OUTPUT_BLOCK_SIZE;
             DISPATCH_CONV_WINOGRAD_BIAS(
-                    megdnn_arm_common_winograd_f16_F23_8x8, cb, __fp16, __fp16,
-                    bmode, nonline_mode, output_transform_buf, bias, output,
-                    transform_mid_buf, oh_start, ow_start, OH, OW, oc_start,
-                    oc_end, oc_index, unit_idx, nr_units_in_tile, src_dtype, dst_dtype);
+                    megdnn_arm_common_winograd_f16_F23_8x8, cb, __fp16, __fp16, bmode,
+                    nonline_mode, output_transform_buf, bias, output, transform_mid_buf,
+                    oh_start, ow_start, OH, OW, oc_start, oc_end, oc_index, unit_idx,
+                    nr_units_in_tile, src_dtype, dst_dtype);
         }
     }
 #undef cb

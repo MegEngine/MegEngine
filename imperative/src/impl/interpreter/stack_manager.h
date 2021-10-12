@@ -11,28 +11,30 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include "megbrain/utils/metahelper.h"
 #include "megbrain/utils/small_vector.h"
 
-namespace mgb::imperative::interpreter::intl{
+namespace mgb::imperative::interpreter::intl {
 
 class StackSnapshot;
 
-class StackManager: public NonCopyableObj {
+class StackManager : public NonCopyableObj {
 public:
     class Node;
     class Guard;
     struct Frame;
     class Trace;
+
 private:
     std::unique_ptr<Node> m_root = nullptr;
     Node* m_current = nullptr;
     SmallVector<uint64_t> m_trace_id_stack;
     uint64_t m_last_trace_id = 0;
+
 public:
     StackManager();
     std::pair<Node*, uint64_t> enter(std::string name);
@@ -41,7 +43,7 @@ public:
     Node* current();
 };
 
-class StackManager::Node: public NonCopyableObj {
+class StackManager::Node : public NonCopyableObj {
 private:
     std::string m_name;
     std::unordered_map<std::string, std::unique_ptr<Node>> m_children;
@@ -49,15 +51,14 @@ private:
     Node* m_parent = nullptr;
     int64_t m_depth = -1;
     uint64_t m_version = 0;
-    explicit Node(std::string name, Node* parent): m_name{name}, m_parent{parent} {
+    explicit Node(std::string name, Node* parent) : m_name{name}, m_parent{parent} {
         if (parent) {
             m_depth = parent->m_depth + 1;
         }
     }
+
 public:
-    const std::string& name() const {
-        return m_name;
-    }
+    const std::string& name() const { return m_name; }
     Node* operator[](const std::string& name) {
         auto& child = m_children[name];
         if (child == nullptr) {
@@ -65,18 +66,12 @@ public:
         }
         return child.get();
     }
-    Node* parent() {
-        return m_parent;
-    }
-    bool is_root() {
-        return m_parent == nullptr;
-    }
-    uint64_t version() const {
-        return m_version;
-    }
+    Node* parent() { return m_parent; }
+    bool is_root() { return m_parent == nullptr; }
+    uint64_t version() const { return m_version; }
     void update_version() {
         ++m_version;
-        for (auto&& [key, child]: m_children) {
+        for (auto&& [key, child] : m_children) {
             child->reset_version();
         }
         m_id_table.clear();
@@ -85,12 +80,8 @@ public:
         m_version = 0;
         m_id_table.clear();
     }
-    int64_t depth() const {
-        return m_depth;
-    }
-    uint64_t next_id(std::string key) {
-        return m_id_table[key]++;
-    }
+    int64_t depth() const { return m_depth; }
+    uint64_t next_id(std::string key) { return m_id_table[key]++; }
     static std::unique_ptr<Node> make() {
         return std::unique_ptr<Node>(new Node("", nullptr));
     }
@@ -100,15 +91,14 @@ class StackManager::Guard {
 private:
     std::string m_name;
     StackManager* m_manager;
+
 public:
-    Guard(std::string name, StackManager* manager): m_name{name}, m_manager{manager}{
+    Guard(std::string name, StackManager* manager) : m_name{name}, m_manager{manager} {
         if (m_manager) {
             m_manager->enter(name);
         }
     }
-    ~Guard() {
-        release();
-    }
+    ~Guard() { release(); }
     void release() {
         if (m_manager) {
             m_manager->exit(m_name);
@@ -126,21 +116,22 @@ class StackManager::Trace {
 private:
     SmallVector<StackManager::Frame> m_frames;
     uint64_t m_id = 0;
+
 public:
-    explicit Trace(StackManager::Node* top, uint64_t id): m_id{id} {
+    explicit Trace(StackManager::Node* top, uint64_t id) : m_id{id} {
         int64_t nr_frames = top->depth() + 1;
         m_frames = SmallVector<StackManager::Frame>(nr_frames);
         StackManager::Node* node = top;
         for (int64_t i = 0; i < nr_frames; ++i) {
-            m_frames[m_frames.size()-1-i] = {node, node->version()};
+            m_frames[m_frames.size() - 1 - i] = {node, node->version()};
             node = node->parent();
         }
-        mgb_assert(node->is_root() , "");
+        mgb_assert(node->is_root(), "");
     }
     Trace() = default;
     std::string to_string() const {
         std::string buffer;
-        for (auto&& [node, version]: m_frames) {
+        for (auto&& [node, version] : m_frames) {
             if (!buffer.empty()) {
                 buffer.append(".");
             }
@@ -151,12 +142,8 @@ public:
         }
         return buffer;
     }
-    const SmallVector<StackManager::Frame>& frames() const {
-        return m_frames;
-    }
-    uint64_t id() const {
-        return m_id;
-    }
+    const SmallVector<StackManager::Frame>& frames() const { return m_frames; }
+    uint64_t id() const { return m_id; }
 };
 
 inline StackManager::StackManager() {
@@ -185,4 +172,4 @@ inline StackManager::Node* StackManager::current() {
     return m_current;
 }
 
-}
+}  // namespace mgb::imperative::interpreter::intl

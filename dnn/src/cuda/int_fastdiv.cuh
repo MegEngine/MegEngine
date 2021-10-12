@@ -25,45 +25,40 @@ namespace cuda {
 class Uint32Fastdiv {
     uint32_t m_mul, m_divisor, m_divisor_is_not_1, m_inc_dividend, m_shift;
 
-    public:
-        Uint32Fastdiv();
+public:
+    Uint32Fastdiv();
 
-        Uint32Fastdiv(uint32_t d) {
-            operator=(d);
-        }
+    Uint32Fastdiv(uint32_t d) { operator=(d); }
 
-        //! set the divisor to be d
-        Uint32Fastdiv& operator = (uint32_t d);
+    //! set the divisor to be d
+    Uint32Fastdiv& operator=(uint32_t d);
 
-        //! caller must ensure that dividend would not exceed this number
-        static MEGDNN_CONSTEXPR uint32_t MAX_DIVIDEND = ~0u - 1;
+    //! caller must ensure that dividend would not exceed this number
+    static MEGDNN_CONSTEXPR uint32_t MAX_DIVIDEND = ~0u - 1;
 
-        __device__ __forceinline__ uint32_t divisor() const {
-            return m_divisor;
-        }
+    __device__ __forceinline__ uint32_t divisor() const { return m_divisor; }
 
-        __device__ __forceinline__ uint32_t divide(uint32_t dividend) const {
-            uint32_t
-                ans_for_one = dividend & ~m_divisor_is_not_1,
-                dfix = dividend + m_inc_dividend,
+    __device__ __forceinline__ uint32_t divide(uint32_t dividend) const {
+        uint32_t ans_for_one = dividend & ~m_divisor_is_not_1,
+                 dfix = dividend + m_inc_dividend,
 #if MEGDNN_CC_CUDA
-                hi32 = __umulhi(dfix, m_mul),
+                 hi32 = __umulhi(dfix, m_mul),
 #else
-                hi32 = ((uint64_t)dfix * m_mul) >> 32,
+                 hi32 = ((uint64_t)dfix * m_mul) >> 32,
 #endif
-                ans = hi32 >> m_shift;
+                 ans = hi32 >> m_shift;
 
-            return (ans & m_divisor_is_not_1) | ans_for_one;
-        }
+        return (ans & m_divisor_is_not_1) | ans_for_one;
+    }
 };
 
 static __forceinline__ __device__ uint32_t
-operator / (uint32_t a, const Uint32Fastdiv &d) {
+operator/(uint32_t a, const Uint32Fastdiv& d) {
     return d.divide(a);
 }
 
 static __forceinline__ __device__ uint32_t
-operator % (uint32_t a, const Uint32Fastdiv &d) {
+operator%(uint32_t a, const Uint32Fastdiv& d) {
     return a - d.divisor() * d.divide(a);
 }
 
@@ -71,10 +66,10 @@ operator % (uint32_t a, const Uint32Fastdiv &d) {
  * \brief maintain (a + k * x) / b and (a + k * x) % b for x >= 0
  * \tparam need_quotient whether quotient need to be maintained
  */
-template<bool need_quotient>
+template <bool need_quotient>
 class StridedDivSeq;
 
-template<>
+template <>
 class StridedDivSeq<false> {
     Uint32Fastdiv m_b;
 
@@ -84,32 +79,26 @@ class StridedDivSeq<false> {
     //! current (a + k * x) % b
     uint32_t m_r;
 
-    public:
-        void host_init(uint32_t k, uint32_t b) {
-            m_b = b;
-            m_kr = k % b;
-        }
+public:
+    void host_init(uint32_t k, uint32_t b) {
+        m_b = b;
+        m_kr = k % b;
+    }
 
-        //! init to k == 0
-        __device__ __forceinline__ void device_init(uint32_t a) {
-            m_r = a % m_b;
-        }
+    //! init to k == 0
+    __device__ __forceinline__ void device_init(uint32_t a) { m_r = a % m_b; }
 
-        //! perform x += 1
-        __device__ __forceinline__ void next() {
-            uint32_t b = m_b.divisor(),
-                     r1 = m_r + m_kr,
-                     carry_mask = (r1 < b) - 1;
-            m_r = r1 - (b & carry_mask);
-        }
+    //! perform x += 1
+    __device__ __forceinline__ void next() {
+        uint32_t b = m_b.divisor(), r1 = m_r + m_kr, carry_mask = (r1 < b) - 1;
+        m_r = r1 - (b & carry_mask);
+    }
 
-        //! current remainder
-        __device__ __forceinline__ uint32_t r() const {
-            return m_r;
-        }
+    //! current remainder
+    __device__ __forceinline__ uint32_t r() const { return m_r; }
 };
 
-template<>
+template <>
 class StridedDivSeq<true> {
     Uint32Fastdiv m_b;
 
@@ -119,37 +108,31 @@ class StridedDivSeq<true> {
     //! current (a + k * x) / b and (a + k * x) % b
     uint32_t m_q, m_r;
 
-    public:
-        void host_init(uint32_t k, uint32_t b) {
-            m_b = b;
-            m_kq = k / b;
-            m_kr = k % b;
-        }
+public:
+    void host_init(uint32_t k, uint32_t b) {
+        m_b = b;
+        m_kq = k / b;
+        m_kr = k % b;
+    }
 
-        //! init to k == 0
-        __device__ __forceinline__ void device_init(uint32_t a) {
-            m_q = m_b.divide(a);
-            m_r = a - m_b.divisor() * m_q;
-        }
+    //! init to k == 0
+    __device__ __forceinline__ void device_init(uint32_t a) {
+        m_q = m_b.divide(a);
+        m_r = a - m_b.divisor() * m_q;
+    }
 
-        //! perform x += 1
-        __device__ __forceinline__ void next() {
-            uint32_t b = m_b.divisor(),
-                     r1 = m_r + m_kr,
-                     carry_mask = (r1 < b) - 1;
-            m_q += m_kq + (r1 >= b);
-            m_r = r1 - (b & carry_mask);
-        }
+    //! perform x += 1
+    __device__ __forceinline__ void next() {
+        uint32_t b = m_b.divisor(), r1 = m_r + m_kr, carry_mask = (r1 < b) - 1;
+        m_q += m_kq + (r1 >= b);
+        m_r = r1 - (b & carry_mask);
+    }
 
-        //! current quotient
-        __device__ __forceinline__ uint32_t q() const {
-            return m_q;
-        }
+    //! current quotient
+    __device__ __forceinline__ uint32_t q() const { return m_q; }
 
-        //! current remainder
-        __device__ __forceinline__ uint32_t r() const {
-            return m_r;
-        }
+    //! current remainder
+    __device__ __forceinline__ uint32_t r() const { return m_r; }
 };
 
 /*!
@@ -164,41 +147,35 @@ class StridedDivSeq2 {
     //! current (a + k * x) % b and (a + k * x) / b % c
     uint32_t m_cur_rkb, m_cur_ans;
 
-    public:
+public:
+    void host_init(uint32_t k, uint32_t b, uint32_t c) {
+        m_b = b;
+        m_c = c;
+        m_qkb = k / b;
+        m_rkb = k % b;
+        m_rkbc = m_qkb % c;
+    }
 
-        void host_init(uint32_t k, uint32_t b, uint32_t c) {
-            m_b = b;
-            m_c = c;
-            m_qkb = k / b;
-            m_rkb = k % b;
-            m_rkbc = m_qkb % c;
-        }
+    //! init to k == 0
+    __device__ __forceinline__ void device_init(uint32_t a) {
+        uint32_t q = m_b.divide(a);
+        m_cur_rkb = a - m_b.divisor() * q;
+        m_cur_ans = q % m_c;
+    }
 
-        //! init to k == 0
-        __device__ __forceinline__ void device_init(uint32_t a) {
-            uint32_t q = m_b.divide(a);
-            m_cur_rkb = a - m_b.divisor() * q;
-            m_cur_ans = q % m_c;
-        }
+    //! perform x += 1
+    __device__ __forceinline__ void next() {
+        uint32_t b = m_b.divisor(), c = m_c.divisor(), rkb = m_cur_rkb + m_rkb,
+                 carry0 = (rkb < b) - 1, next_ans = m_cur_ans + m_rkbc + (rkb >= b),
+                 carry1 = (next_ans < c) - 1;
+        m_cur_rkb = rkb - (b & carry0);
+        m_cur_ans = next_ans - (c & carry1);
+    }
 
-        //! perform x += 1
-        __device__ __forceinline__ void next() {
-            uint32_t b = m_b.divisor(),
-                     c = m_c.divisor(),
-                     rkb = m_cur_rkb + m_rkb,
-                     carry0 = (rkb < b) - 1,
-                     next_ans = m_cur_ans + m_rkbc + (rkb >= b),
-                     carry1 = (next_ans < c) - 1;
-            m_cur_rkb = rkb - (b & carry0);
-            m_cur_ans = next_ans - (c & carry1);
-        }
-
-        __device__ __forceinline__ uint32_t get() const {
-            return m_cur_ans;
-        }
+    __device__ __forceinline__ uint32_t get() const { return m_cur_ans; }
 };
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

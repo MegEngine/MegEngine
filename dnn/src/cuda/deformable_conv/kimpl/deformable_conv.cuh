@@ -36,15 +36,18 @@ struct Param {
     cublasHandle_t handle;
 };
 
-void im2col(const float* dev_im, const float* dev_offset, const float* dev_mask,
-            float* dev_col, const Param& p);
+void im2col(
+        const float* dev_im, const float* dev_offset, const float* dev_mask,
+        float* dev_col, const Param& p);
 
-void col2im(const float* dev_col, const float* dev_offset,
-            const float* dev_mask, float* dev_im_grad, const Param& p);
+void col2im(
+        const float* dev_col, const float* dev_offset, const float* dev_mask,
+        float* dev_im_grad, const Param& p);
 
-void col2im_coord(const float* dev_im, const float* dev_col,
-                 const float* dev_offset, const float* dev_mask,
-                 float* dev_offset_grad, float* mask_grad, const Param& p);
+void col2im_coord(
+        const float* dev_im, const float* dev_col, const float* dev_offset,
+        const float* dev_mask, float* dev_offset_grad, float* mask_grad,
+        const Param& p);
 
 }  // namespace deformable_conv
 }  // namespace cuda

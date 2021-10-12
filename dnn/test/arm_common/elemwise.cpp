@@ -122,26 +122,16 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW44_INT8_INT16_INT32) {
 
     auto run = [&]() {
         // VEC_BCAST101x not PowOp
-        checker.set_param(Mode::ADD).execs(
-                {{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
-        checker.set_param(Mode::RMULH)
-                .execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
-        checker.set_param(Mode::RMULH)
-                .execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
-        checker.set_param(Mode::RMULH)
-                .execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
-        checker.set_param(Mode::RMULH)
-                .execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
-        checker.set_param(Mode::RMULH)
-                .execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
+        checker.set_param(Mode::RMULH).execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.set_param(Mode::RMULH).execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.set_param(Mode::RMULH).execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
+        checker.set_param(Mode::RMULH).execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.set_param(Mode::RMULH).execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
         checker.set_param(Mode::FUSE_ADD_RELU)
                 .execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
         checker.set_param(Mode::FUSE_ADD_RELU)
@@ -153,16 +143,11 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW44_INT8_INT16_INT32) {
         checker.set_param(Mode::FUSE_ADD_RELU)
                 .execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
         // BCAST101x_VEC not PowOp
-        checker.set_param(Mode::ADD).execs(
-                {{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
-        checker.set_param(Mode::ADD).execs(
-                {{1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.set_param(Mode::ADD).execs({{1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
         checker.set_param(Mode::FUSE_ADD_RELU)
                 .execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
         checker.set_param(Mode::FUSE_ADD_RELU)
@@ -315,9 +300,9 @@ TEST_F(ARM_COMMON, ELEMWISE_FORWARD_NCHW88_FP) {
 
 #if MEGDNN_WITH_BENCHMARK
 namespace {
-void run_elemwise_benchmark(const TensorShapeArray& shapes,
-                            param::Elemwise::Mode mode, const char* mode_str,
-                            DType type, Handle* handle_bench) {
+void run_elemwise_benchmark(
+        const TensorShapeArray& shapes, param::Elemwise::Mode mode,
+        const char* mode_str, DType type, Handle* handle_bench) {
     auto handle_fallback = create_cpu_handle(1);
     Benchmarker<Elemwise> benchmarker_bench(handle_bench);
     Benchmarker<Elemwise> benchmarker_fallback(handle_fallback.get());
@@ -345,8 +330,8 @@ void run_elemwise_benchmark(const TensorShapeArray& shapes,
     opr->param() = mode;
     opr->deduce_layout(layouts, dst_layout);
 
-    float computations = dst_layout.total_nr_elems() *
-                         (std::max<size_t>(shapes.size(), 2) - 1);
+    float computations =
+            dst_layout.total_nr_elems() * (std::max<size_t>(shapes.size(), 2) - 1);
     throughput += dst_layout.span().dist_byte();
     computations *= (1e3 / (1024.0 * 1024));
     throughput *= (1e3 / (1024.0 * 1024));
@@ -363,8 +348,8 @@ void run_elemwise_benchmark(const TensorShapeArray& shapes,
     printf("%s = %s (type: %s, mode: %s) cpu=%fMFLOPS %fMB/s, bench=%fMFLOPS "
            "%fMB/s "
            "computations: %fx, throughput: %fx\n",
-           src_strs.c_str(), dst_layout.to_string().c_str(), type.name(),
-           mode_str, fallback_flops, fallback_thr, bench_flops, bench_thr,
+           src_strs.c_str(), dst_layout.to_string().c_str(), type.name(), mode_str,
+           fallback_flops, fallback_thr, bench_flops, bench_thr,
            bench_flops / fallback_flops, bench_thr / fallback_thr);
 }
 }  // namespace

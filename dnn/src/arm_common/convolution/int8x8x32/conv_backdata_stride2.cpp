@@ -11,8 +11,8 @@
 
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride2.h"
 #if MGB_ENABLE_DOT
-#include "src/common/utils.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace arm_common;
@@ -28,9 +28,9 @@ bool need_dst_copy(const NCBKernSizeParam& param) {
     return false;
 }
 
-void get_rectified_size(size_t IH, size_t IW, size_t OH, size_t OW, size_t FH,
-                        size_t FW, size_t PH, size_t PW, size_t& IH2,
-                        size_t& IW2, size_t& OW2) {
+void get_rectified_size(
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t FH, size_t FW, size_t PH,
+        size_t PW, size_t& IH2, size_t& IW2, size_t& OW2) {
     MEGDNN_MARK_USED_VAR(OH);
     MEGDNN_MARK_USED_VAR(IW);
     //! OW should be a multiple of 4
@@ -82,15 +82,14 @@ inline int8x16_t vqtbl1q_s8_common(int8x16_t a, uint8x16_t index) {
 
 template <bool even>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
+void deconv_direct_2x2(
+        const int8_t* src, const int8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW / 2;
 
-    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16,
-                              2, 3, 16, 16, 3, 4, 16, 16};
-    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16,
-                              6, 7, 16, 16, 7, 8, 16, 16};
+    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16, 2, 3, 16, 16, 3, 4, 16, 16};
+    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16, 6, 7, 16, 16, 7, 8, 16, 16};
     uint8x16_t _idx_r_0, _idx_r_1;
     if (even) {
         _idx_r_0 = {0, 16, 1, 16, 2, 16, 3, 16, 4, 16, 5, 16, 6, 16, 7, 16};
@@ -115,8 +114,7 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
                 vdupq_n_s32(*reinterpret_cast<const int32_t*>(k0)));
         uint8x16_t _idx_k = {3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0};
         int8x16_t _k = vqtbl1q_s8_common(_k0, _idx_k);
-        uint8x16_t _idx = {0, 1, 16, 16, 0, 1, 16, 16,
-                           0, 1, 16, 16, 0, 1, 16, 16};
+        uint8x16_t _idx = {0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16};
         int8x16_t _k1 = vqtbl1q_s8_common(_k, _idx);
         _idx = {2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16};
         int8x16_t _k23 = vqtbl1q_s8_common(_k, _idx);
@@ -143,13 +141,13 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
                 int8x16_t _r20 = vqtbl1q_s8_common(_r2_ori, _idx_r_0);
                 int8x16_t _r21 = vqtbl1q_s8_common(_r2_ori, _idx_r_1);
 
-                int16x8x2_t r_00 = vzipq_s16(vreinterpretq_s16_s8(_r00),
-                                             vreinterpretq_s16_s8(_r10));
+                int16x8x2_t r_00 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r00), vreinterpretq_s16_s8(_r10));
                 int8x16_t _r0 = r_00.val[0];
                 int8x16_t _r2 = r_00.val[1];
 
-                int16x8x2_t r_11 = vzipq_s16(vreinterpretq_s16_s8(_r01),
-                                             vreinterpretq_s16_s8(_r11));
+                int16x8x2_t r_11 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r01), vreinterpretq_s16_s8(_r11));
                 int8x16_t _r1 = r_11.val[0];
                 int8x16_t _r3 = r_11.val[1];
 
@@ -158,13 +156,13 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
                 _sum01.val[0] = vdotq_s32(_sum01.val[0], _k, _r2);
                 _sum01.val[1] = vdotq_s32(_sum01.val[1], _k, _r3);
 
-                r_00 = vzipq_s16(vreinterpretq_s16_s8(_r10),
-                                 vreinterpretq_s16_s8(_r20));
+                r_00 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r10), vreinterpretq_s16_s8(_r20));
                 _r0 = r_00.val[0];
                 _r2 = r_00.val[1];
 
-                r_11 = vzipq_s16(vreinterpretq_s16_s8(_r11),
-                                 vreinterpretq_s16_s8(_r21));
+                r_11 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r11), vreinterpretq_s16_s8(_r21));
                 _r1 = r_11.val[0];
                 _r3 = r_11.val[1];
 
@@ -263,13 +261,13 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
                 int8x16_t _r10 = vqtbl1q_s8_common(_r1_ori, _idx_r_0);
                 int8x16_t _r11 = vqtbl1q_s8_common(_r1_ori, _idx_r_1);
 
-                int16x8x2_t r_00 = vzipq_s16(vreinterpretq_s16_s8(_r00),
-                                             vreinterpretq_s16_s8(_r10));
+                int16x8x2_t r_00 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r00), vreinterpretq_s16_s8(_r10));
                 int8x16_t _r0 = r_00.val[0];
                 int8x16_t _r2 = r_00.val[1];
 
-                int16x8x2_t r_11 = vzipq_s16(vreinterpretq_s16_s8(_r01),
-                                             vreinterpretq_s16_s8(_r11));
+                int16x8x2_t r_11 = vzipq_s16(
+                        vreinterpretq_s16_s8(_r01), vreinterpretq_s16_s8(_r11));
                 int8x16_t _r1 = r_11.val[0];
                 int8x16_t _r3 = r_11.val[1];
 
@@ -334,15 +332,14 @@ void deconv_direct_2x2(const int8_t* src, const int8_t* filter, int32_t* dst,
 
 template <bool even>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_3x3(const int8_t* src, const int8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
+void deconv_direct_3x3(
+        const int8_t* src, const int8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW / 2;
 
-    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16,
-                              2, 3, 4, 16, 3, 4, 5, 16};
-    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16,
-                              6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16, 2, 3, 4, 16, 3, 4, 5, 16};
+    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx2 = {8,  9,  10, 16, 9,  10, 11, 16,
                               10, 11, 12, 16, 11, 12, 13, 16};
 
@@ -559,8 +556,9 @@ void deconv_direct_3x3(const int8_t* src, const int8_t* filter, int32_t* dst,
 
 template <bool even>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_5x5(const int8_t* src, const int8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
+void deconv_direct_5x5(
+        const int8_t* src, const int8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW / 2;
 
@@ -837,14 +835,14 @@ void deconv_direct_5x5(const int8_t* src, const int8_t* filter, int32_t* dst,
 
 template <bool even>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void deconv_direct_7x7(const int8_t* src, const int8_t* filter, int32_t* dst,
-                       size_t IH, size_t IW, size_t OH, size_t OW, size_t IC) {
+void deconv_direct_7x7(
+        const int8_t* src, const int8_t* filter, int32_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW / 2;
 
     const uint8x16_t _idx00 = {0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6};
-    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16,
-                               6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx10 = {4, 5, 6, 7, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 10};
     const uint8x16_t _idx11 = {8,  9,  10, 16, 9,  10, 11, 16,
                                10, 11, 12, 16, 11, 12, 13, 16};
@@ -1173,13 +1171,12 @@ size_t deconv::get_workspace_in_bytes_stride2_int8x8x32_dot(
 
 bool deconv::can_stride2_int8x8x32_dot(const NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
-    auto FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.ocpg,
-         PH = fm.padding[0], PW = fm.padding[1];
-    bool avaiable = fm.format == param::Convolution::Format::NCHW &&
-                    !fm.should_flip && fm.spatial_ndim == 2 &&
-                    fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
-                    fm.stride[0] == 2 && fm.stride[1] == 2 && FH == FW &&
-                    (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
+    auto FH = fm.spatial[0], FW = fm.spatial[1], OC = fm.ocpg, PH = fm.padding[0],
+         PW = fm.padding[1];
+    bool avaiable = fm.format == param::Convolution::Format::NCHW && !fm.should_flip &&
+                    fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+                    fm.dilation[1] == 1 && fm.stride[0] == 2 && fm.stride[1] == 2 &&
+                    FH == FW && (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
                     FH >= PH + 1 && FW >= PW + 1;
 
     avaiable &= (param.filter_type.enumv() == DTypeEnum::QuantizedS8 ||
@@ -1201,8 +1198,9 @@ void deconv::stride2_int8x8x32_dot(const NCBKernParam& param) {
 
     get_rectified_size(IH, IW, OH, OW, FH, FW, PH, PW, IH2, IW2, OW2);
 
-    using Func = std::function<void(const int8_t*, const int8_t*, int32_t*,
-                                    size_t, size_t, size_t, size_t, size_t)>;
+    using Func = std::function<void(
+            const int8_t*, const int8_t*, int32_t*, size_t, size_t, size_t, size_t,
+            size_t)>;
     Func conv = nullptr;
     if (FH == 2) {
         if ((padding_w & 1) == 0)
@@ -1251,21 +1249,20 @@ void deconv::stride2_int8x8x32_dot(const NCBKernParam& param) {
         int8_t* sptr = nullptr;
         rep(oc, OC) {
             std::memset(sptr_copied, 0, sizeof(int8_t) * IH2 * IW2);
-            copy_plane_in_bytes(sptr_copied + padding_h * IW2 + padding_w / 2,
-                                sptr_ori + oc * IH * IW, IH,
-                                IW * sizeof(int8_t), 2 * IW2 * sizeof(int8_t),
-                                IW * sizeof(int8_t));
+            copy_plane_in_bytes(
+                    sptr_copied + padding_h * IW2 + padding_w / 2,
+                    sptr_ori + oc * IH * IW, IH, IW * sizeof(int8_t),
+                    2 * IW2 * sizeof(int8_t), IW * sizeof(int8_t));
             sptr = sptr_copied;
 
-            conv(sptr, fptr + oc * IC * FH * FW, dptr, IH2, IW2, OH, OW_real,
-                 IC);
+            conv(sptr, fptr + oc * IC * FH * FW, dptr, IH2, IW2, OH, OW_real, IC);
         }
         if (need_dst_copy_var) {
             for (size_t ic = 0; ic < IC; ++ic) {
-                copy_plane_in_bytes(dptr_ori + ic * OH * OW,
-                                    dptr + ic * OH * OW2, OH,
-                                    OW * sizeof(int32_t), OW * sizeof(int32_t),
-                                    OW2 * sizeof(int32_t));
+                copy_plane_in_bytes(
+                        dptr_ori + ic * OH * OW, dptr + ic * OH * OW2, OH,
+                        OW * sizeof(int32_t), OW * sizeof(int32_t),
+                        OW2 * sizeof(int32_t));
             }
         }
     }

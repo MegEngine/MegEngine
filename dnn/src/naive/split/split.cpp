@@ -19,12 +19,10 @@ namespace megdnn {
 namespace naive {
 
 template <typename T>
-void SplitForwardImpl::exec_internal(_megdnn_tensor_in src,
-        const TensorNDArray &dsts,
-        _megdnn_workspace workspace)
-{
+void SplitForwardImpl::exec_internal(
+        _megdnn_tensor_in src, const TensorNDArray& dsts, _megdnn_workspace workspace) {
     size_t A, B, C;
-    size_t *Bv = reinterpret_cast<size_t *>(workspace.raw_ptr);
+    size_t* Bv = reinterpret_cast<size_t*>(workspace.raw_ptr);
     auto dsts_layout = apply_vector<TensorLayout>(m_get_layout, dsts);
     check_exec(src.layout, dsts_layout, workspace.size);
     auto dsts_shape = apply_vector<TensorShape>(m_get_shape, dsts_layout);
@@ -39,8 +37,8 @@ void SplitForwardImpl::exec_internal(_megdnn_tensor_in src,
         rep(sb, B) {
             auto dptr = dsts[dbi].ptr<T>();
             rep(c, C) {
-                auto sidx = a*B*C + sb*C + c;
-                auto didx = a*Bv[dbi]*C + dbo*C + c;
+                auto sidx = a * B * C + sb * C + c;
+                auto didx = a * Bv[dbi] * C + dbo * C + c;
                 dptr[didx] = sptr[sidx];
             }
             ++dbo;
@@ -52,22 +50,19 @@ void SplitForwardImpl::exec_internal(_megdnn_tensor_in src,
     }
 }
 
-void SplitForwardImpl::exec(_megdnn_tensor_in src,
-        const TensorNDArray &dsts,
-        _megdnn_workspace workspace)
-{
-#define cb(DType) \
-    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
-        using ctype = typename DTypeTrait<DType>::ctype; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(src, dsts, workspace)); \
+void SplitForwardImpl::exec(
+        _megdnn_tensor_in src, const TensorNDArray& dsts, _megdnn_workspace workspace) {
+#define cb(DType)                                                                 \
+    if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                   \
+        using ctype = typename DTypeTrait<DType>::ctype;                          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, dsts, workspace)); \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
 }
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -22,9 +22,10 @@ struct DTypeRWHelper;
 template <typename ctype>
 struct DTypeRWHelper<
         ctype, 1,
-        typename std::enable_if<std::is_same<ctype, dt_qint8>::value ||
-                                std::is_same<ctype, dt_quint8>::value ||
-                                std::is_same<ctype, dt_uint8>::value>::type> {
+        typename std::enable_if<
+                std::is_same<ctype, dt_qint8>::value ||
+                std::is_same<ctype, dt_quint8>::value ||
+                std::is_same<ctype, dt_uint8>::value>::type> {
     using InnerDtype = char;
     using DstDtype = char4;
 };
@@ -32,9 +33,10 @@ struct DTypeRWHelper<
 template <typename ctype>
 struct DTypeRWHelper<
         ctype, 4,
-        typename std::enable_if<std::is_same<ctype, dt_qint8>::value ||
-                                std::is_same<ctype, dt_quint8>::value ||
-                                std::is_same<ctype, dt_uint8>::value>::type> {
+        typename std::enable_if<
+                std::is_same<ctype, dt_qint8>::value ||
+                std::is_same<ctype, dt_quint8>::value ||
+                std::is_same<ctype, dt_uint8>::value>::type> {
     using InnerDtype = char4;
     using DstDtype = char4;
 };
@@ -54,8 +56,9 @@ struct DTypeRWHelper<dt_qint32, 4> {
 template <typename ctype>
 struct DTypeRWHelper<
         ctype, 2,
-        typename std::enable_if<std::is_same<ctype, dt_qint4>::value ||
-                                std::is_same<ctype, dt_quint4>::value>::type> {
+        typename std::enable_if<
+                std::is_same<ctype, dt_qint4>::value ||
+                std::is_same<ctype, dt_quint4>::value>::type> {
     using InnerDtype = char;
     using DstDtype = array_wrapper<uint8_t, 32>;
 };
@@ -63,8 +66,9 @@ struct DTypeRWHelper<
 template <typename ctype>
 struct DTypeRWHelper<
         ctype, 8,
-        typename std::enable_if<std::is_same<ctype, dt_qint4>::value ||
-                                std::is_same<ctype, dt_quint4>::value>::type> {
+        typename std::enable_if<
+                std::is_same<ctype, dt_qint4>::value ||
+                std::is_same<ctype, dt_quint4>::value>::type> {
     using InnerDtype = unsigned;
     using DstDtype = array_wrapper<uint8_t, 32>;
 };
@@ -91,8 +95,8 @@ inline __device__ int make_zero(int zero_point);
 template <>
 inline __device__ int make_zero<4>(int zero_point) {
     return integer_subbyte::transform_int8_to_uint4x8(
-            zero_point, zero_point, zero_point, zero_point, zero_point,
-            zero_point, zero_point, zero_point);
+            zero_point, zero_point, zero_point, zero_point, zero_point, zero_point,
+            zero_point, zero_point);
 }
 
 template <typename DstDtype>
@@ -117,9 +121,9 @@ inline __device__ void write_helper<array_wrapper<uint8_t, 32>>(
             " st.global.v4.u32 [%5], {%6, %7, %8, %9};\n"
             "}\n"
             :
-            : "l"(ptr_), "r"(data[0].x), "r"(data[0].y), "r"(data[0].z),
-              "r"(data[0].w), "l"(((uint8_t*)ptr_) + 16), "r"(data[1].x),
-              "r"(data[1].y), "r"(data[1].z), "r"(data[1].w));
+            : "l"(ptr_), "r"(data[0].x), "r"(data[0].y), "r"(data[0].z), "r"(data[0].w),
+              "l"(((uint8_t*)ptr_) + 16), "r"(data[1].x), "r"(data[1].y),
+              "r"(data[1].z), "r"(data[1].w));
 }
 
 }  // namespace internal

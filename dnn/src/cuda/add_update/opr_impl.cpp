@@ -9,16 +9,15 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./kern.cuh"
 #include "./opr_impl.h"
+#include "./kern.cuh"
 
 #include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace cuda;
 
-void AddUpdateForwardImpl::exec(
-        _megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
+void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
     check_exec(dest.layout, delta.layout);
     if (!dest.layout.is_contiguous()) {
         return exec_noncontig(dest, delta);
@@ -29,11 +28,11 @@ void AddUpdateForwardImpl::exec(
     param.init_from_given_tensor();
     auto stream = cuda_stream(handle());
     switch (dest.layout.dtype.enumv()) {
-
-#define cb(_dt) case DTypeTrait<_dt>::enumv: { \
-        using ctype = DTypeTrait<_dt>::ctype; \
+#define cb(_dt)                                                \
+    case DTypeTrait<_dt>::enumv: {                             \
+        using ctype = DTypeTrait<_dt>::ctype;                  \
         return run_elemwise<AddUpdateKernOp<ctype>, ctype, 1>( \
-                param, stream, {dest, m_param});  \
+                param, stream, {dest, m_param});               \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -45,15 +44,14 @@ void AddUpdateForwardImpl::exec(
 
 void AddUpdateForwardImpl::exec_noncontig(
         _megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
-
     ElemwiseOpParamN<2> param = make_param(dest, delta);
     auto stream = cuda_stream(handle());
     switch (dest.layout.dtype.enumv()) {
-
-#define cb(_dt) case DTypeTrait<_dt>::enumv: { \
-        using ctype = DTypeTrait<_dt>::ctype; \
+#define cb(_dt)                                                         \
+    case DTypeTrait<_dt>::enumv: {                                      \
+        using ctype = DTypeTrait<_dt>::ctype;                           \
         return run_elemwise<AddUpdateKernOpNonContig<ctype>, ctype, 2>( \
-                param, stream, {m_param});  \
+                param, stream, {m_param});                              \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
@@ -64,4 +62,3 @@ void AddUpdateForwardImpl::exec_noncontig(
 }
 
 // vim: syntax=cpp.doxygen
-

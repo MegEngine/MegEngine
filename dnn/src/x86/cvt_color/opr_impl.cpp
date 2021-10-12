@@ -60,12 +60,12 @@
  */
 
 #include "src/x86/cvt_color/opr_impl.h"
-#include "src/x86/utils.h"
 #include "src/common/cv/common.h"
 #include "src/common/cv/cvt_color.h"
 #include "src/common/cv/helper.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
+#include "src/x86/utils.h"
 
 #include <cstring>
 
@@ -117,30 +117,26 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
     __m128i _shuff_0 =
             _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
 
-    __m128i _shuff_1 =
-            _mm_set_epi8(10, 0, 9, 8, 0, 7, 6, 0, 5, 4, 0, 3, 2, 0, 1, 0);
+    __m128i _shuff_1 = _mm_set_epi8(10, 0, 9, 8, 0, 7, 6, 0, 5, 4, 0, 3, 2, 0, 1, 0);
     __m128i _shuff_3 =
             _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 14, 0, 13, 12, 0, 11);
-    __m128i _shuff_4 =
-            _mm_set_epi8(5, 4, 0, 3, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i _shuff_4 = _mm_set_epi8(5, 4, 0, 3, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     __m128i _shuff_6 =
             _mm_set_epi8(0, 15, 14, 0, 13, 12, 0, 11, 10, 0, 9, 8, 0, 7, 6, 0);
 
-    __m128i _shuff_2 =
-            _mm_set_epi8(0, 4, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0);
-    __m128i _shuff_5 =
-            _mm_set_epi8(0, 0, 9, 0, 0, 8, 0, 0, 7, 0, 0, 6, 0, 0, 5, 0);
+    __m128i _shuff_2 = _mm_set_epi8(0, 4, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0);
+    __m128i _shuff_5 = _mm_set_epi8(0, 0, 9, 0, 0, 8, 0, 0, 7, 0, 0, 6, 0, 0, 5, 0);
     __m128i _shuff_7 =
             _mm_set_epi8(15, 0, 0, 14, 0, 0, 13, 0, 0, 12, 0, 0, 11, 0, 0, 10);
 
-    __m128i _blend_12 = _mm_set_epi8(0, -128, 0, 0, -128, 0, 0, -128, 0, 0,
-                                     -128, 0, 0, -128, 0, 0);
-    __m128i _blend_34 = _mm_set_epi8(-128, -128, -128, -128, -128, -128, -128,
-                                     -128, 0, 0, 0, 0, 0, 0, 0, 0);
-    __m128i _blend_345 = _mm_set_epi8(0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0,
-                                      -128, 0, 0, -128, 0);
-    __m128i _blend_67 = _mm_set_epi8(-128, 0, 0, -128, 0, 0, -128, 0, 0, -128,
-                                     0, 0, -128, 0, 0, -128);
+    __m128i _blend_12 =
+            _mm_set_epi8(0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0);
+    __m128i _blend_34 = _mm_set_epi8(
+            -128, -128, -128, -128, -128, -128, -128, -128, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i _blend_345 =
+            _mm_set_epi8(0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0);
+    __m128i _blend_67 = _mm_set_epi8(
+            -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128);
 
     size_t height = dst.rows();
     size_t width = dst.cols();
@@ -219,12 +215,12 @@ void cvt_yuv_transform(const Mat8u& src, Mat8u& dst) {
             RV2 = _mm_shuffle_epi32(RV3, 80);
             RV3 = _mm_shuffle_epi32(RV3, 250);
 
-            GUV1 = _mm_srai_epi32(_mm_add_epi32(_mm_mullo_epi32(U1, v88),
-                                                _mm_mullo_epi32(V1, v183)),
-                                  8);
-            GUV3 = _mm_srai_epi32(_mm_add_epi32(_mm_mullo_epi32(U3, v88),
-                                                _mm_mullo_epi32(V3, v183)),
-                                  8);
+            GUV1 = _mm_srai_epi32(
+                    _mm_add_epi32(_mm_mullo_epi32(U1, v88), _mm_mullo_epi32(V1, v183)),
+                    8);
+            GUV3 = _mm_srai_epi32(
+                    _mm_add_epi32(_mm_mullo_epi32(U3, v88), _mm_mullo_epi32(V3, v183)),
+                    8);
             GUV0 = _mm_shuffle_epi32(GUV1, 80);
             GUV1 = _mm_shuffle_epi32(GUV1, 250);
             GUV2 = _mm_shuffle_epi32(GUV3, 80);
@@ -507,7 +503,7 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
         pU = src.ptr(height + height / 4);
     }
 
-#define YG 18997  /* round(1.164 * 64 * 256 * 256 / 257) */
+#define YG  18997 /* round(1.164 * 64 * 256 * 256 / 257) */
 #define YGB -1160 /* 1.164 * 64 * -16 + 64 / 2 */
 
 // U and V contributions to R,G,B.
@@ -532,39 +528,34 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
         out[index++] = R;     \
     }
 
-    __m128i v32_YG257 = _mm_set1_epi32(0x0101 * YG),
-            v32_UB = _mm_set1_epi32(UB), v32_UG = _mm_set1_epi32(UG),
-            v32_VG = _mm_set1_epi32(VG), v32_BB = _mm_set1_epi32(BB),
-            v32_BG = _mm_set1_epi32(BG), v32_BR = _mm_set1_epi32(BR),
-            v32_VR = _mm_set1_epi32(VR);
+    __m128i v32_YG257 = _mm_set1_epi32(0x0101 * YG), v32_UB = _mm_set1_epi32(UB),
+            v32_UG = _mm_set1_epi32(UG), v32_VG = _mm_set1_epi32(VG),
+            v32_BB = _mm_set1_epi32(BB), v32_BG = _mm_set1_epi32(BG),
+            v32_BR = _mm_set1_epi32(BR), v32_VR = _mm_set1_epi32(VR);
     __m128i R0, G0, B0, R1, G1, B1, R2, G2, B2, R3, G3, B3;
 
     __m128i _shuff_0 =
             _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
-    __m128i _shuff_1 =
-            _mm_set_epi8(10, 0, 9, 8, 0, 7, 6, 0, 5, 4, 0, 3, 2, 0, 1, 0);
+    __m128i _shuff_1 = _mm_set_epi8(10, 0, 9, 8, 0, 7, 6, 0, 5, 4, 0, 3, 2, 0, 1, 0);
     __m128i _shuff_3 =
             _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 14, 0, 13, 12, 0, 11);
-    __m128i _shuff_4 =
-            _mm_set_epi8(5, 4, 0, 3, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i _shuff_4 = _mm_set_epi8(5, 4, 0, 3, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     __m128i _shuff_6 =
             _mm_set_epi8(0, 15, 14, 0, 13, 12, 0, 11, 10, 0, 9, 8, 0, 7, 6, 0);
 
-    __m128i _shuff_2 =
-            _mm_set_epi8(0, 4, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0);
-    __m128i _shuff_5 =
-            _mm_set_epi8(0, 0, 9, 0, 0, 8, 0, 0, 7, 0, 0, 6, 0, 0, 5, 0);
+    __m128i _shuff_2 = _mm_set_epi8(0, 4, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0);
+    __m128i _shuff_5 = _mm_set_epi8(0, 0, 9, 0, 0, 8, 0, 0, 7, 0, 0, 6, 0, 0, 5, 0);
     __m128i _shuff_7 =
             _mm_set_epi8(15, 0, 0, 14, 0, 0, 13, 0, 0, 12, 0, 0, 11, 0, 0, 10);
 
-    __m128i _blend_12 = _mm_set_epi8(0, -128, 0, 0, -128, 0, 0, -128, 0, 0,
-                                     -128, 0, 0, -128, 0, 0);
-    __m128i _blend_34 = _mm_set_epi8(-128, -128, -128, -128, -128, -128, -128,
-                                     -128, 0, 0, 0, 0, 0, 0, 0, 0);
-    __m128i _blend_345 = _mm_set_epi8(0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0,
-                                      -128, 0, 0, -128, 0);
-    __m128i _blend_67 = _mm_set_epi8(-128, 0, 0, -128, 0, 0, -128, 0, 0, -128,
-                                     0, 0, -128, 0, 0, -128);
+    __m128i _blend_12 =
+            _mm_set_epi8(0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0);
+    __m128i _blend_34 = _mm_set_epi8(
+            -128, -128, -128, -128, -128, -128, -128, -128, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i _blend_345 =
+            _mm_set_epi8(0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0);
+    __m128i _blend_67 = _mm_set_epi8(
+            -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128, 0, 0, -128);
 
     __m128i Y0, Y1, U0, V0;
     __m128i VU;
@@ -629,12 +620,14 @@ void cvt_BT601_yuv_transform(const Mat8u& src, Mat8u& dst) {
             BU2 = _mm_shuffle_epi32(BU3, 80);
             BU3 = _mm_shuffle_epi32(BU3, 250);
 
-            GUV1 = _mm_sub_epi32(v32_BG,
-                                 _mm_add_epi32(_mm_mullo_epi32(U1, v32_UG),
-                                               _mm_mullo_epi32(V1, v32_VG)));
-            GUV3 = _mm_sub_epi32(v32_BG,
-                                 _mm_add_epi32(_mm_mullo_epi32(U3, v32_UG),
-                                               _mm_mullo_epi32(V3, v32_VG)));
+            GUV1 = _mm_sub_epi32(
+                    v32_BG,
+                    _mm_add_epi32(
+                            _mm_mullo_epi32(U1, v32_UG), _mm_mullo_epi32(V1, v32_VG)));
+            GUV3 = _mm_sub_epi32(
+                    v32_BG,
+                    _mm_add_epi32(
+                            _mm_mullo_epi32(U3, v32_UG), _mm_mullo_epi32(V3, v32_VG)));
             GUV0 = _mm_shuffle_epi32(GUV1, 80);
             GUV1 = _mm_shuffle_epi32(GUV1, 250);
             GUV2 = _mm_shuffle_epi32(GUV3, 80);
@@ -934,17 +927,18 @@ void cvt_rgb2yuv_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
         const uchar* const pend = psrc + src.cols() * 3;
 
         for (; psrc <= pend - 4 * 3; psrc += 4 * 3, pdst += 4 * 3) {
-            v_src_r = _mm_set_epi32((int)psrc[0], (int)psrc[3], (int)psrc[6],
-                                    (int)psrc[9]);
-            v_src_g = _mm_set_epi32((int)psrc[1], (int)psrc[4], (int)psrc[7],
-                                    (int)psrc[10]);
-            v_src_b = _mm_set_epi32((int)psrc[2], (int)psrc[5], (int)psrc[8],
-                                    (int)psrc[11]);
+            v_src_r = _mm_set_epi32(
+                    (int)psrc[0], (int)psrc[3], (int)psrc[6], (int)psrc[9]);
+            v_src_g = _mm_set_epi32(
+                    (int)psrc[1], (int)psrc[4], (int)psrc[7], (int)psrc[10]);
+            v_src_b = _mm_set_epi32(
+                    (int)psrc[2], (int)psrc[5], (int)psrc[8], (int)psrc[11]);
 
             v_dst_r = _mm_add_epi32(
                     _mm_mullo_epi32(v_src_b, v_coef_2),
-                    _mm_add_epi32(_mm_mullo_epi32(v_src_r, v_coef_0),
-                                  _mm_mullo_epi32(v_src_g, v_coef_1)));
+                    _mm_add_epi32(
+                            _mm_mullo_epi32(v_src_r, v_coef_0),
+                            _mm_mullo_epi32(v_src_g, v_coef_1)));
             v_dst_r = _mm_srai_epi32(_mm_add_epi32(v_dst_r, v_yuv), yuv_shift);
 
             v_dst_g = _mm_add_epi32(
@@ -975,9 +969,9 @@ void cvt_rgb2yuv_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
         }
 
         for (; psrc < pend; psrc += 3, pdst += 3) {
-            int Y = descale(
-                    psrc[0] * coef[0] + psrc[1] * coef[1] + psrc[2] * coef[2],
-                    yuv_shift);
+            int Y =
+                    descale(psrc[0] * coef[0] + psrc[1] * coef[1] + psrc[2] * coef[2],
+                            yuv_shift);
             int Cr = descale((psrc[0] - Y) * coef[3] + delta, yuv_shift);
             int Cb = descale((psrc[2] - Y) * coef[4] + delta, yuv_shift);
             pdst[0] = saturate_cast<uchar>(Y);
@@ -1013,16 +1007,16 @@ void cvt_rgb2yuv_32f_SSE_4_2(const Mat32f& src, Mat32f& dst) {
             v_src_g = _mm_set_ps(psrc[10], psrc[7], psrc[4], psrc[1]);
             v_src_b = _mm_set_ps(psrc[11], psrc[8], psrc[5], psrc[2]);
 
-            v_dst_r = _mm_add_ps(_mm_mul_ps(v_src_b, v_coef_2),
-                                 _mm_add_ps(_mm_mul_ps(v_src_r, v_coef_0),
-                                            _mm_mul_ps(v_src_g, v_coef_1)));
+            v_dst_r = _mm_add_ps(
+                    _mm_mul_ps(v_src_b, v_coef_2),
+                    _mm_add_ps(
+                            _mm_mul_ps(v_src_r, v_coef_0),
+                            _mm_mul_ps(v_src_g, v_coef_1)));
 
             v_dst_g = _mm_add_ps(
-                    v_delta,
-                    _mm_mul_ps(v_coef_3, _mm_sub_ps(v_src_r, v_dst_r)));
+                    v_delta, _mm_mul_ps(v_coef_3, _mm_sub_ps(v_src_r, v_dst_r)));
             v_dst_b = _mm_add_ps(
-                    v_delta,
-                    _mm_mul_ps(v_coef_4, _mm_sub_ps(v_src_b, v_dst_r)));
+                    v_delta, _mm_mul_ps(v_coef_4, _mm_sub_ps(v_src_b, v_dst_r)));
 
             float* r = (float*)(&v_dst_r);
             float* g = (float*)(&v_dst_g);
@@ -1077,12 +1071,12 @@ void cvt_yuv2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
         const uchar* const pend = psrc + src.cols() * 3;
 
         for (; psrc <= pend - 4 * 3; psrc += 4 * 3, pdst += 4 * 3) {
-            v_src_y = _mm_set_epi32((int)psrc[0], (int)psrc[3], (int)psrc[6],
-                                    (int)psrc[9]);
-            v_src_u = _mm_set_epi32((int)psrc[1], (int)psrc[4], (int)psrc[7],
-                                    (int)psrc[10]);
-            v_src_v = _mm_set_epi32((int)psrc[2], (int)psrc[5], (int)psrc[8],
-                                    (int)psrc[11]);
+            v_src_y = _mm_set_epi32(
+                    (int)psrc[0], (int)psrc[3], (int)psrc[6], (int)psrc[9]);
+            v_src_u = _mm_set_epi32(
+                    (int)psrc[1], (int)psrc[4], (int)psrc[7], (int)psrc[10]);
+            v_src_v = _mm_set_epi32(
+                    (int)psrc[2], (int)psrc[5], (int)psrc[8], (int)psrc[11]);
 
             __m128i v_u_delta = _mm_sub_epi32(v_src_u, v_delta);
             __m128i v_v_delta = _mm_sub_epi32(v_src_v, v_delta);
@@ -1099,8 +1093,7 @@ void cvt_yuv2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
             __m128i v_v_delta_2_1_yuv = _mm_add_epi32(v_yuv, v_v_delta_2_1);
 
             __m128i v_dst_r_shift = _mm_srai_epi32(v_u_delta_0_yuv, yuv_shift);
-            __m128i v_dst_g_shift =
-                    _mm_srai_epi32(v_v_delta_2_1_yuv, yuv_shift);
+            __m128i v_dst_g_shift = _mm_srai_epi32(v_v_delta_2_1_yuv, yuv_shift);
             __m128i v_dst_b_shift = _mm_srai_epi32(v_v_delta_3_yuv, yuv_shift);
 
             v_dst_r = _mm_add_epi32(v_src_y, v_dst_r_shift);
@@ -1134,8 +1127,8 @@ void cvt_yuv2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
             uchar Cb = psrc[2];
 
             int R = Y + descale((Cr - delta) * coef[0], yuv_shift);
-            int G = Y + descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1],
-                                yuv_shift);
+            int G = Y +
+                    descale((Cb - delta) * coef[2] + (Cr - delta) * coef[1], yuv_shift);
             int B = Y + descale((Cb - delta) * coef[3], yuv_shift);
 
             pdst[0] = saturate_cast<uchar>(R);
@@ -1173,9 +1166,10 @@ void cvt_yuv2rgb_32f_SSE_4_2(const Mat32f& src, Mat32f& dst) {
                    temp2 = _mm_sub_ps(v_src_v, v_delta);
 
             v_dst_r = _mm_add_ps(v_src_y, _mm_mul_ps(v_coef_0, temp1));
-            v_dst_g = _mm_add_ps(v_src_y,
-                                 _mm_add_ps(_mm_mul_ps(v_coef_2, temp2),
-                                            _mm_mul_ps(v_coef_1, temp1)));
+            v_dst_g = _mm_add_ps(
+                    v_src_y,
+                    _mm_add_ps(
+                            _mm_mul_ps(v_coef_2, temp2), _mm_mul_ps(v_coef_1, temp1)));
             v_dst_b = _mm_add_ps(v_src_y, _mm_mul_ps(v_coef_3, temp2));
 
             float* r = (float*)(&v_dst_r);
@@ -1214,12 +1208,10 @@ MEGDNN_ATTRIBUTE_TARGET("sse4.2")
 void cvt_gray2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
     __m128i src_data, dst_data;
 
-    __m128i shuff_1 =
-            _mm_set_epi8(5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0, 0);
-    __m128i shuff_2 =
-            _mm_set_epi8(10, 10, 9, 9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 5, 5);
-    __m128i shuff_3 = _mm_set_epi8(15, 15, 15, 14, 14, 14, 13, 13, 13, 12, 12,
-                                   12, 11, 11, 11, 10);
+    __m128i shuff_1 = _mm_set_epi8(5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0, 0);
+    __m128i shuff_2 = _mm_set_epi8(10, 10, 9, 9, 9, 8, 8, 8, 7, 7, 7, 6, 6, 6, 5, 5);
+    __m128i shuff_3 = _mm_set_epi8(
+            15, 15, 15, 14, 14, 14, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10);
 
     for (size_t r = 0; r < src.rows(); ++r) {
         const uchar* psrc = src.ptr(r);
@@ -1344,15 +1336,13 @@ void cvt_bgr2gray_32f_SSE_4_2(const Mat32f& src, Mat32f& dst) {
     }
 }
 
-
-
 MEGDNN_ATTRIBUTE_TARGET("sse4.2")
 void cvt_rgba2rgb_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
     __m128i dst_data0, dst_data1, dst_data2;
     __m128i src_data0, src_data1, src_data2, src_data3;
 
-    __m128i shuff_ = _mm_set_epi8(15, 15, 15, 15, 14, 13, 12, 10, 9, 8, 6, 5, 4,
-                                  2, 1, 0);
+    __m128i shuff_ =
+            _mm_set_epi8(15, 15, 15, 15, 14, 13, 12, 10, 9, 8, 6, 5, 4, 2, 1, 0);
 
     for (size_t r = 0; r < src.rows(); ++r) {
         const uchar* psrc = src.ptr(r);
@@ -1412,8 +1402,8 @@ void cvt_rgba2bgr_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
     __m128i dst_data0, dst_data1, dst_data2;
     __m128i src_data0, src_data1, src_data2, src_data3;
 
-    __m128i shuff_ = _mm_set_epi8(15, 15, 15, 15, 12, 13, 14, 8, 9, 10, 4, 5, 6,
-                                  0, 1, 2);
+    __m128i shuff_ =
+            _mm_set_epi8(15, 15, 15, 15, 12, 13, 14, 8, 9, 10, 4, 5, 6, 0, 1, 2);
 
     for (size_t r = 0; r < src.rows(); ++r) {
         const uchar* psrc = src.ptr(r);
@@ -1482,19 +1472,15 @@ void cvt_rgb2bgr_8u_SSE_4_2(const Mat8u& src, Mat8u& dst) {
 
     __m128i _blend_shuff_0 =
             _mm_set_epi8(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 14);
-    __m128i _blend_shuff_1 = _mm_set_epi8(15, 15, 15, 15, 15, 15, 15, 15, 15,
-                                          15, 15, 15, 15, 15, 15, 15);
+    __m128i _blend_shuff_1 = _mm_set_epi8(
+            15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
     __m128i _blend_shuff_2 =
             _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-    __m128i blend_0 =
-            _mm_set_epi8(-128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    __m128i blend_1 =
-            _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -128, 0);
-    __m128i blend_2 =
-            _mm_set_epi8(0, -128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    __m128i blend_3 =
-            _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -128);
+    __m128i blend_0 = _mm_set_epi8(-128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i blend_1 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -128, 0);
+    __m128i blend_2 = _mm_set_epi8(0, -128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    __m128i blend_3 = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -128);
 
     for (size_t r = 0; r < src.rows(); ++r) {
         const uchar* psrc = src.ptr(r);
@@ -1566,9 +1552,8 @@ void cvt_rgb2gray<uchar>(const Mat8u& src, Mat8u& dst) {
         const uchar* pend = psrc + src.cols() * src.channels();
         uchar* pdst = dst.ptr(r);
         for (; psrc < pend; psrc += 3, pdst += 1) {
-            pdst[0] =
-                    (tab[psrc[0]] + tab[psrc[1] + 256] + tab[psrc[2] + 512]) >>
-                    yuv_shift;
+            pdst[0] = (tab[psrc[0]] + tab[psrc[1] + 256] + tab[psrc[2] + 512]) >>
+                      yuv_shift;
         }
     }
 }
@@ -1686,9 +1671,8 @@ void cvt_rgba2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
-                    yuv_shift;
+            temp_dst[0] = (x0 * R2Y + x1 * G2Y + x2 * B2Y + (1 << (yuv_shift - 1))) >>
+                          yuv_shift;
         }
     }
 }
@@ -1734,8 +1718,7 @@ void cvt_bgr2gray<uchar>(const Mat8u& src, Mat8u& dst) {
             uchar x0 = temp_src[0];
             uchar x1 = temp_src[1];
             uchar x2 = temp_src[2];
-            temp_dst[0] =
-                    (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
+            temp_dst[0] = (tab[x2] + tab[x1 + 256] + tab[x0 + 512]) >> yuv_shift;
         }
     }
 }
@@ -1813,8 +1796,8 @@ void cvt_yuv2bgr_yu12<uchar>(const Mat8u& src, Mat8u& dst) {
 }
 
 template <typename T>
-void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
-                   param::CvtColor::Mode mode) {
+void cvt_bt601_yuv(
+        const megcv::Mat<T>& src, megcv::Mat<T>& dst, param::CvtColor::Mode mode) {
     MEGDNN_MARK_USED_VAR(src);
     MEGDNN_MARK_USED_VAR(dst);
     MEGDNN_MARK_USED_VAR(mode);
@@ -1822,8 +1805,9 @@ void cvt_bt601_yuv(const megcv::Mat<T>& src, megcv::Mat<T>& dst,
 }
 
 template <>
-void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
-                          param::CvtColor::Mode mode) {
+void cvt_bt601_yuv<uchar>(
+        const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
+        param::CvtColor::Mode mode) {
     using Mode = param::CvtColor::Mode;
     switch (mode) {
         case Mode::BT601_YUV2RGB_NV21:
@@ -1848,8 +1832,8 @@ void cvt_bt601_yuv<uchar>(const megcv::Mat<uchar>& src, megcv::Mat<uchar>& dst,
 }
 
 template <typename T>
-void CvtColorImpl::cvt_color_exec(_megdnn_tensor_in src_tensor,
-                                  _megdnn_tensor_out dst_tensor) {
+void CvtColorImpl::cvt_color_exec(
+        _megdnn_tensor_in src_tensor, _megdnn_tensor_out dst_tensor) {
     auto mode = param().mode;
     for (size_t i = 0; i < src_tensor.layout.shape[0]; ++i) {
         Mat<T> src = TensorND2Mat<T>(src_tensor, i);
@@ -1933,8 +1917,8 @@ void CvtColorImpl::cvt_color_exec(_megdnn_tensor_in src_tensor,
     }
 }
 
-void CvtColorImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                        _megdnn_workspace workspace) {
+void CvtColorImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
     // x86 cvt_color implementation need sse4.2
@@ -1942,11 +1926,12 @@ void CvtColorImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         naive::CvtColorImpl::exec(src, dst, workspace);
         return;
     }
-    MEGDNN_DISPATCH_CPU_KERN_OPR(if (dst.layout.dtype == dtype::Float32()) {
-        cvt_color_exec<float>(src, dst);
-    } else if (dst.layout.dtype == dtype::Uint8()) {
-        cvt_color_exec<uchar>(src, dst);
-    } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
+    MEGDNN_DISPATCH_CPU_KERN_OPR(
+            if (dst.layout.dtype == dtype::Float32()) {
+                cvt_color_exec<float>(src, dst);
+            } else if (dst.layout.dtype == dtype::Uint8()) {
+                cvt_color_exec<uchar>(src, dst);
+            } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
 }
 
 }  // namespace x86

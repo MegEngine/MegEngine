@@ -31,10 +31,9 @@ class OprDumpContextMemory final : public OprDumpContextRawPOD {
         memcpy(m_buf.data() + pos, data, size);
     }
 
-    void dump_tensor(const std::string&, const HostTensorND&,
-                     TensorWriteMethod) override {
-        mgb_throw(GraphError,
-                  "OprDumpContextMemory does not support dump tensor");
+    void dump_tensor(
+            const std::string&, const HostTensorND&, TensorWriteMethod) override {
+        mgb_throw(GraphError, "OprDumpContextMemory does not support dump tensor");
     }
 
     const GraphDumpConfig& config() const override {
@@ -64,17 +63,14 @@ class OprLoadContextMemory final : public OprLoadContextRawPOD {
 
     std::shared_ptr<HostTensorND> load_tensor() override { mgb_assert(0); }
 
-    std::shared_ptr<DeviceTensorND> load_tensor_shared() override {
-        mgb_assert(0);
-    }
+    std::shared_ptr<DeviceTensorND> load_tensor_shared() override { mgb_assert(0); }
 
     const GraphLoadConfig& config() const override {
         mgb_throw(GraphError, "OprLoadContextMemory has no associated config");
     }
 
 public:
-    OprLoadContextMemory(ComputingGraph* graph,
-                         const OprDumpContextMemory& dumper)
+    OprLoadContextMemory(ComputingGraph* graph, const OprDumpContextMemory& dumper)
             : OprLoadContextRawPOD(false),
               m_ptr{dumper.buf().data()},
               m_size{dumper.buf().size()},
@@ -91,19 +87,14 @@ class ShallowCopyCacheContainer final : public UserDataContainer::UserData {
         static bool eq(const T& x, const T& y) {
             return x == y;
         }
-        static bool eq(const OperatorNodeConfig& x,
-                       const OperatorNodeConfig& y) {
+        static bool eq(const OperatorNodeConfig& x, const OperatorNodeConfig& y) {
             return x.is_same(y);
         }
-        static size_t hash(const void* ptr) {
-            return std::hash<const void*>{}(ptr);
-        }
+        static size_t hash(const void* ptr) { return std::hash<const void*>{}(ptr); }
         static size_t hash(const VarNodeArray& inputs) {
             return PODHash<VarNode*>::perform(inputs.data(), inputs.size());
         }
-        static size_t hash(const OperatorNodeConfig& config) {
-            return config.hash();
-        }
+        static size_t hash(const OperatorNodeConfig& config) { return config.hash(); }
     };
 
 public:
@@ -135,8 +126,9 @@ cg::OperatorNodeBase* serialization::copy_opr_shallow(
         const cg::OperatorNodeBase& opr, const VarNodeArray& inputs,
         const OperatorNodeConfig& config, const OprShallowCopyContext& ctx) {
     auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo());
-    mgb_assert(registry, "could not find OprReceiver to copy opr %s{%s}",
-               opr.cname(), opr.dyn_typeinfo()->name);
+    mgb_assert(
+            registry, "could not find OprReceiver to copy opr %s{%s}", opr.cname(),
+            opr.dyn_typeinfo()->name);
 
     mgb_assert(inputs.size() == opr.input().size());
     auto dst_og = ctx.owner_graph(opr, inputs);
@@ -166,8 +158,7 @@ cg::OperatorNodeBase* serialization::copy_opr_shallow(
         // use cache for copy in same graph
         auto&& cache =
                 dst_og->options()
-                        .user_data
-                        .get_user_data_or_create<ShallowCopyCacheContainer>()
+                        .user_data.get_user_data_or_create<ShallowCopyCacheContainer>()
                         ->cache;
         auto ins = cache.get(&opr, inputs, config);
         if (ins.first) {
@@ -180,15 +171,15 @@ cg::OperatorNodeBase* serialization::copy_opr_shallow(
         ret = do_copy();
     }
 
-    mgb_assert(gopt::has_inplace_basic_arith_opt(opr) ||
-                       ((  // outputs match
-                                opr.usable_output().size() ==
-                                ret->usable_output().size()) &&
-                        (  // new opr is returned
-                                (&opr != ret) || opr.input() == inputs)),
-               "bad opr copy: src=%s{%s} dst=%s{%s}", opr.cname(),
-               opr.dyn_typeinfo()->name, ret->cname(),
-               ret->dyn_typeinfo()->name);
+    mgb_assert(
+            gopt::has_inplace_basic_arith_opt(opr) ||
+                    ((  // outputs match
+                             opr.usable_output().size() ==
+                             ret->usable_output().size()) &&
+                     (  // new opr is returned
+                             (&opr != ret) || opr.input() == inputs)),
+            "bad opr copy: src=%s{%s} dst=%s{%s}", opr.cname(),
+            opr.dyn_typeinfo()->name, ret->cname(), ret->dyn_typeinfo()->name);
 
     return ret;
 }
@@ -199,10 +190,11 @@ cg::OperatorNodeBase* serialization::intl::copy_opr_shallow_default_impl(
     MGB_MARK_USED_VAR(ctx);
 
     auto registry = OprRegistry::find_by_type(opr.dyn_typeinfo());
-    mgb_assert(registry && registry->dumper && registry->loader,
-               "can not shallow_copy operator %s{%s}: "
-               "no dumper/loader registered",
-               opr.cname(), opr.dyn_typeinfo()->name);
+    mgb_assert(
+            registry && registry->dumper && registry->loader,
+            "can not shallow_copy operator %s{%s}: "
+            "no dumper/loader registered",
+            opr.cname(), opr.dyn_typeinfo()->name);
     OprDumpContextMemory dumper;
     registry->dumper(dumper, opr);
 

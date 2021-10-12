@@ -10,10 +10,10 @@
  */
 #include "test/cuda/fixture.h"
 
-#include "test/common/convolution.h"
-#include "test/common/checker.h"
-#include "test/common/tensor.h"
 #include "src/cuda/cudnn_with_check.h"
+#include "test/common/checker.h"
+#include "test/common/convolution.h"
+#include "test/common/tensor.h"
 #include "test/cuda/utils.h"
 
 using namespace megdnn;
@@ -21,12 +21,11 @@ using namespace test;
 using namespace convolution;
 
 #define V1(x) #x
-#define V(x) V1(x)
+#define V(x)  V1(x)
 #define CUDNN_VERSION_STRING \
     "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
 
-TEST_F(CUDA, DILATED_CONVOLUTION_FORWARD)
-{
+TEST_F(CUDA, DILATED_CONVOLUTION_FORWARD) {
     auto args = get_dilated_args();
     Checker<ConvolutionForward> checker(handle_cuda());
 #if CUDNN_VERSION >= 7500
@@ -52,22 +51,20 @@ TEST_F(CUDA, DILATED_CONVOLUTION_FORWARD)
                       {{"CUBLAS", {}}}}}}));
 #endif
     NormalRNG default_rng;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
-        checker.
-            set_dtype(0, dtype::Float32()).
-            set_dtype(1, dtype::Float32()).
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            execs({arg.src, arg.filter, {}});
+        checker.set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .execs({arg.src, arg.filter, {}});
     }
 }
 
-TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA)
-{
+TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA) {
     std::vector<TestArg> args = get_dilated_args();
     Checker<ConvolutionBackwardData> checker(handle_cuda());
 #if CUDNN_VERSION >= 7500
@@ -79,7 +76,7 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA)
             ExecutionPolicyAlgoName{"MATMUL", {{"CUBLAS", {}}}}));
 #endif
     NormalRNG default_rng;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
@@ -91,12 +88,11 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA)
             opr->deduce_layout(src, filter, dst);
         }
         src.dtype = dst.dtype = filter.dtype = dtype::Float32();
-        checker.
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-3).
-            set_param(arg.param).
-            exec(TensorLayoutArray{filter, dst, src});
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{filter, dst, src});
         // cudnn7.5.0 or later, CUDNN_CONVOLUTION_BACKWARD_DATA_ALGO_1 produces
         // incorrect results on architecture 7.0 or later, so disable the
         // following test with float16. remove the if statement, when cudnn
@@ -119,19 +115,17 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_DATA)
         param.dilate_h = param.dilate_w = 2;
         opr->param() = param;
         TensorLayout srcl({600, 512, 7, 7}, dtype::Float32()),
-                     filterl({512, 512, 3, 3}, dtype::Float32()),
-                     dstl({600, 512, 7, 7}, dtype::Float32());
+                filterl({512, 512, 3, 3}, dtype::Float32()),
+                dstl({600, 512, 7, 7}, dtype::Float32());
         auto wsize = opr->get_workspace_in_bytes(filterl, dstl, srcl);
         Tensor<> src(handle, srcl), filter(handle, filterl), dst(handle, dstl);
         WorkspaceWrapper w(handle, wsize);
-        opr->exec(filter.tensornd(), dst.tensornd(), src.tensornd(),
-                w.workspace());
+        opr->exec(filter.tensornd(), dst.tensornd(), src.tensornd(), w.workspace());
         megcore_check(megcoreSynchronize(handle->megcore_computing_handle()));
     }
 }
 
-TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_FILTER)
-{
+TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_FILTER) {
     std::vector<TestArg> args = get_dilated_args();
     Checker<ConvolutionBackwardFilter> checker(handle_cuda());
 #if CUDNN_VERSION >= 7500
@@ -144,7 +138,7 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_FILTER)
 #endif
     NormalRNG default_rng;
     bool first_run = true;
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
         TensorLayout dst;
@@ -156,20 +150,18 @@ TEST_F(CUDA, DILATED_CONVOLUTION_BACKWARD_FILTER)
         float scale = 1.0f / sqrt(dst[2] * dst[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         src.dtype = dst.dtype = filter.dtype = dtype::Float32();
-        checker.
-            set_rng(0, &default_rng).
-            set_rng(1, &default_rng).
-            set_epsilon(1e-2).
-            set_param(arg.param).
-            exec(TensorLayoutArray{src, dst, filter});
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-2)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
         if (!first_run) {
             src.dtype = dst.dtype = filter.dtype = dtype::Float16();
-            checker.
-                set_rng(0, &rng).
-                set_rng(1, &rng).
-                set_epsilon(1e-1).
-                set_param(arg.param).
-                exec(TensorLayoutArray{src, dst, filter});
+            checker.set_rng(0, &rng)
+                    .set_rng(1, &rng)
+                    .set_epsilon(1e-1)
+                    .set_param(arg.param)
+                    .exec(TensorLayoutArray{src, dst, filter});
         } else {
             // first arg is big, and float16 suffers from precision problems
             first_run = false;

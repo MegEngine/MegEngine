@@ -84,19 +84,20 @@ public:
                 : input_dtype{DTypeEnum::Float32},
                   output_dtype{DTypeEnum::Float32},
                   attribute{Attribute::DEFAULT} {}
-        ReformatKey(TensorFormats input_format_, TensorFormats output_format_,
-                    Attribute attribute_,
-                    DTypeEnum input_dtype_ = DTypeEnum::Float32,
-                    DTypeEnum output_dtype_ = DTypeEnum::Float32)
+        ReformatKey(
+                TensorFormats input_format_, TensorFormats output_format_,
+                Attribute attribute_, DTypeEnum input_dtype_ = DTypeEnum::Float32,
+                DTypeEnum output_dtype_ = DTypeEnum::Float32)
                 : input_format{input_format_},
                   output_format{output_format_},
                   input_dtype{input_dtype_},
                   output_dtype{output_dtype_},
                   attribute{attribute_} {}
-        ReformatKey(TensorFormats input_format_, TensorFormats output_format_,
-                    DTypeEnum input_dtype_ = DTypeEnum::Float32,
-                    DTypeEnum output_dtype_ = DTypeEnum::Float32,
-                    Attribute attribute_ = Attribute::DEFAULT)
+        ReformatKey(
+                TensorFormats input_format_, TensorFormats output_format_,
+                DTypeEnum input_dtype_ = DTypeEnum::Float32,
+                DTypeEnum output_dtype_ = DTypeEnum::Float32,
+                Attribute attribute_ = Attribute::DEFAULT)
                 : input_format{input_format_},
                   output_format{output_format_},
                   input_dtype{input_dtype_},
@@ -106,18 +107,16 @@ public:
             size_t operator()(const ReformatKey& key) const;
         };
         struct Equal {
-            bool operator()(const ReformatKey& lhs,
-                            const ReformatKey& rhs) const;
+            bool operator()(const ReformatKey& lhs, const ReformatKey& rhs) const;
         };
     };
-    using ReformatCache =
-            std::unordered_map<ReformatKey, ReformatImpl, ReformatKey::Hash,
-                               ReformatKey::Equal>;
+    using ReformatCache = std::unordered_map<
+            ReformatKey, ReformatImpl, ReformatKey::Hash, ReformatKey::Equal>;
     ReformatImpl get(const ReformatKey& key) const;
     ReformatImpl get(ReformatKey&& key) const { return get(key); }
-    ReformatImpl auto_aligned_reformat_featrue(const VarNode* orig_var,
-                                               TensorFormats orig_format,
-                                               const ReformatKey& key) const;
+    ReformatImpl auto_aligned_reformat_featrue(
+            const VarNode* orig_var, TensorFormats orig_format,
+            const ReformatKey& key) const;
     struct AlignmentDesc {
         megdnn::Dimension::Name name;
         size_t alignment;
@@ -129,15 +128,13 @@ public:
     static TensorShape make_aligned_tensor_shape(
             const VarNode* var, TensorFormats orig_formats,
             TensorFormats target_formats,
-            ReformatKey::Attribute extra_attribute =
-                    ReformatKey::Attribute::DEFAULT);
+            ReformatKey::Attribute extra_attribute = ReformatKey::Attribute::DEFAULT);
     static TensorShape make_aligned_weight_shape(
             const VarNode* var, TensorFormats orig_formats,
             TensorFormats target_formats, TensorFormats extra_formats,
-            ReformatKey::Attribute extra_attribute =
-                    ReformatKey::Attribute::DEFAULT);
-    static AlignmentDesc make_aligned_desc(TensorFormats weight_format,
-                                           TensorFormats out_feature_format);
+            ReformatKey::Attribute extra_attribute = ReformatKey::Attribute::DEFAULT);
+    static AlignmentDesc make_aligned_desc(
+            TensorFormats weight_format, TensorFormats out_feature_format);
 
     static const ReformatManager& instance();
 

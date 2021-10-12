@@ -11,18 +11,18 @@
 
 #include "megbrain/comp_node_env.h"
 
+#include "megbrain/gopt/inference.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/tensor_manip.h"
+#include "megbrain/serialization/serializer.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
-#include "megbrain/serialization/serializer.h"
-#include "megbrain/opr/basic_arith.h"
-#include "megbrain/gopt/inference.h"
-#include "megbrain/opr/tensor_manip.h"
-#include "megdnn/oprs/base.h"
 #include "megdnn/dtype.h"
 #include "megdnn/heuristic_cache.h"
+#include "megdnn/oprs/base.h"
 
 #include <cmath>
 #include <random>
@@ -39,9 +39,9 @@ struct GraphMaker;
 
 template <typename MgbOpr>
 struct GraphMaker<MgbOpr, 2> {
-    SymbolVar operator()(const std::array<cg::SymbolVar, 2>& inputs,
-                          typename MgbOpr::Param& param,
-                          typename MgbOpr::ExecutionPolicy& policy) {
+    SymbolVar operator()(
+            const std::array<cg::SymbolVar, 2>& inputs, typename MgbOpr::Param& param,
+            typename MgbOpr::ExecutionPolicy& policy) {
         return MgbOpr::make(inputs[0], inputs[1], param, policy);
     }
 };
@@ -52,8 +52,8 @@ struct GraphMaker<opr::ConvolutionBackwardData, 2> {
             const std::array<cg::SymbolVar, 2>& inputs,
             opr::ConvolutionBackwardData::Param& param,
             opr::ConvolutionBackwardData::ExecutionPolicy& policy) {
-        return opr::ConvolutionBackwardData::make_deconv(inputs[0], inputs[1],
-                                                         param, policy);
+        return opr::ConvolutionBackwardData::make_deconv(
+                inputs[0], inputs[1], param, policy);
     }
 };
 
@@ -63,60 +63,59 @@ struct GraphMaker<opr::Convolution3DBackwardData, 2> {
             const std::array<cg::SymbolVar, 2>& inputs,
             opr::Convolution3DBackwardData::Param& param,
             opr::Convolution3DBackwardData::ExecutionPolicy& policy) {
-        return opr::Convolution3DBackwardData::make_deconv(inputs[0], inputs[1],
-                                                           param, policy);
+        return opr::Convolution3DBackwardData::make_deconv(
+                inputs[0], inputs[1], param, policy);
     }
 };
 
 template <typename MgbOpr>
 struct GraphMaker<MgbOpr, 3> {
-    SymbolVar operator()(const std::array<cg::SymbolVar, 3>& inputs,
-                          typename MgbOpr::Param& param,
-                          typename MgbOpr::ExecutionPolicy& policy) {
+    SymbolVar operator()(
+            const std::array<cg::SymbolVar, 3>& inputs, typename MgbOpr::Param& param,
+            typename MgbOpr::ExecutionPolicy& policy) {
         return MgbOpr::make(inputs[0], inputs[1], inputs[2], param, policy, {});
     }
 };
 
 template <typename MgbOpr>
 struct GraphMaker<MgbOpr, 4> {
-    SymbolVar operator()(const std::array<cg::SymbolVar, 4>& inputs,
-                         typename MgbOpr::Param& param,
-                         typename MgbOpr::ExecutionPolicy& policy) {
-        return MgbOpr::make(inputs[0], inputs[1], inputs[2], inputs[3], param,
-                            policy, {});
+    SymbolVar operator()(
+            const std::array<cg::SymbolVar, 4>& inputs, typename MgbOpr::Param& param,
+            typename MgbOpr::ExecutionPolicy& policy) {
+        return MgbOpr::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], param, policy, {});
     }
 };
 
 template <typename MgbOpr>
 struct GraphMaker<MgbOpr, 5> {
-    SymbolVar operator()(const std::array<cg::SymbolVar, 5>& inputs,
-                         typename MgbOpr::Param& param,
-                         typename MgbOpr::ExecutionPolicy& policy) {
-        return MgbOpr::make(inputs[0], inputs[1], inputs[2], inputs[3],
-                            inputs[4], param, policy, {});
+    SymbolVar operator()(
+            const std::array<cg::SymbolVar, 5>& inputs, typename MgbOpr::Param& param,
+            typename MgbOpr::ExecutionPolicy& policy) {
+        return MgbOpr::make(
+                inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], param, policy,
+                {});
     }
 };
 
 template <typename MgbOpr, int arith, typename dtype = dtype::Float32>
-void test_fastrun_opr(std::array<TensorShape, arith> inps0,
-                      std::array<TensorShape, arith> inps1,
-                      size_t expect_nr_cache_set_inp0 = 0,
-                      size_t expect_nr_cache_set_inp1 = 0,
-                      typename MgbOpr::Param param = {}) {
+void test_fastrun_opr(
+        std::array<TensorShape, arith> inps0, std::array<TensorShape, arith> inps1,
+        size_t expect_nr_cache_set_inp0 = 0, size_t expect_nr_cache_set_inp1 = 0,
+        typename MgbOpr::Param param = {}) {
     using Policy = opr::Convolution::ExecutionPolicy;
     using S = Policy::Strategy;
     using InputGenerator = std::function<void(HostTensorND & dest)>;
     using ShapeInpArray = std::array<TensorShape, arith>;
     using CacheMem = std::pair<const void*, size_t>;
-    auto on_get = [](const std::string&, const void*, size_t, const void*,
-                     size_t) {};
+    auto on_get = [](const std::string&, const void*, size_t, const void*, size_t) {};
 
     std::vector<std::pair<CacheMem, CacheMem>> cache_set_history;
-    auto on_set = [&cache_set_history](const std::string&, const void* key,
-                                       size_t key_size, const void* val,
-                                       size_t val_size) {
-        cache_set_history.emplace_back(std::make_pair(key, key_size),
-                                       std::make_pair(val, val_size));
+    auto on_set = [&cache_set_history](
+                          const std::string&, const void* key, size_t key_size,
+                          const void* val, size_t val_size) {
+        cache_set_history.emplace_back(
+                std::make_pair(key, key_size), std::make_pair(val, val_size));
     };
 
     PersistentCacheHook cache_hook{on_get, on_set};
@@ -129,8 +128,7 @@ void test_fastrun_opr(std::array<TensorShape, arith> inps0,
         std::array<InputGenerator, arith> inputs_generator;
         std::array<std::shared_ptr<HostTensorND>, arith> inputs;
         for (size_t i = 0; i < arith; ++i) {
-            inputs[i] = std::make_shared<HostTensorND>(comp_node,
-                                                       dtype());
+            inputs[i] = std::make_shared<HostTensorND>(comp_node, dtype());
         }
         HostTensorGenerator<dtype> gen_host;
         for (size_t i = 0; i < arith; ++i) {
@@ -141,22 +139,20 @@ void test_fastrun_opr(std::array<TensorShape, arith> inps0,
         std::array<cg::SymbolVar, arith> sym_in;
         for (size_t i = 0; i < arith; ++i) {
             // to trigger graph trans
-            sym_in[i] = opr::Host2DeviceCopy::make(*graph, inputs[i],
-                                                   ssprintf("inp%zu", i));
+            sym_in[i] = opr::Host2DeviceCopy::make(
+                    *graph, inputs[i], ssprintf("inp%zu", i));
         }
         Policy policy;
         policy.strategy = S::PROFILE;
         auto out = graph_maker(sym_in, param, policy);
 
-        std::unique_ptr<cg::AsyncExecutable> func =
-                graph->compile({{out, {}}});
+        std::unique_ptr<cg::AsyncExecutable> func = graph->compile({{out, {}}});
         func->execute();
     };
 
     std::shared_ptr<cg::ComputingGraph> fastrun_ignore_batchsize_graph =
             ComputingGraph::make();
-    fastrun_ignore_batchsize_graph->options()
-            .fast_run_config.shared_batch_size = 20;
+    fastrun_ignore_batchsize_graph->options().fast_run_config.shared_batch_size = 20;
     run(fastrun_ignore_batchsize_graph, inps0);
     size_t nr_set_inp0 = cache_set_history.size();
     if (expect_nr_cache_set_inp0) {
@@ -247,10 +243,8 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeDeformableConv) {
             {TensorShape{12, 6, 20, 20}, TensorShape{6, 6, 3, 3},
              TensorShape{12, 18, 18, 18}, TensorShape{12, 9, 18, 18},
              TensorShape{12, 6, 18, 18}},
-            {TensorShape{4, 6, 20, 20},
-             TensorShape{6, 6, 3, 3},
-             TensorShape{4, 18, 18, 18},
-             TensorShape{4, 9, 18, 18},
+            {TensorShape{4, 6, 20, 20}, TensorShape{6, 6, 3, 3},
+             TensorShape{4, 18, 18, 18}, TensorShape{4, 9, 18, 18},
              TensorShape{4, 6, 18, 18}});
 
     test_fastrun_opr<opr::DeformableConvBackwardFilter, 5>(
@@ -285,28 +279,29 @@ TEST(TestOprDNN, FastrunIgnoreBatchSizeBatchedMatrixMul) {
     //! fastrun_shared_batch_size == 20
     //! {20(48), 6(8), 8(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)} origin
     //! {20(48), 8(6), 6(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)} transA
-    //! {20(48), 8(6), 6(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transA, transB
-    //! {20(48), 6(8), 8(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transB
+    //! {20(48), 8(6), 6(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transA,
+    //! transB {20(48), 6(8), 8(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transB
     //!
-    //! {20(48), 6(8), 8(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)} origin duplicate
-    //! {20(48), 8(6), 6(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)} transA duplicate
-    //! {20(48), 8(6), 6(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transA, transB duplicate
-    //! {20(48), 6(8), 8(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4), 4(1)} transB duplicate
+    //! {20(48), 6(8), 8(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)} origin
+    //! duplicate {20(48), 8(6), 6(1)}, {20(32), 8(4), 4(1)} -> {20(24), 6(4), 4(1)}
+    //! transA duplicate {20(48), 8(6), 6(1)}, {20(32), 4(8), 8(1)} -> {20(24), 6(4),
+    //! 4(1)} transA, transB duplicate {20(48), 6(8), 8(1)}, {20(32), 4(8), 8(1)} ->
+    //! {20(24), 6(4), 4(1)} transB duplicate
     test_fastrun_opr<opr::BatchedMatrixMul, 2>(
             {TensorShape{12, 6, 8}, TensorShape{12, 8, 4}},
             {TensorShape{4, 6, 8}, TensorShape{4, 8, 4}});
 }
 
 template <typename MgbOpr>
-void test_no_profiling_on_shape_change(const TensorShapeArray& inps0,
-                                       const TensorShapeArray& inps1) {
+void test_no_profiling_on_shape_change(
+        const TensorShapeArray& inps0, const TensorShapeArray& inps1) {
     using Policy = typename MgbOpr::ExecutionPolicy;
 
     int nr_set = 0;
-    auto on_get = [](const std::string&, const void*, size_t, const void*,
-                     size_t) {};
-    auto on_set = [&nr_set](const std::string&, const void*, size_t,
-                            const void*, size_t) { nr_set++; };
+    auto on_get = [](const std::string&, const void*, size_t, const void*, size_t) {};
+    auto on_set = [&nr_set](
+                          const std::string&, const void*, size_t, const void*,
+                          size_t) { nr_set++; };
     PersistentCacheHook cache_hook{on_get, on_set};
 
     auto cn = CompNode::load("xpu0");
@@ -343,12 +338,12 @@ TEST(TestOprDNN, FastrunNoProfilingOnShapeChange) {
     test_no_profiling_on_shape_change<opr::Convolution>(
             {{12, 3, 36, 36}, {4, 3, 3, 3}}, {{32, 3, 28, 28}, {4, 3, 3, 3}});
 
-    test_no_profiling_on_shape_change<opr::MatrixMul>({{20, 30}, {30, 40}},
-                                                      {{30, 40}, {40, 60}});
+    test_no_profiling_on_shape_change<opr::MatrixMul>(
+            {{20, 30}, {30, 40}}, {{30, 40}, {40, 60}});
 }
 
-#endif // MGB_ENABLE_FASTRUN
-#endif // MGB_CUDA
+#endif  // MGB_ENABLE_FASTRUN
+#endif  // MGB_CUDA
 
 }  // anonymous namespace
 

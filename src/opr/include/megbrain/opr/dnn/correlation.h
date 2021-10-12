@@ -17,27 +17,30 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(CorrelationForward,
-                           intl::MegDNNOprWrapperFwd<megdnn::CorrelationForward>) // {
+MGB_DEFINE_OPR_CLASS(
+        CorrelationForward, intl::MegDNNOprWrapperFwd<megdnn::CorrelationForward>) // {
 public:
-    CorrelationForward(VarNode* data1, VarNode* data2, const Param& param,
-                    const OperatorNodeConfig& config);
+    CorrelationForward(
+            VarNode* data1, VarNode* data2, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(SymbolVar data1, SymbolVar data2,
-                          const Param& param = {},
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar data1, SymbolVar data2, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 using Correlation = CorrelationForward;
 
 MGB_DEFINE_OPR_CLASS(
-        CorrelationBackwardData1, intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData1>) // {
+        CorrelationBackwardData1,
+        intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData1>) // {
 public:
-    CorrelationBackwardData1(VarNode* diff, VarNode* data1, VarNode* data2,
-                     const Param& param, const OperatorNodeConfig& config);
+    CorrelationBackwardData1(
+            VarNode* diff, VarNode* data1, VarNode* data2, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(SymbolVar diff, SymbolVar data1, SymbolVar data2,
-                          const Param& param = {},
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar diff, SymbolVar data1, SymbolVar data2, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
 private:
     void scn_do_execute() override;
@@ -47,14 +50,16 @@ private:
 };
 
 MGB_DEFINE_OPR_CLASS(
-        CorrelationBackwardData2, intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData2>) // {
+        CorrelationBackwardData2,
+        intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData2>) // {
 public:
-    CorrelationBackwardData2(VarNode* diff, VarNode* data1, VarNode* data2,
-                     const Param& param, const OperatorNodeConfig& config);
+    CorrelationBackwardData2(
+            VarNode* diff, VarNode* data1, VarNode* data2, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(SymbolVar diff, SymbolVar data1, SymbolVar data2,
-                          const Param& param = {},
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar diff, SymbolVar data1, SymbolVar data2, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
 private:
     void scn_do_execute() override;

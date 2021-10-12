@@ -8,9 +8,9 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/common/checker.h"
-#include "test/common/benchmarker.h"
 #include "test/common/cvt_color.h"
+#include "test/common/benchmarker.h"
+#include "test/common/checker.h"
 
 #include "test/cuda/fixture.h"
 
@@ -19,29 +19,27 @@ namespace test {
 
 using Mode = param::CvtColor::Mode;
 
-TEST_F(CUDA, CVTCOLOR)
-{
+TEST_F(CUDA, CVTCOLOR) {
     using namespace cvt_color;
     std::vector<TestArg> args = get_cuda_args();
     Checker<CvtColor> checker(handle_cuda());
 
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         checker.set_param(arg.param)
-            .set_dtype(0, arg.dtype)
-            .set_dtype(1, arg.dtype)
-            .execs({arg.src, {}});
+                .set_dtype(0, arg.dtype)
+                .set_dtype(1, arg.dtype)
+                .execs({arg.src, {}});
     }
 }
 
 #if MEGDNN_WITH_BENCHMARK
-TEST_F(CUDA, BENCHMARK_CVTCOLOR_RGB2GRAY)
-{
+TEST_F(CUDA, BENCHMARK_CVTCOLOR_RGB2GRAY) {
     using namespace cvt_color;
     using Param = param::CvtColor;
 
 #define BENCHMARK_PARAM(benchmarker, dtype) \
-        benchmarker.set_param(param); \
-        benchmarker.set_dtype(0, dtype);
+    benchmarker.set_param(param);           \
+    benchmarker.set_dtype(0, dtype);
 
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         auto handle_naive = create_cpu_handle(2);
@@ -63,13 +61,12 @@ TEST_F(CUDA, BENCHMARK_CVTCOLOR_RGB2GRAY)
             benchmarker.execs({shape, {}});
             benchmarker_naive.execs({shape, {}});
         }
-
     };
 
     Param param;
     TensorShapeArray shapes = {
-        {1, 500, 512, 3},
-        {2, 500, 512, 3},
+            {1, 500, 512, 3},
+            {2, 500, 512, 3},
     };
 
     param.mode = Param::Mode::RGB2GRAY;
@@ -79,8 +76,7 @@ TEST_F(CUDA, BENCHMARK_CVTCOLOR_RGB2GRAY)
 
 // benchmark cvtcolor planar or semi-planar YUV to RGB, BGR or gray.
 // data type: uint8
-TEST_F(CUDA, BENCHMARK_CVTCOLOR_YUV2XXX_PLANAR_SEMIPLANAR_8U)
-{
+TEST_F(CUDA, BENCHMARK_CVTCOLOR_YUV2XXX_PLANAR_SEMIPLANAR_8U) {
     using namespace cvt_color;
     using Param = param::CvtColor;
     int nrun = 10;
@@ -106,27 +102,25 @@ TEST_F(CUDA, BENCHMARK_CVTCOLOR_YUV2XXX_PLANAR_SEMIPLANAR_8U)
                 param.mode == Mode::YUV2GRAY_NV12 ||
                 param.mode == Mode::YUV2GRAY_YU12 ||
                 param.mode == Mode::YUV2GRAY_YV12) {
-                computation = shape.total_nr_elems()/3*4;
+                computation = shape.total_nr_elems() / 3 * 4;
             } else {
-                computation = shape.total_nr_elems()*3;
+                computation = shape.total_nr_elems() * 3;
             }
             printf("bandwidth: %.2f GiBPS\n",
-                   (float)computation / (1<<30) / (t/1000));
+                   (float)computation / (1 << 30) / (t / 1000));
             printf("naive: ");
             benchmarker_naive.execs({shape, {}});
         }
     };
 
     Param param;
-    TensorShapeArray shapes = {
-        {1, 480, 512, 1},
-        {2, 480, 512, 1}
-    };
+    TensorShapeArray shapes = {{1, 480, 512, 1}, {2, 480, 512, 1}};
 
-#define MEGDNN_CALL_CVTCOLOR_BENCHMARKER(_mode) { \
-        param.mode = _mode;                       \
-        printf("\n=== run mode=" #_mode "\n");    \
-        run(shapes, param);                       \
+#define MEGDNN_CALL_CVTCOLOR_BENCHMARKER(_mode) \
+    {                                           \
+        param.mode = _mode;                     \
+        printf("\n=== run mode=" #_mode "\n");  \
+        run(shapes, param);                     \
     }
 
     MEGDNN_CALL_CVTCOLOR_BENCHMARKER(Mode::YUV2BGR_NV21)
@@ -147,6 +141,6 @@ TEST_F(CUDA, BENCHMARK_CVTCOLOR_YUV2XXX_PLANAR_SEMIPLANAR_8U)
 }
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

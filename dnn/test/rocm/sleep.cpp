@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "hcc_detail/hcc_defs_prologue.h"
+#include "megdnn/oprs.h"
 #include "test/rocm/fixture.h"
 #include "test/rocm/utils.h"
-#include "megdnn/oprs.h"
 
 #include <chrono>
 #include <cstdio>
@@ -38,7 +38,7 @@ TEST_F(ROCM, SLEEP) {
     // warmv7up
     run(0.01);
 
-    for (auto i: {0.1, 0.3}) {
+    for (auto i : {0.1, 0.3}) {
         auto get = run(i);
         ASSERT_GE(get, i);
         ASSERT_LE(get, i * 2);
@@ -47,6 +47,4 @@ TEST_F(ROCM, SLEEP) {
 
 #endif
 
-
 // vim: syntax=cpp.doxygen
-

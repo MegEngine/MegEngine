@@ -47,11 +47,11 @@ public:
     explicit Builder(std::function<descs_t(op_t, descs_t, size_t)> infer_function)
             : m_infer_fn{infer_function} {}
     vars_t write_expr(op_t op, vars_t inputs, size_t nr_outputs) {
-        return write_expr_before(m_exprs.end(), std::move(op),
-                                 std::move(inputs), std::move(nr_outputs));
+        return write_expr_before(
+                m_exprs.end(), std::move(op), std::move(inputs), std::move(nr_outputs));
     }
-    vars_t write_expr_before(expr_iter_t iter, op_t op, vars_t inputs,
-                             size_t nr_outputs) {
+    vars_t write_expr_before(
+            expr_iter_t iter, op_t op, vars_t inputs, size_t nr_outputs) {
         vars_t outputs;
         for (size_t i = 0; i < nr_outputs; ++i) {
             outputs.push_back(next_var());
@@ -59,8 +59,9 @@ public:
         m_exprs.insert(iter, {op, inputs, outputs});
         descs_t input_descs = get_descs(inputs);
         descs_t output_descs = m_infer_fn(op, input_descs, nr_outputs);
-        mgb_assert(output_descs.size() == nr_outputs,
-                   "bad infer_function: output descs size mismatch");
+        mgb_assert(
+                output_descs.size() == nr_outputs,
+                "bad infer_function: output descs size mismatch");
         for (size_t i = 0; i < nr_outputs; ++i) {
             m_var2desc[outputs[i]] = output_descs[i];
         }
@@ -80,7 +81,7 @@ public:
     }
     vars_t write_inputs(descs_t input_descs) {
         vars_t inputs;
-        for (auto&& input_desc: input_descs) {
+        for (auto&& input_desc : input_descs) {
             inputs.push_back(write_input(input_desc));
         }
         return inputs;
@@ -98,23 +99,19 @@ public:
         return descs;
     }
     encoded_graph_t encode() const {
-        graph_t graph{m_inputs,
-                      m_constants,
-                      m_outputs,
-                      {m_exprs.begin(), m_exprs.end()}};
+        graph_t graph{
+                m_inputs, m_constants, m_outputs, {m_exprs.begin(), m_exprs.end()}};
         graph.replace_vars(m_var_replace_map);
         graph.remove_unused_exprs();
         return encoded_graph_t::make(std::move(graph));
     }
     void replace_var(var_t old_var, var_t new_var) {
-        mgb_assert(!m_var_replace_map.count(old_var),
-                   "var cannot be replaced twice");
+        mgb_assert(!m_var_replace_map.count(old_var), "var cannot be replaced twice");
         m_var_replace_map[old_var] = new_var;
     }
     template <typename TFunctor>
     void iterate(TFunctor&& functor) {
-        for (expr_iter_t iter = m_exprs.begin(); iter != m_exprs.end();
-             ++iter) {
+        for (expr_iter_t iter = m_exprs.begin(); iter != m_exprs.end(); ++iter) {
             functor(iter);
         }
     }

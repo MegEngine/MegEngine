@@ -17,8 +17,7 @@ namespace megdnn {
 namespace cuda {
 namespace warp_perspective {
 
-BorderMode get_bmode(param::WarpPerspective::BorderMode bmode)
-{
+BorderMode get_bmode(param::WarpPerspective::BorderMode bmode) {
     using BMode = WarpPerspective::BorderMode;
     switch (bmode) {
         case BMode::REFLECT_101:
@@ -40,7 +39,6 @@ BorderMode get_bmode(param::WarpPerspective::BorderMode bmode)
     }
 }
 
-
 InterpolationMode get_imode(param::WarpPerspective::InterpolationMode imode) {
     using IMode = param::WarpPerspective::InterpolationMode;
     switch (imode) {
@@ -59,8 +57,8 @@ InterpolationMode get_imode(param::WarpPerspective::InterpolationMode imode) {
     }
 }
 
-} // namespace warp_perspective
-} // namespace cuda
-} // namespace megdnn
+}  // namespace warp_perspective
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

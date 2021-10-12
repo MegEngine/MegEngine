@@ -65,11 +65,9 @@ private:
 
 }  // namespace mgb
 
-#define MGB_OBFUSCATE_STR(data) \
-    MGB_OBFUSCATE_STR_KEY(data, mgb::XORObfuscator<'.'>)
+#define MGB_OBFUSCATE_STR(data) MGB_OBFUSCATE_STR_KEY(data, mgb::XORObfuscator<'.'>)
 
-#define MGB_OBFUSCATE_STR_KEY(data, ob)                                    \
-    mgb::ObfucatorCT<std::make_index_sequence<sizeof(data) - 1>, ob>(data) \
-            .decrypt()
+#define MGB_OBFUSCATE_STR_KEY(data, ob) \
+    mgb::ObfucatorCT<std::make_index_sequence<sizeof(data) - 1>, ob>(data).decrypt()
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

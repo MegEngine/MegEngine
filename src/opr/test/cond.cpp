@@ -29,8 +29,9 @@ namespace {
 using MergeMode = opr::CondExecMerge::Param::Mode;
 
 //! return y = (pred == 1 ? x : null)
-SymbolVar make_one_cond(SymbolVar pred, SymbolVar x, size_t nr_branch = 1,
-                        size_t this_branch = 0, bool grad_cond_out = false) {
+SymbolVar make_one_cond(
+        SymbolVar pred, SymbolVar x, size_t nr_branch = 1, size_t this_branch = 0,
+        bool grad_cond_out = false) {
     SymbolVar xcond;
     SymbolVarArray keys(nr_branch, pred.make_scalar_dt(0));
     keys.at(this_branch) = pred.make_scalar_dt(1);
@@ -41,8 +42,7 @@ SymbolVar make_one_cond(SymbolVar pred, SymbolVar x, size_t nr_branch = 1,
     if (grad_cond_out) {
         p.grad_mode = Param::GradMode::SUM_COND_OUT;
     }
-    unpack_vector(opr::CondExecMark::make(masks.at(this_branch), {x}, p),
-                  xcond);
+    unpack_vector(opr::CondExecMark::make(masks.at(this_branch), {x}, p), xcond);
     return xcond;
 }
 
@@ -53,23 +53,21 @@ SymbolVar make_call_rec(SymbolVar x, int* cnt) {
     return opr::CallbackInjector::make(x, param);
 }
 
-SymbolVar merge_one_out(const SymbolVarArray& inputs_orig, MergeMode mode,
-                        size_t nr_distractor = 0,
-                        const VarNodeArrayView& out_shapes = {}) {
+SymbolVar merge_one_out(
+        const SymbolVarArray& inputs_orig, MergeMode mode, size_t nr_distractor = 0,
+        const VarNodeArrayView& out_shapes = {}) {
     SymbolVarArray inputs;
     for (size_t i = 0; i < inputs_orig.size(); ++i) {
         for (size_t j = 0; j <= nr_distractor; ++j) {
             if (j == nr_distractor / 2) {
                 inputs.push_back(inputs_orig[i]);
             } else {
-                inputs.push_back(inputs_orig[i] +
-                                 int(i * (nr_distractor + 1) + j + 1));
+                inputs.push_back(inputs_orig[i] + int(i * (nr_distractor + 1) + j + 1));
             }
         }
     }
     auto out = opr::CondExecMerge::make(
-            inputs, {static_cast<uint32_t>(nr_distractor + 1), mode},
-            out_shapes);
+            inputs, {static_cast<uint32_t>(nr_distractor + 1), mode}, out_shapes);
     EXPECT_EQ(nr_distractor + 1, out.size());
     return out[nr_distractor / 2];
 }
@@ -83,8 +81,8 @@ void test_merge_opr(MergeMode mode, bool pred_dynamic, bool final_sum) {
     graph->options().graph_opt_level = 0;
     HostTensorGenerator<> gen;
     HostTensorGenerator<dtype::Int32> gen_int;
-    auto host_inp0 = gen({2, 3}), host_inp1 = gen({2, 3}),
-         host_pred0 = gen_int({1}), host_pred1 = gen_int({1});
+    auto host_inp0 = gen({2, 3}), host_inp1 = gen({2, 3}), host_pred0 = gen_int({1}),
+         host_pred1 = gen_int({1});
     host_pred0->ptr<int>()[0] = 0;
     host_pred1->ptr<int>()[0] = 1;
 
@@ -99,10 +97,8 @@ void test_merge_opr(MergeMode mode, bool pred_dynamic, bool final_sum) {
     }
 
     int call0 = 0, call1 = 0, call2 = 0, call3 = 0;
-    SymbolVar inp0_cond = make_call_rec(make_one_cond(pred0, inp0, 3, 2) / 2,
-                                        &call0),
-              inp1_cond = make_call_rec(make_one_cond(pred1, inp1, 4, 1) * 3,
-                                        &call1),
+    SymbolVar inp0_cond = make_call_rec(make_one_cond(pred0, inp0, 3, 2) / 2, &call0),
+              inp1_cond = make_call_rec(make_one_cond(pred1, inp1, 4, 1) * 3, &call1),
               merged = merge_one_out({inp0_cond, inp1_cond}, mode, 3), out;
 
     if (final_sum) {
@@ -190,8 +186,9 @@ void test_merge_opr(MergeMode mode, bool pred_dynamic, bool final_sum) {
             case MergeMode::EXACT_ONE_SAME_SHAPE: {
                 if (pred0 + pred1 == 1) {
                     check_all(pred0, pred1);
-                    ASSERT_EQ(prev_dev_ptr(pred0 ? inp0_cond : inp1_cond),
-                              prev_dev_ptr(merged));
+                    ASSERT_EQ(
+                            prev_dev_ptr(pred0 ? inp0_cond : inp1_cond),
+                            prev_dev_ptr(merged));
                 } else {
                     if (mode == MergeMode::EXACT_ONE) {
                         if (!pred_dynamic) {
@@ -239,15 +236,15 @@ void test_simple_grad(bool grad_cond_out) {
          y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y"),
          pred = opr::Host2DeviceCopy::make(*graph, host_pred);
     auto branches = opr::CondExecPred::make(
-            pred, {pred.make_scalar(0.f), pred.make_scalar(1.f),
-                   pred.make_scalar(2.f)});
+            pred,
+            {pred.make_scalar(0.f), pred.make_scalar(1.f), pred.make_scalar(2.f)});
     using GradMode = opr::CondExecMark::Param::GradMode;
     auto get_marked = [&branches, grad_cond_out](SymbolVar x, size_t br) {
         SymbolVar ret;
         unpack_vector(
-                opr::CondExecMark::make(branches.at(br), {x},
-                                        {grad_cond_out ? GradMode::SUM_COND_OUT
-                                                       : GradMode::SUM}),
+                opr::CondExecMark::make(
+                        branches.at(br), {x},
+                        {grad_cond_out ? GradMode::SUM_COND_OUT : GradMode::SUM}),
                 ret);
         return ret;
     };
@@ -255,8 +252,9 @@ void test_simple_grad(bool grad_cond_out) {
     auto cond_x0 = get_marked(x, 0).rename("cx0"),
          cond_x1 = get_marked(x, 1).rename("cx1"),
          cond_y = get_marked(y, 2).rename("cy"),
-         z = merge_one_out({cond_x0 * 2, cond_x1 * 3, cond_y * 2.3f},
-                           MergeMode::EXACT_ONE_SAME_SHAPE)
+         z = merge_one_out(
+                     {cond_x0 * 2, cond_x1 * 3, cond_y * 2.3f},
+                     MergeMode::EXACT_ONE_SAME_SHAPE)
                      .rename("merged"),
          loss = opr::reduce_sum_sqr(z + y, z.make_scalar(1)),
          gx = make_call_rec(cg::grad(loss, x), &call_x),
@@ -317,8 +315,9 @@ void test_nested(bool check_grad) {
     static auto make_bisect_pred = [](SymbolVar pred, float thresh) -> TwoVar {
         SymbolVar lt, ge;
         unpack_vector(
-                opr::CondExecPred::make(pred, {pred.make_scalar_dt(thresh)},
-                                        opr::CondExecPred::Mode::PIECEWISE),
+                opr::CondExecPred::make(
+                        pred, {pred.make_scalar_dt(thresh)},
+                        opr::CondExecPred::Mode::PIECEWISE),
                 lt, ge);
         return {lt, ge};
     };
@@ -347,35 +346,34 @@ void test_nested(bool check_grad) {
 
     int call_lt0, call_ge0;
     SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
-              pred = opr::Host2DeviceCopy::make(*graph, host_pred)
-                             .rename("pred"),
+              pred = opr::Host2DeviceCopy::make(*graph, host_pred).rename("pred"),
               x_lt_0, x_ge_0;
     TwoVar pred_th0;
-    std::tie(x_lt_0, x_ge_0) =
-            make_bisect(x, pred, 0, &call_lt0, &call_ge0, &pred_th0);
+    std::tie(x_lt_0, x_ge_0) = make_bisect(x, pred, 0, &call_lt0, &call_ge0, &pred_th0);
 
     x_lt_0 = x_lt_0.rename("lt0") / 2;
     x_ge_0 = x_ge_0.rename("ge0") * 2;
 
     int call_n0, call_n1, call_p0, call_p1;
     SymbolVar xn0, xn1, xp0, xp1;
-    std::tie(xn0, xn1) = make_bisect(x_lt_0, pred_th0.first.rename("pred-neg"),
-                                     -1, &call_n0, &call_n1);
-    std::tie(xp0, xp1) = make_bisect(x_ge_0, pred_th0.second.rename("pred-pos"),
-                                     1, &call_p0, &call_p1);
+    std::tie(xn0, xn1) = make_bisect(
+            x_lt_0, pred_th0.first.rename("pred-neg"), -1, &call_n0, &call_n1);
+    std::tie(xp0, xp1) = make_bisect(
+            x_ge_0, pred_th0.second.rename("pred-pos"), 1, &call_p0, &call_p1);
 
     int call_xn, call_xp;
 
     auto xn_merge = make_call_rec(
-                 merge_one_out({xn0.rename("xn0") - 3, xn1.rename("xn1") + 3},
-                               MergeMode::EXACT_ONE_SAME_SHAPE),
+                 merge_one_out(
+                         {xn0.rename("xn0") - 3, xn1.rename("xn1") + 3},
+                         MergeMode::EXACT_ONE_SAME_SHAPE),
                  &call_xn),
          xp_merge = make_call_rec(
-                 merge_one_out({xp0.rename("xp0") - 4, xp1.rename("xp1") + 4},
-                               MergeMode::EXACT_ONE_SAME_SHAPE),
+                 merge_one_out(
+                         {xp0.rename("xp0") - 4, xp1.rename("xp1") + 4},
+                         MergeMode::EXACT_ONE_SAME_SHAPE),
                  &call_xp),
-         out = merge_one_out({xn_merge, xp_merge},
-                             MergeMode::EXACT_ONE_SAME_SHAPE);
+         out = merge_one_out({xn_merge, xp_merge}, MergeMode::EXACT_ONE_SAME_SHAPE);
 
     // value infer would fail becase EXACT_ONE can not be satisfied (our
     // inference system has no conditional execution)
@@ -393,8 +391,8 @@ void test_nested(bool check_grad) {
 
     auto func = graph->compile(out_spec);
 
-    func->to_json()->writeto_fpath(output_file(
-            ssprintf("TestCondExec.nested-grad%d.json", check_grad)));
+    func->to_json()->writeto_fpath(
+            output_file(ssprintf("TestCondExec.nested-grad%d.json", check_grad)));
 
     std::array<float, 4> all_biases{-3.f, 3.f, -4.f, 4.f};
     for (size_t casenum = 0; casenum < 4; ++casenum) {
@@ -409,8 +407,7 @@ void test_nested(bool check_grad) {
         // init expect
         {
             auto ptr = expect.copy_from(*host_x).ptr<float>();
-            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it;
-                 ++i) {
+            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it; ++i) {
                 ptr[i] = ptr[i] * k + b;
             }
         }
@@ -418,8 +415,7 @@ void test_nested(bool check_grad) {
         // init expect_gx
         if (check_grad) {
             auto ptr = expect_gx.copy_from(*host_x).ptr<float>();
-            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it;
-                 ++i) {
+            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it; ++i) {
                 auto x = ptr[i];
                 ptr[i] = (k * x + b) * 2 * k;
             }
@@ -433,9 +429,9 @@ void test_nested(bool check_grad) {
         ASSERT_EQ(casenum < 2, call_lt0);
         ASSERT_EQ(casenum >= 2, call_ge0);
         ASSERT_EQ(1, call_n0 + call_n1 + call_p0 + call_p1);
-        ASSERT_EQ((call_n0 << 0) | (call_n1 << 1) | (call_p0 << 2) |
-                          (call_p1 << 3),
-                  1 << casenum);
+        ASSERT_EQ(
+                (call_n0 << 0) | (call_n1 << 1) | (call_p0 << 2) | (call_p1 << 3),
+                1 << casenum);
         ASSERT_EQ(call_lt0, call_xn);
         ASSERT_EQ(call_ge0, call_xp);
     }
@@ -467,12 +463,11 @@ class DynamicMemLeakChecker final : public cg::DeviceMemoryAllocator {
     std::atomic_size_t m_nr_alive{0};
 
 public:
-    void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest,
-                       size_t size) override {
+    void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest, size_t size) override {
         ASSERT_LT(dest.size(), size);
         ++m_nr_alive;
         auto ptr = dest.comp_node().alloc_device(size);
-        auto del = [ this, cn = dest.comp_node() ](void* ptr) {
+        auto del = [this, cn = dest.comp_node()](void* ptr) {
             cn.free_device(ptr);
             auto nr = m_nr_alive.fetch_sub(1);
             ASSERT_GT(nr, 0u);
@@ -496,11 +491,12 @@ TEST(TestCondExec, MarkSimple) {
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
          pred = opr::Host2DeviceCopy::make(*graph, host_pred);
     SymbolVar xcond, ppv;
-    unpack_vector(opr::CondExecPred::make(pred, {pred.make_scalar(0.f)},
-                                          opr::CondExecPred::Param::Mode::CASE),
-                  ppv);
-    ppv = opr::CondExecPredLogical::make({ppv},
-                                         opr::CondExecPredLogical::Mode::NAND);
+    unpack_vector(
+            opr::CondExecPred::make(
+                    pred, {pred.make_scalar(0.f)},
+                    opr::CondExecPred::Param::Mode::CASE),
+            ppv);
+    ppv = opr::CondExecPredLogical::make({ppv}, opr::CondExecPredLogical::Mode::NAND);
     unpack_vector(opr::CondExecMark::make(ppv, {x}), xcond);
     {
         ASSERT_THROW(opr::CondExecMark::make(xcond, {x}), GraphError);
@@ -512,14 +508,14 @@ TEST(TestCondExec, MarkSimple) {
     auto y = make_call_rec(xcond + 2.3f, &nr_call);
     HostTensorND host_y;
 
-    ASSERT_EQ(0u,
-              y.node()->owner_opr()->node_prop().dep_map().count(ppv.node()));
+    ASSERT_EQ(0u, y.node()->owner_opr()->node_prop().dep_map().count(ppv.node()));
 
     auto func = graph->compile({make_callback_copy(y, host_y)});
 
     // dependency added in topo sorter
-    ASSERT_EQ(y.node()->owner_opr()->node_prop().dep_map().at(ppv.node()),
-              cg::OperatorNodeBase::NodeProp::DepType::DEV_COMP_ORDER);
+    ASSERT_EQ(
+            y.node()->owner_opr()->node_prop().dep_map().at(ppv.node()),
+            cg::OperatorNodeBase::NodeProp::DepType::DEV_COMP_ORDER);
 
     auto make_expect = [&host_x]() {
         auto graph = ComputingGraph::make();
@@ -579,9 +575,8 @@ TEST(TestCondExec, Merge) {
     for (int i = 0; i < 16; ++i) {
         int im = i >> 2, idyn = (i >> 1) & 1, final_sum = i & 1;
         test_merge_opr(static_cast<MergeMode>(im), idyn, final_sum);
-        ASSERT_FALSE(Test::HasFailure())
-                << "failed for mode=" << im << " dyn=" << idyn
-                << " final_sum=" << final_sum;
+        ASSERT_FALSE(Test::HasFailure()) << "failed for mode=" << im << " dyn=" << idyn
+                                         << " final_sum=" << final_sum;
     }
 }
 
@@ -603,8 +598,8 @@ TEST(TestCondExec, PredMode) {
     auto run = [](Mode mode, const CaseDesc& cases) {
         auto graph = ComputingGraph::make();
         auto make_hv = [](float val) {
-            auto ret = std::make_shared<HostTensorND>(CompNode::load("xpux"),
-                                                      TensorShape{1});
+            auto ret = std::make_shared<HostTensorND>(
+                    CompNode::load("xpux"), TensorShape{1});
             ret->ptr<float>()[0] = val;
             return ret;
         };
@@ -613,8 +608,7 @@ TEST(TestCondExec, PredMode) {
              pred = opr::Host2DeviceCopy::make(*graph, host_pred);
         auto branches = opr::CondExecPred::make(
                 pred,
-                {pred.make_scalar(0.f), pred.make_scalar(1.f),
-                 pred.make_scalar(2.f)},
+                {pred.make_scalar(0.f), pred.make_scalar(1.f), pred.make_scalar(2.f)},
                 mode);
 
         size_t nr_branch = cases[0].second.size();
@@ -626,13 +620,11 @@ TEST(TestCondExec, PredMode) {
             int delta = 1 << i;
             unpack_vector(opr::CondExecMark::make(branches.at(i), {x}), ret);
             branch_vars.emplace_back(ret + delta);
-            unpack_vector(opr::CondExecMark::make(branches.at(i), {x_dyn}),
-                          ret);
+            unpack_vector(opr::CondExecMark::make(branches.at(i), {x_dyn}), ret);
             branch_vars_dyn.emplace_back(ret + delta);
         }
         auto y = merge_one_out(branch_vars, MergeMode::SUM),
-             y_dyn = merge_one_out(branch_vars_dyn, MergeMode::SUM, 0,
-                                   {x.symshape()});
+             y_dyn = merge_one_out(branch_vars_dyn, MergeMode::SUM, 0, {x.symshape()});
         HostTensorND host_y;
         auto func = graph->compile({make_callback_copy(y_dyn, host_y)});
         auto updater = cg::static_infer::StaticInferUpdater::make();
@@ -647,11 +639,10 @@ TEST(TestCondExec, PredMode) {
             func->execute();
             ASSERT_EQ(TensorShape{1}, infer_val.shape());
             ASSERT_EQ(TensorShape{1}, host_y.shape());
-            uint32_t vinfer = infer_val.ptr<float>()[0],
-                     vy = host_y.ptr<float>()[0];
-            ASSERT_EQ(vinfer, vy) << "input=" << i.first
-                                  << " vinfer=" << std::bitset<8>{vinfer}
-                                  << " vy=" << std::bitset<8>{vy};
+            uint32_t vinfer = infer_val.ptr<float>()[0], vy = host_y.ptr<float>()[0];
+            ASSERT_EQ(vinfer, vy)
+                    << "input=" << i.first << " vinfer=" << std::bitset<8>{vinfer}
+                    << " vy=" << std::bitset<8>{vy};
 
             auto v = vy;
             for (size_t br = 0; br < nr_branch; ++br) {
@@ -686,8 +677,7 @@ TEST(TestCondExec, PredMode) {
                           {2e3f, {0, 0, 0, 1}}});
     ASSERT_FALSE(Test::HasFailure()) << "PIECEWISE mode failed";
 
-    static_assert(opr::CondExecPred::Param::MODE_NR_MEMBER == 3,
-                  "not all mode tested");
+    static_assert(opr::CondExecPred::Param::MODE_NR_MEMBER == 3, "not all mode tested");
 }
 
 TEST(TestCondExec, PredLogicalMode) {
@@ -696,10 +686,10 @@ TEST(TestCondExec, PredLogicalMode) {
     using Checker = thin_function<bool(int nr_true)>;
     auto run = [](Mode mode, const size_t nr_input, Checker checker) {
         const size_t nr_case = 1 << nr_input;
-        auto host_pred = std::make_shared<HostTensorND>(CompNode::load("xpux"),
-                                                        TensorShape{nr_case});
-        auto host_x = std::make_shared<HostTensorND>(CompNode::load("xpux"),
-                                                     TensorShape{1});
+        auto host_pred = std::make_shared<HostTensorND>(
+                CompNode::load("xpux"), TensorShape{nr_case});
+        auto host_x =
+                std::make_shared<HostTensorND>(CompNode::load("xpux"), TensorShape{1});
         memset(host_pred->ptr<float>(), 0, sizeof(float) * nr_case);
         host_x->ptr<float>()[0] = 0;
 
@@ -710,12 +700,9 @@ TEST(TestCondExec, PredLogicalMode) {
         SymbolVarArray inputs, inputs_dyn;
         for (size_t i = 0; i < nr_input; ++i) {
             SymbolVar p, p_dyn, key = pred.make_scalar_dt(1);
-            opr::Subtensor::IndexDesc idx{
-                    opr::indexing::AxisIndexer::make_index(
-                            0, pred.make_scalar(static_cast<int>(i)))};
-            auto sub = [&idx](SymbolVar x) {
-                return opr::Subtensor::make(x, idx);
-            };
+            opr::Subtensor::IndexDesc idx{opr::indexing::AxisIndexer::make_index(
+                    0, pred.make_scalar(static_cast<int>(i)))};
+            auto sub = [&idx](SymbolVar x) { return opr::Subtensor::make(x, idx); };
             unpack_vector(opr::CondExecPred::make(sub(pred), {key}), p);
             unpack_vector(opr::CondExecPred::make(sub(pred_dyn), {key}), p_dyn);
             inputs.push_back(p);
@@ -723,8 +710,7 @@ TEST(TestCondExec, PredLogicalMode) {
         }
 
         SymbolVar logic_out = opr::CondExecPredLogical::make(inputs, mode),
-                  logic_out_dyn =
-                          opr::CondExecPredLogical::make(inputs_dyn, mode),
+                  logic_out_dyn = opr::CondExecPredLogical::make(inputs_dyn, mode),
                   x_mark, x_mark_dyn;
         unpack_vector(opr::CondExecMark::make(logic_out, {x}), x_mark);
         unpack_vector(opr::CondExecMark::make(logic_out_dyn, {x}), x_mark_dyn);
@@ -755,11 +741,10 @@ TEST(TestCondExec, PredLogicalMode) {
     };
 
     for (int inp = 1; inp < 5; ++inp) {
-#define DO_RUN(mode, fn)                                    \
-    do {                                                    \
-        run(Mode::mode, inp, fn);                           \
-        ASSERT_FALSE(Test::HasFailure())                    \
-                << "failed on " << #mode << " inp=" << inp; \
+#define DO_RUN(mode, fn)                                                             \
+    do {                                                                             \
+        run(Mode::mode, inp, fn);                                                    \
+        ASSERT_FALSE(Test::HasFailure()) << "failed on " << #mode << " inp=" << inp; \
     } while (0)
 
         DO_RUN(OR, [](int n) { return n != 0; });
@@ -773,8 +758,9 @@ TEST(TestCondExec, PredLogicalMode) {
 #undef DO_RUN
     }
 
-    static_assert(opr::CondExecPredLogical::Param::MODE_NR_MEMBER == 6,
-                  "not all mode tested");
+    static_assert(
+            opr::CondExecPredLogical::Param::MODE_NR_MEMBER == 6,
+            "not all mode tested");
 }
 
 TEST(TestCondExec, Nested) {
@@ -831,8 +817,8 @@ TEST(TestCondExec, AddUpdateFwd) {
          xmark0 = make_one_cond(pred, x, 1, 0, true),
          xmark1 = make_one_cond(pred - 1, x, 1, 0, true),
          xmerge = merge_one_out({xmark0 + 1, xmark1 + 2}, MergeMode::EXACT_ONE),
-         loss = opr::reduce_sum_sqr(xmerge, x.make_scalar(1)),
-         gx = cg::grad(loss, x), xud = opr::AddUpdate::make(x, gx);
+         loss = opr::reduce_sum_sqr(xmerge, x.make_scalar(1)), gx = cg::grad(loss, x),
+         xud = opr::AddUpdate::make(x, gx);
 
     auto func = graph->compile({{xud, {}}});
 
@@ -870,8 +856,7 @@ TEST(TestCondExec, CondAddUpdate) {
 
     auto x = opr::SharedDeviceTensor::make(*graph, dev_x),
          pred = opr::Host2DeviceCopy::make(*graph, host_pred),
-         xmark = make_one_cond(pred, x),
-         xud = opr::AddUpdate::make(x, xmark * 1.3f);
+         xmark = make_one_cond(pred, x), xud = opr::AddUpdate::make(x, xmark * 1.3f);
     auto func = graph->compile({{xud, {}}});
 
     auto run = [&](float pred) {
@@ -883,8 +868,7 @@ TEST(TestCondExec, CondAddUpdate) {
         expect.copy_from(*host_x);
         if (pred == 1.f) {
             auto px = expect.ptr<float>();
-            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it;
-                 ++i) {
+            for (size_t i = 0, it = expect.shape().total_nr_elems(); i < it; ++i) {
                 px[i] *= 2.3f;
             }
         }
@@ -906,9 +890,9 @@ TEST(TestCondExec, MultiCnMarkWaitPred) {
          pred = opr::Host2DeviceCopy::make(*graph, host_pred),
          pred_delayed = opr::Sleep::make(pred, 0.05, {}, cn1);
     SymbolVar ppv, y;
-    unpack_vector(opr::CondExecPred::make(pred_delayed,
-                                          {pred_delayed.make_scalar_dt(1.f)}),
-                  ppv);
+    unpack_vector(
+            opr::CondExecPred::make(pred_delayed, {pred_delayed.make_scalar_dt(1.f)}),
+            ppv);
     unpack_vector(opr::CondExecMark::make(ppv, {x}, {}, cn0), y);
     HostTensorND host_y;
     auto func = graph->compile({make_callback_copy(y, host_y)});
@@ -933,16 +917,16 @@ TEST(TestCondExec, MultiCnMergeWaitPred) {
               pred = opr::Host2DeviceCopy::make(*graph, host_pred), ppv0, ppv1;
     auto make_marked = [cn1, pred](SymbolVar x, float pv, SymbolVar& ppv) {
         SymbolVar y;
-        unpack_vector(opr::CondExecPred::make(opr::Sleep::make(pred, 0.05),
-                                              {pred.make_scalar_dt(pv)}),
-                      ppv);
+        unpack_vector(
+                opr::CondExecPred::make(
+                        opr::Sleep::make(pred, 0.05), {pred.make_scalar_dt(pv)}),
+                ppv);
         unpack_vector(opr::CondExecMark::make(ppv, {x}, {}, cn1), y);
         return y;
     };
     SymbolVar y0 = make_marked(x, 1.f, ppv0) + 1.f,  // cn1
             y1 = make_marked(x, 2.f, ppv1) + 2.f,    // cn1
-            z = opr::CondExecMerge::make({y0, y1},
-                                         {1, MergeMode::SUM_COND_OUT})[0];
+            z = opr::CondExecMerge::make({y0, y1}, {1, MergeMode::SUM_COND_OUT})[0];
     HostTensorND host_z;
     z.node()->comp_node(cn2);  // change z to cn2
     z.node()->owner_opr()->on_output_comp_node_stream_changed();
@@ -988,12 +972,11 @@ TEST(TestCondExec, InputWaitingForMerge) {
 
     auto make_marked = [](SymbolVar x, SymbolVar pred, float key) -> SymbolVar {
         SymbolVar ppv;
-        unpack_vector(opr::CondExecPred::make(pred, {pred.make_scalar(key)}),
-                      ppv);
+        unpack_vector(opr::CondExecPred::make(pred, {pred.make_scalar(key)}), ppv);
         SymbolVar xcond;
-        unpack_vector(opr::CondExecMark::make(ppv, {x}, {},
-                                              {pred.node()->comp_node()}),
-                      xcond);
+        unpack_vector(
+                opr::CondExecMark::make(ppv, {x}, {}, {pred.node()->comp_node()}),
+                xcond);
         return xcond;
     };
     auto make_merged = [cn0](const VarNodeArrayView& arr) -> SymbolVar {
@@ -1001,21 +984,20 @@ TEST(TestCondExec, InputWaitingForMerge) {
         for (size_t i = 0; i < arr.size(); ++i) {
             mgb_assert((i == 0) == (arr[i]->comp_node() == cn0));
         }
-        unpack_vector(opr::CondExecMerge::make(
-                              arr, {1, MergeMode::SUM_COND_OUT}, {}, cn0),
-                      ret);
+        unpack_vector(
+                opr::CondExecMerge::make(arr, {1, MergeMode::SUM_COND_OUT}, {}, cn0),
+                ret);
         return ret;
     };
     auto x = opr::Host2DeviceCopy::make_no_fwd(*graph, host_x),
          x1 = opr::Copy::make(x, cn1), pred0 = make_delayed_pred(cn0),
-         pred1 = make_delayed_pred(cn1),
-         y0 = make_marked(x, pred0, 1) + 1,       // on cn0
-            y10 = make_marked(x1, pred1, 2) + 2,  // on cn1
-            y11 = make_marked(x, pred1, 3) + 3,   // on cn1
-            ymgr = make_merged({y0, y10, y11}),   // on cn0
-            z = Elemwise::make({x1, opr::Sleep::make(ymgr, 0.03)},
-                               Elemwise::Mode::ADD,
-                               cn0);  // (cn1, cn0) -> cn0
+         pred1 = make_delayed_pred(cn1), y0 = make_marked(x, pred0, 1) + 1,  // on cn0
+            y10 = make_marked(x1, pred1, 2) + 2,                             // on cn1
+            y11 = make_marked(x, pred1, 3) + 3,                              // on cn1
+            ymgr = make_merged({y0, y10, y11}),                              // on cn0
+            z = Elemwise::make(
+                    {x1, opr::Sleep::make(ymgr, 0.03)}, Elemwise::Mode::ADD,
+                    cn0);  // (cn1, cn0) -> cn0
     HostTensorND host_z;
     auto func = graph->compile({make_callback_copy(z, host_z)});
 
@@ -1059,10 +1041,8 @@ TEST(TestCondExec, GradMultiReader) {
          y0 = copy1(make_one_cond(pred, x, 1, 0, true)),
          y1 = copy1(make_one_cond(pred + 1, x * 2.f, 1, 0, true)),
          y2 = make_one_cond(copy1(pred) + 2, copy1(x) * 3.f, 1, 0, true),
-         z = opr::Copy::make(merge_one_out({y0, y1, y2}, MergeMode::SUM),
-                             cns[0]),
-         loss = opr::reduce_sum_sqr(z, z.make_scalar(1)),
-         gx = cg::grad(loss, x);
+         z = opr::Copy::make(merge_one_out({y0, y1, y2}, MergeMode::SUM), cns[0]),
+         loss = opr::reduce_sum_sqr(z, z.make_scalar(1)), gx = cg::grad(loss, x);
     ASSERT_TRUE(cg::is_static_var_value(z.node()));
     HostTensorND host_gx;
     auto func = graph->compile({make_callback_copy(gx, host_gx)});
@@ -1101,15 +1081,13 @@ TEST(TestCondExec, SyncForMultiCN) {
     host_pred->ptr<float>()[0] = 0;
     auto copy1 = [&cns](SymbolVar x) { return opr::Copy::make(x, cns[1]); };
     auto pred = opr::Host2DeviceCopy::make_no_value_infer(*graph, host_pred),
-         x = opr::Host2DeviceCopy::make(*graph, host_x),
-         y0 = make_one_cond(pred, x, 1),
+         x = opr::Host2DeviceCopy::make(*graph, host_x), y0 = make_one_cond(pred, x, 1),
          y1 = make_one_cond(copy1(pred) + 1, copy1(x) * 2.f),
          y2 = make_one_cond(copy1(pred) + 2, copy1(x) * 3.f),
-         y12 = opr::Copy::make(merge_one_out({y1, y2}, MergeMode::SUM_COND_OUT),
-                               cns[0]),
+         y12 = opr::Copy::make(
+                 merge_one_out({y1, y2}, MergeMode::SUM_COND_OUT), cns[0]),
          z = merge_one_out({y12, y0}, MergeMode::EXACT_ONE),
-         loss = opr::reduce_sum_sqr(z, z.make_scalar(1)),
-         gx = cg::grad(loss, x);
+         loss = opr::reduce_sum_sqr(z, z.make_scalar(1)), gx = cg::grad(loss, x);
     ASSERT_FALSE(cg::is_static_var_value(z.node()));
     HostTensorND host_gx;
     auto func = graph->compile({make_callback_copy(gx, host_gx)});
@@ -1154,8 +1132,8 @@ TEST(TestCondExec, AsyncCondAccess) {
          xmark = make_one_cond(pred, x),
          xmark_delay = opr::Sleep::make(xmark, SLEEP_TIME, {}, cn1),
          xp1 = (x + 1).rename("xp1"),
-         y = opr::Elemwise::make({xmark_delay + 2.3f, xp1},
-                                 opr::Elemwise::Mode::ADD, cn1);
+         y = opr::Elemwise::make(
+                 {xmark_delay + 2.3f, xp1}, opr::Elemwise::Mode::ADD, cn1);
 
     host_pred->ptr<float>()[0] = 0;
 
@@ -1175,8 +1153,8 @@ TEST(TestCondExec, AsyncCondAccess) {
     // XPU-226
     auto use_time = timer.get_secs();
     if (use_time >= SLEEP_TIME / 2) {
-        mgb_log_warn("expect time [%f < %f], got %f", use_time, SLEEP_TIME / 2,
-                     use_time);
+        mgb_log_warn(
+                "expect time [%f < %f], got %f", use_time, SLEEP_TIME / 2, use_time);
     }
     ASSERT_EQ(0u, allocator->nr_alive());
 
@@ -1184,8 +1162,7 @@ TEST(TestCondExec, AsyncCondAccess) {
     func->execute().wait();
     use_time = timer.get_secs();
     if (use_time <= SLEEP_TIME) {
-        mgb_log_warn("expect time [%f > %f], got %f", use_time, SLEEP_TIME,
-                     use_time);
+        mgb_log_warn("expect time [%f > %f], got %f", use_time, SLEEP_TIME, use_time);
     }
     HostTensorND expect;
     graph->compile({make_callback_copy(x * 2 + 3.3f, expect)})->execute();
@@ -1218,8 +1195,7 @@ TEST(TestCondExec, VolatilePtr) {
     auto x = opr::VolatileSharedDeviceTensor::make(*graph, dev_x),
          pred = opr::Host2DeviceCopy::make(*graph, host_pred),
          xc0 = make_one_cond(pred + 1, x), xc1 = make_one_cond(pred, x),
-         y = merge_one_out({xc0 + 1.2f, xc1 + 2.1f},
-                           MergeMode::EXACT_ONE_SAME_SHAPE);
+         y = merge_one_out({xc0 + 1.2f, xc1 + 2.1f}, MergeMode::EXACT_ONE_SAME_SHAPE);
     HostTensorND host_y;
     auto func = graph->compile({make_callback_copy(y, host_y)});
 
@@ -1257,8 +1233,7 @@ TEST(TestCondExec, MultiShape) {
     SymbolVar x = opr::Host2DeviceCopy::make(*graph, host_x),
               d2 = opr::Host2DeviceCopy::make(*graph, host_d2),
               d3 = opr::Host2DeviceCopy::make(*graph, host_d3),
-              xc0 = enable_if_shape(x, 2) + d2,
-              xc1 = enable_if_shape(x, 3) + d3,
+              xc0 = enable_if_shape(x, 2) + d2, xc1 = enable_if_shape(x, 3) + d3,
               merged = merge_one_out({xc0, xc1}, MergeMode::EXACT_ONE),
               loss = opr::reduce_sum_sqr(merged, merged.make_scalar(1)),
               gx = cg::grad(loss, x);
@@ -1290,74 +1265,71 @@ TEST(TestCondExec, EmptyShape) {
     HostTensorGenerator<> gen;
     auto host_pred = gen({1});
     host_pred->ptr<float>()[0] = 0;
-    static auto empty_in_empty_out = [](SymbolVar x) {
-        return x;
-    };
+    static auto empty_in_empty_out = [](SymbolVar x) { return x; };
     static auto empty_in_scalar_out = [](SymbolVar x) {
         return opr::Concat::make({x, x.make_scalar(1.f)}, 0);
     };
     static auto scalar_in_empty_out = [](SymbolVar x) {
-        return opr::CondTake::make(x, x, {})[0]; // whether eq 0
+        return opr::CondTake::make(x, x, {})[0];  // whether eq 0
     };
-    { // EXACT_ONE
-    auto graph = ComputingGraph::make();
-    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
-         empty = opr::ImmutableTensor::make(*graph, *gen({0})),
-         scalar = pred.make_scalar(1.f),
-         y0 = empty_in_empty_out(make_one_cond(pred + 1, empty)),
-         y1 = empty_in_scalar_out(make_one_cond(pred, empty)),
-         y2 = scalar_in_empty_out(make_one_cond(pred - 1, scalar)),
-         z = merge_one_out({y0, y1, y2}, MergeMode::EXACT_ONE);
+    {  // EXACT_ONE
+        auto graph = ComputingGraph::make();
+        auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+             empty = opr::ImmutableTensor::make(*graph, *gen({0})),
+             scalar = pred.make_scalar(1.f),
+             y0 = empty_in_empty_out(make_one_cond(pred + 1, empty)),
+             y1 = empty_in_scalar_out(make_one_cond(pred, empty)),
+             y2 = scalar_in_empty_out(make_one_cond(pred - 1, scalar)),
+             z = merge_one_out({y0, y1, y2}, MergeMode::EXACT_ONE);
 
-    HostTensorND host_z;
-    auto func = graph->compile({make_callback_copy(z, host_z)});
-    func->execute();
-    ASSERT_TRUE(host_z.layout().is_empty());
+        HostTensorND host_z;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        func->execute();
+        ASSERT_TRUE(host_z.layout().is_empty());
 
-    host_pred->ptr<float>()[0] = 1;
-    func->execute();
-    ASSERT_EQ(1.f, host_z.ptr<float>()[0]);
+        host_pred->ptr<float>()[0] = 1;
+        func->execute();
+        ASSERT_EQ(1.f, host_z.ptr<float>()[0]);
 
-    host_pred->ptr<float>()[0] = 2;
-    func->execute();
-    ASSERT_TRUE(host_z.layout().is_empty());
+        host_pred->ptr<float>()[0] = 2;
+        func->execute();
+        ASSERT_TRUE(host_z.layout().is_empty());
     }
-    { // SUM
-    auto graph = ComputingGraph::make();
-    host_pred->ptr<float>()[0] = 1;
-    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
-         empty = opr::ImmutableTensor::make(*graph, *gen({0})),
-         scalar = pred.make_scalar(1.f),
-         y0 = empty_in_empty_out(make_one_cond(pred, empty)),
-         y1 = scalar_in_empty_out(make_one_cond(pred, scalar)),
-         z = merge_one_out({y0, y1}, MergeMode::SUM);
+    {  // SUM
+        auto graph = ComputingGraph::make();
+        host_pred->ptr<float>()[0] = 1;
+        auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+             empty = opr::ImmutableTensor::make(*graph, *gen({0})),
+             scalar = pred.make_scalar(1.f),
+             y0 = empty_in_empty_out(make_one_cond(pred, empty)),
+             y1 = scalar_in_empty_out(make_one_cond(pred, scalar)),
+             z = merge_one_out({y0, y1}, MergeMode::SUM);
 
-    HostTensorND host_z;
-    auto func = graph->compile({make_callback_copy(z, host_z)});
-    func->execute();
-    ASSERT_TRUE(host_z.layout().is_empty());
+        HostTensorND host_z;
+        auto func = graph->compile({make_callback_copy(z, host_z)});
+        func->execute();
+        ASSERT_TRUE(host_z.layout().is_empty());
     }
-    { // TAKE GRAD
-    auto graph = ComputingGraph::make();
-    host_pred->ptr<float>()[0] = 0;
-    auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
-         x = pred.make_scalar(1.2f),
-         y0 = opr::CondTake::make(make_one_cond(pred + 1, x), pred, {})[0],
-         y1 = make_one_cond(pred, x.make_scalar(3.4f)),
-         z = merge_one_out({y0, y1}, MergeMode::EXACT_ONE),
-         g = cg::grad(z, x);
+    {  // TAKE GRAD
+        auto graph = ComputingGraph::make();
+        host_pred->ptr<float>()[0] = 0;
+        auto pred = opr::Host2DeviceCopy::make(*graph, host_pred),
+             x = pred.make_scalar(1.2f),
+             y0 = opr::CondTake::make(make_one_cond(pred + 1, x), pred, {})[0],
+             y1 = make_one_cond(pred, x.make_scalar(3.4f)),
+             z = merge_one_out({y0, y1}, MergeMode::EXACT_ONE), g = cg::grad(z, x);
 
-    HostTensorND host_z, host_g;
-    auto func = graph->compile({
-        make_callback_copy(z, host_z), make_callback_copy(g, host_g)});
-    func->execute();
-    ASSERT_EQ(1.2f, host_z.ptr<float>()[0]);
-    ASSERT_EQ(1.f, host_g.ptr<float>()[0]);
+        HostTensorND host_z, host_g;
+        auto func = graph->compile(
+                {make_callback_copy(z, host_z), make_callback_copy(g, host_g)});
+        func->execute();
+        ASSERT_EQ(1.2f, host_z.ptr<float>()[0]);
+        ASSERT_EQ(1.f, host_g.ptr<float>()[0]);
 
-    host_pred->ptr<float>()[0] = 1;
-    func->execute();
-    ASSERT_EQ(3.4f, host_z.ptr<float>()[0]);
-    ASSERT_EQ(0.f, host_g.ptr<float>()[0]);
+        host_pred->ptr<float>()[0] = 1;
+        func->execute();
+        ASSERT_EQ(3.4f, host_z.ptr<float>()[0]);
+        ASSERT_EQ(0.f, host_g.ptr<float>()[0]);
     }
 }
 #endif  // MGB_ENABLE_COND_EXEC

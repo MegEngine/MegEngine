@@ -29,9 +29,7 @@ struct SumOp {
     const size_t B;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs + rhs;
     }
@@ -48,7 +46,7 @@ struct MeanOp {
     src_ctype* src;
     dst_ctype* dst;
     const size_t B;
-    
+
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
     MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
         dst[idx] = val / static_cast<wtype>(B);
@@ -73,9 +71,7 @@ struct SumSqrOp {
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) {
         return static_cast<wtype>(src[idx]) * static_cast<wtype>(src[idx]);
     }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs + rhs;
     }
@@ -93,9 +89,7 @@ struct ProdOp {
     const size_t B;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs * rhs;
     }
@@ -113,9 +107,7 @@ struct MinOp {
     const size_t B;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
 #if defined(__CUDA_ARCH__)
         return lhs < rhs ? lhs : rhs;
@@ -137,9 +129,7 @@ struct MaxOp {
     const size_t B;
 
     MEGDNN_HOST MEGDNN_DEVICE wtype read(uint32_t idx) { return src[idx]; }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
 #if defined(__CUDA_ARCH__)
         return lhs > rhs ? lhs : rhs;
@@ -167,20 +157,16 @@ struct CheckNonFiniteOp {
         return !std::isfinite(src[idx]);
 #endif
     }
-    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) {
-        dst[idx] = val;
-    }
+    MEGDNN_HOST MEGDNN_DEVICE void write(uint32_t idx, wtype val) { dst[idx] = val; }
     static MEGDNN_HOST MEGDNN_DEVICE wtype apply(wtype lhs, wtype rhs) {
         return lhs | rhs;
     }
-    MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(src_ctype* src, dst_ctype* dst,
-                                            size_t B)
+    MEGDNN_HOST MEGDNN_DEVICE CheckNonFiniteOp(src_ctype* src, dst_ctype* dst, size_t B)
             : INIT(wtype(0)), src(src), dst(dst), B(B) {}
 };
 
 #if MEGDNN_CC_HOST
-void get_ABC(const TensorShape& shape, size_t& A, size_t& B, size_t& C,
-             size_t axis);
+void get_ABC(const TensorShape& shape, size_t& A, size_t& B, size_t& C, size_t axis);
 #endif
 
 }  // namespace reduce

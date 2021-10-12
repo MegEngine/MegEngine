@@ -12,8 +12,8 @@
 
 #include "megbrain/gopt/reformat_emitter.h"
 #include <numeric>
-#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
 
 using namespace mgb;
 using namespace gopt;
@@ -22,8 +22,7 @@ using NamedTensorShape = megdnn::NamedTensorShape;
 
 // =================== ModifyShapeMixin ====================*/
 ModifyShapeMixin::Pattern ModifyShapeMixin::mixin_analyze() const {
-    static constexpr uint32_t UNDETERMINED_EXTENT =
-            Dimension::UNDETERMINED_EXTENT;
+    static constexpr uint32_t UNDETERMINED_EXTENT = Dimension::UNDETERMINED_EXTENT;
     ThinHashMap<Dimension::Name, int> name2dominant;
     for (size_t i = 0; i < m_src.ndim; ++i) {
         auto name = m_src[i].name();
@@ -81,9 +80,10 @@ ModifyShapeMixin::Checker ModifyShapeMixin::mixin_emit_checker(
 MakeShapeEmitter::EmitResult MakeShapeEmitter::emit() const {
     auto pattern = mixin_analyze();
     auto builder = [pattern](const VarNodeArray& input) {
-        mgb_assert(input.size() == 1,
-                   "number of input of MakeShapeBuilder should be 1(got:%zu)",
-                   input.size());
+        mgb_assert(
+                input.size() == 1,
+                "number of input of MakeShapeBuilder should be 1(got:%zu)",
+                input.size());
         auto sym_var = SymbolVar(input.front());
         auto shp = opr::GetVarShape::make(sym_var);
         auto cv = [&sym_var](int c) { return sym_var.make_scalar(c); };
@@ -115,9 +115,9 @@ MakeShapeEmitter::EmitResult MakeShapeEmitter::emit() const {
 ReshapeEmitter::EmitResult ReshapeEmitter::emit() const {
     auto pattern = mixin_analyze();
     auto builder = [pattern](const VarNodeArray& input) {
-        mgb_assert(input.size() == 2,
-                   "number of input of Reshape should be 2(got:%zu)",
-                   input.size());
+        mgb_assert(
+                input.size() == 2, "number of input of Reshape should be 2(got:%zu)",
+                input.size());
         auto ovar = opr::Reshape::make(input[0], input[1]);
         return ovar.node();
     };
@@ -129,16 +129,16 @@ ReshapeEmitter::EmitResult ReshapeEmitter::emit() const {
 DimshuffleEmitter::EmitResult DimshuffleEmitter::emit() const {
     auto&& pattern = m_pattern;
     auto builder = [pattern](const VarNodeArray& input) {
-        mgb_assert(input.size() == 1,
-                   "number of input of Dimshuffle should be 1(got:%zu)",
-                   input.size());
+        mgb_assert(
+                input.size() == 1, "number of input of Dimshuffle should be 1(got:%zu)",
+                input.size());
         auto sym_var = SymbolVar(input.front());
         return opr::Dimshuffle::make(sym_var, pattern).node();
     };
     auto checker = [pattern](const VarNodeArray& input) {
-        mgb_assert(input.size() == 1,
-                   "number of input of Dimshuffle should be 1(got:%zu)",
-                   input.size());
+        mgb_assert(
+                input.size() == 1, "number of input of Dimshuffle should be 1(got:%zu)",
+                input.size());
         return input.front()->shape().ndim == pattern.size();
     };
     return std::make_tuple(builder, checker);
@@ -178,9 +178,7 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
         src_dims.emplace_back(Dim(m_src[i], i));
     for (size_t i = 0; i < m_dest.ndim; ++i)
         dest_dims.emplace_back(Dim(m_dest[i], i));
-    auto compare = [](const Dim& lhs, const Dim& rhs) {
-        return lhs.dim < rhs.dim;
-    };
+    auto compare = [](const Dim& lhs, const Dim& rhs) { return lhs.dim < rhs.dim; };
     std::sort(src_dims.begin(), src_dims.end(), compare);
     std::sort(dest_dims.begin(), dest_dims.end(), compare);
     auto src_iter = src_dims.begin();
@@ -192,8 +190,7 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
         } else if (src_iter->dim < dest_iter->dim) {
             auto split = dest_iter->dim / src_iter->dim;
             int dim_idx = dest_iter->index;
-            dest_iter =
-                    dest_dims.insert(dest_iter, Dim(src_iter->dim, dim_idx));
+            dest_iter = dest_dims.insert(dest_iter, Dim(src_iter->dim, dim_idx));
             dest_iter++;
             dest_iter->dim = split;
             dest_iter->index = dim_idx;
@@ -238,8 +235,7 @@ ReformatEmitter::UnderlyingBuilders ReformatEmitter::analyze() const {
     }
     builders.dimshuffle = std::get<0>(DimshuffleEmitter(permute).emit());
     if (!m_dest.eq_shape(i2)) {
-        builders.make_shape2 =
-                std::get<0>(MakeShapeEmitter(m_src, m_dest).emit());
+        builders.make_shape2 = std::get<0>(MakeShapeEmitter(m_src, m_dest).emit());
         builders.reshape2 = std::get<0>(ReshapeEmitter(i2, m_dest).emit());
     }
     return builders;
@@ -272,19 +268,17 @@ PaddingEmitter::EmitResult PaddingEmitter::emit() const {
                     break;
                 }
             }
-            mgb_assert(new_const_extent != 1,
-                       "cannot make an scalar lowbit tensor(got:%s)",
-                       i->dtype().name());
+            mgb_assert(
+                    new_const_extent != 1,
+                    "cannot make an scalar lowbit tensor(got:%s)", i->dtype().name());
             shape[const_axis] = new_const_extent;
         }
-        auto host_val =
-                std::make_shared<HostTensorND>(i->comp_node(), i->dtype());
+        auto host_val = std::make_shared<HostTensorND>(i->comp_node(), i->dtype());
         host_val->resize(shape);
         auto ptr = host_val->raw_ptr();
         size_t size_bytes = TensorLayout{shape, i->dtype()}.span().dist_byte();
         std::memset(ptr, 0, size_bytes);
-        auto padding =
-                opr::ImmutableTensor::make(*i->owner_graph(), *host_val);
+        auto padding = opr::ImmutableTensor::make(*i->owner_graph(), *host_val);
         padding = opr::Broadcast::make(padding, padding_shp_var);
         auto o = opr::Concat::make({i, padding}, axis);
         return o.node();
@@ -308,8 +302,7 @@ SubtensorEmitter::EmitResult SubtensorEmitter::emit() const {
         std::vector<AIdx> index(i->shape().ndim);
         for (size_t ax = 0; ax < index.size(); ++ax) {
             if (ax == axis)
-                index[ax] =
-                        AIdx::make_interval(ax, None, cv(const_extent), None);
+                index[ax] = AIdx::make_interval(ax, None, cv(const_extent), None);
             else
                 index[ax] = AIdx::make_interval(ax, None, None, cv(1));
         }

@@ -10,14 +10,14 @@
  */
 
 #include "./seq_mem_opt.h"
-#include "./static_mem_alloc.h"
 #include "../cg_impl.h"
+#include "./static_mem_alloc.h"
 
 #include "megbrain/graph/event.h"
-#include "megbrain/graph/helper.h"
 #include "megbrain/graph/exc_extra_info.h"
-#include "megbrain/utils/metahelper.h"
+#include "megbrain/graph/helper.h"
 #include "megbrain/utils/arith_helper.h"
+#include "megbrain/utils/metahelper.h"
 
 using namespace mgb;
 using namespace cg;
@@ -25,57 +25,52 @@ using namespace cg;
 constexpr double BYTE2MB = 1.0 / 1024.0 / 1024;
 
 class SeqMemOptimizer::StaticMemAllocLogger {
-    public:
-        virtual ~StaticMemAllocLogger() = default;
-        virtual void flush() = 0;
-        virtual void push(const CompNode &comp_node, size_t size, size_t size_lb,
-                size_t size_ub) = 0;
+public:
+    virtual ~StaticMemAllocLogger() = default;
+    virtual void flush() = 0;
+    virtual void push(
+            const CompNode& comp_node, size_t size, size_t size_lb, size_t size_ub) = 0;
 
-        class LogImpl;
-        class FakeImpl;
+    class LogImpl;
+    class FakeImpl;
 };
 
-class SeqMemOptimizer::StaticMemAllocLogger::FakeImpl final:
-            public StaticMemAllocLogger {
-    public:
-
-        void flush() override {}
-        void push(const CompNode &, size_t, size_t, size_t) override {}
-
+class SeqMemOptimizer::StaticMemAllocLogger::FakeImpl final
+        : public StaticMemAllocLogger {
+public:
+    void flush() override {}
+    void push(const CompNode&, size_t, size_t, size_t) override {}
 };
 
-class SeqMemOptimizer::StaticMemAllocLogger::LogImpl final:
-            public StaticMemAllocLogger {
-
+class SeqMemOptimizer::StaticMemAllocLogger::LogImpl final
+        : public StaticMemAllocLogger {
     std::vector<std::pair<std::string, std::string>> m_logs;
-    public:
-        void flush() {
-            std::sort(m_logs.begin(), m_logs.end());
 
-            std::string log = "static memory allocation:\n";
-            log += " comp_node           alloc                    "
-                "  lower_bound         upper_bound\n";
-            for (auto const &i: m_logs) {
-                log += i.second;
-            }
-            log.pop_back(); // remove trailing '\n'
-            mgb_log_debug("%s", log.c_str());
-        }
+public:
+    void flush() {
+        std::sort(m_logs.begin(), m_logs.end());
 
-        void push(const CompNode &comp_node, size_t size, size_t size_lb,
-                size_t size_ub) {
-            auto msg = ssprintf(
-                    "%9s%10.2fMiB(%10zubytes)%10.2fMiB(%6.2f%%)"
-                    "%10.2fMiB(%6.2f%%)\n",
-                    comp_node.to_string().c_str(), size * BYTE2MB, size,
-                    size_lb * BYTE2MB, size_lb * 100.0 / size,
-                    size_ub * BYTE2MB, size_ub * 100.0 / size);
-            m_logs.push_back(std::make_pair(comp_node.to_string(), msg.c_str()));
+        std::string log = "static memory allocation:\n";
+        log += " comp_node           alloc                    "
+               "  lower_bound         upper_bound\n";
+        for (auto const& i : m_logs) {
+            log += i.second;
         }
+        log.pop_back();  // remove trailing '\n'
+        mgb_log_debug("%s", log.c_str());
+    }
+
+    void push(const CompNode& comp_node, size_t size, size_t size_lb, size_t size_ub) {
+        auto msg = ssprintf(
+                "%9s%10.2fMiB(%10zubytes)%10.2fMiB(%6.2f%%)"
+                "%10.2fMiB(%6.2f%%)\n",
+                comp_node.to_string().c_str(), size * BYTE2MB, size, size_lb * BYTE2MB,
+                size_lb * 100.0 / size, size_ub * BYTE2MB, size_ub * 100.0 / size);
+        m_logs.push_back(std::make_pair(comp_node.to_string(), msg.c_str()));
+    }
 };
 
-
-void SeqMemOptimizer::optimize_mem_plan_dynamic(OperatorNodeBase *opr) {
+void SeqMemOptimizer::optimize_mem_plan_dynamic(OperatorNodeBase* opr) {
     mgb_assert(!m_status);
     m_status = Status::ALLOW_FWD_IN2OUT_READONLY;
     opr->mem_plan_fwd_in2out_readonly();
@@ -90,12 +85,12 @@ void SeqMemOptimizer::optimize_mem_plan() {
         // false in fwd test
     }
 
-    OperatorNodeBase *opr = nullptr;
+    OperatorNodeBase* opr = nullptr;
     MGB_TRY {
         m_writable_fwd_mem_plans.clear();
         m_status = Status::ALLOW_FWD_IN2OUT_READONLY;
         OprNodeArray oprs_to_run;
-        for (auto i: *m_cur_seq_sys_alloc) {
+        for (auto i : *m_cur_seq_sys_alloc) {
             opr = i;
             if (is_all_input_static_storage(opr)) {
                 // if there are dynamic input vars, opr forwarding may not work
@@ -107,31 +102,33 @@ void SeqMemOptimizer::optimize_mem_plan() {
         }
         opr = nullptr;
         m_status = Status::ALLOW_FWD_IN2OUT_WRITABLE;
-        for (auto i: oprs_to_run) {
+        for (auto i : oprs_to_run) {
             opr = i;
             opr->mem_plan_fwd_in2out_writable();
         }
         m_status = 0;
-    } MGB_CATCH(MegBrainError &exc,  {
+    }
+    MGB_CATCH(MegBrainError & exc, {
         if (opr && !exc.extra_info())
             OperatorNodeExcExtraInfo::record(opr, exc);
         throw;
     })
 }
 
-bool SeqMemOptimizer::should_static_alloc_var(VarNode *var) {
+bool SeqMemOptimizer::should_static_alloc_var(VarNode* var) {
     if (!m_cur_static_alloc_var->count(var)) {
         return false;
     }
 
-    auto &&chk = var->mem_plan().chunk();
+    auto&& chk = var->mem_plan().chunk();
     if (!chk.size()) {
         mgb_assert(var->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE));
         return false;
     }
     if (!chk.mem_alloc_status.is_invalid()) {
-        mgb_assert(chk.mem_alloc_status.is_from_owner_var() &&
-                   chk.owner_var->dev_tensor().storage().size() >= chk.size());
+        mgb_assert(
+                chk.mem_alloc_status.is_from_owner_var() &&
+                chk.owner_var->dev_tensor().storage().size() >= chk.size());
         return false;
     }
     return true;
@@ -146,8 +143,7 @@ bool SeqMemOptimizer::plan_chunk_allocation() {
         return run_static_mem_alloc();
     }
 
-    mgb_log_warn(
-            "static memory optimization disabled, allocating in a naive way");
+    mgb_log_warn("static memory optimization disabled, allocating in a naive way");
     auto&& cn2usage = m_static_mem_usage.val();
 
     // clear so usage can start at zero
@@ -183,27 +179,25 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
         StaticMemRecorder::Instance().clear_opr_seq();
     }
 #endif
-    for (size_t idx = 0; idx < m_cur_seq_full->size(); ++ idx) {
-        OperatorNodeBase *opr = m_cur_seq_full->at(idx);
+    for (size_t idx = 0; idx < m_cur_seq_full->size(); ++idx) {
+        OperatorNodeBase* opr = m_cur_seq_full->at(idx);
 #ifndef __IN_TEE_ENV__
         if (StaticMemRecorder::Instance().valid()) {
-            StaticMemRecorder::Instance().regist_opr_seq(
-                    {idx, 0, opr->name()});
+            StaticMemRecorder::Instance().regist_opr_seq({idx, 0, opr->name()});
         }
 #endif
-        auto &&dep_map = opr->node_prop().dep_map();
+        auto&& dep_map = opr->node_prop().dep_map();
 
         if (in_sys_alloc(opr)) {
             // find all output vars, marking start of chunk life
-            for (VarNode *i: opr->output()) {
-
+            for (VarNode* i : opr->output()) {
                 if (!should_static_alloc_var(i))
                     continue;
 
                 auto cur_chk = &i->mem_plan().chunk();
                 auto insert_rst = chk2interval.insert({cur_chk, {}});
 
-                auto &&dest = insert_rst.first->second;
+                auto&& dest = insert_rst.first->second;
                 if (insert_rst.second) {
                     dest.begin = idx;
                     dest.chunk = cur_chk;
@@ -211,8 +205,9 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
                     mgb_assert(cur_chk->owner_var == i);
                 } else {
                     // forwarded from another var
-                    mgb_assert(i->comp_node() == dest.comp_node &&
-                               cur_chk->owner_var != i);
+                    mgb_assert(
+                            i->comp_node() == dest.comp_node &&
+                            cur_chk->owner_var != i);
                 }
 
                 if (i->contain_flag(VarNode::Flag::NO_MEM_RECLAIM)) {
@@ -222,9 +217,8 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
         }
 
         // find all input vars, marking end of chunk life
-        for (auto &&dep_entry: dep_map) {
-            if (!(OperatorNodeBase::NodeProp::is_device_value_dep(
-                            dep_entry.second)))
+        for (auto&& dep_entry : dep_map) {
+            if (!(OperatorNodeBase::NodeProp::is_device_value_dep(dep_entry.second)))
                 continue;
 
             auto ivar = dep_entry.first;
@@ -238,7 +232,7 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
                 continue;
             }
 
-            auto &&dest = iter->second;
+            auto&& dest = iter->second;
             mgb_assert(dest.comp_node == ivar->comp_node());
             dest.end = std::max(dest.end, idx + 1);
         }
@@ -247,7 +241,7 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
     // group memory chunks by comp_node
     CompNode::UnorderedMap<std::vector<MemChunkLifeInterval>> group_by_cn;
 
-    for (auto &&i: chk2interval) {
+    for (auto&& i : chk2interval) {
         if (!i.second.end) {
             // unused output
             i.second.end = i.second.begin + 1;
@@ -265,18 +259,17 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
     StaticMemAllocLogger::FakeImpl fake_logger;
 #if MGB_ENABLE_LOGGING
     StaticMemAllocLogger::LogImpl real_logger;
-    StaticMemAllocLogger *logger =
-        m_graph->options().log_level ?
-        static_cast<StaticMemAllocLogger*>(&real_logger) :
-        static_cast<StaticMemAllocLogger*>(&fake_logger);
+    StaticMemAllocLogger* logger =
+            m_graph->options().log_level
+                    ? static_cast<StaticMemAllocLogger*>(&real_logger)
+                    : static_cast<StaticMemAllocLogger*>(&fake_logger);
 #else
-    StaticMemAllocLogger *logger = &fake_logger;
+    StaticMemAllocLogger* logger = &fake_logger;
 #endif
 
     bool ret = false;
-    for (auto &&i: group_by_cn) {
-        auto cmp = [](
-                const MemChunkLifeInterval &a, const MemChunkLifeInterval &b) {
+    for (auto&& i : group_by_cn) {
+        auto cmp = [](const MemChunkLifeInterval& a, const MemChunkLifeInterval& b) {
             return a.begin < b.begin || (a.begin == b.begin && a.end < b.end);
         };
         // sort for stable order
@@ -302,14 +295,11 @@ bool SeqMemOptimizer::run_static_mem_alloc() {
 }
 
 bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
-        CompNode comp_node,
-        const std::vector<MemChunkLifeInterval> &chunks,
-        StaticMemAllocLogger &static_mem_alloc_logger) {
-
+        CompNode comp_node, const std::vector<MemChunkLifeInterval>& chunks,
+        StaticMemAllocLogger& static_mem_alloc_logger) {
     size_t size_ub = 0;
 
-    auto allocator = StaticMemAlloc::make(
-            StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
+    auto allocator = StaticMemAlloc::make(StaticMemAlloc::AllocatorAlgo::PUSHDOWN);
     allocator->alignment(comp_node.get_mem_addr_alignment());
     allocator->padding(comp_node.get_mem_padding());
 #if MGB_ENABLE_DEBUG_UTIL
@@ -318,23 +308,22 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
     };
 #endif
     ThinHashMap<MemAllocPlan::Chunk*, size_t> chunk2allocatorid;
-    for (auto &&chk: chunks) {
-        auto id = allocator->add(
-                chk.begin, chk.end, chk.chunk->size(), &chk);
+    for (auto&& chk : chunks) {
+        auto id = allocator->add(chk.begin, chk.end, chk.chunk->size(), &chk);
         auto ins_rst = chunk2allocatorid.emplace(chk.chunk, id);
         mgb_assert(ins_rst.second);
         size_ub += chk.chunk->size();
     }
 
-    for (auto &&i: m_writable_fwd_mem_plans) {
+    for (auto&& i : m_writable_fwd_mem_plans) {
         auto from_iter = chunk2allocatorid.find(&i.first->chunk()),
              to_iter = chunk2allocatorid.find(&i.second->chunk());
 
         // ignore mem fwd specs that involve other chunks
         if (from_iter != chunk2allocatorid.end() &&
-                to_iter != chunk2allocatorid.end()) {
-
-            allocator->add_overwrite_spec(to_iter->second, from_iter->second,
+            to_iter != chunk2allocatorid.end()) {
+            allocator->add_overwrite_spec(
+                    to_iter->second, from_iter->second,
                     i.first->offset_in_chunk_byte());
         }
     }
@@ -344,8 +333,7 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
     }
 
     allocator->solve();
-    size_t size = allocator->tot_alloc(),
-           size_lb = allocator->tot_alloc_lower_bound();
+    size_t size = allocator->tot_alloc(), size_lb = allocator->tot_alloc_lower_bound();
 
     static_mem_alloc_logger.push(comp_node, size, size_lb, size_ub);
 
@@ -374,21 +362,19 @@ bool SeqMemOptimizer::run_static_mem_alloc_on_comp_node(
     return should_realloc;
 }
 
-void SeqMemOptimizer::reset_opr_seq(const OprNodeArray *seq,
-                const OprNodeArray *seq_sys_alloc,
-                const VarNodeSet *static_alloc_var,
-                SmallVector<CompNode> all_comp_nodes) {
+void SeqMemOptimizer::reset_opr_seq(
+        const OprNodeArray* seq, const OprNodeArray* seq_sys_alloc,
+        const VarNodeSet* static_alloc_var, SmallVector<CompNode> all_comp_nodes) {
     m_cur_seq_full = seq;
     m_cur_seq_sys_alloc = seq_sys_alloc;
-    m_cur_seq_sys_alloc_set = {
-        seq_sys_alloc->begin(), seq_sys_alloc->end()};
+    m_cur_seq_sys_alloc_set = {seq_sys_alloc->begin(), seq_sys_alloc->end()};
     m_cur_static_alloc_var = static_alloc_var;
     m_all_comp_nodes = std::move(all_comp_nodes);
     m_static_mem_usage.invalidate();
 }
 
 void SeqMemOptimizer::add_writable_fwd_mem_plan_pair(
-        MemAllocPlan *from, MemAllocPlan *to) {
+        MemAllocPlan* from, MemAllocPlan* to) {
     mgb_assert(&from->chunk() != &to->chunk() && from != to);
     m_writable_fwd_mem_plans.emplace_back(from, to);
 }

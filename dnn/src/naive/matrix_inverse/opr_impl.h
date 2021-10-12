@@ -17,16 +17,16 @@ namespace naive {
 class MatrixInverseImpl : public MatrixInverse {
 public:
     using MatrixInverse::MatrixInverse;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 
 protected:
     template <typename ctype>
-    static void do_exec(ctype* dst, const ctype* src, size_t batch, size_t n,
-                        void* workspace);
+    static void do_exec(
+            ctype* dst, const ctype* src, size_t batch, size_t n, void* workspace);
 
-    size_t get_workspace_in_bytes(size_t batch, size_t n,
-                                  size_t dtype_size) override;
+    size_t get_workspace_in_bytes(size_t batch, size_t n, size_t dtype_size) override;
 };
 
 }  // namespace naive

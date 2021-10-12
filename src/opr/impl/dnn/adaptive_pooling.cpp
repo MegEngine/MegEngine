@@ -21,29 +21,27 @@ using namespace mgb;
 using namespace opr;
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(AdaptivePoolingForward);
-AdaptivePoolingForward::AdaptivePoolingForward(VarNode* src, VarNode* out_shape,
-                                               const Param& param,
-                                               const OperatorNodeConfig& config)
-        : Super(OperatorNodeBaseCtorParam{src->owner_graph(),
-                                          config,
-                                          "adaptive_pooling",
-                                          {src, out_shape}}) {
+AdaptivePoolingForward::AdaptivePoolingForward(
+        VarNode* src, VarNode* out_shape, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{
+                  src->owner_graph(), config, "adaptive_pooling", {src, out_shape}}) {
     init_megdnn_opr(*this, param);
     add_input({src, out_shape});
     outshape_by_symvar_enable(1, 1);
 }
 
-SymbolVar AdaptivePoolingForward::make(SymbolVar src, SymbolVar out_shape,
-                                       const Param& param,
-                                       const OperatorNodeConfig& config) {
+SymbolVar AdaptivePoolingForward::make(
+        SymbolVar src, SymbolVar out_shape, const Param& param,
+        const OperatorNodeConfig& config) {
     return src.insert_single_output_opr<AdaptivePoolingForward>(
             src.node(), out_shape.node(), param, config);
 }
 
 void AdaptivePoolingForward::scn_do_execute() {
-    megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
-                       output(0)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output().back()));
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
 }
 
 void AdaptivePoolingForward::outshape_by_symvar_do_get_output_shape(
@@ -51,12 +49,13 @@ void AdaptivePoolingForward::outshape_by_symvar_do_get_output_shape(
     TensorShape oshp2d;
     cg::copy_tensor_value_to_shape(oshp2d, *shpinfo.shpval_inp_val.at(0));
     auto src = shpinfo.shape_inp_shp.at(0);
-    mgb_assert(src.ndim == 4 && oshp2d.ndim == 2,
-               "shape mismatch for AdaptivePooling: src=%s, out2d=%s",
-               src.to_string().c_str(), oshp2d.to_string().c_str());
+    mgb_assert(
+            src.ndim == 4 && oshp2d.ndim == 2,
+            "shape mismatch for AdaptivePooling: src=%s, out2d=%s",
+            src.to_string().c_str(), oshp2d.to_string().c_str());
 
-    mgb_assert(param().format == Param::Format::NCHW,
-               "AdaptivePooling only support NCHW");
+    mgb_assert(
+            param().format == Param::Format::NCHW, "AdaptivePooling only support NCHW");
     dest.ndim = 4;
     dest.shape[0] = src.shape[0];
     dest.shape[1] = src.shape[1];
@@ -68,10 +67,8 @@ size_t AdaptivePoolingForward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
     return megdnn_opr()->get_workspace_in_bytes(
-            {input_shapes[0], this->input(0)->dtype(),
-             this->input(0)->format()},
-            {output_shapes[0], this->output(0)->dtype(),
-             this->output(0)->format()});
+            {input_shapes[0], this->input(0)->dtype(), this->input(0)->format()},
+            {output_shapes[0], this->output(0)->dtype(), this->output(0)->format()});
 }
 
 void AdaptivePoolingForward::init_output_dtype() {
@@ -96,8 +93,7 @@ MGB_IMPL_OPR_GRAD(AdaptivePoolingForward) {
     if (wrt_idx == 0) {
         // wrt src
         SymbolVar grad = AdaptivePoolingBackward::make(
-                opr.input(0), opr.input(1), opr.output(0), out_grad[0],
-                opr.param());
+                opr.input(0), opr.input(1), opr.output(0), out_grad[0], opr.param());
         return grad.node();
     } else {
         mgb_assert(wrt_idx == 1);
@@ -110,30 +106,26 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(AdaptivePoolingBackward);
 AdaptivePoolingBackward::AdaptivePoolingBackward(
         VarNode* src, VarNode* out_shape, VarNode* dst, VarNode* diff,
         const Param& param, const OperatorNodeConfig& config)
-        : Super(OperatorNodeBaseCtorParam{src->owner_graph(),
-                                          config,
-                                          "adaptive_pooling_bwd",
-                                          {src}},
-                0, true) {
+        : Super(
+                  OperatorNodeBaseCtorParam{
+                          src->owner_graph(), config, "adaptive_pooling_bwd", {src}},
+                  0, true) {
     init_megdnn_opr(*this, param);
     add_input({src, out_shape, dst, diff});
 }
 
-SymbolVar AdaptivePoolingBackward::make(SymbolVar src, SymbolVar out_shape,
-                                        SymbolVar dst, SymbolVar diff,
-                                        const Param& param,
-                                        const OperatorNodeConfig& config) {
+SymbolVar AdaptivePoolingBackward::make(
+        SymbolVar src, SymbolVar out_shape, SymbolVar dst, SymbolVar diff,
+        const Param& param, const OperatorNodeConfig& config) {
     return src.insert_single_output_opr<AdaptivePoolingBackward>(
-            src.node(), out_shape.node(), dst.node(), diff.node(), param,
-            config);
+            src.node(), out_shape.node(), dst.node(), diff.node(), param, config);
 }
 
 void AdaptivePoolingBackward::scn_do_execute() {
-    megdnn_opr()->exec(input(0)->dev_tensor().as_megdnn(),
-                       input(2)->dev_tensor().as_megdnn(),
-                       input(3)->dev_tensor().as_megdnn(),
-                       output(0)->dev_tensor().as_megdnn(),
-                       intl::get_megdnn_workspace_from_var(output().back()));
+    megdnn_opr()->exec(
+            input(0)->dev_tensor().as_megdnn(), input(2)->dev_tensor().as_megdnn(),
+            input(3)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            intl::get_megdnn_workspace_from_var(output().back()));
 }
 size_t AdaptivePoolingBackward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,

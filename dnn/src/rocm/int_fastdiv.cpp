@@ -59,5 +59,4 @@ Uint32Fastdiv& Uint32Fastdiv::operator=(uint32_t d) {
 }  // namespace rocm
 }  // namespace megdnn
 
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

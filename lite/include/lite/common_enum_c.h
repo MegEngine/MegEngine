@@ -23,7 +23,7 @@ typedef enum {
 } LiteLogLevel;
 
 typedef enum {
-    LITE_DEFAULT = 0, //! default backend is mge
+    LITE_DEFAULT = 0,  //! default backend is mge
 } LiteBackend;
 
 typedef enum {

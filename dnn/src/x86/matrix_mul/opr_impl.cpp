@@ -77,16 +77,17 @@ const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
 
 fallback::MatrixMulImpl::AlgoBase* MatrixMulImpl::get_algo_from_desc(
         const AlgorithmDesc& desc) {
-    megdnn_assert(algo_pack().all_algos_map().find(desc) !=
-                  algo_pack().all_algos_map().end());
+    megdnn_assert(
+            algo_pack().all_algos_map().find(desc) !=
+            algo_pack().all_algos_map().end());
     return algo_pack().all_algos_map().at(desc);
 }
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*>
-MatrixMulImpl::get_all_packed_algo() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::get_all_packed_algo() {
     auto&& algos = fallback::MatrixMulImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
-                 algo_pack().all_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_algos().begin(),
+            algo_pack().all_algos().end());
     return std::move(algos);
 }
 

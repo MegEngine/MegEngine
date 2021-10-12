@@ -15,7 +15,6 @@
 #include "megbrain/imperative/physical_tensor.h"
 #include "megbrain/imperative/subgraph.h"
 #include "megbrain/imperative/utils/to_string.h"
-#include "megbrain/imperative/subgraph.h"
 
 namespace mgb {
 namespace imperative {
@@ -23,10 +22,7 @@ namespace imperative {
 class OpDef;
 struct OpTrait;
 
-enum DispatchMode {
-    DEFAULT_CPU = 0,
-    KERNEL = 1
-};
+enum DispatchMode { DEFAULT_CPU = 0, KERNEL = 1 };
 
 using SharedOp = std::shared_ptr<OpDef>;
 
@@ -35,12 +31,13 @@ class OpDef : public Hashable,
               public std::enable_shared_from_this<OpDef> {
     mutable const OpTrait* m_trait = nullptr;
     std::string m_scope;
+
 public:
-    using allocator_t = std::function<DeviceTensorStorage::RawStorage(CompNode, size_t)>;
+    using allocator_t =
+            std::function<DeviceTensorStorage::RawStorage(CompNode, size_t)>;
     virtual ~OpDef() = default;
 
-    static std::shared_ptr<OpDef> make_from_op_node(
-        cg::OperatorNodeBase* node);
+    static std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* node);
 
     /*!
      * \brief Decide which dispatch method to be used according to the inputs'
@@ -51,54 +48,43 @@ public:
      * \return Which DispatchMode to be used, such as `CUDA` or `DEFAULT_CPU`.
      */
     static DispatchMode decide_dispatch_mode(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs);
+            const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
     static SmallVector<TensorPtr> apply_on_physical_tensor(
-        const OpDef& def,
-        SmallVector<TensorPtr> inputs);
-    
-    static void execute(
-        const OpDef& def,
-        SmallVector<TensorPtr> inputs,
-        SmallVector<TensorPtr> outputs,
-        SmallVector<TensorPtr> workspace);
+            const OpDef& def, SmallVector<TensorPtr> inputs);
 
+    static void execute(
+            const OpDef& def, SmallVector<TensorPtr> inputs,
+            SmallVector<TensorPtr> outputs, SmallVector<TensorPtr> workspace);
 
     /*!
      * \brief Call the corresponding dnn op to calculate results. Output
      * tensors' device memory should be allocated outside.
      */
     static void apply_on_device_tensornd(
-        const OpDef& def,
-        const SmallVector<DeviceTensorND>& inputs,
-        SmallVector<DeviceTensorND>* outputs);
+            const OpDef& def, const SmallVector<DeviceTensorND>& inputs,
+            SmallVector<DeviceTensorND>* outputs);
 
     static cg::VarNodeArray apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs);
+            const OpDef& def, const VarNodeArray& inputs);
 
     static std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs);
+            const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
-    static std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_tensors,
-        const SmallVector<MemoryDesc>& inputs_mems);
+    static std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>>
+    infer_output_mem_desc(
+            const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
+            const SmallVector<MemoryDesc>& inputs_mems);
 
     static EncodedSubgraph make_backward_graph(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs,
-        const SmallVector<bool>& input_requires_grad,
-        const SmallVector<bool>& output_has_grad);
+            const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
+            const SmallVector<bool>& input_requires_grad,
+            const SmallVector<bool>& output_has_grad);
 
-    static std::vector<std::pair<const char*, std::string>> props(
-        const OpDef& def);
+    static std::vector<std::pair<const char*, std::string>> props(const OpDef& def);
 
     static EncodedSubgraph make_forward_graph(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs);
+            const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
     const OpTrait* trait() const;
 
@@ -118,17 +104,17 @@ public:
     DeviceTensorStorage::RawStorage allocate(CompNode, size_t) const;
 };
 
-template<typename T>
+template <typename T>
 class OpDefImplBase : public OpDef {
 public:
-    template<typename ...Args>
-    static std::shared_ptr<T> make(Args&& ...args) {
+    template <typename... Args>
+    static std::shared_ptr<T> make(Args&&... args) {
         return std::make_shared<T>(std::forward<Args>(args)...);
     }
 };
 
 template <>
-struct ToStringTrait<OpDef*>{
+struct ToStringTrait<OpDef*> {
     std::string operator()(OpDef* op) const {
         if (op == nullptr) {
             return "nullptr";
@@ -137,7 +123,7 @@ struct ToStringTrait<OpDef*>{
     }
 };
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

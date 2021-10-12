@@ -14,21 +14,21 @@
 namespace megdnn {
 namespace fallback {
 
-class GroupLocalImpl: public GroupLocalForward {
-    public:
-        GroupLocalImpl(Handle *handle);
-        void exec(_megdnn_tensor_in src,
-                _megdnn_tensor_in filter,
-                _megdnn_tensor_out dst,
-                _megdnn_workspace workspace) override;
-        size_t get_workspace_in_bytes(const TensorLayout &src,
-                const TensorLayout &filter,
-                const TensorLayout &dst) override;
-    private:
-        std::unique_ptr<Local> m_local_opr;
+class GroupLocalImpl : public GroupLocalForward {
+public:
+    GroupLocalImpl(Handle* handle);
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+
+private:
+    std::unique_ptr<Local> m_local_opr;
 };
 
-} // namespace fallback
-} // namespace megdnn
+}  // namespace fallback
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

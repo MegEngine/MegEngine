@@ -36,23 +36,21 @@ void do_one_pixel(float* dst, const float* filter, float sval, int OC) {
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-void do_one_pixel(dt_float16* dst, const dt_float16* filter, dt_float16 sval,
-                  int OC) {
+void do_one_pixel(dt_float16* dst, const dt_float16* filter, dt_float16 sval, int OC) {
     const __fp16* filter_ptr = reinterpret_cast<const __fp16*>(filter);
     __fp16* dst_ptr = reinterpret_cast<__fp16*>(dst);
     const int width = 8u;
     int oc = 0;
     float16x8_t vs = vdupq_n_f16(sval);
-    for (; oc + width <= OC;
-         oc += width, filter_ptr += width, dst_ptr += width) {
+    for (; oc + width <= OC; oc += width, filter_ptr += width, dst_ptr += width) {
         float16x8_t vf = vld1q_f16(filter_ptr);
         float16x8_t vd = vld1q_f16(dst_ptr);
         vd = vmlaq_f16(vd, vs, vf);
         vst1q_f16(dst_ptr, vd);
     }
 #if MEGDNN_FIX_AARCH32_BUG
-    // FIXME: as llvm may cause cannot select error if enable vectorize
-    #pragma clang loop vectorize(disable)
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
 #endif
     for (; oc < OC; oc++, dst_ptr++, filter_ptr++) {
         *dst_ptr += sval * (*filter_ptr);
@@ -93,17 +91,17 @@ void exec_internal(const LocalImpl::FloatNoncontigBatchKernParam& kparam) {
 
 }  // anonymous namespace
 
-size_t LocalImpl::get_workspace_in_bytes(const TensorLayout& /* src */,
-                                         const TensorLayout& /* filter */,
-                                         const TensorLayout& dst) {
+size_t LocalImpl::get_workspace_in_bytes(
+        const TensorLayout& /* src */, const TensorLayout& /* filter */,
+        const TensorLayout& dst) {
     return dst.span().dist_byte();
 }
 
 LocalImpl::float_noncontig_batch_kern LocalImpl::dispatch_float_noncontig_batch(
         const TensorLayout& src, const TensorLayout&, const TensorLayout&) {
-    megdnn_assert(src.stride[0] > 0 &&
-                  static_cast<size_t>(src.stride[0]) >=
-                          src.total_nr_elems() / src.shape[0]);
+    megdnn_assert(
+            src.stride[0] > 0 &&
+            static_cast<size_t>(src.stride[0]) >= src.total_nr_elems() / src.shape[0]);
     if (src.dtype == dtype::Float32()) {
         if (param().mode == Mode::CROSS_CORRELATION) {
             return exec_internal<true, float>;
@@ -124,8 +122,9 @@ LocalImpl::float_noncontig_batch_kern LocalImpl::dispatch_float_noncontig_batch(
     return nullptr;
 }
 
-void LocalImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                     _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+void LocalImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     return exec_use_float_noncontig_batch(src, filter, dst, workspace);
 }
 

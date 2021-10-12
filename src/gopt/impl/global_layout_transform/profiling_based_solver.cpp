@@ -20,24 +20,18 @@ using namespace gopt;
 using namespace opr;
 
 /* =================== ProfilingBasedSolverSolver ======================*/
-ProfilingBasedSolver::ProfilingBasedSolver(
-        std::unique_ptr<ProfilerBase> profiler)
+ProfilingBasedSolver::ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profiler)
         : m_profiler{std::move(profiler)} {
     static const ThinHashSet<Typeinfo*> format_aware_oprs = {
 #define cb(_Opr) _Opr::typeinfo()
-            cb(Convolution),
-            cb(ConvBiasForward),
-            cb(ConvolutionBackwardData),
-            cb(PoolingForward),
-            cb(WarpPerspective),
-            cb(Resize),
+            cb(Convolution),    cb(ConvBiasForward), cb(ConvolutionBackwardData),
+            cb(PoolingForward), cb(WarpPerspective), cb(Resize),
     };
 
     m_graph_partition_filter = [](const GraphPartition& partition) {
         bool has_format_aware_opr = false;
         for (auto&& opr : partition.all_oprs()) {
-            if (!has_format_aware_opr &&
-                format_aware_oprs.count(opr->dyn_typeinfo())) {
+            if (!has_format_aware_opr && format_aware_oprs.count(opr->dyn_typeinfo())) {
                 has_format_aware_opr = true;
                 break;
             }

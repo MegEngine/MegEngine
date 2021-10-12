@@ -43,8 +43,9 @@ namespace matmul_mk4_4x4x8_a72 {
  */
 
 // clang-format on
-static inline void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                            int16_t* output, int LDC, bool, int remain_n) {
+static inline void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC, bool,
+        int remain_n) {
     K = div_ceil(K, 8);
     int oddk = (K & 1);
     K = ((K + 1) / 2) - 1;
@@ -261,15 +262,14 @@ static inline void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
             "7:\n" STORE_C
 
             "101:\n"
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [oddk] "+r"(oddk), [LDC] "+r"(LDC), [outptr] "+r"(outptr),
-              [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [oddk] "+r"(oddk),
+              [LDC] "+r"(LDC), [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
-              "x8", "x9", "x10", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
+              "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc",
+              "memory");
 
 #undef STORE_C
 #undef STORE_LINE
@@ -282,26 +282,23 @@ static inline void transpose_8x4_b(const dt_int8* inptr, dt_int8* outptr) {
     vst1_s8(outptr + 3 * 8, in0.val[3]);
 }
 
-static inline void interleve_8x4_b(const dt_int8* inptr, const dt_int8* inptr2,
-                                   dt_int8* outptr) {
+static inline void interleve_8x4_b(
+        const dt_int8* inptr, const dt_int8* inptr2, dt_int8* outptr) {
     int8x16_t in0 = vld1q_s8(inptr);
     int8x16_t in1 = vld1q_s8(inptr2);
-    int32x4x2_t in_x2 = {
-            {vreinterpretq_s32_s8(in0), vreinterpretq_s32_s8(in1)}};
+    int32x4x2_t in_x2 = {{vreinterpretq_s32_s8(in0), vreinterpretq_s32_s8(in1)}};
     vst2q_s32(reinterpret_cast<int32_t*>(outptr), in_x2);
 }
 
 static inline void interleve_8x4_b_pad(const dt_int8* inptr, dt_int8* outptr) {
     int8x16_t in0 = vld1q_s8(inptr);
     int8x16_t in1 = vdupq_n_s8(0);
-    int32x4x2_t in_x2 = {
-            {vreinterpretq_s32_s8(in0), vreinterpretq_s32_s8(in1)}};
+    int32x4x2_t in_x2 = {{vreinterpretq_s32_s8(in0), vreinterpretq_s32_s8(in1)}};
     vst2q_s32(reinterpret_cast<int32_t*>(outptr), in_x2);
 }
 
-static void gemm_s8x8x16_mk4_4x4x8_pack_A(dt_int8* out, const dt_int8* in,
-                                          int ldin, int m0, int mmax, int k0,
-                                          int kmax) {
+static void gemm_s8x8x16_mk4_4x4x8_pack_A(
+        dt_int8* out, const dt_int8* in, int ldin, int m0, int mmax, int k0, int kmax) {
     megdnn_assert(m0 % 4 == 0 && mmax % 4 == 0, "M must be time of 4");
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     constexpr int pack_m = 4;
@@ -330,9 +327,8 @@ static void gemm_s8x8x16_mk4_4x4x8_pack_A(dt_int8* out, const dt_int8* in,
     }
 }
 
-static void gemm_s8x8x16_mk4_4x4x8_pack_B(dt_int8* out, const dt_int8* in,
-                                          int ldin, int n0, int nmax, int k0,
-                                          int kmax) {
+static void gemm_s8x8x16_mk4_4x4x8_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int n0, int nmax, int k0, int kmax) {
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
 
     constexpr int pack_n = 4;

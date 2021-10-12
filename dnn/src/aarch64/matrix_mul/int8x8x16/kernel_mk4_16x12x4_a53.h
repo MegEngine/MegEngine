@@ -40,11 +40,9 @@ namespace matmul_mk4_16x12x4_a53 {
  *                            Accumulator
  */
 // clang-format on
-static __attribute__((noinline)) void kern_16x12(const int16_t* packA,
-                                                 const int8_t* packB, int K,
-                                                 int16_t* output, int LDC,
-                                                 bool is_first_k,
-                                                 int remain_n) {
+static __attribute__((noinline)) void kern_16x12(
+        const int16_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int remain_n) {
     K /= 4;
     const int16_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -521,15 +519,15 @@ static __attribute__((noinline)) void kern_16x12(const int16_t* packA,
             "6:\n" STORE_C
 
             "101:\n"
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [outptr] "+r"(outptr),
+              [remain_n] "+r"(remain_n)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
-              "x8", "x9", "x10", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
+              "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc",
+              "memory");
 
 #undef STORE_C
 #undef STORE_LINE
@@ -554,10 +552,9 @@ static __attribute__((noinline)) void kern_16x12(const int16_t* packA,
  *                            Accumulator
  */
 // clang-format on
-static __attribute__((noinline)) void kern_8x12(const int16_t* packA,
-                                                const int8_t* packB, int K,
-                                                int16_t* output, int LDC,
-                                                bool is_first_k, int remain_n) {
+static __attribute__((noinline)) void kern_8x12(
+        const int16_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int remain_n) {
     K /= 4;
     const int16_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -858,14 +855,13 @@ static __attribute__((noinline)) void kern_8x12(const int16_t* packA,
             "6:\n" STORE_C
 
             "101:\n"
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [outptr] "+r"(outptr),
+              [remain_n] "+r"(remain_n)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc",
-              "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "x1", "x2", "x3",
+              "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc", "memory");
 
 #undef STORE_C
 #undef STORE_LINE
@@ -890,10 +886,9 @@ static __attribute__((noinline)) void kern_8x12(const int16_t* packA,
  *                            Accumulator
  */
 // clang-format on
-static __attribute__((noinline)) void kern_4x12(const int16_t* packA,
-                                                const int8_t* packB, int K,
-                                                int16_t* output, int LDC,
-                                                bool is_first_k, int remain_n) {
+static __attribute__((noinline)) void kern_4x12(
+        const int16_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int remain_n) {
     K /= 4;
     const int16_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -1162,22 +1157,21 @@ static __attribute__((noinline)) void kern_4x12(const int16_t* packA,
             "6:\n" STORE_C
 
             "101:\n"
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [outptr] "+r"(outptr), [remain_n] "+r"(remain_n)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [outptr] "+r"(outptr),
+              [remain_n] "+r"(remain_n)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc",
-              "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "x1", "x2", "x3",
+              "x4", "x5", "x6", "x7", "x8", "x9", "x10", "cc", "memory");
 
 #undef STORE_C
 #undef STORE_LINE
 }
 
-static void gemm_s8x8x16_mk4_16x12_pack_A(dt_int16* outptr,
-                                          const dt_int8* inptr, int ldin,
-                                          int m0, int mmax, int k0, int kmax) {
+static void gemm_s8x8x16_mk4_16x12_pack_A(
+        dt_int16* outptr, const dt_int8* inptr, int ldin, int m0, int mmax, int k0,
+        int kmax) {
     megdnn_assert(m0 % 4 == 0 && mmax % 4 == 0, "M must be time of 4");
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     constexpr int pack_m = 16;
@@ -1224,9 +1218,8 @@ static void gemm_s8x8x16_mk4_16x12_pack_A(dt_int16* outptr,
     }
 }
 
-static void gemm_s8x8x16_mk4_16x12_pack_B(dt_int8* out, const dt_int8* in,
-                                          int ldin, int n0, int nmax, int k0,
-                                          int kmax) {
+static void gemm_s8x8x16_mk4_16x12_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int n0, int nmax, int k0, int kmax) {
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
 
     constexpr int pack_n = 12;

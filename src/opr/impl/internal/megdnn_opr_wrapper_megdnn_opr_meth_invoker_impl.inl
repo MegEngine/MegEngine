@@ -13,40 +13,38 @@
 #error "must be included from megdnn_opr_wrapper.inl"
 #endif
 
-template<>
+template <>
 struct _MegDNNOprMethInvoker<_NR_INPUTS, _NR_OUTPUTS> {
 #define _cb_in(_x) \
     { ishp[_x], mgb_opr->input(_x)->dtype(), mgb_opr->input(_x)->format() }
-    template<class Opr>
+    template <class Opr>
     static inline size_t get_workspace_in_bytes(
-            Opr *opr, const cg::OperatorNodeBase *mgb_opr,
-            const TensorShapeArray &ishp,
-            const TensorShapeArray &oshp) {
+            Opr* opr, const cg::OperatorNodeBase* mgb_opr, const TensorShapeArray& ishp,
+            const TensorShapeArray& oshp) {
 #define _cb_out(_x) \
     { oshp[_x], mgb_opr->output(_x)->dtype(), mgb_opr->output(_x)->format() }
         return opr->get_workspace_in_bytes(_FOREACH_IO(_cb_in, _cb_out));
 #undef _cb_out
     }
 
-    template<class Opr>
+    template <class Opr>
     static inline void deduce_layout(
-            Opr *opr, const cg::OperatorNodeBase *mgb_opr,
-            const TensorShapeArray &ishp,
-            TensorShapeArray &oshp) {
+            Opr* opr, const cg::OperatorNodeBase* mgb_opr, const TensorShapeArray& ishp,
+            TensorShapeArray& oshp) {
 #define _cb_out(_x) ov[_x]
         TensorLayout ov[_NR_OUTPUTS];
-        for (int i = 0; i < _NR_OUTPUTS; ++ i)
+        for (int i = 0; i < _NR_OUTPUTS; ++i)
             ov[i] = {mgb_opr->output(i)->dtype(), mgb_opr->output(i)->format()};
         opr->deduce_layout(_FOREACH_IO(_cb_in, _cb_out));
-        for (int i = 0; i < _NR_OUTPUTS; ++ i)
+        for (int i = 0; i < _NR_OUTPUTS; ++i)
             oshp[i] = ov[i];
     }
 #undef _cb_out
 #undef _cb_in
 
-    template<class Opr>
-    static inline void exec(Opr *opr, const cg::OperatorNodeBase *mgb_opr) {
-#define _cb_in(_x) mgb_opr->input(_x)->dev_tensor().as_megdnn()
+    template <class Opr>
+    static inline void exec(Opr* opr, const cg::OperatorNodeBase* mgb_opr) {
+#define _cb_in(_x)  mgb_opr->input(_x)->dev_tensor().as_megdnn()
 #define _cb_out(_x) mgb_opr->output(_x)->dev_tensor().as_megdnn()
         opr->exec(
                 _FOREACH_IO(_cb_in, _cb_out),

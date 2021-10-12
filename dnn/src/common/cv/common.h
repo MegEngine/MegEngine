@@ -129,9 +129,7 @@ private:
 
 public:
     void* raw_ptr() { return static_cast<void*>(m_data.get() + m_offset); }
-    const void* raw_ptr() const {
-        return static_cast<void*>(m_data.get() + m_offset);
-    }
+    const void* raw_ptr() const { return static_cast<void*>(m_data.get() + m_offset); }
 
     Mat();
     Mat(size_t rows, size_t cols, size_t channels, size_t step);
@@ -141,8 +139,8 @@ public:
     Mat(size_t rows, size_t cols, size_t channels, size_t step, T* data);
     // shallow-copy constructor
     Mat(const Mat<T>& rhs);
-    Mat(const Mat<T>& rhs, size_t row_offset, size_t row_count,
-        size_t col_offset, size_t col_count);
+    Mat(const Mat<T>& rhs, size_t row_offset, size_t row_count, size_t col_offset,
+        size_t col_count);
     Mat<T>& operator=(const Mat<T>& rhs);
 
     T& at(size_t r, size_t c, size_t ch);

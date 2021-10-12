@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/aarch64/matrix_mul/algos.h"
 #include "src/aarch64/matrix_mul/opr_impl.h"
+#include "src/aarch64/matrix_mul/algos.h"
 #include "src/common/metahelper.h"
 #include "src/common/utils.h"
 
@@ -52,8 +52,8 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
 
     SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
     fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
-public:
 
+public:
     AlgoPack() {
         m_all_algos.emplace_back(&f32_gemv);
         m_all_algos.emplace_back(&f32K8x12x1);
@@ -104,11 +104,11 @@ const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
 
 MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(MatrixMulImpl)
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*>
-MatrixMulImpl::get_all_packed_algo() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::get_all_packed_algo() {
     auto&& algos = arm_common::MatrixMulImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
-                 algo_pack().all_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_algos().begin(),
+            algo_pack().all_algos().end());
     return std::move(algos);
 }
 

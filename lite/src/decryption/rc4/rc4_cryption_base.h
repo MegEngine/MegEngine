@@ -51,8 +51,7 @@ public:
         uint8_t b = s_[j_];
         s_[i_] = b;
         s_[j_] = a;
-        uint8_t c = s_[m256((i_ << 5) ^ (j_ >> 3))] +
-                    s_[m256((j_ << 5) ^ (i_ >> 3))];
+        uint8_t c = s_[m256((i_ << 5) ^ (j_ >> 3))] + s_[m256((j_ << 5) ^ (i_ >> 3))];
         return (s_[m256(a + b)] + s_[c ^ 0xAA]) ^ s_[m256(j_ + b)];
     }
 
@@ -77,9 +76,7 @@ private:
 class FastHash64 {
 public:
     FastHash64(uint64_t seed)
-            : hash_{seed},
-              mul0_{key_gen_hash_mul0()},
-              mul1_{key_gen_hash_mul1()} {}
+            : hash_{seed}, mul0_{key_gen_hash_mul0()}, mul1_{key_gen_hash_mul1()} {}
 
     void feed(uint64_t val) {
         val ^= val >> 23;

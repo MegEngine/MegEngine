@@ -10,17 +10,15 @@
  */
 #include "megcore.h"
 
-#include "test/common/utils.h"
-#include "./fixture.h"
-#include "test/cuda/utils.h"
 #include <cuda_runtime_api.h>
+#include "./fixture.h"
+#include "test/common/utils.h"
+#include "test/cuda/utils.h"
 
-TEST_F(MegcoreCUDA, DEVICE)
-{
+TEST_F(MegcoreCUDA, DEVICE) {
     for (int id = -1; id < std::min(nr_devices(), 2); ++id) {
         megcoreDeviceHandle_t handle;
-        megcoreCreateDeviceHandle(&handle, megcorePlatformCUDA,
-                    id, 0);
+        megcoreCreateDeviceHandle(&handle, megcorePlatformCUDA, id, 0);
 
         int deviceID;
         megcoreGetDeviceID(handle, &deviceID);
@@ -39,7 +37,7 @@ TEST_F(MegcoreCUDA, DEVICE)
 
         megcoreActivate(handle);
 
-        void *ptr;
+        void* ptr;
         megcoreMalloc(handle, &ptr, 256);
         megcoreFree(handle, ptr);
 
@@ -51,8 +49,7 @@ TEST_F(MegcoreCUDA, ERROR_MSG) {
 #if MEGDNN_ENABLE_EXCEPTIONS
     megcoreDeviceHandle_t handle;
     ASSERT_THROW(
-            megcoreCreateDeviceHandle(
-                &handle, megcorePlatformCUDA, nr_devices(), 0),
+            megcoreCreateDeviceHandle(&handle, megcorePlatformCUDA, nr_devices(), 0),
             megdnn::test::MegDNNError);
     cudaGetLastError();
     cuda_check(cudaGetLastError());

@@ -33,18 +33,17 @@ public:
     }
 
     //! get owner graph and check that it matches opr and inputs
-    ComputingGraph* owner_graph(const cg::OperatorNodeBase& opr,
-                                const VarNodeArray& inputs) const;
+    ComputingGraph* owner_graph(
+            const cg::OperatorNodeBase& opr, const VarNodeArray& inputs) const;
 };
 
 /*!
  * \brief copy a single operator by serializing and the then deserializing
  *      using new config and apply on new inputs
  */
-cg::OperatorNodeBase* copy_opr_shallow(const cg::OperatorNodeBase& opr,
-                                       const VarNodeArray& inputs,
-                                       const OperatorNodeConfig& config = {},
-                                       const OprShallowCopyContext& ctx = {});
+cg::OperatorNodeBase* copy_opr_shallow(
+        const cg::OperatorNodeBase& opr, const VarNodeArray& inputs,
+        const OperatorNodeConfig& config = {}, const OprShallowCopyContext& ctx = {});
 
 namespace intl {
 

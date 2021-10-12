@@ -35,8 +35,7 @@ low 64 bit  <0, 0> <0, 1> <1, 2> <1, 3> | <2, 0> <2, 1> <3, 2> <3, 3>
 ---------------------------------------------------------------------
 high 64 bit <0, 3> <0, 2> <1, 1> <1, 0> | <2, 3> <2, 2> <3, 1> <3, 0>
 **/
-static inline void nchw44_pack_filter(const int8_t* src, int8_t* dst,
-                                      int length) {
+static inline void nchw44_pack_filter(const int8_t* src, int8_t* dst, int length) {
     static const uint8_t weight_idx_buffer[16] = {0,  4, 9, 13, 2,  6,  11, 15,
                                                   12, 8, 5, 1,  14, 10, 7,  3};
     constexpr int simd_len = 16;
@@ -69,26 +68,23 @@ static inline void nchw44_pack_src(const int8_t* src, int8_t* dst, int length) {
     }
 }
 
-template <BiasMode bias_mode, typename Op, int filter_size, typename DstType,
-          int stride>
+template <
+        BiasMode bias_mode, typename Op, int filter_size, typename DstType, int stride>
 struct ConvDirectInt8Nchw44Choose {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int32_t* bias, int32_t* temp, DstType* dst,
-                     const size_t oc, const size_t ic, const size_t ih,
-                     const size_t iw, const size_t oh, const size_t ow,
-                     const Op& op);
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+            DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+            const size_t iw, const size_t oh, const size_t ow, const Op& op);
 };
 
-template <BiasMode bias_mode, typename Op, int filter_size, typename DstType,
-          int stride>
-void conv_direct_int8_nchw44(const int8_t* src, const int8_t* filter,
-                             const int32_t* bias, int32_t* temp, DstType* dst,
-                             const size_t oc, const size_t ic, const size_t ih,
-                             const size_t iw, const size_t oh, const size_t ow,
-                             const Op& op) {
-    ConvDirectInt8Nchw44Choose<bias_mode, Op, filter_size, DstType,
-                               stride>::impl(src, filter, bias, temp, dst, oc,
-                                             ic, ih, iw, oh, ow, op);
+template <
+        BiasMode bias_mode, typename Op, int filter_size, typename DstType, int stride>
+void conv_direct_int8_nchw44(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+        const size_t iw, const size_t oh, const size_t ow, const Op& op) {
+    ConvDirectInt8Nchw44Choose<bias_mode, Op, filter_size, DstType, stride>::impl(
+            src, filter, bias, temp, dst, oc, ic, ih, iw, oh, ow, op);
 }
 
 }  // namespace int8_direct_nchw44

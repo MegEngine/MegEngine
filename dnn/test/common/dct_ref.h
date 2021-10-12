@@ -41,11 +41,10 @@ CheckerHelper::TensorsConstriant gen_dct_constriant(
         const size_t n, const size_t ic, const size_t ih, const size_t iw,
         const size_t oc, Param param);
 
-std::shared_ptr<DctTestcase> gen_dct_case(const size_t n, const size_t ic,
-                                          const size_t ih, const size_t iw,
-                                          const size_t oc, Param param,
-                                          DType dst_dtype = dtype::Float32(),
-                                          bool correct_result = true);
+std::shared_ptr<DctTestcase> gen_dct_case(
+        const size_t n, const size_t ic, const size_t ih, const size_t iw,
+        const size_t oc, Param param, DType dst_dtype = dtype::Float32(),
+        bool correct_result = true);
 
 }  // namespace test
 }  // namespace megdnn

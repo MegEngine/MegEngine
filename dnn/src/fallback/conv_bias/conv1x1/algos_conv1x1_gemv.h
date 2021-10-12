@@ -22,17 +22,15 @@ class ConvBiasImpl::AlgoConv1x1Gemv final : public AlgoBase {
 public:
     AlgoConv1x1Gemv() = default;
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     const char* name() const override { return "CONV1x1_GEMV"; }
 
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
-    SmallVector<NCBKern> dispatch_kerns(
-            const NCBKernSizeParam& param) const override;
+    SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam& param) const override;
 
     bool is_preferred(const NCBKernSizeParam&) const override;
 

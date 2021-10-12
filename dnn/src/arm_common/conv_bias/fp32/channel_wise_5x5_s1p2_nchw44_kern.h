@@ -20,9 +20,9 @@ namespace arm_common {
 namespace channel_wise_nchw44_float {
 
 template <BiasMode bias_mode, typename Op>
-void do_conv_kern_5x5_stride1_padding2(const float* src, float* dst,
-                                       const float* filter, const float* bias,
-                                       int H, int W);
+void do_conv_kern_5x5_stride1_padding2(
+        const float* src, float* dst, const float* filter, const float* bias, int H,
+        int W);
 
 }  // namespace channel_wise_nchw44_float
 }  // namespace arm_common

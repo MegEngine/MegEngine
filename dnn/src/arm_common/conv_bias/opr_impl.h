@@ -28,12 +28,10 @@ public:
         }
     };
 
-    SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo()
-            override;
+    SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo() override;
 
     bool is_matmul_quantized_prefer(
-            const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param)
-            const override;
+            const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;

@@ -24,8 +24,7 @@ void output_info(std::shared_ptr<Network> network, size_t output_size) {
     for (size_t index = 0; index < output_size; index++) {
         printf("output[%zu] names %s \n", index,
                network->get_all_output_name()[index].c_str());
-        std::shared_ptr<Tensor> output_tensor =
-                network->get_output_tensor(index);
+        std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(index);
         size_t ndim = output_tensor->get_layout().ndim;
         for (size_t i = 0; i < ndim; i++) {
             printf("output[%zu] tensor.shape[%zu] %zu \n", index, i,
@@ -70,7 +69,8 @@ void output_data_info(std::shared_ptr<Network> network, size_t output_size) {
             default:
                 printf("unknow datatype");
         }
-        printf("output_length %zu index %zu  max=%e , max idx=%d, min=%e , min_idx=%d, sum=%e\n",
+        printf("output_length %zu index %zu  max=%e , max idx=%d, min=%e , min_idx=%d, "
+               "sum=%e\n",
                out_length, index, max, max_idx, min, min_idx, sum);
     }
 #undef cb
@@ -91,8 +91,7 @@ bool lite::example::load_from_path_run_cuda(const Args& args) {
     IO device_input{input_name, is_host};
     network_io.inputs.push_back(device_input);
     //! create and load the network
-    std::shared_ptr<Network> network =
-            std::make_shared<Network>(config, network_io);
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, network_io);
     network->load_model(network_path);
 
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
@@ -332,8 +331,7 @@ bool lite::example::async_forward(const Args& args) {
     volatile bool finished = false;
     network->set_async_callback([&finished]() {
 #if !__DEPLOY_ON_XP_SP2__
-        std::cout << "worker thread_id:" << std::this_thread::get_id()
-                  << std::endl;
+        std::cout << "worker thread_id:" << std::this_thread::get_id() << std::endl;
 #endif
         finished = true;
     });

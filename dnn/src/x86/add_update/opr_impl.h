@@ -15,16 +15,14 @@
 namespace megdnn {
 namespace x86 {
 
-class AddUpdateImpl: public ::megdnn::fallback::AddUpdateImpl {
-    public:
-        using ::megdnn::fallback::AddUpdateImpl::AddUpdateImpl;
-        void exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) override;
+class AddUpdateImpl : public ::megdnn::fallback::AddUpdateImpl {
+public:
+    using ::megdnn::fallback::AddUpdateImpl::AddUpdateImpl;
+    void exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) override;
 
-        bool is_thread_safe() const override {
-            return true;
-        }
+    bool is_thread_safe() const override { return true; }
 };
 
-} // namespace x86
-} // namespace megdnn
+}  // namespace x86
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

@@ -20,9 +20,12 @@
 namespace megdnn {
 namespace cuda {
 
-void copy_noncontig_general(const TensorND &dst, const TensorND &src, cudaStream_t stream);
-void get_launch_spec_unroll16(const void *kern, size_t size, int *grid_size, int *block_size);
-void get_launch_spec_unroll4(const void *kern, size_t size, int *grid_size, int *block_size);
+void copy_noncontig_general(
+        const TensorND& dst, const TensorND& src, cudaStream_t stream);
+void get_launch_spec_unroll16(
+        const void* kern, size_t size, int* grid_size, int* block_size);
+void get_launch_spec_unroll4(
+        const void* kern, size_t size, int* grid_size, int* block_size);
 
 //! internals for general
 namespace noncontig_general_intl {
@@ -48,7 +51,8 @@ struct OpCallerBinaryNoContiguous {
  */
 template <typename OpCaller>
 __global__ void cuda_kern_general(OpCaller op_caller, uint32_t size) {
-    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x, delta = blockDim.x * gridDim.x;
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x,
+             delta = blockDim.x * gridDim.x;
     if (idx < size) {
         int offset0 = op_caller.par0.offset(idx);
         int offset1 = op_caller.par1.offset(idx);
@@ -74,17 +78,19 @@ __global__ void cuda_kern_general(OpCaller op_caller, uint32_t size) {
  */
 template <typename OpCaller>
 __global__ void dst_pack_kern(OpCaller op_caller, uint32_t size) {
-    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x, delta = blockDim.x * gridDim.x;
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x,
+             delta = blockDim.x * gridDim.x;
     //! each thread fetch 4 elements
     uint32_t num = size / 4;
     if (idx < num) {
         uint32_t offset = idx * 4;
-        uchar1 val1 = *reinterpret_cast<uchar1 *>(&op_caller.par1.at(offset));
-        uchar1 val2 = *reinterpret_cast<uchar1 *>(&op_caller.par1.at(offset + 1));
-        uchar1 val3 = *reinterpret_cast<uchar1 *>(&op_caller.par1.at(offset + 2));
-        uchar1 val4 = *reinterpret_cast<uchar1 *>(&op_caller.par1.at(offset + 3));
+        uchar1 val1 = *reinterpret_cast<uchar1*>(&op_caller.par1.at(offset));
+        uchar1 val2 = *reinterpret_cast<uchar1*>(&op_caller.par1.at(offset + 1));
+        uchar1 val3 = *reinterpret_cast<uchar1*>(&op_caller.par1.at(offset + 2));
+        uchar1 val4 = *reinterpret_cast<uchar1*>(&op_caller.par1.at(offset + 3));
 
-        *reinterpret_cast<uchar4 *>(&op_caller.par0.at(offset)) = uchar4{val1.x, val2.x, val3.x, val4.x};
+        *reinterpret_cast<uchar4*>(&op_caller.par0.at(offset)) =
+                uchar4{val1.x, val2.x, val3.x, val4.x};
 
         idx += delta;
     }
@@ -96,16 +102,17 @@ __global__ void dst_pack_kern(OpCaller op_caller, uint32_t size) {
  */
 template <typename OpCaller>
 __global__ void src_pack_kern(OpCaller op_caller, uint32_t size) {
-    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x, delta = blockDim.x * gridDim.x;
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x,
+             delta = blockDim.x * gridDim.x;
     //! each thread fetch 4 elements
     uint32_t num = size / 4;
     if (idx < num) {
         uint32_t offset = idx * 4;
-        uchar4 val = *reinterpret_cast<uchar4 *>(&op_caller.par1.at(offset));
-        *reinterpret_cast<uchar1 *>(&op_caller.par0.at(offset)) = uchar1{val.x};
-        *reinterpret_cast<uchar1 *>(&op_caller.par0.at(offset + 1)) = uchar1{val.y};
-        *reinterpret_cast<uchar1 *>(&op_caller.par0.at(offset + 2)) = uchar1{val.z};
-        *reinterpret_cast<uchar1 *>(&op_caller.par0.at(offset + 3)) = uchar1{val.w};
+        uchar4 val = *reinterpret_cast<uchar4*>(&op_caller.par1.at(offset));
+        *reinterpret_cast<uchar1*>(&op_caller.par0.at(offset)) = uchar1{val.x};
+        *reinterpret_cast<uchar1*>(&op_caller.par0.at(offset + 1)) = uchar1{val.y};
+        *reinterpret_cast<uchar1*>(&op_caller.par0.at(offset + 2)) = uchar1{val.z};
+        *reinterpret_cast<uchar1*>(&op_caller.par0.at(offset + 3)) = uchar1{val.w};
 
         idx += delta;
     }
@@ -130,7 +137,7 @@ class UserOpInvoker;
 template <typename ctype>
 class UserOpInvoker<ctype, 2> {
     bool m_invoked;
-    const ElemwiseOpParamN<2> &m_param;
+    const ElemwiseOpParamN<2>& m_param;
     cudaStream_t m_stream;
     size_t m_rw_size;
 
@@ -145,7 +152,8 @@ class UserOpInvoker<ctype, 2> {
     }
 
 #define cb_header(ndim) void dispatch1_##ndim()
-#define cb_dispatch(ndim, contig_mask) dispatch2<ParamElemVisitor<ndim, ctype, contig_mask>>()
+#define cb_dispatch(ndim, contig_mask) \
+    dispatch2<ParamElemVisitor<ndim, ctype, contig_mask>>()
     DEFINE_CONTIG_RECEIVER(1, cb_header, cb_dispatch, m_param[0].layout)
     DEFINE_CONTIG_RECEIVER(2, cb_header, cb_dispatch, m_param[0].layout)
     DEFINE_CONTIG_RECEIVER(3, cb_header, cb_dispatch, m_param[0].layout)
@@ -170,7 +178,8 @@ class UserOpInvoker<ctype, 2> {
 #define cb_header(ndim)    \
     template <class PVis0> \
     void dispatch3_##ndim()
-#define cb_dispatch(ndim, contig_mask) do_run<PVis0, ParamElemVisitor<ndim, ctype, contig_mask>>()
+#define cb_dispatch(ndim, contig_mask) \
+    do_run<PVis0, ParamElemVisitor<ndim, ctype, contig_mask>>()
     DEFINE_CONTIG_RECEIVER(1, cb_header, cb_dispatch, m_param[1].layout)
     DEFINE_CONTIG_RECEIVER(2, cb_header, cb_dispatch, m_param[1].layout)
     DEFINE_CONTIG_RECEIVER(3, cb_header, cb_dispatch, m_param[1].layout)
@@ -203,7 +212,7 @@ class UserOpInvoker<ctype, 2> {
                     return true;
                 else if (src.ndim == 1 && src_contig)
                     return true;
-                else 
+                else
                     return false;
             };
             if (check_one_dim()) {
@@ -235,21 +244,24 @@ class UserOpInvoker<ctype, 2> {
         if (kernel_type == 1) {
             //! src pack: read 1 uchar4, write 4 uchar
             auto fptr = src_pack_kern<Caller>;
-            get_launch_spec_unroll4(reinterpret_cast<const void *>(fptr), size, &grid_size, &block_size);
+            get_launch_spec_unroll4(
+                    reinterpret_cast<const void*>(fptr), size, &grid_size, &block_size);
             param_host_init();
             (*fptr)<<<grid_size, block_size, 0, m_stream>>>(caller, size);
 
         } else if (kernel_type == 0) {
             //! dst pack: read 4 uchar, write 1 uchar4
             auto fptr = dst_pack_kern<Caller>;
-            get_launch_spec_unroll4(reinterpret_cast<const void *>(fptr), size, &grid_size, &block_size);
+            get_launch_spec_unroll4(
+                    reinterpret_cast<const void*>(fptr), size, &grid_size, &block_size);
             param_host_init();
             (*fptr)<<<grid_size, block_size, 0, m_stream>>>(caller, size);
 
         } else {
             //! general
             auto fptr = cuda_kern_general<Caller>;
-            elemwise_intl::get_launch_spec(reinterpret_cast<const void *>(fptr), size, &grid_size, &block_size);
+            elemwise_intl::get_launch_spec(
+                    reinterpret_cast<const void*>(fptr), size, &grid_size, &block_size);
             param_host_init();
             (*fptr)<<<grid_size, block_size, 0, m_stream>>>(caller, size);
         }
@@ -257,8 +269,8 @@ class UserOpInvoker<ctype, 2> {
     }
 
 public:
-    UserOpInvoker(const ElemwiseOpParamN<2> &param, cudaStream_t stream)
-        : m_rw_size(param.size), m_param(param), m_stream(stream) {
+    UserOpInvoker(const ElemwiseOpParamN<2>& param, cudaStream_t stream)
+            : m_rw_size(param.size), m_param(param), m_stream(stream) {
         m_invoked = false;
         dispatch0();
         megdnn_assert(m_invoked);
@@ -374,8 +386,8 @@ class UserOpInvoker<dt_quint4, 2> {
         };
         //! general
         auto fptr = cuda_kern_general_q4<Caller>;
-        elemwise_intl::get_launch_spec(reinterpret_cast<const void*>(fptr),
-                                       size, &grid_size, &block_size);
+        elemwise_intl::get_launch_spec(
+                reinterpret_cast<const void*>(fptr), size, &grid_size, &block_size);
         param_host_init();
         (*fptr)<<<grid_size, block_size, 0, m_stream>>>(caller, size);
         after_kernel_launch();
@@ -396,8 +408,8 @@ public:
 
 #undef devfunc
 
-} // namespace noncontig_general_intl
-} // namespace cuda
-} // namespace megdnn
+}  // namespace noncontig_general_intl
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen

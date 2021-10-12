@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "megbrain/graph/cg.h"
 #include <vector>
+#include "megbrain/graph/cg.h"
 
 namespace mgb {
 namespace cg {
@@ -24,35 +24,32 @@ class VarNode;
  * \brief get the involved comp nodes of an operator; the operator must have
  *      been compiled
  */
-CompNode::UnorderedSet get_opr_comp_node_set(OperatorNodeBase *opr);
+CompNode::UnorderedSet get_opr_comp_node_set(OperatorNodeBase* opr);
 
 /*!
  * \brief whether var shape could be statically inferred
  */
-static inline bool is_static_var_shape(VarNode *var) {
+static inline bool is_static_var_shape(VarNode* var) {
     using IT = static_infer::InferType;
-    auto it = var->owner_graph()->static_infer_manager().
-        get_infer_type(var);
+    auto it = var->owner_graph()->static_infer_manager().get_infer_type(var);
     return it.shape & (IT::CONST | IT::RT_STATIC);
 }
 
 /*!
  * \brief whether var shape is constant
  */
-static inline bool is_const_var_shape(VarNode *var) {
+static inline bool is_const_var_shape(VarNode* var) {
     using IT = static_infer::InferType;
-    auto it = var->owner_graph()->static_infer_manager().
-        get_infer_type(var);
+    auto it = var->owner_graph()->static_infer_manager().get_infer_type(var);
     return it.shape & IT::CONST;
 }
 
 /*!
  * \brief whether var value could be statically inferred
  */
-static inline bool is_static_var_value(VarNode *var) {
+static inline bool is_static_var_value(VarNode* var) {
     using IT = static_infer::InferType;
-    auto it = var->owner_graph()->static_infer_manager().
-        get_infer_type(var);
+    auto it = var->owner_graph()->static_infer_manager().get_infer_type(var);
     return it.value & (IT::CONST | IT::RT_STATIC);
 }
 
@@ -66,9 +63,9 @@ static inline bool is_const_var_value(VarNode* var) {
     if (!(infer_type.value & IT::CONST))
         return false;
 
-    mgb_assert(infer_type.shape & IT::CONST,
-               "var(%s) has const value infer but non-const shape infer",
-               var->cname());
+    mgb_assert(
+            infer_type.shape & IT::CONST,
+            "var(%s) has const value infer but non-const shape infer", var->cname());
 
     return true;
 }
@@ -76,7 +73,7 @@ static inline bool is_const_var_value(VarNode* var) {
 /*!
  * \brief whether var storage would be statically allocated by system
  */
-static inline bool is_static_var_storage(VarNode *var) {
+static inline bool is_static_var_storage(VarNode* var) {
     using F = VarNode::Flag;
     if (var->contain_flag(F::PERSISTENT_DEVICE_VALUE))
         return true;
@@ -94,12 +91,12 @@ static inline bool is_static_var_storage(VarNode *var) {
  * See the code for precise definition
  */
 static inline bool need_device_computing_on_var(
-        VarNode *var, OperatorNodeBase::NodeProp::DepType dt) {
+        VarNode* var, OperatorNodeBase::NodeProp::DepType dt) {
     using DT = OperatorNodeBase::NodeProp::DepType;
     return !var->contain_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE) &&
-        ((dt & (DT::DEV_VALUE | DT::DEV_COMP_ORDER)) ||
-        ((dt & DT::HOST_VALUE) && !is_static_var_value(var)) ||
-        ((dt & DT::SHAPE) && is_static_var_shape(var)));
+           ((dt & (DT::DEV_VALUE | DT::DEV_COMP_ORDER)) ||
+            ((dt & DT::HOST_VALUE) && !is_static_var_value(var)) ||
+            ((dt & DT::SHAPE) && is_static_var_shape(var)));
 }
 
 /*!
@@ -120,7 +117,7 @@ SymbolVarArray to_symbol_var_array(const VarNodeArray& var_node_array);
 /*!
  * \brief return a string to describe the list of variables
  */
-std::string dump_var_info(const VarNodeArrayView &vars);
+std::string dump_var_info(const VarNodeArrayView& vars);
 
 /*!
  * \brief compute grad of target w.r.t. wrt (i.e. d(target)/d(wrt))
@@ -130,22 +127,24 @@ std::string dump_var_info(const VarNodeArrayView &vars);
  * \return the var representing grad, or nullptr if target does not depend on
  *      wrt
  */
-SymbolVar grad(SymbolVar target, SymbolVar wrt,
-        bool warn_mid_wrt = true, bool return_zero_for_nodep = true);
+SymbolVar grad(
+        SymbolVar target, SymbolVar wrt, bool warn_mid_wrt = true,
+        bool return_zero_for_nodep = true);
 
 /*!
  * \brief equivalant to calling grad(grad, wrt) one by one if symbolic;
  * since cache in grad manager would be cleared each time, this method is more
  * efficient if eager.
  */
-SymbolVarArray grad(SymbolVar target, SymbolVarArray wrts,
-        bool warn_mid_wrt = true, bool return_zero_for_nodep = true);
+SymbolVarArray grad(
+        SymbolVar target, SymbolVarArray wrts, bool warn_mid_wrt = true,
+        bool return_zero_for_nodep = true);
 
 /*!
  * \brief get current grad target, which must be called inside
  *      OperatorNodeBase::grad() implementations
  */
-SymbolVar current_grad_target(ComputingGraph &graph);
+SymbolVar current_grad_target(ComputingGraph& graph);
 
 struct SpecialOprStat {
     bool has_virtual_grad = false;
@@ -159,8 +158,8 @@ struct SpecialOprStat {
  * \return a list of vars correpsonding to \p dest whose dependencies have been
  *         replaced according to \p varmap
  */
-SymbolVarArray replace_vars(const SymbolVarArray &dest,
-        const ThinHashMap<SymbolVar, SymbolVar>& varmap);
+SymbolVarArray replace_vars(
+        const SymbolVarArray& dest, const ThinHashMap<SymbolVar, SymbolVar>& varmap);
 
 /*!
  * \brief replace operator in a graph
@@ -182,7 +181,7 @@ SymbolVarArray replace_oprs(
  *         replaced with \p new_graph
  */
 SymbolVarArray replace_vars_comp_graph(
-    const SymbolVarArray &dest, ComputingGraph* new_graph);
+        const SymbolVarArray& dest, ComputingGraph* new_graph);
 
 SymbolVarArray find_h2d(const SymbolVarArray& dest);
 
@@ -192,7 +191,7 @@ SymbolVarArray find_h2d(const SymbolVarArray& dest);
  *
  * This function also performs path compression
  */
-OperatorNodeBase* get_opr_root_source_opr(OperatorNodeBase *opr);
+OperatorNodeBase* get_opr_root_source_opr(OperatorNodeBase* opr);
 
 //! describes how two mem plans intersect
 enum class MemPlanIntersectionType {
@@ -200,15 +199,14 @@ enum class MemPlanIntersectionType {
     IDENTICAL,  //!< completely same
     OVERLAP     //!< intersects but not identical
 };
-MemPlanIntersectionType get_mem_plan_intersection_type(VarNode* a, VarNode *b);
+MemPlanIntersectionType get_mem_plan_intersection_type(VarNode* a, VarNode* b);
 
 /*!
  * \brief request output var to writable forward input var if no mem plan of
  *      other input vars intersects with this input var
  */
 void request_fwd_in2out_writable_if_no_mem_ovelap(
-        OperatorNodeBase *opr, size_t inp, size_t out);
-
+        OperatorNodeBase* opr, size_t inp, size_t out);
 
 /*!
  * \brief update shapes of output vars; set to empty if not statically
@@ -219,7 +217,7 @@ void request_fwd_in2out_writable_if_no_mem_ovelap(
  *
  * Note: implemented in cg_impl.cpp, since it is used during graph init
  */
-void update_output_var_shapes(OperatorNodeBase *opr);
+void update_output_var_shapes(OperatorNodeBase* opr);
 
 /*!
  * \brief add an output to be used as the workspace for an operator
@@ -229,17 +227,17 @@ void update_output_var_shapes(OperatorNodeBase *opr);
  * This helper is usually called from an opr constructor and used for adding the
  * last output.
  */
-void add_workspace_output(OperatorNodeBase *opr);
+void add_workspace_output(OperatorNodeBase* opr);
 
 /*!
  * \brief copy a raw tensor shape into a host tensor
  */
-void copy_shape_to_tensor_value(DeviceTensorND &dest, const TensorShape &shp);
+void copy_shape_to_tensor_value(DeviceTensorND& dest, const TensorShape& shp);
 
 /*!
  * \brief copy value of a host tensor into a raw tensor shape
  */
-void copy_tensor_value_to_shape(TensorShape &dest, const DeviceTensorND &val);
+void copy_tensor_value_to_shape(TensorShape& dest, const DeviceTensorND& val);
 
 /*!
  * \brief get a symbolvar whose value is tensor shape, used for other
@@ -249,9 +247,8 @@ void copy_tensor_value_to_shape(TensorShape &dest, const DeviceTensorND &val);
  *      function if *config* is invalid
  */
 SymbolVar var_from_tensor_shape(
-        ComputingGraph &graph, const OperatorNodeConfig &config,
-        const char *opr_name,
-        const TensorShape &shape);
+        ComputingGraph& graph, const OperatorNodeConfig& config, const char* opr_name,
+        const TensorShape& shape);
 
 /*!
  * \brief get a symbolvar whose value is tensor shape
@@ -259,10 +256,9 @@ SymbolVar var_from_tensor_shape(
  * \param inp used to determine the computing graph, which can be any symbolvar
  *      belonging to the same computing graph.
  */
-static inline SymbolVar var_from_tensor_shape(
-        SymbolVar inp, const TensorShape &shape) {
-    return var_from_tensor_shape(*inp.node()->owner_graph(),
-            OperatorNodeConfig().follow_comp_node(inp),
+static inline SymbolVar var_from_tensor_shape(SymbolVar inp, const TensorShape& shape) {
+    return var_from_tensor_shape(
+            *inp.node()->owner_graph(), OperatorNodeConfig().follow_comp_node(inp),
             nullptr, shape);
 }
 
@@ -271,51 +267,45 @@ static inline SymbolVar var_from_tensor_shape(
  * \param cb callback to be invoked when a new operator is discovered
  */
 class DepOprIter {
-    public:
-        using Callback = thin_function<void(OperatorNodeBase*)>;
-        using ExtraDep = ThinHashMap<OperatorNodeBase*, SmallVector<VarNode*>>;
+public:
+    using Callback = thin_function<void(OperatorNodeBase*)>;
+    using ExtraDep = ThinHashMap<OperatorNodeBase*, SmallVector<VarNode*>>;
 
-        explicit DepOprIter(Callback cb,
-                            std::shared_ptr<ExtraDep> extra_dep = nullptr)
-                : m_cb{std::move(cb)}, m_extra_dep(std::move(extra_dep)) {}
+    explicit DepOprIter(Callback cb, std::shared_ptr<ExtraDep> extra_dep = nullptr)
+            : m_cb{std::move(cb)}, m_extra_dep(std::move(extra_dep)) {}
 
-        //! add an operator whose deps should be discovered
-        void add(OperatorNodeBase *dest);
+    //! add an operator whose deps should be discovered
+    void add(OperatorNodeBase* dest);
 
-        void add(SymbolVar var) { add(var.node()->owner_opr()); }
+    void add(SymbolVar var) { add(var.node()->owner_opr()); }
 
-        //! graph of all the oprs
-        ComputingGraph* owner_graph() const {
-            return m_owner_graph;
-        }
+    //! graph of all the oprs
+    ComputingGraph* owner_graph() const { return m_owner_graph; }
 
-        //! check if an opr has been visited
-        bool visited(OperatorNodeBase *opr) const {
-            return m_visited.count(opr);
-        }
+    //! check if an opr has been visited
+    bool visited(OperatorNodeBase* opr) const { return m_visited.count(opr); }
 
-        //! set an opr to have been visited
-        DepOprIter& set_visited(OperatorNodeBase* opr) {
-            m_visited.insert(opr);
-            return *this;
-        }
+    //! set an opr to have been visited
+    DepOprIter& set_visited(OperatorNodeBase* opr) {
+        m_visited.insert(opr);
+        return *this;
+    }
 
-    private:
-        //! a single stack frame to avoid recursion
-        struct Frame {
-            OperatorNodeBase *opr;
-            VarNode * const *inputs;
-            VarNode * const *extra_deps;
-            size_t inp_idx, nr_input, nr_extra_dep;
-        };
-        ComputingGraph *m_owner_graph = nullptr;
-        std::vector<Frame> m_stack;
-        ThinHashSet<OperatorNodeBase*> m_visited;
-        Callback m_cb;
-        const std::shared_ptr<ExtraDep> m_extra_dep;
+private:
+    //! a single stack frame to avoid recursion
+    struct Frame {
+        OperatorNodeBase* opr;
+        VarNode* const* inputs;
+        VarNode* const* extra_deps;
+        size_t inp_idx, nr_input, nr_extra_dep;
+    };
+    ComputingGraph* m_owner_graph = nullptr;
+    std::vector<Frame> m_stack;
+    ThinHashSet<OperatorNodeBase*> m_visited;
+    Callback m_cb;
+    const std::shared_ptr<ExtraDep> m_extra_dep;
 
-        inline void push_stack(OperatorNodeBase *opr);
-
+    inline void push_stack(OperatorNodeBase* opr);
 };
 
 /*!
@@ -326,44 +316,43 @@ class DepOprIter {
  * when B is exetended (e.g. by constructing a grad graph), others can know how
  * to transform a var in A into its equivalent var in B.
  */
-class InterGraphVarTransformer final: public UserDataContainer::UserData {
+class InterGraphVarTransformer final : public UserDataContainer::UserData {
     MGB_TYPEINFO_OBJ_DECL;
 
     InterGraphVarTransformer() = default;
 
-    public:
+public:
+    /*!
+     * var transforming function to be defined by copier; the input var has
+     * been checked to be in src graph.
+     */
+    using TransFunc = thin_function<VarNode*(VarNode*)>;
 
-        /*!
-         * var transforming function to be defined by copier; the input var has
-         * been checked to be in src graph.
-         */
-        using TransFunc = thin_function<VarNode*(VarNode*)>;
+    /*!
+     * \brief register a transfomer to *dest* graph that takes var in *src*
+     *      and outputs a corresponding var in *dest*
+     *
+     * This function should be called only once on a graph
+     */
+    static void register_to(
+            ComputingGraph* dest, const ComputingGraph* src, const TransFunc& trans);
 
-        /*!
-         * \brief register a transfomer to *dest* graph that takes var in *src*
-         *      and outputs a corresponding var in *dest*
-         *
-         * This function should be called only once on a graph
-         */
-        static void register_to(ComputingGraph *dest,
-                const ComputingGraph *src, const TransFunc &trans);
+    /*!
+     * \brief get the transformer associated with a graph
+     * \return previously registered transformer on given graph or nullptr
+     *      if none registered
+     */
+    static const InterGraphVarTransformer* get(const ComputingGraph& graph);
 
-        /*!
-         * \brief get the transformer associated with a graph
-         * \return previously registered transformer on given graph or nullptr
-         *      if none registered
-         */
-        static const InterGraphVarTransformer* get(const ComputingGraph &graph);
+    /*!
+     * \brief transform a var into this graph
+     */
+    VarNode* trans(VarNode* src) const;
 
-        /*!
-         * \brief transform a var into this graph
-         */
-        VarNode *trans(VarNode *src) const;
-
-    private:
-        ComputingGraph *m_graph_dest;
-        const ComputingGraph *m_graph_src;
-        TransFunc m_trans_func;
+private:
+    ComputingGraph* m_graph_dest;
+    const ComputingGraph* m_graph_src;
+    TransFunc m_trans_func;
 };
 
 /*!
@@ -399,7 +388,7 @@ public:
 SymbolVarArray get_dest_vars_with_extra_deps(
         const SymbolVarArray& dest_vars, SpecialOprStat* sopr_stat = nullptr);
 
-} // cg
-} //mgb
+}  // namespace cg
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

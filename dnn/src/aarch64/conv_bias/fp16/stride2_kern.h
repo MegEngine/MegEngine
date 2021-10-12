@@ -20,9 +20,9 @@ namespace aarch64 {
 namespace fp16 {
 namespace conv_stride2 {
 
-static void do_conv_2x2_stride2(const __fp16* src, const __fp16* filter,
-                                __fp16* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_2x2_stride2(
+        const __fp16* src, const __fp16* filter, __fp16* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 3;
     size_t mod4_left = width & 3;
@@ -162,10 +162,9 @@ static void do_conv_2x2_stride2(const __fp16* src, const __fp16* filter,
                     "5: \n"
                     : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1)
                     : "r"(mod4_left), "w"(_k0123)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18", "v19", "v28", "v29", "v30",
-                      "v31");
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18", "v19", "v28", "v29", "v30", "v31");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -175,9 +174,9 @@ static void do_conv_2x2_stride2(const __fp16* src, const __fp16* filter,
     }
 }
 
-static void do_conv_3x3_stride2(const __fp16* src, const __fp16* filter,
-                                __fp16* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_3x3_stride2(
+        const __fp16* src, const __fp16* filter, __fp16* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 3;
     size_t mod3_left = width % 3;
@@ -352,10 +351,10 @@ static void do_conv_3x3_stride2(const __fp16* src, const __fp16* filter,
                     "3: \n"
                     : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2)
                     : "r"(mod3_left), "w"(_k0123), "w"(_k3456), "w"(_k5678)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18", "v21", "v22", "v23", "v24",
-                      "v25", "v26", "v27", "v28", "v29");
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
+                      "v28", "v29");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -366,9 +365,9 @@ static void do_conv_3x3_stride2(const __fp16* src, const __fp16* filter,
     }
 }
 
-static void do_conv_5x5_stride2(const __fp16* src, const __fp16* filter,
-                                __fp16* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_5x5_stride2(
+        const __fp16* src, const __fp16* filter, __fp16* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 3;
     size_t mod2_left = width & 1;
@@ -384,18 +383,12 @@ static void do_conv_5x5_stride2(const __fp16* src, const __fp16* filter,
         const __fp16* r4 = src_ptr + IW * 4;
 
         register MEGDNN_SIMD_TYPE _k0123 asm("v0") = MEGDNN_SIMD_LOADU(filter);
-        register MEGDNN_SIMD_TYPE _k4567 asm("v1") =
-                MEGDNN_SIMD_LOADU(filter + 4);
-        register MEGDNN_SIMD_TYPE _k891011 asm("v2") =
-                MEGDNN_SIMD_LOADU(filter + 8);
-        register MEGDNN_SIMD_TYPE _k12131415 asm("v3") =
-                MEGDNN_SIMD_LOADU(filter + 12);
-        register MEGDNN_SIMD_TYPE _k16171819 asm("v4") =
-                MEGDNN_SIMD_LOADU(filter + 16);
-        register MEGDNN_SIMD_TYPE _k20212223 asm("v5") =
-                MEGDNN_SIMD_LOADU(filter + 20);
-        register MEGDNN_SIMD_TYPE _k24242424 asm("v6") =
-                MEGDNN_SIMD_SET1(filter[24]);
+        register MEGDNN_SIMD_TYPE _k4567 asm("v1") = MEGDNN_SIMD_LOADU(filter + 4);
+        register MEGDNN_SIMD_TYPE _k891011 asm("v2") = MEGDNN_SIMD_LOADU(filter + 8);
+        register MEGDNN_SIMD_TYPE _k12131415 asm("v3") = MEGDNN_SIMD_LOADU(filter + 12);
+        register MEGDNN_SIMD_TYPE _k16171819 asm("v4") = MEGDNN_SIMD_LOADU(filter + 16);
+        register MEGDNN_SIMD_TYPE _k20212223 asm("v5") = MEGDNN_SIMD_LOADU(filter + 20);
+        register MEGDNN_SIMD_TYPE _k24242424 asm("v6") = MEGDNN_SIMD_SET1(filter[24]);
 
         for (size_t i = 0; i < OH; i++) {
             asm volatile(
@@ -592,15 +585,14 @@ static void do_conv_5x5_stride2(const __fp16* src, const __fp16* filter,
                     "bne 2b \n"
                     "3: \n"
 
-                    : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2),
-                      "+r"(r3), "+r"(r4)
+                    : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
+                      "+r"(r4)
                     : "w"(_k0123), "w"(_k4567), "w"(_k891011), "w"(_k12131415),
-                      "w"(_k16171819), "w"(_k20212223), "w"(_k24242424),
-                      "r"(mod2_left)
-                    : "cc", "memory", "x1", "v7", "v8", "v9", "v10", "v11",
-                      "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-                      "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
-                      "v28", "v29", "v30", "v31");
+                      "w"(_k16171819), "w"(_k20212223), "w"(_k24242424), "r"(mod2_left)
+                    : "cc", "memory", "x1", "v7", "v8", "v9", "v10", "v11", "v12",
+                      "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+                      "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30",
+                      "v31");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -613,9 +605,9 @@ static void do_conv_5x5_stride2(const __fp16* src, const __fp16* filter,
     }
 }
 
-static void do_conv_7x7_stride2(const __fp16* src, const __fp16* filter,
-                                __fp16* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_7x7_stride2(
+        const __fp16* src, const __fp16* filter, __fp16* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 3;
 
@@ -632,30 +624,20 @@ static void do_conv_7x7_stride2(const __fp16* src, const __fp16* filter,
         const __fp16* r6 = src_ptr + IW * 6;
 
         register MEGDNN_SIMD_TYPE _k0123 asm("v0") = MEGDNN_SIMD_LOADU(filter);
-        register MEGDNN_SIMD_TYPE _k4567 asm("v1") =
-                MEGDNN_SIMD_LOADU(filter + 4);
-        register MEGDNN_SIMD_TYPE _k891011 asm("v2") =
-                MEGDNN_SIMD_LOADU(filter + 8);
-        register MEGDNN_SIMD_TYPE _k12131415 asm("v3") =
-                MEGDNN_SIMD_LOADU(filter + 12);
-        register MEGDNN_SIMD_TYPE _k16171819 asm("v4") =
-                MEGDNN_SIMD_LOADU(filter + 16);
-        register MEGDNN_SIMD_TYPE _k20212223 asm("v5") =
-                MEGDNN_SIMD_LOADU(filter + 20);
-        register MEGDNN_SIMD_TYPE _k24252627 asm("v6") =
-                MEGDNN_SIMD_LOADU(filter + 24);
-        register MEGDNN_SIMD_TYPE _k28293031 asm("v7") =
-                MEGDNN_SIMD_LOADU(filter + 28);
-        register MEGDNN_SIMD_TYPE _k32333435 asm("v8") =
-                MEGDNN_SIMD_LOADU(filter + 32);
-        register MEGDNN_SIMD_TYPE _k36373839 asm("v9") =
-                MEGDNN_SIMD_LOADU(filter + 36);
+        register MEGDNN_SIMD_TYPE _k4567 asm("v1") = MEGDNN_SIMD_LOADU(filter + 4);
+        register MEGDNN_SIMD_TYPE _k891011 asm("v2") = MEGDNN_SIMD_LOADU(filter + 8);
+        register MEGDNN_SIMD_TYPE _k12131415 asm("v3") = MEGDNN_SIMD_LOADU(filter + 12);
+        register MEGDNN_SIMD_TYPE _k16171819 asm("v4") = MEGDNN_SIMD_LOADU(filter + 16);
+        register MEGDNN_SIMD_TYPE _k20212223 asm("v5") = MEGDNN_SIMD_LOADU(filter + 20);
+        register MEGDNN_SIMD_TYPE _k24252627 asm("v6") = MEGDNN_SIMD_LOADU(filter + 24);
+        register MEGDNN_SIMD_TYPE _k28293031 asm("v7") = MEGDNN_SIMD_LOADU(filter + 28);
+        register MEGDNN_SIMD_TYPE _k32333435 asm("v8") = MEGDNN_SIMD_LOADU(filter + 32);
+        register MEGDNN_SIMD_TYPE _k36373839 asm("v9") = MEGDNN_SIMD_LOADU(filter + 36);
         register MEGDNN_SIMD_TYPE _k40414243 asm("v10") =
                 MEGDNN_SIMD_LOADU(filter + 40);
         register MEGDNN_SIMD_TYPE _k44454647 asm("v11") =
                 MEGDNN_SIMD_LOADU(filter + 44);
-        register MEGDNN_SIMD_TYPE _k48484848 asm("v12") =
-                MEGDNN_SIMD_SET1(filter[48]);
+        register MEGDNN_SIMD_TYPE _k48484848 asm("v12") = MEGDNN_SIMD_SET1(filter[48]);
 
         for (size_t i = 0; i < OH; i++) {
             asm volatile(
@@ -1005,16 +987,15 @@ static void do_conv_7x7_stride2(const __fp16* src, const __fp16* filter,
                     "bne 2b \n"
                     "3: \n"
 
-                    : "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
-                      "+r"(r4), "+r"(r5), "+r"(r6)
+                    : "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4),
+                      "+r"(r5), "+r"(r6)
                     : "r"(width), "w"(_k0123), "w"(_k4567), "w"(_k891011),
                       "w"(_k12131415), "w"(_k16171819), "w"(_k20212223),
                       "w"(_k24252627), "w"(_k28293031), "w"(_k32333435),
-                      "w"(_k36373839), "w"(_k40414243), "w"(_k44454647),
-                      "w"(_k48484848)
-                    : "cc", "memory", "x1", "v13", "v14", "v15", "v16", "v17",
-                      "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
-                      "v26", "v27", "v28", "v29", "v30", "v31");
+                      "w"(_k36373839), "w"(_k40414243), "w"(_k44454647), "w"(_k48484848)
+                    : "cc", "memory", "x1", "v13", "v14", "v15", "v16", "v17", "v18",
+                      "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
+                      "v28", "v29", "v30", "v31");
 
             r0 += tail_step;
             r1 += tail_step;

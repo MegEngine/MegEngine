@@ -14,7 +14,6 @@
 
 #include "src/common/handle_impl.h"
 
-#include "src/naive/padding/opr_impl.h"
 #include "src/naive/adaptive_pooling/opr_impl.h"
 #include "src/naive/add_update/opr_impl.h"
 #include "src/naive/argmxx/opr_impl.h"
@@ -58,6 +57,7 @@
 #include "src/naive/matrix_mul/opr_impl.h"
 #include "src/naive/max_tensor_diff/opr_impl.h"
 #include "src/naive/mesh_indexing/opr_impl.h"
+#include "src/naive/padding/opr_impl.h"
 #include "src/naive/param_pack/opr_impl.h"
 #include "src/naive/pooling/opr_impl.h"
 #include "src/naive/powc/opr_impl.h"
@@ -93,21 +93,16 @@ namespace megdnn {
 namespace naive {
 
 DefaultConvolutionForwardAlgorithm HandleImpl::m_default_conv_fwd_algo;
-DefaultConvolutionBackwardDataAlgorithm
-        HandleImpl::m_default_conv_bwd_data_algo;
-DefaultConvolutionBackwardFilterAlgorithm
-        HandleImpl::m_default_conv_bwd_filter_algo;
+DefaultConvolutionBackwardDataAlgorithm HandleImpl::m_default_conv_bwd_data_algo;
+DefaultConvolutionBackwardFilterAlgorithm HandleImpl::m_default_conv_bwd_filter_algo;
 DefaultConvBiasForwardAlgorithm HandleImpl::m_default_conv_bias_fwd_algo;
 DefaultConvolution3DForwardAlgorithm HandleImpl::m_default_conv3d_fwd_algo;
-DefaultConvolution3DBackwardDataAlgorithm
-        HandleImpl::m_default_conv3d_bwd_data_algo;
+DefaultConvolution3DBackwardDataAlgorithm HandleImpl::m_default_conv3d_bwd_data_algo;
 DefaultConvolution3DBackwardFilterAlgorithm
         HandleImpl::m_default_conv3d_bwd_filter_algo;
-DefaultBatchConvBiasForwardAlgorithm
-        HandleImpl::m_default_batch_conv_bias_fwd_algo;
+DefaultBatchConvBiasForwardAlgorithm HandleImpl::m_default_batch_conv_bias_fwd_algo;
 DefaultLocalShareForwardAlgorithm HandleImpl::m_default_local_share_fwd_algo;
-DefaultLocalShareBackwardDataAlgorithm
-        HandleImpl::m_default_local_share_bwd_data_algo;
+DefaultLocalShareBackwardDataAlgorithm HandleImpl::m_default_local_share_bwd_data_algo;
 DefaultLocalShareBackwardFilterAlgorithm
         HandleImpl::m_default_local_share_bwd_filter_algo;
 
@@ -117,8 +112,7 @@ DefaultBatchedMatrixMulAlgorithm HandleImpl::m_default_batched_matmul_fwd_algo;
 DefaultPoolingForwardAlgorithm HandleImpl::m_default_pooling_fwd_algo;
 DefaultPoolingBackwardAlgorithm HandleImpl::m_default_pooling_bwd_algo;
 
-HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle,
-                       HandleType type)
+HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle, HandleType type)
         : HandleImplHelper(computing_handle, type),
           m_dispatcher{megcoreGetCPUDispatcher(computing_handle)} {}
 

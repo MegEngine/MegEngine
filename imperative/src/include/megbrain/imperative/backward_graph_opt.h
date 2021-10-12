@@ -22,4 +22,4 @@ struct OptimizedBackwardGraphResult {
     OptimizedBackwardGraphResult(const EncodedSubgraph& bgraph);
 };
 
-} // namespace mgb::imperative
+}  // namespace mgb::imperative

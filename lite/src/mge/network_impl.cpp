@@ -12,12 +12,12 @@
 #include "lite_build_config.h"
 
 #if LITE_BUILD_WITH_MGE
-#include "network_impl.h"
 #include "common.h"
 #include "lite/network.h"
 #include "memory_allocator.h"
-#include "parse_model/model_parser.h"
+#include "network_impl.h"
 #include "parse_info/parse_info_base.h"
+#include "parse_model/model_parser.h"
 
 #include "megbrain/common.h"
 #include "megbrain/comp_node.h"
@@ -52,8 +52,7 @@ void NetworkImplDft::set_config(const Config& config) {
 void NetworkImplDft::shared_weight_with(const NetworkImplBase* src_network) {
     application_config();
     const auto& src_impl = src_network->cast_final_safe<NetworkImplDft>();
-    LITE_ASSERT(src_impl.m_loader,
-                "Clone network must after the network is loaded.");
+    LITE_ASSERT(src_impl.m_loader, "Clone network must after the network is loaded.");
     m_load_result = src_impl.m_loader->load(m_load_config, true);
 
     //! flag weather the mode is cross compnode model
@@ -87,10 +86,11 @@ void NetworkImplDft::application_config() {
     ConfigOption(force_dynamic_alloc, force_dynamic_alloc);
     ConfigOption(force_output_dynamic_alloc, force_output_dynamic_alloc);
     ConfigOption(no_profiling_on_shape_change, no_profiling_on_shape_change);
-    LITE_ASSERT(m_user_config->options.jit_level == 0 ||
-                        (m_user_config->options.jit_level > 0 &&
-                         device_type == LiteDeviceType::LITE_CUDA),
-                "jit only support in cuda device.");
+    LITE_ASSERT(
+            m_user_config->options.jit_level == 0 ||
+                    (m_user_config->options.jit_level > 0 &&
+                     device_type == LiteDeviceType::LITE_CUDA),
+            "jit only support in cuda device.");
     ConfigOption(graph_opt.jit, jit_level);
     ConfigOption(comp_node_seq_record_level, comp_node_seq_record_level);
     ConfigOption(graph_opt_level, graph_opt_level);
@@ -118,45 +118,40 @@ void NetworkImplDft::application_config() {
         //! currently not set Locator type because an atlas mgb model is a
         //! cross-compnode graph
         if (device_type == LiteDeviceType::LITE_ATLAS) {
-            m_load_config.comp_node_mapper =
-                    [this](mgb::CompNode::Locator& loc) {
-                        if (loc.type == mgb::CompNode::DeviceType::ATLAS) {
-                            loc.device = m_compnode_locator.device;
-                            loc.stream = m_compnode_locator.stream;
-                        } else if (loc.type ==
-                                   mgb::CompNode::DeviceType::MULTITHREAD) {
-                            loc.stream = m_nr_threads;
-                        }
-                    };
+            m_load_config.comp_node_mapper = [this](mgb::CompNode::Locator& loc) {
+                if (loc.type == mgb::CompNode::DeviceType::ATLAS) {
+                    loc.device = m_compnode_locator.device;
+                    loc.stream = m_compnode_locator.stream;
+                } else if (loc.type == mgb::CompNode::DeviceType::MULTITHREAD) {
+                    loc.stream = m_nr_threads;
+                }
+            };
         } else {
-            m_load_config.comp_node_mapper =
-                    [this](mgb::CompNode::Locator& loc) {
-                        loc = m_compnode_locator;
-                    };
+            m_load_config.comp_node_mapper = [this](mgb::CompNode::Locator& loc) {
+                loc = m_compnode_locator;
+            };
         }
     }
 }
 
-void NetworkImplDft::set_memory_allocator(
-        std::shared_ptr<Allocator> user_allocator) {
+void NetworkImplDft::set_memory_allocator(std::shared_ptr<Allocator> user_allocator) {
     auto allocator = std::make_shared<UserStaticMemAlloc>(user_allocator);
     LITE_ASSERT(m_load_config.comp_graph);
     m_load_config.comp_graph->set_device_memory_allocator(allocator);
 }
 
 //! share the runtime memory with other network, the weights is not shared
-void NetworkImplDft::share_runtime_memory_with(
-        Network::NetworkImplBase* network_impl) {
+void NetworkImplDft::share_runtime_memory_with(Network::NetworkImplBase* network_impl) {
     LITE_ASSERT(network_impl);
     LITE_ASSERT(m_load_config.comp_graph);
-    m_load_config.comp_graph->share_device_memory_with(
-            *(network_impl->cast_final_safe<NetworkImplDft>()
-                      .m_load_config.comp_graph));
+    m_load_config.comp_graph->share_device_memory_with(*(
+            network_impl->cast_final_safe<NetworkImplDft>().m_load_config.comp_graph));
 }
 
 void NetworkImplDft::set_cpu_inplace_mode() {
-    LITE_ASSERT(m_user_config->device_type == LiteDeviceType::LITE_CPU,
-                "cpu inplace mode is only avaliable in CPU.");
+    LITE_ASSERT(
+            m_user_config->device_type == LiteDeviceType::LITE_CPU,
+            "cpu inplace mode is only avaliable in CPU.");
     m_is_cpu_inplace_mode = true;
     if (m_compnode_locator.type == mgb::CompNode::DeviceType::CPU) {
         m_compnode_locator.device = mgb::CompNode::Locator::DEVICE_CPU_DEFAULT;
@@ -164,14 +159,14 @@ void NetworkImplDft::set_cpu_inplace_mode() {
         LITE_ASSERT(
                 m_compnode_locator.type == CompNode::DeviceType::MULTITHREAD,
                 "cpu inplace mode is only avaliable in CPU.");
-        m_compnode_locator.device =
-                mgb::CompNode::Locator::DEVICE_MULTITHREAD_DEFAULT;
+        m_compnode_locator.device = mgb::CompNode::Locator::DEVICE_MULTITHREAD_DEFAULT;
     }
 }
 
 void NetworkImplDft::set_cpu_threads_number(size_t nr_threads) {
-    LITE_ASSERT(m_user_config->device_type == LiteDeviceType::LITE_CPU,
-                "multi threads mode is only avaliable in CPU.");
+    LITE_ASSERT(
+            m_user_config->device_type == LiteDeviceType::LITE_CPU,
+            "multi threads mode is only avaliable in CPU.");
     if (nr_threads > 1) {
         m_nr_threads = nr_threads;
         m_compnode_locator.type = mgb::CompNode::DeviceType::MULTITHREAD;
@@ -181,8 +176,9 @@ void NetworkImplDft::set_cpu_threads_number(size_t nr_threads) {
 
 void NetworkImplDft::set_runtime_thread_affinity(
         const ThreadAffinityCallback& thread_affinity_callback) {
-    LITE_ASSERT(m_user_config->device_type == LiteDeviceType::LITE_CPU,
-                "multi threads mode is only avaliable in CPU.");
+    LITE_ASSERT(
+            m_user_config->device_type == LiteDeviceType::LITE_CPU,
+            "multi threads mode is only avaliable in CPU.");
     mgb::CompNode::Locator loc;
     m_load_config.comp_node_mapper(loc);
     auto cn = mgb::CompNode::load(loc);
@@ -191,9 +187,7 @@ void NetworkImplDft::set_runtime_thread_affinity(
                 thread_affinity_callback);
     } else {
         mgb::CompNodeEnv::from_comp_node(cn).cpu_env().dispatch(
-                [thread_affinity_callback](void) {
-                    thread_affinity_callback(0);
-                });
+                [thread_affinity_callback](void) { thread_affinity_callback(0); });
     }
 }
 
@@ -213,11 +207,11 @@ void NetworkImplDft::use_tensorrt() {
 
 //! set the callback in async model
 void NetworkImplDft::set_async_callback(const AsyncCallback& callback) {
-    LITE_ASSERT(!m_is_cpu_inplace_mode,
-                "cpu inplace mode not support async mode");
-    LITE_ASSERT(m_user_config->device_type == LiteDeviceType::LITE_CPU ||
-                        m_user_config->device_type == LiteDeviceType::LITE_CUDA,
-                "Now only cpu and cuda>10.0 support async mode");
+    LITE_ASSERT(!m_is_cpu_inplace_mode, "cpu inplace mode not support async mode");
+    LITE_ASSERT(
+            m_user_config->device_type == LiteDeviceType::LITE_CPU ||
+                    m_user_config->device_type == LiteDeviceType::LITE_CUDA,
+            "Now only cpu and cuda>10.0 support async mode");
     m_async = true;
     m_async_callback = std::move(callback);
 }
@@ -256,8 +250,7 @@ void NetworkImplDft::make_output_spec() {
             };
             m_output_spec.emplace_back(load_out, std::move(cb));
         } else {
-            LITE_THROW(ssprintf("no output named : %s in the mode",
-                                out.name.c_str()));
+            LITE_THROW(ssprintf("no output named : %s in the mode", out.name.c_str()));
         }
     }
 }
@@ -273,8 +266,7 @@ void NetworkImplDft::replace_dev_input_pass() {
     //! in m_network_io.input, user can directly change the dev tensor
     //! storage through m_network_io.input.lite_tensor->reset() befor forward
     using DeviceTensorMap =
-            std::unordered_map<std::string,
-                               std::shared_ptr<mgb::DeviceTensorND>>;
+            std::unordered_map<std::string, std::shared_ptr<mgb::DeviceTensorND>>;
     DeviceTensorMap name2dev_tensor;
 
     mgb::ThinHashMap<mgb::HostTensorND*, mgb::SymbolVar> host_val2var;
@@ -283,9 +275,7 @@ void NetworkImplDft::replace_dev_input_pass() {
     auto on_opr = [&](mgb::cg::OperatorNodeBase* opr) {
         if (opr->same_type<mgb::opr::Host2DeviceCopy>()) {
             mgb::HostTensorND* tensor =
-                    opr->cast_final<mgb::opr::Host2DeviceCopy>()
-                            .host_data()
-                            .get();
+                    opr->cast_final<mgb::opr::Host2DeviceCopy>().host_data().get();
             host_val2var[tensor] = opr->output(0);
         }
     };
@@ -309,8 +299,7 @@ void NetworkImplDft::replace_dev_input_pass() {
             name2dev_tensor[config_in.name] = dev_val;
         }
     }
-    auto new_ovar =
-            mgb::cg::replace_vars(m_load_result.output_var_list, inp_var_map);
+    auto new_ovar = mgb::cg::replace_vars(m_load_result.output_var_list, inp_var_map);
     for (size_t i = 0; i < new_ovar.size(); ++i) {
         out_var_map[m_load_result.output_var_list[i]] = new_ovar[i];
     }
@@ -340,25 +329,23 @@ void NetworkImplDft::cross_compnode_model_detect() {
     for (auto i : m_load_result.output_var_list) {
         dep_iter.add(i.node()->owner_opr());
     }
-    m_nr_device_type  = nr_used_device_type.size();
+    m_nr_device_type = nr_used_device_type.size();
 }
 
 void NetworkImplDft::load_model(
         std::shared_ptr<void> model_mem, size_t size,
         std::unordered_map<std::string, LiteAny> separate_config_map) {
     if (!m_loader) {
-        m_input_file = mgb::serialization::InputFile::make_mem_proxy(
-                model_mem, size, false);
-        auto format =
-                mgb::serialization::GraphLoader::identify_graph_dump_format(
-                        *m_input_file);
+        m_input_file =
+                mgb::serialization::InputFile::make_mem_proxy(model_mem, size, false);
+        auto format = mgb::serialization::GraphLoader::identify_graph_dump_format(
+                *m_input_file);
         if (!format.valid()) {
             LITE_THROW("invalid model format");
         }
         m_loader = mgb::serialization::GraphLoader::make(
                 std::move(m_input_file), format.val());
     }
-
 
     //! applay the user configration to mge model
     application_config();
@@ -367,14 +354,12 @@ void NetworkImplDft::load_model(
     if (separate_config_map.find("device_id") != separate_config_map.end()) {
         set_device_id(separate_config_map["device_id"].unsafe_cast<int>());
     }
-    if (separate_config_map.find("number_threads") !=
-                separate_config_map.end() &&
+    if (separate_config_map.find("number_threads") != separate_config_map.end() &&
         separate_config_map["number_threads"].unsafe_cast<size_t>() > 1) {
         set_cpu_threads_number(
                 separate_config_map["number_threads"].unsafe_cast<size_t>());
     }
-    if (separate_config_map.find("enable_inplace_model") !=
-                separate_config_map.end() &&
+    if (separate_config_map.find("enable_inplace_model") != separate_config_map.end() &&
         separate_config_map["enable_inplace_model"].unsafe_cast<bool>()) {
         set_cpu_inplace_mode();
     }
@@ -430,8 +415,7 @@ void NetworkImplDft::wait() {
 
 void NetworkImplDft::finish() const {
     if (m_async) {
-        LITE_ASSERT(m_async_callback,
-                    "The callback func must set when async mode.");
+        LITE_ASSERT(m_async_callback, "The callback func must set when async mode.");
         m_async_callback();
     }
     if (m_finish_callback) {
@@ -478,8 +462,7 @@ void NetworkImplDft::update_input() {
         for (auto&& in_tensor_iter : m_load_result.tensor_map) {
             for (auto&& config_in : m_network_io->inputs) {
                 //! if tensor is set to device input
-                if (in_tensor_iter.first == config_in.name &&
-                    !config_in.is_host) {
+                if (in_tensor_iter.first == config_in.name && !config_in.is_host) {
                     //! if the origin compnode of the tensor is not the device,
                     //! set the input to host
                     if (get_device_from_locator(
@@ -508,14 +491,13 @@ void NetworkImplDft::update_input() {
                             .m_host_tensor = in_tensor_iter.second;
                     config_in.lite_tensor->update_from_implement();
                 } else {
-                    config_in.lite_tensor = std::make_shared<Tensor>(
-                            device_id, stream_id, device_type);
+                    config_in.lite_tensor =
+                            std::make_shared<Tensor>(device_id, stream_id, device_type);
                     config_in.lite_tensor->set_layout(
                             to_lite_layout(in_tensor_iter.second->layout()));
                 }
                 if (config_in.config_layout.ndim &&
-                    !(config_in.config_layout ==
-                      config_in.lite_tensor->get_layout())) {
+                    !(config_in.config_layout == config_in.lite_tensor->get_layout())) {
                     config_in.lite_tensor->set_layout(config_in.config_layout);
                 }
             }
@@ -523,8 +505,8 @@ void NetworkImplDft::update_input() {
         if (!found) {
             IOInner io_in;
             io_in.name = in_tensor_iter.first;
-            io_in.lite_tensor = std::make_shared<Tensor>(device_id, stream_id,
-                                                         device_type, true);
+            io_in.lite_tensor =
+                    std::make_shared<Tensor>(device_id, stream_id, device_type, true);
             TensorHelper::implement(io_in.lite_tensor)
                     ->cast_final_safe<TensorImplDft>()
                     .m_host_tensor = in_tensor_iter.second;
@@ -533,11 +515,9 @@ void NetworkImplDft::update_input() {
         }
     }
     //! delete the IO that is not the network
-    for (auto it = m_network_io->inputs.begin();
-         it != m_network_io->inputs.end();) {
+    for (auto it = m_network_io->inputs.begin(); it != m_network_io->inputs.end();) {
         if (it->lite_tensor == nullptr) {
-            LITE_LOG("%s is not the network input, ignore it.",
-                     it->name.c_str());
+            LITE_LOG("%s is not the network input, ignore it.", it->name.c_str());
             it = m_network_io->inputs.erase(it);
         } else {
             it++;
@@ -557,13 +537,13 @@ void NetworkImplDft::update_output() {
     //! delete the output that is not the network
     for (auto out_it = m_network_io->outputs.begin();
          out_it != m_network_io->outputs.end();) {
-        if (std::find_if(m_load_result.output_var_list.begin(),
-                         m_load_result.output_var_list.end(),
-                         [out_it](const mgb::SymbolVar var) {
-                             return var.node()->name() == out_it->name;
-                         }) == m_load_result.output_var_list.end()) {
-            LITE_LOG("%s is not the network output, ignore it.",
-                     out_it->name.c_str());
+        if (std::find_if(
+                    m_load_result.output_var_list.begin(),
+                    m_load_result.output_var_list.end(),
+                    [out_it](const mgb::SymbolVar var) {
+                        return var.node()->name() == out_it->name;
+                    }) == m_load_result.output_var_list.end()) {
+            LITE_LOG("%s is not the network output, ignore it.", out_it->name.c_str());
             out_it = m_network_io->outputs.erase(out_it);
         } else {
             out_it++;
@@ -571,8 +551,9 @@ void NetworkImplDft::update_output() {
     }
     //! user config the output tensor, so only compute the config output
     if (m_compute_configured_output_only) {
-        LITE_ASSERT(m_network_io->outputs.size() > 0,
-                    "compute configured output only with no configure output.");
+        LITE_ASSERT(
+                m_network_io->outputs.size() > 0,
+                "compute configured output only with no configure output.");
         for (auto out_it = m_network_io->outputs.begin();
              out_it != m_network_io->outputs.end(); out_it++) {
             //! use pinned memory to copy form device
@@ -580,25 +561,23 @@ void NetworkImplDft::update_output() {
                 out_it->lite_tensor = std::make_shared<Tensor>(
                         device_id, stream_id, device_type, true);
             } else {
-                out_it->lite_tensor = std::make_shared<Tensor>(
-                        device_id, stream_id, device_type);
+                out_it->lite_tensor =
+                        std::make_shared<Tensor>(device_id, stream_id, device_type);
             }
         }
         //! user not set, use default output
     } else {
         for (auto&& out : m_load_result.output_var_list) {
-            auto it = std::find_if(m_network_io->outputs.begin(),
-                                   m_network_io->outputs.end(),
-                                   [&out](const IOInner io) {
-                                       return io.name == out.node()->name();
-                                   });
+            auto it = std::find_if(
+                    m_network_io->outputs.begin(), m_network_io->outputs.end(),
+                    [&out](const IOInner io) { return io.name == out.node()->name(); });
             if (it != m_network_io->outputs.end()) {
                 if (it->is_host) {
                     it->lite_tensor = std::make_shared<Tensor>(
                             device_id, stream_id, device_type, true);
                 } else {
-                    it->lite_tensor = std::make_shared<Tensor>(
-                            device_id, stream_id, device_type);
+                    it->lite_tensor =
+                            std::make_shared<Tensor>(device_id, stream_id, device_type);
                 }
             } else {
                 IOInner output;
@@ -611,18 +590,16 @@ void NetworkImplDft::update_output() {
     }
 }
 
-std::shared_ptr<Tensor> NetworkImplDft::get_io_tensor(std::string io_name,
-                                                      LiteTensorPhase phase) {
-    if (phase == LiteTensorPhase::LITE_INPUT ||
-        phase == LiteTensorPhase::LITE_IO) {
+std::shared_ptr<Tensor> NetworkImplDft::get_io_tensor(
+        std::string io_name, LiteTensorPhase phase) {
+    if (phase == LiteTensorPhase::LITE_INPUT || phase == LiteTensorPhase::LITE_IO) {
         for (auto&& config_in : m_network_io->inputs) {
             if (io_name == config_in.name) {
                 return config_in.lite_tensor;
             }
         }
     }
-    if (phase == LiteTensorPhase::LITE_OUTPUT ||
-        phase == LiteTensorPhase::LITE_IO) {
+    if (phase == LiteTensorPhase::LITE_OUTPUT || phase == LiteTensorPhase::LITE_IO) {
         for (auto&& config_out : m_network_io->outputs) {
             if (io_name == config_out.name) {
                 config_out.lite_tensor->update_from_implement();
@@ -648,31 +625,27 @@ std::shared_ptr<Tensor> NetworkImplDft::get_output_tensor(size_t index) {
 }
 
 //! set opr algorithm selection strategy in the network
-void NetworkImplDft::set_network_algo_policy(LiteAlgoSelectStrategy strategy,
-                                             uint32_t shared_batch_size,
-                                             bool binary_equal_between_batch) {
+void NetworkImplDft::set_network_algo_policy(
+        LiteAlgoSelectStrategy strategy, uint32_t shared_batch_size,
+        bool binary_equal_between_batch) {
     using S = megdnn::param::ExecutionPolicy::Strategy;
     auto dst_strategy = static_cast<S>(0);
-    if (static_cast<uint32_t>(strategy) &
-        LiteAlgoSelectStrategy::LITE_ALGO_HEURISTIC) {
+    if (static_cast<uint32_t>(strategy) & LiteAlgoSelectStrategy::LITE_ALGO_HEURISTIC) {
         dst_strategy = dst_strategy | S::HEURISTIC;
     }
-    if (static_cast<uint32_t>(strategy) &
-        LiteAlgoSelectStrategy::LITE_ALGO_PROFILE) {
+    if (static_cast<uint32_t>(strategy) & LiteAlgoSelectStrategy::LITE_ALGO_PROFILE) {
         dst_strategy = dst_strategy | S::PROFILE;
     }
     if (static_cast<uint32_t>(strategy) &
         LiteAlgoSelectStrategy::LITE_ALGO_REPRODUCIBLE) {
         dst_strategy = dst_strategy | S::REPRODUCIBLE;
     }
-    if (static_cast<uint32_t>(strategy) &
-        LiteAlgoSelectStrategy::LITE_ALGO_OPTIMIZED) {
+    if (static_cast<uint32_t>(strategy) & LiteAlgoSelectStrategy::LITE_ALGO_OPTIMIZED) {
         dst_strategy = dst_strategy | S::OPTIMIZED;
     }
     m_execution_policy = dst_strategy;
 
-    auto&& fast_run_config =
-            m_load_config.comp_graph->options().fast_run_config;
+    auto&& fast_run_config = m_load_config.comp_graph->options().fast_run_config;
     fast_run_config.binary_equal_between_batch = binary_equal_between_batch;
     fast_run_config.shared_batch_size = shared_batch_size;
 
@@ -749,8 +722,7 @@ void NetworkImplDft::enable_profile_performance(std::string profile_json_file) {
 #if MGB_OPENCL
     mgb::CompNode::enable_opencl_profile(true);
 #endif
-    m_profiler = std::make_unique<mgb::GraphProfiler>(
-            m_load_config.comp_graph.get());
+    m_profiler = std::make_unique<mgb::GraphProfiler>(m_load_config.comp_graph.get());
     m_profiler_output_file = profile_json_file;
 #else
     LITE_MARK_USED_VAR(profile_json_file);

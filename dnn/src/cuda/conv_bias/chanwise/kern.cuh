@@ -25,8 +25,8 @@ namespace conv_bias {
 namespace chanwise {
 
 struct Param {
-    uint32_t batch, src_chl, src_h, src_w, chl_mul, flt_h, flt_w, out_h, out_w,
-            pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w;
+    uint32_t batch, src_chl, src_h, src_w, chl_mul, flt_h, flt_w, out_h, out_w, pad_h,
+            pad_w, stride_h, stride_w, dilation_h, dilation_w;
 #if MEGDNN_CC_HOST
     static Param from_fwd_args(const BiasForwardSizeArgs& args) {
 #define U(v) static_cast<uint32_t>(v)
@@ -54,16 +54,17 @@ struct Param {
 };
 
 template <typename T>
-void run_fwd(T* dst, const T* src, const T* flt, const Param& param,
-             cudaStream_t stream);
+void run_fwd(
+        T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream);
 
 template <typename T>
-void run_fwd_small(T* dst, const T* src, const T* flt, const Param& param,
-                   cudaStream_t stream);
+void run_fwd_small(
+        T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream);
 
 // implemented in fwd_8x8x32.cu
-void run_fwd_8x8x32(int32_t* dst, const int8_t* src, const int8_t* flt,
-                    const Param& param, cudaStream_t stream);
+void run_fwd_8x8x32(
+        int32_t* dst, const int8_t* src, const int8_t* flt, const Param& param,
+        cudaStream_t stream);
 
 }  // namespace chanwise
 }  // namespace conv_bias

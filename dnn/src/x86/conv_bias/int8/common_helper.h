@@ -50,8 +50,7 @@ static inline __m128i _mm_cvtepi8_epi16_from_ptr(const int8_t* ptr) {
 static inline void transpose_4x2xn_int8_int16(
         const int8_t* inptr0_0, const int8_t* inptr0_1, const int8_t* inptr1_0,
         const int8_t* inptr1_1, const int8_t* inptr2_0, const int8_t* inptr2_1,
-        const int8_t* inptr3_0, const int8_t* inptr3_1, int16_t* out_ptr,
-        int length) {
+        const int8_t* inptr3_0, const int8_t* inptr3_1, int16_t* out_ptr, int length) {
     for (int i = 0; i < length; i++) {
         *out_ptr++ = (int16_t)(*inptr0_0++);
         *out_ptr++ = (int16_t)(*inptr0_1++);
@@ -105,8 +104,8 @@ static inline void transpose_4x2x8_int8_int16(
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-static inline void transpose_2x16_int8(const int8_t* inptr0,
-                                       const int8_t* inptr1, int8_t* out_ptr) {
+static inline void transpose_2x16_int8(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* out_ptr) {
     __m128i r0 = _mm_loadu_si128((__m128i*)inptr0);
     __m128i r1 = _mm_loadu_si128((__m128i*)inptr1);
     __m128i r01l = _mm_unpacklo_epi8(r0, r1);
@@ -115,9 +114,8 @@ static inline void transpose_2x16_int8(const int8_t* inptr0,
     _mm_storeu_si128((__m128i*)(out_ptr + 16), r01h);
 }
 
-static inline void transpose_2xn_int8(const int8_t* inptr0,
-                                      const int8_t* inptr1, int8_t* out_ptr,
-                                      int length) {
+static inline void transpose_2xn_int8(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* out_ptr, int length) {
     for (int i = 0; i < length; i++) {
         *out_ptr++ = *inptr0++;
         *out_ptr++ = *inptr1++;
@@ -128,9 +126,9 @@ static inline void append_zero_and_inc(int8_t*& out_ptr, int length) {
     memset(out_ptr, 0, sizeof(int8_t) * length);
     out_ptr += length;
 }
-static inline void append_zero_and_inc(int8_t*& even_out_ptr,
-                                       int8_t*& odd_out_ptr, const int length,
-                                       const int c_step) {
+static inline void append_zero_and_inc(
+        int8_t*& even_out_ptr, int8_t*& odd_out_ptr, const int length,
+        const int c_step) {
     int even_length = div_ceil(length, c_step) * c_step;
     int odd_length = length - even_length;
     memset(even_out_ptr, 0, sizeof(int8_t) * even_length);
@@ -143,10 +141,9 @@ static inline void append_zero(int8_t* out_ptr, int length) {
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-static inline void transpose_2x16_int8_odd_even(const int8_t* inptr0,
-                                                const int8_t* inptr1,
-                                                int8_t* odd_out_ptr,
-                                                int8_t* even_out_ptr) {
+static inline void transpose_2x16_int8_odd_even(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* odd_out_ptr,
+        int8_t* even_out_ptr) {
     const static __m128i shuffle0 =
             _mm_setr_epi8(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
     __m128i r0 = _mm_loadu_si128((__m128i*)inptr0);
@@ -161,11 +158,9 @@ static inline void transpose_2x16_int8_odd_even(const int8_t* inptr0,
     _mm_storeu_si128((__m128i*)even_out_ptr, even);
 }
 
-static inline void transpose_2xn_int8_odd_even(const int8_t* inptr0,
-                                               const int8_t* inptr1,
-                                               int8_t* odd_out_ptr,
-                                               int8_t* even_out_ptr,
-                                               int length) {
+static inline void transpose_2xn_int8_odd_even(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* odd_out_ptr,
+        int8_t* even_out_ptr, int length) {
     for (int i = 0; i < length; i++) {
         if (i % 2 == 0) {
             *odd_out_ptr++ = *inptr0++;

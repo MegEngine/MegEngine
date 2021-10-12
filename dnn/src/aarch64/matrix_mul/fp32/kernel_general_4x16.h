@@ -12,7 +12,6 @@
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 
-
 namespace megdnn {
 namespace aarch64 {
 namespace matmul_general_4x16 {
@@ -39,8 +38,9 @@ namespace matmul_general_4x16 {
 //  +--+ - - - -  +--------+--------+--------+--------+
 //
 //                        Accumulator
-void kern_4x16(const float* packA, const float* packB, int K,
-               float* output, int LDC, bool is_first_k, int m_remain) {
+void kern_4x16(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k, int m_remain) {
     const float* a_ptr = packA;
     const float* b_ptr = packB;
     int oddk = (K & 1);
@@ -224,14 +224,14 @@ void kern_4x16(const float* packA, const float* packB, int K,
 
             "6:\n" STORE_C
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
               [m_remain] "+r"(m_remain), [outptr] "+r"(outptr)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "x1", "x2", "x3", "x9",
-              "x10", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "x1", "x2", "x3", "x9", "x10", "cc",
+              "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -263,8 +263,9 @@ void kern_4x16(const float* packA, const float* packB, int K,
 //  +--+--+ - - - -  +--------+
 //
 //                        Accumulator
-void kern_4x4(const float* packA, const float* packB, int K, float* output,
-              int LDC, bool is_first_k, int m_remain, int n_remain) {
+void kern_4x4(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     const float* a_ptr = packA;
     const float* b_ptr = packB;
     int oddk = (K & 1);
@@ -330,99 +331,100 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
     STORE_LINE("6", "2")        \
     STORE_LINE("7", "3")        \
     "105:\n"
-// clang-format on
+    // clang-format on
 
-            asm volatile(
-                    // load accumulator C
-                    "add x1, x0, %x[LDC]\n"
-                    "add x2, x1, %x[LDC]\n"
-                    "add x3, x2, %x[LDC]\n"
+    asm volatile(
+            // load accumulator C
+            "add x1, x0, %x[LDC]\n"
+            "add x2, x1, %x[LDC]\n"
+            "add x3, x2, %x[LDC]\n"
 
-                    "cmp %w[is_first_k], #1\n"
-                    "beq 1f\n" LOAD_C
+            "cmp %w[is_first_k], #1\n"
+            "beq 1f\n" LOAD_C
 
-                    "b 2f\n"
+            "b 2f\n"
 
-                    "1:\n"
-                    "eor v4.16b, v4.16b, v4.16b\n"
-                    "eor v5.16b, v5.16b, v5.16b\n"
-                    "eor v6.16b, v6.16b, v6.16b\n"
-                    "eor v7.16b, v7.16b, v7.16b\n"
+            "1:\n"
+            "eor v4.16b, v4.16b, v4.16b\n"
+            "eor v5.16b, v5.16b, v5.16b\n"
+            "eor v6.16b, v6.16b, v6.16b\n"
+            "eor v7.16b, v7.16b, v7.16b\n"
 
-                    "2: \n"
-                    "ld1 {v0.4s}, [%[a_ptr]], 16\n"
-                    "ld1 {v2.4s}, [%[b_ptr]], 16\n"
-                    "cmp %w[K], #0\n"
-                    "beq 4f\n"
+            "2: \n"
+            "ld1 {v0.4s}, [%[a_ptr]], 16\n"
+            "ld1 {v2.4s}, [%[b_ptr]], 16\n"
+            "cmp %w[K], #0\n"
+            "beq 4f\n"
 
-                    "3:\n"
-                    "ld1 {v1.4s}, [%[a_ptr]], 16\n"
-                    "ld1 {v3.4s}, [%[b_ptr]], 16\n"
-                    "fmla v4.4s, v2.4s, v0.s[0]\n"
-                    "fmla v5.4s, v2.4s, v0.s[1]\n"
-                    "fmla v6.4s, v2.4s, v0.s[2]\n"
-                    "fmla v7.4s, v2.4s, v0.s[3]\n"
+            "3:\n"
+            "ld1 {v1.4s}, [%[a_ptr]], 16\n"
+            "ld1 {v3.4s}, [%[b_ptr]], 16\n"
+            "fmla v4.4s, v2.4s, v0.s[0]\n"
+            "fmla v5.4s, v2.4s, v0.s[1]\n"
+            "fmla v6.4s, v2.4s, v0.s[2]\n"
+            "fmla v7.4s, v2.4s, v0.s[3]\n"
 
-                    "ld1 {v0.4s}, [%[a_ptr]], 16\n"
-                    "ld1 {v2.4s}, [%[b_ptr]], 16\n"
-                    "fmla v4.4s, v3.4s, v1.s[0]\n"
-                    "fmla v5.4s, v3.4s, v1.s[1]\n"
-                    "fmla v6.4s, v3.4s, v1.s[2]\n"
-                    "fmla v7.4s, v3.4s, v1.s[3]\n"
+            "ld1 {v0.4s}, [%[a_ptr]], 16\n"
+            "ld1 {v2.4s}, [%[b_ptr]], 16\n"
+            "fmla v4.4s, v3.4s, v1.s[0]\n"
+            "fmla v5.4s, v3.4s, v1.s[1]\n"
+            "fmla v6.4s, v3.4s, v1.s[2]\n"
+            "fmla v7.4s, v3.4s, v1.s[3]\n"
 
-                    "subs %w[K], %w[K], #1\n"
-                    "bne 3b\n"
+            "subs %w[K], %w[K], #1\n"
+            "bne 3b\n"
 
-                    "4:\n"
-                    "cmp %w[oddk], #1\n"
-                    "beq 5f\n"
+            "4:\n"
+            "cmp %w[oddk], #1\n"
+            "beq 5f\n"
 
-                    // Even tail
-                    "ld1 {v1.4s}, [%[a_ptr]], 16\n"
-                    "ld1 {v3.4s}, [%[b_ptr]], 16\n"
-                    "fmla v4.4s, v2.4s, v0.s[0]\n"
-                    "fmla v5.4s, v2.4s, v0.s[1]\n"
-                    "fmla v6.4s, v2.4s, v0.s[2]\n"
-                    "fmla v7.4s, v2.4s, v0.s[3]\n"
+            // Even tail
+            "ld1 {v1.4s}, [%[a_ptr]], 16\n"
+            "ld1 {v3.4s}, [%[b_ptr]], 16\n"
+            "fmla v4.4s, v2.4s, v0.s[0]\n"
+            "fmla v5.4s, v2.4s, v0.s[1]\n"
+            "fmla v6.4s, v2.4s, v0.s[2]\n"
+            "fmla v7.4s, v2.4s, v0.s[3]\n"
 
-                    "fmla v4.4s, v3.4s, v1.s[0]\n"
-                    "fmla v5.4s, v3.4s, v1.s[1]\n"
-                    "fmla v6.4s, v3.4s, v1.s[2]\n"
-                    "fmla v7.4s, v3.4s, v1.s[3]\n"
+            "fmla v4.4s, v3.4s, v1.s[0]\n"
+            "fmla v5.4s, v3.4s, v1.s[1]\n"
+            "fmla v6.4s, v3.4s, v1.s[2]\n"
+            "fmla v7.4s, v3.4s, v1.s[3]\n"
 
-                    "b 6f\n"
+            "b 6f\n"
 
-                    // odd tail
-                    "5:\n"
-                    "fmla v4.4s, v2.4s, v0.s[0]\n"
-                    "fmla v5.4s, v2.4s, v0.s[1]\n"
-                    "fmla v6.4s, v2.4s, v0.s[2]\n"
-                    "fmla v7.4s, v2.4s, v0.s[3]\n"
+            // odd tail
+            "5:\n"
+            "fmla v4.4s, v2.4s, v0.s[0]\n"
+            "fmla v5.4s, v2.4s, v0.s[1]\n"
+            "fmla v6.4s, v2.4s, v0.s[2]\n"
+            "fmla v7.4s, v2.4s, v0.s[3]\n"
 
-                    "6:\n" STORE_C
+            "6:\n" STORE_C
 
-                    : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                      [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                      [oddk] "+r"(oddk), [m_remain] "+r"(m_remain),
-                      [n_remain] "+r"(n_remain), [outptr] "+r"(outptr)
-                    :
-                    : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "x1",
-                      "x2", "x3", "x10", "cc", "memory");
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [LDC] "+r"(LDC),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+              [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain),
+              [outptr] "+r"(outptr)
+            :
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "x1", "x2", "x3", "x10",
+              "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
 #undef STORE_C
 }
 
-void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
-                         int ymax, int k0, int kmax) {
+void sgemm_4x16_pack_A_n(
+        float* outptr, const float* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     float zerobuff[4];
     std::memset(zerobuff, 0, sizeof(float) * 4);
-    constexpr int PACK_SIZE = 4*4;
+    constexpr int PACK_SIZE = 4 * 4;
 
     int y = y0;
     for (; y + 3 < ymax; y += 4) {
-       // printf("main loop pack_a_n %p \n",outptr);
+        // printf("main loop pack_a_n %p \n",outptr);
         const float* inptr0 = inptr + y * ldin + k0;
         const float* inptr1 = inptr0 + ldin;
         const float* inptr2 = inptr1 + ldin;
@@ -459,9 +461,11 @@ void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -478,9 +482,11 @@ void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
             if (y + 3 >= ymax) {
                 switch (y + 3 - ymax) {
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -493,8 +499,8 @@ void sgemm_4x16_pack_A_n(float * outptr, const float * inptr, int ldin, int y0,
     }
 }
 
-void sgemm_4x16_pack_A_t(float* out, const float* in, int ldin, int x0,
-                         int xmax, int k0, int kmax) {
+void sgemm_4x16_pack_A_t(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int ksize = kmax - k0;
     int ksize4 = (ksize << 2);
     float* outptr_base = out;
@@ -515,8 +521,7 @@ void sgemm_4x16_pack_A_t(float* out, const float* in, int ldin, int x0,
         auto outptr = outptr_base;
         for (; x + 4 <= xmax; x += 4) {
             auto outptr_interleave = outptr;
-            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
 
@@ -546,8 +551,8 @@ void sgemm_4x16_pack_A_t(float* out, const float* in, int ldin, int x0,
     }
 }
 
-void sgemm_4x16_pack_B_n(float* out, const float* in, int ldin,
-                         int x0, int xmax, int k0, int kmax) {
+void sgemm_4x16_pack_B_n(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int ksize = kmax - k0;
     int ksize16 = ksize * 16;
     int ksize4 = (ksize << 2);
@@ -570,15 +575,13 @@ void sgemm_4x16_pack_B_n(float* out, const float* in, int ldin,
         auto outptr = outptr_base;
         for (; x + 16 <= xmax; x += 16) {
             auto outptr_interleave = outptr;
-            interleave_4x16_1_s(inptr, inptr1, inptr2, inptr3,
-                                outptr_interleave);
+            interleave_4x16_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize16;
         }
         outptr = outptr_base4;
         for (; x + 4 <= xmax; x += 4) {
             auto outptr_interleave = outptr;
-            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                               outptr_interleave);
+            interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
             outptr += ksize4;
         }
 
@@ -616,8 +619,8 @@ void sgemm_4x16_pack_B_n(float* out, const float* in, int ldin,
     }
 }
 
-void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
-                         int y0, int ymax, int k0, int kmax) {
+void sgemm_4x16_pack_B_t(
+        float* out, const float* in, int ldin, int y0, int ymax, int k0, int kmax) {
     float* outptr = out;
     const float* inptr = in;
     float zerobuff[4];
@@ -642,8 +645,7 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
 
             int x = (kmax - k0);
             for (; x > 3; x -= 4) {
-                transpose_4x4_1_s(inptr0, inptr1, inptr2, inptr3, outptr_inner,
-                                  64);
+                transpose_4x4_1_s(inptr0, inptr1, inptr2, inptr3, outptr_inner, 64);
                 outptr_inner += 64;
             }
             for (; x > 0; x--) {
@@ -676,9 +678,11 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -696,9 +700,11 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
                 switch ((y + 3) - ymax) {
                     /* Everything falls through in here */
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -711,8 +717,8 @@ void sgemm_4x16_pack_B_t(float* out, const float* in, int ldin,
     }
 }
 
-} // matmul_general_4x16
-} // aarch64
-} // megdnn
+}  // namespace matmul_general_4x16
+}  // namespace aarch64
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

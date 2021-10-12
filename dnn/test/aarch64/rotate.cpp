@@ -9,36 +9,34 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "test/common/rotate.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
 
 #include "test/aarch64/fixture.h"
 
 namespace megdnn {
 namespace test {
 
-TEST_F(AARCH64, ROTATE)
-{
+TEST_F(AARCH64, ROTATE) {
     using namespace rotate;
     std::vector<TestArg> args = get_args();
     Checker<Rotate> checker(handle());
 
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         checker.set_param(arg.param)
-            .set_dtype(0, arg.dtype)
-            .set_dtype(1, arg.dtype)
-            .execs({arg.src, {}});
+                .set_dtype(0, arg.dtype)
+                .set_dtype(1, arg.dtype)
+                .execs({arg.src, {}});
     }
 }
 
-TEST_F(AARCH64, BENCHMARK_ROTATE)
-{
+TEST_F(AARCH64, BENCHMARK_ROTATE) {
     using namespace rotate;
     using Param = param::Rotate;
 
 #define BENCHMARK_PARAM(benchmarker) \
-        benchmarker.set_param(param); \
-        benchmarker.set_dtype(0, dtype::Uint8());
+    benchmarker.set_param(param);    \
+    benchmarker.set_dtype(0, dtype::Uint8());
 
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         auto handle_naive = create_cpu_handle(2);
@@ -56,8 +54,8 @@ TEST_F(AARCH64, BENCHMARK_ROTATE)
 
     Param param;
     TensorShapeArray shapes = {
-        {1, 100, 100, 1},
-        {2, 100, 100, 3},
+            {1, 100, 100, 1},
+            {2, 100, 100, 3},
     };
 
     param.clockwise = true;
@@ -67,7 +65,6 @@ TEST_F(AARCH64, BENCHMARK_ROTATE)
     run(shapes, param);
 }
 
-
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

@@ -48,8 +48,7 @@ void CpuCompNode::CpuDispatchableBase::add_callback(Task&& task) {
     dispatch(std::move(task));
 }
 
-class CpuCompNode::WorkerQueue final
-        : public AsyncQueueSC<TaskElem, WorkerQueue> {
+class CpuCompNode::WorkerQueue final : public AsyncQueueSC<TaskElem, WorkerQueue> {
     const Locator m_locator;
     std::shared_ptr<ThreadPool> m_thread_pool = nullptr;
 
@@ -92,9 +91,7 @@ public:
         }
     }
 
-    int nr_threads() {
-        return m_thread_pool ? m_thread_pool->nr_threads() : 1_z;
-    }
+    int nr_threads() { return m_thread_pool ? m_thread_pool->nr_threads() : 1_z; }
 
     ThreadPool* get_thread_pool() { return m_thread_pool.get(); }
 };
@@ -114,17 +111,18 @@ class CpuCompNode::SeqRecorderImpl final : public CompNodeSeqRecorder {
      */
     void check_the_same_comp_node(const CompNode& comp_node) const {
         if (mgb_unlikely(comp_node.valid())) {
-            mgb_assert(m_record_compnode == comp_node,
-                       "CompNode %s can't hook in CompNode %s when recording\n",
-                       comp_node.locator().to_string().c_str(),
-                       m_record_compnode.locator().to_string().c_str());
+            mgb_assert(
+                    m_record_compnode == comp_node,
+                    "CompNode %s can't hook in CompNode %s when recording\n",
+                    comp_node.locator().to_string().c_str(),
+                    m_record_compnode.locator().to_string().c_str());
         }
     }
 
 public:
-    SeqRecorderImpl(SeqRecorderImpl** self_pointer,
-                    std::shared_ptr<ThreadPool> thread_pool,
-                    const CompNode& comp_node)
+    SeqRecorderImpl(
+            SeqRecorderImpl** self_pointer, std::shared_ptr<ThreadPool> thread_pool,
+            const CompNode& comp_node)
             : m_self_pointer{self_pointer},
               m_thread_pool{thread_pool},
               m_record_compnode{comp_node} {
@@ -164,9 +162,10 @@ public:
         mgb_assert(m_stopped, "not stopped yet");
         if (m_first_replay) {
             // check that dispatch is not called from tasks
-            mgb_assert(!*m_self_pointer,
-                       "no other seq recorder should be created before first "
-                       "replay");
+            mgb_assert(
+                    !*m_self_pointer,
+                    "no other seq recorder should be created before first "
+                    "replay");
             *m_self_pointer = this;
         }
         MGB_TRY {
@@ -194,14 +193,12 @@ public:
 
     void on_alloc(const CompNode& comp_node) {
         check_the_same_comp_node(comp_node);
-        mgb_assert(m_fake_exec,
-                   "alloc is disallowed during comp node seq recording");
+        mgb_assert(m_fake_exec, "alloc is disallowed during comp node seq recording");
     }
 
     void on_free(const CompNode& comp_node) {
         check_the_same_comp_node(comp_node);
-        mgb_assert(m_fake_exec,
-                   "free is disallowed during comp node seq recording");
+        mgb_assert(m_fake_exec, "free is disallowed during comp node seq recording");
     }
 
     void on_sync(const CompNode& comp_node) {
@@ -210,31 +207,32 @@ public:
     }
 
     void dispatch(Task&& task, const CompNode& comp_node) {
-        mgb_assert(!m_synchronized,
-                   "no more tasks should be dispatched after synchronization");
+        mgb_assert(
+                !m_synchronized,
+                "no more tasks should be dispatched after synchronization");
         auto kern = [task](size_t, size_t) { task(); };
-        dispatch_allow_after_sync({std::move(kern), static_cast<size_t>(1_z)},
-                                  comp_node);
+        dispatch_allow_after_sync(
+                {std::move(kern), static_cast<size_t>(1_z)}, comp_node);
     }
     void dispatch_allow_after_sync(Task&& task, const CompNode& comp_node) {
         check_the_same_comp_node(comp_node);
-        mgb_assert(!m_stopped,
-                   "dispatch should not be called after recording is stopped");
+        mgb_assert(
+                !m_stopped, "dispatch should not be called after recording is stopped");
         if (!m_fake_exec) {
             auto kern = [task](size_t, size_t) { task(); };
             m_tasks.push_back({std::move(kern), static_cast<size_t>(1_z)});
         }
     }
     void dispatch(TaskElem&& task_elem, const CompNode& comp_node) {
-        mgb_assert(!m_synchronized,
-                   "no more tasks should be dispatched after synchronization");
+        mgb_assert(
+                !m_synchronized,
+                "no more tasks should be dispatched after synchronization");
         dispatch_allow_after_sync(std::move(task_elem), comp_node);
     }
-    void dispatch_allow_after_sync(TaskElem&& task_elem,
-                                   const CompNode& comp_node) {
+    void dispatch_allow_after_sync(TaskElem&& task_elem, const CompNode& comp_node) {
         check_the_same_comp_node(comp_node);
-        mgb_assert(!m_stopped,
-                   "dispatch should not be called after recording is stopped");
+        mgb_assert(
+                !m_stopped, "dispatch should not be called after recording is stopped");
         if (!m_fake_exec) {
             m_tasks.push_back(task_elem);
         }
@@ -257,8 +255,9 @@ protected:
     Locator m_locator, m_locator_logical;
 
 public:
-    CompNodeBaseImpl(const Locator& locator, const Locator& locator_logical,
-                     free_func_t fd, free_func_t fh)
+    CompNodeBaseImpl(
+            const Locator& locator, const Locator& locator_logical, free_func_t fd,
+            free_func_t fh)
             : CpuDispatchableBase(fd, fh),
               m_locator(locator),
               m_locator_logical(locator_logical) {}
@@ -274,8 +273,7 @@ public:
 #else
         void* ptr = nullptr;
         auto err = posix_memalign(&ptr, alignment, size);
-        mgb_assert(!err, "failed to malloc %zubytes with align %zu", size,
-                   alignment);
+        mgb_assert(!err, "failed to malloc %zubytes with align %zu", size, alignment);
         return ptr;
 #endif
     }
@@ -292,8 +290,7 @@ public:
 
     void* alloc_host(size_t size) override { return mgb_aligned_alloc(size); }
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         // use lambda capture to avoid memory allocation in std::bind
         auto do_copy = [host_ptr, device_ptr, size]() {
             std::memcpy(host_ptr, device_ptr, size);
@@ -301,8 +298,7 @@ public:
         m_env.cpu_env().dispatch(do_copy);
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
         // use lambda capture to avoid memory allocation in std::bind
         auto do_copy = [device_ptr, host_ptr, size]() {
             std::memcpy(device_ptr, host_ptr, size);
@@ -310,18 +306,14 @@ public:
         m_env.cpu_env().dispatch(do_copy);
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override {
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override {
         dest_impl->copy_to_device(dest, src, size);
     }
 
-    size_t get_mem_addr_alignment() override {
-        return m_env.property().mem_alignment;
-    }
+    size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
 
-    void dispatch(Task&& task) override {
-        m_env.cpu_env().dispatch(std::move(task));
-    }
+    void dispatch(Task&& task) override { m_env.cpu_env().dispatch(std::move(task)); }
 
     MemNode mem_node() override {
         // TODO: numa nodes
@@ -352,8 +344,8 @@ class CpuCompNode::WorkerQueue::DispatcherImpl final : public CPUDispatcher {
     CompNodeBaseImpl* const m_comp_node;
 
 public:
-    DispatcherImpl(const std::shared_ptr<WorkerQueue>& queue,
-                   CompNodeBaseImpl* comp_node)
+    DispatcherImpl(
+            const std::shared_ptr<WorkerQueue>& queue, CompNodeBaseImpl* comp_node)
             : m_queue{queue}, m_comp_node{comp_node} {}
 
     void dispatch(Task&& task) override {
@@ -398,9 +390,7 @@ public:
         if (thread_pool) {
             thread_pool->set_affinity(affinity_cb);
         } else {
-            auto affinity_run = [affinity_cb](size_t, size_t) {
-                affinity_cb(0);
-            };
+            auto affinity_run = [affinity_cb](size_t, size_t) { affinity_cb(0); };
             m_queue->add_task({affinity_run, 1_z});
         }
     }
@@ -415,8 +405,9 @@ class InplaceCPUDispatcher final : public CPUDispatcher {
     CompNodeBaseImpl* const m_comp_node;
 
 public:
-    InplaceCPUDispatcher(CompNodeBaseImpl* comp_node,
-                         std::shared_ptr<ThreadPool> thread_pool = nullptr)
+    InplaceCPUDispatcher(
+            CompNodeBaseImpl* comp_node,
+            std::shared_ptr<ThreadPool> thread_pool = nullptr)
             : m_thread_pool(thread_pool), m_comp_node(comp_node) {}
 
     void dispatch(Task&& task) override {
@@ -493,10 +484,9 @@ public:
     }
     using CpuEventImpl = CpuDispatchableBase::EventImpl;
 
-    CompNodeDefaultImpl(const Locator& locator,
-                           const Locator& locator_logical)
-            : CompNodeBaseImpl(locator, locator_logical, static_free_device,
-                               static_free_host) {
+    CompNodeDefaultImpl(const Locator& locator, const Locator& locator_logical)
+            : CompNodeBaseImpl(
+                      locator, locator_logical, static_free_device, static_free_host) {
         mgb_assert(
                 locator.type == DeviceType::CPU &&
                         locator.device == Locator::DEVICE_CPU_DEFAULT,
@@ -557,8 +547,7 @@ public:
     SeqRecorderImpl* cur_recorder() const override { return nullptr; }
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompNodeDefaultImpl);
-CompNodeDefaultImpl* CompNodeDefaultImpl::sm_default_cpu_comp_node_ptr =
-        nullptr;
+CompNodeDefaultImpl* CompNodeDefaultImpl::sm_default_cpu_comp_node_ptr = nullptr;
 
 //! ==================== CompNodeRecorderImpl ======================
 class CpuCompNode::CompNodeRecorderImpl final : public CompNodeBaseImpl {
@@ -582,10 +571,11 @@ class CpuCompNode::CompNodeRecorderImpl final : public CompNodeBaseImpl {
         }
 
         void do_device_wait_by(Impl*) override {
-            mgb_throw(MegBrainError,
-                      "device_wait() should not be called on events created "
-                      "during "
-                      "comp node seq recording");
+            mgb_throw(
+                    MegBrainError,
+                    "device_wait() should not be called on events created "
+                    "during "
+                    "comp node seq recording");
         }
 
     public:
@@ -596,9 +586,8 @@ class CpuCompNode::CompNodeRecorderImpl final : public CompNodeBaseImpl {
 #if MGB_HAVE_THREAD
         void host_wait_cv() override {
             CpuDispatchableBase::EventImpl::host_wait_cv();
-            auto thread_pool =
-                    static_cast<CompNodeRecorderImpl*>(m_comp_node_impl)
-                            ->get_thread_pool();
+            auto thread_pool = static_cast<CompNodeRecorderImpl*>(m_comp_node_impl)
+                                       ->get_thread_pool();
             if (thread_pool) {
                 thread_pool->deactive();
             }
@@ -623,10 +612,11 @@ public:
         static_cast<CompNodeRecorderImpl*>(self)->free_host(ptr);
     }
 
-    CompNodeRecorderImpl(const Locator& locator, const Locator& locator_logical,
-                         const std::shared_ptr<WorkerQueue>& worker_queue)
-            : CompNodeBaseImpl(locator, locator_logical, static_free_device,
-                               static_free_host),
+    CompNodeRecorderImpl(
+            const Locator& locator, const Locator& locator_logical,
+            const std::shared_ptr<WorkerQueue>& worker_queue)
+            : CompNodeBaseImpl(
+                      locator, locator_logical, static_free_device, static_free_host),
               m_worker_queue(worker_queue) {
         auto cn = make_comp_node_from_impl(this);
         if (locator.type == DeviceType::MULTITHREAD) {
@@ -636,23 +626,24 @@ public:
         }
         if (locator.type == DeviceType::CPU) {
             if (locator.device == Locator::DEVICE_CPU_DEFAULT) {
-                m_env.init_cpu({std::make_shared<InplaceCPUDispatcher>(this)},
-                               cn);
+                m_env.init_cpu({std::make_shared<InplaceCPUDispatcher>(this)}, cn);
             } else {
-                m_env.init_cpu({std::make_shared<WorkerQueue::DispatcherImpl>(
-                                       m_worker_queue, this)},
-                               cn);
+                m_env.init_cpu(
+                        {std::make_shared<WorkerQueue::DispatcherImpl>(
+                                m_worker_queue, this)},
+                        cn);
             }
         } else if (locator.type == DeviceType::MULTITHREAD) {
             if (locator.device == Locator::DEVICE_MULTITHREAD_DEFAULT) {
-                m_env.init_cpu({std::make_shared<InplaceCPUDispatcher>(
-                                       this, m_thread_pool)},
-                               cn);
+                m_env.init_cpu(
+                        {std::make_shared<InplaceCPUDispatcher>(this, m_thread_pool)},
+                        cn);
             } else {
                 m_worker_queue->attach_thread_pool(m_thread_pool);
-                m_env.init_cpu({std::make_shared<WorkerQueue::DispatcherImpl>(
-                                       m_worker_queue, this)},
-                               cn);
+                m_env.init_cpu(
+                        {std::make_shared<WorkerQueue::DispatcherImpl>(
+                                m_worker_queue, this)},
+                        cn);
             }
         }
     }
@@ -728,24 +719,22 @@ public:
         CompNodeBaseImpl::mgb_aligned_free(ptr);
     }
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         if (m_worker_queue) {
             m_worker_queue->check_exception();
         }
         CompNodeBaseImpl::copy_to_host(host_ptr, device_ptr, size);
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
         if (m_worker_queue) {
             m_worker_queue->check_exception();
         }
         CompNodeBaseImpl::copy_to_device(device_ptr, host_ptr, size);
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override {
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override {
         //! copy to default_cpu
         if (dest_impl->same_type<CpuCompNode::CompNodeDefaultImpl>()) {
             CompNodeBaseImpl::peer_copy_to(dest_impl, dest, src, size);
@@ -758,26 +747,28 @@ public:
                 dest_impl->copy_to_device(dest, src, size);
                 return;
 #else
-                mgb_throw(MegBrainError,
-                          "Atlas comp_node used but "
-                          "ATLAS BUILD not enabled");
+                mgb_throw(
+                        MegBrainError,
+                        "Atlas comp_node used but "
+                        "ATLAS BUILD not enabled");
 #endif
-            } else if (dest_impl->env().property().type ==
-                       DeviceType::CAMBRICON) {
+            } else if (dest_impl->env().property().type == DeviceType::CAMBRICON) {
 #if MGB_CAMBRICON
                 dest_impl->copy_to_device(dest, src, size);
                 return;
 #else
-                mgb_throw(MegBrainError,
-                          "Cambricon comp_node used but "
-                          "CAMBRICON BUILD not enabled");
+                mgb_throw(
+                        MegBrainError,
+                        "Cambricon comp_node used but "
+                        "CAMBRICON BUILD not enabled");
 #endif
             }
             else {
-                mgb_assert(locator().device == Locator::DEVICE_CPU_DEFAULT,
-                           "currently only peer copy from default cpu comp "
-                           "nodes "
-                           "is implemented");
+                mgb_assert(
+                        locator().device == Locator::DEVICE_CPU_DEFAULT,
+                        "currently only peer copy from default cpu comp "
+                        "nodes "
+                        "is implemented");
             }
         }
         dest_impl->copy_to_device(dest, src, size);
@@ -807,8 +798,7 @@ public:
 
     std::unique_ptr<CompNodeSeqRecorder> create_seq_recorder(
             cg::ComputingGraph*) override {
-        return std::make_unique<SeqRecorderImpl>(&sm_cur_recorder,
-                                                 m_thread_pool, this);
+        return std::make_unique<SeqRecorderImpl>(&sm_cur_recorder, m_thread_pool, this);
     }
 
     SeqRecorderImpl* cur_recorder() const override { return sm_cur_recorder; }
@@ -837,8 +827,7 @@ struct CpuCompNode::Pool {
     MGB_RECURSIVE_MUTEX mtx;
     // use global memory pool to ensuare object memory accessible even after
     // global finalize
-    std::aligned_storage_t<sizeof(CompNodeRecorderImpl),
-                           alignof(CompNodeRecorderImpl)>
+    std::aligned_storage_t<sizeof(CompNodeRecorderImpl), alignof(CompNodeRecorderImpl)>
             impl_storage[MAX_NR_COMP_NODE];
     size_t nr_used_impl_storage = 0;
 
@@ -870,8 +859,7 @@ void CpuCompNode::foreach (thin_function<void(CompNode)> callback) {
             if (i >= sm_pool->nr_used_impl_storage)
                 return;
             cur = make_comp_node_from_impl(
-                    reinterpret_cast<CompNodeRecorderImpl*>(
-                            &sm_pool->impl_storage[i]));
+                    reinterpret_cast<CompNodeRecorderImpl*>(&sm_pool->impl_storage[i]));
         }
         callback(cur);
     }
@@ -890,12 +878,12 @@ size_t CpuCompNode::get_device_count() {
     return sys::get_cpu_count();
 }
 
-CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
-                                         Locator locator_logical) {
+CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator, Locator locator_logical) {
 #if !MGB_HAVE_THREAD
     // use only cpu:default and cpu0:1023 comp node when threading is disabled
-    mgb_assert(locator.device == Locator::DEVICE_CPU_DEFAULT ||
-               (locator.device == 0 && locator.stream == 1023));
+    mgb_assert(
+            locator.device == Locator::DEVICE_CPU_DEFAULT ||
+            (locator.device == 0 && locator.stream == 1023));
     locator_logical = {locator_logical.type, locator.device, locator.stream};
 #endif
     {
@@ -907,24 +895,26 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
             sm_pool = new (&storage) Pool;
         }
     }
-    mgb_assert(locator.device >= 0 ||
-                       (locator.device == Locator::DEVICE_CPU_DEFAULT &&
-                        locator.stream == 0) ||
-                       locator.device == Locator::DEVICE_MULTITHREAD_DEFAULT,
-               "failed to load cpu for device:%d stream:%d", locator.device,
-               locator.stream);
+    mgb_assert(
+            locator.device >= 0 ||
+                    (locator.device == Locator::DEVICE_CPU_DEFAULT &&
+                     locator.stream == 0) ||
+                    locator.device == Locator::DEVICE_MULTITHREAD_DEFAULT,
+            "failed to load cpu for device:%d stream:%d", locator.device,
+            locator.stream);
     MGB_LOCK_GUARD(sm_pool->mtx);
 
     // encode both device ID and type into a int
-    mgb_assert(locator_logical.device >= -1 ||
-               locator_logical.device <= Locator::DEVICE_CPU_DEFAULT);
+    mgb_assert(
+            locator_logical.device >= -1 ||
+            locator_logical.device <= Locator::DEVICE_CPU_DEFAULT);
     if (locator_logical.type != CompNode::DeviceType::UNSPEC) {
-        mgb_assert(locator_logical.type == CompNode::DeviceType::CPU ||
-                   locator_logical.type == CompNode::DeviceType::MULTITHREAD);
+        mgb_assert(
+                locator_logical.type == CompNode::DeviceType::CPU ||
+                locator_logical.type == CompNode::DeviceType::MULTITHREAD);
     }
     if (locator.type == DeviceType::CPU) {
-        auto&& pqueue_weak =
-                sm_pool->physical2queue[{locator.device, locator.stream}];
+        auto&& pqueue_weak = sm_pool->physical2queue[{locator.device, locator.stream}];
         auto pqueue = pqueue_weak.lock();
         if (!pqueue) {
             pqueue = std::make_shared<WorkerQueue>(locator);
@@ -932,13 +922,11 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
         }
         auto&& pimpl = sm_pool->locator2impl[{locator, locator_logical}];
         if (!pimpl) {
-            mgb_assert(sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
-                       "too many cpu comp nodes; max %d allowed",
-                       Pool::MAX_NR_COMP_NODE);
-            pimpl.reset(new (
-                    &sm_pool->impl_storage[sm_pool->nr_used_impl_storage++])
-                                CompNodeRecorderImpl{locator, locator_logical,
-                                                     pqueue});
+            mgb_assert(
+                    sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
+                    "too many cpu comp nodes; max %d allowed", Pool::MAX_NR_COMP_NODE);
+            pimpl.reset(new (&sm_pool->impl_storage[sm_pool->nr_used_impl_storage++])
+                                CompNodeRecorderImpl{locator, locator_logical, pqueue});
         }
         log_comp_node_created(locator, locator_logical);
         return pimpl.get();
@@ -951,16 +939,14 @@ CpuCompNode::Impl* CpuCompNode::load_cpu(Locator locator,
             pqueue = std::make_shared<WorkerQueue>(locator);
             pqueue_weak = pqueue;
         }
-        auto&& pimpl =
-                sm_pool->locator2impl_multi_thread[{locator, locator_logical}];
+        auto&& pimpl = sm_pool->locator2impl_multi_thread[{locator, locator_logical}];
         if (!pimpl) {
-            mgb_assert(sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
-                       "too many cpu multithread comp nodes; max %d allowed",
-                       Pool::MAX_NR_COMP_NODE);
-            pimpl.reset(new (
-                    &sm_pool->impl_storage[sm_pool->nr_used_impl_storage++])
-                                CompNodeRecorderImpl{locator, locator_logical,
-                                                     pqueue});
+            mgb_assert(
+                    sm_pool->nr_used_impl_storage < Pool::MAX_NR_COMP_NODE,
+                    "too many cpu multithread comp nodes; max %d allowed",
+                    Pool::MAX_NR_COMP_NODE);
+            pimpl.reset(new (&sm_pool->impl_storage[sm_pool->nr_used_impl_storage++])
+                                CompNodeRecorderImpl{locator, locator_logical, pqueue});
         }
         log_comp_node_created(locator, locator_logical);
         return pimpl.get();
@@ -1005,8 +991,7 @@ double CpuCompNode::CpuDispatchableBase::EventImpl::do_elapsed_time_until(
 }
 
 #if MGB_HAVE_THREAD
-void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
-        Impl* cn_impl) {
+void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(Impl* cn_impl) {
     {
         auto locator = m_comp_node_impl->locator();
         if (locator.device == Locator::DEVICE_CPU_DEFAULT &&
@@ -1014,20 +999,22 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
                      ->cur_recorder()) {
             auto v0 = m_record_nr_req.load(std::memory_order_relaxed),
                  v1 = m_record_nr_finish.load(std::memory_order_relaxed);
-            mgb_assert(v0 && v0 == v1,
-                       "event on cpu:default hasn't been recorded inplace.");
+            mgb_assert(
+                    v0 && v0 == v1,
+                    "event on cpu:default hasn't been recorded inplace.");
             return;
         }
     }
 
     {
         auto type = cn_impl->env().property().type;
-        mgb_throw_if(type != CompNode::DeviceType::CPU
-                             && type != CompNode::DeviceType::CUDA
-                             && type != CompNode::DeviceType::ATLAS
-                             ,
-                     MegBrainError,
-                     "currently CPU can only wait for CPU, CUDA, ATLAS"
+        mgb_throw_if(
+                type != CompNode::DeviceType::CPU &&
+                        type != CompNode::DeviceType::CUDA
+                        && type != CompNode::DeviceType::ATLAS
+                ,
+                MegBrainError,
+                "currently CPU can only wait for CPU, CUDA, ATLAS"
         );
     }
 
@@ -1035,16 +1022,15 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
 #if MGB_ATLAS
         return m_comp_node_impl->sync();
 #else
-        mgb_throw(MegBrainError,
-                  "Atlas comp_node used but ATLAS BUILD not enabled");
+        mgb_throw(MegBrainError, "Atlas comp_node used but ATLAS BUILD not enabled");
 #endif
-    } else if (cn_impl->env().property().type ==
-               CompNode::DeviceType::CAMBRICON) {
+    } else if (cn_impl->env().property().type == CompNode::DeviceType::CAMBRICON) {
 #if MGB_CAMBRICON
         return m_comp_node_impl->sync();
 #else
-        mgb_throw(MegBrainError,
-                  "Cambricon comp_node used but MGB_CAMBRICON not enabled");
+        mgb_throw(
+                MegBrainError,
+                "Cambricon comp_node used but MGB_CAMBRICON not enabled");
 #endif
     }
 
@@ -1068,8 +1054,7 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::do_device_wait_by(
 void CpuCompNode::CpuDispatchableBase::EventImpl::do_record() {
     incr_nr_req();
     auto call_on_finish = [this]() { on_finish(); };
-    static_cast<CpuDispatchableBase*>(m_comp_node_impl)
-            ->dispatch(call_on_finish);
+    static_cast<CpuDispatchableBase*>(m_comp_node_impl)->dispatch(call_on_finish);
 }
 
 void CpuCompNode::CpuDispatchableBase::EventImpl::on_finish() {
@@ -1095,8 +1080,8 @@ bool CpuCompNode::CpuDispatchableBase::EventImpl::do_finished() {
 }
 
 void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
-    for (size_t i = 0, it = SCQueueSynchronizer::get_default_max_spin() / 20;
-         i < it; ++i) {
+    for (size_t i = 0, it = SCQueueSynchronizer::get_default_max_spin() / 20; i < it;
+         ++i) {
         if (finished()) {
             return;
         }
@@ -1115,8 +1100,7 @@ void CpuCompNode::CpuDispatchableBase::EventImpl::host_wait_cv() {
 
 CpuCompNode::CpuDispatchableBase::EventImpl::~EventImpl() noexcept {
     auto check_all_finished = [this]() {
-        return do_finished() &&
-               !m_dev_wait_nr_waiter.load(std::memory_order_acquire);
+        return do_finished() && !m_dev_wait_nr_waiter.load(std::memory_order_acquire);
     };
     if (!check_all_finished()) {
         mgb_log_debug(

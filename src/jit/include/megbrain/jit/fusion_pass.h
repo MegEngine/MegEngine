@@ -71,8 +71,9 @@ public:
      * (2) graph_opt_level = 1
      * (3) graph_opt_level = 0, jit_opt_level = 0
      */
-    JITFusionPass(bool after_grad = true, int jit_opt_level = 0,
-                  const JITConfig& jit_config = {});
+    JITFusionPass(
+            bool after_grad = true, int jit_opt_level = 0,
+            const JITConfig& jit_config = {});
     const char* name() const override;
     void apply(OptState& opt) const override;
 };

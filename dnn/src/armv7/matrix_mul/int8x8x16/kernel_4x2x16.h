@@ -46,9 +46,9 @@ namespace matmul_4x2x16 {
  *                               Accumulator
  */
 
-static void kern_4x2(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void kern_4x2(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     MEGDNN_MARK_USED_VAR(m_remain);
     MEGDNN_MARK_USED_VAR(n_remain);
     K /= 16;

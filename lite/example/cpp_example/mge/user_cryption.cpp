@@ -16,8 +16,8 @@ using namespace lite;
 using namespace example;
 
 namespace {
-std::vector<uint8_t> decrypt_model(const void* model_mem, size_t size,
-                                   const std::vector<uint8_t>& key) {
+std::vector<uint8_t> decrypt_model(
+        const void* model_mem, size_t size, const std::vector<uint8_t>& key) {
     if (key.size() == 1) {
         std::vector<uint8_t> ret(size, 0);
         const uint8_t* ptr = static_cast<const uint8_t*>(model_mem);

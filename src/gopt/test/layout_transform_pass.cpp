@@ -85,53 +85,49 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     using Attribute = LayoutTransformContext::Attribute;
     OprList opr_list = {
-            opr::ConvBiasForward::typeinfo(),
-            opr::ElemwiseMultiType::typeinfo(),
-            opr::Elemwise::typeinfo(),
-            opr::TypeCvt::typeinfo(),
-            opr::PoolingForward::typeinfo(),
-            opr::WarpPerspectiveForward::typeinfo(),
+            opr::ConvBiasForward::typeinfo(), opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),        opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),  opr::WarpPerspectiveForward::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {
             TensorFormats::NCHW, TensorFormats::NHWC, TensorFormats::NCHWc4,
             TensorFormats::NCHWc32, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::AUTO_PADDING_NHWC};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4,
-                         OprFormat::NHWC})
-            .add_opr_config(opr::PoolingForward::typeinfo(),
-                            {OprFormat::NCHW4, OprFormat::NCHW32,
-                             OprFormat::NHWC, OprFormat::CHWN4});
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC})
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(),
+                    {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
+                     OprFormat::CHWN4});
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
-    auto new_output = gopt::GraphOptimizer{}
-                              .add_pass<FuseConvBiasNonlinPass>()
-                              .add_pass<FuseConvBiasZPass>()
-                              .add_pass<LayoutTransformPass>(std::move(ctx),
-                                                             std::move(solver))
-                              .add_pass<ShuffleShuffleRemovePass>()
-                              .add_pass(FuseNCHW4Int8Preprocess::make())
-                              .add_pass<FoldingConvBiasDimshufflePass>()
-                              .add_pass<ParamFusePass>()
-                              .add_pass<ParamMergePass>()
-                              .apply({{output}})
-                              .endpoint_vars();
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<FuseConvBiasZPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
     auto new_out_var = new_output[0];
     /// check global layout transform pass
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
     ASSERT_EQ(nr_dimshuffle, 3u);
     /// check pass fuse conv bias with z
-    auto nr_elemwise_mult_type =
-            find_opr_num<opr::ElemwiseMultiType>(new_out_var);
+    auto nr_elemwise_mult_type = find_opr_num<opr::ElemwiseMultiType>(new_out_var);
     ASSERT_EQ(nr_elemwise_mult_type, 4u);
     /// 21 convolutions, 21 weights and 21 bias, total 42 parameters
-    const auto& param_merge =
-            find_opr<opr::MultipleDeviceTensorHolder>(new_out_var);
+    const auto& param_merge = find_opr<opr::MultipleDeviceTensorHolder>(new_out_var);
     ASSERT_EQ(param_merge.output().size(), 42u);
     /// check first conv format
     const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
@@ -142,8 +138,7 @@ TEST(TestLayoutTransform, Resnet18_QS8) {
     HostTensorND t2;
     auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
     func2->execute();
-    gprof.to_json_full(func2.get())
-            ->writeto_fpath(output_file("resnet18_qs8.json"));
+    gprof.to_json_full(func2.get())->writeto_fpath(output_file("resnet18_qs8.json"));
     /// check correct
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
@@ -175,25 +170,22 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
     using Target = LayoutTransformContext::Target;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     OprList opr_list = {
-            opr::ConvBiasForward::typeinfo(),
-            opr::ElemwiseMultiType::typeinfo(),
-            opr::Elemwise::typeinfo(),
-            opr::TypeCvt::typeinfo(),
-            opr::PoolingForward::typeinfo(),
-            opr::WarpPerspectiveForward::typeinfo(),
+            opr::ConvBiasForward::typeinfo(), opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),        opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),  opr::WarpPerspectiveForward::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW,    TensorFormats::NHWC,
-            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
-            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::AUTO_PADDING_NHWC};
+            TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
+            TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4,
-                         OprFormat::NHWC, OprFormat::NCHW64})
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
+                OprFormat::NCHW64})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
@@ -201,29 +193,27 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
-    auto new_output = gopt::GraphOptimizer{}
-                              .add_pass<FuseConvBiasNonlinPass>()
-                              .add_pass<FuseConvBiasZPass>()
-                              .add_pass<LayoutTransformPass>(std::move(ctx),
-                                                             std::move(solver))
-                              .add_pass<ShuffleShuffleRemovePass>()
-                              .add_pass(FuseNCHW4Int8Preprocess::make())
-                              .add_pass<FoldingConvBiasDimshufflePass>()
-                              .add_pass<ParamFusePass>()
-                              .add_pass<ParamMergePass>()
-                              .apply({{output}})
-                              .endpoint_vars();
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<FuseConvBiasZPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
     auto new_out_var = new_output[0];
     /// check global layout transform pass
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
     ASSERT_EQ(nr_dimshuffle, 3u);
     /// check pass fuse conv bias with z
-    auto nr_elemwise_mult_type =
-            find_opr_num<opr::ElemwiseMultiType>(new_out_var);
+    auto nr_elemwise_mult_type = find_opr_num<opr::ElemwiseMultiType>(new_out_var);
     ASSERT_EQ(nr_elemwise_mult_type, 4u);
     /// 21 convolutions, 21 weights and 21 bias, total 42 parameters
-    const auto& param_merge =
-            find_opr<opr::MultipleDeviceTensorHolder>(new_out_var);
+    const auto& param_merge = find_opr<opr::MultipleDeviceTensorHolder>(new_out_var);
     ASSERT_EQ(param_merge.output().size(), 42u);
     /// check first conv format
     const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
@@ -234,8 +224,7 @@ TEST(TestLayoutTransform, Resnet18_QS4) {
     HostTensorND t2;
     auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
     func2->execute();
-    gprof.to_json_full(func2.get())
-            ->writeto_fpath(output_file("resnet18_qs4.json"));
+    gprof.to_json_full(func2.get())->writeto_fpath(output_file("resnet18_qs4.json"));
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 
@@ -269,8 +258,7 @@ TEST(TestLayoutTransform, Resnet18_NCHW64) {
     HostTensorND t2;
     auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
     func2->execute();
-    gprof.to_json_full(func2.get())
-            ->writeto_fpath(output_file("resnet18_nchw64.json"));
+    gprof.to_json_full(func2.get())->writeto_fpath(output_file("resnet18_nchw64.json"));
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 
@@ -297,25 +285,22 @@ TEST(TestLayoutTransform, Detection_QS8) {
     using Target = LayoutTransformContext::Target;
     using ReformatAttribute = LayoutTransformContext::ReformatAttribute;
     OprList opr_list = {
-            opr::ConvBiasForward::typeinfo(),
-            opr::ElemwiseMultiType::typeinfo(),
-            opr::Elemwise::typeinfo(),
-            opr::TypeCvt::typeinfo(),
-            opr::PoolingForward::typeinfo(),
-            opr::WarpPerspectiveForward::typeinfo(),
+            opr::ConvBiasForward::typeinfo(), opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),        opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),  opr::WarpPerspectiveForward::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW,    TensorFormats::NHWC,
-            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
-            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::AUTO_PADDING_NHWC};
+            TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
+            TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4,
-                         OprFormat::NHWC, OprFormat::NCHW64})
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
+                OprFormat::NCHW64})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
@@ -323,18 +308,18 @@ TEST(TestLayoutTransform, Detection_QS8) {
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
-    auto new_outputs = gopt::GraphOptimizer{}
-                               .add_pass<FuseConvBiasNonlinPass>()
-                               .add_pass<FuseConvBiasZPass>()
-                               .add_pass<LayoutTransformPass>(std::move(ctx),
-                                                              std::move(solver))
-                               .add_pass<ShuffleShuffleRemovePass>()
-                               .add_pass(FuseNCHW4Int8Preprocess::make())
-                               .add_pass<FoldingConvBiasDimshufflePass>()
-                               .add_pass<ParamFusePass>()
-                               .add_pass<ParamMergePass>()
-                               .apply({{outputs}})
-                               .endpoint_vars();
+    auto new_outputs =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<FuseConvBiasZPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{outputs}})
+                    .endpoint_vars();
 
     GraphProfiler gprof{network.graph.get()};
     using OutputSpecItem = cg::ComputingGraph::OutputSpecItem;
@@ -370,25 +355,22 @@ TEST(TestLayoutTransform, Detection_QS4) {
     using Attribute = LayoutTransformContext::Attribute;
     using Target = LayoutTransformContext::Target;
     OprList opr_list = {
-            opr::ConvBiasForward::typeinfo(),
-            opr::ElemwiseMultiType::typeinfo(),
-            opr::Elemwise::typeinfo(),
-            opr::TypeCvt::typeinfo(),
-            opr::PoolingForward::typeinfo(),
-            opr::WarpPerspectiveForward::typeinfo(),
+            opr::ConvBiasForward::typeinfo(), opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),        opr::TypeCvt::typeinfo(),
+            opr::PoolingForward::typeinfo(),  opr::WarpPerspectiveForward::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW,    TensorFormats::NHWC,
-            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
-            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::AUTO_PADDING_NHWC};
+            TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
+            TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4,
-                         OprFormat::NHWC, OprFormat::NCHW64})
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::CHWN4, OprFormat::NHWC,
+                OprFormat::NCHW64})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NCHW64,
@@ -396,18 +378,18 @@ TEST(TestLayoutTransform, Detection_QS4) {
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
-    auto new_outputs = gopt::GraphOptimizer{}
-                               .add_pass<FuseConvBiasNonlinPass>()
-                               .add_pass<FuseConvBiasZPass>()
-                               .add_pass<LayoutTransformPass>(std::move(ctx),
-                                                              std::move(solver))
-                               .add_pass<ShuffleShuffleRemovePass>()
-                               .add_pass(FuseNCHW4Int8Preprocess::make())
-                               .add_pass<FoldingConvBiasDimshufflePass>()
-                               .add_pass<ParamFusePass>()
-                               .add_pass<ParamMergePass>()
-                               .apply({{outputs}})
-                               .endpoint_vars();
+    auto new_outputs =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<FuseConvBiasZPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{outputs}})
+                    .endpoint_vars();
 
     GraphProfiler gprof{network.graph.get()};
     using OutputSpecItem = cg::ComputingGraph::OutputSpecItem;
@@ -429,8 +411,7 @@ TEST(TestLayoutTransform, Wide) {
     auto cn = CompNode::load("gpu0");
     Network network(cn);
     auto data = network.add_var("data", {16, 3, 64, 64});
-    auto f = network.add_conv(data, 16, {3, 3}, dtype::Float32(), true, {2, 2},
-                              {1, 1});
+    auto f = network.add_conv(data, 16, {3, 3}, dtype::Float32(), true, {2, 2}, {1, 1});
     f = network.add_conv(f, 16, {3, 3}, dtype::Float32(), true, {2, 2}, {1, 1});
     f = network.add_conv(f, 16, {3, 3}, dtype::Float32(), true, {2, 2}, {1, 1});
     SymbolVarArray stages;
@@ -456,23 +437,22 @@ TEST(TestLayoutTransform, Wide) {
             opr::ConvBiasForward::typeinfo(),
             opr::Elemwise::typeinfo(),
     };
-    SmallVector<TensorFormats> available_tensor_formats = {TensorFormats::NCHW,
-                                                           TensorFormats::NHWC};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::DEFAULT};
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW, TensorFormats::NHWC};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::DEFAULT};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
-    ctx->add_opr_config(opr::ConvBiasForward::typeinfo(),
-                        {OprFormat::NCHW, OprFormat::NHWC});
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+            opr::ConvBiasForward::typeinfo(), {OprFormat::NCHW, OprFormat::NHWC});
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
     auto v = gopt::GraphOptimizer{}
                      .add_pass<FuseConvBiasNonlinPass>()
                      .add_pass<FuseConvBiasZPass>()
-                     .add_pass<LayoutTransformPass>(std::move(ctx),
-                                                    std::move(solver))
+                     .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
                      .add_pass<ShuffleShuffleRemovePass>()
                      .add_pass<ParamFusePass>()
                      .add_pass<ParamMergePass>()
@@ -484,7 +464,7 @@ TEST(TestLayoutTransform, Wide) {
     func->execute();
     gprof.to_json_full(func.get())->writeto_fpath(output_file("wide.json"));
     /// check global layout transform pass, no dimshuffle
-    /// disable the following check, to make ci stable. 
+    /// disable the following check, to make ci stable.
 #if 0
     auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(sym_o);
     ASSERT_EQ(nr_dimshuffle, 0u);
@@ -507,12 +487,12 @@ TEST(TestLayoutTransform, ElemwiseMultiType) {
     y = network.add_type_cvt(y, dtype::QuantizedS4{1.f});
     auto x_ = network.add_type_cvt(x, dtype::Float32());
     auto y_ = network.add_type_cvt(y, dtype::Float32());
-    auto z = network.add_elemwise({x_, y_}, dtype::Float32(),
-                                  opr::Elemwise::Mode::FUSE_ADD_RELU);
+    auto z = network.add_elemwise(
+            {x_, y_}, dtype::Float32(), opr::Elemwise::Mode::FUSE_ADD_RELU);
     z = network.add_type_cvt(z, dtype::QuantizedS4{1.f});
     z = network.add_type_cvt(z, dtype::Float32());
-    auto z2 = network.add_elemwise({x, y}, dtype::QuantizedS4{1.f},
-                                   opr::Elemwise::Mode::FUSE_ADD_RELU);
+    auto z2 = network.add_elemwise(
+            {x, y}, dtype::QuantizedS4{1.f}, opr::Elemwise::Mode::FUSE_ADD_RELU);
     z2 = network.add_type_cvt(z2, dtype::Float32());
     HostTensorND t1;
     auto func1 = network.graph->compile({make_callback_copy(z, t1)});
@@ -526,9 +506,9 @@ TEST(TestLayoutTransform, ElemwiseMultiType) {
             x, megdnn::param::RelayoutFormat::Mode::NCHW_NCHW64);
     auto alter_y = opr::RelayoutFormat::make(
             y, megdnn::param::RelayoutFormat::Mode::NCHW_NCHW64);
-    auto alter_z =
-            network.add_elemwise({alter_x, alter_y}, dtype::QuantizedS4{1.f},
-                                 opr::Elemwise::Mode::FUSE_ADD_RELU);
+    auto alter_z = network.add_elemwise(
+            {alter_x, alter_y}, dtype::QuantizedS4{1.f},
+            opr::Elemwise::Mode::FUSE_ADD_RELU);
     alter_z = opr::RelayoutFormat::make(
             alter_z, megdnn::param::RelayoutFormat::Mode::NCHW64_NCHW);
     alter_z = network.add_type_cvt(alter_z, dtype::Float32());
@@ -554,11 +534,9 @@ TEST(TestLayoutTransform, DetectionHead) {
     auto data = opr::TypeCvt::make(h2d, dtype::Float32());
     auto sub_128 = data + (-128);
     auto x = opr::TypeCvt::make(sub_128, dtype::QuantizedS8(1.f));
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn))
-                        .rename(name),
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
                 dtype);
     };
     auto w = mkcvar("w", {16, 3, 3, 3}, dtype::QuantizedS8(1.f));
@@ -574,9 +552,9 @@ TEST(TestLayoutTransform, DetectionHead) {
             conv_1, dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8)));
     auto w1 = mkcvar("w1", {16, 16, 3, 3}, dtype::QuantizedS4(1.f));
     auto b1 = mkcvar("b1", {1, 16, 1, 1}, dtype::QuantizedS32(1.f));
-    auto y = opr::ConvBias::make(conv_1, w1, b1, param, {},
-                                 OperatorNodeConfig(dtype::Quantized4Asymm(
-                                         1.f, static_cast<uint8_t>(8))));
+    auto y = opr::ConvBias::make(
+            conv_1, w1, b1, param, {},
+            OperatorNodeConfig(dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8))));
 
     using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
     S strategy = S::PROFILE;
@@ -598,20 +576,20 @@ TEST(TestLayoutTransform, DetectionHead) {
             opr::WarpPerspectiveForward::typeinfo(),
     };
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW,    TensorFormats::NHWC,
-            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
-            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
-                           ReformatAttribute::AUTO_PADDING_NHWC};
+            TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
+            TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+    Attribute attribute = {
+            OprFormat::NCHW, TensorFormats::NCHW, Target::UNSPEC,
+            ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4,
-                OprFormat::NCHW32, OprFormat::NCHW64, OprFormat::CHWN4})
-            .add_opr_config(opr::ConvolutionForward::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW4})
+               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW32,
+                OprFormat::NCHW64, OprFormat::CHWN4})
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW4})
             .add_opr_config(
                     opr::ConvolutionBackwardData::typeinfo(),
                     {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4})
@@ -626,17 +604,17 @@ TEST(TestLayoutTransform, DetectionHead) {
     auto profiler = ProfilerBase::make_profiler();
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
-    auto new_out_vars = gopt::GraphOptimizer{}
-                                .add_pass<LayoutTransformPass>(
-                                        std::move(ctx), std::move(solver))
-                                .add_pass<ShuffleShuffleRemovePass>()
-                                .add_pass(FuseNCHW4Int8Preprocess::make())
-                                .add_pass<FoldingConvBiasDimshufflePass>()
-                                .add_pass<FoldingConvBiasTypecvtPass>()
-                                .add_pass<ParamFusePass>()
-                                .add_pass<ParamMergePass>()
-                                .apply(SymbolVarArray{y})
-                                .endpoint_vars();
+    auto new_out_vars =
+            gopt::GraphOptimizer{}
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<FoldingConvBiasTypecvtPass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply(SymbolVarArray{y})
+                    .endpoint_vars();
     const auto& v = new_out_vars[0];
     using OutputSpecItem = cg::ComputingGraph::OutputSpecItem;
     std::vector<OutputSpecItem> outs;
@@ -672,10 +650,10 @@ TEST(TestLayoutTransform, CanonicalizeLayoutTransform) {
     auto x = network.add_var("x", {N, C / 4, H, W, 4});
     x = network.add_type_cvt(x, dtype::QuantizedS4{1.f});
     using NamedTensorShape = megdnn::NamedTensorShape;
-    auto src = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW4);
-    auto dst = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NHWC);
+    auto src =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW4);
+    auto dst =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NHWC);
     auto&& tuple = gopt::ReformatEmitter(src, dst).emit();
     auto builder = std::get<0>(tuple);
     x = SymbolVar(builder({x.node()}));
@@ -683,17 +661,20 @@ TEST(TestLayoutTransform, CanonicalizeLayoutTransform) {
     x = network.add_type_cvt(x, dtype::Float32());
 
     SymbolVar another_x;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ShuffleShuffleRemovePass>()
-                          .apply({{x}})
-                          .endpoint_vars(),
-                  another_x);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ShuffleShuffleRemovePass>()
+                    .apply({{x}})
+                    .endpoint_vars(),
+            another_x);
     const auto& astype = find_opr<opr::TypeCvt>(x);
-    EXPECT_TRUE(astype.input(0)->owner_opr()->dyn_typeinfo() ==
-                opr::Host2DeviceCopy::typeinfo());
+    EXPECT_TRUE(
+            astype.input(0)->owner_opr()->dyn_typeinfo() ==
+            opr::Host2DeviceCopy::typeinfo());
     const auto& another_astype = find_opr<opr::TypeCvt>(another_x);
-    EXPECT_TRUE(another_astype.input(0)->owner_opr()->dyn_typeinfo() ==
-                opr::Reshape::typeinfo());
+    EXPECT_TRUE(
+            another_astype.input(0)->owner_opr()->dyn_typeinfo() ==
+            opr::Reshape::typeinfo());
     size_t nr_type_cvt = find_opr_num<opr::TypeCvt>(another_x);
     ASSERT_EQ(nr_type_cvt, 2u);
 

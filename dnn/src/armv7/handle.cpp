@@ -13,10 +13,10 @@
 
 #include "src/armv7/handle.h"
 
-#include "src/armv7/matrix_mul/opr_impl.h"
-#include "src/armv7/rotate/opr_impl.h"
-#include "src/armv7/relayout/opr_impl.h"
 #include "src/armv7/conv_bias/opr_impl.h"
+#include "src/armv7/matrix_mul/opr_impl.h"
+#include "src/armv7/relayout/opr_impl.h"
+#include "src/armv7/rotate/opr_impl.h"
 
 namespace megdnn {
 namespace armv7 {
@@ -37,7 +37,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvBias)
 MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
 #pragma GCC diagnostic pop
 
-} // namespace armv7
-} // namespace megdnn
+}  // namespace armv7
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

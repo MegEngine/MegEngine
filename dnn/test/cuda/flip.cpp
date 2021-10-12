@@ -13,10 +13,10 @@
 
 #include "megdnn.h"
 #include "megdnn/oprs.h"
-#include "test/common/tensor.h"
-#include "test/common/flip.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/flip.h"
+#include "test/common/tensor.h"
 #include "test/cuda/fixture.h"
 
 namespace megdnn {
@@ -39,10 +39,9 @@ TEST_F(CUDA, FLIP) {
             args.emplace_back(cur_param, TensorShape{65540, 3, 4, 3});
         }
     }
-    for (auto &&arg : args) {
+    for (auto&& arg : args) {
         checker.execs({arg.src, {}});
     }
-
 }
 
 TEST_F(CUDA, FLIP_BENCHMARK) {
@@ -72,10 +71,7 @@ TEST_F(CUDA, FLIP_BENCHMARK) {
 #undef BENCHMARK_FLIP
     };
 
-    TensorShapeArray shapes = {
-        {3, 101, 98, 1},
-        {3, 101, 98, 3}
-    };
+    TensorShapeArray shapes = {{3, 101, 98, 1}, {3, 101, 98, 3}};
 
     run(shapes);
 }

@@ -43,8 +43,9 @@ struct matmul_general_8x12 {
     //  +--+   ---  -  +--------+--------+--------+
     //
     //                        Accumulator
-    static void kern_8x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k) {
+    static void kern_8x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -306,14 +307,13 @@ struct matmul_general_8x12 {
                 "6:\n"
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
-                  "v28", "v29", "v30", "v31", "x1", "x2", "x3", "x4", "x5",
-                  "x6", "x7", "cc", "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20",
+                  "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30",
+                  "v31", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -348,9 +348,9 @@ struct matmul_general_8x12 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_8x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k,
-                         int n_remain) {
+    static void kern_8x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int n_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -520,13 +520,12 @@ struct matmul_general_8x12 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [n_remain] "+r"(n_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [n_remain] "+r"(n_remain)
                 :
-                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "v20",
-                  "v23", "v26", "v29", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
-                  "cc", "memory");
+                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "v20", "v23",
+                  "v26", "v29", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "cc",
+                  "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -557,9 +556,9 @@ struct matmul_general_8x12 {
     //  +--+   ---  -  +--------+--------+--------+
     //
     //                        Accumulator
-    static void kern_4x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k,
-                          int m_remain) {
+    static void kern_4x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int m_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -717,13 +716,12 @@ struct matmul_general_8x12 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [m_remain] "+r"(m_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [m_remain] "+r"(m_remain)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "x1", "x2", "x3", "x10", "cc", "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "x1",
+                  "x2", "x3", "x10", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -754,9 +752,9 @@ struct matmul_general_8x12 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_4x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k, int m_remain,
-                         int n_remain) {
+    static void kern_4x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int m_remain, int n_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         int oddk = (K & 1);
@@ -895,20 +893,21 @@ struct matmul_general_8x12 {
                 "6:\n" STORE_C
 
                 : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-                  [oddk] "+r"(oddk), [outptr] "+r"(outptr),
-                  [n_remain] "+r"(n_remain), [m_remain] "+r"(m_remain)
+                  [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
+                  [outptr] "+r"(outptr), [n_remain] "+r"(n_remain),
+                  [m_remain] "+r"(m_remain)
                 :
-                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "x1", "x2",
-                  "x3", "x10", "cc", "memory");
+                : "v0", "v1", "v2", "v5", "v8", "v11", "v14", "v17", "x1", "x2", "x3",
+                  "x10", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
 #undef STORE_C
     }
 
-    static void sgemm_8x12_pack_A_n(float* outptr, const float* inptr, int ldin,
-                                    int y0, int ymax, int k0, int kmax) {
+    static void sgemm_8x12_pack_A_n(
+            float* outptr, const float* inptr, int ldin, int y0, int ymax, int k0,
+            int kmax) {
         float zerobuff[8];
         std::memset(zerobuff, 0, sizeof(float) * 8);
         constexpr int PACK_SIZE_32 = 4 * 8;
@@ -933,8 +932,9 @@ struct matmul_general_8x12 {
             prefetch_2x(inptr7);
             int x = (kmax - k0);
             for (; x > 3; x -= 4) {
-                transpose_8x4_1_s(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                  inptr5, inptr6, inptr7, outptr);
+                transpose_8x4_1_s(
+                        inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                        outptr);
                 outptr += PACK_SIZE_32;
             }
             for (; x > 0; x--) {
@@ -1004,8 +1004,8 @@ struct matmul_general_8x12 {
         }
     }
 
-    static void sgemm_8x12_pack_A_t(float* out, const float* in, int ldin,
-                                    int x0, int xmax, int k0, int kmax) {
+    static void sgemm_8x12_pack_A_t(
+            float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
         int ksize = kmax - k0;
         int ksize8 = (ksize << 3);
         int ksize4 = (ksize << 2);
@@ -1028,20 +1028,17 @@ struct matmul_general_8x12 {
             auto outptr = outptr_base;
             for (; x + 8 <= xmax; x += 8) {
                 auto outptr_interleave = outptr;
-                interleave_4x8_1_s(inptr, inptr1, inptr2, inptr3,
-                                   outptr_interleave);
+                interleave_4x8_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
                 outptr += ksize8;
             }
             outptr = outptr_base4;
             for (; x + 4 <= xmax; x += 4) {
                 auto outptr_interleave = outptr;
-                interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                                   outptr_interleave);
+                interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
                 outptr += ksize4;
             }
             if (x < xmax) {
-                interleave_4(inptr, inptr1, inptr2, inptr3, outptr, 4,
-                             xmax - x);
+                interleave_4(inptr, inptr1, inptr2, inptr3, outptr, 4, xmax - x);
             }
             outptr_base += 4 * 8;
             outptr_base4 += 4 * 4;
@@ -1071,8 +1068,8 @@ struct matmul_general_8x12 {
         }
     }
 
-    static void sgemm_8x12_pack_B_n(float* out, const float* in, int ldin,
-                                    int x0, int xmax, int k0, int kmax) {
+    static void sgemm_8x12_pack_B_n(
+            float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax) {
         int ksize = kmax - k0;
         int ksize12 = ksize * 12;
         int ksize4 = (ksize << 2);
@@ -1095,20 +1092,17 @@ struct matmul_general_8x12 {
             auto outptr = outptr_base;
             for (; x + 12 <= xmax; x += 12) {
                 auto outptr_interleave = outptr;
-                interleave_4x12_1_s(inptr, inptr1, inptr2, inptr3,
-                                    outptr_interleave);
+                interleave_4x12_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
                 outptr += ksize12;
             }
             outptr = outptr_base4;
             for (; x + 4 <= xmax; x += 4) {
                 auto outptr_interleave = outptr;
-                interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3,
-                                   outptr_interleave);
+                interleave_4x4_1_s(inptr, inptr1, inptr2, inptr3, outptr_interleave);
                 outptr += ksize4;
             }
             if (x < xmax) {
-                interleave_4(inptr, inptr1, inptr2, inptr3, outptr, 4,
-                             xmax - x);
+                interleave_4(inptr, inptr1, inptr2, inptr3, outptr, 4, xmax - x);
             }
             outptr_base += 12 * 4;
             outptr_base4 += 4 * 4;
@@ -1138,8 +1132,8 @@ struct matmul_general_8x12 {
         }
     }
 
-    static void sgemm_8x12_pack_B_t(float* out, const float* in, int ldin,
-                                    int y0, int ymax, int k0, int kmax) {
+    static void sgemm_8x12_pack_B_t(
+            float* out, const float* in, int ldin, int y0, int ymax, int k0, int kmax) {
         float* outptr = out;
         const float* inptr = in;
         float zerobuff[12];
@@ -1172,9 +1166,9 @@ struct matmul_general_8x12 {
             prefetch_2x(inptr11);
             int x = (kmax - k0);
             for (; x > 3; x -= 4) {
-                transpose_12x4_1_s(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                   inptr5, inptr6, inptr7, inptr8, inptr9,
-                                   inptr10, inptr11, outptr);
+                transpose_12x4_1_s(
+                        inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                        inptr8, inptr9, inptr10, inptr11, outptr);
                 outptr += 48;
             }
             for (; x > 0; x--) {

@@ -10,8 +10,8 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
-#include "src/rocm/relayout/relayout_contiguous.h.hip"
 #include "src/common/utils.h"
+#include "src/rocm/relayout/relayout_contiguous.h.hip"
 
 namespace megdnn {
 namespace rocm {
@@ -37,15 +37,14 @@ void ParamElemVisitor<ndim, ctype, CONTIG_OTHER>::host_init(
 }
 
 template <int ndim, typename ctype>
-void ParamElemVisitor<ndim, ctype, CONTIG_FULL>::host_init(const TensorND& rv,
-                                                           int /*grid_size*/,
-                                                           int /*block_size*/) {
+void ParamElemVisitor<ndim, ctype, CONTIG_FULL>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert_contiguous(rv.layout);
     m_ptr = rv.ptr<ctype>();
 }
 
 #define INST(ndim, ctype, ctg) template class ParamElemVisitor<ndim, ctype, ctg>
-#define INST_FOR_CTYPE MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
+#define INST_FOR_CTYPE         MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
 
 #define ndim_cb(_ndim)             \
     INST(_ndim, ct, CONTIG_OTHER); \
@@ -68,9 +67,9 @@ INST_FOR_CTYPE
 
 }  // namespace contiguous_intl
 
-void get_last_contiguous_launch_spec(const void* /*kern*/, size_t size,
-                                     size_t contiguous_size, int* grid_size,
-                                     int* block_size) {
+void get_last_contiguous_launch_spec(
+        const void* /*kern*/, size_t size, size_t contiguous_size, int* grid_size,
+        int* block_size) {
     safe_size_in_kern(size);
     const uint32_t blocks = 256;
     *block_size = blocks;
@@ -85,9 +84,8 @@ void get_last_contiguous_launch_spec(const void* /*kern*/, size_t size,
     }
 
     // because we unroll contiguous_size times in the kernel
-    megdnn_assert(static_cast<size_t>(*block_size) * *grid_size *
-                          contiguous_size >=
-                  size);
+    megdnn_assert(
+            static_cast<size_t>(*block_size) * *grid_size * contiguous_size >= size);
 }
 
 }  // namespace rocm

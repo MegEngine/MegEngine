@@ -23,8 +23,7 @@ TEST_F(ARM_COMMON, LOCAL_FORWARD) {
     auto args = local::get_args();
     Checker<LocalForward> checker(handle());
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.sshape(), arg.fshape(), arg.dshape()});
+        checker.set_param(arg.param).execs({arg.sshape(), arg.fshape(), arg.dshape()});
     }
 
     NormalRNG rng(10.f);
@@ -37,8 +36,7 @@ TEST_F(ARM_COMMON, LOCAL_FORWARD) {
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
         checker.set_epsilon(1e-2);
-        checker.set_param(arg.param).execs(
-                {arg.sshape(), arg.fshape(), arg.dshape()});
+        checker.set_param(arg.param).execs({arg.sshape(), arg.fshape(), arg.dshape()});
     }
 #endif
 }
@@ -51,10 +49,9 @@ TEST_F(ARM_COMMON, BENCHMARK_LOCAL_FORWARD) {
         benchmarker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
                 .set_dtype(2, dtype::Float32());
-        auto tfloat32 = benchmarker.set_display(true)
-                                .set_times(RUN)
-                                .set_param(param)
-                                .exec(shapes);
+        auto tfloat32 =
+                benchmarker.set_display(true).set_times(RUN).set_param(param).exec(
+                        shapes);
         int N = shapes[0][0];
         int IC = shapes[0][1];
         int IH = shapes[0][2];
@@ -64,14 +61,12 @@ TEST_F(ARM_COMMON, BENCHMARK_LOCAL_FORWARD) {
         int FH = shapes[1][3];
         int FW = shapes[1][4];
         int OC = shapes[1][5];
-        std::cout << "LOCAL FORWARD, src: {" << N << ", " << IC << ", " << IH
-                  << ", " << IW << "}" << std::endl;
-        std::cout << "LOCAL FORWARD, filter: {" << OH << ", " << OW << ", "
-                  << IC << ", " << FH << ", " << FW << ", " << OC << "}"
-                  << std::endl;
+        std::cout << "LOCAL FORWARD, src: {" << N << ", " << IC << ", " << IH << ", "
+                  << IW << "}" << std::endl;
+        std::cout << "LOCAL FORWARD, filter: {" << OH << ", " << OW << ", " << IC
+                  << ", " << FH << ", " << FW << ", " << OC << "}" << std::endl;
         std::cout << "LOCAL FORWARD (f32), bandwidth: "
-                  << (1.f * N * OC * OH * OW * FH * FW * IC +
-                      1.f * N * IC * IH * IW) *
+                  << (1.f * N * OC * OH * OW * FH * FW * IC + 1.f * N * IC * IH * IW) *
                              sizeof(float) * 1e-9 / (tfloat32 / RUN * 1e-3)
                   << "GBPS" << std::endl;
 
@@ -79,13 +74,11 @@ TEST_F(ARM_COMMON, BENCHMARK_LOCAL_FORWARD) {
         benchmarker.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float16())
                 .set_dtype(2, dtype::Float16());
-        auto tfloat16 = benchmarker.set_display(true)
-                                .set_times(RUN)
-                                .set_param(param)
-                                .exec(shapes);
+        auto tfloat16 =
+                benchmarker.set_display(true).set_times(RUN).set_param(param).exec(
+                        shapes);
         std::cout << "LOCAL FORWARD (f16), bandwidth: "
-                  << (1.f * N * OC * OH * OW * FH * FW * IC +
-                      1.f * N * IC * IH * IW) *
+                  << (1.f * N * OC * OH * OW * FH * FW * IC + 1.f * N * IC * IH * IW) *
                              sizeof(dt_float16) * 1e-9 / (tfloat16 / RUN * 1e-3)
                   << "GBPS" << std::endl;
 #endif

@@ -28,26 +28,25 @@ using namespace x86;
 namespace megdnn {
 namespace x86 {
 
-bool chanwise_avx2_stride1_qint8_usable(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool chanwise_avx2_stride1_qint8_usable(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
-    bool aviliable =
-            (param.bias_mode != BiasMode::BIAS) &&
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-             (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                param.filter_type.enumv() == DTypeEnum::Int8 &&
-                param.dst_type.enumv() == DTypeEnum::Int32) ||
-               (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
-            fm.format == ConvBiasImpl::Param::Format::NCHW &&
-            fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-            fm.dilation[1] == 1 && (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-            fm.stride[0] == 1 && fm.stride[1] == 1 && (fm.icpg == 1) &&
-            (fm.ocpg == 1) && is_supported(SIMDType::AVX2);
+    bool aviliable = (param.bias_mode != BiasMode::BIAS) &&
+                     ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                       param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+                       param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
+                      (((param.src_type.enumv() == DTypeEnum::Int8 &&
+                         param.filter_type.enumv() == DTypeEnum::Int8 &&
+                         param.dst_type.enumv() == DTypeEnum::Int32) ||
+                        (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                         param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+                         param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
+                     fm.format == ConvBiasImpl::Param::Format::NCHW &&
+                     fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+                     fm.dilation[1] == 1 &&
+                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 1 &&
+                     fm.stride[1] == 1 && (fm.icpg == 1) && (fm.ocpg == 1) &&
+                     is_supported(SIMDType::AVX2);
     return aviliable;
 }
 
@@ -63,26 +62,25 @@ bool chanwise_avx2_stride1_qint8_usable_preferred(
            chanwise_avx2_stride1_qint8_preferred(param);
 }
 
-bool chanwise_avx2_stride2_qint8_usable(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool chanwise_avx2_stride2_qint8_usable(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
-    bool aviliable =
-            (param.bias_mode != BiasMode::BIAS) &&
-            ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-              param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
-             (((param.src_type.enumv() == DTypeEnum::Int8 &&
-                param.filter_type.enumv() == DTypeEnum::Int8 &&
-                param.dst_type.enumv() == DTypeEnum::Int32) ||
-               (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
-                param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
-            fm.format == ConvBiasImpl::Param::Format::NCHW &&
-            fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-            fm.dilation[1] == 1 && (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-            fm.stride[0] == 2 && fm.stride[1] == 2 && (fm.icpg == 1) &&
-            (fm.ocpg == 1) && is_supported(SIMDType::AVX2);
+    bool aviliable = (param.bias_mode != BiasMode::BIAS) &&
+                     ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                       param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+                       param.dst_type.enumv() == DTypeEnum::QuantizedS8) ||
+                      (((param.src_type.enumv() == DTypeEnum::Int8 &&
+                         param.filter_type.enumv() == DTypeEnum::Int8 &&
+                         param.dst_type.enumv() == DTypeEnum::Int32) ||
+                        (param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                         param.filter_type.enumv() == DTypeEnum::QuantizedS8 &&
+                         param.dst_type.enumv() == DTypeEnum::QuantizedS32)))) &&
+                     fm.format == ConvBiasImpl::Param::Format::NCHW &&
+                     fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+                     fm.dilation[1] == 1 &&
+                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 2 &&
+                     fm.stride[1] == 2 && (fm.icpg == 1) && (fm.ocpg == 1) &&
+                     is_supported(SIMDType::AVX2);
     return aviliable;
 }
 
@@ -98,8 +96,7 @@ bool chanwise_avx2_stride2_qint8_usable_preferred(
            chanwise_avx2_stride2_qint8_preferred(param);
 }
 
-bool direct_avx2_stride1_int8_usable(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool direct_avx2_stride1_int8_usable(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
     bool aviliable = ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
@@ -116,14 +113,12 @@ bool direct_avx2_stride1_int8_usable(
                      fm.format == ConvBiasImpl::Param::Format::NCHW &&
                      fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
                      fm.dilation[1] == 1 &&
-                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-                     fm.stride[0] == 1 && fm.stride[1] == 1 &&
-                     is_supported(SIMDType::AVX2);
+                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 1 &&
+                     fm.stride[1] == 1 && is_supported(SIMDType::AVX2);
     return aviliable;
 }
 
-bool direct_avx2_stride1_int8_preferred(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool direct_avx2_stride1_int8_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto IC = fm.icpg;
     auto OC = fm.ocpg;
@@ -140,8 +135,7 @@ bool direct_avx2_stride1_int8_usable_preferred(
            direct_avx2_stride1_int8_preferred(param);
 }
 
-bool direct_avx2_stride2_int8_usable(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool direct_avx2_stride2_int8_usable(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto FH = fm.spatial[0];
     bool aviliable = ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
@@ -158,14 +152,12 @@ bool direct_avx2_stride2_int8_usable(
                      fm.format == ConvBiasImpl::Param::Format::NCHW &&
                      fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
                      fm.dilation[1] == 1 &&
-                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) &&
-                     fm.stride[0] == 2 && fm.stride[1] == 2 &&
-                     is_supported(SIMDType::AVX2);
+                     (FH == 2 || FH == 3 || FH == 5 || FH == 7) && fm.stride[0] == 2 &&
+                     fm.stride[1] == 2 && is_supported(SIMDType::AVX2);
     return aviliable;
 }
 
-bool direct_avx2_stride2_int8_preferred(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool direct_avx2_stride2_int8_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
     auto IC = fm.icpg;
     auto OC = fm.ocpg;
@@ -200,8 +192,7 @@ bool mkldnn_qint8_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
     return is_supported(SIMDType::VNNI);
 }
 
-bool mkldnn_qint8_usable_preferred(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool mkldnn_qint8_usable_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
     return mkldnn_qint8_usable(param) && mkldnn_qint8_preferred(param);
 }
 
@@ -220,8 +211,7 @@ bool mkldnn_matmul_qint8_usable(const ConvBiasImpl::NCBKernSizeParam& param) {
            param.nr_threads == 1_z;
 }
 
-bool mkldnn_matmul_qint8_preferred(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+bool mkldnn_matmul_qint8_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
     auto is_preferred = true;
     auto&& fm = param.filter_meta;
 
@@ -232,10 +222,8 @@ bool mkldnn_matmul_qint8_preferred(
     return is_preferred && is_supported(SIMDType::VNNI);
 }
 
-bool mkldnn_matmul_qint8_usable_preferred(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
-    return mkldnn_matmul_qint8_usable(param) &&
-           mkldnn_matmul_qint8_preferred(param);
+bool mkldnn_matmul_qint8_usable_preferred(const ConvBiasImpl::NCBKernSizeParam& param) {
+    return mkldnn_matmul_qint8_usable(param) && mkldnn_matmul_qint8_preferred(param);
 }
 #endif
 

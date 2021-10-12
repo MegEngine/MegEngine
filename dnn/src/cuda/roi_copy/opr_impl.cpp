@@ -21,24 +21,23 @@
 namespace megdnn {
 namespace cuda {
 
-void ROICopyImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                       _megdnn_workspace workspace) {
+void ROICopyImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
-    size_t N = dst.layout.shape[0], OH = dst.layout.shape[1],
-           OW = dst.layout.shape[2], OC = dst.layout.shape[3];
+    size_t N = dst.layout.shape[0], OH = dst.layout.shape[1], OW = dst.layout.shape[2],
+           OC = dst.layout.shape[3];
     ptrdiff_t istride0 = src.layout.stride[0], istride1 = src.layout.stride[1],
               istride2 = src.layout.stride[2], istride3 = src.layout.stride[3];
 
-    TensorLayout relayout_src_layout({N, OH, OW, OC},
-                                     {istride0, istride1, istride2, istride3},
-                                     src.layout.dtype);
+    TensorLayout relayout_src_layout(
+            {N, OH, OW, OC}, {istride0, istride1, istride2, istride3},
+            src.layout.dtype);
     TensorND relayout_src(
-            static_cast<char*>(src.raw_ptr) + (param().row_from * istride1 +
-                                               param().col_from * istride2) *
-                                                      src.layout.dtype.size(),
+            static_cast<char*>(src.raw_ptr) +
+                    (param().row_from * istride1 + param().col_from * istride2) *
+                            src.layout.dtype.size(),
             relayout_src_layout);
-    static_cast<HandleImplHelper*>(handle())->relayout_opr()->exec(relayout_src,
-                                                                   dst);
+    static_cast<HandleImplHelper*>(handle())->relayout_opr()->exec(relayout_src, dst);
 }
 
 }  // namespace cuda

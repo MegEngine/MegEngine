@@ -30,8 +30,8 @@ inline void run_fill_test(Handle* handle, DType dtype) {
     }
 }
 
-} // namespace fill
-} // namespace test
-} // namespace megdnn
+}  // namespace fill
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

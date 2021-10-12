@@ -30,8 +30,8 @@ using namespace jit;
 
 namespace {
 
-class AffineToLLVMLoweringPass : public PassWrapper<AffineToLLVMLoweringPass,
-                                                    OperationPass<ModuleOp>> {
+class AffineToLLVMLoweringPass
+        : public PassWrapper<AffineToLLVMLoweringPass, OperationPass<ModuleOp>> {
 public:
     void getDependentDialects(mlir::DialectRegistry& registry) const override {
         registry.insert<mlir::LLVM::LLVMDialect>();

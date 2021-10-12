@@ -58,8 +58,7 @@ void CompNodeImplHelper::EventImplHelper::host_wait() {
 #endif
         return;
     }
-    mgb_assert(!sm_cpu_sync_level, "invalid cpu sync level: %d",
-               sm_cpu_sync_level);
+    mgb_assert(!sm_cpu_sync_level, "invalid cpu sync level: %d", sm_cpu_sync_level);
 
     host_wait_cv();
 }

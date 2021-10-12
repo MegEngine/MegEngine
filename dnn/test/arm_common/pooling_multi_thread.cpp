@@ -13,9 +13,9 @@
 #include "megdnn/opr_param_defs.h"
 #include "test/arm_common/fixture.h"
 
-#include "test/common/pooling.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/pooling.h"
 #include "test/common/rng.h"
 
 namespace megdnn {
@@ -24,37 +24,36 @@ namespace test {
 /*********************** mutli threads *********************************/
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING) {
     using Param = param::Pooling;
-    for (size_t ih: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-    for (size_t iw: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-    for (size_t p: {1, 2})
-    {
-        Param param;
-        param.mode = Param::Mode::MAX;
-        param.window_h = param.window_w = 3;
-        param.stride_h = param.stride_w = 2;
-        param.pad_h = param.pad_w = p;
-        Checker<Pooling> checker(handle());
-        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+    for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+            for (size_t p : {1, 2}) {
+                Param param;
+                param.mode = Param::Mode::MAX;
+                param.window_h = param.window_w = 3;
+                param.stride_h = param.stride_w = 2;
+                param.pad_h = param.pad_w = p;
+                Checker<Pooling> checker(handle());
+                checker.set_param(param).exec({{2, 3, ih, iw}, {}});
 
-        param.mode = Param::Mode::AVERAGE;
-        param.window_h = param.window_w = 3;
-        param.stride_h = param.stride_w = 2;
-        param.pad_h = param.pad_w = p;
-        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+                param.mode = Param::Mode::AVERAGE;
+                param.window_h = param.window_w = 3;
+                param.stride_h = param.stride_w = 2;
+                param.pad_h = param.pad_w = p;
+                checker.set_param(param).exec({{2, 3, ih, iw}, {}});
 
-        param.mode = Param::Mode::MAX;
-        param.window_h = param.window_w = 4;
-        param.stride_h = param.stride_w = 2;
-        param.pad_h = param.pad_w = p;
-        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+                param.mode = Param::Mode::MAX;
+                param.window_h = param.window_w = 4;
+                param.stride_h = param.stride_w = 2;
+                param.pad_h = param.pad_w = p;
+                checker.set_param(param).exec({{2, 3, ih, iw}, {}});
 
-        param.mode = Param::Mode::MAX;
-        param.window_h = param.window_w = 5;
-        param.stride_h = param.stride_w = 2;
-        param.pad_h = param.pad_w = p;
-        if (ih + p * 2 >= 5 && iw + p * 2 >= 5)
-            checker.set_param(param).exec({{2, 3, ih, iw}, {}});
-    }
+                param.mode = Param::Mode::MAX;
+                param.window_h = param.window_w = 5;
+                param.stride_h = param.stride_w = 2;
+                param.pad_h = param.pad_w = p;
+                if (ih + p * 2 >= 5 && iw + p * 2 >= 5)
+                    checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+            }
 }
 
 std::vector<std::pair<param::Pooling, TensorShapeArray>> get_nchw44_pool_args(
@@ -68,31 +67,29 @@ std::vector<std::pair<param::Pooling, TensorShapeArray>> get_nchw44_pool_args(
                 for (size_t iw : {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13})
                     for (size_t ph : {0, 1, 2})
                         for (size_t pw : {0, 1, 2})
-                            for (auto mode : {param::Pooling::Mode::MAX,
-                                              param::Pooling::Mode::AVERAGE})
-                                if (ih + 2 * ph >= filter &&
-                                    iw + 2 * pw >= filter && filter > ph &&
-                                    filter > pw) {
+                            for (auto mode :
+                                 {param::Pooling::Mode::MAX,
+                                  param::Pooling::Mode::AVERAGE})
+                                if (ih + 2 * ph >= filter && iw + 2 * pw >= filter &&
+                                    filter > ph && filter > pw) {
                                     param::Pooling param;
                                     param.mode = mode;
-                                    param.format =
-                                            param::Pooling::Format::NCHW44;
+                                    param.format = param::Pooling::Format::NCHW44;
                                     param.pad_h = ph;
                                     param.pad_w = pw;
                                     param.stride_h = param.stride_w = stride;
                                     param.window_h = param.window_w = filter;
                                     args.emplace_back(std::make_pair(
                                             param,
-                                            TensorShapeArray{{n, c / ic_step,
-                                                              ih, iw, ic_step},
-                                                             {}}));
+                                            TensorShapeArray{
+                                                    {n, c / ic_step, ih, iw, ic_step},
+                                                    {}}));
                                 }
     return args;
 }
 
 void run_pooling_check(
-        Handle* handle,
-        std::vector<std::pair<param::Pooling, TensorShapeArray>> args,
+        Handle* handle, std::vector<std::pair<param::Pooling, TensorShapeArray>> args,
         bool is_int8) {
     Checker<Pooling> checker(handle);
     UniformIntRNG rng_int8{INT8_MIN >> 1, INT8_MAX >> 1};
@@ -111,13 +108,11 @@ void run_pooling_check(
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_NCHW44_FP32) {
     for (auto filter : {2, 3, 4, 5})
         for (auto stride : {1, 2}) {
-            run_pooling_check(handle(), get_nchw44_pool_args(filter, stride),
-                              false);
+            run_pooling_check(handle(), get_nchw44_pool_args(filter, stride), false);
         }
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W9_w13_NCHW44)
-{
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W9_w13_NCHW44) {
     UniformIntRNG rng{-10, 10};
     Checker<Pooling> checker(handle());
     checker.set_rng(0, &rng);
@@ -141,8 +136,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W9_w13_NCHW44)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
-{
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44) {
     UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
     Checker<Pooling> checker(handle());
     checker.set_rng(0, &rng);
@@ -173,8 +167,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W3x3_NCHW44)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W2x2_NCHW44)
-{
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W2x2_NCHW44) {
     UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
     Checker<Pooling> checker(handle());
     checker.set_rng(0, &rng);
@@ -205,8 +198,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W2x2_NCHW44)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W4x4_NCHW44)
-{
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W4x4_NCHW44) {
     UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
     Checker<Pooling> checker(handle());
     checker.set_rng(0, &rng);
@@ -235,8 +227,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W4x4_NCHW44)
     }
     // clang-format on
 }
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W5x5_NCHW44)
-{
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W5x5_NCHW44) {
     UniformIntRNG rng{INT8_MIN >> 1, INT8_MAX >> 1};
     Checker<Pooling> checker(handle());
     checker.set_rng(0, &rng);
@@ -267,46 +258,42 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_W5x5_NCHW44)
     // clang-format on
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_INT8_W3x3_S2x2)
-{
-    for (size_t ih: {2, 3, 7, 13, 52, 53, 54, 55})
-    for (size_t iw: {2, 3, 6, 14, 53, 54, 55, 56})
-    for (size_t ph: {0, 1, 2})
-    for (size_t pw: {0, 1, 2})
-    if (ih+2*ph >= 3 && iw+2*pw >= 3)
-    {
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::Int8());
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.pad_h = ph;
-        param.pad_w = pw;
-        param.stride_h = param.stride_w = 2;
-        param.window_h = param.window_w = 3;
-        checker.set_param(param).exec(TensorShapeArray{
-                {2, 3, ih, iw}, {}});
-    }
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_INT8_W3x3_S2x2) {
+    for (size_t ih : {2, 3, 7, 13, 52, 53, 54, 55})
+        for (size_t iw : {2, 3, 6, 14, 53, 54, 55, 56})
+            for (size_t ph : {0, 1, 2})
+                for (size_t pw : {0, 1, 2})
+                    if (ih + 2 * ph >= 3 && iw + 2 * pw >= 3) {
+                        Checker<Pooling> checker(handle());
+                        checker.set_dtype(0, dtype::Int8());
+                        param::Pooling param;
+                        param.mode = param::Pooling::Mode::MAX;
+                        param.pad_h = ph;
+                        param.pad_w = pw;
+                        param.stride_h = param.stride_w = 2;
+                        param.window_h = param.window_w = 3;
+                        checker.set_param(param).exec(
+                                TensorShapeArray{{2, 3, ih, iw}, {}});
+                    }
 }
 
-TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_INT8_W2x2_S2x2)
-{
-    for (size_t ih: {2, 3, 7, 13, 52, 53, 54, 55})
-    for (size_t iw: {2, 3, 6, 14, 53, 54, 55, 56})
-    for (size_t ph: {0, 1})
-    for (size_t pw: {0, 1})
-    if (ih+2*ph >= 3 && iw+2*pw >= 3)
-    {
-        Checker<Pooling> checker(handle());
-        checker.set_dtype(0, dtype::Int8());
-        param::Pooling param;
-        param.mode = param::Pooling::Mode::MAX;
-        param.pad_h = ph;
-        param.pad_w = pw;
-        param.stride_h = param.stride_w = 2;
-        param.window_h = param.window_w = 2;
-        checker.set_param(param).exec(TensorShapeArray{
-                {2, 3, ih, iw}, {}});
-    }
+TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_INT8_W2x2_S2x2) {
+    for (size_t ih : {2, 3, 7, 13, 52, 53, 54, 55})
+        for (size_t iw : {2, 3, 6, 14, 53, 54, 55, 56})
+            for (size_t ph : {0, 1})
+                for (size_t pw : {0, 1})
+                    if (ih + 2 * ph >= 3 && iw + 2 * pw >= 3) {
+                        Checker<Pooling> checker(handle());
+                        checker.set_dtype(0, dtype::Int8());
+                        param::Pooling param;
+                        param.mode = param::Pooling::Mode::MAX;
+                        param.pad_h = ph;
+                        param.pad_w = pw;
+                        param.stride_h = param.stride_w = 2;
+                        param.window_h = param.window_w = 2;
+                        checker.set_param(param).exec(
+                                TensorShapeArray{{2, 3, ih, iw}, {}});
+                    }
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -353,10 +340,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_FP16) {
                     }
 
     //! test for SH == 2 && SW == 2 && FH = FW = 4 max pooling
-    for (size_t ih :
-         {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-        for (size_t iw :
-             {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t p : {1, 2}) {
                 Param param;
                 param.mode = Param::Mode::MAX;
@@ -367,10 +352,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_FP16) {
             }
 
     //! test for SH == 2 && SW == 2 && FH = FW = 5 max pooling
-    for (size_t ih :
-         {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-        for (size_t iw :
-             {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+    for (size_t ih : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t p : {1, 2}) {
                 Param param;
                 param.mode = Param::Mode::MAX;
@@ -435,8 +418,7 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_QUANTIZED) {
                         }
 
         //! test for SH == 2 && SW == 2 && FH == FW == 4 max pooling
-        for (size_t ih :
-             {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
             for (size_t iw :
                  {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
                 for (size_t p : {1, 2}) {
@@ -449,10 +431,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_QUANTIZED) {
                 }
 
         //! test for SH == 2 && SW == 2 && FH == FW == 5 max pooling
-        for (size_t ih :
-             {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-            for (size_t iw :
-                 {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t ih : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+            for (size_t iw : {3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
                 for (size_t p : {1, 2}) {
                     Param param;
                     param.mode = Param::Mode::MAX;
@@ -465,32 +445,29 @@ TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_QUANTIZED) {
 }
 TEST_F(ARM_COMMON_MULTI_THREADS, POOLING_FALLBACK) {
     using Param = param::Pooling;
-    for (size_t ih: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-    for (size_t iw: {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
-    for (size_t p: {1, 2})
-    {
-        Param param;
-        param.mode = Param::Mode::MAX;
-        param.window_h = param.window_w = 3;
-        param.stride_h = param.stride_w = 2;
-        param.pad_h = param.pad_w = p;
-        Checker<Pooling> checker(handle());
-        checker.set_param(param).exec({{2, 3, ih, iw}, {}});
-    }
+    for (size_t ih : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+        for (size_t iw : {2, 3, 5, 7, 11, 13, 17, 19, 23, 24, 25, 26, 27, 28, 29, 30})
+            for (size_t p : {1, 2}) {
+                Param param;
+                param.mode = Param::Mode::MAX;
+                param.window_h = param.window_w = 3;
+                param.stride_h = param.stride_w = 2;
+                param.pad_h = param.pad_w = p;
+                Checker<Pooling> checker(handle());
+                checker.set_param(param).exec({{2, 3, ih, iw}, {}});
+            }
 }
 
 #if MEGDNN_WITH_BENCHMARK
 namespace {
 template <typename Opr>
-void benchmark_impl(const typename Opr::Param& param,
-                    std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
-                    TaskExecutorConfig&& multi_thread_config,
-                    TaskExecutorConfig&& single_thread_config,
-                    DType data_type) {
+void benchmark_impl(
+        const typename Opr::Param& param, std::vector<SmallVector<TensorShape>> shapes,
+        size_t RUNS, TaskExecutorConfig&& multi_thread_config,
+        TaskExecutorConfig&& single_thread_config, DType data_type) {
     std::vector<float> multi_thread_times, single_thread_times;
     {
-        auto multi_thread_hanle =
-                create_cpu_handle(0, true, &multi_thread_config);
+        auto multi_thread_hanle = create_cpu_handle(0, true, &multi_thread_config);
         auto benchmarker = Benchmarker<Opr>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         benchmarker.set_dtype(0, data_type);
@@ -499,8 +476,7 @@ void benchmark_impl(const typename Opr::Param& param,
         }
     }
     {
-        auto single_thread_handle =
-                create_cpu_handle(0, true, &single_thread_config);
+        auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
         auto benchmarker = Benchmarker<Opr>(single_thread_handle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         benchmarker.set_dtype(0, data_type);
@@ -513,8 +489,7 @@ void benchmark_impl(const typename Opr::Param& param,
     for (size_t i = 0; i < multi_thread_config.affinity_core_set.size(); i++) {
         printf("%zu ", multi_thread_config.affinity_core_set[i]);
     }
-    printf(", Single thread core_id %zu\n",
-           single_thread_config.affinity_core_set[0]);
+    printf(", Single thread core_id %zu\n", single_thread_config.affinity_core_set[0]);
     for (size_t i = 0; i < shapes.size(); i++) {
         auto shape = shapes[i];
         printf("Case: ");
@@ -523,8 +498,7 @@ void benchmark_impl(const typename Opr::Param& param,
         printf("%zu threads time: %f,\n single thread time: "
                "%f. spead up = %f, speedup/cores=%f\n",
                multi_thread_config.nr_thread, multi_thread_times[i],
-               single_thread_times[i],
-               single_thread_times[i] / multi_thread_times[i],
+               single_thread_times[i], single_thread_times[i] / multi_thread_times[i],
                single_thread_times[i] / multi_thread_times[i] /
                        multi_thread_config.nr_thread);
     }
@@ -556,9 +530,12 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING) {
     param.pad_h = param.pad_w = 1;
     printf("Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n", param.window_h,
            param.window_w, param.stride_h, static_cast<int>(param.mode));
-    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {0, 1, 2, 3}}, {1, {0}}, dtype::Float32());
-    benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}}, dtype::Float32());
-    benchmark_impl<Pooling>(param, shapes, RUNS, {2, {0, 1}}, {1, {0}}, dtype::Float32());
+    benchmark_impl<Pooling>(
+            param, shapes, RUNS, {4, {0, 1, 2, 3}}, {1, {0}}, dtype::Float32());
+    benchmark_impl<Pooling>(
+            param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}}, dtype::Float32());
+    benchmark_impl<Pooling>(
+            param, shapes, RUNS, {2, {0, 1}}, {1, {0}}, dtype::Float32());
 }
 
 TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING_NCHW44) {
@@ -572,8 +549,7 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING_NCHW44) {
     std::vector<std::vector<size_t>> filter_and_stride = {
             {2, 1}, {2, 2}, {3, 1}, {3, 2}, {4, 1}, {4, 2}, {5, 1}, {5, 2}};
 
-    for (auto mode :
-         {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE}) {
+    for (auto mode : {param::Pooling::Mode::MAX, param::Pooling::Mode::AVERAGE}) {
         for (auto filter : filter_and_stride) {
             shapes.push_back({{1, 32 * 4, 215, 215}, {}});
             shapes.push_back({{1, 32 * 4, 128, 128}, {}});
@@ -586,8 +562,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING_NCHW44) {
             printf("NCHW Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n",
                    param.window_h, param.window_h, param.stride_h,
                    static_cast<int>(param.mode));
-            benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}},
-                                    {1, {4}}, dtype::QuantizedS8(1.1f));
+            benchmark_impl<Pooling>(
+                    param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+                    dtype::QuantizedS8(1.1f));
             shapes.clear();
             shapes.push_back({{1, 32, 215, 215, 4}, {}});
             shapes.push_back({{1, 32, 128, 128, 4}, {}});
@@ -597,8 +574,9 @@ TEST_F(ARM_COMMON_BENCHMARK_MULTI_THREADS, BENCHMARK_POOLING_NCHW44) {
             printf("NCHW44 Benchmark POOLING kernel:%d*%d stride:%d,mode %d\n",
                    param.window_h, param.window_w, param.stride_h,
                    static_cast<int>(param.mode));
-            benchmark_impl<Pooling>(param, shapes, RUNS, {4, {4, 5, 6, 7}},
-                                    {1, {4}}, dtype::QuantizedS8(1.1f));
+            benchmark_impl<Pooling>(
+                    param, shapes, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+                    dtype::QuantizedS8(1.1f));
             shapes.clear();
         }
     }

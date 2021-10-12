@@ -10,8 +10,8 @@
  */
 
 #include "megbrain/imperative/backward_graph_opt.h"
-#include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/backward_graph.h"
 
 using namespace mgb;
 using namespace imperative;
@@ -55,7 +55,8 @@ OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const EncodedSubgraph
     // step 1.2: inputs only available in backward (i.e. grads)
     // should be marked as always appears in backward
     for (size_t i = 0, j = 0; i < mask.size(); ++i) {
-        if (!mask[i]) continue;
+        if (!mask[i])
+            continue;
         if (i >= input_size + output_size) {
             vinfo[graph.inputs[j]].appears_in_backward = true;
         }
@@ -66,7 +67,9 @@ OptimizedBackwardGraphResult::OptimizedBackwardGraphResult(const EncodedSubgraph
     // are marked always appears in backward (otherwise no memory saving)
     for (auto&& expr : graph.exprs) {
         auto&& [op, iv, ov] = expr;
-        if (std::all_of(iv.begin(), iv.end(), [&](auto&& v){return vinfo[v].appears_in_backward;})) {
+        if (std::all_of(iv.begin(), iv.end(), [&](auto&& v) {
+                return vinfo[v].appears_in_backward;
+            })) {
             bgraph.exprs.push_back(expr);
             for (auto&& v : ov) {
                 vinfo[v].appears_in_backward = true;

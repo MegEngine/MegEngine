@@ -51,8 +51,8 @@ class ConvBiasImpl::AlgoPack : NonCopyableObj {
 
 public:
     AlgoPack() {
-    //! FIXME: preference to use mkldnn algo on VNNI devices
-    //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
+        //! FIXME: preference to use mkldnn algo on VNNI devices
+        //! But now mkldnn algo preference issue with NCHW->NHWC->NCHW
 #if MEGDNN_X86_WITH_MKL_DNN
         //! Create the mkldnn algo
         m_all_no_winograd_algo.emplace_back(&mkldnn_conv_fp32);
@@ -92,12 +92,10 @@ public:
             m_all_algos_map.emplace(algo->info().desc, algo);
         }
     }
-    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& all_no_winograd_algo()
-            const {
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& all_no_winograd_algo() const {
         return m_all_no_winograd_algo;
     }
-    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos()
-            const {
+    const SmallVector<fallback::ConvBiasImpl::AlgoBase*>& winograd_algos() const {
         return m_winograd_algos;
     }
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
@@ -110,27 +108,27 @@ const ConvBiasImpl::AlgoPack& ConvBiasImpl::algo_pack() {
 
 fallback::ConvBiasImpl::AlgoBase* ConvBiasImpl::get_algo_from_desc(
         const AlgorithmDesc& desc) {
-    megdnn_assert(algo_pack().all_algos_map().find(desc) !=
-                  algo_pack().all_algos_map().end());
+    megdnn_assert(
+            algo_pack().all_algos_map().find(desc) !=
+            algo_pack().all_algos_map().end());
     return algo_pack().all_algos_map().at(desc);
 }
 
-SmallVector<fallback::ConvBiasImpl::AlgoBase*>
-ConvBiasImpl::get_all_packed_algo() {
+SmallVector<fallback::ConvBiasImpl::AlgoBase*> ConvBiasImpl::get_all_packed_algo() {
     auto&& algos = fallback::ConvBiasImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_no_winograd_algo().begin(),
-                 algo_pack().all_no_winograd_algo().end());
-    algos.insert(algos.end(), algo_pack().winograd_algos().begin(),
-                 algo_pack().winograd_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_no_winograd_algo().begin(),
+            algo_pack().all_no_winograd_algo().end());
+    algos.insert(
+            algos.end(), algo_pack().winograd_algos().begin(),
+            algo_pack().winograd_algos().end());
 
     return std::move(algos);
 }
 
-void ConvBiasImpl::get_rectified_img_size(size_t IH, size_t IW, size_t FH,
-                                          size_t FW, size_t OH, size_t OW,
-                                          size_t PH, size_t PW, size_t& IH2,
-                                          size_t& IW2, size_t& OH2,
-                                          size_t& OW2) {
+void ConvBiasImpl::get_rectified_img_size(
+        size_t IH, size_t IW, size_t FH, size_t FW, size_t OH, size_t OW, size_t PH,
+        size_t PW, size_t& IH2, size_t& IW2, size_t& OH2, size_t& OW2) {
     OW2 = (OW + 7) >> 3 << 3;
     OH2 = OH;
     IH2 = std::max(IH, OH2 + FH - 1 + 2 * PH);
@@ -190,11 +188,9 @@ SmallVector<AlgoCategory> ConvBiasImpl::suggest_algo_category_order(
         im2col_prefer = true;
     }
     if (im2col_prefer) {
-        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT,
-                AlgoCategory::NAIVE};
+        return {AlgoCategory::IM2COL, AlgoCategory::DIRECT, AlgoCategory::NAIVE};
     } else {
-        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL,
-                AlgoCategory::NAIVE};
+        return {AlgoCategory::DIRECT, AlgoCategory::IM2COL, AlgoCategory::NAIVE};
     }
 }
 

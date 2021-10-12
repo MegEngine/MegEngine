@@ -15,14 +15,14 @@
 namespace megdnn {
 namespace rocm {
 
-class SleepForwardImpl: public SleepForward {
-    public:
-        using SleepForward::SleepForward;
+class SleepForwardImpl : public SleepForward {
+public:
+    using SleepForward::SleepForward;
 
-        void exec() override;
+    void exec() override;
 };
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

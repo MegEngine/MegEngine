@@ -56,26 +56,26 @@ public:
         void init_desc(convolution::CUDNNBwdDataDescs& desc) const {
             desc.set(filter_meta, *diff_layout, *grad_layout, opr->param());
         }
-        SizeArgs(const ConvolutionBackwardDataImpl* opr,
-                 const TensorLayout& filter, const TensorLayout& diff,
-                 const TensorLayout& grad);
-        SizeArgs(const ConvolutionBackwardDataImpl* opr,
-                 const TensorLayout& filter,
-                 const CanonizedFilterMeta& filter_meta,
-                 const TensorLayout& diff, const TensorLayout& grad);
+        SizeArgs(
+                const ConvolutionBackwardDataImpl* opr, const TensorLayout& filter,
+                const TensorLayout& diff, const TensorLayout& grad);
+        SizeArgs(
+                const ConvolutionBackwardDataImpl* opr, const TensorLayout& filter,
+                const CanonizedFilterMeta& filter_meta, const TensorLayout& diff,
+                const TensorLayout& grad);
 
         convolution::ForwardSizeArgs as_fwd_args() const {
-            return {handle, grad_layout, filter_layout, filter_meta,
-                    diff_layout};
+            return {handle, grad_layout, filter_layout, filter_meta, diff_layout};
         }
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *filter_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(const ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
-                 _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                const ConvolutionBackwardDataImpl* opr, _megdnn_tensor_in filter,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -91,17 +91,16 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
 
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "conv bwd data algo %s: "
-                      "required workspace %zu bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "conv bwd data algo %s: "
+                "required workspace %zu bytes, got %zu",
+                name(), req, workspace.size);
         return *this;
     }
 
@@ -113,10 +112,10 @@ class ConvolutionBackwardDataImpl::AlgoCUDNN final : public AlgoBase {
     CudnnAlgoPack::Attr m_attr;
 
 public:
-    AlgoCUDNN(cudnnConvolutionBwdDataAlgo_t cudnn_enum)
-            : m_cudnn_enum(cudnn_enum) {
-        megdnn_assert(CudnnAlgoPack::conv_bwd_data_algos().find(cudnn_enum) !=
-                      CudnnAlgoPack::conv_bwd_data_algos().end());
+    AlgoCUDNN(cudnnConvolutionBwdDataAlgo_t cudnn_enum) : m_cudnn_enum(cudnn_enum) {
+        megdnn_assert(
+                CudnnAlgoPack::conv_bwd_data_algos().find(cudnn_enum) !=
+                CudnnAlgoPack::conv_bwd_data_algos().end());
         m_attr = CudnnAlgoPack::conv_bwd_data_algos().at(cudnn_enum);
     }
 
@@ -158,14 +157,12 @@ public:
     void exec(const ExecArgs& args) const override;
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
 };
 
@@ -177,9 +174,7 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionBackwardDataImpl::AlgoChanwiseSmall final : public AlgoBase {
@@ -191,8 +186,7 @@ public:
     const char* name() const override { return "CHANNEL_WISE_SMALL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE_SMALL)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::USABLE_DEPEND_ON_SHAPE;
     }
 };
 
@@ -203,16 +197,11 @@ public:
     void exec(const ExecArgs& args) const override;
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
-    const char* name() const override {
-        return "CONVOLUTION_BACKWARD_DATD_BFLOAT16";
-    }
+    const char* name() const override { return "CONVOLUTION_BACKWARD_DATD_BFLOAT16"; }
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -220,25 +209,19 @@ private:
 };
 
 //! implement group conv by another algo
-class ConvolutionBackwardDataImpl::AlgoGroupConvGeneral final
-        : public AlgoBase {
+class ConvolutionBackwardDataImpl::AlgoGroupConvGeneral final : public AlgoBase {
 public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
-    const char* name() const override {
-        return "CUDA:GROUP_CONV_BACKWARD_DATA";
-    }
+    const char* name() const override { return "CUDA:GROUP_CONV_BACKWARD_DATA"; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;
@@ -256,26 +239,24 @@ public:
         int warp_k;
         int stage;
         std::string to_string() {
-            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m,
-                            threadblock_n, threadblock_k, warp_m, warp_n,
-                            warp_k, stage);
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_%dstage", threadblock_m, threadblock_n,
+                    threadblock_k, warp_m, warp_n, warp_k, stage);
         }
     };
     AlgoInt8NCHW4DotProdImplicitGemm(AlgoParam algo_param)
             : m_algo_param{algo_param},
-              m_name{ssprintf("INT8_NCHW4_DOTPROD_IMPLICIT_GEMM%s",
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "INT8_NCHW4_DOTPROD_IMPLICIT_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW4_DOTPROD_INT8)
 private:
-    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
-                                         const SizeArgs& args) const;
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const;
     const void* get_available_op(const SizeArgs& args) const;
     AlgoParam m_algo_param;
     std::string m_name;
@@ -287,16 +268,12 @@ public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
-    const char* name() const override {
-        return "INT8_NCHW_DOTPROD_IMPLICIT_GEMM";
-    }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    const char* name() const override { return "INT8_NCHW_DOTPROD_IMPLICIT_GEMM"; }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NCHW_DOTPROD_INT8);
+
 private:
-    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
-                                         const SizeArgs& args) const;
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const;
     const void* get_available_op(const SizeArgs& args) const;
 };
 
@@ -313,29 +290,27 @@ public:
         int stage;
         int access_size;
         std::string to_string() {
-            return ssprintf("_%dX%dX%d_%dX%dX%d_%dstage_%d", threadblock_m,
-                            threadblock_n, threadblock_k, warp_m, warp_n,
-                            warp_k, stage, access_size);
+            return ssprintf(
+                    "_%dX%dX%d_%dX%dX%d_%dstage_%d", threadblock_m, threadblock_n,
+                    threadblock_k, warp_m, warp_n, warp_k, stage, access_size);
         }
     };
     AlgoInt8NHWCIMMAImplicitGemm(AlgoParam algo_param)
             : m_algo_param{algo_param},
-              m_name{ssprintf("INT8_NHWC_IMMA_IMPLICIT_GEMM%s",
-                              m_algo_param.to_string().c_str())} {}
+              m_name{ssprintf(
+                      "INT8_NHWC_IMMA_IMPLICIT_GEMM%s",
+                      m_algo_param.to_string().c_str())} {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     const char* name() const override { return m_name.c_str(); }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_IMPLICIT_GEMM_NHWC_IMMA_INT8)
 private:
-    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr,
-                                         const SizeArgs& args) const;
+    WorkspaceBundle get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const;
     const void* get_available_op(const SizeArgs& args) const;
-    void reorder_filter(const ExecArgs& args, const int iterleaved,
-                        int8_t* reordered_filter) const;
+    void reorder_filter(
+            const ExecArgs& args, const int iterleaved, int8_t* reordered_filter) const;
     AlgoParam m_algo_param;
     std::string m_name;
 };

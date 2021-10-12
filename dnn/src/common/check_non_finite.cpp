@@ -14,8 +14,8 @@
 
 namespace megdnn {
 
-void CheckNonFinite::check_exec(const TensorLayout& src, const TensorLayout& dst,
-                             size_t workspace_in_bytes) {
+void CheckNonFinite::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(dst);
     megdnn_assert(src.ndim == 1);

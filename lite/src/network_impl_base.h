@@ -72,8 +72,7 @@ public:
     //! get the network input and ouput tensor, the layout of which is
     //! sync from mge tensor
     virtual std::shared_ptr<Tensor> get_io_tensor(
-            std::string io_name,
-            LiteTensorPhase phase = LiteTensorPhase::LITE_IO) = 0;
+            std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_IO) = 0;
 
     //! get the input tensor by index in the load_result tensormap
     virtual std::shared_ptr<Tensor> get_input_tensor(size_t index) = 0;
@@ -103,9 +102,9 @@ public:
     virtual void set_finish_callback(const FinishCallback& callback) = 0;
 
     //! load the model and get the m_load_result
-    virtual void load_model(std::shared_ptr<void> model_mem, size_t size,
-                            std::unordered_map<std::string, LiteAny>
-                                    separate_config_map = {}) = 0;
+    virtual void load_model(
+            std::shared_ptr<void> model_mem, size_t size,
+            std::unordered_map<std::string, LiteAny> separate_config_map = {}) = 0;
 
     //! forward the network with filled input data and fill the output data
     //! to the output tensor
@@ -146,13 +145,13 @@ public:
         LITE_ASSERT(network);
         return network->m_impl.get();
     }
-    static Network::NetworkImplBase* implement(
-            const std::shared_ptr<Network> network) {
+    static Network::NetworkImplBase* implement(const std::shared_ptr<Network> network) {
         LITE_ASSERT(network);
         return network->m_impl.get();
     }
-    static void implement(const std::shared_ptr<Network> network,
-                          std::unique_ptr<Network::NetworkImplBase> impl) {
+    static void implement(
+            const std::shared_ptr<Network> network,
+            std::unique_ptr<Network::NetworkImplBase> impl) {
         LITE_ASSERT(network);
         network->m_impl = std::move(impl);
     }

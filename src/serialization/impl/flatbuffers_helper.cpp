@@ -94,20 +94,19 @@ flatbuffers::Offset<fbs::DType> build_dtype(
         mgb_trap();  // unreachable
             MEGDNN_FOREACH_DTYPE_NAME(cb)
 #undef cb
-#define CASE_ASYMMETRIC(_dt)                                                  \
-    case megdnn::DTypeEnum::_dt: {                                            \
-        auto&& p = dtype.param<dtype::_dt>();                                 \
-        param_type = DTypeParam_LinearQuantizationParam;                      \
-        param = CreateLinearQuantizationParam(builder, p.scale, p.zero_point) \
-                        .Union();                                             \
-        break;                                                                \
+#define CASE_ASYMMETRIC(_dt)                                                           \
+    case megdnn::DTypeEnum::_dt: {                                                     \
+        auto&& p = dtype.param<dtype::_dt>();                                          \
+        param_type = DTypeParam_LinearQuantizationParam;                               \
+        param = CreateLinearQuantizationParam(builder, p.scale, p.zero_point).Union(); \
+        break;                                                                         \
     }
-#define CASE_SYMMETRIC(_dt)                                                    \
-    case megdnn::DTypeEnum::_dt:                                               \
-        param_type = DTypeParam_LinearQuantizationParam;                       \
-        param = CreateLinearQuantizationParam(builder,                         \
-                                              dtype.param<dtype::_dt>().scale) \
-                        .Union();                                              \
+#define CASE_SYMMETRIC(_dt)                                       \
+    case megdnn::DTypeEnum::_dt:                                  \
+        param_type = DTypeParam_LinearQuantizationParam;          \
+        param = CreateLinearQuantizationParam(                    \
+                        builder, dtype.param<dtype::_dt>().scale) \
+                        .Union();                                 \
         break;
             CASE_ASYMMETRIC(Quantized4Asymm)
             CASE_ASYMMETRIC(Quantized8Asymm)

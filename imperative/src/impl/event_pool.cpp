@@ -41,9 +41,9 @@ CompNode::Event* EventPool::alloc(CompNode cn) {
         auto iter = m_cn2pool.find(cn);
         if (iter == m_cn2pool.end()) {
             iter = m_cn2pool
-                           .emplace(std::piecewise_construct,
-                                    std::forward_as_tuple(cn),
-                                    std::forward_as_tuple(cn, m_flags))
+                           .emplace(
+                                   std::piecewise_construct, std::forward_as_tuple(cn),
+                                   std::forward_as_tuple(cn, m_flags))
                            .first;
         }
         pool = &iter->second;
@@ -52,7 +52,7 @@ CompNode::Event* EventPool::alloc(CompNode cn) {
 }
 std::shared_ptr<CompNode::Event> EventPool::alloc_shared(CompNode cn) {
     auto* raw_event = alloc(cn);
-    return {raw_event, [this](CompNode::Event* event){ this->free(event); }};
+    return {raw_event, [this](CompNode::Event* event) { this->free(event); }};
 }
 void EventPool::free(CompNode::Event* event) {
     CompNode::EventPool* pool;

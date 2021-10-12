@@ -50,15 +50,13 @@ TEST(ARM_RUNTIME, CPUINFO_KIRIN980) {
                 case 1:
                 case 2:
                 case 3:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a76,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a76, cpuinfo_get_core(i)->uarch);
                     break;
                 case 4:
                 case 5:
                 case 6:
                 case 7:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a55,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a55, cpuinfo_get_core(i)->uarch);
                     break;
             }
         }
@@ -70,8 +68,7 @@ TEST(ARM_RUNTIME, CPUINFO_KIRIN980) {
 TEST(ARM_RUNTIME, CPUINFO_SDM8150) {
     ASSERT_TRUE(cpuinfo_initialize());
 
-    int right_soc =
-            strcmp(cpuinfo_get_package(0)->name, "Qualcomm Snapdragon 8150");
+    int right_soc = strcmp(cpuinfo_get_package(0)->name, "Qualcomm Snapdragon 8150");
 
     if (!right_soc) {
         ASSERT_EQ(8, cpuinfo_get_processors_count());
@@ -100,15 +97,13 @@ TEST(ARM_RUNTIME, CPUINFO_SDM8150) {
                 case 1:
                 case 2:
                 case 3:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a76,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a76, cpuinfo_get_core(i)->uarch);
                     break;
                 case 4:
                 case 5:
                 case 6:
                 case 7:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a55,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a55, cpuinfo_get_core(i)->uarch);
                     break;
             }
         }
@@ -120,8 +115,7 @@ TEST(ARM_RUNTIME, CPUINFO_SDM8150) {
 TEST(ARM_RUNTIME, CPUINFO_SDM660) {
     ASSERT_TRUE(cpuinfo_initialize());
 
-    int right_soc =
-            strcmp(cpuinfo_get_package(0)->name, "Qualcomm Snapdragon 660");
+    int right_soc = strcmp(cpuinfo_get_package(0)->name, "Qualcomm Snapdragon 660");
 
     if (!right_soc) {
         ASSERT_EQ(8, cpuinfo_get_processors_count());
@@ -150,15 +144,13 @@ TEST(ARM_RUNTIME, CPUINFO_SDM660) {
                 case 1:
                 case 2:
                 case 3:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a73,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a73, cpuinfo_get_core(i)->uarch);
                     break;
                 case 4:
                 case 5:
                 case 6:
                 case 7:
-                    ASSERT_EQ(cpuinfo_uarch_cortex_a53,
-                              cpuinfo_get_core(i)->uarch);
+                    ASSERT_EQ(cpuinfo_uarch_cortex_a53, cpuinfo_get_core(i)->uarch);
                     break;
             }
         }

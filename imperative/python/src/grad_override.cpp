@@ -44,7 +44,8 @@ std::shared_ptr<Tensor> make_empty_tensor(CompNode cn, Tensor* shape, DType dtyp
     return res;
 }
 
-std::optional<apply_result_t> elemwise_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> elemwise_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto& op = ctx.op->cast_final_safe<Elemwise>();
     if (op.mode == Elemwise::Mode::ADD) {
         mgb_assert(ctx.nargs == 2);
@@ -55,7 +56,8 @@ std::optional<apply_result_t> elemwise_grad_rule(ApplyContext& ctx, CustomBackwa
             }
         }
         maker.output_size(1).output_captured(0, false);
-        maker.backward([shapes=std::move(input_shapes)](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+        maker.backward([shapes = std::move(input_shapes)](
+                               BackwardContext&, Tensor* const* grads, size_t ngrads) {
             mgb_assert(ngrads == 1);
             Tensor* grad = grads[0];
             apply_result_t ret(2);
@@ -74,7 +76,8 @@ std::optional<apply_result_t> elemwise_grad_rule(ApplyContext& ctx, CustomBackwa
     return {};
 }
 
-std::optional<apply_result_t> reshape_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> reshape_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     mgb_assert(ctx.nargs == 2);
     std::array<std::shared_ptr<Tensor>, 2> input_shapes;
     for (size_t i = 0; i < 2; ++i) {
@@ -83,7 +86,8 @@ std::optional<apply_result_t> reshape_grad_rule(ApplyContext& ctx, CustomBackwar
         }
     }
     maker.output_size(1).output_captured(0, false);
-    maker.backward([shapes=std::move(input_shapes)](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([shapes = std::move(input_shapes)](
+                           BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(2);
@@ -100,7 +104,8 @@ std::optional<apply_result_t> reshape_grad_rule(ApplyContext& ctx, CustomBackwar
     return apply(ctx);
 }
 
-std::optional<apply_result_t> subtensor_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> subtensor_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto&& op = ctx.op->cast_final_safe<Subtensor>();
     auto&& grad_op = SetSubtensor::make(op.items);
     SmallVector<std::shared_ptr<Tensor>> inputs;
@@ -111,17 +116,19 @@ std::optional<apply_result_t> subtensor_grad_rule(ApplyContext& ctx, CustomBackw
         }
     }
     maker.output_size(1).output_captured(0, false);
-    maker.backward([inputs=std::move(inputs), grad_op_=std::move(grad_op)](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([inputs = std::move(inputs), grad_op_ = std::move(grad_op)](
+                           BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(1);
         if (grad && inputs[0]) {
-            SmallVector<Tensor*> args_(inputs.size()+1);
-            auto&& zeros = make_empty_tensor(grad->comp_node(), inputs[0].get(), grad->dtype());
+            SmallVector<Tensor*> args_(inputs.size() + 1);
+            auto&& zeros = make_empty_tensor(
+                    grad->comp_node(), inputs[0].get(), grad->dtype());
             args_[0] = zeros.get();
             args_[1] = grad;
             for (size_t i = 1; i < inputs.size(); ++i) {
-                args_[i+1] = inputs[i].get();
+                args_[i + 1] = inputs[i].get();
             }
             ret[0] = python::apply(grad_op_, args_)[0];
         }
@@ -130,7 +137,8 @@ std::optional<apply_result_t> subtensor_grad_rule(ApplyContext& ctx, CustomBackw
     return apply(ctx);
 }
 
-std::optional<apply_result_t> indexingMultiAxisVec_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> indexingMultiAxisVec_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto&& op = ctx.op->cast_final_safe<IndexingMultiAxisVec>();
     auto&& grad_op = IndexingSetMultiAxisVec::make(op.items);
     SmallVector<std::shared_ptr<Tensor>> inputs;
@@ -141,17 +149,19 @@ std::optional<apply_result_t> indexingMultiAxisVec_grad_rule(ApplyContext& ctx, 
         }
     }
     maker.output_size(1).output_captured(0, false);
-    maker.backward([inputs=std::move(inputs), grad_op_=std::move(grad_op)](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([inputs = std::move(inputs), grad_op_ = std::move(grad_op)](
+                           BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(1);
         if (grad && inputs[0]) {
-            SmallVector<Tensor*> args_(inputs.size()+1);
-            auto&& zeros = make_empty_tensor(grad->comp_node(), inputs[0].get(), grad->dtype());
+            SmallVector<Tensor*> args_(inputs.size() + 1);
+            auto&& zeros = make_empty_tensor(
+                    grad->comp_node(), inputs[0].get(), grad->dtype());
             args_[0] = zeros.get();
             args_[1] = grad;
             for (size_t i = 1; i < inputs.size(); ++i) {
-                args_[i+1] = inputs[i].get();
+                args_[i + 1] = inputs[i].get();
             }
             ret[0] = python::apply(grad_op_, args_)[0];
         }
@@ -160,7 +170,8 @@ std::optional<apply_result_t> indexingMultiAxisVec_grad_rule(ApplyContext& ctx, 
     return apply(ctx);
 }
 
-std::optional<apply_result_t> reduce_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> reduce_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto& op = ctx.op->cast_final_safe<Reduce>();
     if (op.mode == Reduce::Mode::SUM) {
         if (ctx.nargs != 1) {
@@ -171,7 +182,8 @@ std::optional<apply_result_t> reduce_grad_rule(ApplyContext& ctx, CustomBackward
             input_shapes[0] = get_shape(ctx.args[0]);
         }
         maker.output_size(1).output_captured(0, false);
-        maker.backward([shapes=std::move(input_shapes)](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+        maker.backward([shapes = std::move(input_shapes)](
+                               BackwardContext&, Tensor* const* grads, size_t ngrads) {
             mgb_assert(ngrads == 1);
             Tensor* grad = grads[0];
             apply_result_t ret(1);
@@ -185,14 +197,16 @@ std::optional<apply_result_t> reduce_grad_rule(ApplyContext& ctx, CustomBackward
     return {};
 }
 
-std::optional<apply_result_t> addAxis_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> addAxis_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto&& op = ctx.op->cast_final_safe<AddAxis>();
     mgb_assert(ctx.nargs == 1);
     bool flag = input_requires_grad(ctx, 0);
     auto&& grad_op = RemoveAxis::make(op.axis);
     std::sort(grad_op->axis.begin(), grad_op->axis.end(), std::greater<int32_t>());
     maker.output_size(1).output_captured(0, false);
-    maker.backward([grad_op_=std::move(grad_op), flag_=flag](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([grad_op_ = std::move(grad_op), flag_ = flag](
+                           BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(1);
@@ -204,14 +218,16 @@ std::optional<apply_result_t> addAxis_grad_rule(ApplyContext& ctx, CustomBackwar
     return apply(ctx);
 }
 
-std::optional<apply_result_t> removeAxis_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> removeAxis_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     auto&& op = ctx.op->cast_final_safe<RemoveAxis>();
     mgb_assert(ctx.nargs == 1);
     bool flag = input_requires_grad(ctx, 0);
     auto&& grad_op = AddAxis::make(op.axis);
     std::sort(grad_op->axis.begin(), grad_op->axis.end());
     maker.output_size(1).output_captured(0, false);
-    maker.backward([grad_op_=std::move(grad_op), flag_=flag](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([grad_op_ = std::move(grad_op), flag_ = flag](
+                           BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(1);
@@ -223,10 +239,11 @@ std::optional<apply_result_t> removeAxis_grad_rule(ApplyContext& ctx, CustomBack
     return apply(ctx);
 }
 
-std::optional<apply_result_t> fastpathcopy_grad_rule(ApplyContext& ctx, CustomBackward::Maker& maker) {
+std::optional<apply_result_t> fastpathcopy_grad_rule(
+        ApplyContext& ctx, CustomBackward::Maker& maker) {
     mgb_assert(ctx.nargs == 1);
     maker.output_size(1).output_captured(0, false);
-    maker.backward([](BackwardContext&, Tensor*const* grads, size_t ngrads) {
+    maker.backward([](BackwardContext&, Tensor* const* grads, size_t ngrads) {
         mgb_assert(ngrads == 1);
         Tensor* grad = grads[0];
         apply_result_t ret(1);
@@ -252,5 +269,5 @@ struct Init {
     }
 } _;
 
-} // namespace
-} // namespace mgb::imperative::python
+}  // namespace
+}  // namespace mgb::imperative::python

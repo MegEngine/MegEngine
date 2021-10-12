@@ -28,7 +28,7 @@ public:
     Result exec(_megdnn_tensor_in data, _megdnn_workspace workspace) override;
 };
 
-}  // namespace naive
+}  // namespace atlas
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

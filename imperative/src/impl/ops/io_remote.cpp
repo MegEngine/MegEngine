@@ -16,7 +16,7 @@
 #include "megbrain/imperative/proxy_graph_detail.h"
 #include "megbrain/opr/io_remote.h"
 #include "megbrain/opr/mm_handler.h"
-#endif // MGB_ENABLE_OPR_MM
+#endif  // MGB_ENABLE_OPR_MM
 
 #include "megbrain/imperative/ops/autogen.h"
 
@@ -48,8 +48,8 @@ cg::OperatorNodeBase* apply_on_var_node_remote_recv(
             ssprintf("%s:%d", recv.addr.data(), recv.port));
     auto&& graph = inputs[0]->owner_graph();
     return graph->insert_opr(std::make_unique<mgb::opr::RemoteRecv>(
-            recv.key, inputs[0], *graph, group_client, config,
-            recv.shape, recv.dtype, recv.backend));
+            recv.key, inputs[0], *graph, group_client, config, recv.shape, recv.dtype,
+            recv.backend));
 }
 
 OP_TRAIT_REG(RemoteSend, RemoteSend, mgb::opr::RemoteSend)
@@ -60,7 +60,7 @@ OP_TRAIT_REG(RemoteRecv, RemoteRecv, mgb::opr::RemoteRecv)
         .apply_on_var_node(apply_on_var_node_remote_recv)
         .fallback();
 }  // anonymous namespace
-#endif // MGB_ENABLE_OPR_MM
+#endif  // MGB_ENABLE_OPR_MM
 
 }  // namespace imperative
 }  // namespace mgb

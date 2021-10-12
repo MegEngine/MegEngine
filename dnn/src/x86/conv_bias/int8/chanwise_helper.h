@@ -27,13 +27,12 @@ static inline bool need_dst_copy(const NCBKernSizeParam& param) {
 
 static inline bool need_src_copy(const NCBKernSizeParam& param) {
     auto&& fm = param.filter_meta;
-    return (fm.padding[0] != 0 || fm.padding[1] != 0) ? true
-                                                      : need_dst_copy(param);
+    return (fm.padding[0] != 0 || fm.padding[1] != 0) ? true : need_dst_copy(param);
 }
 
-static inline void get_rectified_size(const NCBKernSizeParam& param,
-                                      size_t& IH2, size_t& IW2, size_t& OH2,
-                                      size_t& OW2) {
+static inline void get_rectified_size(
+        const NCBKernSizeParam& param, size_t& IH2, size_t& IW2, size_t& OH2,
+        size_t& OW2) {
     auto&& fm = param.filter_meta;
     auto SW = fm.stride[1];
     auto OH = param.osz[0];
@@ -60,8 +59,7 @@ static inline void copy_padding_kern(
     bool need_src_copy_var = need_src_copy(kern_param);
     size_t padding_group_size = IH2 * IW2;
 
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1],
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1],
            channel_id = ncb_index.ndrange_id[2];
     size_t workspace_group_id = ncb_index.thread_id;
     const int8_t* sptr = kern_param.src<int8_t>(batch_id, group_id, channel_id);
@@ -70,8 +68,9 @@ static inline void copy_padding_kern(
                             workspace_group_id * padding_group_size;
         std::memset(sptr_base, 0, sizeof(int8_t) * IH2 * IW2);
         rep(ih, std::min(IH, IH2)) {
-            std::memcpy(sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
-                        sizeof(int8_t) * IW);
+            std::memcpy(
+                    sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
+                    sizeof(int8_t) * IW);
         }
     }
 };

@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "inttypes.h"
 #include "Python.h"
+#include "inttypes.h"
 
 namespace mgb::imperative::python {
 
@@ -46,4 +46,4 @@ private:
     TraceInfo(const TraceInfo& that) = default;
 };
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

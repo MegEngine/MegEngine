@@ -35,8 +35,8 @@ public:
     void apply_action(SeqModifyAction& action, const OprNodeArray& oprseq);
 };
 
-} // namespace cg
-} // namespace mgb
+}  // namespace cg
+}  // namespace mgb
 
 #endif  //  MGB_ENABLE_DTR
 

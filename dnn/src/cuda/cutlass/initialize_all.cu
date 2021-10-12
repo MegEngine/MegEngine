@@ -49,8 +49,7 @@ namespace library {
 #define CUTLASS_ARCH_MMA_SM75_SUPPORTED 1
 #endif
 
-#if __CUDACC_VER_MAJOR__ > 9 || \
-        (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)
+#if __CUDACC_VER_MAJOR__ > 9 || (__CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ >= 2)
 
 void initialize_all_gemm_simt_operations(Manifest& manifest);
 void initialize_all_conv2d_simt_operations(Manifest& manifest);

@@ -153,24 +153,24 @@ public:
     /**
      * @brief Create one or more GPU buffers for the specified usage mode
      */
-    std::vector<NvOFBufferObj> CreateBuffers(NV_OF_BUFFER_USAGE usage,
-                                             uint32_t numBuffers);
+    std::vector<NvOFBufferObj> CreateBuffers(
+            NV_OF_BUFFER_USAGE usage, uint32_t numBuffers);
 
     /**
      * @brief Create one or more GPU buffers for the specified width, height and
      * usage mode,
      */
-    std::vector<NvOFBufferObj> CreateBuffers(uint32_t nWidth, uint32_t nHeight,
-                                             NV_OF_BUFFER_USAGE usage,
-                                             uint32_t numBuffers);
+    std::vector<NvOFBufferObj> CreateBuffers(
+            uint32_t nWidth, uint32_t nHeight, NV_OF_BUFFER_USAGE usage,
+            uint32_t numBuffers);
 
     /**
      * @brief This function is used to estimate the optical flow from image1 to
      * image2.
      */
-    void Execute(NvOFBuffer* image1, NvOFBuffer* image2,
-                 NvOFBuffer* outputBuffer, NvOFBuffer* hintBuffer = nullptr,
-                 NvOFBuffer* costBuffer = nullptr);
+    void Execute(
+            NvOFBuffer* image1, NvOFBuffer* image2, NvOFBuffer* outputBuffer,
+            NvOFBuffer* hintBuffer = nullptr, NvOFBuffer* costBuffer = nullptr);
 
 protected:
     /**
@@ -193,8 +193,7 @@ public:
      * Retrieves the next minimum grid size supported for the specified grid
      * size
      */
-    bool GetNextMinGridSize(uint32_t nOutGridSize,
-                            uint32_t& nextMinOutGridSize);
+    bool GetNextMinGridSize(uint32_t nOutGridSize, uint32_t& nextMinOutGridSize);
 
 private:
     /*
@@ -211,8 +210,9 @@ private:
      * Executes the estimation of optical flow/stereo disparity between 2
      * images.
      */
-    virtual void DoExecute(const NV_OF_EXECUTE_INPUT_PARAMS& executeInParams,
-                           NV_OF_EXECUTE_OUTPUT_PARAMS& executeOutParams) = 0;
+    virtual void DoExecute(
+            const NV_OF_EXECUTE_INPUT_PARAMS& executeInParams,
+            NV_OF_EXECUTE_OUTPUT_PARAMS& executeOutParams) = 0;
 
     /*
      * Allocates one or more GPU buffers.

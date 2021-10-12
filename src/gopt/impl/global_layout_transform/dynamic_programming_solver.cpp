@@ -57,8 +57,7 @@ private:
         size_t operator()(const State& key) const {
             size_t h = 0;
             for (auto&& v : key) {
-                h = mgb::hash_pair_combine(h,
-                                           std::hash<TensorFormatsBitSet>{}(v));
+                h = mgb::hash_pair_combine(h, std::hash<TensorFormatsBitSet>{}(v));
             }
             return h;
         }
@@ -93,9 +92,9 @@ private:
      * operator \param[in] opr_fmt given op format, an enum type argument which
      * indicates the op format configuration. \param[in] ctx context
      */
-    TensorFormats get_io_formats(ThinHashMap<VarNode*, TensorFormats>& var2fmts,
-                                 const OperatorNodeBase* opr, OprFormat opr_fmt,
-                                 const Context& ctx);
+    TensorFormats get_io_formats(
+            ThinHashMap<VarNode*, TensorFormats>& var2fmts, const OperatorNodeBase* opr,
+            OprFormat opr_fmt, const Context& ctx);
     /*!
      * \brief compute the distace of two states of the given varnode
      * \param[in] from the source state
@@ -103,9 +102,9 @@ private:
      * \param[in] var given varnode
      * \param[in] ctx context
      */
-    float distance(const TensorFormatsBitSet& from,
-                   const TensorFormatsBitSet& to, VarNode* var,
-                   const Context& ctx);
+    float distance(
+            const TensorFormatsBitSet& from, const TensorFormatsBitSet& to,
+            VarNode* var, const Context& ctx);
     /*!
      * \brief compute the distace of two states of the given cut edges
      * \param[in] from the source state
@@ -113,22 +112,23 @@ private:
      * \param[in] edge a VarNodeArry, the given cut edges
      * \param[in] ctx context
      */
-    float state_distance(const State& from, const State& to,
-                         const VarNodeArray& edge, const Context& ctx);
+    float state_distance(
+            const State& from, const State& to, const VarNodeArray& edge,
+            const Context& ctx);
     /*!
      * \brief analyze the edges of each cut
      * \param[out] edges the return edges of the cuts
      * \param[out] edge2idx hashmaps, that maps edge(varnode) to its index
      * \param[in] ctx contex
      */
-    void analyze_edges(SmallVector<VarNodeArray>& edges,
-                       SmallVector<std::unordered_map<VarNode*, int>>& edge2idx,
-                       const Context& ctx);
+    void analyze_edges(
+            SmallVector<VarNodeArray>& edges,
+            SmallVector<std::unordered_map<VarNode*, int>>& edge2idx,
+            const Context& ctx);
     /*!
      * \brief prune states using the distance of states
      */
-    void prune(StateTable& states, const VarNodeArray& edge,
-               const Context& ctx);
+    void prune(StateTable& states, const VarNodeArray& edge, const Context& ctx);
     /*!
      * \brief force prune states, reserve the smallest MAX_STATES states
      */
@@ -139,8 +139,8 @@ private:
 };
 
 TensorFormats DynamicProgrammingSolver::Impl::get_io_formats(
-        ThinHashMap<VarNode*, TensorFormats>& var2fmts,
-        const OperatorNodeBase* opr, OprFormat opr_fmt, const Context& ctx) {
+        ThinHashMap<VarNode*, TensorFormats>& var2fmts, const OperatorNodeBase* opr,
+        OprFormat opr_fmt, const Context& ctx) {
     auto&& rst = ctx.rst;
     auto&& opr_configs = ctx.opr_configs;
 
@@ -167,10 +167,9 @@ TensorFormats DynamicProgrammingSolver::Impl::get_io_formats(
     return out_fmt;
 }
 
-float DynamicProgrammingSolver::Impl::distance(const TensorFormatsBitSet& from,
-                                               const TensorFormatsBitSet& to,
-                                               VarNode* var,
-                                               const Context& ctx) {
+float DynamicProgrammingSolver::Impl::distance(
+        const TensorFormatsBitSet& from, const TensorFormatsBitSet& to, VarNode* var,
+        const Context& ctx) {
     auto&& costs = ctx.rst.var_record.at(var).costs;
     auto&& available_tensor_formats = ctx.available_tensor_formats;
 
@@ -193,10 +192,9 @@ float DynamicProgrammingSolver::Impl::distance(const TensorFormatsBitSet& from,
     return dist;
 }
 
-float DynamicProgrammingSolver::Impl::state_distance(const State& from,
-                                                     const State& to,
-                                                     const VarNodeArray& edge,
-                                                     const Context& ctx) {
+float DynamicProgrammingSolver::Impl::state_distance(
+        const State& from, const State& to, const VarNodeArray& edge,
+        const Context& ctx) {
     float dist = 0.f;
     mgb_assert(from.size() == to.size() && from.size() == edge.size());
     for (size_t i = 0; i < edge.size(); ++i) {
@@ -207,8 +205,7 @@ float DynamicProgrammingSolver::Impl::state_distance(const State& from,
 
 void DynamicProgrammingSolver::Impl::analyze_edges(
         SmallVector<VarNodeArray>& edges,
-        SmallVector<std::unordered_map<VarNode*, int>>& edge2idx,
-        const Context& ctx) {
+        SmallVector<std::unordered_map<VarNode*, int>>& edge2idx, const Context& ctx) {
     auto&& topo = ctx.topo;
     auto&& rst = ctx.rst;
 
@@ -245,9 +242,8 @@ void DynamicProgrammingSolver::Impl::analyze_edges(
     }
 }
 
-void DynamicProgrammingSolver::Impl::prune(StateTable& states,
-                                           const VarNodeArray& edge,
-                                           const Context& ctx) {
+void DynamicProgrammingSolver::Impl::prune(
+        StateTable& states, const VarNodeArray& edge, const Context& ctx) {
     struct Item {
         decltype(states.begin()) iter;
     };
@@ -266,10 +262,10 @@ void DynamicProgrammingSolver::Impl::prune(StateTable& states,
                 i = list.erase(i);
                 advanced_i = true;
                 break;
-            } else if (i->iter->second.time < j->iter->second.time &&
-                       state_distance(i->iter->first, j->iter->first, edge,
-                                      ctx) <
-                               j->iter->second.time - i->iter->second.time) {
+            } else if (
+                    i->iter->second.time < j->iter->second.time &&
+                    state_distance(i->iter->first, j->iter->first, edge, ctx) <
+                            j->iter->second.time - i->iter->second.time) {
                 removed_states.push_back(j->iter->first);
                 j = list.erase(j);
             } else {
@@ -357,8 +353,7 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
                 auto&& costs = rst.var_record.at(var).costs;
                 if (ovar_set.count(var) > 0) {
                     add(state[i], out_fmt);
-                    if (partition.output().count(var) > 0 &&
-                        out_fmt != base_fmt) {
+                    if (partition.output().count(var) > 0 && out_fmt != base_fmt) {
                         ovar_time += costs.at({out_fmt, base_fmt});
                         add(state[i], base_fmt);
                     }
@@ -419,8 +414,7 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
                     } else {
                         mgb_assert(ovar_set.count(var) > 0);
                         add(state[i], out_fmt);
-                        if (partition.output().count(var) > 0 &&
-                            out_fmt != base_fmt) {
+                        if (partition.output().count(var) > 0 && out_fmt != base_fmt) {
                             ovar_time += costs.at({out_fmt, base_fmt});
 
                             add(state[i], base_fmt);
@@ -508,8 +502,9 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
         }
     }
     mgb_assert(cur_opr != nullptr);
-    mgb_log_debug("opr:%s;format:%s;time:%f", cur_opr->cname(),
-                  opr_format_to_string(min_fmt), min_time);
+    mgb_log_debug(
+            "opr:%s;format:%s;time:%f", cur_opr->cname(), opr_format_to_string(min_fmt),
+            min_time);
 
     solution.insert({cur_opr, min_fmt});
     cur = cuts.size() - 2;
@@ -524,8 +519,9 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
                 mgb_assert(valid(fmt_set, base_fmt));
             }
         }
-        mgb_log_debug("opr:%s;format:%s;time:%f", val.opr->cname(),
-                      opr_format_to_string(val.opr_fmt), val.time);
+        mgb_log_debug(
+                "opr:%s;format:%s;time:%f", val.opr->cname(),
+                opr_format_to_string(val.opr_fmt), val.time);
         solution.insert({val.opr, val.opr_fmt});
         pstate = val.prev;
         cur--;

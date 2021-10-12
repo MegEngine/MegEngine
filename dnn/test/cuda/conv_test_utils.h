@@ -23,7 +23,7 @@
 #include "test/cuda/utils.h"
 
 #define V1(x) #x
-#define V(x) V1(x)
+#define V(x)  V1(x)
 
 namespace megdnn {
 namespace test {
@@ -52,8 +52,7 @@ void benchmark_target_algo_with_cudnn_tsc(
         const char* algo = nullptr,
         param::ConvBias::Format format = param::ConvBias::Format::NCHW4,
         bool with_cudnn = true, const char* change_cudnn_algo = nullptr,
-        param::ConvBias::Format change_cudnn_format =
-                param::ConvBias::Format::NCHW4,
+        param::ConvBias::Format change_cudnn_format = param::ConvBias::Format::NCHW4,
         DType change_cudnn_src_dtype = dtype::Int8(),
         DType change_cudnn_filter_dtype = dtype::Int8(),
         DType change_cudnn_bias_dtype = dtype::Int8(),

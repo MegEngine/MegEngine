@@ -20,8 +20,7 @@
 namespace mgb {
 namespace imperative {
 
-std::shared_ptr<OpDef> OpDef::make_from_op_node(
-    cg::OperatorNodeBase* node) {
+std::shared_ptr<OpDef> OpDef::make_from_op_node(cg::OperatorNodeBase* node) {
     OpTrait* trait;
     trait = OpTrait::find_by_typeinfo(node->dyn_typeinfo());
     if (!trait) {
@@ -34,88 +33,87 @@ std::shared_ptr<OpDef> OpDef::make_from_op_node(
 }
 
 DispatchMode OpDef::decide_dispatch_mode(
-    const OpDef& def,
-    const SmallVector<LogicalTensorDesc>& inputs) {
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     return def.trait()->decide_dispatch_mode(def, inputs);
 }
 
 SmallVector<TensorPtr> OpDef::apply_on_physical_tensor(
-    const OpDef& def,
-    SmallVector<TensorPtr> inputs) {
+        const OpDef& def, SmallVector<TensorPtr> inputs) {
     return def.trait()->apply_on_physical_tensor(def, std::move(inputs));
 }
 
-std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> OpDef::infer_output_mem_desc(
-    const OpDef& def,
-    const SmallVector<TensorPtr>& inputs_tensors,
-    const SmallVector<MemoryDesc>& inputs_mems) {
+std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> OpDef::
+        infer_output_mem_desc(
+                const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
+                const SmallVector<MemoryDesc>& inputs_mems) {
     return def.trait()->infer_output_mem_desc(def, inputs_tensors, inputs_mems);
 }
 
 void OpDef::execute(
-    const OpDef& def,
-    SmallVector<TensorPtr> inputs,
-    SmallVector<TensorPtr> outputs,
-    SmallVector<TensorPtr> workspace) {
+        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
+        SmallVector<TensorPtr> workspace) {
     def.trait()->execute(def, std::move(inputs), outputs, std::move(workspace));
 }
 
 void OpDef::apply_on_device_tensornd(
-    const OpDef& def,
-    const SmallVector<DeviceTensorND>& inputs,
-    SmallVector<DeviceTensorND>* outputs) {
+        const OpDef& def, const SmallVector<DeviceTensorND>& inputs,
+        SmallVector<DeviceTensorND>* outputs) {
     def.trait()->apply_on_device_tensornd(def, inputs, outputs);
     return;
 }
 
-VarNodeArray OpDef::apply_on_var_node(
-    const OpDef& def,
-    const VarNodeArray& inputs) {
+VarNodeArray OpDef::apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     return def.trait()->apply_on_var_node(def, inputs);
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> OpDef::infer_output_attrs_fallible(
-    const OpDef& def,
-    const SmallVector<LogicalTensorDesc>& inputs) {
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
     return def.trait()->infer_output_attrs_fallible(def, inputs);
 }
 
 EncodedSubgraph OpDef::make_backward_graph(
-    const OpDef& def,
-    const SmallVector<LogicalTensorDesc>& inputs,
-    const SmallVector<bool>& input_requires_grad,
-    const SmallVector<bool>& output_has_grad) {
-    using BackwardGraphCache = OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
+        const SmallVector<bool>& input_requires_grad,
+        const SmallVector<bool>& output_has_grad) {
+    using BackwardGraphCache =
+            OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
     thread_local BackwardGraphCache cache;
-    decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs, {input_requires_grad, output_has_grad}};
+    decltype(cache)::key_t cache_key{
+            const_cast<OpDef&>(def).shared_from_this(),
+            inputs,
+            {input_requires_grad, output_has_grad}};
     auto iter = cache.find(cache_key);
     if (iter == cache.end()) {
-        iter = cache.insert({cache_key, def.trait()->make_backward_graph(def, inputs, input_requires_grad, output_has_grad)}).first;
+        iter = cache.insert({cache_key, def.trait()->make_backward_graph(
+                                                def, inputs, input_requires_grad,
+                                                output_has_grad)})
+                       .first;
     }
     return iter->second;
 }
 
-std::vector<std::pair<const char*, std::string>> OpDef::props(
-    const OpDef& def) {
+std::vector<std::pair<const char*, std::string>> OpDef::props(const OpDef& def) {
     return def.trait()->props(def);
 }
 
 EncodedSubgraph OpDef::make_forward_graph(
-    const OpDef& def,
-    const SmallVector<LogicalTensorDesc>& inputs){
-    using ForwardGraphCache = OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    using ForwardGraphCache =
+            OpMethResultCache<EncodedSubgraph, SmallVector<bool>, SmallVector<bool>>;
     thread_local ForwardGraphCache cache;
-    decltype(cache)::key_t cache_key{const_cast<OpDef&>(def).shared_from_this(), inputs};
+    decltype(cache)::key_t cache_key{
+            const_cast<OpDef&>(def).shared_from_this(), inputs};
     auto iter = cache.find(cache_key);
     if (iter == cache.end()) {
-        iter = cache.insert({cache_key, def.trait()->make_forward_graph(def, inputs)}).first;
+        iter = cache.insert({cache_key, def.trait()->make_forward_graph(def, inputs)})
+                       .first;
     }
     return iter->second;
 }
 
 std::string OpDef::to_string() const {
     std::string builder = trait()->make_name(*this) + "{";
-    for (auto&& [name, value]: props(*this)) {
+    for (auto&& [name, value] : props(*this)) {
         builder += name;
         builder += ": ";
         builder += value;
@@ -135,8 +133,9 @@ bool OpDef::is_same_st(const Hashable& rhs) const {
 const OpTrait* OpDef::trait() const {
     if (!m_trait) {
         m_trait = OpTrait::find_by_typeinfo(dyn_typeinfo());
-        mgb_throw_if(!m_trait, MegBrainError,
-            "can not find op_trait by %s", dyn_typeinfo()->name);
+        mgb_throw_if(
+                !m_trait, MegBrainError, "can not find op_trait by %s",
+                dyn_typeinfo()->name);
     }
     return m_trait;
 }
@@ -170,7 +169,8 @@ std::string Subgraph::repr() const {
     std::ostringstream buf;
     buf << "(";
     for (size_t i = 0; i < inputs.size(); ++i) {
-        if (i > 0) buf << ", ";
+        if (i > 0)
+            buf << ", ";
         buf << "%" << inputs[i];
     }
     buf << ") => {\n";
@@ -193,7 +193,8 @@ std::string Subgraph::repr() const {
         buf << "  ";
         if (outs.size()) {
             for (size_t i = 0; i < outs.size(); ++i) {
-                if (i > 0) buf << ", ";
+                if (i > 0)
+                    buf << ", ";
                 buf << "%" << outs[i];
             }
             buf << " = ";
@@ -217,7 +218,8 @@ std::string Subgraph::repr() const {
     buf << "  ";
     if (outputs.size()) {
         for (size_t i = 0; i < outputs.size(); ++i) {
-            if (i > 0) buf << ", ";
+            if (i > 0)
+                buf << ", ";
             buf << "%" << outputs[i];
         }
     } else {
@@ -247,7 +249,7 @@ bool Subgraph::operator==(const Subgraph& rhs) const {
     mgb_assert(false, "Not Implemented");
 }
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

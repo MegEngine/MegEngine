@@ -8,8 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "./kernel_impl.h"
 #include "../conv_pooling_utils.cuh"
+#include "./kernel_impl.h"
 
 namespace megdnn {
 namespace cuda {
@@ -17,7 +17,7 @@ namespace conv_pool {
 
 DISPATCH_POOLSHAPE(Relu, 7)
 
-} // namespace conv_pool
-} // namespace cuda
-} // namespace megdnn
+}  // namespace conv_pool
+}  // namespace cuda
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

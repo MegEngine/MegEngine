@@ -11,42 +11,37 @@
 
 #pragma once
 
-#include "megbrain/graph.h"
 #include "./static_infer_impl.h"
+#include "megbrain/graph.h"
 
 #include <unordered_set>
 
 namespace mgb {
 namespace cg {
 
-    class ComputingGraphImpl;
+class ComputingGraphImpl;
 
-    /*!
-     * \brief extra info for comp seq
-     *
-     * This is stored in the ComputingSequence object associated with a graph.
-     */
-    struct CompSeqExtraInfo {
-        ThinHashMap<const VarNode *, ComputingGraph::VarReceiverInfo>
-            var2recvinfo;
+/*!
+ * \brief extra info for comp seq
+ *
+ * This is stored in the ComputingSequence object associated with a graph.
+ */
+struct CompSeqExtraInfo {
+    ThinHashMap<const VarNode*, ComputingGraph::VarReceiverInfo> var2recvinfo;
 
-        //! target tags for shape/value infer; setup by topo sorter and used by
-        //! CompSeqManager::reset_dest
-        ThinHashSet<static_infer::StaticInferManagerImpl::TagHandler*>
-            infer_dest;
+    //! target tags for shape/value infer; setup by topo sorter and used by
+    //! CompSeqManager::reset_dest
+    ThinHashSet<static_infer::StaticInferManagerImpl::TagHandler*> infer_dest;
 
+    //! missing inputs, initialized by CompSeqManager::reset_dest()
+    VarNodeSet missing_for_shape, missing_for_value;
 
-        //! missing inputs, initialized by CompSeqManager::reset_dest()
-        VarNodeSet missing_for_shape, missing_for_value;
+    //! source nodes needed for static infer; may contain nodes not in
+    //! computing sequence; initialized by CompSeqManager::reset_dest()
+    static_infer::DepVal rt_static_infer_src;
+};
 
-        //! source nodes needed for static infer; may contain nodes not in
-        //! computing sequence; initialized by CompSeqManager::reset_dest()
-        static_infer::DepVal rt_static_infer_src;
-    };
-
-} // namespace cg
-} // namespace mgb
-
+}  // namespace cg
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

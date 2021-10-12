@@ -20,9 +20,8 @@ namespace warp_perspective {
 BorderMode get_bmode(param::WarpPerspective::BorderMode bmode);
 InterpolationMode get_imode(param::WarpPerspective::InterpolationMode imode);
 
-} // namespace warp_perspective
-} // namespace cuda
-} // namespace megdnn
+}  // namespace warp_perspective
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

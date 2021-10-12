@@ -62,4 +62,3 @@ private:
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

@@ -14,22 +14,22 @@
 namespace megdnn {
 namespace naive {
 
-class TransposeForwardImpl: public TransposeForward {
-    public:
-        using TransposeForward::TransposeForward;
-        void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                _megdnn_workspace workspace) override;
-        size_t get_workspace_in_bytes(const TensorLayout &,
-                const TensorLayout &) override {
-            return 0;
-        }
-    private:
-        template <typename T>
-        static void exec_internal(
-                _megdnn_tensor_in src, _megdnn_tensor_out dst);
+class TransposeForwardImpl : public TransposeForward {
+public:
+    using TransposeForward::TransposeForward;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
+        return 0;
+    }
+
+private:
+    template <typename T>
+    static void exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst);
 };
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

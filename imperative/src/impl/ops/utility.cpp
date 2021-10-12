@@ -9,41 +9,40 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
- #include <queue>
+#include <queue>
 
-#include "megbrain/imperative/ops/autogen.h"
-#include "megbrain/imperative/ops/utility.h"
-#include "megbrain/imperative/ops/opr_attr.h"
+#include "../op_trait.h"
 #include "megbrain/imperative/graph_cache.h"
-#include "megbrain/imperative/subgraph_detail.h"
 #include "megbrain/imperative/opr_utility.h"
-#include "megbrain/opr/utility.h"
+#include "megbrain/imperative/ops/autogen.h"
+#include "megbrain/imperative/ops/opr_attr.h"
+#include "megbrain/imperative/ops/utility.h"
+#include "megbrain/imperative/subgraph_detail.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_gen.h"
 #include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/io.h"
-#include "../op_trait.h"
+#include "megbrain/opr/utility.h"
 
 namespace mgb::imperative {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GenericPyOp);
 OP_TRAIT_REG(GenericPyOp, GenericPyOp).fallback();
 
-namespace { namespace fastpathcopy {
-    auto apply_on_var_node(
-            const OpDef& def,
-            const VarNodeArray& inputs) {
-        return inputs;
-    }
+namespace {
+namespace fastpathcopy {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    return inputs;
+}
 
-OP_TRAIT_REG(FastpathCopy,FastpathCopy)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // fastpathcopy
+OP_TRAIT_REG(FastpathCopy, FastpathCopy)
+        .apply_on_var_node(apply_on_var_node)
+        .fallback();
+}  // namespace fastpathcopy
+}  // namespace
 
-namespace  { namespace shape_infer {
-auto apply_on_physical_tensor(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
+namespace {
+namespace shape_infer {
+auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     auto& op = def.cast_final_safe<ShapeInfer>();
     size_t nr_inputs = inputs.size();
     mgb_assert(nr_inputs > 0, "no inputs for ShapeInfer");
@@ -59,11 +58,13 @@ auto apply_on_physical_tensor(
         layout.init_contiguous_stride();
         input_descs.push_back({layout, op.devices[i]});
     }
-    auto [output_descs, valid] = OpDef::infer_output_attrs_fallible(*op.op, input_descs);
+    auto [output_descs, valid] =
+            OpDef::infer_output_attrs_fallible(*op.op, input_descs);
     mgb_assert(valid, "shape inference incomplete");
     SmallVector<TensorPtr> outputs;
-    for (auto&& output_desc: output_descs) {
-        HostTensorND shape_tensor{output_desc.comp_node, {output_desc.layout.ndim}, dtype::Int32()};
+    for (auto&& output_desc : output_descs) {
+        HostTensorND shape_tensor{
+                output_desc.comp_node, {output_desc.layout.ndim}, dtype::Int32()};
         for (size_t i = 0; i < output_desc.layout.ndim; ++i) {
             shape_tensor.ptr<int32_t>()[i] = output_desc.layout[i];
         }
@@ -72,31 +73,31 @@ auto apply_on_physical_tensor(
     }
     return outputs;
 }
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto& op = def.cast_final_safe<ShapeInfer>();
     size_t nr_inputs = inputs.size();
     VarNodeArray input_values, outputs;
     mgb_assert(nr_inputs > 0, "no inputs for ShapeInfer");
     for (size_t i = 0; i < nr_inputs; ++i) {
-        auto input_value = opr::Alloc::make(SymbolVar(inputs[i]), op.dtypes[i], {op.devices[i]});
+        auto input_value =
+                opr::Alloc::make(SymbolVar(inputs[i]), op.dtypes[i], {op.devices[i]});
         input_values.push_back(input_value.node());
     }
     auto output_values = OpDef::apply_on_var_node(*op.op, input_values);
-    for (auto&& output_value: output_values) {
+    for (auto&& output_value : output_values) {
         outputs.push_back(opr::GetVarShape::make(output_value).node());
     }
     return outputs;
 }
 
 auto infer_output_attrs_fallible(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& input_descs) {
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
     auto& op = def.cast_final_safe<ShapeInfer>();
     SmallVector<LogicalTensorDesc> input_shape_descs;
     size_t nr_inputs = op.devices.size();
-    mgb_assert(op.dtypes.size() == nr_inputs, "number of input devices and dtypes mismatch");
+    mgb_assert(
+            op.dtypes.size() == nr_inputs,
+            "number of input devices and dtypes mismatch");
     for (size_t i = 0; i < nr_inputs; ++i) {
         LogicalTensorDesc input_shape_desc;
         input_shape_desc.comp_node = op.devices[i];
@@ -104,9 +105,10 @@ auto infer_output_attrs_fallible(
         input_shape_desc.layout.dtype = op.dtypes[i];
         input_shape_descs.push_back(input_shape_desc);
     }
-    auto [output_shape_descs, _] = OpDef::infer_output_attrs_fallible(*op.op, input_shape_descs);
+    auto [output_shape_descs, _] =
+            OpDef::infer_output_attrs_fallible(*op.op, input_shape_descs);
     SmallVector<LogicalTensorDesc> output_descs;
-    for (auto&& output_shape_desc: output_shape_descs) {
+    for (auto&& output_shape_desc : output_shape_descs) {
         LogicalTensorDesc output_desc;
         output_desc.comp_node = output_shape_desc.comp_node;
         output_desc.layout.ndim = 1;
@@ -141,54 +143,52 @@ auto is_same_st(const OpDef& def, const OpDef& another) {
     if (!lhs.op->is_same(*rhs.op)) {
         return false;
     }
-    return std::tie(lhs.devices, lhs.dtypes) ==
-           std::tie(rhs.devices, rhs.dtypes);
+    return std::tie(lhs.devices, lhs.dtypes) == std::tie(rhs.devices, rhs.dtypes);
 }
 
-OP_TRAIT_REG(ShapeInfer,ShapeInfer)
-    .apply_on_var_node(apply_on_var_node)
-    .apply_on_physical_tensor(apply_on_physical_tensor)
-    .infer_output_attrs_fallible(infer_output_attrs_fallible)
-    .make_name(make_name)
-    .props(props)
-    .hash(hash)
-    .is_same_st(is_same_st)
-    .fallback();
-}}
-
+OP_TRAIT_REG(ShapeInfer, ShapeInfer)
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .make_name(make_name)
+        .props(props)
+        .hash(hash)
+        .is_same_st(is_same_st)
+        .fallback();
+}  // namespace shape_infer
+}  // namespace
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ShapeInfer);
 
-namespace { namespace identity {
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+namespace {
+namespace identity {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = def.cast_final_safe<Identity>();
     mgb_assert(inputs.size() == 1);
     OperatorNodeConfig config{op.make_name()};
     return opr::Identity::make(inputs[0], config);
 }
 
-auto apply_on_physical_tensor(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
+auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     return SmallVector<TensorPtr>{inputs[0]};
 }
 OP_TRAIT_REG(Identity, Identity)
-    .apply_on_var_node(apply_on_var_node)
-    .apply_on_physical_tensor(apply_on_physical_tensor)
-    .fallback();
-}} // identity
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .fallback();
+}  // namespace identity
+}  // namespace
 
-namespace { namespace subgraph {
+namespace {
+namespace subgraph {
 
-EncodedSubgraph make_forward_graph(const OpDef& def, SmallVector<LogicalTensorDesc> inputs) {
+EncodedSubgraph make_forward_graph(
+        const OpDef& def, SmallVector<LogicalTensorDesc> inputs) {
     return EncodedSubgraph::make(*def.cast_final_safe<SubgraphOp>().graph);
 }
 
 EncodedSubgraph make_backward_graph(
-        const OpDef& def, 
-        const SmallVector<LogicalTensorDesc>& inputs,
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         SmallVector<bool> output_has_grad) {
     auto& op = def.cast_final_safe<SubgraphOp>();
@@ -198,20 +198,21 @@ EncodedSubgraph make_backward_graph(
             output_has_grad[i] = false;
         }
     }
-    auto bgraph = subgraph_detail::make_backward_graph(def, inputs, input_requires_grad, output_has_grad);
+    auto bgraph = subgraph_detail::make_backward_graph(
+            def, inputs, input_requires_grad, output_has_grad);
     return EncodedSubgraph::make_single(
-            SubgraphOp::make(op.name + "Grad",
-                             std::make_shared<Subgraph>(bgraph.graph)),
+            SubgraphOp::make(
+                    op.name + "Grad", std::make_shared<Subgraph>(bgraph.graph)),
             bgraph.input_mask, bgraph.output_mask);
 }
 
 std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
     auto& op = def.cast_final_safe<SubgraphOp>();
     return {
-        {"name", op.name},
-        {"inputs", mgb::imperative::to_string(op.graph->inputs)},
-        {"exprs", mgb::imperative::to_string(op.graph->exprs)},
-        {"outputs", mgb::imperative::to_string(op.graph->outputs)},
+            {"name", op.name},
+            {"inputs", mgb::imperative::to_string(op.graph->inputs)},
+            {"exprs", mgb::imperative::to_string(op.graph->exprs)},
+            {"outputs", mgb::imperative::to_string(op.graph->outputs)},
     };
 }
 
@@ -227,7 +228,7 @@ std::string make_name(const OpDef& def) {
 auto hash(const OpDef& def) {
     auto& op = def.cast_final_safe<SubgraphOp>();
     if (!op.graph_key) {
-        return (size_t)reinterpret_cast<uintptr_t>(op.graph.get());
+        return (size_t) reinterpret_cast<uintptr_t>(op.graph.get());
     }
     return op.graph_key->hash();
 }
@@ -249,21 +250,24 @@ auto is_same_st(const OpDef& def, const OpDef& another) {
 }
 
 OP_TRAIT_REG(SubgraphOp, SubgraphOp)
-    .make_forward_graph(make_forward_graph)
-    .make_backward_graph(make_backward_graph)
-    .props(props)
-    .make_name(make_name)
-    .hash(hash)
-    .is_same_st(is_same_st)
-    .fallback();
+        .make_forward_graph(make_forward_graph)
+        .make_backward_graph(make_backward_graph)
+        .props(props)
+        .make_name(make_name)
+        .hash(hash)
+        .is_same_st(is_same_st)
+        .fallback();
 
-}}
+}  // namespace subgraph
+}  // namespace
 
-namespace { namespace compiled_op {
+namespace {
+namespace compiled_op {
 
-struct DeviceMemoryAllocatorImpl: cg::DeviceMemoryAllocator {
+struct DeviceMemoryAllocatorImpl : cg::DeviceMemoryAllocator {
     std::shared_ptr<OpDef> current_op;
-    void alloc_static(ComputingGraph* graph, DeviceTensorStorage& dest, size_t size) override {
+    void alloc_static(
+            ComputingGraph* graph, DeviceTensorStorage& dest, size_t size) override {
         mgb_assert(0, "alloc_static is not allowed in CompiledOp");
     }
     void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest, size_t size) override {
@@ -282,27 +286,32 @@ struct ComputingGraphHolder {
     SmallVector<std::unique_ptr<CompNode::Event>> events;
 };
 
-ComputingGraphHolder& get_computing_graph(std::shared_ptr<OpDef> compiled_op, SmallVector<LogicalTensorDesc> descs) {
-    using ComputingGraphHolderCache = OpMethResultCache<std::queue<std::unique_ptr<ComputingGraphHolder>>>;
+ComputingGraphHolder& get_computing_graph(
+        std::shared_ptr<OpDef> compiled_op, SmallVector<LogicalTensorDesc> descs) {
+    using ComputingGraphHolderCache =
+            OpMethResultCache<std::queue<std::unique_ptr<ComputingGraphHolder>>>;
     thread_local ComputingGraphHolderCache cache;
     thread_local size_t nr_cg_holders = 0;
     ComputingGraphHolderCache::key_t cache_key = {compiled_op, descs};
     auto& cg_holder_queue = cache[cache_key];
     std::unique_ptr<ComputingGraphHolder> holder;
-    if(!cg_holder_queue.empty()) {
+    if (!cg_holder_queue.empty()) {
         // pick one
         std::swap(cg_holder_queue.front(), holder);
         // check all events finished
-        for (auto&& event: holder->events) {
+        for (auto&& event : holder->events) {
             if (!event->finished()) {
-                bool queue_limited = event->comp_node().contain_flag(CompNode::Flag::QUEUE_LIMITED);
+                bool queue_limited =
+                        event->comp_node().contain_flag(CompNode::Flag::QUEUE_LIMITED);
                 bool many_graph = cg_holder_queue.size() > 10;
                 if (queue_limited || !many_graph) {
                     std::swap(cg_holder_queue.front(), holder);
                     break;
                 } else {
                     // graph limit
-                    mgb_log_debug("computing graph limit for compiled op exceeded, waiting for prev graph");
+                    mgb_log_debug(
+                            "computing graph limit for compiled op exceeded, waiting "
+                            "for prev graph");
                     event->host_wait();
                 }
             }
@@ -319,22 +328,24 @@ ComputingGraphHolder& get_computing_graph(std::shared_ptr<OpDef> compiled_op, Sm
         cg_holder.graph = ComputingGraph::make();
         cg_holder.graph->options().force_dynamic_alloc = true;
         cg_holder.graph->options().async_exec_level = 0;
-        cg_holder.graph->options().graph_opt_level = compiled_op->cast_final_safe<CompiledOp>().gopt_level;
+        cg_holder.graph->options().graph_opt_level =
+                compiled_op->cast_final_safe<CompiledOp>().gopt_level;
         cg_holder.graph->options().enable_var_mem_defragment = false;
         cg_holder.graph->options().comp_seq_sync_device = false;
         // set allocator for DTR support
         cg_holder.graph->set_device_memory_allocator(cg_holder.allocator);
         VarNodeArray input_vars;
-        for (auto&& desc: descs) {
+        for (auto&& desc : descs) {
             auto input_device_nd = std::make_shared<DeviceTensorND>();
             input_device_nd->dtype(desc.layout.dtype);
             input_device_nd->comp_node(desc.comp_node);
             input_device_nd->resize(desc.layout);
             cg_holder.inputs.push_back(input_device_nd);
-            auto callback = [input_device_nd]{
-                return *input_device_nd;
-            };
-            auto* input_var = opr::InputCallback::make(*cg_holder.graph, callback, desc.comp_node, desc.layout.dtype, TensorShape())[0].node();
+            auto callback = [input_device_nd] { return *input_device_nd; };
+            auto* input_var = opr::InputCallback::make(
+                                      *cg_holder.graph, callback, desc.comp_node,
+                                      desc.layout.dtype, TensorShape())[0]
+                                      .node();
             input_vars.push_back(input_var);
         }
         // forward to inner op
@@ -344,7 +355,7 @@ ComputingGraphHolder& get_computing_graph(std::shared_ptr<OpDef> compiled_op, Sm
         for (size_t i = 0; i < nr_outputs; ++i) {
             auto* output_var = output_vars[i];
             auto output_ptr = std::make_shared<DeviceTensorND>();
-            auto callback = [output_ptr](DeviceTensorND output){
+            auto callback = [output_ptr](DeviceTensorND output) {
                 output_ptr->reset(output.storage(), output.layout());
             };
             output_spec.push_back({output_var, callback});
@@ -352,25 +363,25 @@ ComputingGraphHolder& get_computing_graph(std::shared_ptr<OpDef> compiled_op, Sm
         }
         cg_holder.executable = cg_holder.graph->compile(output_spec);
         CompNode::UnorderedSet comp_nodes;
-        for (auto&& output_var: output_vars) {
+        for (auto&& output_var : output_vars) {
             comp_nodes.insert(output_var->comp_node());
         }
-        for (auto&& comp_node: comp_nodes) {
+        for (auto&& comp_node : comp_nodes) {
             cg_holder.events.push_back(comp_node.create_event());
             cg_holder.events.back()->record();
         }
         nr_cg_holders++;
-        mgb_log_debug("add new computing graph for compiled op, now %zu graphs", nr_cg_holders);
+        mgb_log_debug(
+                "add new computing graph for compiled op, now %zu graphs",
+                nr_cg_holders);
     }
     cg_holder_queue.push(std::move(holder));
     return *cg_holder_queue.back();
 }
 
-auto apply_on_physical_tensor(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs) {
+auto apply_on_physical_tensor(const OpDef& def, const SmallVector<TensorPtr>& inputs) {
     SmallVector<LogicalTensorDesc> input_descs;
-    for (auto&& input: inputs) {
+    for (auto&& input : inputs) {
         input_descs.push_back({input->layout(), input->comp_node()});
     }
     size_t nr_inputs = inputs.size();
@@ -380,18 +391,19 @@ auto apply_on_physical_tensor(
     cg_holder.executable->wait();
     for (size_t i = 0; i < nr_inputs; ++i) {
         auto input_dev_tensor = inputs[i]->dev_tensor();
-        cg_holder.inputs[i]->reset(input_dev_tensor.storage(), input_dev_tensor.layout());
+        cg_holder.inputs[i]->reset(
+                input_dev_tensor.storage(), input_dev_tensor.layout());
     }
     cg_holder.allocator->current_op = shared_def;
     cg_holder.executable->execute();
-    for (auto&& event: cg_holder.events) {
+    for (auto&& event : cg_holder.events) {
         event->record();
     }
     SmallVector<TensorPtr> outputs;
-    for (auto input_nd: cg_holder.inputs) {
+    for (auto input_nd : cg_holder.inputs) {
         *input_nd = {};
     }
-    for (auto output_nd: cg_holder.outputs) {
+    for (auto output_nd : cg_holder.outputs) {
         outputs.push_back(Tensor::make(*output_nd));
         *output_nd = {};
     }
@@ -399,18 +411,16 @@ auto apply_on_physical_tensor(
     cg_holder.allocator->current_op = nullptr;
     return outputs;
 }
-auto apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto& op = def.cast_final_safe<CompiledOp>();
     op.op->set_scope(op.scope());
     return OpDef::apply_on_var_node(*op.op, inputs);
 }
 
 auto infer_output_attrs_fallible(
-        const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& input_descs) {
-    return OpDef::infer_output_attrs_fallible(*def.cast_final_safe<CompiledOp>().op, input_descs);
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& input_descs) {
+    return OpDef::infer_output_attrs_fallible(
+            *def.cast_final_safe<CompiledOp>().op, input_descs);
 }
 
 auto props(const OpDef& def) {
@@ -424,19 +434,18 @@ auto make_name(const OpDef& def) {
 }
 
 std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_tensors,
+        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
         const SmallVector<MemoryDesc>& inputs_mems) {
     return {};
 }
 
 EncodedSubgraph make_backward_graph(
-        const OpDef& def, 
-        const SmallVector<LogicalTensorDesc>& inputs,
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad) {
     auto& op = def.cast_final_safe<CompiledOp>();
-    auto backward_graph = OpDef::make_backward_graph(*op.op, inputs, input_requires_grad, output_has_grad);
+    auto backward_graph = OpDef::make_backward_graph(
+            *op.op, inputs, input_requires_grad, output_has_grad);
     auto name = def.trait()->make_name(def);
     auto key = std::make_shared<BackwardOpKey>();
     key->op = op.op;
@@ -452,7 +461,8 @@ EncodedSubgraph make_backward_graph(
                 grad_outputs_has_grad, key);
     }
     auto compiled_op = CompiledOp::make(bgraph_op, op.gopt_level);
-    auto encoded_graph = EncodedSubgraph::make_single(compiled_op, backward_graph.input_mask, backward_graph.output_mask);
+    auto encoded_graph = EncodedSubgraph::make_single(
+            compiled_op, backward_graph.input_mask, backward_graph.output_mask);
     return encoded_graph;
 }
 
@@ -471,17 +481,18 @@ auto is_same_st(const OpDef& def, const OpDef& another) {
 }
 
 OP_TRAIT_REG(CompiledOp, CompiledOp)
-    .apply_on_var_node(apply_on_var_node)
-    .apply_on_physical_tensor(apply_on_physical_tensor)
-    .infer_output_attrs_fallible(infer_output_attrs_fallible)
-    .make_backward_graph(make_backward_graph)
-    .make_name(make_name)
-    .infer_output_mem_desc(infer_output_mem_desc)
-    .props(props)
-    .hash(hash)
-    .is_same_st(is_same_st)
-    .fallback();
-}}
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .make_backward_graph(make_backward_graph)
+        .make_name(make_name)
+        .infer_output_mem_desc(infer_output_mem_desc)
+        .props(props)
+        .hash(hash)
+        .is_same_st(is_same_st)
+        .fallback();
+}  // namespace compiled_op
+}  // namespace
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(UniqueKey);
 
@@ -491,4 +502,4 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(BackwardOpKey);
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CompiledOp);
 
-} // namespace mgb::imperative
+}  // namespace mgb::imperative

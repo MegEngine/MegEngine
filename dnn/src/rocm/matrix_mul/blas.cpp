@@ -18,24 +18,24 @@
 using namespace megdnn;
 using namespace rocm;
 
-bool MatrixMulForwardImpl::AlgoBlas::is_available(
-        const SizeArgs& args) const {
+bool MatrixMulForwardImpl::AlgoBlas::is_available(const SizeArgs& args) const {
     if (args.opr->param().format != param::MatrixMul::Format::DEFAULT)
         return false;
     if (args.layout_a.dtype == dtype::Float32() ||
         args.layout_a.dtype == dtype::Float16()) {
         return true;
-    } else if (args.layout_a.dtype.enumv() == DTypeEnum::Int8 ||
-               args.layout_a.dtype.enumv() == DTypeEnum::QuantizedS8) {
+    } else if (
+            args.layout_a.dtype.enumv() == DTypeEnum::Int8 ||
+            args.layout_a.dtype.enumv() == DTypeEnum::QuantizedS8) {
         auto k = args.layout_a.shape[args.opr->param().transposeA ? 0 : 1];
         //! see
         //! https://github.com/ROCmSoftwarePlatform/rocBLAS/blob/develop/library/src/blas_ex/rocblas_gemm_ex.cpp:470
         bool rocblas_int8x8x32_valid = true;
         rocblas_int8x8x32_valid &= (k % 4 == 0);
-        rocblas_int8x8x32_valid &= (!args.opr->param().transposeB ||
-                                    args.layout_b.stride[0] % 4 == 0);
-        rocblas_int8x8x32_valid &= (!args.opr->param().transposeA ||
-                                    args.layout_a.stride[0] % 4 == 0);
+        rocblas_int8x8x32_valid &=
+                (!args.opr->param().transposeB || args.layout_b.stride[0] % 4 == 0);
+        rocblas_int8x8x32_valid &=
+                (!args.opr->param().transposeA || args.layout_a.stride[0] % 4 == 0);
         return rocblas_int8x8x32_valid;
     }
     return false;
@@ -56,10 +56,9 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                                              : rocblas_operation_none,
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
-                n, m, k, one, args.tensor_b.ptr<dt_float32>(),
-                args.layout_b.stride[0], args.tensor_a.ptr<dt_float32>(),
-                args.layout_a.stride[0], zero, args.tensor_c.ptr<dt_float32>(),
-                args.layout_c.stride[0]));
+                n, m, k, one, args.tensor_b.ptr<dt_float32>(), args.layout_b.stride[0],
+                args.tensor_a.ptr<dt_float32>(), args.layout_a.stride[0], zero,
+                args.tensor_c.ptr<dt_float32>(), args.layout_c.stride[0]));
     };
 
 #if !MEGDNN_DISABLE_FLOAT16
@@ -79,13 +78,11 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
                 n, m, k, one, args.tensor_b.raw_ptr, rocblas_datatype_f16_r,
-                args.layout_b.stride[0], args.tensor_a.raw_ptr,
-                rocblas_datatype_f16_r, args.layout_a.stride[0], zero,
-                args.tensor_c.raw_ptr, rocblas_datatype_f16_r,
-                args.layout_c.stride[0], args.tensor_c.raw_ptr,
-                rocblas_datatype_f16_r, args.layout_c.stride[0],
-                rocblas_datatype_f32_r, rocblas_gemm_algo_standard,
-                solution_index, flags, &ws_size, nullptr);
+                args.layout_b.stride[0], args.tensor_a.raw_ptr, rocblas_datatype_f16_r,
+                args.layout_a.stride[0], zero, args.tensor_c.raw_ptr,
+                rocblas_datatype_f16_r, args.layout_c.stride[0], args.tensor_c.raw_ptr,
+                rocblas_datatype_f16_r, args.layout_c.stride[0], rocblas_datatype_f32_r,
+                rocblas_gemm_algo_standard, solution_index, flags, &ws_size, nullptr);
         rocblas_check(gemm_ex_err);
         MEGDNN_MARK_USED_VAR(ws_size);
     };
@@ -117,19 +114,21 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
         }
 #if !MEGDNN_DISABLE_FLOAT16
         else {
-            megdnn_assert(args.layout_a.dtype == dtype::Float16(),
-                          "invalid matmul data type");
+            megdnn_assert(
+                    args.layout_a.dtype == dtype::Float16(),
+                    "invalid matmul data type");
             hgemm();
         }
 #endif
     }
 #if !MEGDNN_DISABLE_FLOAT16
     else if (args.opr->param().compute_mode == Param::ComputeMode::FLOAT32) {
-        megdnn_assert(args.layout_b.dtype == dtype::Float16() &&
-                              args.layout_c.dtype == dtype::Float16() &&
-                              args.layout_a.dtype == dtype::Float16(),
-                      "DataType::FLOAT_IO16xC32 is supported, when dtype of A, "
-                      "B, C are all Float16");
+        megdnn_assert(
+                args.layout_b.dtype == dtype::Float16() &&
+                        args.layout_c.dtype == dtype::Float16() &&
+                        args.layout_a.dtype == dtype::Float16(),
+                "DataType::FLOAT_IO16xC32 is supported, when dtype of A, "
+                "B, C are all Float16");
         gemm_ex();
     }
 #endif
@@ -147,16 +146,13 @@ void MatrixMulForwardImpl::AlgoBlas::exec(const ExecArgs& args) const {
                 args.opr->param().transposeA ? rocblas_operation_transpose
                                              : rocblas_operation_none,
                 n, m, k, one, args.tensor_b.raw_ptr, rocblas_datatype_i8_r,
-                args.layout_b.stride[0], args.tensor_a.raw_ptr,
-                rocblas_datatype_i8_r, args.layout_a.stride[0], zero,
-                args.tensor_c.raw_ptr, rocblas_datatype_i32_r,
-                args.layout_c.stride[0], args.tensor_c.raw_ptr,
-                rocblas_datatype_i32_r, args.layout_c.stride[0],
-                rocblas_datatype_i32_r, rocblas_gemm_algo_standard,
-                solution_index, flags, &ws_size, nullptr));
+                args.layout_b.stride[0], args.tensor_a.raw_ptr, rocblas_datatype_i8_r,
+                args.layout_a.stride[0], zero, args.tensor_c.raw_ptr,
+                rocblas_datatype_i32_r, args.layout_c.stride[0], args.tensor_c.raw_ptr,
+                rocblas_datatype_i32_r, args.layout_c.stride[0], rocblas_datatype_i32_r,
+                rocblas_gemm_algo_standard, solution_index, flags, &ws_size, nullptr));
         MEGDNN_MARK_USED_VAR(ws_size);
     }
-
 }
 
 // vim: syntax=cpp.doxygen

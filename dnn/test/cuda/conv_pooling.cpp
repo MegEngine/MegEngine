@@ -10,13 +10,13 @@
  */
 #include "test/cuda/fixture.h"
 
-#include "test/common/tensor.h"
-#include "megdnn/oprs.h"
-#include "test/common/workspace_wrapper.h"
 #include "megdnn/opr_param_defs.h"
+#include "megdnn/oprs.h"
 #include "test/common/checker.h"
 #include "test/common/conv_pooling.h"
 #include "test/common/rng.h"
+#include "test/common/tensor.h"
+#include "test/common/workspace_wrapper.h"
 
 namespace megdnn {
 namespace test {
@@ -55,8 +55,7 @@ TEST_F(CUDA, CONV_POOLING_FORWARD)
 }
 #endif
 
-
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

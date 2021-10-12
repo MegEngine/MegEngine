@@ -97,28 +97,26 @@ mlir::Value ValueBuilderHelper::min(mlir::Value lhs, mlir::Value rhs) {
 /* ===================== constant functions ===================== */
 
 mlir::Value ValueBuilderHelper::const_f32(float val) {
-    return m_builder.create<mlir::ConstantOp>(m_location,
-                                              m_builder.getF32FloatAttr(val));
+    return m_builder.create<mlir::ConstantOp>(
+            m_location, m_builder.getF32FloatAttr(val));
 }
 
 mlir::Value ValueBuilderHelper::const_i32(int32_t val) {
-    return m_builder.create<mlir::ConstantOp>(m_location,
-                                              m_builder.getIndexAttr(val));
+    return m_builder.create<mlir::ConstantOp>(m_location, m_builder.getIndexAttr(val));
 }
 
 /* ===================== select function ===================== */
 
-mlir::Value ValueBuilderHelper::select(mlir::Value cond, mlir::Value true_val,
-                                       mlir::Value false_val) {
-    return m_builder.create<mlir::SelectOp>(m_location, cond, true_val,
-                                            false_val);
+mlir::Value ValueBuilderHelper::select(
+        mlir::Value cond, mlir::Value true_val, mlir::Value false_val) {
+    return m_builder.create<mlir::SelectOp>(m_location, cond, true_val, false_val);
 }
 
 /* ===================== helper functions ===================== */
 
-mlir::AffineMap jit::get_affinemap(mlir::OpBuilder& builder,
-                                   const mlir::Value& val,
-                                   const megdnn::TensorLayout& layout) {
+mlir::AffineMap jit::get_affinemap(
+        mlir::OpBuilder& builder, const mlir::Value& val,
+        const megdnn::TensorLayout& layout) {
     auto type = val.getType().cast<mlir::MemRefType>();
     mgb_assert(type, "currently only support MemRefType");
     std::vector<mlir::AffineExpr> exprs;
@@ -129,16 +127,13 @@ mlir::AffineMap jit::get_affinemap(mlir::OpBuilder& builder,
             exprs.push_back(builder.getAffineDimExpr(i));
         }
     }
-    auto map = mlir::AffineMap::get(type.getRank(), 0, exprs,
-                                    builder.getContext());
+    auto map = mlir::AffineMap::get(type.getRank(), 0, exprs, builder.getContext());
     return map;
 }
 
-mlir::Value jit::get_affine_load_op(mlir::OpBuilder& builder,
-                                    const mlir::Location& loc,
-                                    const mlir::Value& val,
-                                    const mlir::ValueRange& index,
-                                    const megdnn::TensorLayout& dst) {
+mlir::Value jit::get_affine_load_op(
+        mlir::OpBuilder& builder, const mlir::Location& loc, const mlir::Value& val,
+        const mlir::ValueRange& index, const megdnn::TensorLayout& dst) {
     if (val.getType().isa<mlir::MemRefType>()) {
         auto type = val.getType().cast<mlir::MemRefType>();
         megdnn::TensorLayout src_layout = mlir_type_to_layout(type);

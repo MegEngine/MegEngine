@@ -26,8 +26,7 @@ namespace elemwise_multi_type {
                     cb(fuse_add_rmulh_round_shr_saturate_int32)
 
 #define FOREACH_ELEMWISE_MULTI_TYPE_CASE(cb) \
-    cb(FIRST_ELEMWISE_MULTI_TYPE_CASE)       \
-            FOREACH_ELEMWISE_MULTI_TYPE_NONFIRST_CASE(cb)
+    cb(FIRST_ELEMWISE_MULTI_TYPE_CASE) FOREACH_ELEMWISE_MULTI_TYPE_NONFIRST_CASE(cb)
 
 #define def_tags(name) \
     struct name {};
@@ -38,8 +37,8 @@ template <typename tag>
 void run_test(Handle* handle);
 
 #define t(n) , n
-typedef ::testing::Types<FIRST_ELEMWISE_MULTI_TYPE_CASE
-                                 FOREACH_ELEMWISE_MULTI_TYPE_NONFIRST_CASE(t)>
+typedef ::testing::Types<
+        FIRST_ELEMWISE_MULTI_TYPE_CASE FOREACH_ELEMWISE_MULTI_TYPE_NONFIRST_CASE(t)>
         test_types;
 #undef t
 

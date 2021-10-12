@@ -26,19 +26,18 @@ struct OprLoadDumpImpl<opr::CambriconRuntimeOpr, 0> {
         bool tensor_dim_mutable = opr.is_tensor_dim_mutable();
         ctx.dump_buf_with_len(&tensor_dim_mutable, sizeof(bool));
     }
-    static cg::OperatorNodeBase* load(OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
         inputs.at(0)->comp_node().activate();
         auto buf = ctx.load_shared_buf_with_len();
         auto symbol = ctx.load_buf_with_len();
         auto tensor_dim_mutable_storage = ctx.load_buf_with_len();
         bool tensor_dim_mutable;
-        memcpy(&tensor_dim_mutable, tensor_dim_mutable_storage.data(),
-               sizeof(bool));
-        return opr::CambriconRuntimeOpr::make(std::move(buf), std::move(symbol),
-                                              cg::to_symbol_var_array(inputs),
-                                              tensor_dim_mutable, config)
+        memcpy(&tensor_dim_mutable, tensor_dim_mutable_storage.data(), sizeof(bool));
+        return opr::CambriconRuntimeOpr::make(
+                       std::move(buf), std::move(symbol),
+                       cg::to_symbol_var_array(inputs), tensor_dim_mutable, config)
                 .at(0)
                 .node()
                 ->owner_opr();
@@ -52,20 +51,17 @@ cg::OperatorNodeBase* opr_shallow_copy_cambricon_runtime_opr(
         const cg::OperatorNodeBase& opr_, const VarNodeArray& inputs,
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<CambriconRuntimeOpr>();
-    return CambriconRuntimeOpr::make(opr.buffer(), opr.symbol(),
-                                     cg::to_symbol_var_array(inputs),
-                                     opr.is_tensor_dim_mutable(), config)
+    return CambriconRuntimeOpr::make(
+                   opr.buffer(), opr.symbol(), cg::to_symbol_var_array(inputs),
+                   opr.is_tensor_dim_mutable(), config)
             .at(0)
             .node()
             ->owner_opr();
 }
 
 MGB_SEREG_OPR(CambriconRuntimeOpr, 0);
-MGB_REG_OPR_SHALLOW_COPY(CambriconRuntimeOpr,
-                         opr_shallow_copy_cambricon_runtime_opr);
+MGB_REG_OPR_SHALLOW_COPY(CambriconRuntimeOpr, opr_shallow_copy_cambricon_runtime_opr);
 }  // namespace opr
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
-

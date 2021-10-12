@@ -13,14 +13,14 @@
 
 #include "megbrain/dtype.h"
 #include "megbrain/utils/arith_helper.h"
-#include "megdnn/thin/function.h"
 #include "megdnn/opr_param_defs.h"
+#include "megdnn/thin/function.h"
 
 namespace mgb {
 namespace serialization {
 
-void serialize_dtype(DType dtype,
-                     megdnn::thin_function<void(const void*, size_t)> write_fn);
+void serialize_dtype(
+        DType dtype, megdnn::thin_function<void(const void*, size_t)> write_fn);
 DType deserialize_dtype(megdnn::thin_function<void(void*, size_t)> read_fn);
 
 /*!
@@ -29,8 +29,8 @@ DType deserialize_dtype(megdnn::thin_function<void(void*, size_t)> read_fn);
  */
 template <typename T>
 class CompressedUint {
-    static_assert(std::is_unsigned<T>::value && std::is_integral<T>::value,
-                  "T must be uint");
+    static_assert(
+            std::is_unsigned<T>::value && std::is_integral<T>::value, "T must be uint");
 
 public:
     /*!
@@ -69,9 +69,9 @@ public:
      */
     template <class Reader>
     static T read(Reader reader) {
-        static_assert(std::is_same<std::remove_cv_t<decltype(reader())>,
-                                   uint8_t>::value,
-                      "reader must return uint8_t");
+        static_assert(
+                std::is_same<std::remove_cv_t<decltype(reader())>, uint8_t>::value,
+                "reader must return uint8_t");
         T val = 0;
         for (;;) {
             uint8_t cur = reader();

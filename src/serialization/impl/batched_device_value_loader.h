@@ -27,8 +27,7 @@ namespace serialization {
  */
 class BatchedDeviceValueLoader {
     struct TensorList {
-        std::vector<std::pair<HostTensorND, std::shared_ptr<DeviceTensorND>>>
-                tensors;
+        std::vector<std::pair<HostTensorND, std::shared_ptr<DeviceTensorND>>> tensors;
     };
     CompNode::UnorderedMap<TensorList> m_cn2tensor_list;
 
@@ -39,8 +38,7 @@ public:
      * \param comp_node target comp node
      * \param value tensor value; it should be placed on the CPU comp node
      */
-    std::shared_ptr<DeviceTensorND> make(CompNode comp_node,
-                                         HostTensorND value);
+    std::shared_ptr<DeviceTensorND> make(CompNode comp_node, HostTensorND value);
 
     //! apply all the lazy loads
     void apply();

@@ -49,8 +49,9 @@ public:
         mutable std::string m_input;
 
     public:
-        Key(Handle* opr_handle, Algorithm::OprType opr_type, const TensorLayout* inp_layouts_ptr,
-            size_t inp_layouts_size, const void* param_ptr = nullptr, size_t param_size = 0)
+        Key(Handle* opr_handle, Algorithm::OprType opr_type,
+            const TensorLayout* inp_layouts_ptr, size_t inp_layouts_size,
+            const void* param_ptr = nullptr, size_t param_size = 0)
                 : m_handle{opr_handle},
                   m_opr_type{static_cast<uint32_t>(opr_type)},
                   m_inp_layouts_ptr{inp_layouts_ptr},

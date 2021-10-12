@@ -52,53 +52,52 @@ const char* PaddingChannelPass::name() const {
 void PaddingChannelPass::apply(OptState& opt) const {
     MIDOUT_B("PaddingChannelPass::apply");
     // do not check shape
-    opt.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_ALL ^
-                                   VarReplaceCheckFlag::CHECK_SHAPE);
+    opt.set_var_replace_check_flag(
+            VarReplaceCheckFlag::CHECK_ALL ^ VarReplaceCheckFlag::CHECK_SHAPE);
 
     ThinHashSet<OperatorNodeBase*> padding_oprs;
-    ThinHashMap<Typeinfo*, thin_function<OperatorNodeBase*(
-                                   OperatorNodeBase*, const VarNodeArray&)>>
+    ThinHashMap<
+            Typeinfo*,
+            thin_function<OperatorNodeBase*(OperatorNodeBase*, const VarNodeArray&)>>
             opr_replace_funcs;
 
     auto rewriter = opt.graph().make_rewriter();
     auto pad_in_channels = [](VarNode* inp, size_t pad_channels) -> VarNode* {
         mgb_assert(inp->shape().ndim == 4);
-        mgb_assert(inp->dtype().enumv() == DTypeEnum::QuantizedS4 ||
-                   inp->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
-                   inp->dtype().enumv() == DTypeEnum::QuantizedS8 ||
-                   inp->dtype().enumv() == DTypeEnum::QuantizedS32);
-        TensorShape shape{inp->shape()[0], pad_channels, inp->shape()[2],
-                          inp->shape()[3]};
+        mgb_assert(
+                inp->dtype().enumv() == DTypeEnum::QuantizedS4 ||
+                inp->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                inp->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                inp->dtype().enumv() == DTypeEnum::QuantizedS32);
+        TensorShape shape{
+                inp->shape()[0], pad_channels, inp->shape()[2], inp->shape()[3]};
         std::shared_ptr<HostTensorND> host_val =
                 std::make_shared<HostTensorND>(inp->comp_node(), inp->dtype());
         host_val->resize(shape);
         auto ptr = host_val->raw_ptr();
-        size_t size_bytes =
-                TensorLayout{shape, inp->dtype()}.span().dist_byte();
+        size_t size_bytes = TensorLayout{shape, inp->dtype()}.span().dist_byte();
         std::memset(ptr, 0, size_bytes);
-        auto padding =
-                opr::ImmutableTensor::make(*inp->owner_graph(), *host_val);
+        auto padding = opr::ImmutableTensor::make(*inp->owner_graph(), *host_val);
         auto out = opr::Concat::make({inp, padding}, 1);
         return out.node();
     };
 
     auto pad_out_channels = [](VarNode* inp, size_t pad_channels) -> VarNode* {
         mgb_assert(inp->shape().ndim == 4);
-        mgb_assert(inp->dtype().enumv() == DTypeEnum::QuantizedS4 ||
-                   inp->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
-                   inp->dtype().enumv() == DTypeEnum::QuantizedS8 ||
-                   inp->dtype().enumv() == DTypeEnum::QuantizedS32);
-        TensorShape shape{pad_channels, inp->shape()[1], inp->shape()[2],
-                          inp->shape()[3]};
+        mgb_assert(
+                inp->dtype().enumv() == DTypeEnum::QuantizedS4 ||
+                inp->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                inp->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                inp->dtype().enumv() == DTypeEnum::QuantizedS32);
+        TensorShape shape{
+                pad_channels, inp->shape()[1], inp->shape()[2], inp->shape()[3]};
         std::shared_ptr<HostTensorND> host_val =
                 std::make_shared<HostTensorND>(inp->comp_node(), inp->dtype());
         host_val->resize(shape);
         auto ptr = host_val->raw_ptr();
-        size_t size_bytes =
-                TensorLayout{shape, inp->dtype()}.span().dist_byte();
+        size_t size_bytes = TensorLayout{shape, inp->dtype()}.span().dist_byte();
         std::memset(ptr, 0, size_bytes);
-        auto padding =
-                opr::ImmutableTensor::make(*inp->owner_graph(), *host_val);
+        auto padding = opr::ImmutableTensor::make(*inp->owner_graph(), *host_val);
         auto out = opr::Concat::make({inp, padding}, 0);
         return out.node();
     };
@@ -122,8 +121,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
     };
 
     // padding policy for conv bias with data type qint8
-    auto padding_policy_qint8 = [&padding_oprs, &pad_in_channels,
-                                 &pad_out_channels](
+    auto padding_policy_qint8 = [&padding_oprs, &pad_in_channels, &pad_out_channels](
                                         OperatorNodeBase* opr,
                                         const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
@@ -145,8 +143,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
                     pad_channels = 4 - (in_channels % 4);  // pad to use dp4a
             } else {
                 if (in_channels % 32)
-                    pad_channels =
-                            32 - (in_channels % 32);  // pad to use tensorcore
+                    pad_channels = 32 - (in_channels % 32);  // pad to use tensorcore
             }
             if (pad_channels > 0) {
                 inps[0] = pad_in_channels(new_inp[0], pad_channels);
@@ -172,8 +169,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
     };
 
     // padding policy for conv bias with data type qint4 and quint4
-    auto padding_policy_int4 = [&padding_oprs, &pad_in_channels,
-                                &pad_out_channels](
+    auto padding_policy_int4 = [&padding_oprs, &pad_in_channels, &pad_out_channels](
                                        OperatorNodeBase* opr,
                                        const VarNodeArray& new_inp) {
         mgb_assert(opr->input().size() == new_inp.size());
@@ -244,10 +240,9 @@ void PaddingChannelPass::apply(OptState& opt) const {
                     OperatorNodeBase* opr, const VarNodeArray& new_inp) {
                 if (opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8) {
                     return padding_policy_qint8(opr, new_inp);
-                } else if (opr->input(0)->dtype().enumv() ==
-                                   DTypeEnum::QuantizedS4 ||
-                           opr->input(0)->dtype().enumv() ==
-                                   DTypeEnum::Quantized4Asymm) {
+                } else if (
+                        opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4 ||
+                        opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm) {
                     return padding_policy_int4(opr, new_inp);
                 } else {
                     mgb_assert(
@@ -257,8 +252,8 @@ void PaddingChannelPass::apply(OptState& opt) const {
                             "consumer(%s), producer(%s)",
                             opr->input(0)->dtype().name(), opr->cname(),
                             opr->input(0)->owner_opr()->cname());
-                    return serialization::copy_opr_shallow(*opr, new_inp,
-                                                           opr->config());
+                    return serialization::copy_opr_shallow(
+                            *opr, new_inp, opr->config());
                 }
             };
     opr_replace_funcs[opr::ConvolutionBackwardData::typeinfo()] =
@@ -273,16 +268,16 @@ void PaddingChannelPass::apply(OptState& opt) const {
                             "consumer(%s), producer(%s)",
                             opr->input(0)->dtype().name(), opr->cname(),
                             opr->input(0)->owner_opr()->cname());
-                    return serialization::copy_opr_shallow(*opr, new_inp,
-                                                           opr->config());
+                    return serialization::copy_opr_shallow(
+                            *opr, new_inp, opr->config());
                 }
                 mgb_assert(opr->input().size() == new_inp.size());
-                mgb_assert(new_inp.size() == 2,
-                           "deconv (conv bwd data) operator for inference can "
-                           "only have 2 input vars(got:%zu)",
-                           new_inp.size());
                 mgb_assert(
-                        opr->input(0)->shape().eq_shape(new_inp[0]->shape()));
+                        new_inp.size() == 2,
+                        "deconv (conv bwd data) operator for inference can "
+                        "only have 2 input vars(got:%zu)",
+                        new_inp.size());
+                mgb_assert(opr->input(0)->shape().eq_shape(new_inp[0]->shape()));
                 auto inps = new_inp;
                 size_t out_channels = opr->input(0)->shape()[0];
                 size_t in_channels = opr->input(0)->shape()[1];
@@ -310,8 +305,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
                     inps[0] = pad_in_channels(inps[0], pad_channels);
                     padding_oprs.insert(opr);
                 }
-                return serialization::copy_opr_shallow(*opr, inps,
-                                                       opr->config());
+                return serialization::copy_opr_shallow(*opr, inps, opr->config());
             };
     auto replace_format_aware_opr = [&padding_oprs](
                                             OperatorNodeBase* opr,
@@ -319,15 +313,15 @@ void PaddingChannelPass::apply(OptState& opt) const {
         if (opr->input(0)->dtype().enumv() != DTypeEnum::QuantizedS8 &&
             opr->input(0)->dtype().enumv() != DTypeEnum::QuantizedS4 &&
             opr->input(0)->dtype().enumv() != DTypeEnum::Quantized4Asymm) {
-            mgb_assert(padding_oprs.count(opr->input(0)->owner_opr()) == 0,
-                       "operator(type:%s,name:%s) for data type(%s) cannot be "
-                       "padded channel. extra info:"
-                       "consumer(%s), producer(%s)",
-                       opr->dyn_typeinfo()->name, opr->cname(),
-                       opr->input(0)->dtype().name(), opr->cname(),
-                       opr->input(0)->owner_opr()->cname());
-            return serialization::copy_opr_shallow(*opr, new_inp,
-                                                   opr->config());
+            mgb_assert(
+                    padding_oprs.count(opr->input(0)->owner_opr()) == 0,
+                    "operator(type:%s,name:%s) for data type(%s) cannot be "
+                    "padded channel. extra info:"
+                    "consumer(%s), producer(%s)",
+                    opr->dyn_typeinfo()->name, opr->cname(),
+                    opr->input(0)->dtype().name(), opr->cname(),
+                    opr->input(0)->owner_opr()->cname());
+            return serialization::copy_opr_shallow(*opr, new_inp, opr->config());
         }
         mgb_assert(opr->input().size() == new_inp.size());
         if (padding_oprs.count(opr->input(0)->owner_opr())) {
@@ -335,8 +329,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
         }
         return serialization::copy_opr_shallow(*opr, new_inp, opr->config());
     };
-    opr_replace_funcs[opr::PoolingForward::typeinfo()] =
-            replace_format_aware_opr;
+    opr_replace_funcs[opr::PoolingForward::typeinfo()] = replace_format_aware_opr;
     opr_replace_funcs[opr::WarpPerspectiveForward::typeinfo()] =
             replace_format_aware_opr;
 
@@ -357,8 +350,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
                 if (channels_after_padding == 0) {
                     channels_after_padding = new_inp[i]->shape()[1];
                 } else {
-                    same_padding =
-                            channels_after_padding == new_inp[i]->shape()[1];
+                    same_padding = channels_after_padding == new_inp[i]->shape()[1];
                 }
             }
             if (padding_all_inps && (!padding_cur_inp || !same_padding))
@@ -369,8 +361,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
             auto inps = new_inp;
             for (size_t i = 0; i < new_inp.size(); ++i) {
                 auto cur_inp = opr->input(i);
-                bool padding_cur_inp =
-                        padding_oprs.count(cur_inp->owner_opr()) > 0;
+                bool padding_cur_inp = padding_oprs.count(cur_inp->owner_opr()) > 0;
                 if (padding_cur_inp) {
                     inps[i] = extract_subtensor(inps[i], cur_inp->shape());
                 }
@@ -382,8 +373,7 @@ void PaddingChannelPass::apply(OptState& opt) const {
         }
         return serialization::copy_opr_shallow(*opr, new_inp, opr->config());
     };
-    opr_replace_funcs[opr::ElemwiseMultiType::typeinfo()] =
-            replace_elemwise_like_opr;
+    opr_replace_funcs[opr::ElemwiseMultiType::typeinfo()] = replace_elemwise_like_opr;
     opr_replace_funcs[opr::Elemwise::typeinfo()] = replace_elemwise_like_opr;
     opr_replace_funcs[opr::TypeCvt::typeinfo()] = replace_elemwise_like_opr;
 
@@ -418,17 +408,16 @@ void PaddingChannelPass::apply(OptState& opt) const {
             }
             auto new_opr = (it->second)(opr, new_inp);
             auto &&out0 = opr->output(), &&out1 = new_opr->output();
-            mgb_assert(out0.size() == out1.size(),
-                       "bad opr replace: src=%s{%s} dst=%s{%s}, "
-                       "src.size=%zu "
-                       "dst.size=%zu",
-                       opr->cname(), opr->dyn_typeinfo()->name,
-                       new_opr->cname(), new_opr->dyn_typeinfo()->name,
-                       out0.size(), out1.size());
+            mgb_assert(
+                    out0.size() == out1.size(),
+                    "bad opr replace: src=%s{%s} dst=%s{%s}, "
+                    "src.size=%zu "
+                    "dst.size=%zu",
+                    opr->cname(), opr->dyn_typeinfo()->name, new_opr->cname(),
+                    new_opr->dyn_typeinfo()->name, out0.size(), out1.size());
             for (size_t i = 0; i < out0.size(); ++i) {
                 if (!out0[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
-                    mgb_assert(!out1[i]->contain_flag(
-                            VarNode::Flag::VOLATILE_CONTENT));
+                    mgb_assert(!out1[i]->contain_flag(VarNode::Flag::VOLATILE_CONTENT));
                     auto src = out0[i];
                     auto dst = out1[i];
                     if (opt.graph().endpoint_contain(src) &&

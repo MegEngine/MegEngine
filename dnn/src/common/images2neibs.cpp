@@ -14,9 +14,7 @@
 
 namespace megdnn {
 
-void Images2NeibsBase::deduce_layout_fwd(const TensorLayout &src,
-        TensorLayout &dst)
-{
+void Images2NeibsBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " +
                "pad_h=" + std::to_string(param().pad_h) + ", " +
@@ -42,42 +40,37 @@ void Images2NeibsBase::deduce_layout_fwd(const TensorLayout &src,
     size_t ww = this->param().window_w;
     size_t oh, ow;
 
-    infer_conv_shape2d(ih, iw, wh+(wh-1)*(dh-1), ww+(ww-1)*(dw-1), sh, sw, ph, pw, oh, ow);
+    infer_conv_shape2d(
+            ih, iw, wh + (wh - 1) * (dh - 1), ww + (ww - 1) * (dw - 1), sh, sw, ph, pw,
+            oh, ow);
     dst = TensorLayout(TensorShape({n, ic, oh, ow, wh, ww}), src.dtype);
 }
 
-void Images2NeibsBase::check_layout_fwd(const TensorLayout &src,
-        const TensorLayout &dst)
-{
+void Images2NeibsBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& dst) {
     TensorLayout dst_expected;
     deduce_layout_fwd(src, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
 }
 
-void Images2NeibsForward::deduce_layout(const TensorLayout &src,
-        TensorLayout &dst)
-{
+void Images2NeibsForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     deduce_layout_fwd(src, dst);
 }
 
-void Images2NeibsForward::check_exec(const TensorLayout &src,
-        const TensorLayout &dst,
-        size_t workspace_in_bytes)
-{
+void Images2NeibsForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     check_layout_fwd(src, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void Images2NeibsBackward::check_exec(const TensorLayout &diff,
-        const TensorLayout &grad,
-        size_t workspace_in_bytes)
-{
+void Images2NeibsBackward::check_exec(
+        const TensorLayout& diff, const TensorLayout& grad, size_t workspace_in_bytes) {
     check_layout_fwd(grad, diff);
     auto required_workspace_in_bytes = get_workspace_in_bytes(grad, diff);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

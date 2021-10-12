@@ -90,7 +90,7 @@ enum class AlgoDataType : uint32_t {
     INT8X8X16 = 1 << 4,
     INT16X16X32 = 1 << 5,
     INT4X4X16 = 1 << 6,
-    QINT4x4x32 = 1 << 7, 
+    QINT4x4x32 = 1 << 7,
 };
 
 /*!
@@ -195,16 +195,16 @@ public:
     Handle::HandleType handle_type() const { return m_handle_type; }
 
     Info::Desc desc() const { return {handle_type(), type(), param(), name()}; }
-    Info info() const {
-        return {desc(), attribute()};
-    }
+    Info info() const { return {desc(), attribute()}; }
 
     template <typename T>
     static void serialize_write_pod(const T& val, std::string& result) {
-        static_assert(std::is_trivially_copyable<T>::value,
-                      "type should be trivially copyable");
-        static_assert(!std::is_pointer<T>::value,
-                      "serialize pointer is unsafe in eager execution mode");
+        static_assert(
+                std::is_trivially_copyable<T>::value,
+                "type should be trivially copyable");
+        static_assert(
+                !std::is_pointer<T>::value,
+                "serialize pointer is unsafe in eager execution mode");
         result.append(reinterpret_cast<const char*>(&val), sizeof(T));
     }
 
@@ -231,9 +231,8 @@ public:
         return ret;
     }
 
-    static std::string deserialize_read_pod(const std::string& data,
-                                            size_t offset = 0,
-                                            size_t size = 0) {
+    static std::string deserialize_read_pod(
+            const std::string& data, size_t offset = 0, size_t size = 0) {
         return std::string(data.data() + offset, size);
     }
 
@@ -286,8 +285,8 @@ public:
      * \param layouts origin layouts of the parent opr
      * \param opr parent opr
      */
-    virtual std::vector<SearchItem> get_subopr_list(const TensorLayoutArray&,
-                                                    const OperatorBase*) const {
+    virtual std::vector<SearchItem> get_subopr_list(
+            const TensorLayoutArray&, const OperatorBase*) const {
         return {};
     }
 
@@ -333,9 +332,7 @@ public:
 
     ExecutionPolicy& execution_policy() { return m_execution_policy; }
 
-    const ExecutionPolicy& execution_policy() const {
-        return m_execution_policy;
-    }
+    const ExecutionPolicy& execution_policy() const { return m_execution_policy; }
 
     virtual Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) = 0;
 
@@ -355,8 +352,8 @@ public:
     using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
-    std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
-                                                       const TensorLayout& p1) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info(
+            const TensorLayout& p0, const TensorLayout& p1) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1)) {
             ret.emplace_back(algo->info());
@@ -364,8 +361,8 @@ public:
         return ret;
     }
 
-    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
-                                                       const TensorLayout& p1) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
+            const TensorLayout& p0, const TensorLayout& p1) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms_safe(p0, p1)) {
             ret.emplace_back(algo->info());
@@ -382,12 +379,11 @@ public:
      */
     AlgorithmInfo get_algorithm_info_heuristic(
             const TensorLayout& p0, const TensorLayout& p1,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
-        return get_algorithm_heuristic(p0, p1, workspace_limit_in_bytes,
-                                       positive_attr, negative_attr)
+        return get_algorithm_heuristic(
+                       p0, p1, workspace_limit_in_bytes, positive_attr, negative_attr)
                 ->info();
     }
 
@@ -408,8 +404,7 @@ protected:
      */
     virtual Algorithm* get_algorithm_heuristic(
             const TensorLayout& p0, const TensorLayout& p1,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
@@ -423,9 +418,8 @@ public:
     using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
-    std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1, p2)) {
             ret.emplace_back(algo->info());
@@ -433,9 +427,8 @@ public:
         return ret;
     }
 
-    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms_safe(p0, p1, p2)) {
             ret.emplace_back(algo->info());
@@ -451,14 +444,13 @@ public:
      * \p workspace_limit_in_bytes.
      */
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
-        return get_algorithm_heuristic(p0, p1, p2, workspace_limit_in_bytes,
-                                       positive_attr, negative_attr)
+        return get_algorithm_heuristic(
+                       p0, p1, p2, workspace_limit_in_bytes, positive_attr,
+                       negative_attr)
                 ->info();
     }
 
@@ -467,11 +459,9 @@ protected:
 
     //! get all possible algorithms for the specified layouts
     virtual std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2) = 0;
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2) = 0;
     virtual std::vector<Algorithm*> get_all_algorithms_safe(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2) = 0;
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2) = 0;
 
     /**
      * \brief Returns the best algorithm by heuristic.
@@ -480,10 +470,8 @@ protected:
      * \p workspace_limit_in_bytes.
      */
     virtual Algorithm* get_algorithm_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
@@ -497,10 +485,9 @@ public:
     using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
-       std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2,
-                                                       const TensorLayout& p3) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1, p2, p3)) {
             ret.emplace_back(algo->info());
@@ -508,10 +495,9 @@ public:
         return ret;
     }
 
-    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2,
-                                                       const TensorLayout& p3) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3)) {
             ret.emplace_back(algo->info());
@@ -527,14 +513,14 @@ public:
      * \p workspace_limit_in_bytes.
      */
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
-        return get_algorithm_heuristic(p0, p1, p2, p3, workspace_limit_in_bytes,
-                                       positive_attr, negative_attr)
+        return get_algorithm_heuristic(
+                       p0, p1, p2, p3, workspace_limit_in_bytes, positive_attr,
+                       negative_attr)
                 ->info();
     }
 
@@ -543,11 +529,11 @@ protected:
 
     //! get all possible algorithms for the specified layouts
     virtual std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3) = 0;
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3) = 0;
     virtual std::vector<Algorithm*> get_all_algorithms_safe(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3) = 0;
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3) = 0;
 
     /**
      * \brief Returns the best algorithm by heuristic.
@@ -556,10 +542,9 @@ protected:
      * \p workspace_limit_in_bytes.
      */
     virtual Algorithm* get_algorithm_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
@@ -573,11 +558,9 @@ public:
     using AlgoAttribute = detail::Algorithm::Attribute;
 
     //! get all possible algorithm decriptions for the specified layouts
-    std::vector<AlgorithmInfo> get_all_algorithms_info(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2,
-                                                       const TensorLayout& p3,
-                                                       const TensorLayout& p4) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1, p2, p3, p4)) {
             ret.emplace_back(algo->info());
@@ -585,11 +568,9 @@ public:
         return ret;
     }
 
-    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(const TensorLayout& p0,
-                                                       const TensorLayout& p1,
-                                                       const TensorLayout& p2,
-                                                       const TensorLayout& p3,
-                                                       const TensorLayout& p4) {
+    std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3, p4)) {
             ret.emplace_back(algo->info());
@@ -605,16 +586,14 @@ public:
      * \p workspace_limit_in_bytes.
      */
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
-        return get_algorithm_heuristic(p0, p1, p2, p3, p4,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
+        return get_algorithm_heuristic(
+                       p0, p1, p2, p3, p4, workspace_limit_in_bytes, positive_attr,
+                       negative_attr)
                 ->info();
     }
 
@@ -622,14 +601,12 @@ protected:
     ~MultiAlgoOpr() = default;
 
     //! get all possible algorithms for the specified layouts
-        virtual std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4) = 0;
+    virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4) = 0;
     virtual std::vector<Algorithm*> get_all_algorithms_safe(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4) = 0;
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4) = 0;
 
     /**
      * \brief Returns the best algorithm by heuristic.
@@ -638,11 +615,9 @@ protected:
      * \p workspace_limit_in_bytes.
      */
     virtual Algorithm* get_algorithm_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4,
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };
@@ -657,9 +632,8 @@ public:
 
     //! get all possible algorithm decriptions for the specified layouts
     std::vector<AlgorithmInfo> get_all_algorithms_info(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms(p0, p1, p2, p3, p4, p5, p6, p7)) {
@@ -669,9 +643,8 @@ public:
     }
 
     std::vector<AlgorithmInfo> get_all_algorithms_info_safe(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7) {
         std::vector<AlgorithmInfo> ret;
         for (auto&& algo : get_all_algorithms_safe(p0, p1, p2, p3, p4, p5, p6, p7)) {
@@ -687,17 +660,15 @@ public:
      * The selected algorithm should not use workspace more than
      */
     AlgorithmInfo get_algorithm_info_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) {
-        return get_algorithm_heuristic(p0, p1, p2, p3, p4, p5, p6, p7,
-                                       workspace_limit_in_bytes, positive_attr,
-                                       negative_attr)
+        return get_algorithm_heuristic(
+                       p0, p1, p2, p3, p4, p5, p6, p7, workspace_limit_in_bytes,
+                       positive_attr, negative_attr)
                 ->info();
     }
 
@@ -705,15 +676,13 @@ protected:
     ~MultiAlgoOpr() = default;
 
     //! get all possible algorithms for the specified layouts
-        virtual std::vector<Algorithm*> get_all_algorithms(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+    virtual std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7) = 0;
     virtual std::vector<Algorithm*> get_all_algorithms_safe(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7) = 0;
 
     /**
@@ -723,12 +692,10 @@ protected:
      * \p workspace_limit_in_bytes.
      */
     virtual Algorithm* get_algorithm_heuristic(
-            const TensorLayout& p0, const TensorLayout& p1,
-            const TensorLayout& p2, const TensorLayout& p3,
-            const TensorLayout& p4, const TensorLayout& p5,
+            const TensorLayout& p0, const TensorLayout& p1, const TensorLayout& p2,
+            const TensorLayout& p3, const TensorLayout& p4, const TensorLayout& p5,
             const TensorLayout& p6, const TensorLayout& p7,
-            size_t workspace_limit_in_bytes =
-                    std::numeric_limits<size_t>::max(),
+            size_t workspace_limit_in_bytes = std::numeric_limits<size_t>::max(),
             const AlgoAttribute& positive_attr = AlgoAttribute::DEFAULT,
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT) = 0;
 };

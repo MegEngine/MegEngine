@@ -21,10 +21,10 @@ TEST(TestReformatEmitter, Basic) {
     constexpr size_t N = 12, C = 64, H = 7, W = 7;
     HostTensorGenerator<> gen;
     using NamedTensorShape = megdnn::NamedTensorShape;
-    auto src = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW32);
-    auto dest = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW4);
+    auto src =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW32);
+    auto dest =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW4);
     auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
     auto reformat = std::get<0>(tuple);
     auto checker = std::get<1>(tuple);
@@ -64,8 +64,7 @@ TEST(TestReformatEmitter, Basic) {
             nr_shapeof++;
         if (o->same_type<opr::Reshape>())
             nr_reshape++;
-    }}
-            .add(y1.node()->owner_opr());
+    }}.add(y1.node()->owner_opr());
     ASSERT_EQ(nr_shapeof, 1);
     ASSERT_EQ(nr_reshape, 2);
     auto y2 = SymbolVar(nchw32_to_nchw4(x.node()));
@@ -81,10 +80,10 @@ TEST(TestReformatEmitter, MoreComplicated) {
     constexpr size_t N = 16, C = 64, H = 7, W = 7;
     HostTensorGenerator<> gen;
     using NamedTensorShape = megdnn::NamedTensorShape;
-    auto src = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW64);
-    auto dest = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW88);
+    auto src =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW64);
+    auto dest =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW88);
     auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
     auto reformat = std::get<0>(tuple);
     auto checker = std::get<1>(tuple);
@@ -108,10 +107,10 @@ TEST(TestReformatEmitter, EliminateRedudantReshape) {
     constexpr size_t N = 16, C = 64, H = 7, W = 7;
     HostTensorGenerator<> gen;
     using NamedTensorShape = megdnn::NamedTensorShape;
-    auto src = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW);
-    auto dest = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NHWC);
+    auto src =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW);
+    auto dest =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NHWC);
     auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
     auto reformat = std::get<0>(tuple);
     auto checker = std::get<1>(tuple);
@@ -135,8 +134,7 @@ TEST(TestReformatEmitter, EliminateRedudantReshape) {
     cg::DepOprIter{[&nr_reshape](cg::OperatorNodeBase* o) {
         if (o->same_type<opr::Reshape>())
             nr_reshape++;
-    }}
-            .add(y1.node()->owner_opr());
+    }}.add(y1.node()->owner_opr());
     ASSERT_EQ(nr_reshape, 0);
     HostTensorND t1, t2;
     auto func1 = graph->compile({make_callback_copy(y1, t1)});
@@ -151,10 +149,10 @@ TEST(TestReformatEmitter, Nchw4ToNchw) {
     constexpr size_t N = 12, C = 64, H = 7, W = 7;
     HostTensorGenerator<> gen;
     using NamedTensorShape = megdnn::NamedTensorShape;
-    auto src = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW4);
-    auto dest = NamedTensorShape::make_named_tensor_shape(
-            NamedTensorShape::Format::NCHW);
+    auto src =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW4);
+    auto dest =
+            NamedTensorShape::make_named_tensor_shape(NamedTensorShape::Format::NCHW);
     auto&& tuple = gopt::ReformatEmitter(src, dest).emit();
     auto reformat = std::get<0>(tuple);
     auto checker = std::get<1>(tuple);
@@ -189,8 +187,7 @@ TEST(TestReformatEmitter, Nchw4ToNchw) {
         }
         if (o->same_type<opr::Dimshuffle>())
             dimshuffle = o->output(0);
-    }}
-            .add(y1.node()->owner_opr());
+    }}.add(y1.node()->owner_opr());
     ASSERT_EQ(reshapes.size(), 1);
     {
         gopt::SubGraph graph({y1});

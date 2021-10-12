@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {

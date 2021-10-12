@@ -68,9 +68,9 @@ namespace filter_common {
 #define VEC_ALIGN 16
 
 template <typename ST, typename FT>
-FilterEngine<ST, FT>::FilterEngine(BaseRowFilter* row_filter,
-                                  BaseColumnFilter* column_filter, size_t ch,
-                                  const ST* border_value, BorderMode bmode)
+FilterEngine<ST, FT>::FilterEngine(
+        BaseRowFilter* row_filter, BaseColumnFilter* column_filter, size_t ch,
+        const ST* border_value, BorderMode bmode)
         : m_row_filter(row_filter),
           m_column_filter(column_filter),
           m_ch(ch),
@@ -85,8 +85,9 @@ FilterEngine<ST, FT>::FilterEngine(BaseRowFilter* row_filter,
     m_buf_step = 0;
 
     //! the anchor must be in the kernerl
-    megdnn_assert(0 <= m_anchor.x && m_anchor.x < m_ksize.cols() &&
-                  0 <= m_anchor.y && m_anchor.y < m_ksize.rows());
+    megdnn_assert(
+            0 <= m_anchor.x && m_anchor.x < m_ksize.cols() && 0 <= m_anchor.y &&
+            m_anchor.y < m_ksize.rows());
 
     int src_elem_size = (int)sizeof(ST) * m_ch;
     m_border_elem_size = src_elem_size / ((sizeof(ST) >= 4) ? sizeof(int) : 1);
@@ -138,10 +139,8 @@ void FilterEngine<ST, FT>::start(const Mat<ST>& src) {
         (*m_row_filter)(&m_src_row[0], dst, m_whole_size.width(), cn);
     }
 
-
     m_buf_step = buf_elem_size *
-              (int)align_size(m_whole_size.width() + m_ksize.width() - 1,
-                              VEC_ALIGN);
+                 (int)align_size(m_whole_size.width() + m_ksize.width() - 1, VEC_ALIGN);
     m_ring_buf.resize(m_buf_step * m_ksize.height() + VEC_ALIGN);
     m_left_width = m_anchor.x;
     m_right_width = m_ksize.width() - m_anchor.x - 1;
@@ -160,20 +159,21 @@ void FilterEngine<ST, FT>::start(const Mat<ST>& src) {
             //! calc the index of the border value, we will not calc it when
             //! process border each time
             for (int i = 0; i < m_left_width; i++) {
-                int p0 = gaussian_blur::border_interpolate(i - m_left_width,
-                                            m_whole_size.width(), m_bmode) *
+                int p0 = gaussian_blur::border_interpolate(
+                                 i - m_left_width, m_whole_size.width(), m_bmode) *
                          m_border_elem_size;
                 for (int j = 0; j < m_border_elem_size; j++)
                     m_border_table[i * m_border_elem_size + j] = p0 + j;
             }
 
             for (int i = 0; i < m_right_width; i++) {
-                int p0 = gaussian_blur::border_interpolate(m_whole_size.width() + i,
-                                            m_whole_size.width(), m_bmode) *
+                int p0 = gaussian_blur::border_interpolate(
+                                 m_whole_size.width() + i, m_whole_size.width(),
+                                 m_bmode) *
                          m_border_elem_size;
                 for (int j = 0; j < m_border_elem_size; j++)
-                    m_border_table[(i + m_left_width) * m_border_elem_size +
-                                   j] = p0 + j;
+                    m_border_table[(i + m_left_width) * m_border_elem_size + j] =
+                            p0 + j;
             }
         }
     }
@@ -183,8 +183,8 @@ void FilterEngine<ST, FT>::start(const Mat<ST>& src) {
 }
 
 template <typename ST, typename FT>
-int FilterEngine<ST, FT>::proceed(const uchar* src, int srcstep, int count,
-                                  uchar* dst, int dststep) {
+int FilterEngine<ST, FT>::proceed(
+        const uchar* src, int srcstep, int count, uchar* dst, int dststep) {
     const int* btab = &m_border_table[0];
     int src_elem_size = static_cast<int>(sizeof(ST) * m_ch);
     bool makeBorder = (m_left_width > 0 || m_right_width > 0) &&
@@ -201,8 +201,7 @@ int FilterEngine<ST, FT>::proceed(const uchar* src, int srcstep, int count,
         count -= dcount;
         for (; dcount-- > 0; src += srcstep) {
             int bi = (start_y + row_count) % m_ksize.height();
-            uchar* brow =
-                    align_ptr(&m_ring_buf[0], VEC_ALIGN) + bi * m_buf_step;
+            uchar* brow = align_ptr(&m_ring_buf[0], VEC_ALIGN) + bi * m_buf_step;
             uchar* row = &m_src_row[0];
 
             if (++row_count > static_cast<int>(m_ksize.height())) {
@@ -221,19 +220,16 @@ int FilterEngine<ST, FT>::proceed(const uchar* src, int srcstep, int count,
 
                     for (int i = 0; i < m_left_width * m_border_elem_size; i++)
                         irow[i] = isrc[btab[i]];
-                    for (int i = 0; i < m_right_width * m_border_elem_size;
-                         i++) {
+                    for (int i = 0; i < m_right_width * m_border_elem_size; i++) {
                         irow[i + (m_whole_size.width() + m_left_width) *
                                          m_border_elem_size] =
-                                isrc[btab[i +
-                                          m_left_width * m_border_elem_size]];
+                                isrc[btab[i + m_left_width * m_border_elem_size]];
                     }
                 } else {
                     for (int i = 0; i < m_left_width * src_elem_size; i++)
                         row[i] = src[btab[i]];
                     for (int i = 0; i < m_right_width * src_elem_size; i++)
-                        row[i + (m_whole_size.width() + m_left_width) *
-                                        src_elem_size] =
+                        row[i + (m_whole_size.width() + m_left_width) * src_elem_size] =
                                 src[btab[i + m_left_width * src_elem_size]];
                 }
             }
@@ -242,11 +238,10 @@ int FilterEngine<ST, FT>::proceed(const uchar* src, int srcstep, int count,
         }
 
         int max_i = std::min<int>(
-                m_ksize.height(),
-                m_whole_size.height() - dy + (m_ksize.height() - 1));
+                m_ksize.height(), m_whole_size.height() - dy + (m_ksize.height() - 1));
         for (i = 0; i < max_i; i++) {
-            int src_y = gaussian_blur::border_interpolate(dy + i - m_anchor.y,
-                                           m_whole_size.rows(), m_bmode);
+            int src_y = gaussian_blur::border_interpolate(
+                    dy + i - m_anchor.y, m_whole_size.rows(), m_bmode);
             if (src_y < 0)
                 buf_rows[i] = align_ptr(&m_const_border_row[0], VEC_ALIGN);
             else {
@@ -255,16 +250,16 @@ int FilterEngine<ST, FT>::proceed(const uchar* src, int srcstep, int count,
                     break;
                 }
                 int bi = src_y % m_ksize.height();
-                buf_rows[i] =
-                        align_ptr(&m_ring_buf[0], VEC_ALIGN) + bi * m_buf_step;
+                buf_rows[i] = align_ptr(&m_ring_buf[0], VEC_ALIGN) + bi * m_buf_step;
             }
         }
         if (i < static_cast<int>(m_ksize.height())) {
             break;
         }
         i -= m_ksize.height() - 1;
-        (*m_column_filter)(const_cast<const uchar**>(&buf_rows[0]), dst,
-                           dststep, i, m_whole_size.width() * m_ch);
+        (*m_column_filter)(
+                const_cast<const uchar**>(&buf_rows[0]), dst, dststep, i,
+                m_whole_size.width() * m_ch);
     }
 
     return dy;
@@ -275,9 +270,9 @@ void FilterEngine<ST, FT>::apply(const Mat<ST>& src, Mat<ST>& dst) {
     int src_step = src.step() * sizeof(ST);
     int dst_step = dst.step() * sizeof(ST);
     start(src);
-    proceed(reinterpret_cast<const uchar*>(src.ptr()),
-            static_cast<int>(src_step), m_whole_size.height(),
-            reinterpret_cast<uchar*>(dst.ptr()), static_cast<int>(dst_step));
+    proceed(reinterpret_cast<const uchar*>(src.ptr()), static_cast<int>(src_step),
+            m_whole_size.height(), reinterpret_cast<uchar*>(dst.ptr()),
+            static_cast<int>(dst_step));
 }
 
 //! explicit instantiation template
@@ -288,10 +283,8 @@ template FilterEngine<float, float>::FilterEngine(
         BaseRowFilter* _rowFilter, BaseColumnFilter* _columnFilter, size_t _CH,
         const float* _borderValue, BorderMode _BorderType);
 
-template void FilterEngine<uchar, int>::apply(const Mat<uchar>& src,
-                                              Mat<uchar>& dst);
-template void FilterEngine<float, float>::apply(const Mat<float>& src,
-                                              Mat<float>& dst);
+template void FilterEngine<uchar, int>::apply(const Mat<uchar>& src, Mat<uchar>& dst);
+template void FilterEngine<float, float>::apply(const Mat<float>& src, Mat<float>& dst);
 
 template FilterEngine<unsigned char, int>::~FilterEngine();
 template FilterEngine<float, float>::~FilterEngine();

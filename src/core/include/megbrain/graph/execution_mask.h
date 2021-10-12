@@ -94,8 +94,7 @@ public:
      *
      * The params can be null, which represent the root level.
      */
-    static ExecutionMask* find_direct_lowest(ExecutionMask* a,
-                                             ExecutionMask* b);
+    static ExecutionMask* find_direct_lowest(ExecutionMask* a, ExecutionMask* b);
 };
 
 }  // namespace cg

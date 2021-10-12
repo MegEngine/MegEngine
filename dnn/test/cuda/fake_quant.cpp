@@ -34,8 +34,7 @@ TEST_F(CUDA, FAKE_QUANT) {
                 .set_dtype(1, dtype)
                 .set_dtype(2, dtype)
                 .set_dtype(3, dtype)
-                .execs(TensorShapeArray{ishape, scale_shape, zeropoint_shape,
-                                        ishape});
+                .execs(TensorShapeArray{ishape, scale_shape, zeropoint_shape, ishape});
     }
     // test noncontiguous layout
     for (auto&& arg : args) {
@@ -49,10 +48,11 @@ TEST_F(CUDA, FAKE_QUANT) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl({ilayout,
-                                        {scale_shape, dtype::Float32()},
-                                        {zeropoint_shape, dtype::Float32()},
-                                        ilayout});
+        checker.set_param(param).execl(
+                {ilayout,
+                 {scale_shape, dtype::Float32()},
+                 {zeropoint_shape, dtype::Float32()},
+                 ilayout});
     }
 }
 
@@ -72,8 +72,8 @@ TEST_F(CUDA, FAKE_QUANT_BACKWARD) {
                 .set_dtype(2, dtype)
                 .set_dtype(3, dtype)
                 .set_dtype(4, dtype)
-                .execs(TensorShapeArray{ishape, ishape, scale_shape,
-                                        zeropoint_shape, ishape});
+                .execs(TensorShapeArray{
+                        ishape, ishape, scale_shape, zeropoint_shape, ishape});
     }
     // test noncontiguous layout
     for (auto&& arg : args) {
@@ -87,11 +87,12 @@ TEST_F(CUDA, FAKE_QUANT_BACKWARD) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl({ilayout,
-                                        ilayout,
-                                        {scale_shape, dtype::Float32()},
-                                        {zeropoint_shape, dtype::Float32()},
-                                        ilayout});
+        checker.set_param(param).execl(
+                {ilayout,
+                 ilayout,
+                 {scale_shape, dtype::Float32()},
+                 {zeropoint_shape, dtype::Float32()},
+                 ilayout});
     }
 }
 

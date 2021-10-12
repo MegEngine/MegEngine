@@ -147,8 +147,7 @@ std::vector<LocalShareArgs> get_local_share_conv_small_image() {
     return ret;
 }
 
-void test_local_share_bwd_data_implicit_gemm(size_t kernel_size,
-                                             Handle* handle) {
+void test_local_share_bwd_data_implicit_gemm(size_t kernel_size, Handle* handle) {
     Checker<LocalShareBackwardData> checker(handle);
     bool require_algo = false;
     checker.set_before_exec_callback(AlgoChecker<LocalShareBackwardData>(
@@ -160,19 +159,16 @@ void test_local_share_bwd_data_implicit_gemm(size_t kernel_size,
         static_cast<void>(arg);
         size_t b = arg.b, c = arg.c, f = arg.f, p = arg.p, s = arg.s, h = arg.h,
                w = arg.w, sg = arg.sg;
-        size_t ho = infer_conv_shape(h, f, s, p),
-               wo = infer_conv_shape(w, f, s, p);
+        size_t ho = infer_conv_shape(h, f, s, p), wo = infer_conv_shape(w, f, s, p);
         Param param;
         param.stride_h = param.stride_w = s;
         param.pad_h = param.pad_w = p;
         param.spatial_groups_h = param.spatial_groups_w = sg;
         checker.set_param(param);
         checker.set_rng(2, &const_0);
-        TensorShape diff{b, c, ho, wo}, filter{sg, sg, 4, f, f, c},
-                grad{b, 4, h, w};
+        TensorShape diff{b, c, ho, wo}, filter{sg, sg, 4, f, f, c}, grad{b, 4, h, w};
         checker.execs({filter, diff, grad});
-        diff = TensorShape{b, c, ho, wo},
-        filter = TensorShape{sg, sg, 8, f, f, c};
+        diff = TensorShape{b, c, ho, wo}, filter = TensorShape{sg, sg, 8, f, f, c};
         grad = {b, 8, h, w};
         checker.exec({filter, diff, grad});
     }
@@ -275,8 +271,8 @@ TEST_F(CUDA, LOCAL_SHARE_FORWARD_7x7_LAR_BS) {
 TEST_F(CUDA, LOCAL_SHARE_BATCHED_MATMUL) {
     Checker<LocalShare> checker(handle_cuda());
     bool require_algo = false;
-    checker.set_before_exec_callback(AlgoChecker<LocalShare>(
-            "LOCAL_SHARE_BATCHED_MATMUL", &require_algo));
+    checker.set_before_exec_callback(
+            AlgoChecker<LocalShare>("LOCAL_SHARE_BATCHED_MATMUL", &require_algo));
     using Param = LocalShare::Param;
     auto args = convolution::get_args();
     for (size_t sg : {2, 3}) {
@@ -289,24 +285,18 @@ TEST_F(CUDA, LOCAL_SHARE_BATCHED_MATMUL) {
                 continue;
             Param param;
             param.sparse = arg.param.sparse;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
-            TensorShape filter{sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
+            TensorShape filter{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             checker.set_param(param);
             checker.exec({arg.src, filter, {}});
         }
@@ -316,8 +306,8 @@ TEST_F(CUDA, LOCAL_SHARE_BATCHED_MATMUL) {
 TEST_F(CUDA, GROUP_LOCAL_SHARE_BATCHED_MATMUL) {
     Checker<LocalShare> checker(handle_cuda());
     bool require_algo = false;
-    checker.set_before_exec_callback(AlgoChecker<LocalShare>(
-            "LOCAL_SHARE_BATCHED_MATMUL", &require_algo));
+    checker.set_before_exec_callback(
+            AlgoChecker<LocalShare>("LOCAL_SHARE_BATCHED_MATMUL", &require_algo));
     using Param = LocalShare::Param;
     auto args = convolution::get_args();
     for (size_t sg : {2, 3}) {
@@ -332,28 +322,21 @@ TEST_F(CUDA, GROUP_LOCAL_SHARE_BATCHED_MATMUL) {
                 continue;
             Param param;
             param.sparse = Param::Sparse::GROUP;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             size_t nr_groups = 3;
-            TensorShape filter{nr_groups,
-                               sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
-            TensorShape src{arg.src[0], arg.src[1] * nr_groups, arg.src[2],
-                            arg.src[3]};
+            TensorShape filter{
+                    nr_groups,     sg,           sg, arg.filter[1], arg.filter[2],
+                    arg.filter[3], arg.filter[0]};
+            TensorShape src{arg.src[0], arg.src[1] * nr_groups, arg.src[2], arg.src[3]};
             checker.set_param(param);
             checker.exec({src, filter, {}});
         }
@@ -377,26 +360,20 @@ TEST_F(CUDA, LOCAL_SHARE_FORWARD_SMALL_IMAGE_GENERAL) {
             if (arg.param.dilate_h != 1 || arg.param.dilate_w != 1)
                 continue;
             Param param;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             arg.filter[1] = arg.filter[1] + (4 - arg.filter[1] % 4);
             arg.src[1] = arg.filter[1];
-            TensorShape filter{sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
+            TensorShape filter{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             checker.set_param(param);
             checker.exec({arg.src, filter, {}});
         }
@@ -444,25 +421,19 @@ TEST_F(CUDA, LOCAL_SHARE_BWD_DATA_IMPLICIT_GEMM_GENERAL) {
             if (arg.param.dilate_h != 1 || arg.param.dilate_w != 1)
                 continue;
             Param param;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             arg.filter[0] = arg.filter[0] + (4 - arg.filter[0] % 4);
-            TensorShape filter{sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
+            TensorShape filter{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0], ho, wo};
             checker.set_param(param);
             checker.set_rng(2, &const_0);
@@ -503,24 +474,18 @@ TEST_F(CUDA, LOCAL_SHARE_BWD_DATA_BATCHED_MATMUL) {
             if (arg.param.dilate_h != 1 || arg.param.dilate_w != 1)
                 continue;
             Param param;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
-            TensorShape filter{sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
+            TensorShape filter{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0], ho, wo};
             checker.set_rng(2, &const_0);
             checker.set_param(param);
@@ -547,29 +512,23 @@ TEST_F(CUDA, GROUP_LOCAL_SHARE_BWD_DATA_BATCHED_MATMUL) {
                 continue;
             Param param;
             param.sparse = Param::Sparse::GROUP;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             size_t nr_groups = 3;
-            TensorShape filter{nr_groups,
-                               sg,
-                               sg,
-                               arg.filter[1],
-                               arg.filter[2],
-                               arg.filter[3],
-                               arg.filter[0]};
+            TensorShape filter{
+                    nr_groups,     sg,           sg, arg.filter[1], arg.filter[2],
+                    arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0] * nr_groups, ho, wo};
-            TensorShape grad{arg.src[0], arg.src[1] * nr_groups, arg.src[2],
-                             arg.src[3]};
+            TensorShape grad{
+                    arg.src[0], arg.src[1] * nr_groups, arg.src[2], arg.src[3]};
             checker.set_rng(2, &const_0);
             checker.set_param(param);
             checker.exec({filter, diff, grad});
@@ -595,25 +554,19 @@ TEST_F(CUDA, LOCAL_SHARE_BWD_FILTER_IMPLICIT_GEMM_GENERAL) {
             if (arg.param.dilate_h != 1 || arg.param.dilate_w != 1)
                 continue;
             Param param;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             arg.src[0] = arg.src[0] + (4 - arg.src[0] % 4);
-            TensorShape grad{sg,
-                             sg,
-                             arg.filter[1],
-                             arg.filter[2],
-                             arg.filter[3],
-                             arg.filter[0]};
+            TensorShape grad{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0], ho, wo};
             checker.set_param(param);
             checker.set_rng(2, &const_0);
@@ -635,20 +588,17 @@ TEST_F(CUDA, LOCAL_SHARE_BWD_FILTER_IMPLICIT_GEMM_SPECIAL) {
         static_cast<void>(arg);
         size_t b = arg.b, c = arg.c, f = arg.f, p = arg.p, s = arg.s, h = arg.h,
                w = arg.w, sg = arg.sg;
-        size_t ho = infer_conv_shape(h, f, s, p),
-               wo = infer_conv_shape(w, f, s, p);
+        size_t ho = infer_conv_shape(h, f, s, p), wo = infer_conv_shape(w, f, s, p);
         Param param;
         param.stride_h = param.stride_w = s;
         param.pad_h = param.pad_w = p;
         param.spatial_groups_h = param.spatial_groups_w = sg;
         checker.set_param(param);
         checker.set_rng(2, &const_0);
-        TensorShape diff{b, c, ho, wo}, grad{sg, sg, 4, f, f, c},
-                src{b, 4, h, w};
+        TensorShape diff{b, c, ho, wo}, grad{sg, sg, 4, f, f, c}, src{b, 4, h, w};
         checker.execs({src, diff, grad});
         src = {b, 8, h, w};
-        diff = TensorShape{b, c, ho, wo},
-        grad = TensorShape{sg, sg, 8, f, f, c};
+        diff = TensorShape{b, c, ho, wo}, grad = TensorShape{sg, sg, 8, f, f, c};
         checker.exec({src, diff, grad});
     }
 }
@@ -670,24 +620,18 @@ TEST_F(CUDA, LOCAL_SHARE_BWD_FILTER_BATCHED_MATMUL) {
             if (arg.param.dilate_h != 1 || arg.param.dilate_w != 1)
                 continue;
             Param param;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
-            TensorShape grad{sg,
-                             sg,
-                             arg.filter[1],
-                             arg.filter[2],
-                             arg.filter[3],
-                             arg.filter[0]};
+            TensorShape grad{
+                    sg, sg, arg.filter[1], arg.filter[2], arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0], ho, wo};
             checker.set_rng(2, &const_0);
             checker.set_param(param);
@@ -714,29 +658,22 @@ TEST_F(CUDA, GROUP_LOCAL_SHARE_BWD_FILTER_BATCHED_MATMUL) {
                 continue;
             Param param;
             param.sparse = Param::Sparse::GROUP;
-            param.stride_h = arg.param.stride_h,
-            param.stride_w = arg.param.stride_w;
+            param.stride_h = arg.param.stride_h, param.stride_w = arg.param.stride_w;
             param.pad_h = arg.param.pad_h, param.pad_w = arg.param.pad_w;
-            param.dilate_h = arg.param.dilate_h,
-            param.dilate_w = arg.param.dilate_w;
+            param.dilate_h = arg.param.dilate_h, param.dilate_w = arg.param.dilate_w;
             param.spatial_groups_h = param.spatial_groups_w = sg;
-            size_t ho = infer_conv_shape(arg.src[2], arg.filter[2],
-                                         param.stride_h, param.pad_h);
-            size_t wo = infer_conv_shape(arg.src[3], arg.filter[3],
-                                         param.stride_w, param.pad_w);
+            size_t ho = infer_conv_shape(
+                    arg.src[2], arg.filter[2], param.stride_h, param.pad_h);
+            size_t wo = infer_conv_shape(
+                    arg.src[3], arg.filter[3], param.stride_w, param.pad_w);
             if (ho % sg != 0 || wo % sg != 0)
                 continue;
             size_t nr_groups = 3;
-            TensorShape grad{nr_groups,
-                             sg,
-                             sg,
-                             arg.filter[1],
-                             arg.filter[2],
-                             arg.filter[3],
-                             arg.filter[0]};
+            TensorShape grad{
+                    nr_groups,     sg,           sg, arg.filter[1], arg.filter[2],
+                    arg.filter[3], arg.filter[0]};
             TensorShape diff{arg.src[0], arg.filter[0] * nr_groups, ho, wo};
-            TensorShape src{arg.src[0], arg.src[1] * nr_groups, arg.src[2],
-                            arg.src[3]};
+            TensorShape src{arg.src[0], arg.src[1] * nr_groups, arg.src[2], arg.src[3]};
             checker.set_rng(2, &const_0);
             checker.set_param(param);
             checker.exec({src, diff, grad});
@@ -756,8 +693,8 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_BWD_FILTER) {
     LocalShare::Param param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -784,9 +721,7 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_BWD_FILTER) {
         printf("src=%s, diff=%s, grad=%s, float32: %.2fms "
                "%.2fTFlops\n",
                src.to_string().c_str(), diff.to_string().c_str(),
-               grad.to_string().c_str(), time_in_ms,
-               (flo / (time_in_ms * 1e-3)));
-
+               grad.to_string().c_str(), time_in_ms, (flo / (time_in_ms * 1e-3)));
     };
     // stride = 1
     run(32, 128, 24, 24, 128, 1, 1, 3);
@@ -821,7 +756,6 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_BWD_FILTER) {
     run(64, 256, 12, 12, 512, 3, 2, 3);
 }
 
-
 TEST_F(CUDA, BENCHMARK_GROUP_LOCAL_SHARE_FORWARD) {
     CUBenchmarker<LocalShare> bencher(handle_cuda());
     size_t RUNS = 1000;
@@ -833,8 +767,8 @@ TEST_F(CUDA, BENCHMARK_GROUP_LOCAL_SHARE_FORWARD) {
     LocalShare::Param param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -863,7 +797,6 @@ TEST_F(CUDA, BENCHMARK_GROUP_LOCAL_SHARE_FORWARD) {
         printf("src=%s, filter=%s, float32: %.2fms %.2fTFlops\n",
                src.to_string().c_str(), filter.to_string().c_str(), time_in_ms,
                (flo / (time_in_ms * 1e-3)));
-
     };
     // stride = 1
     run(32, 128, 24, 24, 128, 1, 1, 3);
@@ -893,8 +826,8 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_BWD_DATA) {
     LocalShare::Param param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -921,9 +854,7 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_BWD_DATA) {
         printf("filter=%s, diff=%s, grad=%s, float32: %.2fms "
                "%.2fTFlops\n",
                filter.to_string().c_str(), diff.to_string().c_str(),
-               grad.to_string().c_str(), time_in_ms,
-               (flo / (time_in_ms * 1e-3)));
-
+               grad.to_string().c_str(), time_in_ms, (flo / (time_in_ms * 1e-3)));
     };
     // stride = 1
     run(32, 128, 24, 24, 128, 1, 1, 3);
@@ -968,16 +899,15 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD_BOTTLENECK) {
     bencher.set_proxy(proxy);
 
     bencher_conv.set_display(false).set_times(RUNS);
-    std::unique_ptr<OprProxy<Convolution>> conv_proxy{
-            new OprProxy<Convolution>{true}};
+    std::unique_ptr<OprProxy<Convolution>> conv_proxy{new OprProxy<Convolution>{true}};
     bencher_conv.set_proxy(conv_proxy);
 
     LocalShare::Param param;
     Convolution::Param conv_param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -1007,15 +937,13 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD_BOTTLENECK) {
 
         bencher_conv.set_param(conv_param);
         bencher_conv.proxy()->target_execution_policy.algo.reset();
-        auto time_in_ms_conv =
-                bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
+        auto time_in_ms_conv = bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
 
         printf("src=%s, filter=%s, float32: %.2fms %.2fTFlops, "
                "conv(float32): %.2fms %.2fTFlops, local_share/conv=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(), time_in_ms,
                (flo / (time_in_ms * 1e-3)), time_in_ms_conv,
                (flo / (time_in_ms_conv * 1e-3)), time_in_ms / time_in_ms_conv);
-
     };
     // stride = 1
     run(32, 128, 24, 24, 128, 1, 1, 3);
@@ -1060,16 +988,15 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD_FROM_RESEARCH) {
     bencher.set_proxy(proxy);
 
     bencher_conv.set_display(false).set_times(RUNS);
-    std::unique_ptr<OprProxy<Convolution>> conv_proxy{
-            new OprProxy<Convolution>{true}};
+    std::unique_ptr<OprProxy<Convolution>> conv_proxy{new OprProxy<Convolution>{true}};
     bencher_conv.set_proxy(conv_proxy);
 
     LocalShare::Param param;
     Convolution::Param conv_param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -1099,15 +1026,13 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD_FROM_RESEARCH) {
 
         bencher_conv.set_param(conv_param);
         bencher_conv.proxy()->target_execution_policy.algo.reset();
-        auto time_in_ms_conv =
-                bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
+        auto time_in_ms_conv = bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
 
         printf("src=%s, filter=%s, float32: %.2fms %.2fTFlops, "
                "conv(float32): %.2fms %.2fTFlops, local_share/conv=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(), time_in_ms,
                (flo / (time_in_ms * 1e-3)), time_in_ms_conv,
                (flo / (time_in_ms_conv * 1e-3)), time_in_ms / time_in_ms_conv);
-
     };
     // stride = 1
     run(64, 128, 24, 24, 128, 1, 1, 3);
@@ -1143,16 +1068,15 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD) {
     bencher.set_proxy(proxy);
 
     bencher_conv.set_display(false).set_times(RUNS);
-    std::unique_ptr<OprProxy<Convolution>> conv_proxy{
-            new OprProxy<Convolution>{true}};
+    std::unique_ptr<OprProxy<Convolution>> conv_proxy{new OprProxy<Convolution>{true}};
     bencher_conv.set_proxy(conv_proxy);
 
     LocalShare::Param param;
     Convolution::Param conv_param;
     NormalRNG rng;
 
-    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t f, size_t s, size_t sg) {
+    auto run = [&](size_t batch, size_t ic, size_t ih, size_t iw, size_t oc, size_t f,
+                   size_t s, size_t sg) {
         param.pad_h = f / 2;
         param.pad_w = f / 2;
         param.stride_h = s;
@@ -1182,15 +1106,13 @@ TEST_F(CUDA, BENCHMARK_LOCAL_SHARE_FORWARD) {
 
         bencher_conv.set_param(conv_param);
         bencher_conv.proxy()->target_execution_policy.algo.reset();
-        auto time_in_ms_conv =
-                bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
+        auto time_in_ms_conv = bencher_conv.execs({src, {oc, ic, f, f}, {}}) / RUNS;
 
         printf("src=%s, filter=%s, float32: %.2fms %.2fTFlops, "
                "conv(float32): %.2fms %.2fTFlops, local_share/conv=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(), time_in_ms,
                (flo / (time_in_ms * 1e-3)), time_in_ms_conv,
                (flo / (time_in_ms_conv * 1e-3)), time_in_ms / time_in_ms_conv);
-
     };
     run(64, 256, 48, 48, 256, 7, 1, 3);
     run(64, 128, 24, 24, 128, 7, 1, 3);

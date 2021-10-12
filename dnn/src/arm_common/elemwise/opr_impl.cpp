@@ -31,8 +31,7 @@ class ElemwiseImpl::AlgoPack {
     AlgoTernaryFma3VecVecVec algo_ternaryfma3_vec_vec_vec;
     AlgoTernaryFma3VecVecScalar algo_ternaryfma3_vec_vecsca;
     AlgoTernaryFma3Bcast101VecBcast101 algo_ternaryfma3_bcast101_vec_bcast101;
-    AlgoTernaryFma3Bcast101xXVecBcast101xX
-            algo_ternaryfma3_bcast101xX_vec_bcast101xX;
+    AlgoTernaryFma3Bcast101xXVecBcast101xX algo_ternaryfma3_bcast101xX_vec_bcast101xX;
     AlgoTernaryFma3VecBcast101Vec algo_ternaryfma3_vec_bcast101_vec;
     AlgoTernaryFma3VecBcast101xXVec algo_ternaryfma3_vec_bcast101xX_vec;
     AlgoTernaryFma3VecScalarVec algo_ternaryfma3_vec_sca_vec;
@@ -68,8 +67,7 @@ void ElemwiseImpl::exec(const TensorNDArray& srcs, _megdnn_tensor_out dst) {
     if (m_dst->layout.dtype == dtype::Float32() ||
         DNN_FLOAT16_SELECT(m_dst->layout.dtype == dtype::Float16(), false) ||
         m_dst->layout.dtype == dtype::Int32() ||
-        m_dst->layout.dtype == dtype::Int16() ||
-        m_dst->layout.dtype == dtype::Int8()) {
+        m_dst->layout.dtype == dtype::Int16() || m_dst->layout.dtype == dtype::Int8()) {
         auto kern_param = make_kern_param(this);
         kern_param.m_dst = &dst;
         static AlgoPack m_algo_pack;
@@ -89,8 +87,7 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
     kern_param.mode = opr->param().mode;
     kern_param.handle = opr->handle();
 
-    if ((opr->m_src->size() == 3) &&
-        (opr->param().mode == Mode::FUSE_MUL_ADD3)) {
+    if ((opr->m_src->size() == 3) && (opr->param().mode == Mode::FUSE_MUL_ADD3)) {
         kern_param.ternary_elparam = opr->make_elemwise_op_param<3>();
         bool c_is_scalar;
         opr->prepare_fma3(kern_param.ternary_elparam, c_is_scalar);
@@ -110,8 +107,7 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
             return kern_param;
         }
 
-        if (is_vector(src1.layout) &&
-            is_broadcasted_channel_like(src0.layout, binfo) &&
+        if (is_vector(src1.layout) && is_broadcasted_channel_like(src0.layout, binfo) &&
             src0.layout.eq_layout(src2.layout)) {
             kern_param.broad_cast_type = BcastType::BCAST101_VEC_BCAST101;
             return kern_param;
@@ -151,8 +147,7 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
         }
     } else if (opr->m_src->size() == 2) {
         kern_param.binary_elparam = opr->make_elemwise_op_param<2>();
-        auto &src0 = kern_param.binary_elparam[0],
-             &src1 = kern_param.binary_elparam[1];
+        auto &src0 = kern_param.binary_elparam[0], &src1 = kern_param.binary_elparam[1];
         BroadcastChannelInfo binfo;
         if (is_vector(src0.layout) && is_vector(src1.layout)) {
             kern_param.broad_cast_type = BcastType::VEC_VEC;
@@ -169,14 +164,12 @@ ElemwiseImpl::KernParam ElemwiseImpl::make_kern_param(ElemwiseImpl* opr) {
             return kern_param;
         }
 
-        if (is_vector(src0.layout) &&
-            is_broadcasted_channel_like(src1.layout, binfo)) {
+        if (is_vector(src0.layout) && is_broadcasted_channel_like(src1.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::VEC_BCAST101;
             return kern_param;
         }
 
-        if (is_vector(src1.layout) &&
-            is_broadcasted_channel_like(src0.layout, binfo)) {
+        if (is_vector(src1.layout) && is_broadcasted_channel_like(src0.layout, binfo)) {
             kern_param.broad_cast_type = BcastType::BCAST101_VEC;
             return kern_param;
         }

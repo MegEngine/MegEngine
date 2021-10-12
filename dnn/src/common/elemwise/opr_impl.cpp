@@ -74,7 +74,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
 #define cb(_m)                                                  \
     MIDOUT_BEGIN(megdnn_common_elemwise, midout_iv(Mode::_m)) { \
-        get(Mode::_m).allow_bool = true;                       \
+        get(Mode::_m).allow_bool = true;                        \
     }                                                           \
     MIDOUT_END();
         MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_BOOL(cb);
@@ -141,8 +141,9 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
 
 #if MEGDNN_ELEMWISE_MODE_ENABLE_ALL
         for (auto&& i : traits) {
-            megdnn_assert(i.arity && (i.allow_int || i.allow_float || i.allow_bool) &&
-                          (!i.commutable || i.arity == 2));
+            megdnn_assert(
+                    i.arity && (i.allow_int || i.allow_float || i.allow_bool) &&
+                    (!i.commutable || i.arity == 2));
         }
 #else
 #pragma message "elemwise mode stripped"
@@ -156,8 +157,7 @@ const ModeTrait& ModeTrait::from_mode(Mode mode) {
     return ret;
 }
 
-void ElemwiseForward::deduce_shape(const TensorShapeArray& src,
-                                   TensorShape& dst) {
+void ElemwiseForward::deduce_shape(const TensorShapeArray& src, TensorShape& dst) {
     auto err = [&]() {
         std::string msg("bad input shape for polyadic operator: ");
         bool first = true;
@@ -189,8 +189,7 @@ void ElemwiseForward::deduce_shape(const TensorShapeArray& src,
                             err();
                     }
                     int final_idx = std::max(cur_idx, dst_idx);
-                    dst.shape[final_idx] =
-                            (v0 != 0 && v1 != 0) ? std::max(v0, v1) : 0;
+                    dst.shape[final_idx] = (v0 != 0 && v1 != 0) ? std::max(v0, v1) : 0;
                 } else {
                     if (dst_idx < 0) {
                         dst.shape[cur_idx] = cur.shape[cur_idx];
@@ -211,15 +210,13 @@ void FormatDeducer::feed(TensorFormat cur) {
     if (m_result == m_default) {
         m_result = cur;
     } else {
-        megdnn_assert(m_result == cur,
-                      "different input layout formats in elemwise: %s vs %s",
-                      m_result.impl()->to_string().c_str(),
-                      cur.impl()->to_string().c_str());
+        megdnn_assert(
+                m_result == cur, "different input layout formats in elemwise: %s vs %s",
+                m_result.impl()->to_string().c_str(), cur.impl()->to_string().c_str());
     }
 }
 
-void ElemwiseForward::deduce_format(const TensorFormatArray& src,
-                                    TensorFormat& dst) {
+void ElemwiseForward::deduce_format(const TensorFormatArray& src, TensorFormat& dst) {
     FormatDeducer d;
     for (auto i : src) {
         d.feed(i);
@@ -227,8 +224,7 @@ void ElemwiseForward::deduce_format(const TensorFormatArray& src,
     dst = d.get();
 }
 
-void ElemwiseForward::deduce_layout(const TensorLayoutArray& src,
-                                    TensorLayout& dst) {
+void ElemwiseForward::deduce_layout(const TensorLayoutArray& src, TensorLayout& dst) {
     megdnn_assert(src.size() == mode_trait().arity);
     DType dtype;
     FormatDeducer format_deducer;
@@ -237,9 +233,9 @@ void ElemwiseForward::deduce_layout(const TensorLayoutArray& src,
             dtype = i.dtype;
             dst.format = i.format;
         } else {
-            megdnn_assert(dtype == i.dtype,
-                          "input dtype not unique: get %s and %s", dtype.name(),
-                          i.dtype.name());
+            megdnn_assert(
+                    dtype == i.dtype, "input dtype not unique: get %s and %s",
+                    dtype.name(), i.dtype.name());
         }
 
         format_deducer.feed(i.format);
@@ -286,16 +282,14 @@ void ElemwiseForward::check_dtype(DType dtype) {
     auto&& trait = mode_trait();
     switch (dtype.category()) {
         case DTypeCategory::FLOAT:
-            megdnn_assert(trait.allow_float, "unsupport mode %s for float\n",
-                          trait.name);
+            megdnn_assert(
+                    trait.allow_float, "unsupport mode %s for float\n", trait.name);
             break;
         case DTypeCategory::INT:
-            megdnn_assert(trait.allow_int, "unsupport mode %s for int\n",
-                          trait.name);
+            megdnn_assert(trait.allow_int, "unsupport mode %s for int\n", trait.name);
             break;
         case DTypeCategory::BOOL:
-            megdnn_assert(trait.allow_bool, "unsupport mode %s for bool\n",
-                          trait.name);
+            megdnn_assert(trait.allow_bool, "unsupport mode %s for bool\n", trait.name);
             break;
         default:
             megdnn_throw("bad dtype");

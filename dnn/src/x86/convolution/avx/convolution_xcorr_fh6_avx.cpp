@@ -808,8 +808,8 @@
         }                                                                  \
     } while (0)
 
-#include "src/x86/avx_helper.h"
 #include <algorithm>
+#include "src/x86/avx_helper.h"
 
 #include "../convolution_direct_special_cases.h"
 
@@ -817,10 +817,10 @@ namespace megdnn {
 namespace x86 {
 namespace detail {
 
-void convolution_xcorr_fh6_avx(const float *src, const float *filter, float *dst,
-        const size_t src_h, const size_t src_w, const size_t dst_h, const size_t dst_w,
-        const size_t flt_w)
-{
+void convolution_xcorr_fh6_avx(
+        const float* src, const float* filter, float* dst, const size_t src_h,
+        const size_t src_w, const size_t dst_h, const size_t dst_w,
+        const size_t flt_w) {
     (void)src_h;
     const size_t dst_h_beg = 0;
     const size_t dst_h_end = dst_h;
@@ -856,9 +856,9 @@ void convolution_xcorr_fh6_avx(const float *src, const float *filter, float *dst
     }
 }
 
-} // namespace detail
-} // namespace x86
-} // namespace megdnn
+}  // namespace detail
+}  // namespace x86
+}  // namespace megdnn
 #undef SIMD_H1
 #undef SIMD_H2
 #undef SIMD_H3

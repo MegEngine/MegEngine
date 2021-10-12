@@ -18,8 +18,8 @@
 namespace mgb {
 namespace jit {
 
-mlir::Value polynomial(ValueBuilderHelper& helper, mlir::Value x,
-                       std::vector<mlir::Value>& coeff) {
+mlir::Value polynomial(
+        ValueBuilderHelper& helper, mlir::Value x, std::vector<mlir::Value>& coeff) {
     size_t n = coeff.size();
     if (n == 0) {
         return helper.const_f32(0);
@@ -36,8 +36,7 @@ mlir::Value polynomial(ValueBuilderHelper& helper, mlir::Value x,
 // atan(t) = t + c3 * t^3 + c5 * t^5 + ... + c17 * t^17
 // original paper:
 // https://arxiv.org/pdf/1508.03211.pdf
-mlir::Value atan2_approx(ValueBuilderHelper& helper, mlir::Value y,
-                         mlir::Value x) {
+mlir::Value atan2_approx(ValueBuilderHelper& helper, mlir::Value y, mlir::Value x) {
     auto atan_poly = [&](mlir::Value t) {
         std::vector<mlir::Value> coeff = {
                 helper.const_f32(2.90188402868807315826416015625E-3),
@@ -90,22 +89,15 @@ mlir::Value erf_approx(ValueBuilderHelper& helper, mlir::Value x) {
     auto t = helper.div(one, helper.add(one, helper.mul(half, helper.abs(x))));
 
     std::vector<mlir::Value> coeff = {
-            helper.const_f32(0.17087277),
-            helper.const_f32(-0.82215223),
-            helper.const_f32(1.48851587),
-            helper.const_f32(-1.13520398),
-            helper.const_f32(0.27886807),
-            helper.const_f32(-0.18628806),
-            helper.const_f32(0.09678418),
-            helper.const_f32(0.37409196),
-            helper.const_f32(1.00002368),
-            helper.const_f32(-1.26551223)};
+            helper.const_f32(0.17087277), helper.const_f32(-0.82215223),
+            helper.const_f32(1.48851587), helper.const_f32(-1.13520398),
+            helper.const_f32(0.27886807), helper.const_f32(-0.18628806),
+            helper.const_f32(0.09678418), helper.const_f32(0.37409196),
+            helper.const_f32(1.00002368), helper.const_f32(-1.26551223)};
     auto p = polynomial(helper, t, coeff);
 
     auto r = helper.mul(t, helper.exp(helper.sub(p, helper.mul(x, x))));
-    return helper.select(helper.ge(x, zero),
-                         helper.sub(one, r),
-                         helper.sub(r, one));
+    return helper.select(helper.ge(x, zero), helper.sub(one, r), helper.sub(r, one));
 }
 
 // numerical approximation of the inverse of normal distribution function
@@ -149,9 +141,8 @@ mlir::Value ndtri_approx(ValueBuilderHelper& helper, mlir::Value x) {
                 helper.const_f32(3.01581553508235416007E-4),
                 helper.const_f32(2.65806974686737550832E-6),
                 helper.const_f32(6.23974539184983293730E-9)};
-        return helper.select(cond,
-                             polynomial(helper, i, coeff0),
-                             polynomial(helper, i, coeff1));
+        return helper.select(
+                cond, polynomial(helper, i, coeff0), polynomial(helper, i, coeff1));
     };
 
     // polynomial Q
@@ -176,9 +167,8 @@ mlir::Value ndtri_approx(ValueBuilderHelper& helper, mlir::Value x) {
                 helper.const_f32(3.28014464682127739104E-4),
                 helper.const_f32(2.89247864745380683936E-6),
                 helper.const_f32(6.79019408009981274425E-9)};
-        return helper.select(cond,
-                             polynomial(helper, i, coeff0),
-                             polynomial(helper, i, coeff1));
+        return helper.select(
+                cond, polynomial(helper, i, coeff0), polynomial(helper, i, coeff1));
     };
 
     // polynomial R
@@ -226,8 +216,9 @@ mlir::Value ndtri_approx(ValueBuilderHelper& helper, mlir::Value x) {
     auto z = helper.sqrt(helper.mul(minus_2, helper.log(x13)));
     auto z_lt_8 = helper.lt(z, eight);
     auto t = helper.div(one, z);
-    auto res1 = helper.add(helper.sub(helper.div(helper.log(z), z), z),
-                           helper.div(helper.mul(t, P(t, z_lt_8)), Q(t, z_lt_8)));
+    auto res1 = helper.add(
+            helper.sub(helper.div(helper.log(z), z), z),
+            helper.div(helper.mul(t, P(t, z_lt_8)), Q(t, z_lt_8)));
     auto res13 = helper.select(case1, res1, helper.sub(zero, res1));
 
     // case2

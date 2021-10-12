@@ -10,22 +10,22 @@
  */
 
 #include <cstring>
+#include "megbrain/dtype.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/nn_int.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/utils/arith_helper.h"
-#include "megbrain/opr/nn_int.h"
-#include "megbrain/dtype.h"
 
 #if MGB_ENABLE_TENSOR_RT
-#include "megbrain/tensorrt/opr_replace.h"
-#include "megbrain/tensorrt/tensorrt_opr.h"
-#include "megbrain/tensorrt/tensorrt_engine_cache.h"
 #include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/misc.h"
+#include "megbrain/tensorrt/opr_replace.h"
+#include "megbrain/tensorrt/tensorrt_engine_cache.h"
+#include "megbrain/tensorrt/tensorrt_opr.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -55,7 +55,7 @@ nvinfer1::DataType mgb_dtype_to_trt_dtype(DType dtype) {
                     dtype.name());
     }
 }
-}
+}  // namespace
 
 class TensorRTReplacePass::Impl final {
     static constexpr size_t OPR_FAIL_LOG_NUM = 10;
@@ -88,8 +88,9 @@ class TensorRTReplacePass::Impl final {
         // Because a var node can belong to two different tensor rt subgraph
         ThinHashMap<VarNode*, nvinfer1::ITensor*> varnode2itensor;
         TensorRTGraphFeatureBits feature_bits;
-        TensorRTGraph(TensorRTGraphFeatureBits feature_bits =
-                              TensorRTGraphFeatureBits::NCHW_FLOAT)
+        TensorRTGraph(
+                TensorRTGraphFeatureBits feature_bits =
+                        TensorRTGraphFeatureBits::NCHW_FLOAT)
                 : builder{nvinfer1::createInferBuilder(
                           opr::TensorRTOpr::Logger::instance())},
                   network{nullptr},
@@ -113,10 +114,8 @@ class TensorRTReplacePass::Impl final {
     std::vector<std::shared_ptr<TensorRTGraph>> m_tensorrt_graphs;
     // use ThinHashMap instead of std::unordered_map
     ThinHashMap<OperatorNodeBase*, size_t> m_graph_map;
-    ThinHashMap<OperatorNodeBase*, nvinfer1::IConvolutionLayer*>
-            m_opr2convlayer;
-    ThinHashMap<OperatorNodeBase*, nvinfer1::IDeconvolutionLayer*>
-            m_opr2deconvlayer;
+    ThinHashMap<OperatorNodeBase*, nvinfer1::IConvolutionLayer*> m_opr2convlayer;
+    ThinHashMap<OperatorNodeBase*, nvinfer1::IDeconvolutionLayer*> m_opr2deconvlayer;
 
     size_t m_opr_num;
     size_t m_opr_fail_num;
@@ -124,8 +123,7 @@ class TensorRTReplacePass::Impl final {
 
     struct OprTrait {
         // judge if supported, not exist means not support
-        thin_function<Maybe<std::string>(OperatorNodeBase*)>
-                get_replace_fail_msg;
+        thin_function<Maybe<std::string>(OperatorNodeBase*)> get_replace_fail_msg;
         // replace opr by trt opr, ditto
         thin_function<void(nvinfer1::INetworkDefinition*, OperatorNodeBase*)>
                 add_to_nvinfer;
@@ -136,8 +134,9 @@ class TensorRTReplacePass::Impl final {
     // Make a trt tensor for Varnode var and add it as input of trt buffer.
     // Return false if a tensor of var is previously made and added.
     // True if var is encountered for the first time.
-    bool check_input(VarNode* var, OperatorNodeBase* opr,
-                     mgb::SmallVector<nvinfer1::DimensionType> dimtypes = {});
+    bool check_input(
+            VarNode* var, OperatorNodeBase* opr,
+            mgb::SmallVector<nvinfer1::DimensionType> dimtypes = {});
     HostTensorND get_value(VarNode* var, ConvFormat format = ConvFormat::NCHW);
     void set_itensor_dynamic_range(VarNode* var, OperatorNodeBase* opr);
     float get_scale(DType data_type);
@@ -146,9 +145,9 @@ class TensorRTReplacePass::Impl final {
     // subgraph
     bool is_quantized_int8_operator(OperatorNodeBase* opr);
     Maybe<std::string> has_fail_msg(OperatorNodeBase* opr);
-    static nvinfer1::ITensor& replace(nvinfer1::INetworkDefinition* newtwork,
-                                      nvinfer1::ITensor& pre_output,
-                                      OperatorNodeBase* opr);
+    static nvinfer1::ITensor& replace(
+            nvinfer1::INetworkDefinition* newtwork, nvinfer1::ITensor& pre_output,
+            OperatorNodeBase* opr);
     void update_graph();
     void mark_varnode_format_nchw4();
     void detect_replace();
@@ -188,15 +187,13 @@ public:
             using Mode = opr::Elemwise::Mode;
             static const ThinHashSet<Mode> supported_modes {
 #if NV_TENSOR_RT_VERSION >= 5105
-                Mode::SIN, Mode::COS, Mode::ASIN, Mode::ACOS, Mode::CEIL,
-                        Mode::FLOOR,
+                Mode::SIN, Mode::COS, Mode::ASIN, Mode::ACOS, Mode::CEIL, Mode::FLOOR,
 #endif
                         Mode::EXP, Mode::LOG, Mode::ABS,
 
-                        Mode::RELU, Mode::SIGMOID, Mode::TANH, Mode::ADD,
-                        Mode::MUL, Mode::MIN, Mode::MAX, Mode::SUB,
-                        Mode::TRUE_DIV, Mode::POW, Mode::FUSE_ADD_RELU,
-                        Mode::FUSE_ADD_TANH, Mode::FUSE_ADD_SIGMOID
+                        Mode::RELU, Mode::SIGMOID, Mode::TANH, Mode::ADD, Mode::MUL,
+                        Mode::MIN, Mode::MAX, Mode::SUB, Mode::TRUE_DIV, Mode::POW,
+                        Mode::FUSE_ADD_RELU, Mode::FUSE_ADD_TANH, Mode::FUSE_ADD_SIGMOID
             };
             auto mode = opr->cast_final_safe<opr::Elemwise>().param().mode;
             if (!supported_modes.count(mode)) {
@@ -239,8 +236,7 @@ public:
             if (opr->output(0)->dtype().enumv() != DTypeEnum::QuantizedS8)
                 return "Unsupported data type.";
             using Mode = opr::ElemwiseMultiType::Mode;
-            auto mode =
-                    opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
+            auto mode = opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
             if (mode != Mode::QFUSE_ADD_RELU && mode != Mode::QADD) {
                 return "Unsupported ElemwiseMultiType mode.";
             }
@@ -275,8 +271,7 @@ public:
                     return "Bias not constant. Not replaceable in TRT.";
             }
             auto&& param = opr->cast_final_safe<opr::ConvBias>().param();
-            if (param.format != ConvFormat::NCHW &&
-                param.format != ConvFormat::NCHW4)
+            if (param.format != ConvFormat::NCHW && param.format != ConvFormat::NCHW4)
                 return "TensorRT replace pass only support NCHW format "
                        "convolution.";
             if (param.mode == opr::ConvBias::Param::Mode::CONVOLUTION)
@@ -285,8 +280,7 @@ public:
             REPLACE_FAIL_MSG_EPILOGUE;
         };
 
-        m_opr_trait[opr::ConvolutionBackwardData::typeinfo()]
-                .get_replace_fail_msg =
+        m_opr_trait[opr::ConvolutionBackwardData::typeinfo()].get_replace_fail_msg =
                 [this](OperatorNodeBase* opr) -> Maybe<std::string> {
             if (opr->input(0)->dtype() != dtype::Float32())
                 return "Non-Float32 Deconvolution is not supported.";
@@ -373,34 +367,34 @@ public:
             auto&& param = opr->cast_final_safe<opr::Convolution>().param();
             mgb_assert(
                     param.format == megdnn::param::Convolution::Format::NCHW &&
-                            param.mode == megdnn::param::Convolution::Mode::
-                                                  CROSS_CORRELATION,
+                            param.mode ==
+                                    megdnn::param::Convolution::Mode::CROSS_CORRELATION,
                     "conv param is not supported by TensorRT");
             size_t group_offset = 0;
             if (param.sparse == megdnn::param::Convolution::Sparse::GROUP) {
                 group_offset = 1;
             } else {
-                mgb_assert(param.sparse ==
-                                   megdnn::param::Convolution::Sparse::DENSE,
-                           "param.sparse should be GROUP or DENSE");
+                mgb_assert(
+                        param.sparse == megdnn::param::Convolution::Sparse::DENSE,
+                        "param.sparse should be GROUP or DENSE");
             }
             auto conv = net->addConvolution(
                     *varnode2itensor[input], opr->output(0)->shape()[1],
                     nvinfer1::DimsHW{
                             static_cast<int>(kernel->shape()[group_offset + 2]),
-                            static_cast<int>(
-                                    kernel->shape()[group_offset + 3])},
+                            static_cast<int>(kernel->shape()[group_offset + 3])},
                     wt_kernel, wt_bias);
             mgb_assert(conv, "construct network failed");
             std::string layer_name = "TRT_CONV:" + opr->name();
             conv->setName(layer_name.c_str());
-            conv->setStride(nvinfer1::DimsHW{static_cast<int>(param.stride_h),
-                                             static_cast<int>(param.stride_w)});
-            conv->setPadding(nvinfer1::DimsHW{static_cast<int>(param.pad_h),
-                                              static_cast<int>(param.pad_w)});
-            conv->setDilation(
-                    nvinfer1::DimsHW{static_cast<int>(param.dilate_h),
-                                     static_cast<int>(param.dilate_w)});
+            conv->setStride(nvinfer1::DimsHW{
+                    static_cast<int>(param.stride_h),
+                    static_cast<int>(param.stride_w)});
+            conv->setPadding(nvinfer1::DimsHW{
+                    static_cast<int>(param.pad_h), static_cast<int>(param.pad_w)});
+            conv->setDilation(nvinfer1::DimsHW{
+                    static_cast<int>(param.dilate_h),
+                    static_cast<int>(param.dilate_w)});
             if (group_offset > 0)
                 conv->setNbGroups(static_cast<int>(kernel->shape()[0]));
             m_opr2convlayer[opr] = conv;
@@ -410,128 +404,128 @@ public:
         };
 
         // support floating point data type and quantized data type
-        m_opr_trait[opr::ConvBiasForward::typeinfo()]
-                .add_to_nvinfer = [this](nvinfer1::INetworkDefinition* net,
-                                         OperatorNodeBase* opr) {
-            auto&& varnode2itensor =
-                    m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
-            using Param = opr::ConvBias::Param;
-            using NonlineMode = Param::NonlineMode;
-            using Sparse = Param::Sparse;
-            using Format = Param::Format;
-            auto conv_bias = try_cast_as_op<opr::ConvBias>(opr);
-            auto&& param = conv_bias->param();
-            mgb_assert(param.mode == Param::Mode::CROSS_CORRELATION,
-                       "Trt only support CROSS_CORRELATION convolution.");
-            bool is_format_nchw4 = param.format == Format::NCHW4;
-            bool is_qint8 = is_quantized_int8_operator(opr);
-            if (is_format_nchw4)
-                mgb_assert(is_qint8);
-            // set kernel and bias
-            VarNode* input = conv_bias->input(0);
-            VarNode* kernel = conv_bias->input(1);
-            check_input(input, opr);
-            nvinfer1::Weights wt_kernel{
-                    nvinfer1::DataType::kFLOAT,
-                    get_value(kernel, param.format).raw_ptr(),
-                    static_cast<int64_t>(kernel->shape().total_nr_elems())};
-            nvinfer1::Weights wt_bias{nvinfer1::DataType::kFLOAT, nullptr, 0};
-            if (conv_bias->input().size() >= 3) {
-                VarNode* bias = conv_bias->input(2);
-                wt_bias.values = get_value(bias, param.format).raw_ptr();
-                wt_bias.count =
-                        static_cast<int64_t>(bias->shape().total_nr_elems());
-            }
+        m_opr_trait[opr::ConvBiasForward::typeinfo()].add_to_nvinfer =
+                [this](nvinfer1::INetworkDefinition* net, OperatorNodeBase* opr) {
+                    auto&& varnode2itensor =
+                            m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
+                    using Param = opr::ConvBias::Param;
+                    using NonlineMode = Param::NonlineMode;
+                    using Sparse = Param::Sparse;
+                    using Format = Param::Format;
+                    auto conv_bias = try_cast_as_op<opr::ConvBias>(opr);
+                    auto&& param = conv_bias->param();
+                    mgb_assert(
+                            param.mode == Param::Mode::CROSS_CORRELATION,
+                            "Trt only support CROSS_CORRELATION convolution.");
+                    bool is_format_nchw4 = param.format == Format::NCHW4;
+                    bool is_qint8 = is_quantized_int8_operator(opr);
+                    if (is_format_nchw4)
+                        mgb_assert(is_qint8);
+                    // set kernel and bias
+                    VarNode* input = conv_bias->input(0);
+                    VarNode* kernel = conv_bias->input(1);
+                    check_input(input, opr);
+                    nvinfer1::Weights wt_kernel{
+                            nvinfer1::DataType::kFLOAT,
+                            get_value(kernel, param.format).raw_ptr(),
+                            static_cast<int64_t>(kernel->shape().total_nr_elems())};
+                    nvinfer1::Weights wt_bias{nvinfer1::DataType::kFLOAT, nullptr, 0};
+                    if (conv_bias->input().size() >= 3) {
+                        VarNode* bias = conv_bias->input(2);
+                        wt_bias.values = get_value(bias, param.format).raw_ptr();
+                        wt_bias.count =
+                                static_cast<int64_t>(bias->shape().total_nr_elems());
+                    }
 
-            // determine conv shape
-            int co = 0;
-            int sh = param.stride_h, sw = param.stride_w, ph = param.pad_h,
-                pw = param.pad_w, dh = param.dilate_h, dw = param.dilate_w;
-            size_t group_offset = 0;
-            int groups = 1;
-            if (param.sparse == Sparse::GROUP) {
-                groups = kernel->shape()[0];
-                group_offset = 1;
-            } else {
-                mgb_assert(param.sparse == Sparse::DENSE,
-                           "sparse should be GROUP or DENSE");
-            }
-            int fh = kernel->shape()[group_offset + 2],
-                fw = kernel->shape()[group_offset + 3];
-            if (param.format == Format::NCHW) {
-                mgb_assert(conv_bias->input(0)->dtype() == dtype::Float32(),
-                           "conv bias only support Float32 with NCHW format");
-                co = conv_bias->output(0)->shape()[1];
-            } else if (param.format == Format::NCHW4) {
-                mgb_assert(
-                        conv_bias->input(0)->dtype().enumv() ==
-                                        DTypeEnum::QuantizedS8 &&
-                                conv_bias->output(0)->dtype().enumv() ==
-                                        DTypeEnum::QuantizedS8,
-                        "conv bias only support QuantizedS8 with NCHW4 format");
-                co = conv_bias->output(0)->shape()[1] * 4;
-            }
-            mgb_assert(co > 0);
+                    // determine conv shape
+                    int co = 0;
+                    int sh = param.stride_h, sw = param.stride_w, ph = param.pad_h,
+                        pw = param.pad_w, dh = param.dilate_h, dw = param.dilate_w;
+                    size_t group_offset = 0;
+                    int groups = 1;
+                    if (param.sparse == Sparse::GROUP) {
+                        groups = kernel->shape()[0];
+                        group_offset = 1;
+                    } else {
+                        mgb_assert(
+                                param.sparse == Sparse::DENSE,
+                                "sparse should be GROUP or DENSE");
+                    }
+                    int fh = kernel->shape()[group_offset + 2],
+                        fw = kernel->shape()[group_offset + 3];
+                    if (param.format == Format::NCHW) {
+                        mgb_assert(
+                                conv_bias->input(0)->dtype() == dtype::Float32(),
+                                "conv bias only support Float32 with NCHW format");
+                        co = conv_bias->output(0)->shape()[1];
+                    } else if (param.format == Format::NCHW4) {
+                        mgb_assert(
+                                conv_bias->input(0)->dtype().enumv() ==
+                                                DTypeEnum::QuantizedS8 &&
+                                        conv_bias->output(0)->dtype().enumv() ==
+                                                DTypeEnum::QuantizedS8,
+                                "conv bias only support QuantizedS8 with NCHW4 format");
+                        co = conv_bias->output(0)->shape()[1] * 4;
+                    }
+                    mgb_assert(co > 0);
 
-            // process conv
-            auto conv = net->addConvolution(*varnode2itensor[input], co,
-                                            nvinfer1::DimsHW{fh, fw}, wt_kernel,
-                                            wt_bias);
-            mgb_assert(conv, "construct network failed");
-            std::string layer_name = "TRT_CONV:" + conv_bias->name();
-            conv->setName(layer_name.c_str());
-            conv->setStride(nvinfer1::DimsHW{sh, sw});
-            conv->setPadding(nvinfer1::DimsHW{ph, pw});
-            conv->setDilation(nvinfer1::DimsHW{dh, dw});
+                    // process conv
+                    auto conv = net->addConvolution(
+                            *varnode2itensor[input], co, nvinfer1::DimsHW{fh, fw},
+                            wt_kernel, wt_bias);
+                    mgb_assert(conv, "construct network failed");
+                    std::string layer_name = "TRT_CONV:" + conv_bias->name();
+                    conv->setName(layer_name.c_str());
+                    conv->setStride(nvinfer1::DimsHW{sh, sw});
+                    conv->setPadding(nvinfer1::DimsHW{ph, pw});
+                    conv->setDilation(nvinfer1::DimsHW{dh, dw});
 
-            if (group_offset > 0)
-                conv->setNbGroups(groups);
-            std::string output_name = "TRT_O:" + conv_bias->output(0)->name();
-            conv->getOutput(0)->setName(output_name.c_str());
-            varnode2itensor[conv_bias->output(0)] = conv->getOutput(0);
-            if (is_qint8)
-                set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
+                    if (group_offset > 0)
+                        conv->setNbGroups(groups);
+                    std::string output_name = "TRT_O:" + conv_bias->output(0)->name();
+                    conv->getOutput(0)->setName(output_name.c_str());
+                    varnode2itensor[conv_bias->output(0)] = conv->getOutput(0);
+                    if (is_qint8)
+                        set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
 
-            // process short cut add
-            if (conv_bias->input().size() >= 4) {
-                check_input(conv_bias->input(3), opr);
-                auto add = net->addElementWise(
-                        *varnode2itensor[conv_bias->output(0)],
-                        *varnode2itensor[conv_bias->input(3)],
-                        nvinfer1::ElementWiseOperation::kSUM);
-                mgb_assert(add, "construct network failed");
-                std::string layer_name = "TRT_ELEM:" + conv_bias->name();
-                add->setName(layer_name.c_str());
-                std::string output_name =
-                        "TRT_O:" + conv_bias->output(0)->name() +
-                        "_shortcut_add";
-                add->getOutput(0)->setName(output_name.c_str());
-                varnode2itensor[conv_bias->output(0)] = add->getOutput(0);
-                if (is_qint8)
-                    set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
-            }
+                    // process short cut add
+                    if (conv_bias->input().size() >= 4) {
+                        check_input(conv_bias->input(3), opr);
+                        auto add = net->addElementWise(
+                                *varnode2itensor[conv_bias->output(0)],
+                                *varnode2itensor[conv_bias->input(3)],
+                                nvinfer1::ElementWiseOperation::kSUM);
+                        mgb_assert(add, "construct network failed");
+                        std::string layer_name = "TRT_ELEM:" + conv_bias->name();
+                        add->setName(layer_name.c_str());
+                        std::string output_name =
+                                "TRT_O:" + conv_bias->output(0)->name() +
+                                "_shortcut_add";
+                        add->getOutput(0)->setName(output_name.c_str());
+                        varnode2itensor[conv_bias->output(0)] = add->getOutput(0);
+                        if (is_qint8)
+                            set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
+                    }
 
-            // process activation
-            if (param.nonlineMode != Param::NonlineMode::IDENTITY) {
-                nvinfer1::ActivationType act_type =
-                        param.nonlineMode == NonlineMode::RELU
-                                ? nvinfer1::ActivationType::kRELU
-                                : nvinfer1::ActivationType::kSIGMOID;
-                auto act = net->addActivation(
-                        *varnode2itensor[conv_bias->output(0)], act_type);
-                mgb_assert(act, "construct network failed");
-                std::string layer_name =
-                        "TRT_ACTV:" + conv_bias->name();
-                act->setName(layer_name.c_str());
-                std::string output_name =
-                        "TRT_O:" + conv_bias->output(0)->name() + "_act";
-                act->getOutput(0)->setName(output_name.c_str());
-                varnode2itensor[conv_bias->output(0)] = act->getOutput(0);
-                if (is_qint8)
-                    set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
-
-            }
-        };
+                    // process activation
+                    if (param.nonlineMode != Param::NonlineMode::IDENTITY) {
+                        nvinfer1::ActivationType act_type =
+                                param.nonlineMode == NonlineMode::RELU
+                                        ? nvinfer1::ActivationType::kRELU
+                                        : nvinfer1::ActivationType::kSIGMOID;
+                        auto act = net->addActivation(
+                                *varnode2itensor[conv_bias->output(0)], act_type);
+                        mgb_assert(act, "construct network failed");
+                        std::string layer_name = "TRT_ACTV:" + conv_bias->name();
+                        act->setName(layer_name.c_str());
+                        std::string output_name =
+                                "TRT_O:" + conv_bias->output(0)->name() + "_act";
+                        act->getOutput(0)->setName(output_name.c_str());
+                        varnode2itensor[conv_bias->output(0)] = act->getOutput(0);
+                        if (is_qint8)
+                            set_itensor_dynamic_range(conv_bias->output(0), conv_bias);
+                    }
+                };
 
         // megbrain deconvolution operator does not support quantized data type
         m_opr_trait[opr::ConvolutionBackwardData::typeinfo()]
@@ -546,8 +540,7 @@ public:
                     nvinfer1::DataType::kFLOAT, get_value(kernel).raw_ptr(),
                     static_cast<int64_t>(kernel->shape().total_nr_elems())};
             nvinfer1::Weights wt_bias{nvinfer1::DataType::kFLOAT, nullptr, 0};
-            auto&& param = opr->cast_final_safe<opr::ConvolutionBackwardData>()
-                                   .param();
+            auto&& param = opr->cast_final_safe<opr::ConvolutionBackwardData>().param();
             mgb_assert(
                     param.format == megdnn::param::Convolution::Format::NCHW &&
                             param.mode == megdnn::param::Convolution::Mode::
@@ -558,26 +551,25 @@ public:
             if (param.sparse == megdnn::param::Convolution::Sparse::GROUP) {
                 group_offset = 1;
             } else {
-                mgb_assert(param.sparse ==
-                                   megdnn::param::Convolution::Sparse::DENSE,
-                           "param.sparse should be GROUP or DENSE");
+                mgb_assert(
+                        param.sparse == megdnn::param::Convolution::Sparse::DENSE,
+                        "param.sparse should be GROUP or DENSE");
             }
 
             auto deconv = net->addDeconvolution(
                     *varnode2itensor[input], opr->output(0)->shape()[1],
                     nvinfer1::DimsHW{
                             static_cast<int>(kernel->shape()[group_offset + 2]),
-                            static_cast<int>(
-                                    kernel->shape()[group_offset + 3])},
+                            static_cast<int>(kernel->shape()[group_offset + 3])},
                     wt_kernel, wt_bias);
             mgb_assert(deconv, "construct network failed");
             std::string layer_name = "TRT_DCON:" + opr->name();
             deconv->setName(layer_name.c_str());
-            deconv->setStride(
-                    nvinfer1::DimsHW{static_cast<int>(param.stride_h),
-                                     static_cast<int>(param.stride_w)});
-            deconv->setPadding(nvinfer1::DimsHW{static_cast<int>(param.pad_h),
-                                                static_cast<int>(param.pad_w)});
+            deconv->setStride(nvinfer1::DimsHW{
+                    static_cast<int>(param.stride_h),
+                    static_cast<int>(param.stride_w)});
+            deconv->setPadding(nvinfer1::DimsHW{
+                    static_cast<int>(param.pad_h), static_cast<int>(param.pad_w)});
 
             if (group_offset > 0)
                 deconv->setNbGroups(static_cast<int>(kernel->shape()[0]));
@@ -604,19 +596,21 @@ public:
             auto&& param = opr->cast_final_safe<opr::Pooling>().param();
             check_input(opr->input(0), opr);
             auto pool = net->addPooling(
-                    *varnode2itensor[opr->input(0)],
-                    pooling_type_map.at(param.mode),
-                    nvinfer1::DimsHW{static_cast<int>(param.window_h),
-                                     static_cast<int>(param.window_w)});
+                    *varnode2itensor[opr->input(0)], pooling_type_map.at(param.mode),
+                    nvinfer1::DimsHW{
+                            static_cast<int>(param.window_h),
+                            static_cast<int>(param.window_w)});
             mgb_assert(pool, "construct network failed");
             std::string layer_name = "TRT_POOL:" + opr->name();
             pool->setName(layer_name.c_str());
-            pool->setPadding(nvinfer1::DimsHW{static_cast<int>(param.pad_h),
-                                              static_cast<int>(param.pad_w)});
-            pool->setStride(nvinfer1::DimsHW{static_cast<int>(param.stride_h),
-                                             static_cast<int>(param.stride_w)});
-            //! According to the documentation of TensorRT, the default value of exclusive is true.
-            //! So we need to set exclusive to false when pooling mode is average
+            pool->setPadding(nvinfer1::DimsHW{
+                    static_cast<int>(param.pad_h), static_cast<int>(param.pad_w)});
+            pool->setStride(nvinfer1::DimsHW{
+                    static_cast<int>(param.stride_h),
+                    static_cast<int>(param.stride_w)});
+            //! According to the documentation of TensorRT, the default value of
+            //! exclusive is true. So we need to set exclusive to false when pooling
+            //! mode is average
             if (param.mode == Mode::AVERAGE_COUNT_EXCLUDE_PADDING)
                 pool->setAverageCountExcludesPadding(true);
             else if (param.mode == Mode::AVERAGE)
@@ -625,22 +619,20 @@ public:
             pool->getOutput(0)->setName(output_name.c_str());
             varnode2itensor[opr->output(0)] = pool->getOutput(0);
             if (param.format == Format::NCHW4) {
-                mgb_assert(opr->input(0)->dtype().enumv() ==
-                                   DTypeEnum::QuantizedS8,
-                           "Pooling with NCHW4 format should use quantized "
-                           "int8 data type");
+                mgb_assert(
+                        opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8,
+                        "Pooling with NCHW4 format should use quantized "
+                        "int8 data type");
                 set_itensor_dynamic_range(opr->output(0), opr);
             }
         };
 
         m_opr_trait[opr::Concat::typeinfo()].add_to_nvinfer =
-                [this](nvinfer1::INetworkDefinition* net,
-                       OperatorNodeBase* opr) {
+                [this](nvinfer1::INetworkDefinition* net, OperatorNodeBase* opr) {
                     auto&& varnode2itensor =
-                            m_tensorrt_graphs[m_graph_map[opr] - 1]
-                                    ->varnode2itensor;
+                            m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
                     size_t input_size = opr->input().size();
-                    std::unique_ptr<nvinfer1::ITensor* []> input_tensors(
+                    std::unique_ptr<nvinfer1::ITensor*[]> input_tensors(
                             new nvinfer1::ITensor*[input_size]);
                     for (size_t i = 0; i < input_size; ++i) {
                         check_input(opr->input(i), opr);
@@ -654,8 +646,7 @@ public:
 
                     int axis = opr->cast_final_safe<opr::Concat>().param().axis;
                     concat->setAxis(axis);
-                    std::string output_name =
-                            "TRT_O:" + opr->output()[0]->name();
+                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
                     concat->getOutput(0)->setName(output_name.c_str());
                     varnode2itensor[opr->output(0)] = concat->getOutput(0);
                     if (is_quantized_int8_operator(opr)) {
@@ -678,75 +669,69 @@ public:
                 }
                 return dimtypes;
             };
-            auto on_elemwise_arity_unary =
-                    [this, &varnode2itensor, &net, &opr,
-                     &get_dimtype](nvinfer1::UnaryOperation unary_op) {
-                        size_t tensor_ndim = opr->input(0)->shape().ndim;
-                        check_input(opr->input(0), opr,
-                                    get_dimtype(tensor_ndim));
-                        auto unary = net->addUnary(
-                                *varnode2itensor[opr->input(0)], unary_op);
-                        mgb_assert(unary, "construct network failed");
-                        std::string layer_name = "TRT_UNARY:" + opr->name();
-                        unary->setName(layer_name.c_str());
-                        std::string output_name =
-                                "TRT_O:" + opr->output()[0]->name();
-                        unary->getOutput(0)->setName(output_name.c_str());
-                        varnode2itensor[opr->output(0)] = unary->getOutput(0);
-                    };
+            auto on_elemwise_arity_unary = [this, &varnode2itensor, &net, &opr,
+                                            &get_dimtype](
+                                                   nvinfer1::UnaryOperation unary_op) {
+                size_t tensor_ndim = opr->input(0)->shape().ndim;
+                check_input(opr->input(0), opr, get_dimtype(tensor_ndim));
+                auto unary = net->addUnary(*varnode2itensor[opr->input(0)], unary_op);
+                mgb_assert(unary, "construct network failed");
+                std::string layer_name = "TRT_UNARY:" + opr->name();
+                unary->setName(layer_name.c_str());
+                std::string output_name = "TRT_O:" + opr->output()[0]->name();
+                unary->getOutput(0)->setName(output_name.c_str());
+                varnode2itensor[opr->output(0)] = unary->getOutput(0);
+            };
             auto on_elemwise_arity_activation =
                     [this, &varnode2itensor, &net, &opr,
                      &get_dimtype](nvinfer1::ActivationType act_type) {
                         size_t tensor_ndim = opr->input(0)->shape().ndim;
-                        check_input(opr->input(0), opr,
-                                    get_dimtype(tensor_ndim));
+                        check_input(opr->input(0), opr, get_dimtype(tensor_ndim));
                         auto act = net->addActivation(
                                 *varnode2itensor[opr->input(0)], act_type);
                         mgb_assert(act, "construct network failed");
                         std::string layer_name = "TRT_ACTV:" + opr->name();
                         act->setName(layer_name.c_str());
-                        std::string output_name =
-                                "TRT_O:" + opr->output()[0]->name();
+                        std::string output_name = "TRT_O:" + opr->output()[0]->name();
                         act->getOutput(0)->setName(output_name.c_str());
                         varnode2itensor[opr->output(0)] = act->getOutput(0);
                     };
-            auto on_elemwise_arity_binary = [this, &varnode2itensor, &net, &opr,
-                                             &get_dimtype](
-                                                    nvinfer1::
-                                                            ElementWiseOperation
-                                                                    elem_op) {
-                size_t ndim0 = opr->input(0)->shape().ndim,
-                       ndim1 = opr->input(1)->shape().ndim;
-                mgb_assert(ndim0 == ndim1);
-                size_t tensor_ndim = ndim0;
-                bool inp0_new = check_input(opr->input(0), opr,
-                                            get_dimtype(tensor_ndim));
-                bool inp1_new = check_input(opr->input(1), opr,
-                                            get_dimtype(tensor_ndim));
-                if (inp0_new && inp1_new) {
-                    mgb_log_warn(
-                            "Both operands of Elemwise are newly prepared. "
-                            "This is rare. "
-                            "Please check. opr=%s inputs=%s",
-                            opr->cname(),
-                            cg::dump_var_info(opr->input()).c_str());
-                }
-                auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
-                     dims1 = varnode2itensor[opr->input(1)]->getDimensions();
-                mgb_throw_if(dims0.nbDims != dims1.nbDims, AssertionError,
-                             "Input dimensions of two input tensors must be "
-                             "equal (got: %d, %d).",
-                             dims0.nbDims, dims1.nbDims);
-                auto elem = net->addElementWise(*varnode2itensor[opr->input(0)],
-                                                *varnode2itensor[opr->input(1)],
-                                                elem_op);
-                mgb_assert(elem, "construct network failed");
-                std::string layer_name = "TRT_ELEM:" + opr->name();
-                elem->setName(layer_name.c_str());
-                std::string output_name = "TRT_O:" + opr->output()[0]->name();
-                elem->getOutput(0)->setName(output_name.c_str());
-                varnode2itensor[opr->output(0)] = elem->getOutput(0);
-            };
+            auto on_elemwise_arity_binary =
+                    [this, &varnode2itensor, &net, &opr,
+                     &get_dimtype](nvinfer1::ElementWiseOperation elem_op) {
+                        size_t ndim0 = opr->input(0)->shape().ndim,
+                               ndim1 = opr->input(1)->shape().ndim;
+                        mgb_assert(ndim0 == ndim1);
+                        size_t tensor_ndim = ndim0;
+                        bool inp0_new = check_input(
+                                opr->input(0), opr, get_dimtype(tensor_ndim));
+                        bool inp1_new = check_input(
+                                opr->input(1), opr, get_dimtype(tensor_ndim));
+                        if (inp0_new && inp1_new) {
+                            mgb_log_warn(
+                                    "Both operands of Elemwise are newly prepared. "
+                                    "This is rare. "
+                                    "Please check. opr=%s inputs=%s",
+                                    opr->cname(),
+                                    cg::dump_var_info(opr->input()).c_str());
+                        }
+                        auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
+                             dims1 = varnode2itensor[opr->input(1)]->getDimensions();
+                        mgb_throw_if(
+                                dims0.nbDims != dims1.nbDims, AssertionError,
+                                "Input dimensions of two input tensors must be "
+                                "equal (got: %d, %d).",
+                                dims0.nbDims, dims1.nbDims);
+                        auto elem = net->addElementWise(
+                                *varnode2itensor[opr->input(0)],
+                                *varnode2itensor[opr->input(1)], elem_op);
+                        mgb_assert(elem, "construct network failed");
+                        std::string layer_name = "TRT_ELEM:" + opr->name();
+                        elem->setName(layer_name.c_str());
+                        std::string output_name = "TRT_O:" + opr->output()[0]->name();
+                        elem->getOutput(0)->setName(output_name.c_str());
+                        varnode2itensor[opr->output(0)] = elem->getOutput(0);
+                    };
             switch (mode) {
 #define cb(mode)                                                    \
     case Mode::mode:                                                \
@@ -780,69 +765,56 @@ public:
                                 get_value(bias_var).raw_ptr(),
                                 static_cast<int64_t>(
                                         bias_var->shape().total_nr_elems())};
-                        if (opr_var->owner_opr()
-                                    ->same_type<opr::Convolution>()) {
-                            m_opr2convlayer[opr_var->owner_opr()]
-                                    ->setBiasWeights(wt_bias);
-                        } else if (
-                                opr_var->owner_opr()
-                                        ->same_type<
-                                                opr::ConvolutionBackwardData>()) {
-                            m_opr2deconvlayer[opr_var->owner_opr()]
-                                    ->setBiasWeights(wt_bias);
+                        if (opr_var->owner_opr()->same_type<opr::Convolution>()) {
+                            m_opr2convlayer[opr_var->owner_opr()]->setBiasWeights(
+                                    wt_bias);
+                        } else if (opr_var->owner_opr()
+                                           ->same_type<
+                                                   opr::ConvolutionBackwardData>()) {
+                            m_opr2deconvlayer[opr_var->owner_opr()]->setBiasWeights(
+                                    wt_bias);
                         }
-                        varnode2itensor[opr->output(0)] =
-                                varnode2itensor[result[2]];
+                        varnode2itensor[opr->output(0)] = varnode2itensor[result[2]];
                         break;
                     }
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kSUM);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kSUM);
                     break;
                 }
                 case Mode::MUL:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kPROD);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kPROD);
                     break;
                 case Mode::MIN:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kMIN);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kMIN);
                     break;
                 case Mode::MAX:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kMAX);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kMAX);
                     break;
                 case Mode::SUB:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kSUB);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kSUB);
                     break;
                 case Mode::TRUE_DIV:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kDIV);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kDIV);
                     break;
                 case Mode::POW:
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kPOW);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kPOW);
                     break;
                 case Mode::FUSE_ADD_RELU: {
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kSUM);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kSUM);
                     if (is_quantized_int8_operator(opr))
                         set_itensor_dynamic_range(opr->output(0), opr);
-                    auto act =
-                            net->addActivation(*varnode2itensor[opr->output(0)],
-                                               nvinfer1::ActivationType::kRELU);
+                    auto act = net->addActivation(
+                            *varnode2itensor[opr->output(0)],
+                            nvinfer1::ActivationType::kRELU);
                     mgb_assert(act, "construct network failed");
                     std::string layer_name = "TRT_ACTV:" + opr->name();
                     act->setName(layer_name.c_str());
-                    std::string output_name =
-                            "TRT_O:" + opr->output()[0]->name();
+                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
                     act->getOutput(0)->setName(output_name.c_str());
                     varnode2itensor[opr->output(0)] = act->getOutput(0);
                     break;
                 }
                 case Mode::FUSE_ADD_SIGMOID: {
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kSUM);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kSUM);
                     if (is_quantized_int8_operator(opr))
                         set_itensor_dynamic_range(opr->output(0), opr);
                     auto act = net->addActivation(
@@ -851,25 +823,22 @@ public:
                     mgb_assert(act, "construct network failed");
                     std::string layer_name = "TRT_ACTV:" + opr->name();
                     act->setName(layer_name.c_str());
-                    std::string output_name =
-                            "TRT_O:" + opr->output()[0]->name();
+                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
                     act->getOutput(0)->setName(output_name.c_str());
                     varnode2itensor[opr->output(0)] = act->getOutput(0);
                     break;
                 }
                 case Mode::FUSE_ADD_TANH: {
-                    on_elemwise_arity_binary(
-                            nvinfer1::ElementWiseOperation::kSUM);
+                    on_elemwise_arity_binary(nvinfer1::ElementWiseOperation::kSUM);
                     if (is_quantized_int8_operator(opr))
                         set_itensor_dynamic_range(opr->output(0), opr);
-                    auto act =
-                            net->addActivation(*varnode2itensor[opr->output(0)],
-                                               nvinfer1::ActivationType::kTANH);
+                    auto act = net->addActivation(
+                            *varnode2itensor[opr->output(0)],
+                            nvinfer1::ActivationType::kTANH);
                     mgb_assert(act, "construct network failed");
                     std::string layer_name = "TRT_ACTV:" + opr->name();
                     act->setName(layer_name.c_str());
-                    std::string output_name =
-                            "TRT_O:" + opr->output()[0]->name();
+                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
                     act->getOutput(0)->setName(output_name.c_str());
                     varnode2itensor[opr->output(0)] = act->getOutput(0);
                     break;
@@ -881,60 +850,62 @@ public:
                 set_itensor_dynamic_range(opr->output(0), opr);
         };
 
-        m_opr_trait[opr::ElemwiseMultiType::typeinfo()]
-                .add_to_nvinfer = [this](nvinfer1::INetworkDefinition* net,
-                                         OperatorNodeBase* opr) {
-            auto&& varnode2itensor =
-                    m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
-            size_t ndim0 = opr->input(0)->shape().ndim,
-                   ndim1 = opr->input(1)->shape().ndim;
-            mgb_assert(ndim0 == ndim1);
-            size_t tensor_ndim = ndim0;
-            using Mode = opr::ElemwiseMultiType::Mode;
-            SmallVector<nvinfer1::DimensionType> dimtypes(tensor_ndim);
-            for (size_t  i = 0; i < tensor_ndim; i++) {
-                dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
-            }
-            auto mode =
-                    opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
-            mgb_assert(mode == Mode::QADD || mode == Mode::QFUSE_ADD_RELU,
-                       "Only QADD and QFUSE_ADD_RELU are supported on CUDA.");
-            mgb_assert(
-                    opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8,
-                    "output data type %s is not supported",
-                    opr->output(0)->dtype().name());
-            check_input(opr->input(0), opr, dimtypes);
-            check_input(opr->input(1), opr, dimtypes);
-            auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
-                 dims1 = varnode2itensor[opr->input(1)]->getDimensions();
-            mgb_throw_if(dims0.nbDims != dims1.nbDims, AssertionError,
-                         "Input dimensions of two input tensors must be "
-                         "equal (got: %d, %d).",
-                         dims0.nbDims, dims1.nbDims);
-            auto elem =
-                    net->addElementWise(*varnode2itensor[opr->input(0)],
-                                        *varnode2itensor[opr->input(1)],
-                                        nvinfer1::ElementWiseOperation::kSUM);
-            mgb_assert(elem, "construct network failed");
-            std::string layer_name = "TRT_ELEM:" + opr->name();
-            elem->setName(layer_name.c_str());
-            std::string output_name = "TRT_O:" + opr->output()[0]->name();
-            elem->getOutput(0)->setName(output_name.c_str());
-            varnode2itensor[opr->output(0)] = elem->getOutput(0);
-            set_itensor_dynamic_range(opr->output(0), opr);
-            if (mode == Mode::QFUSE_ADD_RELU) {
-                auto act =
-                        net->addActivation(*varnode2itensor[opr->output(0)],
-                                           nvinfer1::ActivationType::kRELU);
-                mgb_assert(act, "construct network failed");
-                std::string layer_name = "TRT_ACTV:" + opr->name();
-                act->setName(layer_name.c_str());
-                std::string output_name = "TRT_O:" + opr->output()[0]->name() + "_act";
-                act->getOutput(0)->setName(output_name.c_str());
-                varnode2itensor[opr->output(0)] = act->getOutput(0);
-                set_itensor_dynamic_range(opr->output(0), opr);
-            }
-        };
+        m_opr_trait[opr::ElemwiseMultiType::typeinfo()].add_to_nvinfer =
+                [this](nvinfer1::INetworkDefinition* net, OperatorNodeBase* opr) {
+                    auto&& varnode2itensor =
+                            m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
+                    size_t ndim0 = opr->input(0)->shape().ndim,
+                           ndim1 = opr->input(1)->shape().ndim;
+                    mgb_assert(ndim0 == ndim1);
+                    size_t tensor_ndim = ndim0;
+                    using Mode = opr::ElemwiseMultiType::Mode;
+                    SmallVector<nvinfer1::DimensionType> dimtypes(tensor_ndim);
+                    for (size_t i = 0; i < tensor_ndim; i++) {
+                        dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
+                    }
+                    auto mode =
+                            opr->cast_final_safe<opr::ElemwiseMultiType>().param().mode;
+                    mgb_assert(
+                            mode == Mode::QADD || mode == Mode::QFUSE_ADD_RELU,
+                            "Only QADD and QFUSE_ADD_RELU are supported on CUDA.");
+                    mgb_assert(
+                            opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8,
+                            "output data type %s is not supported",
+                            opr->output(0)->dtype().name());
+                    check_input(opr->input(0), opr, dimtypes);
+                    check_input(opr->input(1), opr, dimtypes);
+                    auto dims0 = varnode2itensor[opr->input(0)]->getDimensions(),
+                         dims1 = varnode2itensor[opr->input(1)]->getDimensions();
+                    mgb_throw_if(
+                            dims0.nbDims != dims1.nbDims, AssertionError,
+                            "Input dimensions of two input tensors must be "
+                            "equal (got: %d, %d).",
+                            dims0.nbDims, dims1.nbDims);
+                    auto elem = net->addElementWise(
+                            *varnode2itensor[opr->input(0)],
+                            *varnode2itensor[opr->input(1)],
+                            nvinfer1::ElementWiseOperation::kSUM);
+                    mgb_assert(elem, "construct network failed");
+                    std::string layer_name = "TRT_ELEM:" + opr->name();
+                    elem->setName(layer_name.c_str());
+                    std::string output_name = "TRT_O:" + opr->output()[0]->name();
+                    elem->getOutput(0)->setName(output_name.c_str());
+                    varnode2itensor[opr->output(0)] = elem->getOutput(0);
+                    set_itensor_dynamic_range(opr->output(0), opr);
+                    if (mode == Mode::QFUSE_ADD_RELU) {
+                        auto act = net->addActivation(
+                                *varnode2itensor[opr->output(0)],
+                                nvinfer1::ActivationType::kRELU);
+                        mgb_assert(act, "construct network failed");
+                        std::string layer_name = "TRT_ACTV:" + opr->name();
+                        act->setName(layer_name.c_str());
+                        std::string output_name =
+                                "TRT_O:" + opr->output()[0]->name() + "_act";
+                        act->getOutput(0)->setName(output_name.c_str());
+                        varnode2itensor[opr->output(0)] = act->getOutput(0);
+                        set_itensor_dynamic_range(opr->output(0), opr);
+                    }
+                };
 
         auto replace_matmul_opr = [this](nvinfer1::INetworkDefinition* net,
                                          OperatorNodeBase* opr) {
@@ -943,19 +914,17 @@ public:
             SmallVector<nvinfer1::DimensionType> dimtypes;
             bool transposeA = false, transposeB = false;
             if (opr->same_type<opr::MatrixMul>()) {
-                dimtypes = {nvinfer1::DimensionType::kSPATIAL,
-                            nvinfer1::DimensionType::kSPATIAL};
-                transposeA = opr->cast_final_safe<opr::MatrixMul>()
-                                     .param()
-                                     .transposeA;
-                transposeB = opr->cast_final_safe<opr::MatrixMul>()
-                                     .param()
-                                     .transposeB;
+                dimtypes = {
+                        nvinfer1::DimensionType::kSPATIAL,
+                        nvinfer1::DimensionType::kSPATIAL};
+                transposeA = opr->cast_final_safe<opr::MatrixMul>().param().transposeA;
+                transposeB = opr->cast_final_safe<opr::MatrixMul>().param().transposeB;
             } else {
                 mgb_assert(opr->same_type<opr::BatchedMatrixMul>());
-                dimtypes = {nvinfer1::DimensionType::kINDEX,
-                            nvinfer1::DimensionType::kSPATIAL,
-                            nvinfer1::DimensionType::kSPATIAL};
+                dimtypes = {
+                        nvinfer1::DimensionType::kINDEX,
+                        nvinfer1::DimensionType::kSPATIAL,
+                        nvinfer1::DimensionType::kSPATIAL};
                 transposeA = opr->cast_final_safe<opr::BatchedMatrixMul>()
                                      .param()
                                      .transposeA;
@@ -989,7 +958,8 @@ public:
         // megdnn matrix mul operator on cuda backend does not support quantized
         // data type
         m_opr_trait[opr::MatrixMul::typeinfo()].add_to_nvinfer = replace_matmul_opr;
-        m_opr_trait[opr::BatchedMatrixMul::typeinfo()].add_to_nvinfer = replace_matmul_opr;
+        m_opr_trait[opr::BatchedMatrixMul::typeinfo()].add_to_nvinfer =
+                replace_matmul_opr;
 
         // powc only support float32
         m_opr_trait[opr::PowC::typeinfo()]
@@ -1003,32 +973,30 @@ public:
                 dimtypes[i] = nvinfer1::DimensionType::kSPATIAL;
             }
             check_input(opr->input(0), opr, dimtypes);
-            auto host_one = HostTensorND(opr->output(0)->comp_node(), {1},
-                                         dtype::Float32()),
-                 host_zero = HostTensorND(opr->output(0)->comp_node(), {1},
-                                          dtype::Float32()),
-                 host_exp = HostTensorND(opr->output(0)->comp_node(), {1},
-                                         dtype::Float32());
+            auto host_one = HostTensorND(
+                         opr->output(0)->comp_node(), {1}, dtype::Float32()),
+                 host_zero = HostTensorND(
+                         opr->output(0)->comp_node(), {1}, dtype::Float32()),
+                 host_exp = HostTensorND(
+                         opr->output(0)->comp_node(), {1}, dtype::Float32());
             *(reinterpret_cast<float*>(host_one.raw_ptr())) = 1;
             *(reinterpret_cast<float*>(host_zero.raw_ptr())) = 0;
             *(reinterpret_cast<float*>(host_exp.raw_ptr())) =
                     opr->cast_final_safe<opr::PowC>().param().exp;
             auto ptr = opr->owner_graph()
                                ->options()
-                               .user_data
-                               .get_user_data_or_create<HostTensorKeeper>();
+                               .user_data.get_user_data_or_create<HostTensorKeeper>();
             ptr->htr.push_back(host_one);
             ptr->htr.push_back(host_zero);
             ptr->htr.push_back(host_exp);
-            auto scale =
-                    net->addScale(*varnode2itensor[opr->input(0)],
-                                  nvinfer1::ScaleMode::kUNIFORM,
-                                  nvinfer1::Weights{nvinfer1::DataType::kFLOAT,
-                                                    host_zero.raw_ptr(), 1},
-                                  nvinfer1::Weights{nvinfer1::DataType::kFLOAT,
-                                                    host_one.raw_ptr(), 1},
-                                  nvinfer1::Weights{nvinfer1::DataType::kFLOAT,
-                                                    host_exp.raw_ptr(), 1});
+            auto scale = net->addScale(
+                    *varnode2itensor[opr->input(0)], nvinfer1::ScaleMode::kUNIFORM,
+                    nvinfer1::Weights{
+                            nvinfer1::DataType::kFLOAT, host_zero.raw_ptr(), 1},
+                    nvinfer1::Weights{
+                            nvinfer1::DataType::kFLOAT, host_one.raw_ptr(), 1},
+                    nvinfer1::Weights{
+                            nvinfer1::DataType::kFLOAT, host_exp.raw_ptr(), 1});
             std::string layer_name = "TRT_SCALE:" + opr->name();
             scale->setName(layer_name.c_str());
             std::string output_name = "TRT_O:" + opr->output()[0]->name();
@@ -1045,14 +1013,13 @@ public:
         if (!m_opr_fail.empty()) {
             std::string msg{"TRT replace summary:\n"};
             msg += ssprintf(" number of oprs: %zu\n", m_opr_num);
-            msg += ssprintf(" number of unsupported oprs: %zu\n",
-                            m_opr_fail_num);
-            msg += ssprintf(" first %zu unsupported oprs:\n",
-                            m_opr_fail.size());
+            msg += ssprintf(" number of unsupported oprs: %zu\n", m_opr_fail_num);
+            msg += ssprintf(" first %zu unsupported oprs:\n", m_opr_fail.size());
             for (size_t i = 0; i < m_opr_fail.size(); ++i) {
-                msg += ssprintf("   %s {%s}: %s\n", m_opr_fail[i].opr->cname(),
-                                m_opr_fail[i].opr->dyn_typeinfo()->name,
-                                m_opr_fail[i].fail_msg.c_str());
+                msg += ssprintf(
+                        "   %s {%s}: %s\n", m_opr_fail[i].opr->cname(),
+                        m_opr_fail[i].opr->dyn_typeinfo()->name,
+                        m_opr_fail[i].fail_msg.c_str());
             }
             msg.pop_back();
             mgb_log("%s", msg.c_str());
@@ -1062,8 +1029,7 @@ public:
 
 MGB_TYPEINFO_OBJ_IMPL(TensorRTReplacePass::Impl::HostTensorKeeper);
 
-Maybe<std::string> TensorRTReplacePass::Impl::has_fail_msg(
-        OperatorNodeBase* opr) {
+Maybe<std::string> TensorRTReplacePass::Impl::has_fail_msg(OperatorNodeBase* opr) {
     auto iter = m_opr_trait.find(opr->dyn_typeinfo());
     if (iter != m_opr_trait.end()) {
         if (iter->second.get_replace_fail_msg) {
@@ -1074,8 +1040,7 @@ Maybe<std::string> TensorRTReplacePass::Impl::has_fail_msg(
     return "Opr not supported.";
 }
 
-VarNodeArray TensorRTReplacePass::Impl::find_parent_conv(
-        OperatorNodeBase* inp_opr) {
+VarNodeArray TensorRTReplacePass::Impl::find_parent_conv(OperatorNodeBase* inp_opr) {
     OperatorNodeBase* owner_opr;
     VarNodeArray vars_to_check, new_vars, rst;
     bool conv_output_found = false;
@@ -1117,15 +1082,14 @@ VarNodeArray TensorRTReplacePass::Impl::find_parent_conv(
         if (conv_output_found)
             break;
         if (new_vars.size() != 0) {
-            vars_to_check.insert(vars_to_check.end(), new_vars.begin(),
-                                 new_vars.end());
+            vars_to_check.insert(vars_to_check.end(), new_vars.begin(), new_vars.end());
             new_vars.clear();
         }
     }
 
     if (conv_output_found) {
-        conv_output_found &= m_graph_map[inp_opr] ==
-                             m_graph_map[conv_output_var->owner_opr()];
+        conv_output_found &=
+                m_graph_map[inp_opr] == m_graph_map[conv_output_var->owner_opr()];
         auto&& trt_graph = m_tensorrt_graphs[m_graph_map[inp_opr] - 1];
         conv_output_found &= trt_graph->outputs.count(conv_output_var) == 0;
     }
@@ -1155,18 +1119,18 @@ bool TensorRTReplacePass::Impl::check_input(
     MGB_MARK_USED_VAR(mgb_dtype_to_trt_dtype);
     if (dimtypes.size() == 0) {
 #if NV_TENSOR_RT_VERSION >= 6001
-        mgb_assert(var->shape().ndim == 4 || (var->shape().ndim == 5 && var->shape()[4] == 4));
-        nvinfer1::Dims4 dims{static_cast<int>(var->shape()[0]),
-                             static_cast<int>(var->shape()[1]),
-                             static_cast<int>(var->shape()[2]),
-                             static_cast<int>(var->shape()[3])};
+        mgb_assert(
+                var->shape().ndim == 4 ||
+                (var->shape().ndim == 5 && var->shape()[4] == 4));
+        nvinfer1::Dims4 dims{
+                static_cast<int>(var->shape()[0]), static_cast<int>(var->shape()[1]),
+                static_cast<int>(var->shape()[2]), static_cast<int>(var->shape()[3])};
         if (var->shape().ndim == 5) {
             mgb_assert(var->shape()[4] == 4);
             dims.d[1] *= 4;
         }
         itensor = trt_graph->network->addInput(
-                var->cname(), mgb_dtype_to_trt_dtype(var->dtype()),
-                dims);
+                var->cname(), mgb_dtype_to_trt_dtype(var->dtype()), dims);
         if (trt_graph->mark_input_varnode_nchw4.count(var)) {
             itensor->setAllowedFormats(
                     1 << static_cast<int>(nvinfer1::TensorFormat::kCHW4));
@@ -1177,34 +1141,39 @@ bool TensorRTReplacePass::Impl::check_input(
 #else
         if (var->shape().ndim == 4) {
             // the default input tensor is a NCHW tensor
-            mgb_assert(var->shape().ndim == 4,
-                       "Default input tensor should be NCHW or NCHW4 format.");
+            mgb_assert(
+                    var->shape().ndim == 4,
+                    "Default input tensor should be NCHW or NCHW4 format.");
             itensor = trt_graph->network->addInput(
                     var->cname(), nvinfer1::DataType::kFLOAT,
-                    nvinfer1::DimsNCHW{static_cast<int>(var->shape()[0]),
-                                       static_cast<int>(var->shape()[1]),
-                                       static_cast<int>(var->shape()[2]),
-                                       static_cast<int>(var->shape()[3])});
+                    nvinfer1::DimsNCHW{
+                            static_cast<int>(var->shape()[0]),
+                            static_cast<int>(var->shape()[1]),
+                            static_cast<int>(var->shape()[2]),
+                            static_cast<int>(var->shape()[3])});
 
         } else {
-            mgb_assert(var->shape().ndim == 5 && var->shape()[4] == 4,
-                       "Input tensor format is not NCHW4 (got %s)",
-                       var->shape().to_string().c_str());
+            mgb_assert(
+                    var->shape().ndim == 5 && var->shape()[4] == 4,
+                    "Input tensor format is not NCHW4 (got %s)",
+                    var->shape().to_string().c_str());
             itensor = trt_graph->network->addInput(
                     var->cname(), nvinfer1::DataType::kFLOAT,
-                    nvinfer1::DimsNCHW{static_cast<int>(var->shape()[0]),
-                                       static_cast<int>(var->shape()[1] * 4),
-                                       static_cast<int>(var->shape()[2]),
-                                       static_cast<int>(var->shape()[3])});
+                    nvinfer1::DimsNCHW{
+                            static_cast<int>(var->shape()[0]),
+                            static_cast<int>(var->shape()[1] * 4),
+                            static_cast<int>(var->shape()[2]),
+                            static_cast<int>(var->shape()[3])});
         }
 #endif
     } else {
         nvinfer1::Dims dims;
         // process var node that marked as nchw4 format
         if (trt_graph->mark_input_varnode_nchw4.count(var)) {
-            mgb_assert(var->shape().ndim == 5 && var->shape()[4] == 4,
-                       "Input tensor format is not NCHW4 (got %s)",
-                       var->shape().to_string().c_str());
+            mgb_assert(
+                    var->shape().ndim == 5 && var->shape()[4] == 4,
+                    "Input tensor format is not NCHW4 (got %s)",
+                    var->shape().to_string().c_str());
             dims.nbDims = var->shape().ndim - 1;
             for (size_t i = 0; i < var->shape().ndim - 1; i++) {
                 dims.d[i] = var->shape()[i];
@@ -1251,8 +1220,7 @@ void TensorRTReplacePass::Impl::set_itensor_dynamic_range(
     MGB_MARK_USED_VAR(var);
     MGB_MARK_USED_VAR(opr);
 #if NV_TENSOR_RT_VERSION >= 5020
-    auto&& varnode2itensor =
-            m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
+    auto&& varnode2itensor = m_tensorrt_graphs[m_graph_map[opr] - 1]->varnode2itensor;
     auto&& tensor = varnode2itensor[var];
     auto&& data_type = var->dtype();
     mgb_assert(data_type.enumv() == DTypeEnum::QuantizedS8);
@@ -1283,8 +1251,7 @@ HostTensorND TensorRTReplacePass::Impl::get_value(VarNode* var, ConvFormat forma
             auto sub = [&xshp, &cv](int idx) {
                 return opr::IndexAt::make(xshp, {{0, cv(idx)}});
             };
-            auto tshp =
-                    opr::Concat::make({sub(0), sub(1) * 4, sub(2), sub(3)}, 0);
+            auto tshp = opr::Concat::make({sub(0), sub(1) * 4, sub(2), sub(3)}, 0);
             auto y0 = opr::Dimshuffle::make(x, {0, 1, 4, 2, 3});
             auto y1 = opr::Reshape::make(y0, tshp);
             if (var->dtype().enumv() == DTypeEnum::QuantizedS8 ||
@@ -1302,8 +1269,9 @@ HostTensorND TensorRTReplacePass::Impl::get_value(VarNode* var, ConvFormat forma
         } else if (var->shape().ndim == 6) {
             // assume nchw4 layout
             mgb_assert(var->shape()[5] == 4);
-            mgb_assert(var->dtype().enumv() == DTypeEnum::QuantizedS8 ||
-                       var->dtype() == dtype::Float32());
+            mgb_assert(
+                    var->dtype().enumv() == DTypeEnum::QuantizedS8 ||
+                    var->dtype() == dtype::Float32());
             auto x = SymbolVar(var);
             auto xshp = opr::GetVarShape::make(x);
 
@@ -1311,8 +1279,8 @@ HostTensorND TensorRTReplacePass::Impl::get_value(VarNode* var, ConvFormat forma
             auto sub = [&xshp, &cv](int idx) {
                 return opr::IndexAt::make(xshp, {{0, cv(idx)}});
             };
-            auto tshp = opr::Concat::make(
-                    {sub(0), sub(1), sub(2) * 4, sub(3), sub(4)}, 0);
+            auto tshp =
+                    opr::Concat::make({sub(0), sub(1), sub(2) * 4, sub(3), sub(4)}, 0);
             auto y0 = opr::Dimshuffle::make(x, {0, 1, 2, 5, 3, 4});
             auto y1 = opr::Reshape::make(y0, tshp);
             if (var->dtype().enumv() == DTypeEnum::QuantizedS8) {
@@ -1344,20 +1312,20 @@ float TensorRTReplacePass::Impl::get_scale(DType data_type) {
     switch (data_type.enumv()) {
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb);
         default:
-            mgb_throw(InternalError, "invalid quantized data type: %s",
-                      data_type.name());
+            mgb_throw(
+                    InternalError, "invalid quantized data type: %s", data_type.name());
     }
     return scale;
 #undef cb
 }
 
-bool TensorRTReplacePass::Impl::is_quantized_int8_operator(
-        OperatorNodeBase* opr) {
+bool TensorRTReplacePass::Impl::is_quantized_int8_operator(OperatorNodeBase* opr) {
     bool is_quantized = true;
     if (opr->same_type<opr::ConvBias>()) {
         is_quantized = opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
-        mgb_assert(!is_quantized ||
-                   opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8);
+        mgb_assert(
+                !is_quantized ||
+                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8);
         return is_quantized;
     }
     for (auto&& inp : opr->input()) {
@@ -1375,18 +1343,15 @@ bool TensorRTReplacePass::Impl::is_quantized_int8_operator(
 }
 
 void TensorRTReplacePass::Impl::detect_replace() {
-    auto cb = [this](OperatorNodeBase* opr) {
-        m_const_var_propogate->add_opr(opr);
-    };
+    auto cb = [this](OperatorNodeBase* opr) { m_const_var_propogate->add_opr(opr); };
     m_opt_state.graph().iter(cb);
 
     auto on_opr = [this](OperatorNodeBase* opr) {
         ++m_opr_num;
         Maybe<std::string> irreplaceable_msg = has_fail_msg(opr);
         TensorRTGraphFeatureBits feature_bits =
-                is_quantized_int8_operator(opr)
-                        ? TensorRTGraphFeatureBits::NCHW4_QINT8
-                        : TensorRTGraphFeatureBits::NCHW_FLOAT;
+                is_quantized_int8_operator(opr) ? TensorRTGraphFeatureBits::NCHW4_QINT8
+                                                : TensorRTGraphFeatureBits::NCHW_FLOAT;
         if (!irreplaceable_msg.valid()) {
             size_t max = 1;
             for (auto i : opr->input()) {
@@ -1424,8 +1389,7 @@ void TensorRTReplacePass::Impl::detect_replace() {
         } else {
             static const ThinHashSet<Typeinfo*> ignore_types{
                     opr::SharedDeviceTensor::typeinfo(),
-                    opr::ImmutableTensor::typeinfo(),
-                    opr::Host2DeviceCopy::typeinfo(),
+                    opr::ImmutableTensor::typeinfo(), opr::Host2DeviceCopy::typeinfo(),
                     opr::MultipleDeviceTensorHolder::typeinfo()};
             if (!ignore_types.count(opr->dyn_typeinfo())) {
                 ++m_opr_fail_num;
@@ -1442,8 +1406,8 @@ void TensorRTReplacePass::Impl::detect_replace() {
                     max = m_graph_map[i->owner_opr()];
                 if (!has_fail_msg(i->owner_opr()).valid()) {
                     //! TODO: check
-                    m_tensorrt_graphs[m_graph_map[i->owner_opr()] - 1]
-                            ->outputs.insert(i);
+                    m_tensorrt_graphs[m_graph_map[i->owner_opr()] - 1]->outputs.insert(
+                            i);
                 }
             }
             m_graph_map[opr] = max;
@@ -1455,14 +1419,13 @@ void TensorRTReplacePass::Impl::detect_replace() {
         auto var_node = i.node();
         if (!has_fail_msg(var_node->owner_opr()).valid()) {
             //! TODO: check
-            m_tensorrt_graphs[m_graph_map[var_node->owner_opr()] - 1]
-                    ->outputs.insert(var_node);
+            m_tensorrt_graphs[m_graph_map[var_node->owner_opr()] - 1]->outputs.insert(
+                    var_node);
         }
     }
 }
 
-void TensorRTReplacePass::Impl::
-        mark_varnode_format_nchw4() {
+void TensorRTReplacePass::Impl::mark_varnode_format_nchw4() {
     for (auto trt_graph : m_tensorrt_graphs) {
         trt_graph->mark_varnode_format_nchw4();
     }
@@ -1487,18 +1450,18 @@ void TensorRTReplacePass::Impl::update_graph() {
                 b->setGpuAllocator(gpu_allocator.get());
             } else {
                 auto cn0 = gpu_allocator->comp_node();
-                mgb_assert(cn0 == cn,
-                           "multiple comp nodes for trt graph are not "
-                           "supported: %s %s",
-                           cn0.to_string().c_str(), cn.to_string().c_str());
+                mgb_assert(
+                        cn0 == cn,
+                        "multiple comp nodes for trt graph are not "
+                        "supported: %s %s",
+                        cn0.to_string().c_str(), cn.to_string().c_str());
             }
 
             if (!trt_graph->network) {
 #if NV_TENSOR_RT_VERSION >= 6001
                 nvinfer1::NetworkDefinitionCreationFlags flags;
-                flags = 1 << static_cast<int>(
-                                nvinfer1::NetworkDefinitionCreationFlag::
-                                        kEXPLICIT_BATCH);
+                flags = 1 << static_cast<int>(nvinfer1::NetworkDefinitionCreationFlag::
+                                                      kEXPLICIT_BATCH);
                 trt_graph->network = b->createNetworkV2(flags);
 #else
                 trt_graph->network = b->createNetwork();
@@ -1545,8 +1508,7 @@ void TensorRTReplacePass::Impl::update_graph() {
 
     ThinHashSet<OperatorNodeBase*> visited;
     // replace opr by trt
-    auto update_opr = [this, &gpu_allocator,
-                       &visited](OperatorNodeBase* opr) {
+    auto update_opr = [this, &gpu_allocator, &visited](OperatorNodeBase* opr) {
         if (!has_fail_msg(opr).valid()) {
             mgb_assert(gpu_allocator);
             auto trt_graph = m_tensorrt_graphs[m_graph_map[opr] - 1];
@@ -1575,26 +1537,22 @@ void TensorRTReplacePass::Impl::update_graph() {
                         new_inps[i] = y1.node();
                     }
                     if (inps[i]->dtype().enumv() == DTypeEnum::QuantizedS8) {
-                        new_inps[i] = opr::TypeCvt::make(new_inps[i],
-                                                         dtype::Float32())
+                        new_inps[i] = opr::TypeCvt::make(new_inps[i], dtype::Float32())
                                               .node();
                     }
 #endif
                 }
                 // now trt_graph does not own the unique_ptr of infer builder
                 m_opt_state.call_with_opr(opr, [&] {
-                    trt_graph->trt_outputs =
-                            cg::to_var_node_array(TensorRTOpr::make(
-                                    TensorRTOpr::to_shared_ptr_builder(
-                                            trt_graph->builder),
-                                    TensorRTOpr::to_shared_ptr_network(
-                                            trt_graph->network),
-                                    trt_graph->feature_bits, gpu_allocator,
-                                    cg::to_symbol_var_array(new_inps)));
+                    trt_graph->trt_outputs = cg::to_var_node_array(TensorRTOpr::make(
+                            TensorRTOpr::to_shared_ptr_builder(trt_graph->builder),
+                            TensorRTOpr::to_shared_ptr_network(trt_graph->network),
+                            trt_graph->feature_bits, gpu_allocator,
+                            cg::to_symbol_var_array(new_inps)));
                 });
-                mgb_assert(trt_graph->trt_outputs.size() ==
-                                   trt_graph->outputs.size(),
-                           "mgb outputs number != tensorrt outputs number");
+                mgb_assert(
+                        trt_graph->trt_outputs.size() == trt_graph->outputs.size(),
+                        "mgb outputs number != tensorrt outputs number");
             }
             for (auto&& output : opr->output()) {
                 if (trt_graph->outputs.count(output)) {
@@ -1617,16 +1575,15 @@ void TensorRTReplacePass::Impl::update_graph() {
                     }
                     if (output->dtype().enumv() == DTypeEnum::QuantizedS8) {
                         float scale = get_scale(output->dtype());
-                        output_var =
-                                opr::TypeCvt::make(output_var,
-                                                   dtype::QuantizedS8{scale})
-                                        .node();
+                        output_var = opr::TypeCvt::make(
+                                             output_var, dtype::QuantizedS8{scale})
+                                             .node();
                     }
 #endif
                     m_rewriter.replace_var(
                             output, output_var,
-                            mgb_ssprintf_log("replace opr: %s",
-                                             output->owner_opr()->cname())
+                            mgb_ssprintf_log(
+                                    "replace opr: %s", output->owner_opr()->cname())
                                     .c_str());
                 }
             }
@@ -1650,8 +1607,9 @@ const char* TensorRTReplacePass::name() const {
 
 void TensorRTReplacePass::apply(OptState& opt) const {
     if (CompNode::get_device_count(CompNode::DeviceType::CUDA)) {
-        opt.set_var_replace_check_flag(gopt::VarReplaceCheckFlag::CHECK_SHAPE |
-                                       gopt::VarReplaceCheckFlag::CHECK_DTYPE);
+        opt.set_var_replace_check_flag(
+                gopt::VarReplaceCheckFlag::CHECK_SHAPE |
+                gopt::VarReplaceCheckFlag::CHECK_DTYPE);
         Impl(*this, opt);
     } else {
         mgb_log_debug("cuda is not available; TensorRTReplacePass is ignored");
@@ -1695,7 +1653,7 @@ void TensorRTReplacePass::Impl::TensorRTGraph::mark_varnode_format_nchw4() {
     auto cb = [&](OperatorNodeBase* opr) {
         mgb_assert(!p.count(opr));
         p[opr] = opr;
-        for (auto&& inp: opr->input()) {
+        for (auto&& inp : opr->input()) {
             auto root = get_root(inp->owner_opr());
             // ensure that if one of oprs in tree is nchw4
             // the root of the tree must be nchw4
@@ -1732,8 +1690,7 @@ void TensorRTReplacePass::Impl::TensorRTGraph::mark_varnode_format_nchw4() {
 }
 
 void mgb::tensorrt::transform_dest_vars_inplace(
-        mgb::cg::VarNodeArray& dest_vars,
-        cg::GraphCommonOptimizeOptions& options) {
+        mgb::cg::VarNodeArray& dest_vars, cg::GraphCommonOptimizeOptions& options) {
     gopt::GraphOptimizer optimizer;
     //! As in megengine, the layout is NCHW, while tensorrt pass currently
     //! only support NCHW4(int8), so we transform layout to nchw4 firstly.

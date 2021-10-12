@@ -40,8 +40,7 @@ struct Args {
 };
 
 std::shared_ptr<Tensor> parse_npy(
-        const std::string& path,
-        LiteBackend backend = LiteBackend::LITE_DEFAULT);
+        const std::string& path, LiteBackend backend = LiteBackend::LITE_DEFAULT);
 
 using ExampleFunc = std::function<bool(const Args&)>;
 using ExampleFuncMap = std::unordered_map<std::string, ExampleFunc>;
@@ -85,11 +84,10 @@ bool device_io_c_interface(const lite::example::Args& args);
 bool async_c_interface(const lite::example::Args& args);
 #endif
 
-#define CONCAT_IMPL(a, b) a##b
+#define CONCAT_IMPL(a, b)  a##b
 #define MACRO_CONCAT(a, b) CONCAT_IMPL(a, b)
 
-#define REGIST_EXAMPLE(name_, func_) \
-    REGIST_EXAMPLE_WITH_NUM(__COUNTER__, name_, func_)
+#define REGIST_EXAMPLE(name_, func_) REGIST_EXAMPLE_WITH_NUM(__COUNTER__, name_, func_)
 
 #define REGIST_EXAMPLE_WITH_NUM(number_, name_, func_)          \
     template <>                                                 \

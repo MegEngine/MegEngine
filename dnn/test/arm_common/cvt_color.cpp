@@ -8,9 +8,9 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/common/checker.h"
-#include "test/common/benchmarker.h"
 #include "test/common/cvt_color.h"
+#include "test/common/benchmarker.h"
+#include "test/common/checker.h"
 
 #include "test/arm_common/fixture.h"
 
@@ -19,29 +19,27 @@ namespace test {
 
 using Mode = param::CvtColor::Mode;
 
-TEST_F(ARM_COMMON, CVTCOLOR)
-{
+TEST_F(ARM_COMMON, CVTCOLOR) {
     using namespace cvt_color;
     std::vector<TestArg> args = get_args();
     Checker<CvtColor> checker(handle());
 
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         checker.set_param(arg.param)
-            .set_dtype(0, arg.dtype)
-            .set_dtype(1, arg.dtype)
-            .execs({arg.src, {}});
+                .set_dtype(0, arg.dtype)
+                .set_dtype(1, arg.dtype)
+                .execs({arg.src, {}});
     }
 }
 
 #if MEGDNN_WITH_BENCHMARK
-TEST_F(ARM_COMMON, BENCHMARK_CVTCOLOR_RGB2GRAY)
-{
+TEST_F(ARM_COMMON, BENCHMARK_CVTCOLOR_RGB2GRAY) {
     using namespace cvt_color;
     using Param = param::CvtColor;
 
 #define BENCHMARK_PARAM(benchmarker, dtype) \
-        benchmarker.set_param(param); \
-        benchmarker.set_dtype(0, dtype);
+    benchmarker.set_param(param);           \
+    benchmarker.set_dtype(0, dtype);
 
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         auto handle_naive = create_cpu_handle(2);
@@ -63,18 +61,16 @@ TEST_F(ARM_COMMON, BENCHMARK_CVTCOLOR_RGB2GRAY)
             benchmarker.execs({shape, {}});
             benchmarker_naive.execs({shape, {}});
         }
-
     };
 
     Param param;
     TensorShapeArray shapes = {
-        {1, 500, 512, 3},
-        {2, 500, 512, 3},
+            {1, 500, 512, 3},
+            {2, 500, 512, 3},
     };
 
     param.mode = Param::Mode::RGB2GRAY;
     run(shapes, param);
-
 }
 
 TEST_F(ARM_COMMON, BENCHMARK_CVTCOLOR_BT601_YUV) {

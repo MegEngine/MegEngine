@@ -23,12 +23,12 @@ namespace megdnn {
 
 using LocalKParam = naive::LocalForwardImpl::FloatNoncontigBatchKernParam;
 
-void WITH_SIMD_SUFFIX(local_xcorr)(
-        const LocalKParam &param) MEGDNN_SIMD_ATTRIBUTE_TARGET;
+void WITH_SIMD_SUFFIX(local_xcorr)(const LocalKParam& param)
+        MEGDNN_SIMD_ATTRIBUTE_TARGET;
 
-void WITH_SIMD_SUFFIX(local_conv)(
-        const LocalKParam &param) MEGDNN_SIMD_ATTRIBUTE_TARGET;
+void WITH_SIMD_SUFFIX(local_conv)(const LocalKParam& param)
+        MEGDNN_SIMD_ATTRIBUTE_TARGET;
 
-} // namespace megdnn
+}  // namespace megdnn
 
 #include "src/common/macro_helper_epilogue.h"

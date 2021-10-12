@@ -12,12 +12,12 @@
 #pragma once
 
 #include <string>
-#include <variant>
 #include <unordered_set>
+#include <variant>
 
-#include "megbrain/tensor.h"
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/imperative/utils/to_string.h"
+#include "megbrain/tensor.h"
 
 #include "./stack_manager.h"
 #include "./tensor_info.h"
@@ -38,16 +38,14 @@ struct Put {
     void get_props(TFunctor&& functor) const {
         functor("dest", dest);
         functor("no_cache", no_cache);
-        //functor("value", value);
+        // functor("value", value);
     }
 
-    const char* get_name() const {
-        return "Put";
-    }
+    const char* get_name() const { return "Put"; }
 };
 
 struct ApplyOp {
-    uint64_t id; //used by profiler to identify unique apply
+    uint64_t id;  // used by profiler to identify unique apply
     std::shared_ptr<OpDef> op;
     SmallVector<TensorInfo*> inputs;
     SmallVector<TensorInfo*> outputs;
@@ -61,9 +59,7 @@ struct ApplyOp {
         functor("dels", dels);
     }
 
-    const char* get_name() const {
-        return "ApplyOp";
-    }
+    const char* get_name() const { return "ApplyOp"; }
 };
 
 struct Del {
@@ -74,9 +70,7 @@ struct Del {
         functor("dest", dest);
     }
 
-    const char* get_name() const {
-        return "Del";
-    }
+    const char* get_name() const { return "Del"; }
 };
 
 struct GetValue {
@@ -87,9 +81,7 @@ struct GetValue {
         functor("dest", dest);
     }
 
-    const char* get_name() const {
-        return "GetValue";
-    }
+    const char* get_name() const { return "GetValue"; }
 };
 
 struct SwapIn {
@@ -100,9 +92,7 @@ struct SwapIn {
         functor("dest", dest);
     }
 
-    const char* get_name() const {
-        return "SwapIn";
-    }
+    const char* get_name() const { return "SwapIn"; }
 };
 
 struct SwapOut {
@@ -113,9 +103,7 @@ struct SwapOut {
         functor("dest", dest);
     }
 
-    const char* get_name() const {
-        return "SwapOut";
-    }
+    const char* get_name() const { return "SwapOut"; }
 };
 
 struct Drop {
@@ -126,9 +114,7 @@ struct Drop {
         functor("dest", dest);
     }
 
-    const char* get_name() const {
-        return "Drop";
-    }
+    const char* get_name() const { return "Drop"; }
 };
 
 struct SetOption {
@@ -141,9 +127,7 @@ struct SetOption {
         functor("value", value);
     }
 
-    const char* get_name() const {
-        return "SetOption";
-    }
+    const char* get_name() const { return "SetOption"; }
 };
 
 struct StartProfile {
@@ -152,9 +136,7 @@ struct StartProfile {
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {}
 
-    const char* get_name() const {
-        return "StartProfile";
-    }
+    const char* get_name() const { return "StartProfile"; }
 };
 
 struct StopProfile {
@@ -163,9 +145,7 @@ struct StopProfile {
     template <typename TFunctor>
     void get_props(TFunctor&& functor) const {}
 
-    const char* get_name() const {
-        return "StopProfile";
-    }
+    const char* get_name() const { return "StopProfile"; }
 };
 
 struct PushScope {
@@ -176,9 +156,7 @@ struct PushScope {
         functor("scope_name", scope_name);
     }
 
-    const char* get_name() const {
-        return "PushScope";
-    }
+    const char* get_name() const { return "PushScope"; }
 };
 
 struct PopScope {
@@ -189,51 +167,41 @@ struct PopScope {
         functor("scope_name", scope_name);
     }
 
-    const char* get_name() const {
-        return "PopScope";
-    }
+    const char* get_name() const { return "PopScope"; }
 };
 
-using CommandData = std::variant<Put,
-                             ApplyOp,
-                             Del,
-                             GetValue,
-                             SwapIn,
-                             SwapOut,
-                             Drop,
-                             SetOption,
-                             StartProfile,
-                             StopProfile,
-                             PushScope,
-                             PopScope>;
+using CommandData = std::variant<
+        Put, ApplyOp, Del, GetValue, SwapIn, SwapOut, Drop, SetOption, StartProfile,
+        StopProfile, PushScope, PopScope>;
 
 struct Command {
     uint64_t id;
     CommandData data;
     StackManager::Trace trace;
-    
 };
 // using IdentifiedCommand = std::pair<uint64_t, Command>;
 
-}
+}  // namespace interpreter::intl
 
 template <>
-struct ToStringTrait<interpreter::intl::Command>{
+struct ToStringTrait<interpreter::intl::Command> {
     std::string operator()(const interpreter::intl::Command& cmd) const {
-        std::string content = std::visit([](const auto& cmd){
-            std::string result = cmd.get_name();
-            result += "{";
-            cmd.get_props([&](const char* key, auto&& value) {
-                result += key;
-                result += ": ";
-                result += to_string(value);
-                result += ",";
-            });
-            result += "}";
-            return result;
-        }, cmd.data);
+        std::string content = std::visit(
+                [](const auto& cmd) {
+                    std::string result = cmd.get_name();
+                    result += "{";
+                    cmd.get_props([&](const char* key, auto&& value) {
+                        result += key;
+                        result += ": ";
+                        result += to_string(value);
+                        result += ",";
+                    });
+                    result += "}";
+                    return result;
+                },
+                cmd.data);
         return content;
     }
 };
 
-}
+}  // namespace mgb::imperative

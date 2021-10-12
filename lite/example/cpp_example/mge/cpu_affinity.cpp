@@ -31,8 +31,7 @@ bool lite::example::cpu_affinity(const Args& args) {
     auto affinity = [core_ids](int id) {
         //! add user define affinity function
         set_cpu_affinity({core_ids[id]});
-        printf("set thread id = %d with the affinity of core %d.\n", id,
-               core_ids[id]);
+        printf("set thread id = %d with the affinity of core %d.\n", id, core_ids[id]);
     };
     Runtime::set_runtime_thread_affinity(network, affinity);
 

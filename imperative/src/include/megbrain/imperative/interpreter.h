@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include <atomic>
 #include <any>
+#include <atomic>
 
 #include "megbrain/imperative/op_def.h"
 
@@ -22,13 +22,14 @@ struct AsyncError : std::nested_exception, std::exception {
             rethrow_nested();
         } catch (const std::exception& e) {
             return e.what();
-        } catch (...) {}
+        } catch (...) {
+        }
         return "unkown async error";
     }
 };
 
 struct Interpreter {
-    struct HandleImpl{};
+    struct HandleImpl {};
     using Handle = HandleImpl*;
 
     struct Channel {
@@ -43,8 +44,7 @@ struct Interpreter {
         virtual void drop(Handle) = 0;
 
         virtual SmallVector<Handle> apply_op(
-                std::shared_ptr<OpDef> op,
-                const SmallVector<Handle>& inputs) = 0;
+                std::shared_ptr<OpDef> op, const SmallVector<Handle>& inputs) = 0;
 
         virtual HostTensorND get_value(Handle) = 0;
         virtual TensorShape get_shape(Handle) = 0;
@@ -72,4 +72,4 @@ struct Interpreter {
     static Interpreter& inst();
 };
 
-} // namespace mgb::imperative::interpreter
+}  // namespace mgb::imperative::interpreter

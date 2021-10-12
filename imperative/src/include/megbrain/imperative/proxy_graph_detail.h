@@ -17,35 +17,31 @@ namespace mgb {
 namespace imperative {
 namespace proxy_graph_detail {
 
-SmallVector<TensorPtr>
-apply_on_physical_tensor(const OpDef& def,
-        SmallVector<TensorPtr> inputs);
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, SmallVector<TensorPtr> inputs);
 
-void execute(const OpDef& def,
-        SmallVector<TensorPtr> inputs,
-        SmallVector<TensorPtr> outputs,
+void execute(
+        const OpDef& def, SmallVector<TensorPtr> inputs, SmallVector<TensorPtr> outputs,
         SmallVector<TensorPtr> workspace);
 
-std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs);
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
 std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_tensors,
+        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
         const SmallVector<MemoryDesc>& inputs_mems);
 
-void exec(const OpDef& def,
-        const SmallVector<TensorPtr>& inputs,
+void exec(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
         const SmallVector<TensorPtr>& outputs);
 
-EncodedSubgraph
-make_backward_graph(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs,
+EncodedSubgraph make_backward_graph(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
-} // namespace proxy_graph_detail
-} // namespace imperative
-} // namespace mgb
+}  // namespace proxy_graph_detail
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

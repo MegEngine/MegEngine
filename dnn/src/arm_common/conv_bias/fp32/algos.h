@@ -19,8 +19,8 @@ namespace megdnn {
 namespace arm_common {
 class ConvBiasImpl::AlgoFP32WinogradF23_4x4 final : public AlgoBase {
 public:
-    AlgoFP32WinogradF23_4x4(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                            uint32_t tile_size)
+    AlgoFP32WinogradF23_4x4(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     const char* name() const override {
         if (m_name.empty()) {
@@ -29,17 +29,15 @@ public:
         }
         return m_name.c_str();
     }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF63 final : public AlgoBase {
 public:
-    AlgoFP32WinogradF63(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                        uint32_t tile_size)
+    AlgoFP32WinogradF63(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     const char* name() const override {
         if (m_name.empty()) {
@@ -57,8 +55,8 @@ public:
 
 class ConvBiasImpl::AlgoFP32WinogradF63_4x4 final : public AlgoBase {
 public:
-    AlgoFP32WinogradF63_4x4(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                            uint32_t tile_size)
+    AlgoFP32WinogradF63_4x4(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     const char* name() const override {
         if (m_name.empty()) {
@@ -67,17 +65,15 @@ public:
         }
         return m_name.c_str();
     }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_FP32)
 };
 
 class ConvBiasImpl::AlgoFP32WinogradF54 final : public AlgoBase {
 public:
-    AlgoFP32WinogradF54(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                        uint32_t tile_size)
+    AlgoFP32WinogradF54(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     const char* name() const override {
         if (m_name.empty()) {
@@ -95,8 +91,8 @@ public:
 
 class ConvBiasImpl::AlgoFP32WinogradF45 final : public AlgoBase {
 public:
-    AlgoFP32WinogradF45(fallback::MatrixMulImpl::AlgoBase* matmul_algo,
-                        uint32_t tile_size)
+    AlgoFP32WinogradF45(
+            fallback::MatrixMulImpl::AlgoBase* matmul_algo, uint32_t tile_size)
             : m_matmul_algo{matmul_algo}, m_tile_size{tile_size} {}
     const char* name() const override {
         if (m_name.empty()) {
@@ -126,9 +122,7 @@ public:
         }
         return m_name.c_str();
     }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F23_4X4_NCHW44_F32)
 };
@@ -146,9 +140,7 @@ public:
         }
         return m_name.c_str();
     }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F63_4X4_NCHW44_F32)
 };
@@ -166,9 +158,7 @@ public:
         }
         return m_name.c_str();
     }
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_WINOGRAD_ALGO_FUN_DECLARE(AlgoDataType::FLOAT32);
     MEGDNN_DECL_ALGO_TYPE(ARM_COMMON_WINOGRAD_F73_4X4_NCHW44_F32)
 };
@@ -178,12 +168,11 @@ class ConvBiasImpl::AlgoF32Direct final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32DIRECT"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -198,12 +187,11 @@ class ConvBiasImpl::AlgoF32DirectStride1 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32STRD1"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -218,12 +206,11 @@ class ConvBiasImpl::AlgoF32DirectStride2 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32STRD2"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -239,12 +226,11 @@ class ConvBiasImpl::AlgoF32DirectNCHW44 final : public AlgoBase {
 
 public:
     AlgoF32DirectNCHW44() {}
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32_CONV_NCHW44_DIRECT"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -260,12 +246,11 @@ class ConvBiasImpl::AlgoF32DirectNCHWNCHW44 final : public AlgoBase {
 
 public:
     AlgoF32DirectNCHWNCHW44() {}
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32_CONV_NCHW_NCHW44"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -280,12 +265,11 @@ class ConvBiasImpl::AlgoF32ChannelWiseNCHW44 final : public AlgoBase {
     SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& param) const;
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "F32_CHANNEL_WISE_NCHW44"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(

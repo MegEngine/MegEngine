@@ -43,8 +43,7 @@ namespace x86 {
     __m128 fval_2 = _mm_cvtepi32_ps(val_2); \
     __m128 fval_3 = _mm_cvtepi32_ps(val_3);
 
-template <SIMDType simd_type, typename src_ctype,
-          typename dst_ctype = src_ctype>
+template <SIMDType simd_type, typename src_ctype, typename dst_ctype = src_ctype>
 struct TypeCvtOp;
 
 template <>
@@ -54,24 +53,22 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_quint8, dt_quint8>
     constexpr static size_t SIMD_WIDTH = 16;
 
     void operator()(const __m128ix2& vsrc, dt_quint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
 
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128i operator()(const __m128i& vsrc) const {
         CONVERT_UINT8_INT32
-        auto vitem0 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, vszp)),
-                                 this->vscale);
-        auto vitem1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, vszp)),
-                                 this->vscale);
-        auto vitem2 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, vszp)),
-                                 this->vscale);
-        auto vitem3 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, vszp)),
-                                 this->vscale);
+        auto vitem0 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, vszp)), this->vscale);
+        auto vitem1 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, vszp)), this->vscale);
+        auto vitem2 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, vszp)), this->vscale);
+        auto vitem3 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, vszp)), this->vscale);
         auto result0 = QConverter::convert<int64_t, __m128x2, __m128i>(
                 {{vitem0, vitem1}}, this->vdzp);
         auto result1 = QConverter::convert<int64_t, __m128x2, __m128i>(
@@ -92,11 +89,9 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint8, dt_quint8>
     constexpr static size_t SIMD_WIDTH = 16;
 
     void operator()(const __m128ix2& vsrc, dt_quint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128i operator()(const __m128i& vsrc) const {
@@ -126,8 +121,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint32, dt_quint8>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128ix2& vsrc, dt_quint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc)));
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst), _mm_set1_epi64x(operator()(vsrc)));
     }
     int64_t operator()(const __m128ix2& vsrc) const {
         auto vitem0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc.val[0]), this->vscale);
@@ -149,8 +144,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_float32, dt_quint8>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128x2& vsrc, dt_quint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc)));
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst), _mm_set1_epi64x(operator()(vsrc)));
     }
     int64_t operator()(const __m128x2& vsrc) const {
         auto vitem0 = _mm_mul_ps(vsrc.val[0], this->vscale);
@@ -171,12 +166,10 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint8, dt_qint8>
     constexpr static size_t SIMD_WIDTH = 16;
 
     void operator()(const __m128ix2& vsrc, dt_qint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
 
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128i operator()(const __m128i& vsrc) const {
@@ -186,16 +179,14 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint8, dt_qint8>
         auto vitem1 = _mm_mul_ps(fval_1, this->vscale);
         auto vitem2 = _mm_mul_ps(fval_2, this->vscale);
         auto vitem3 = _mm_mul_ps(fval_3, this->vscale);
-        auto result0 =
-                QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
+        auto result0 = QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
         return _mm_set_epi64x(result1, result0);
     }
 
     void operator()(src_ctype src, dst_ctype* dst) {
-        *reinterpret_cast<uint8_t*>(dst) = saturate<int8_t, float>(
-                std::round(src.as_int8() * scale), -128, 127);
+        *reinterpret_cast<uint8_t*>(dst) =
+                saturate<int8_t, float>(std::round(src.as_int8() * scale), -128, 127);
     }
 };
 
@@ -206,27 +197,23 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_quint8, dt_qint8>
     constexpr static size_t SIMD_WIDTH = 16;
 
     void operator()(const __m128ix2& vsrc, dt_qint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128i operator()(const __m128i& vsrc) const {
         CONVERT_UINT8_INT32
-        auto vitem0 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, vszp)),
-                                 this->vscale);
-        auto vitem1 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, vszp)),
-                                 this->vscale);
-        auto vitem2 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, vszp)),
-                                 this->vscale);
-        auto vitem3 = _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, vszp)),
-                                 this->vscale);
-        auto result0 =
-                QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
+        auto vitem0 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, vszp)), this->vscale);
+        auto vitem1 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, vszp)), this->vscale);
+        auto vitem2 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, vszp)), this->vscale);
+        auto vitem3 =
+                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, vszp)), this->vscale);
+        auto result0 = QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
         return _mm_set_epi64x(result1, result0);
     }
 
@@ -243,8 +230,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint32, dt_qint8>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128ix2& vsrc, dt_qint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc)));
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst), _mm_set1_epi64x(operator()(vsrc)));
     }
     int64_t operator()(const __m128ix2& vsrc) const {
         auto vitem0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc.val[0]), this->vscale);
@@ -252,8 +239,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint32, dt_qint8>
         return QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
     }
     void operator()(src_ctype src, dst_ctype* dst) {
-        *reinterpret_cast<int8_t*>(dst) = saturate<int8_t, float>(
-                std::round(src.as_int32() * scale), -128, 127);
+        *reinterpret_cast<int8_t*>(dst) =
+                saturate<int8_t, float>(std::round(src.as_int32() * scale), -128, 127);
     }
 };
 
@@ -278,8 +265,8 @@ struct TypeCvtOp<SIMDType::AVX2, dt_qint32, dt_qint8>
     }
 
     void operator()(src_ctype src, dst_ctype* dst) {
-        *reinterpret_cast<int8_t*>(dst) = saturate<int8_t, float>(
-                std::round(src.as_int32() * scale), -128, 127);
+        *reinterpret_cast<int8_t*>(dst) =
+                saturate<int8_t, float>(std::round(src.as_int32() * scale), -128, 127);
     }
 };
 
@@ -290,8 +277,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_float32, dt_qint8>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128x2 vsrc, dt_qint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc)));
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst), _mm_set1_epi64x(operator()(vsrc)));
     }
     int64_t operator()(const __m128x2& vsrc) const {
         auto vitem0 = _mm_mul_ps(vsrc.val[0], this->vscale);
@@ -332,26 +319,22 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_quint8, dt_qint32>
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128ix4 operator()(const __m128i& vsrc) const {
         CONVERT_UINT8_INT32
-        auto vitem0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, this->vszp)),
-                           this->vscale);
-        auto vitem1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, this->vszp)),
-                           this->vscale);
-        auto vitem2 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, this->vszp)),
-                           this->vscale);
-        auto vitem3 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, this->vszp)),
-                           this->vscale);
-        return {{QConverter::convert<__m128i, __m128>(vitem0),
+        auto vitem0 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_0, this->vszp)), this->vscale);
+        auto vitem1 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_1, this->vszp)), this->vscale);
+        auto vitem2 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_2, this->vszp)), this->vscale);
+        auto vitem3 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_3, this->vszp)), this->vscale);
+        return {
+                {QConverter::convert<__m128i, __m128>(vitem0),
                  QConverter::convert<__m128i, __m128>(vitem1),
                  QConverter::convert<__m128i, __m128>(vitem2),
                  QConverter::convert<__m128i, __m128>(vitem3)}};
     }
     void operator()(src_ctype src, dst_ctype* dst) {
-        *reinterpret_cast<int32_t*>(dst) =
-                std::round((src.as_uint8() - szp) * scale);
+        *reinterpret_cast<int32_t*>(dst) = std::round((src.as_uint8() - szp) * scale);
     }
 };
 
@@ -388,7 +371,8 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint8, dt_qint32>
         auto vitem1 = _mm_mul_ps(fval_1, this->vscale);
         auto vitem2 = _mm_mul_ps(fval_2, this->vscale);
         auto vitem3 = _mm_mul_ps(fval_3, this->vscale);
-        return {{QConverter::convert<__m128i, __m128>(vitem0),
+        return {
+                {QConverter::convert<__m128i, __m128>(vitem0),
                  QConverter::convert<__m128i, __m128>(vitem1),
                  QConverter::convert<__m128i, __m128>(vitem2),
                  QConverter::convert<__m128i, __m128>(vitem3)}};
@@ -405,11 +389,9 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_qint32, dt_qint32>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128ix2& vsrc, dt_qint32* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
     __m128i operator()(const __m128i& vsrc) const {
         auto vitem0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc), this->vscale);
@@ -427,11 +409,9 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_float32, dt_qint32>
     constexpr static size_t SIMD_WIDTH = 4;
 
     void operator()(const __m128x2& vsrc, dt_qint32* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[0]));
         dst += SIMD_WIDTH;
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc.val[1]));
     }
     __m128i operator()(const __m128& vsrc) const {
         auto vitem0 = _mm_mul_ps(vsrc, this->vscale);
@@ -470,18 +450,14 @@ struct TypeCvtOp<SIMDType::SSE4_2, dt_quint8, dt_float32>
     MEGDNN_ATTRIBUTE_TARGET("sse4.1")
     __m128x4 operator()(const __m128i& vsrc) const {
         CONVERT_UINT8_INT32
-        auto vitem0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_0, this->vszp)),
-                           this->vscale);
-        auto vitem1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_1, this->vszp)),
-                           this->vscale);
-        auto vitem2 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_2, this->vszp)),
-                           this->vscale);
-        auto vitem3 =
-                _mm_mul_ps(_mm_cvtepi32_ps(_mm_sub_epi32(val_3, this->vszp)),
-                           this->vscale);
+        auto vitem0 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_0, this->vszp)), this->vscale);
+        auto vitem1 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_1, this->vszp)), this->vscale);
+        auto vitem2 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_2, this->vszp)), this->vscale);
+        auto vitem3 = _mm_mul_ps(
+                _mm_cvtepi32_ps(_mm_sub_epi32(val_3, this->vszp)), this->vscale);
         return {{vitem0, vitem1, vitem2, vitem3}};
     }
     void operator()(src_ctype src, dst_ctype* dst) {

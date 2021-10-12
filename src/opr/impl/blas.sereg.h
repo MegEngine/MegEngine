@@ -21,10 +21,9 @@ namespace serialization {
 template <>
 struct OprMaker<opr::SVD, 1> {
     using Param = opr::SVD::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& i,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         return opr::SVD::make(i[0], param, config)[0].node()->owner_opr();
     }
@@ -33,13 +32,12 @@ struct OprMaker<opr::SVD, 1> {
 template <class MegDNNConv = megdnn::MatrixMul>
 struct MakeMatrixMulCaller {
     template <typename Opr>
-    static VarNode* make(const cg::VarNodeArray& inputs,
-                         const typename MegDNNConv::Param& param,
-                         const megdnn::param::ExecutionPolicy& execution_policy,
-                         const OperatorNodeConfig& config) {
+    static VarNode* make(
+            const cg::VarNodeArray& inputs, const typename MegDNNConv::Param& param,
+            const megdnn::param::ExecutionPolicy& execution_policy,
+            const OperatorNodeConfig& config) {
         if (inputs.size() == 2) {
-            return Opr::make(inputs[0], inputs[1], param, execution_policy,
-                             config)
+            return Opr::make(inputs[0], inputs[1], param, execution_policy, config)
                     .node();
         }
         return nullptr;
@@ -53,19 +51,19 @@ struct MatrixMulLoadDumpImpl {
         ctx.write_param<megdnn::param::MatrixMul>(opr.param());
     }
 
-    static VarNode* make(const cg::VarNodeArray& inputs,
-                         const megdnn::param::MatrixMul& param,
-                         const megdnn::param::ExecutionPolicy& execution_policy,
-                         const OperatorNodeConfig& config) {
-        VarNode* ret = Maker::template make<Opr>(inputs, param,
-                                                 execution_policy, config);
+    static VarNode* make(
+            const cg::VarNodeArray& inputs, const megdnn::param::MatrixMul& param,
+            const megdnn::param::ExecutionPolicy& execution_policy,
+            const OperatorNodeConfig& config) {
+        VarNode* ret =
+                Maker::template make<Opr>(inputs, param, execution_policy, config);
         mgb_assert(ret);
         return ret;
     }
 
-    static cg::OperatorNodeBase* load(OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
         auto param = ctx.read_param<megdnn::param::MatrixMul>();
         return make(inputs, param, {}, config)->owner_opr();
     }
@@ -73,14 +71,13 @@ struct MatrixMulLoadDumpImpl {
 
 template <>
 struct OprLoadDumpImpl<opr::MatrixMul, 2>
-        : public MatrixMulLoadDumpImpl<opr::MatrixMul,
-                                       MakeMatrixMulCaller<megdnn::MatrixMul>,
-                                       megdnn::MatrixMul> {};
+        : public MatrixMulLoadDumpImpl<
+                  opr::MatrixMul, MakeMatrixMulCaller<megdnn::MatrixMul>,
+                  megdnn::MatrixMul> {};
 template <>
 struct OprLoadDumpImpl<opr::BatchedMatrixMul, 2>
         : public MatrixMulLoadDumpImpl<
-                  opr::BatchedMatrixMul,
-                  MakeMatrixMulCaller<megdnn::BatchedMatrixMul>,
+                  opr::BatchedMatrixMul, MakeMatrixMulCaller<megdnn::BatchedMatrixMul>,
                   megdnn::BatchedMatrixMul> {};
 
 }  // namespace serialization

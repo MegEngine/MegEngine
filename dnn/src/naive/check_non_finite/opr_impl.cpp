@@ -18,7 +18,7 @@ namespace {
 using namespace megdnn;
 
 #define src_ctype dt_float32
-#define wtype dt_int32
+#define wtype     dt_int32
 
 void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
     std::function<wtype(size_t, size_t)> func;
@@ -39,19 +39,20 @@ void reduce_fwd(const src_ctype* sptr, wtype* dptr, size_t size) {
 namespace megdnn {
 namespace naive {
 
-size_t CheckNonFiniteImpl::get_workspace_in_bytes(const TensorLayout&,
-                                               const TensorLayout&) {
+size_t CheckNonFiniteImpl::get_workspace_in_bytes(
+        const TensorLayout&, const TensorLayout&) {
     return 0;
 }
 
-void CheckNonFiniteImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                           _megdnn_workspace workspace) {
+void CheckNonFiniteImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
 
     auto handle = static_cast<HandleImpl*>(this->handle());
     MEGDNN_DISPATCH_CPU_KERN(
-            handle, reduce_fwd(src.ptr<dt_float32>(), dst.ptr<dt_int32>(),
-                               src.layout.total_nr_elems()));
+            handle, reduce_fwd(
+                            src.ptr<dt_float32>(), dst.ptr<dt_int32>(),
+                            src.layout.total_nr_elems()));
 }
 }  // namespace naive
 }  // namespace megdnn

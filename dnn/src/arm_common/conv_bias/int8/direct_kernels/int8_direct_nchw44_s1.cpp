@@ -21,14 +21,12 @@
 namespace megdnn {
 namespace arm_common {
 namespace {
-template <BiasMode bias_mode, typename Op, int remain_w, int filter_size,
-          int c_dim, typename DstType>
-static void ker_neon_dirctconv_2x2s1_oc8_ow8(const int8_t* src_ptr,
-                                             const int8_t* weight_ptr,
-                                             const int32_t* bias_ptr,
-                                             DstType* dst_ptr, int ic, int ih,
-                                             int iw, int ld_dst_oc,
-                                             const Op& op) {
+template <
+        BiasMode bias_mode, typename Op, int remain_w, int filter_size, int c_dim,
+        typename DstType>
+static void ker_neon_dirctconv_2x2s1_oc8_ow8(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+        DstType* dst_ptr, int ic, int ih, int iw, int ld_dst_oc, const Op& op) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int ic_step = 4;
@@ -49,8 +47,8 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow8(const int8_t* src_ptr,
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
-            const int8_t* src_ic_0_3 = src_ptr + ic_idx * ic_stride +
-                                       fh_idx * iw * ic_step * pack_iw_len;
+            const int8_t* src_ic_0_3 =
+                    src_ptr + ic_idx * ic_stride + fh_idx * iw * ic_step * pack_iw_len;
 
             src[0] = vld1q_s8(src_ic_0_3);
             src[1] = vld1q_s8((src_ic_0_3 + 16));
@@ -63,8 +61,7 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow8(const int8_t* src_ptr,
             src[8] = vld1q_s8((src_ic_0_3 + 8 * 16));
 
             // oc == 0
-            const int8_t* read_weight_ptr =
-                    weight_ptr + fh_idx * fw * ld_weight_ic4;
+            const int8_t* read_weight_ptr = weight_ptr + fh_idx * fw * ld_weight_ic4;
 
             weight[0][0] = vld1q_s8(read_weight_ptr);
             weight[0][1] = vld1q_s8(read_weight_ptr + 16);
@@ -113,14 +110,12 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow8(const int8_t* src_ptr,
             c, op, dst_ptr, ld_dst_oc);
 }
 
-template <BiasMode bias_mode, typename Op, int remain_w, int filter_size,
-          int c_dim, typename DstType>
-static void ker_neon_dirctconv_2x2s1_oc4_ow8(const int8_t* src_ptr,
-                                             const int8_t* weight_ptr,
-                                             const int32_t* bias_ptr,
-                                             DstType* dst_ptr, int ic, int ih,
-                                             int iw, int ld_dst_oc,
-                                             const Op& op) {
+template <
+        BiasMode bias_mode, typename Op, int remain_w, int filter_size, int c_dim,
+        typename DstType>
+static void ker_neon_dirctconv_2x2s1_oc4_ow8(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+        DstType* dst_ptr, int ic, int ih, int iw, int ld_dst_oc, const Op& op) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int oc_step = 4;
@@ -139,8 +134,8 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow8(const int8_t* src_ptr,
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
         for (int fh_idx = 0; fh_idx < fh; ++fh_idx) {
-            const int8_t* src_ic_0_3 = src_ptr + ic_idx * ic_stride +
-                                       fh_idx * iw * ic_step * pack_iw_len;
+            const int8_t* src_ic_0_3 =
+                    src_ptr + ic_idx * ic_stride + fh_idx * iw * ic_step * pack_iw_len;
 
             src[0] = vld1q_s8(src_ic_0_3);
             src[1] = vld1q_s8((src_ic_0_3 + 16));
@@ -153,8 +148,7 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow8(const int8_t* src_ptr,
             src[8] = vld1q_s8((src_ic_0_3 + 8 * 16));
 
             // oc == 0
-            const int8_t* read_weight_ptr =
-                    weight_ptr + fh_idx * fw * ld_weight_ic4;
+            const int8_t* read_weight_ptr = weight_ptr + fh_idx * fw * ld_weight_ic4;
 
             weight[0][0] = vld1q_s8(read_weight_ptr);
             weight[0][1] = vld1q_s8(read_weight_ptr + 16);
@@ -186,12 +180,13 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow8(const int8_t* src_ptr,
             c, op, dst_ptr, ld_dst_oc);
 }
 
-template <BiasMode bias_mode, typename Op, int remain_w, int filter_size,
-          int c_dim, typename DstType>
+template <
+        BiasMode bias_mode, typename Op, int remain_w, int filter_size, int c_dim,
+        typename DstType>
 struct KerNeonDirectStride1Int8 {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih,
-                     int iw, const Op& op, int ld_dst_oc);
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, const Op& op, int ld_dst_oc);
 };
 /**
 dot like impl. dot 4 ic to 1 oc, accumale to c <ow, oc>
@@ -203,12 +198,11 @@ high 64 bit <0, 3> <0, 2> <1, 1> <1, 0> | <2, 3> <2, 2> <3, 1> <3, 0>
 dot: (<0, 0> + <0, 3>) + (<0, 1> + <0, 2>) -> <0>
 **/
 //! TODO: can try oh = 2 impl, oc = 8 impl
-template <BiasMode bias_mode, typename Op, int remain_w, int c_dim,
-          typename DstType>
+template <BiasMode bias_mode, typename Op, int remain_w, int c_dim, typename DstType>
 struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 3, c_dim, DstType> {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih,
-                     int iw, const Op& op, int ld_dst_oc) {
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, const Op& op, int ld_dst_oc) {
         constexpr int filter_size = 3;
         constexpr int fh = filter_size;
         constexpr int fw = filter_size;
@@ -285,12 +279,11 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 3, c_dim, DstType> {
     }
 };
 
-template <BiasMode bias_mode, typename Op, int remain_w, int c_dim,
-          typename DstType>
+template <BiasMode bias_mode, typename Op, int remain_w, int c_dim, typename DstType>
 struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 5, c_dim, DstType> {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih,
-                     int iw, const Op& op, int ld_dst_oc) {
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, const Op& op, int ld_dst_oc) {
         constexpr int filter_size = 5;
         constexpr int fh = filter_size;
         constexpr int fw = filter_size;
@@ -388,12 +381,11 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 5, c_dim, DstType> {
     }
 };
 
-template <BiasMode bias_mode, typename Op, int remain_w, int c_dim,
-          typename DstType>
+template <BiasMode bias_mode, typename Op, int remain_w, int c_dim, typename DstType>
 struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 7, c_dim, DstType> {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih,
-                     int iw, const Op& op, int ld_dst_oc) {
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, const Op& op, int ld_dst_oc) {
         constexpr int filter_size = 7;
         constexpr int fh = filter_size;
         constexpr int fw = filter_size;
@@ -513,13 +505,10 @@ struct KerNeonDirectStride1Int8<bias_mode, Op, remain_w, 7, c_dim, DstType> {
 };
 
 template <BiasMode bias_mode, typename Op, typename DstType>
-void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
-                                         const int8_t* filter,
-                                         const int32_t* bias, int32_t* temp,
-                                         DstType* dst, const size_t oc,
-                                         const size_t ic, const size_t ih,
-                                         const size_t iw, const size_t oh,
-                                         const size_t ow, const Op& op) {
+void conv_direct_stride1_2x2_int8_nchw44(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+        const size_t iw, const size_t oh, const size_t ow, const Op& op) {
     MEGDNN_MARK_USED_VAR(temp);
     constexpr size_t filter_size = 2;
     constexpr size_t fh = filter_size;
@@ -539,21 +528,18 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
     const int ld_oc = oh * ow * oc_step;
 
     using remain_fun = std::function<void(
-            const int8_t* src_ptr, const int8_t* weight_ptr,
-            const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih, int iw,
-            int ld_dst_oc, const Op& op)>;
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, int ld_dst_oc, const Op& op)>;
     remain_fun kern_big_oc_remain = nullptr;
     remain_fun kern_small_oc_remain = nullptr;
 
     switch (ow_remain) {
-#define cb(step)                                                           \
-    case step:                                                             \
-        kern_big_oc_remain =                                               \
-                ker_neon_dirctconv_2x2s1_oc8_ow8<bias_mode, Op, step,      \
-                                                 filter_size, 2, DstType>; \
-        kern_small_oc_remain =                                             \
-                ker_neon_dirctconv_2x2s1_oc4_ow8<bias_mode, Op, step,      \
-                                                 filter_size, 1, DstType>; \
+#define cb(step)                                                 \
+    case step:                                                   \
+        kern_big_oc_remain = ker_neon_dirctconv_2x2s1_oc8_ow8<   \
+                bias_mode, Op, step, filter_size, 2, DstType>;   \
+        kern_small_oc_remain = ker_neon_dirctconv_2x2s1_oc4_ow8< \
+                bias_mode, Op, step, filter_size, 1, DstType>;   \
         break;
 
         UNROLL_CALL_RAW(8, cb);
@@ -569,8 +555,8 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_idx) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
-                ker_neon_dirctconv_2x2s1_oc8_ow8<bias_mode, Op, ow_step, filter_size,
-                                                 2, DstType>(
+                ker_neon_dirctconv_2x2s1_oc8_ow8<
+                        bias_mode, Op, ow_step, filter_size, 2, DstType>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
                         dst + dst_offset, ic, ih, iw, ld_oc, op);
             }
@@ -579,9 +565,9 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_end) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
-                kern_big_oc_remain(src + src_offset, filter + weight_offset,
-                                   bias + oc_idx, dst + dst_offset, ic, ih, iw,
-                                   ld_oc, op);
+                kern_big_oc_remain(
+                        src + src_offset, filter + weight_offset, bias + oc_idx,
+                        dst + dst_offset, ic, ih, iw, ld_oc, op);
             }
         }
     }
@@ -594,8 +580,8 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_idx) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
-                ker_neon_dirctconv_2x2s1_oc4_ow8<bias_mode, Op, ow_step, filter_size,
-                                                 1, DstType>(
+                ker_neon_dirctconv_2x2s1_oc4_ow8<
+                        bias_mode, Op, ow_step, filter_size, 1, DstType>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
                         dst + dst_offset, ic, ih, iw, ld_oc, op);
             }
@@ -604,21 +590,18 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
                         (oh_idx * iw + ow_end) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
-                kern_small_oc_remain(src + src_offset, filter + weight_offset,
-                                     bias + oc_idx, dst + dst_offset, ic, ih,
-                                     iw, ld_oc, op);
+                kern_small_oc_remain(
+                        src + src_offset, filter + weight_offset, bias + oc_idx,
+                        dst + dst_offset, ic, ih, iw, ld_oc, op);
             }
         }
     }
 }
 template <BiasMode bias_mode, typename Op, int filter_size, typename DstType>
-void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
-                                          const int8_t* filter,
-                                          const int32_t* bias, int32_t* temp,
-                                          DstType* dst, const size_t oc,
-                                          const size_t ic, const size_t ih,
-                                          const size_t iw, const size_t oh,
-                                          const size_t ow, const Op& op) {
+void conv_direct_stride1_int8_nchw44_kern(
+        const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+        DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+        const size_t iw, const size_t oh, const size_t ow, const Op& op) {
     MEGDNN_MARK_USED_VAR(temp);
     constexpr size_t fh = filter_size;
     constexpr size_t fw = filter_size;
@@ -634,17 +617,15 @@ void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
     const size_t ow_remain = ow - ow_end;
 
     using remain_fun = std::function<void(
-            const int8_t* src_ptr, const int8_t* weight_ptr,
-            const int32_t* bias_ptr, DstType* dst_ptr, int ic, int ih, int iw,
-            const Op& op, int ld_dst_oc)>;
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int32_t* bias_ptr,
+            DstType* dst_ptr, int ic, int ih, int iw, const Op& op, int ld_dst_oc)>;
 
     remain_fun kern_small_oc_remain = nullptr;
     switch (ow_remain) {
-#define cb(step)                                                              \
-    case step:                                                                \
-        kern_small_oc_remain =                                                \
-                KerNeonDirectStride1Int8<bias_mode, Op, step, filter_size, 1, \
-                                         DstType>::impl;                      \
+#define cb(step)                                                     \
+    case step:                                                       \
+        kern_small_oc_remain = KerNeonDirectStride1Int8<             \
+                bias_mode, Op, step, filter_size, 1, DstType>::impl; \
         break;
 
         UNROLL_CALL_RAW(8, cb);
@@ -661,21 +642,19 @@ void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
                         (oh_idx * iw + ow_idx) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
-                KerNeonDirectStride1Int8<bias_mode, Op, ow_step, filter_size, 1,
-                                         DstType>::impl(src + src_offset,
-                                                        filter + weight_offset,
-                                                        bias + oc_idx,
-                                                        dst + dst_offset, ic,
-                                                        ih, iw, op, ld_dst_oc);
+                KerNeonDirectStride1Int8<
+                        bias_mode, Op, ow_step, filter_size, 1, DstType>::
+                        impl(src + src_offset, filter + weight_offset, bias + oc_idx,
+                             dst + dst_offset, ic, ih, iw, op, ld_dst_oc);
             }
             if (ow_remain > 0) {
                 const size_t src_offset =
                         (oh_idx * iw + ow_end) * ic_step * pack_iw_len;
                 const size_t dst_offset =
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
-                kern_small_oc_remain(src + src_offset, filter + weight_offset,
-                                     bias + oc_idx, dst + dst_offset, ic, ih,
-                                     iw, op, ld_dst_oc);
+                kern_small_oc_remain(
+                        src + src_offset, filter + weight_offset, bias + oc_idx,
+                        dst + dst_offset, ic, ih, iw, op, ld_dst_oc);
             }
         }
     }
@@ -685,43 +664,43 @@ void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
 namespace int8_direct_nchw44 {
 template <BiasMode bias_mode, typename Op, int filter_size, typename DstType>
 struct ConvDirectInt8Nchw44Choose<bias_mode, Op, filter_size, DstType, 1> {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int32_t* bias, int32_t* temp, DstType* dst,
-                     const size_t oc, const size_t ic, const size_t ih,
-                     const size_t iw, const size_t oh, const size_t ow,
-                     const Op& op) {
-        conv_direct_stride1_int8_nchw44_kern<bias_mode, Op, filter_size,
-                                             DstType>(
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+            DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+            const size_t iw, const size_t oh, const size_t ow, const Op& op) {
+        conv_direct_stride1_int8_nchw44_kern<bias_mode, Op, filter_size, DstType>(
                 src, filter, bias, temp, dst, oc, ic, ih, iw, oh, ow, op);
     }
 };
 
 template <BiasMode bias_mode, typename Op, typename DstType>
 struct ConvDirectInt8Nchw44Choose<bias_mode, Op, 2, DstType, 1> {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int32_t* bias, int32_t* temp, DstType* dst,
-                     const size_t oc, const size_t ic, const size_t ih,
-                     const size_t iw, const size_t oh, const size_t ow,
-                     const Op& op) {
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int32_t* bias, int32_t* temp,
+            DstType* dst, const size_t oc, const size_t ic, const size_t ih,
+            const size_t iw, const size_t oh, const size_t ow, const Op& op) {
         conv_direct_stride1_2x2_int8_nchw44<bias_mode, Op, DstType>(
                 src, filter, bias, temp, dst, oc, ic, ih, iw, oh, ow, op);
     }
 };
 
-#define DO_CONV_KERN_FUN(stride, DstType, filter_size, bias_mode, Op)      \
-    template struct ConvDirectInt8Nchw44Choose<bias_mode, Op, filter_size, \
-                                               DstType, stride>;
+#define DO_CONV_KERN_FUN(stride, DstType, filter_size, bias_mode, Op) \
+    template struct ConvDirectInt8Nchw44Choose<                       \
+            bias_mode, Op, filter_size, DstType, stride>;
 
-#define GET_OP_PARAM(stride, filter, bias_mode)                  \
-    DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                                                 \
-                     TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
-    DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                                                 \
-                     ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-    DO_CONV_KERN_FUN(stride, dt_qint8, filter, bias_mode,        \
-                                                                 \
-                     HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
+#define GET_OP_PARAM(stride, filter, bias_mode)         \
+    DO_CONV_KERN_FUN(                                   \
+            stride, dt_qint8, filter, bias_mode,        \
+                                                        \
+            TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
+    DO_CONV_KERN_FUN(                                   \
+            stride, dt_qint8, filter, bias_mode,        \
+                                                        \
+            ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+    DO_CONV_KERN_FUN(                                   \
+            stride, dt_qint8, filter, bias_mode,        \
+                                                        \
+            HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
     DO_CONV_KERN_FUN(stride, dt_int32, filter, bias_mode, NoneOp<dt_int32>)
 
 #define GET_BIAS_MODE_PARAM(stride, filter)         \

@@ -59,27 +59,25 @@ TEST_F(CUDA, CORRELATION_BACKWARDDATA1) {
                         uint32_t kernel_radius = (kernel_size - 1) / 2;
                         uint32_t border_size = max_displacement + kernel_radius;
                         uint32_t top_width =
-                                ceil(static_cast<float>(paddedbottomwidth -
-                                                        border_size * 2) /
+                                ceil(static_cast<float>(
+                                             paddedbottomwidth - border_size * 2) /
                                      static_cast<float>(stride1));
                         uint32_t top_height =
-                                ceil(static_cast<float>(paddedbottomheight -
-                                                        border_size * 2) /
+                                ceil(static_cast<float>(
+                                             paddedbottomheight - border_size * 2) /
                                      static_cast<float>(stride1));
-                        uint32_t neighborhood_grid_radius =
-                                max_displacement / stride2;
+                        uint32_t neighborhood_grid_radius = max_displacement / stride2;
                         uint32_t neighborhood_grid_width =
                                 neighborhood_grid_radius * 2 + 1;
-                        uint32_t top_channels = neighborhood_grid_width *
-                                                neighborhood_grid_width;
+                        uint32_t top_channels =
+                                neighborhood_grid_width * neighborhood_grid_width;
 
                         checker.set_param(param)
                                 .set_dtype(0, dtype)
                                 .set_dtype(1, dtype)
                                 .set_dtype(2, dtype)
                                 .set_dtype(3, dtype)
-                                .execs({{N, top_channels, top_height,
-                                         top_width},
+                                .execs({{N, top_channels, top_height, top_width},
                                         {N, C, OH, OW},
                                         {N, C, OH, OW},
                                         {N, C, OH, OW}});
@@ -121,27 +119,25 @@ TEST_F(CUDA, CORRELATION_BACKWARDDATA2) {
                         uint32_t kernel_radius = (kernel_size - 1) / 2;
                         uint32_t border_size = max_displacement + kernel_radius;
                         uint32_t top_width =
-                                ceil(static_cast<float>(paddedbottomwidth -
-                                                        border_size * 2) /
+                                ceil(static_cast<float>(
+                                             paddedbottomwidth - border_size * 2) /
                                      static_cast<float>(stride1));
                         uint32_t top_height =
-                                ceil(static_cast<float>(paddedbottomheight -
-                                                        border_size * 2) /
+                                ceil(static_cast<float>(
+                                             paddedbottomheight - border_size * 2) /
                                      static_cast<float>(stride1));
-                        uint32_t neighborhood_grid_radius =
-                                max_displacement / stride2;
+                        uint32_t neighborhood_grid_radius = max_displacement / stride2;
                         uint32_t neighborhood_grid_width =
                                 neighborhood_grid_radius * 2 + 1;
-                        uint32_t top_channels = neighborhood_grid_width *
-                                                neighborhood_grid_width;
+                        uint32_t top_channels =
+                                neighborhood_grid_width * neighborhood_grid_width;
 
                         checker.set_param(param)
                                 .set_dtype(0, dtype)
                                 .set_dtype(1, dtype)
                                 .set_dtype(2, dtype)
                                 .set_dtype(3, dtype)
-                                .execs({{N, top_channels, top_height,
-                                         top_width},
+                                .execs({{N, top_channels, top_height, top_width},
                                         {N, C, OH, OW},
                                         {N, C, OH, OW},
                                         {N, C, OH, OW}});

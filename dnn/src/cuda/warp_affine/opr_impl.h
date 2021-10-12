@@ -18,12 +18,13 @@ class WarpAffineImpl : public WarpAffine {
 public:
     using WarpAffine::WarpAffine;
 
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-              _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout& mat,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout& mat,
+            const TensorLayout&) override {
         //! Use workspace to store the transform matrix if inverse is false
         //! use double for the workspace dtype as float may cause accuracy error
         return mat.total_nr_elems() * sizeof(double);

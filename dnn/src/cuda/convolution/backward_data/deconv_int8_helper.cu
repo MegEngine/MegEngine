@@ -68,8 +68,7 @@ __global__ void reorder_filter_nhwc_to_cnxhwx_kernel(
 #pragma unroll
         for (int i = 0; i < interleaved; i++) {
             src_value[i] = *reinterpret_cast<const int*>(
-                    src + (ocb * interleaved + i) * FHFW * IC + fhfw * IC +
-                    icb * 4);
+                    src + (ocb * interleaved + i) * FHFW * IC + fhfw * IC + icb * 4);
         }
 
         auto trans = transpose_int8_interleavedx4<interleaved, vec_type>();
@@ -77,9 +76,9 @@ __global__ void reorder_filter_nhwc_to_cnxhwx_kernel(
 
 #pragma unroll
         for (int i = 0; i < 4; i++) {
-            *reinterpret_cast<vec_type*>(dst + (icb * 4 + i) * FHFW * OC +
-                                         (ocb * FHFW + fhfw) * interleaved) =
-                    dst_value[i];
+            *reinterpret_cast<vec_type*>(
+                    dst + (icb * 4 + i) * FHFW * OC +
+                    (ocb * FHFW + fhfw) * interleaved) = dst_value[i];
         }
     }
 }
@@ -90,8 +89,7 @@ void megdnn::cuda::deconv::reorder_filter_nc4hw4_to_n4hwc4(
         int8_t* dst, const int8_t* src, uint32_t OC, uint32_t IC, uint32_t FH,
         uint32_t FW, cudaStream_t stream) {
     dim3 threads(BLOCKSIZE_X, BLOCKSIZE_Y, 1);
-    dim3 blocks(DIVUP(FH * FW, BLOCKSIZE_X), DIVUP(IC / 4, BLOCKSIZE_Y),
-                OC / 4);
+    dim3 blocks(DIVUP(FH * FW, BLOCKSIZE_X), DIVUP(IC / 4, BLOCKSIZE_Y), OC / 4);
 
     reorder_filter_nc4hw4_to_n4hwc4_kernel<<<blocks, threads, 0, stream>>>(
             dst, src, OC, IC, FH * FW);
@@ -107,16 +105,13 @@ void megdnn::cuda::deconv::reorder_filter_nhwc_to_cnxhwx(
 
     if (interleaved == 4) {
         reorder_filter_nhwc_to_cnxhwx_kernel<4, int>
-                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
-                                                       FH * FW);
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC, FH * FW);
     } else if (interleaved == 8) {
         reorder_filter_nhwc_to_cnxhwx_kernel<8, int2>
-                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
-                                                       FH * FW);
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC, FH * FW);
     } else {
         reorder_filter_nhwc_to_cnxhwx_kernel<16, int4>
-                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC,
-                                                       FH * FW);
+                <<<nr_blocks, nr_threads, 0, stream>>>(dst, src, OC, IC, FH * FW);
     }
     after_kernel_launch();
 }

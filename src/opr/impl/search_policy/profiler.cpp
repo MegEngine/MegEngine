@@ -56,8 +56,8 @@ std::string serialize_policy(const megdnn::ExecutionPolicy& policy) {
     return ret;
 }
 
-megdnn::ExecutionPolicy deserialize_policy(const char* buf, uint32_t size,
-                                           uint32_t& offset) {
+megdnn::ExecutionPolicy deserialize_policy(
+        const char* buf, uint32_t size, uint32_t& offset) {
     megdnn::ExecutionPolicy ret;
 #define cb(_val, _type)                                                 \
     _val = megdnn::Algorithm::deserialize_read_pod<_type>(buf, offset); \
@@ -88,20 +88,20 @@ megdnn::ExecutionPolicy deserialize_policy(const char* buf, uint32_t size,
     }
     return ret;
 }
-}
+}  // namespace
 
 namespace mgb {
 namespace opr {
-#define APPLY(statement, ...)                                  \
-    mgb::apply([&](const auto&... args) { return statement; }, \
-               std::tuple_cat(__VA_ARGS__))
+#define APPLY(statement, ...)                               \
+    mgb::apply(                                             \
+            [&](const auto&... args) { return statement; }, \
+            std::tuple_cat(__VA_ARGS__))
 
 ////////////// TimedProfiler::Param::ExecutionPolicyBlob //////////////////////
 
 template <typename Opr>
-typename TimedProfiler<Opr>::Param::ExecutionPolicyBlob
-TimedProfiler<Opr>::Param::ExecutionPolicyBlob::serialize(
-        const megdnn::ExecutionPolicy& policy) {
+typename TimedProfiler<Opr>::Param::ExecutionPolicyBlob TimedProfiler<Opr>::Param::
+        ExecutionPolicyBlob::serialize(const megdnn::ExecutionPolicy& policy) {
     ExecutionPolicyBlob ret;
     std::string serialize_bin = serialize_policy(policy);
     mgb_assert(serialize_bin.size() < MAX_SIZE_IN_BYTES);
@@ -111,8 +111,8 @@ TimedProfiler<Opr>::Param::ExecutionPolicyBlob::serialize(
 }
 
 template <typename Opr>
-megdnn::ExecutionPolicy
-TimedProfiler<Opr>::Param::ExecutionPolicyBlob::deserialize() const {
+megdnn::ExecutionPolicy TimedProfiler<Opr>::Param::ExecutionPolicyBlob::deserialize()
+        const {
     uint32_t offset = 0;
     auto&& ret = deserialize_policy(data, size, offset);
     mgb_assert(offset == size);
@@ -124,12 +124,10 @@ TimedProfiler<Opr>::Param::ExecutionPolicyBlob::deserialize() const {
     TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob::serialize(       \
             const megdnn::ExecutionPolicy& policy);                          \
     template megdnn::ExecutionPolicy                                         \
-    TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob::deserialize()    \
-            const;
+    TimedProfiler<megdnn::Opr>::Param::ExecutionPolicyBlob::deserialize() const;
 
 MGB_FOREACH_FASTRUN_OPR(INST)
 #undef INST
-
 
 ////////////////// TimedProfiler //////////////////////////////
 
@@ -150,18 +148,16 @@ double TimedProfiler<Opr>::init_timeout_setting() {
     return 0;
 }
 
-#define APPLY(statement, ...)                                  \
-    mgb::apply([&](const auto&... args) { return statement; }, \
-               std::tuple_cat(__VA_ARGS__))
+#define APPLY(statement, ...)                               \
+    mgb::apply(                                             \
+            [&](const auto&... args) { return statement; }, \
+            std::tuple_cat(__VA_ARGS__))
 
 template <typename Opr>
-void TimedProfiler<Opr>::preprocess(const TensorLayoutArray&,
-                                    const megdnn::SmallVector<DeviceTensorND>&,
-                                    intl::UniqPtrWithCN<Opr>&,
-                                    megdnn::Workspace&,
-                                    std::array<TensorLayout, arity>&,
-                                    std::array<DeviceTensorND, arity_in>&,
-                                    PreprocessFilter<Opr>&) {
+void TimedProfiler<Opr>::preprocess(
+        const TensorLayoutArray&, const megdnn::SmallVector<DeviceTensorND>&,
+        intl::UniqPtrWithCN<Opr>&, megdnn::Workspace&, std::array<TensorLayout, arity>&,
+        std::array<DeviceTensorND, arity_in>&, PreprocessFilter<Opr>&) {
     // Opr is neither convbias nor convolution.This function do nothing.
 }
 
@@ -171,8 +167,7 @@ void TimedProfiler<megdnn::ConvBias>::preprocess(
         const TensorLayoutArray& preprocessed_layout,
         const SmallVector<DeviceTensorND>& flt_val,
         intl::UniqPtrWithCN<megdnn::ConvBias>& megdnn_opr,
-        megdnn::Workspace& mdn_workspace,
-        std::array<TensorLayout, arity>& layouts,
+        megdnn::Workspace& mdn_workspace, std::array<TensorLayout, arity>& layouts,
         std::array<DeviceTensorND, arity_in>& inp_val,
         PreprocessFilter<megdnn::ConvBias>& prep_flt) {
     if (!preprocessed_layout.empty()) {
@@ -183,8 +178,8 @@ void TimedProfiler<megdnn::ConvBias>::preprocess(
             pf.tensors[i] = flt_val[i].as_megdnn();
         }
         APPLY(megdnn_opr->exec_preprocess(args..., &pf, mdn_workspace),
-              std::forward_as_tuple(layouts[0], inp_val[1].as_megdnn(),
-                                    inp_val[2].as_megdnn()),
+              std::forward_as_tuple(
+                      layouts[0], inp_val[1].as_megdnn(), inp_val[2].as_megdnn()),
               array_skip<arity_in - 1>(layouts));
     }
 }
@@ -195,8 +190,7 @@ void TimedProfiler<megdnn::ConvolutionForward>::preprocess(
         const TensorLayoutArray& preprocessed_layout,
         const megdnn::SmallVector<DeviceTensorND>& flt_val,
         intl::UniqPtrWithCN<megdnn::ConvolutionForward>& megdnn_opr,
-        megdnn::Workspace& mdn_workspace,
-        std::array<TensorLayout, arity>& layouts,
+        megdnn::Workspace& mdn_workspace, std::array<TensorLayout, arity>& layouts,
         std::array<DeviceTensorND, arity_in>& inp_val,
         PreprocessFilter<megdnn::ConvolutionForward>& prep_flt) {
     if (!preprocessed_layout.empty()) {
@@ -222,8 +216,7 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     mgb_assert(miopen_algo_search_enabled, "MIOpen algo search not enabled");
 #endif
     auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn =
-            CompNode::load(param.comp_node_physical, param.comp_node_logical);
+    CompNode cn = CompNode::load(param.comp_node_physical, param.comp_node_logical);
     auto megdnn_opr = intl::create_megdnn_opr<Opr>(cn);
     std::array<TensorLayout, arity> layouts;
 
@@ -240,11 +233,11 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
 #define cb(_dt)                  \
     case DTypeTrait<_dt>::enumv: \
         return _dt(1.0f)
-            
+
             cb(dtype::QuantizedS8);
             cb(dtype::QuantizedS16);
             cb(dtype::QuantizedS32);
-            cb(dtype::QuantizedS4);        
+            cb(dtype::QuantizedS4);
             default:
                 return DType::from_enum(enumv);
 #undef cb
@@ -262,8 +255,7 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     if_constexpr<opr_supports_preprocess<Opr>()>([&](auto _) {
         if (param.allow_weight_preprocess) {
             preprocessed_layout = APPLY(
-                    _(megdnn_opr)->deduce_preprocessed_filter_layout(args...),
-                    layouts);
+                    _(megdnn_opr)->deduce_preprocessed_filter_layout(args...), layouts);
         }
     });
 
@@ -308,8 +300,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     // allocate storage for preprocessed filter
     SmallVector<DeviceTensorND> flt_val(preprocessed_layout.size());
     for (size_t i = 0; i < preprocessed_layout.size(); i++) {
-        flt_val[i] = {cn, preprocessed_layout[i], preprocessed_layout[i].dtype,
-                      preprocessed_layout[i].format};
+        flt_val[i] = {
+                cn, preprocessed_layout[i], preprocessed_layout[i].dtype,
+                preprocessed_layout[i].format};
     }
 
     for (int i = 0; i < arity_in; ++i) {
@@ -317,8 +310,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
     }
 
     PreprocessFilter<Opr> prep_flt;
-    preprocess(preprocessed_layout, flt_val, megdnn_opr, mdn_workspace, layouts,
-               inp_val, prep_flt);
+    preprocess(
+            preprocessed_layout, flt_val, megdnn_opr, mdn_workspace, layouts, inp_val,
+            prep_flt);
 
     RealTimer timer;
     auto ev_start = cn.create_event(CompNode::Event::NEED_TIMER),
@@ -329,18 +323,18 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
                 auto&& opr = _(megdnn_opr);
                 PreprocessFilter<Opr>* pf =
                         preprocessed_layout.empty() ? nullptr : &prep_flt;
-                APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace),
-                      inp_val, out_val);
+                APPLY(opr->exec(args.as_megdnn()..., pf, mdn_workspace), inp_val,
+                      out_val);
             },
             /* else */
             [&](auto _) {
-                APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace),
-                      inp_val, out_val);
+                APPLY(_(megdnn_opr)->exec(args.as_megdnn()..., mdn_workspace), inp_val,
+                      out_val);
             });
     ev_end->record();
 
-    megdnn::Algorithm* algo = megdnn_opr->get_algorithm_from_desc(
-            megdnn_opr->execution_policy().algo);
+    megdnn::Algorithm* algo =
+            megdnn_opr->get_algorithm_from_desc(megdnn_opr->execution_policy().algo);
     mgb_assert(algo);
     double next_report_time = 0.5;
     while (!ev_end->finished()) {
@@ -351,8 +345,9 @@ typename TimedProfiler<Opr>::TResult TimedProfiler<Opr>::prof_impl(
                     " (limit can be set by MGB_CONV_PROFILING_TIMEOUT) ",
                     algo->name(), timer.get_secs(), param.actual_timeout);
 #else
-            mgb_log_warn("profiling conv algo %s already took %.3f/%.3f secs",
-                         algo->name(), timer.get_secs(), param.actual_timeout);
+            mgb_log_warn(
+                    "profiling conv algo %s already took %.3f/%.3f secs", algo->name(),
+                    timer.get_secs(), param.actual_timeout);
 #endif
             next_report_time = timer.get_secs() + 1;
         }
@@ -379,11 +374,10 @@ Maybe<typename TimedProfiler<Opr>::Result> TimedProfiler<Opr>::profile(
     } else if (timeout_setting) {
         timeout = std::min(timeout, timeout_setting);
     }
-    param.actual_timeout =
-            timeout ? timeout : std::numeric_limits<double>::infinity();
+    param.actual_timeout = timeout ? timeout : std::numeric_limits<double>::infinity();
     auto res = sys::TimedFuncInvoker::ins().invoke(
-            AlgoChooserFuncId<Opr>::ID,
-            TParam::from_pod(const_cast<Param&>(param)), timeout);
+            AlgoChooserFuncId<Opr>::ID, TParam::from_pod(const_cast<Param&>(param)),
+            timeout);
     if (res.valid())
         return res.val().template as_single_pod<Result>();
     return None;
@@ -396,8 +390,7 @@ void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
     megcore::enableMIOpenAlgoSearch(true);
 #endif
     auto&& param = raw_param.as_single_pod<Param>();
-    CompNode cn =
-            CompNode::load(param.comp_node_physical, param.comp_node_logical);
+    CompNode cn = CompNode::load(param.comp_node_physical, param.comp_node_logical);
     // wait for cuda init, so its time does not get accounted in timeout
     cn.sync();
     MIDOUT_E
@@ -410,8 +403,7 @@ void TimedProfiler<Opr>::prof_init_device(const TParam& raw_param) {
     TimedProfiler<megdnn::Opr>::prof_impl(const TParam& raw_param);           \
     template Maybe<typename TimedProfiler<megdnn::Opr>::Result>               \
     TimedProfiler<megdnn::Opr>::profile(const Param& param, double& timeout); \
-    template void TimedProfiler<megdnn::Opr>::prof_init_device(               \
-            const TParam& raw_param);
+    template void TimedProfiler<megdnn::Opr>::prof_init_device(const TParam& raw_param);
 
 MGB_FOREACH_FASTRUN_OPR(INST)
 #undef INST

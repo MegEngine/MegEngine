@@ -14,15 +14,12 @@
 
 namespace megdnn {
 
-void DotForward::check_exec(const TensorLayout &A,
-        const TensorLayout &B,
-        const TensorLayout &C,
-        size_t workspace_in_bytes)
-{
+void DotForward::check_exec(
+        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
+        size_t workspace_in_bytes) {
     auto errmsg = [&]() {
-        return megdnn_layout_msg(A)
-        + ", " + megdnn_layout_msg(B)
-        + ", " + megdnn_layout_msg(C);
+        return megdnn_layout_msg(A) + ", " + megdnn_layout_msg(B) + ", " +
+               megdnn_layout_msg(C);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert(A.ndim == 1_z && A.stride[0] >= 0, "%s", errmsg().c_str());
@@ -36,13 +33,11 @@ void DotForward::check_exec(const TensorLayout &A,
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void DotForward::deduce_layout(const TensorLayout &A,
-        const TensorLayout &,
-        TensorLayout &C)
-{
+void DotForward::deduce_layout(
+        const TensorLayout& A, const TensorLayout&, TensorLayout& C) {
     C = TensorLayout(TensorShape{1}, A.dtype);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

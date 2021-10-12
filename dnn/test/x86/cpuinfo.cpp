@@ -21,8 +21,7 @@ namespace test {
 TEST(X86_RUNTIME, CPUINFO_XEON6130) {
     ASSERT_TRUE(cpuinfo_initialize());
 
-    int right_cpu =
-            strcmp(cpuinfo_get_package(0)->name, "Intel Xeon Gold 6130");
+    int right_cpu = strcmp(cpuinfo_get_package(0)->name, "Intel Xeon Gold 6130");
 
     if (!right_cpu) {
         ASSERT_TRUE(cpuinfo_get_processors());

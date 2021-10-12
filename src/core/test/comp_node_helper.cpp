@@ -125,8 +125,7 @@ void run_comp_seq_rec_basic_level2(CompNode cn) {
 void run_comp_seq_rec_dyn_elemwise(CompNode cn, bool fake_first) {
     // dynamic memory is allocated in elemwise
     HostTensorGenerator<> gen;
-    auto host_x = gen({3, 3}, cn), host_y = gen({1, 3}, cn),
-         host_z = gen({3, 1}, cn);
+    auto host_x = gen({3, 3}, cn), host_y = gen({1, 3}, cn), host_z = gen({3, 1}, cn);
 
     auto check = [&]() {
         HostTensorND ret(CompNode::load("cpux"), host_x->shape());
@@ -202,13 +201,13 @@ void run_level2(CompNode cn, bool use_multi_holder) {
              large = opr::ImmutableTensor::make(*graph, *host_large),
              z = opr::Host2DeviceCopy::make(*graph, host_z),
              // elemwise with larger tmp storage
-                t0 = opr::Elemwise::make({c, y, z},
-                                         opr::Elemwise::Mode::FUSE_MUL_ADD3) +
+                t0 = opr::Elemwise::make(
+                             {c, y, z}, opr::Elemwise::Mode::FUSE_MUL_ADD3) +
                      large,
              // t1 shape is {8, 1}
                 t1 = opr::reduce_sum(t0, z.symshape()),
-             t2 = opr::Elemwise::make({repeat2(c), y, repeat2(t1)},
-                                      opr::Elemwise::Mode::FUSE_MUL_ADD3),
+             t2 = opr::Elemwise::make(
+                     {repeat2(c), y, repeat2(t1)}, opr::Elemwise::Mode::FUSE_MUL_ADD3),
              large1 = opr::ImmutableTensor::make(*graph, *host_large);
         t2 * 2;  // unused opr
 
@@ -293,8 +292,8 @@ template <>
 void run<level2_share_storage>(CompNode cn) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1}, cn), host_y = gen({1}, cn), host_z = gen({10}, cn);
-    auto make_func = [&](bool enable)
-            -> thin_function<std::array<const HostTensorND*, 2>()> {
+    auto make_func =
+            [&](bool enable) -> thin_function<std::array<const HostTensorND*, 2>()> {
         auto g0 = ComputingGraph::make(), g1 = ComputingGraph::make();
         if (enable) {
             g0->options().var_sanity_check_first_run = false;
@@ -313,8 +312,7 @@ void run<level2_share_storage>(CompNode cn) {
              host_t1 = std::make_shared<HostTensorND>();
         auto f0 = g0->compile({make_callback_copy(t0, *host_t0)});
         auto f1 = g1->compile({make_callback_copy(t1, *host_t1)});
-        std::shared_ptr<cg::AsyncExecutable> sh_f0(f0.release()),
-                sh_f1(f1.release());
+        std::shared_ptr<cg::AsyncExecutable> sh_f0(f0.release()), sh_f1(f1.release());
         if (enable) {
             ComputingGraph::assert_destroy(g0);
             ComputingGraph::assert_destroy(g1);
@@ -461,8 +459,7 @@ void run<shape_dep_const_shape>(CompNode cn) {
     {
         // dump graph
         auto graph = ComputingGraph::make();
-        auto x = opr::Host2DeviceCopy::make(*graph, host_x,
-                                            OperatorNodeConfig{"x"}),
+        auto x = opr::Host2DeviceCopy::make(*graph, host_x, OperatorNodeConfig{"x"}),
              y = x.flatten() +
                  opr::reduce_sum(opr::GetVarShape::make(x), x.make_scalar(1));
 
@@ -501,8 +498,7 @@ void run<multi_recorder_run>(CompNode cn) {
     std::vector<HostTensorND> host_z_v(2, HostTensorND());
     std::vector<std::unique_ptr<mgb::cg::AsyncExecutable>> funcs;
     auto host_x = gen({3, 4, 10, 8}, cn), host_y = gen({2, 3, 2, 3, 3}, cn);
-    auto gen_graph =
-            [&](int graph_id) -> std::unique_ptr<mgb::cg::AsyncExecutable> {
+    auto gen_graph = [&](int graph_id) -> std::unique_ptr<mgb::cg::AsyncExecutable> {
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x),
              y = opr::Host2DeviceCopy::make(*graph, host_y),

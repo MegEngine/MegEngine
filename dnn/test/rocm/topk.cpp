@@ -16,7 +16,6 @@
 using namespace megdnn;
 using namespace test;
 
-
 /*
  * !!!!!!!!!!!!!!!! IMPORTANT NOTE !!!!!!!!!!!!!!!!
  * The kernels are indepedently developed and tested in the

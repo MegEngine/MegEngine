@@ -23,16 +23,15 @@ using namespace arm_common;
 
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8)
 
-using direct_fun =
-        std::function<void(const WorkspaceBundle& bundle,
-                           const ConvBiasImpl::NCBKernParam& ncb_param,
-                           const ConvBiasImpl::NCBKernIndex& ncb_index)>;
+using direct_fun = std::function<void(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& ncb_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index)>;
 
 namespace {
 
 static void get_rectified_size(
-        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, int& ih,
-        int& iw, int& oh, int& ow) {
+        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, int& ih, int& iw,
+        int& oh, int& ow) {
     int IC = param.filter_meta.icpg;
     int IW = param.isz[1];
     int OH = param.osz[0];
@@ -52,8 +51,7 @@ static void get_rectified_size(
     iw = round_up(IW + 2 * PW, cacheline);
 }
 
-static inline int get_perthread_cache_bytes(const int ic, const int ih,
-                                            const int iw) {
+static inline int get_perthread_cache_bytes(const int ic, const int ih, const int iw) {
     // border_size is used to avoid read illegal memory
     int border_size = 64 * 2;
     return ic * ih * iw * sizeof(int8_t) + border_size;
@@ -69,11 +67,12 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     return {nullptr, {bytes_of_copy_per_thread * param.nr_threads}};
 }
 
-template <typename dst_type, size_t filter_size, BiasMode bias_mode,
-          typename Op, int stride>
-static void conv_kern(const WorkspaceBundle& bundle,
-                      const ConvBiasImpl::NCBKernParam& ncb_param,
-                      const ConvBiasImpl::NCBKernIndex& ncb_index) {
+template <
+        typename dst_type, size_t filter_size, BiasMode bias_mode, typename Op,
+        int stride>
+static void conv_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& ncb_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index) {
     const int OH = ncb_param.osz[0];
     const int OW = ncb_param.osz[1];
     const int FH = ncb_param.filter_meta.spatial[0];
@@ -99,8 +98,8 @@ static void conv_kern(const WorkspaceBundle& bundle,
     const int oh_tile_id = ncb_index.ndrange_id[2];
     const int thread_id = ncb_index.thread_id;
 
-    const int oh_tile_size = l2_block_helper(ncb_param.nr_threads, OH,
-                                             IC * IW * sizeof(int8_t) * 2);
+    const int oh_tile_size =
+            l2_block_helper(ncb_param.nr_threads, OH, IC * IW * sizeof(int8_t) * 2);
     const int oh_start_row = oh_tile_id * oh_tile_size;
     const int ih_start_row = std::max(oh_start_row * SH - PH, 0);
 
@@ -114,13 +113,11 @@ static void conv_kern(const WorkspaceBundle& bundle,
     const int cols_padding_at_right = std::max(iw2 - IW - PW, 0);
 
     //! src layout{IC/4, IH, IW, 4}
-    const int bytes_of_src_offset =
-            ih_start_row * IW * IC_PACK_SIZE * sizeof(int8_t);
+    const int bytes_of_src_offset = ih_start_row * IW * IC_PACK_SIZE * sizeof(int8_t);
     const int8_t* copy_src = static_cast<const int8_t*>(
             ncb_param.src<int8_t>(batch_id, group_id) + bytes_of_src_offset);
 
-    const int bytes_of_copy_per_thread =
-            get_perthread_cache_bytes(IC, ih2, iw2);
+    const int bytes_of_copy_per_thread = get_perthread_cache_bytes(IC, ih2, iw2);
     int8_t* copy_dst = reinterpret_cast<int8_t*>(bundle.get(0)) +
                        thread_id * bytes_of_copy_per_thread;
 
@@ -142,15 +139,14 @@ static void conv_kern(const WorkspaceBundle& bundle,
 
     Op op = Op(1.0f, 4.0f);
     if (ncb_param.dst_type.enumv() == DTypeEnum::QuantizedS8) {
-        float scale_bias =
-                ncb_param.bias_type.param<dtype::QuantizedS32>().scale;
+        float scale_bias = ncb_param.bias_type.param<dtype::QuantizedS32>().scale;
         float scale_dst = ncb_param.dst_type.param<dtype::QuantizedS8>().scale;
         op = Op(scale_bias, scale_dst);
     }
     direct_dotprod_nchw44::conv_direct_sdot_int8_nchw44<
             dst_type, stride, bias_mode, Op, filter_size>(
-            dst, OH, OW, copy_dst, ih_real_size, iw2, weights, bias,
-            oh_real_size, OC, IC, op);
+            dst, OH, OW, copy_dst, ih_real_size, iw2, weights, bias, oh_real_size, OC,
+            IC, op);
 }
 
 }  // namespace
@@ -158,7 +154,7 @@ static void conv_kern(const WorkspaceBundle& bundle,
 bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
         const NCBKernSizeParam& param,
         AlgoSelectionStrategy algo_selection_strategy) const {
-    if (!cpuinfo_has_arm_neon_dot()){
+    if (!cpuinfo_has_arm_neon_dot()) {
         return false;
     }
     MEGDNN_MARK_USED_VAR(algo_selection_strategy);
@@ -187,9 +183,8 @@ bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::usable(
     bool layout_ok = fm.format == param::Convolution::Format::NCHW44_DOT &&
                      IC % 4 == 0 && OC % 4 == 0;
 
-    bool param_ok = !fm.should_flip && fm.spatial_ndim == 2 &&
-                    fm.dilation[0] == 1 && fm.dilation[1] == 1 && FH == FW &&
-                    (FH >= 2 && FH <= 7);
+    bool param_ok = !fm.should_flip && fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
+                    fm.dilation[1] == 1 && FH == FW && (FH >= 2 && FH <= 7);
 
     bool stride_ok = SH == SW && (SH == 1 || SH == 2);
 
@@ -204,19 +199,20 @@ bool ConvBiasImpl::AlgoDotS8Direct_NCHW44::is_preferred(
 
 size_t ConvBiasImpl::AlgoDotS8Direct_NCHW44::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
-                 midout_iv("ALGODOTS8DIRECT_NCHW44::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_int8,
+            midout_iv("ALGODOTS8DIRECT_NCHW44::get_workspace"_hash)) {
         return get_bundle(param).total_size_in_bytes();
     }
     MIDOUT_END();
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,
-                 midout_iv("ALGODOTS8DIRECT_NCHW44::dispatch_kerns"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_int8,
+            midout_iv("ALGODOTS8DIRECT_NCHW44::dispatch_kerns"_hash)) {
         auto fm = param.filter_meta;
         size_t BATCH = param.n;
         size_t GROUP = fm.group;
@@ -224,47 +220,48 @@ ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
         direct_fun kernel = nullptr;
         bool quantized = param.dst_type.enumv() == DTypeEnum::QuantizedS8;
 
-#define DO_CONV_KERN_FUN(dst_type, filter, bias_mode, op, stride)      \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8,                     \
-                 midout_iv(#dst_type #filter #bias_mode #op##_hash)) { \
-        kernel = conv_kern<dst_type, filter, bias_mode, op, stride>;   \
-    }                                                                  \
+#define DO_CONV_KERN_FUN(dst_type, filter, bias_mode, op, stride)    \
+    MIDOUT_BEGIN(                                                    \
+            megdnn_arm_common_conv_bias_int8,                        \
+            midout_iv(#dst_type #filter #bias_mode #op##_hash)) {    \
+        kernel = conv_kern<dst_type, filter, bias_mode, op, stride>; \
+    }                                                                \
     MIDOUT_END();
 
-#define GET_OP_PARAM(i, bias_mode, stride)                                   \
-    switch (param.nonlineMode) {                                             \
-        case param::ConvBias::NonlineMode::IDENTITY:                         \
-            if (quantized) {                                                 \
-                DO_CONV_KERN_FUN(dt_int8, i, bias_mode,                      \
-                                 TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>, \
-                                 stride)                                     \
-            } else {                                                         \
-                DO_CONV_KERN_FUN(dt_int32, i, bias_mode,                     \
-                                 NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>,    \
-                                 stride)                                     \
-            }                                                                \
-            break;                                                           \
-        case param::ConvBias::NonlineMode::RELU:                             \
-            if (quantized) {                                                 \
-                DO_CONV_KERN_FUN(dt_int8, i, bias_mode,                      \
-                                 ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>,    \
-                                 stride)                                     \
-            } else {                                                         \
-                megdnn_assert("No support NoQuantized RELU");                \
-            }                                                                \
-            break;                                                           \
-        case param::ConvBias::NonlineMode::H_SWISH:                          \
-            if (quantized) {                                                 \
-                DO_CONV_KERN_FUN(dt_int8, i, bias_mode,                      \
-                                 HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>,  \
-                                 stride)                                     \
-            } else {                                                         \
-                megdnn_assert("No support NoQuantized H_SWISH");             \
-            }                                                                \
-            break;                                                           \
-        default:                                                             \
-            megdnn_assert(0);                                                \
-            break;                                                           \
+#define GET_OP_PARAM(i, bias_mode, stride)                                  \
+    switch (param.nonlineMode) {                                            \
+        case param::ConvBias::NonlineMode::IDENTITY:                        \
+            if (quantized) {                                                \
+                DO_CONV_KERN_FUN(                                           \
+                        dt_int8, i, bias_mode,                              \
+                        TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>, stride) \
+            } else {                                                        \
+                DO_CONV_KERN_FUN(                                           \
+                        dt_int32, i, bias_mode,                             \
+                        NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>, stride)    \
+            }                                                               \
+            break;                                                          \
+        case param::ConvBias::NonlineMode::RELU:                            \
+            if (quantized) {                                                \
+                DO_CONV_KERN_FUN(                                           \
+                        dt_int8, i, bias_mode,                              \
+                        ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>, stride)    \
+            } else {                                                        \
+                megdnn_assert("No support NoQuantized RELU");               \
+            }                                                               \
+            break;                                                          \
+        case param::ConvBias::NonlineMode::H_SWISH:                         \
+            if (quantized) {                                                \
+                DO_CONV_KERN_FUN(                                           \
+                        dt_int8, i, bias_mode,                              \
+                        HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>, stride)  \
+            } else {                                                        \
+                megdnn_assert("No support NoQuantized H_SWISH");            \
+            }                                                               \
+            break;                                                          \
+        default:                                                            \
+            megdnn_assert(0);                                               \
+            break;                                                          \
     }
 
 #define GET_STRIDE_PARAM(filter, bias_mode)     \
@@ -325,8 +322,8 @@ ConvBiasImpl::AlgoDotS8Direct_NCHW44::dispatch_kerns(
         int OH = param.osz[0];
         int IC = param.filter_meta.icpg;
         int IW = param.isz[1];
-        int oh_tile_size = l2_block_helper(param.nr_threads, OH,
-                                           IC * IW * sizeof(int8_t) * 2);
+        int oh_tile_size =
+                l2_block_helper(param.nr_threads, OH, IC * IW * sizeof(int8_t) * 2);
         size_t oh_tiles = static_cast<size_t>(div_ceil(OH, oh_tile_size));
 
         auto do_conv = [wbundle, kernel](

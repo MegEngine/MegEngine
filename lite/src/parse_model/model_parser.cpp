@@ -38,8 +38,7 @@ void ModelParser::parse_header() {
     LITE_ASSERT(models->size() == 1, "Now only support one model");
     auto model = models->Get(0);
     m_model_name = model->header()->name()->c_str();
-    m_model_decryption_name =
-            model->header()->model_decryption_method()->c_str();
+    m_model_decryption_name = model->header()->model_decryption_method()->c_str();
     m_info_decryption_name = model->header()->info_decryption_method()->c_str();
     m_info_parse_func_name = model->header()->info_parse_method()->c_str();
 
@@ -58,32 +57,34 @@ bool ModelParser::parse_model_info(
     size_t info_length = m_info->data()->size();
     const uint8_t* info_data = m_info->data()->Data();
     //! decryption the info
-    auto info_ptr = decrypt_memory(info_data, info_length,
-                                   m_info_decryption_name, info_length);
+    auto info_ptr =
+            decrypt_memory(info_data, info_length, m_info_decryption_name, info_length);
     //! parse the info
     LITE_LOCK_GUARD(parse_info_static_data().map_mutex);
-    auto it_parse = parse_info_static_data().parse_info_methods.find(
-            m_info_parse_func_name);
+    auto it_parse =
+            parse_info_static_data().parse_info_methods.find(m_info_parse_func_name);
     if (it_parse == parse_info_static_data().parse_info_methods.end()) {
-        LITE_THROW(ssprintf("can't find model info parse function %s.",
-                            m_info_parse_func_name.c_str()));
+        LITE_THROW(ssprintf(
+                "can't find model info parse function %s.",
+                m_info_parse_func_name.c_str()));
     }
     auto model_info_parse_func =
             parse_info_static_data().parse_info_methods[m_info_parse_func_name];
     //! convert for NetworkIOInner to NetworkIO
     if (model_info_parse_func) {
-        model_info_parse_func(info_ptr.get(), info_length, m_model_name,
-                              network_config, network_io, isolated_config_map,
-                              extra_info);
+        model_info_parse_func(
+                info_ptr.get(), info_length, m_model_name, network_config, network_io,
+                isolated_config_map, extra_info);
     } else {
-        LITE_THROW(ssprintf("model info parse function of  %s is empty",
-                            m_info_parse_func_name.c_str()));
+        LITE_THROW(ssprintf(
+                "model info parse function of  %s is empty",
+                m_info_parse_func_name.c_str()));
     }
     return true;
 }
 
-std::shared_ptr<void> ModelParser::parse_model(size_t& model_length,
-                                               const Config& config) const {
+std::shared_ptr<void> ModelParser::parse_model(
+        size_t& model_length, const Config& config) const {
     if (m_is_bare_model) {
         if (config.bare_model_cryption_name.size() == 0) {
             model_length = m_total_length;
@@ -98,8 +99,8 @@ std::shared_ptr<void> ModelParser::parse_model(size_t& model_length,
     model_length = m_model_data->data()->size();
     const uint8_t* model_data = m_model_data->data()->Data();
     LITE_ASSERT(model_length > 0, "The loaded model is of zero length.");
-    return decrypt_memory(model_data, model_length, m_model_decryption_name,
-                          model_length);
+    return decrypt_memory(
+            model_data, model_length, m_model_decryption_name, model_length);
 }
 
 std::shared_ptr<void> ModelParser::decrypt_memory(
@@ -108,28 +109,27 @@ std::shared_ptr<void> ModelParser::decrypt_memory(
     const uint8_t* memory_ptr = data;
     if (decryption_name == "NONE") {
         result_length = length;
-        return std::shared_ptr<void>(const_cast<uint8_t*>(memory_ptr),
-                                     [](void*) {});
+        return std::shared_ptr<void>(const_cast<uint8_t*>(memory_ptr), [](void*) {});
     }
     LITE_LOCK_GUARD(decryption_static_data().map_mutex);
     auto it = decryption_static_data().decryption_methods.find(decryption_name);
     if (it == decryption_static_data().decryption_methods.end()) {
-        LITE_THROW(ssprintf("The decryption method %s is not registed yet.",
-                            decryption_name.c_str()));
+        LITE_THROW(ssprintf(
+                "The decryption method %s is not registed yet.",
+                decryption_name.c_str()));
     }
     auto&& func = it->second.first;
     auto&& key = it->second.second;
     if (func) {
         auto model_vector = func(memory_ptr, length, *key);
         result_length = model_vector.size();
-        auto tmp_model_vector =
-                new std::vector<uint8_t>(std::move(model_vector));
+        auto tmp_model_vector = new std::vector<uint8_t>(std::move(model_vector));
         return std::shared_ptr<void>(
                 tmp_model_vector->data(),
                 [tmp_model_vector](void*) { delete tmp_model_vector; });
     } else {
-        LITE_THROW(ssprintf("No decryption function in %s method.",
-                            decryption_name.c_str()));
+        LITE_THROW(ssprintf(
+                "No decryption function in %s method.", decryption_name.c_str()));
     }
 }
 

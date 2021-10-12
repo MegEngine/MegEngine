@@ -43,35 +43,32 @@ namespace {
     case megdnn::NonlineMode::IDENTITY: \
         break;
 
-#define FOR_NONLINEAR_UNARY(_op)                                             \
-    megdnn::arm_common::OpCallerUnary<_op<ctype>, megdnn::arm_common::VEC>:: \
-            run(static_cast<ctype*>(conv_dst_ptr),                           \
-                reinterpret_cast<ctype*>(dst_ptr), bias_type, dst_type,      \
-                N* OC* OH* OW* pack_oc_size);
+#define FOR_NONLINEAR_UNARY(_op)                                                  \
+    megdnn::arm_common::OpCallerUnary<_op<ctype>, megdnn::arm_common::VEC>::run(  \
+            static_cast<ctype*>(conv_dst_ptr), reinterpret_cast<ctype*>(dst_ptr), \
+            bias_type, dst_type, N* OC* OH* OW* pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                    \
-    megdnn::arm_common::                                                       \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>::run( \
-                    static_cast<ctype*>(conv_dst_ptr),                         \
-                    reinterpret_cast<const ctype*>(bias_ptr),                  \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
-                    dst_type, N, OC, OH* OW);
+#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                            \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>:: \
+            run(static_cast<ctype*>(conv_dst_ptr),                                     \
+                reinterpret_cast<const ctype*>(bias_ptr),                              \
+                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N,  \
+                OC, OH* OW);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                           \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
-                                       megdnn::arm_common::VEC_BCAST101xX>:: \
-            run(static_cast<ctype*>(conv_dst_ptr),                           \
-                reinterpret_cast<const ctype*>(bias_ptr),                    \
-                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
-                dst_type, N, OC, OH* OW, pack_oc_size);
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                                     \
+    megdnn::arm_common::                                                               \
+            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101xX>::run(       \
+                    static_cast<ctype*>(conv_dst_ptr),                                 \
+                    reinterpret_cast<const ctype*>(bias_ptr),                          \
+                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
+                    N, OC, OH* OW, pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY(_op)                                            \
-    megdnn::arm_common::                                                     \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run(    \
-                    static_cast<ctype*>(conv_dst_ptr),                       \
-                    reinterpret_cast<const ctype*>(bias_ptr),                \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
-                    dst_type, N* OC* OH* OW* pack_oc_size);
+#define FOR_NONLINEAR_BINARY(_op)                                                     \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run( \
+            static_cast<ctype*>(conv_dst_ptr),                                        \
+            reinterpret_cast<const ctype*>(bias_ptr),                                 \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type,        \
+            N* OC* OH* OW* pack_oc_size);
 
 #define FOR_BIAS(_mode)                                                   \
     switch (_mode) {                                                      \
@@ -86,8 +83,9 @@ namespace {
                 if (pack_oc_size == 1) {                                  \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
                 } else {                                                  \
-                    megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
-                                  "Only support nchw44/nchw88 in ARM");   \
+                    megdnn_assert(                                        \
+                            pack_oc_size == 4 || pack_oc_size == 8,       \
+                            "Only support nchw44/nchw88 in ARM");         \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX); \
                 }                                                         \
             }                                                             \
@@ -122,24 +120,26 @@ namespace {
         DEFAULT                                                   \
     }
 
-template <typename ctype, typename dtype = ctype,
-          megdnn::PostprocessMode postprocess_mode =
-                  megdnn::PostprocessMode::FLOAT>
+template <
+        typename ctype, typename dtype = ctype,
+        megdnn::PostprocessMode postprocess_mode = megdnn::PostprocessMode::FLOAT>
 struct PostProcess {
-    static void run(void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         FOR_BIAS(bias_mode)
     }
 };
 
 template <typename ctype, typename dtype>
 struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
-    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         MEGDNN_MARK_USED_VAR(conv_dst_ptr);
         MEGDNN_MARK_USED_VAR(bias_ptr);
         MEGDNN_MARK_USED_VAR(dst_ptr);
@@ -152,9 +152,10 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
         MEGDNN_MARK_USED_VAR(OH);
         MEGDNN_MARK_USED_VAR(OW);
         MEGDNN_MARK_USED_VAR(pack_oc_size);
-        megdnn_throw_if(bias_mode != megdnn::BiasMode::NO_BIAS ||
-                                nonlineMode != megdnn::NonlineMode::IDENTITY,
-                        megdnn_error, "biasmode or nonlineMode do not support");
+        megdnn_throw_if(
+                bias_mode != megdnn::BiasMode::NO_BIAS ||
+                        nonlineMode != megdnn::NonlineMode::IDENTITY,
+                megdnn_error, "biasmode or nonlineMode do not support");
     }
 };
 
@@ -167,37 +168,36 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 #undef FOR_BIAS
 #undef HANDLE_IDENTITY
 
-#define FOR_NONLINEAR_UNARY(_op)                                               \
-    megdnn::arm_common::OpCallerUnary<                                         \
-            _op<opctype, opdtype>,                                             \
-            megdnn::arm_common::VEC>::run(static_cast<opctype*>(conv_dst_ptr), \
-                                          reinterpret_cast<opdtype*>(dst_ptr), \
-                                          bias_type, dst_type,                 \
-                                          N* OC* OH* OW* pack_oc_size);
+#define FOR_NONLINEAR_UNARY(_op)                                                \
+    megdnn::arm_common::                                                        \
+            OpCallerUnary<_op<opctype, opdtype>, megdnn::arm_common::VEC>::run( \
+                    static_cast<opctype*>(conv_dst_ptr),                        \
+                    reinterpret_cast<opdtype*>(dst_ptr), bias_type, dst_type,   \
+                    N* OC* OH* OW* pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                \
-    megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,              \
-                                       megdnn::arm_common::VEC_BCAST101>:: \
-            run(static_cast<opctype*>(conv_dst_ptr),                       \
-                reinterpret_cast<const opctype*>(bias_ptr),                \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, \
-                dst_type, N, OC, OH* OW);
+#define FOR_NONLINEAR_BINARY_BROADCAST(_op)                                          \
+    megdnn::arm_common::OpCallerBinary<                                              \
+            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101>::               \
+            run(static_cast<opctype*>(conv_dst_ptr),                                 \
+                reinterpret_cast<const opctype*>(bias_ptr),                          \
+                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
+                N, OC, OH* OW);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                           \
-    megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,                \
-                                       megdnn::arm_common::VEC_BCAST101xX>:: \
-            run(static_cast<opctype*>(conv_dst_ptr),                         \
-                reinterpret_cast<const opctype*>(bias_ptr),                  \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,   \
-                dst_type, N, OC, OH* OW, pack_oc_size);
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX(_op)                                   \
+    megdnn::arm_common::OpCallerBinary<                                              \
+            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101xX>::             \
+            run(static_cast<opctype*>(conv_dst_ptr),                                 \
+                reinterpret_cast<const opctype*>(bias_ptr),                          \
+                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
+                N, OC, OH* OW, pack_oc_size);
 
-#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW88(_op)                           \
-    megdnn::arm_common::OpCallerBinary<_op<opctype, opdtype>,                \
-                                       megdnn::arm_common::VEC_BCAST101xX>:: \
-            run(static_cast<opctype*>(conv_dst_ptr),                         \
-                reinterpret_cast<const opctype*>(bias_ptr),                  \
-                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type,   \
-                dst_type, N, OC, OH* OW, pack_oc_size);
+#define FOR_NONLINEAR_BINARY_BROADCAST_NCHW88(_op)                                   \
+    megdnn::arm_common::OpCallerBinary<                                              \
+            _op<opctype, opdtype>, megdnn::arm_common::VEC_BCAST101xX>::             \
+            run(static_cast<opctype*>(conv_dst_ptr),                                 \
+                reinterpret_cast<const opctype*>(bias_ptr),                          \
+                reinterpret_cast<opdtype*>(dst_ptr), bias_type, bias_type, dst_type, \
+                N, OC, OH* OW, pack_oc_size);
 
 #define HANDLE_IDENTITY(_caller, _op)   \
     case megdnn::NonlineMode::IDENTITY: \
@@ -228,8 +228,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
             if (pack_oc_size == 1) {                                      \
                 FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);            \
             } else {                                                      \
-                megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8,     \
-                              "Only support nchw44/nchw88 in ARM");       \
+                megdnn_assert(                                            \
+                        pack_oc_size == 4 || pack_oc_size == 8,           \
+                        "Only support nchw44/nchw88 in ARM");             \
                 FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX);     \
             }                                                             \
             break;                                                        \
@@ -238,8 +239,9 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
                 if (pack_oc_size == 1) {                                  \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST);        \
                 } else {                                                  \
-                    megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
-                                  "Only support nchw44/nchw88 in ARM");   \
+                    megdnn_assert(                                        \
+                            pack_oc_size == 4 || pack_oc_size == 8,       \
+                            "Only support nchw44/nchw88 in ARM");         \
                     FOR_NONLINEAR(FOR_NONLINEAR_BINARY_BROADCAST_NCHWXX); \
                 }                                                         \
                 break;                                                    \
@@ -250,10 +252,11 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::NO_PROCESS> {
 
 template <typename opctype, typename opdtype>
 struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
-    static void run(void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
+    static void run(
+            void* conv_dst_ptr, const void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
         //! when OH * OW = 1, the bias_mode will be BiasMode::BIAS. It is wrong,
         //! we deal this case at default branch.
         FOR_BIAS(bias_mode, OH, OW);
@@ -268,59 +271,60 @@ struct PostProcess<opctype, opdtype, megdnn::PostprocessMode::QUANTIZED> {
 #undef FOR_NONLINEAR
 #undef FOR_BIAS
 
-#define FOR_BINARY_BROADCAST(_op)                                              \
-    megdnn::arm_common::                                                       \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>::run( \
-                    static_cast<ctype*>(conv_dst_ptr),                         \
-                    reinterpret_cast<const ctype*>(bias_ptr),                  \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,   \
-                    dst_type, N, OC, OH* OW);
+#define FOR_BINARY_BROADCAST(_op)                                                      \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101>:: \
+            run(static_cast<ctype*>(conv_dst_ptr),                                     \
+                reinterpret_cast<const ctype*>(bias_ptr),                              \
+                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, N,  \
+                OC, OH* OW);
 
-#define FOR_BINARY_BROADCAST_NCHWXX(_op)                                     \
-    megdnn::arm_common::OpCallerBinary<_op<ctype>,                           \
-                                       megdnn::arm_common::VEC_BCAST101xX>:: \
-            run(static_cast<ctype*>(conv_dst_ptr),                           \
-                reinterpret_cast<const ctype*>(bias_ptr),                    \
-                reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type,     \
-                dst_type, N, OC, OH* OW, pack_oc_size);
+#define FOR_BINARY_BROADCAST_NCHWXX(_op)                                               \
+    megdnn::arm_common::                                                               \
+            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_BCAST101xX>::run(       \
+                    static_cast<ctype*>(conv_dst_ptr),                                 \
+                    reinterpret_cast<const ctype*>(bias_ptr),                          \
+                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type, \
+                    N, OC, OH* OW, pack_oc_size);
 
-#define FOR_BINARY(_op)                                                      \
-    megdnn::arm_common::                                                     \
-            OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run(    \
-                    static_cast<ctype*>(conv_dst_ptr),                       \
-                    reinterpret_cast<const ctype*>(bias_ptr),                \
-                    reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, \
-                    dst_type, N* OC* OH* OW* pack_oc_size);
+#define FOR_BINARY(_op)                                                               \
+    megdnn::arm_common::OpCallerBinary<_op<ctype>, megdnn::arm_common::VEC_VEC>::run( \
+            static_cast<ctype*>(conv_dst_ptr),                                        \
+            reinterpret_cast<const ctype*>(bias_ptr),                                 \
+            reinterpret_cast<ctype*>(dst_ptr), bias_type, bias_type, dst_type,        \
+            N* OC* OH* OW* pack_oc_size);
 
-#define FOR_BIAS(_bias_mode, OH, OW)                                  \
-    switch (_bias_mode) {                                             \
-        case megdnn::BiasMode::NO_BIAS:                               \
-            break;                                                    \
-        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:                \
-            if (pack_oc_size == 1) {                                  \
-                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));               \
-            } else {                                                  \
-                megdnn_assert(pack_oc_size == 4 || pack_oc_size == 8, \
-                              "Only support nchw44/nchw88 in ARM");   \
-                FOR_BINARY_BROADCAST_NCHWXX(CONCAT_OP(AddOp));        \
-            }                                                         \
-            break;                                                    \
-        case megdnn::BiasMode::BIAS:                                  \
-            FOR_BINARY(CONCAT_OP(AddOp));                             \
-            break;                                                    \
-        default:                                                      \
-            megdnn_throw("unknow biasmode");                          \
-            break;                                                    \
+#define FOR_BIAS(_bias_mode, OH, OW)                            \
+    switch (_bias_mode) {                                       \
+        case megdnn::BiasMode::NO_BIAS:                         \
+            break;                                              \
+        case megdnn::BiasMode::BROADCAST_CHANNEL_BIAS:          \
+            if (pack_oc_size == 1) {                            \
+                FOR_BINARY_BROADCAST(CONCAT_OP(AddOp));         \
+            } else {                                            \
+                megdnn_assert(                                  \
+                        pack_oc_size == 4 || pack_oc_size == 8, \
+                        "Only support nchw44/nchw88 in ARM");   \
+                FOR_BINARY_BROADCAST_NCHWXX(CONCAT_OP(AddOp));  \
+            }                                                   \
+            break;                                              \
+        case megdnn::BiasMode::BIAS:                            \
+            FOR_BINARY(CONCAT_OP(AddOp));                       \
+            break;                                              \
+        default:                                                \
+            megdnn_throw("unknow biasmode");                    \
+            break;                                              \
     }
 
 template <typename ctype, typename dtype>
 struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
-    static void run(void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
-                    megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
-                    megdnn::DType bias_type, megdnn::DType dst_type, size_t N,
-                    size_t OC, size_t OH, size_t OW, size_t pack_oc_size = 1) {
-        megdnn_throw_if(nonlineMode != megdnn::NonlineMode::IDENTITY,
-                        megdnn_error, "nonlineMode do not support");
+    static void run(
+            void* conv_dst_ptr, void* bias_ptr, void* dst_ptr,
+            megdnn::BiasMode bias_mode, megdnn::NonlineMode nonlineMode,
+            megdnn::DType bias_type, megdnn::DType dst_type, size_t N, size_t OC,
+            size_t OH, size_t OW, size_t pack_oc_size = 1) {
+        megdnn_throw_if(
+                nonlineMode != megdnn::NonlineMode::IDENTITY, megdnn_error,
+                "nonlineMode do not support");
         FOR_BIAS(bias_mode, OH, OW);
     }
 };
@@ -335,123 +339,114 @@ struct PostProcess<ctype, dtype, megdnn::PostprocessMode::ADD_BIAS> {
 #undef DEFAULT
 #undef HANDLE_IDENTITY
 
-#define DISPATCH_CONV_WINOGRAD_NONLINE(_midout_tag, cb, _bias_id, _src_type,  \
-                                       _dst_type, _bmode, _nonline_mode, ...) \
-    switch (_nonline_mode) {                                                  \
-        case param::ConvBias::NonlineMode::IDENTITY: {                        \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 0) {                          \
-                cb(_bmode, NoneOp<_src_type MEGDNN_COMMA _dst_type>,          \
-                   __VA_ARGS__);                                              \
-            }                                                                 \
-            MIDOUT_END();                                                     \
-            break;                                                            \
-        }                                                                     \
-        case param::ConvBias::NonlineMode::RELU: {                            \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 1) {                          \
-                cb(_bmode, ReluOp<_src_type MEGDNN_COMMA _dst_type>,          \
-                   __VA_ARGS__);                                              \
-            }                                                                 \
-            MIDOUT_END();                                                     \
-            break;                                                            \
-        }                                                                     \
-        case param::ConvBias::NonlineMode::SIGMOID: {                         \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 2) {                          \
-                cb(_bmode, SigmoidOp<_src_type MEGDNN_COMMA _dst_type>,       \
-                   __VA_ARGS__);                                              \
-            }                                                                 \
-            MIDOUT_END();                                                     \
-            break;                                                            \
-        }                                                                     \
-        case param::ConvBias::NonlineMode::H_SWISH: {                         \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 3) {                          \
-                cb(_bmode, HSwishOp<_src_type MEGDNN_COMMA _dst_type>,        \
-                   __VA_ARGS__);                                              \
-            }                                                                 \
-            MIDOUT_END();                                                     \
-            break;                                                            \
-        }                                                                     \
-        default:                                                              \
-            megdnn_assert(0);                                                 \
-            break;                                                            \
+#define DISPATCH_CONV_WINOGRAD_NONLINE(                                               \
+        _midout_tag, cb, _bias_id, _src_type, _dst_type, _bmode, _nonline_mode, ...)  \
+    switch (_nonline_mode) {                                                          \
+        case param::ConvBias::NonlineMode::IDENTITY: {                                \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 0) {                                  \
+                cb(_bmode, NoneOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__);    \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        case param::ConvBias::NonlineMode::RELU: {                                    \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 1) {                                  \
+                cb(_bmode, ReluOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__);    \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        case param::ConvBias::NonlineMode::SIGMOID: {                                 \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 2) {                                  \
+                cb(_bmode, SigmoidOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__); \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        case param::ConvBias::NonlineMode::H_SWISH: {                                 \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 3) {                                  \
+                cb(_bmode, HSwishOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__);  \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        default:                                                                      \
+            megdnn_assert(0);                                                         \
+            break;                                                                    \
     }
 
-#define DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(_midout_tag, cb, _bias_id,    \
-                                                 _src_type, _dst_type, _bmode, \
-                                                 _nonline_mode, ...)           \
-    switch (_nonline_mode) {                                                   \
-        case param::ConvBias::NonlineMode::IDENTITY: {                         \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 0) {                           \
-                cb(_bmode, TypeCvtOp<_src_type MEGDNN_COMMA _dst_type>,        \
-                   __VA_ARGS__);                                               \
-            }                                                                  \
-            MIDOUT_END();                                                      \
-            break;                                                             \
-        }                                                                      \
-        case param::ConvBias::NonlineMode::RELU: {                             \
-            MIDOUT_BEGIN(_midout_tag, _bias_id, 1) {                           \
-                cb(_bmode, ReluOp<_src_type MEGDNN_COMMA _dst_type>,           \
-                   __VA_ARGS__);                                               \
-            }                                                                  \
-            MIDOUT_END();                                                      \
-            break;                                                             \
-        }                                                                      \
-        default:                                                               \
-            megdnn_assert(0);                                                  \
-            break;                                                             \
+#define DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                                     \
+        _midout_tag, cb, _bias_id, _src_type, _dst_type, _bmode, _nonline_mode, ...)  \
+    switch (_nonline_mode) {                                                          \
+        case param::ConvBias::NonlineMode::IDENTITY: {                                \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 0) {                                  \
+                cb(_bmode, TypeCvtOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__); \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        case param::ConvBias::NonlineMode::RELU: {                                    \
+            MIDOUT_BEGIN(_midout_tag, _bias_id, 1) {                                  \
+                cb(_bmode, ReluOp<_src_type MEGDNN_COMMA _dst_type>, __VA_ARGS__);    \
+            }                                                                         \
+            MIDOUT_END();                                                             \
+            break;                                                                    \
+        }                                                                             \
+        default:                                                                      \
+            megdnn_assert(0);                                                         \
+            break;                                                                    \
     }
 
-#define DISPATCH_CONV_WINOGRAD_BIAS(_midout_tag, cb, _src_type, _dst_type,   \
-                                    _bmode, _nonline_mode, ...)              \
-    switch (_bmode) {                                                        \
-        case BiasMode::BIAS: {                                               \
-            DISPATCH_CONV_WINOGRAD_NONLINE(_midout_tag, cb, 0, _src_type,    \
-                                           _dst_type, BiasMode::BIAS,        \
-                                           _nonline_mode, __VA_ARGS__)       \
-            break;                                                           \
-        }                                                                    \
-        case BiasMode::NO_BIAS: {                                            \
-            DISPATCH_CONV_WINOGRAD_NONLINE(_midout_tag, cb, 1, _src_type,    \
-                                           _dst_type, BiasMode::NO_BIAS,     \
-                                           _nonline_mode, __VA_ARGS__)       \
-            break;                                                           \
-        }                                                                    \
-        case BiasMode::BROADCAST_CHANNEL_BIAS: {                             \
-            DISPATCH_CONV_WINOGRAD_NONLINE(_midout_tag, cb, 2, _src_type,    \
-                                           _dst_type,                        \
-                                           BiasMode::BROADCAST_CHANNEL_BIAS, \
-                                           _nonline_mode, __VA_ARGS__)       \
-            break;                                                           \
-        }                                                                    \
-        default:                                                             \
-            megdnn_assert(0);                                                \
-            break;                                                           \
+#define DISPATCH_CONV_WINOGRAD_BIAS(                                              \
+        _midout_tag, cb, _src_type, _dst_type, _bmode, _nonline_mode, ...)        \
+    switch (_bmode) {                                                             \
+        case BiasMode::BIAS: {                                                    \
+            DISPATCH_CONV_WINOGRAD_NONLINE(                                       \
+                    _midout_tag, cb, 0, _src_type, _dst_type, BiasMode::BIAS,     \
+                    _nonline_mode, __VA_ARGS__)                                   \
+            break;                                                                \
+        }                                                                         \
+        case BiasMode::NO_BIAS: {                                                 \
+            DISPATCH_CONV_WINOGRAD_NONLINE(                                       \
+                    _midout_tag, cb, 1, _src_type, _dst_type, BiasMode::NO_BIAS,  \
+                    _nonline_mode, __VA_ARGS__)                                   \
+            break;                                                                \
+        }                                                                         \
+        case BiasMode::BROADCAST_CHANNEL_BIAS: {                                  \
+            DISPATCH_CONV_WINOGRAD_NONLINE(                                       \
+                    _midout_tag, cb, 2, _src_type, _dst_type,                     \
+                    BiasMode::BROADCAST_CHANNEL_BIAS, _nonline_mode, __VA_ARGS__) \
+            break;                                                                \
+        }                                                                         \
+        default:                                                                  \
+            megdnn_assert(0);                                                     \
+            break;                                                                \
     }
 
-#define DISPATCH_CONV_WINOGRAD_BIAS_QUANTIZED(                                \
-        _midout_tag, cb, _src_type, _dst_type, _bmode, _nonline_mode, ...)    \
-    switch (_bmode) {                                                         \
-        case BiasMode::BIAS: {                                                \
-            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                         \
-                    _midout_tag, cb, 0, _src_type, _dst_type, BiasMode::BIAS, \
-                    _nonline_mode, __VA_ARGS__)                               \
-            break;                                                            \
-        }                                                                     \
-        case BiasMode::NO_BIAS: {                                             \
-            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                         \
-                    _midout_tag, cb, 1, _src_type, _dst_type,                 \
-                    BiasMode::NO_BIAS, _nonline_mode, __VA_ARGS__)            \
-            break;                                                            \
-        }                                                                     \
-        case BiasMode::BROADCAST_CHANNEL_BIAS: {                              \
-            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                         \
-                    _midout_tag, cb, 2, _src_type, _dst_type,                 \
-                    BiasMode::BROADCAST_CHANNEL_BIAS, _nonline_mode,          \
-                    __VA_ARGS__)                                              \
-            break;                                                            \
-        }                                                                     \
-        default:                                                              \
-            megdnn_assert(0);                                                 \
-            break;                                                            \
+#define DISPATCH_CONV_WINOGRAD_BIAS_QUANTIZED(                                    \
+        _midout_tag, cb, _src_type, _dst_type, _bmode, _nonline_mode, ...)        \
+    switch (_bmode) {                                                             \
+        case BiasMode::BIAS: {                                                    \
+            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                             \
+                    _midout_tag, cb, 0, _src_type, _dst_type, BiasMode::BIAS,     \
+                    _nonline_mode, __VA_ARGS__)                                   \
+            break;                                                                \
+        }                                                                         \
+        case BiasMode::NO_BIAS: {                                                 \
+            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                             \
+                    _midout_tag, cb, 1, _src_type, _dst_type, BiasMode::NO_BIAS,  \
+                    _nonline_mode, __VA_ARGS__)                                   \
+            break;                                                                \
+        }                                                                         \
+        case BiasMode::BROADCAST_CHANNEL_BIAS: {                                  \
+            DISPATCH_CONV_WINOGRAD_NONLINE_QUANTIZED(                             \
+                    _midout_tag, cb, 2, _src_type, _dst_type,                     \
+                    BiasMode::BROADCAST_CHANNEL_BIAS, _nonline_mode, __VA_ARGS__) \
+            break;                                                                \
+        }                                                                         \
+        default:                                                                  \
+            megdnn_assert(0);                                                     \
+            break;                                                                \
     }
 
 }  // namespace

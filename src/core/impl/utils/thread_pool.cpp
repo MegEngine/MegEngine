@@ -40,8 +40,7 @@ ThreadPool::ThreadPool(size_t threads_num)
                             m_workers[i]->affinity_flag = false;
                         }
                         //! if the thread should work
-                        if (m_workers[i]->work_flag.load(
-                                    std::memory_order_acquire)) {
+                        if (m_workers[i]->work_flag.load(std::memory_order_acquire)) {
                             int index = -1;
                             //! Get one task and execute
                             while ((index = m_task_iter.fetch_sub(
@@ -50,8 +49,7 @@ ThreadPool::ThreadPool(size_t threads_num)
                                 //! index is decrease, use
                                 //! m_all_task_number - index to get the
                                 //! increase id which will pass to task
-                                m_task(static_cast<size_t>(m_nr_parallelism -
-                                                           index),
+                                m_task(static_cast<size_t>(m_nr_parallelism - index),
                                        i);
                             }
                             //! Flag worker is finished
@@ -64,8 +62,7 @@ ThreadPool::ThreadPool(size_t threads_num)
                     {
                         std::unique_lock<std::mutex> lock(m_mutex);
                         if (!m_stop && !m_active) {
-                            m_cv.wait(lock,
-                                      [this] { return m_stop || m_active; });
+                            m_cv.wait(lock, [this] { return m_stop || m_active; });
                         }
                     }
                 }
@@ -75,8 +72,7 @@ ThreadPool::ThreadPool(size_t threads_num)
 }
 void ThreadPool::add_task(const TaskElem& task_elem) {
     //! Make sure the main thread have bind
-    if (m_main_affinity_flag &&
-        m_core_binding_function != nullptr) {
+    if (m_main_affinity_flag && m_core_binding_function != nullptr) {
         std::lock_guard<std::mutex> lock(m_mutex_task);
         m_core_binding_function(m_nr_threads - 1);
         m_main_affinity_flag = false;
@@ -90,8 +86,9 @@ void ThreadPool::add_task(const TaskElem& task_elem) {
         return;
     } else {
         std::lock_guard<std::mutex> lock(m_mutex_task);
-        mgb_assert(m_task_iter.load(std::memory_order_acquire) <= 0,
-                   "The init value of m_all_sub_task is not zero.");
+        mgb_assert(
+                m_task_iter.load(std::memory_order_acquire) <= 0,
+                "The init value of m_all_sub_task is not zero.");
         active();
         //! Set the task number, task iter and task
         m_nr_parallelism = parallelism;
@@ -107,8 +104,7 @@ void ThreadPool::add_task(const TaskElem& task_elem) {
         int index = -1;
         while ((index = m_task_iter.fetch_sub(1, std::memory_order_acq_rel)) &&
                (index > 0)) {
-            m_task(static_cast<size_t>(m_nr_parallelism - index),
-                   m_nr_threads - 1);
+            m_task(static_cast<size_t>(m_nr_parallelism - index), m_nr_threads - 1);
         }
         //! make sure all threads done
         sync();

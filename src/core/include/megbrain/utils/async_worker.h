@@ -18,6 +18,4 @@
 #include "./async_worker_impl_0.h"
 #endif
 
-
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

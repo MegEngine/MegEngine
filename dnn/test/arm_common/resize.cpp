@@ -26,10 +26,8 @@ static void set_nchw_args(IMode imode, std::vector<TestArg>& args) {
             args.emplace_back(
                     param, TensorShape{n + 1ul, c + 1ul, ih + 1ul, iw + 1ul},
                     TensorShape{n + 1ul, c + 1ul, oh + 1ul, ow + 1ul});
-    args.emplace_back(param, TensorShape{1, 1, 10, 10},
-                      TensorShape{1, 1, 20, 20});
-    args.emplace_back(param, TensorShape{1, 1, 10, 10},
-                      TensorShape{1, 1, 7, 9});
+    args.emplace_back(param, TensorShape{1, 1, 10, 10}, TensorShape{1, 1, 20, 20});
+    args.emplace_back(param, TensorShape{1, 1, 10, 10}, TensorShape{1, 1, 7, 9});
     args.emplace_back(param, TensorShape{2, 2, 3, 4}, TensorShape{2, 2, 6, 8});
     args.emplace_back(param, TensorShape{1, 2, 6, 8}, TensorShape{1, 2, 3, 4});
 }
@@ -116,4 +114,3 @@ TEST_F(ARM_COMMON, RESIZE_NCHW88_FP16) {
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

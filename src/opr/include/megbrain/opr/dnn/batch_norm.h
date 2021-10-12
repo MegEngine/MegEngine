@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/internal/identical_fwd.h"
+#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 #include "megbrain/opr/internal/out_shape_by_sym_var.h"
 #include "megbrain/opr/param_defs.h"
 
@@ -39,51 +39,50 @@ namespace opr {
  * Output reserve is used for cudnnBatchNormalizationForwardTrainingEx, and should
  * be preserved for backward.
  */
-MGB_DEFINE_OPR_CLASS(BatchNormForward,
-    cg::OutshapePureByInshapeOpr<
-    intl::WorkspaceSizeInfer<
-    cg::SingleCNOperatorNodeBaseT<
-    mixin::MegDNNOprHolderImpl<megdnn::BN>>>>) // {
-    public:
+MGB_DEFINE_OPR_CLASS(
+        BatchNormForward,
+        cg::OutshapePureByInshapeOpr<
+                intl::WorkspaceSizeInfer<cg::SingleCNOperatorNodeBaseT<
+                        mixin::MegDNNOprHolderImpl<megdnn::BN>>>>) // {
+public:
+    BatchNormForward(
+            VarNode* x, VarNode* scale, VarNode* bias, VarNode* mean, VarNode* variance,
+            const Param& param, const OperatorNodeConfig& config);
 
-        BatchNormForward(VarNode *x, VarNode *scale, VarNode *bias,
-                VarNode *mean, VarNode *variance,
-                const Param &param,
-                const OperatorNodeConfig &config);
+    BatchNormForward(
+            VarNode* x, VarNode* scale, VarNode* bias, const Param& param,
+            const OperatorNodeConfig& config);
 
-        BatchNormForward(VarNode *x, VarNode *scale, VarNode *bias,
-                const Param &param,
-                const OperatorNodeConfig &config);
+    static SymbolVarArray make(
+            SymbolVar x, SymbolVar scale, SymbolVar bias, SymbolVar mean,
+            SymbolVar variance, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
-        static SymbolVarArray make(SymbolVar x,
-                SymbolVar scale, SymbolVar bias,
-                SymbolVar mean, SymbolVar variance,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
+    static SymbolVarArray make(
+            SymbolVar x, SymbolVar scale, SymbolVar bias, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
-        static SymbolVarArray make(SymbolVar x,
-                SymbolVar scale, SymbolVar bias,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
-    private:
+private:
+    NodeProp* do_make_node_prop() const override;
 
-        NodeProp* do_make_node_prop() const override;
+    void scn_do_execute() override;
+    void add_input_layout_constraint() override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
+    void mem_plan_fwd_in2out_writable() override;
 
-        void scn_do_execute() override;
-        void add_input_layout_constraint() override;
-        void get_output_var_shape(const TensorShapeArray &inp_shape,
-            TensorShapeArray &out_shape) const override;
-        size_t get_workspace_size_bytes(
-            const TensorShapeArray &input_shapes,
-            const TensorShapeArray &output_shapes) const override;
-        void init_output_static_infer_desc() override;
-        void init_output_dtype() override;
-        void mem_plan_fwd_in2out_writable() override;
-
-        // if set to True, running mean/variance will be updated inplace
-        bool m_force_inplace = true;
-        // need running mean/variance
-        bool need_stats() const {return input().size() == 5 && param().fwd_mode == Param::FwdMode::TRAINING;}
+    // if set to True, running mean/variance will be updated inplace
+    bool m_force_inplace = true;
+    // need running mean/variance
+    bool need_stats() const {
+        return input().size() == 5 && param().fwd_mode == Param::FwdMode::TRAINING;
+    }
 };
 
 using BatchNorm = BatchNormForward;
@@ -94,30 +93,25 @@ using BatchNorm = BatchNormForward;
  *   scale_grad, bias_grad, x_grad
  */
 
-MGB_DEFINE_OPR_CLASS(BatchNormBackward,
-    intl::MegDNNOprWrapperBwd<megdnn::BNBackward>) // {
+MGB_DEFINE_OPR_CLASS(
+        BatchNormBackward, intl::MegDNNOprWrapperBwd<megdnn::BNBackward>) // {
+public:
+    BatchNormBackward(
+            VarNode* x, VarNode* y_grad, VarNode* save_mean, VarNode* save_variance,
+            VarNode* scale, VarNode* reserve, const Param& param,
+            const OperatorNodeConfig& config);
+    static SymbolVarArray make(
+            SymbolVar x, SymbolVar y_grad, SymbolVar save_mean, SymbolVar save_variance,
+            SymbolVar scale, SymbolVar reserve, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
-    public:
-        BatchNormBackward(VarNode *x, VarNode *y_grad,
-                VarNode *save_mean, VarNode *save_variance,
-                VarNode *scale, VarNode *reserve,
-                const Param &param,
-                const OperatorNodeConfig &config);
-        static SymbolVarArray make(SymbolVar x,
-                SymbolVar y_grad, SymbolVar save_mean,
-                SymbolVar save_variance, SymbolVar scale,
-                SymbolVar reserve,
-                const Param &param = {},
-                const OperatorNodeConfig &config = {});
-    private:
-        NodeProp* do_make_node_prop() const override;
-        void init_output_static_infer_desc() override;
-        void init_output_dtype() override;
+private:
+    NodeProp* do_make_node_prop() const override;
+    void init_output_static_infer_desc() override;
+    void init_output_dtype() override;
 };
 
-} // namespace opr
-} // namespace mgb
-
-
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

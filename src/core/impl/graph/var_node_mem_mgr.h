@@ -12,13 +12,13 @@
 #pragma once
 
 #include "./impl_common.h"
-#include "./var_node_mem_mgr/seq_mem_opt.h"
 #include "./var_node_mem_mgr/defrag.h"
+#include "./var_node_mem_mgr/seq_mem_opt.h"
 #include "megbrain/graph/event.h"
 
-#include "megbrain/utils/thread.h"
 #include "megbrain/utils/metahelper.h"
 #include "megbrain/utils/thin/nullable_hash_map.h"
+#include "megbrain/utils/thread.h"
 
 namespace mgb {
 namespace cg {
@@ -70,8 +70,8 @@ public:
     void exec_exit();
 
     //! allocate storage for a comp node
-    const DeviceTensorStorage& alloc(ComputingGraph* graph, CompNode cn,
-                                     size_t size, size_t cur_version);
+    const DeviceTensorStorage& alloc(
+            ComputingGraph* graph, CompNode cn, size_t size, size_t cur_version);
 
     //! get currently allocated size on a comp node; return 0 if nothing on
     //! given comp node
@@ -104,346 +104,323 @@ public:
  * dynamic memory allocation.
  */
 class VarNodeMemManager {
-    public:
-        enum class LayoutConstraintLevel {
-            NONE = 0,   //!< use custom callback
-            MONOTONE = 1,   //!< required to be monotonous (i.e. cache friendly)
-            CONTIG = 2,     //!< required to be contiguous
+public:
+    enum class LayoutConstraintLevel {
+        NONE = 0,      //!< use custom callback
+        MONOTONE = 1,  //!< required to be monotonous (i.e. cache friendly)
+        CONTIG = 2,    //!< required to be contiguous
+    };
+
+    struct VarNodeMemTrait {
+        struct LayoutConstraint {
+            LayoutConstraintLevel level;
+            std::vector<VarNode::LayoutConstraintCallback> custom;
         };
-
-        struct VarNodeMemTrait {
-            struct LayoutConstraint {
-                LayoutConstraintLevel level;
-                std::vector<VarNode::LayoutConstraintCallback> custom;
-            };
-            VarNode *readonly_src = nullptr;
-
-            /*!
-             * if b claims to forcely update a (
-             * i.e. b->set_fwd_in2out_writable_force(a) * is called), then we
-             * have b->force_update_src == a.
-             *
-             * When computing sequence is determined, at most only one force
-             * update can take place, and seq_force_update_dest would be set
-             * accordingly. They would share underlying mem plan.
-             *
-             * Note that seq_force_update_dest is only used for marking force
-             * updates, and when a is readonly forwarded as b,
-             * a->seq_force_update_dest would also be assigned to b's.
-             */
-            VarNode *force_update_src = nullptr,
-                    *seq_force_update_dest = nullptr;
-
-            LayoutConstraint layout_constraint;
-
-            bool check_layout(const TensorLayout &layout) const;
-
-            //! clear optimization status; called before opt process starts
-            void clear_opt_status();
-
-            bool has_dynamic_mem_fwd_from_other() const {
-                return readonly_src;
-            }
-        };
-
-        VarNodeMemManager(ComputingGraphImpl *graph);
-        ~VarNodeMemManager() noexcept;
+        VarNode* readonly_src = nullptr;
 
         /*!
-         * \brief reset active operator sequence
-         * \param[out] extra_info output param that would be filled with extra
-         *      info for the comp seq
-         */
-        void reset_opr_seq(
-                CompSeqExtraInfo& extra_info, const OprNodeArray *seq);
-
-        /*!
-         * Like reset_opr_seq() but do not clear m_dynamic_alloc_opr_info; this
-         * is used in eager eval mode.
-         */
-        void reset_opr_seq_no_clear_dyn_alloc_info(CompSeqExtraInfo& extra_info,
-                                                   const OprNodeArray* seq,
-                                                   const size_t* run_id_ptr);
-
-        /*!
-         * \brief allocate static var node memory; should be called before graph
-         *      execution
+         * if b claims to forcely update a (
+         * i.e. b->set_fwd_in2out_writable_force(a) * is called), then we
+         * have b->force_update_src == a.
          *
-         * \return whether memory is reallocated
-         */
-        bool alloc_var_node_mem_static();
-
-        /*!
-         * \brief free the memory of var with MEMORY_NO_NEED flag
+         * When computing sequence is determined, at most only one force
+         * update can take place, and seq_force_update_dest would be set
+         * accordingly. They would share underlying mem plan.
          *
-         * \return whether memory of MEMORY_NO_NEED var or related other var
-         * memory changed
+         * Note that seq_force_update_dest is only used for marking force
+         * updates, and when a is readonly forwarded as b,
+         * a->seq_force_update_dest would also be assigned to b's.
          */
-        bool free_combine_memory_no_need_var();
+        VarNode *force_update_src = nullptr, *seq_force_update_dest = nullptr;
 
-        /*!
-         * \brief initialize static memory allocation plan
-         *
-         * This can be used with custom StaticDeviceMemoryAllocator so static
-         * memory storage can be controled.
-         *
-         * \return whether allocation plan changes
-         */
-        bool update_static_alloc_plan();
+        LayoutConstraint layout_constraint;
 
-        /*!
-         * \brief get static memory usage on each comp node
-         *
-         * This is only valid after calling update_static_alloc_plan()
-         */
-        const CompNode::UnorderedMap<size_t>& get_static_alloc_size() const {
-            return m_seq_mem_opt.static_mem_usage();
-        }
+        bool check_layout(const TensorLayout& layout) const;
 
-        /*!
-         * \brief allocate dynamic output var node memory for operator; should
-         * be called before operator execution
-         */
-        void alloc_var_node_mem_dynamic(GraphExecutable::ExecEnv &env,
-                OperatorNodeBase *opr);
+        //! clear optimization status; called before opt process starts
+        void clear_opt_status();
 
-        //! get underlying device memory manager
-        const std::shared_ptr<StaticDeviceMemoryManager>&
-        static_device_memory_manager() const {
-            return m_static_dev_mem_mgr;
-        }
+        bool has_dynamic_mem_fwd_from_other() const { return readonly_src; }
+    };
 
-        //! set underlying device memory manager
-        void static_device_memory_manager(
-                std::shared_ptr<StaticDeviceMemoryManager> mgr) {
-            m_static_dev_mem_mgr = std::move(mgr);
-        }
+    VarNodeMemManager(ComputingGraphImpl* graph);
+    ~VarNodeMemManager() noexcept;
 
-        ComputingGraphImpl* owner_graph() const { return m_owner_graph; }
+    /*!
+     * \brief reset active operator sequence
+     * \param[out] extra_info output param that would be filled with extra
+     *      info for the comp seq
+     */
+    void reset_opr_seq(CompSeqExtraInfo& extra_info, const OprNodeArray* seq);
 
-        /*!
-         * \brief set the CompNodeSyncManager associated with a VarNode
-         *
-         * This is invoked by SeqCompNodeOptimizer. mgr->set_ready() would be
-         * called when this var finishes computing.
-         */
-        static void set_var_node_cn_sync_manager(VarNode* var,
-                                                 CompNodeSyncManager* mgr) {
-            var->m_cn_sync_manager = mgr;
-        }
+    /*!
+     * Like reset_opr_seq() but do not clear m_dynamic_alloc_opr_info; this
+     * is used in eager eval mode.
+     */
+    void reset_opr_seq_no_clear_dyn_alloc_info(
+            CompSeqExtraInfo& extra_info, const OprNodeArray* seq,
+            const size_t* run_id_ptr);
 
-        //! get the CompNodeSyncManager associated with a VarNode
-        static CompNodeSyncManager* var_node_cn_sync_manager(VarNode* var) {
-            return var->m_cn_sync_manager;
-        }
+    /*!
+     * \brief allocate static var node memory; should be called before graph
+     *      execution
+     *
+     * \return whether memory is reallocated
+     */
+    bool alloc_var_node_mem_static();
 
-        //! whether calling on_var_node_device_comp_finish is needed
-        bool on_var_node_device_comp_finish_needed(VarNode *var) const;
+    /*!
+     * \brief free the memory of var with MEMORY_NO_NEED flag
+     *
+     * \return whether memory of MEMORY_NO_NEED var or related other var
+     * memory changed
+     */
+    bool free_combine_memory_no_need_var();
 
-        /*!
-         * \brief called by operators when computing of a var is finished
-         *
-         * Set ready, init output refcnt, and decr input refcnt
-         *
-         * This method only needs to be called for vars which
-         * on_var_node_device_comp_finish_needed() returns true.
-         *
-         * Note: this function shoould be dispatched regardless of the operator
-         * execution mask. The system manages var refcnt even if an operator is
-         * not executed, so vars can be correctly reclaimed in dynamic execution
-         * case.
-         *
-         * \param compute_enabled whether the owner opr is actually executed
-         *      (i.e. whether its ExecutionMask is enabled); if this is false,
-         *      then only deref of input vars would be performed.
-         */
-        void on_var_node_device_comp_finish(VarNode *var, bool compute_enabled);
+    /*!
+     * \brief initialize static memory allocation plan
+     *
+     * This can be used with custom StaticDeviceMemoryAllocator so static
+     * memory storage can be controled.
+     *
+     * \return whether allocation plan changes
+     */
+    bool update_static_alloc_plan();
 
-        /*!
-         * \brief release static device memory storage
-         *
-         * Note: dev tensors in var nodes would not be touched, but their
-         * content pointers would become dangling after calling this method.
-         * This behavior is kind of dangerous, but it is designed so for best
-         * performance.
-         *
-         * \return use count of device memory before clear; a value of 1
-         *      indicates the memory would be actually released
-         */
-        size_t clear_static_device_memory();
+    /*!
+     * \brief get static memory usage on each comp node
+     *
+     * This is only valid after calling update_static_alloc_plan()
+     */
+    const CompNode::UnorderedMap<size_t>& get_static_alloc_size() const {
+        return m_seq_mem_opt.static_mem_usage();
+    }
 
-        //! get the reference to the static device memory
-        const SmallVector<DeviceTensorStorage>& static_device_memory_refholder()
-                const {
-            return m_static_mem_refholder;
-        }
+    /*!
+     * \brief allocate dynamic output var node memory for operator; should
+     * be called before operator execution
+     */
+    void alloc_var_node_mem_dynamic(
+            GraphExecutable::ExecEnv& env, OperatorNodeBase* opr);
 
-        /* ============= implementation for methods in VarNode ============= */
+    //! get underlying device memory manager
+    const std::shared_ptr<StaticDeviceMemoryManager>& static_device_memory_manager()
+            const {
+        return m_static_dev_mem_mgr;
+    }
 
-        /*!
-         * \brief see VarNode::set_fwd_in2out_readonly
-         */
-        bool fwd_in2out_readonly(
-                VarNode *src, const SubTensorSpec &sub, VarNode *dest);
+    //! set underlying device memory manager
+    void static_device_memory_manager(std::shared_ptr<StaticDeviceMemoryManager> mgr) {
+        m_static_dev_mem_mgr = std::move(mgr);
+    }
 
-        /*!
-         * \brief see VarNode::set_fwd_in2out_writable
-         */
-        void fwd_in2out_writable(VarNode *src, VarNode *dest);
+    ComputingGraphImpl* owner_graph() const { return m_owner_graph; }
 
-        /*!
-         * \brief see VarNode::set_fwd_in2out_writable_force
-         */
-        void fwd_in2out_writable_force(VarNode *src, VarNode *dest);
+    /*!
+     * \brief set the CompNodeSyncManager associated with a VarNode
+     *
+     * This is invoked by SeqCompNodeOptimizer. mgr->set_ready() would be
+     * called when this var finishes computing.
+     */
+    static void set_var_node_cn_sync_manager(VarNode* var, CompNodeSyncManager* mgr) {
+        var->m_cn_sync_manager = mgr;
+    }
 
-        void add_layout_constraint(VarNode *dest,
-                VarNode::LayoutConstraintCallback callback);
+    //! get the CompNodeSyncManager associated with a VarNode
+    static CompNodeSyncManager* var_node_cn_sync_manager(VarNode* var) {
+        return var->m_cn_sync_manager;
+    }
 
-        void add_layout_constraint_level(
-                VarNode *dest, LayoutConstraintLevel level);
+    //! whether calling on_var_node_device_comp_finish is needed
+    bool on_var_node_device_comp_finish_needed(VarNode* var) const;
 
-        /**
-         * \brief alloc var memory with shape.
-         *
-         * Alloc memory of size_seq if size_req != 0.
-         */
-        void var_alloc_with_shape(VarNode* var, const TensorShape& shape,
-                                  size_t size_req = 0);
+    /*!
+     * \brief called by operators when computing of a var is finished
+     *
+     * Set ready, init output refcnt, and decr input refcnt
+     *
+     * This method only needs to be called for vars which
+     * on_var_node_device_comp_finish_needed() returns true.
+     *
+     * Note: this function shoould be dispatched regardless of the operator
+     * execution mask. The system manages var refcnt even if an operator is
+     * not executed, so vars can be correctly reclaimed in dynamic execution
+     * case.
+     *
+     * \param compute_enabled whether the owner opr is actually executed
+     *      (i.e. whether its ExecutionMask is enabled); if this is false,
+     *      then only deref of input vars would be performed.
+     */
+    void on_var_node_device_comp_finish(VarNode* var, bool compute_enabled);
 
-        /*!
-         * \brief initialize mem plan for a single var
-         *
-         * This would check if force update is set, and act accordingly; note
-         * that \p fixed_alloc must be NULL in this case.
-         */
-        void init_single_var_mem_plan(
-                VarNode* var,
-                const DeviceTensorND* fixed_alloc = nullptr);
+    /*!
+     * \brief release static device memory storage
+     *
+     * Note: dev tensors in var nodes would not be touched, but their
+     * content pointers would become dangling after calling this method.
+     * This behavior is kind of dangerous, but it is designed so for best
+     * performance.
+     *
+     * \return use count of device memory before clear; a value of 1
+     *      indicates the memory would be actually released
+     */
+    size_t clear_static_device_memory();
 
-        /* ============= misc methods ============= */
-        VarNodeMemTrait& get_var_node_mem_trait(const VarNode *var) {
-            return m_node_mem_trait[const_cast<VarNode*>(var)];
-        }
+    //! get the reference to the static device memory
+    const SmallVector<DeviceTensorStorage>& static_device_memory_refholder() const {
+        return m_static_mem_refholder;
+    }
 
-        VarNodeMemTrait& get_var_node_mem_trait_at(const VarNode *var) {
-            return m_node_mem_trait.at(const_cast<VarNode*>(var));
-        }
+    /* ============= implementation for methods in VarNode ============= */
 
-        //! get VarNodeMemTrait, or nullptr if trait does not exist
-        VarNodeMemTrait* get_var_node_mem_trait_nullable(const VarNode *var) {
-            auto iter = m_node_mem_trait.find(const_cast<VarNode*>(var));
-            return iter == m_node_mem_trait.end() ? nullptr : &iter->second;
-        }
+    /*!
+     * \brief see VarNode::set_fwd_in2out_readonly
+     */
+    bool fwd_in2out_readonly(VarNode* src, const SubTensorSpec& sub, VarNode* dest);
 
-        void remove_var_node_mem_trait(VarNode *var) {
-            m_node_mem_trait.erase(var);
-        }
+    /*!
+     * \brief see VarNode::set_fwd_in2out_writable
+     */
+    void fwd_in2out_writable(VarNode* src, VarNode* dest);
 
-        bool optimize_started() const {
-            return m_optimize_started;
-        }
+    /*!
+     * \brief see VarNode::set_fwd_in2out_writable_force
+     */
+    void fwd_in2out_writable_force(VarNode* src, VarNode* dest);
 
-        void on_graph_compile_finished() {
-            m_optimize_started = false;
-        }
+    void add_layout_constraint(
+            VarNode* dest, VarNode::LayoutConstraintCallback callback);
 
-    private:
-        /*!
-         * \brief mem alloc info in dynamic alloc mode for oprs with static
-         *      shape
-         */
-        struct DynamicAllocOprInfo {
-            bool has_dynamic_storage_input;
+    void add_layout_constraint_level(VarNode* dest, LayoutConstraintLevel level);
 
-            //! comp seq execution ID for recently finished alloc, so multiple
-            //! outputs of a single opr is alloated only once
-            size_t alloc_comp_seq_exec_id = -1;
+    /**
+     * \brief alloc var memory with shape.
+     *
+     * Alloc memory of size_seq if size_req != 0.
+     */
+    void var_alloc_with_shape(
+            VarNode* var, const TensorShape& shape, size_t size_req = 0);
 
-            //! previously synced layout and address of dev_val_input
-            megdnn::TensorNDArray prev_dev_val_input;
+    /*!
+     * \brief initialize mem plan for a single var
+     *
+     * This would check if force update is set, and act accordingly; note
+     * that \p fixed_alloc must be NULL in this case.
+     */
+    void init_single_var_mem_plan(
+            VarNode* var, const DeviceTensorND* fixed_alloc = nullptr);
 
-            //! static infer handler and previously synched version
-            std::vector<std::pair<
-                static_infer::StaticInferManagerImpl::TagHandler*, size_t>>
+    /* ============= misc methods ============= */
+    VarNodeMemTrait& get_var_node_mem_trait(const VarNode* var) {
+        return m_node_mem_trait[const_cast<VarNode*>(var)];
+    }
+
+    VarNodeMemTrait& get_var_node_mem_trait_at(const VarNode* var) {
+        return m_node_mem_trait.at(const_cast<VarNode*>(var));
+    }
+
+    //! get VarNodeMemTrait, or nullptr if trait does not exist
+    VarNodeMemTrait* get_var_node_mem_trait_nullable(const VarNode* var) {
+        auto iter = m_node_mem_trait.find(const_cast<VarNode*>(var));
+        return iter == m_node_mem_trait.end() ? nullptr : &iter->second;
+    }
+
+    void remove_var_node_mem_trait(VarNode* var) { m_node_mem_trait.erase(var); }
+
+    bool optimize_started() const { return m_optimize_started; }
+
+    void on_graph_compile_finished() { m_optimize_started = false; }
+
+private:
+    /*!
+     * \brief mem alloc info in dynamic alloc mode for oprs with static
+     *      shape
+     */
+    struct DynamicAllocOprInfo {
+        bool has_dynamic_storage_input;
+
+        //! comp seq execution ID for recently finished alloc, so multiple
+        //! outputs of a single opr is alloated only once
+        size_t alloc_comp_seq_exec_id = -1;
+
+        //! previously synced layout and address of dev_val_input
+        megdnn::TensorNDArray prev_dev_val_input;
+
+        //! static infer handler and previously synched version
+        std::vector<
+                std::pair<static_infer::StaticInferManagerImpl::TagHandler*, size_t>>
                 static_infer_inp;
 
-            VarNodeArray dev_val_input, dynamic_alloc_output;
-            Spinlock mtx;
+        VarNodeArray dev_val_input, dynamic_alloc_output;
+        Spinlock mtx;
 
-            DynamicAllocOprInfo(OperatorNodeBase *opr);
+        DynamicAllocOprInfo(OperatorNodeBase* opr);
 
-            //! whether any input or output is dynamc
-            bool has_dyn_input_or_output() const {
-                return has_dynamic_storage_input ||
-                    !dynamic_alloc_output.empty();
-            }
+        //! whether any input or output is dynamc
+        bool has_dyn_input_or_output() const {
+            return has_dynamic_storage_input || !dynamic_alloc_output.empty();
+        }
 
-            //! whether current input vars are different from prev input
-            bool check_if_mem_status_change();
-        };
+        //! whether current input vars are different from prev input
+        bool check_if_mem_status_change();
+    };
 
-        class ImpureMemPlanManager {
-            bool m_layout_changed = false, m_during_check = false;
-            OprNodeArray m_oprs;  //!< only oprs with IMPURE_OUTPUT_MEM_PLAN
-            SmallVector<MemAllocPlan*> m_ptr_changed_mplans;
-            SmallVector<std::pair<VarNode*, VarNode*>> m_force_update_pairs;
+    class ImpureMemPlanManager {
+        bool m_layout_changed = false, m_during_check = false;
+        OprNodeArray m_oprs;  //!< only oprs with IMPURE_OUTPUT_MEM_PLAN
+        SmallVector<MemAllocPlan*> m_ptr_changed_mplans;
+        SmallVector<std::pair<VarNode*, VarNode*>> m_force_update_pairs;
 
-        public:
-            void clear_tracked_oprs() { m_oprs.clear(); }
+    public:
+        void clear_tracked_oprs() { m_oprs.clear(); }
 
-            void add_opr_to_track(OperatorNodeBase* opr) {
-                m_oprs.emplace_back(opr);
-            }
+        void add_opr_to_track(OperatorNodeBase* opr) { m_oprs.emplace_back(opr); }
 
-            //! called from init_single_var_mem_plan() when fixed alloc causes
-            //! layout change
-            void record_layout_changed(MemAllocPlan*) {
-                m_layout_changed = true;
-            }
+        //! called from init_single_var_mem_plan() when fixed alloc causes
+        //! layout change
+        void record_layout_changed(MemAllocPlan*) { m_layout_changed = true; }
 
-            //! called from init_single_var_mem_plan() when fixed alloc causes
-            //! ptr change
-            inline void record_ptr_changed(VarNodeMemManager* mgr, VarNode* var);
+        //! called from init_single_var_mem_plan() when fixed alloc causes
+        //! ptr change
+        inline void record_ptr_changed(VarNodeMemManager* mgr, VarNode* var);
 
-            /*!
-             * \brief check if static memory allocation is needed (i.e. if any
-             *      layout changes)
-             *
-             * Note: readonly-fwd readers and force update dest of vars with
-             * only ptr change would be updated if this function returns false.
-             */
-            bool check_need_realloc();
-        };
+        /*!
+         * \brief check if static memory allocation is needed (i.e. if any
+         *      layout changes)
+         *
+         * Note: readonly-fwd readers and force update dest of vars with
+         * only ptr change would be updated if this function returns false.
+         */
+        bool check_need_realloc();
+    };
 
-        bool m_first_static_plan_run = true, m_optimize_started = false,
-             m_already_free_no_need_mem = false;
-        ComputingGraphImpl *m_owner_graph;
-        ThinHashMap<VarNode*, VarNodeMemTrait> m_node_mem_trait;
-        NullableHashMap<OperatorNodeBase*, DynamicAllocOprInfo>
-            m_dynamic_alloc_opr_info;
-        const OprNodeArray* m_opr_seq;
+    bool m_first_static_plan_run = true, m_optimize_started = false,
+         m_already_free_no_need_mem = false;
+    ComputingGraphImpl* m_owner_graph;
+    ThinHashMap<VarNode*, VarNodeMemTrait> m_node_mem_trait;
+    NullableHashMap<OperatorNodeBase*, DynamicAllocOprInfo> m_dynamic_alloc_opr_info;
+    const OprNodeArray* m_opr_seq;
 
-        //! vars that should be statically allocated
-        VarNodeSet m_sys_alloc_static_vars;
+    //! vars that should be statically allocated
+    VarNodeSet m_sys_alloc_static_vars;
 
-        //! vars on which on_var_node_device_comp_finish() should be called
-        VarNodeSet m_need_post_exec_action_vars;
+    //! vars on which on_var_node_device_comp_finish() should be called
+    VarNodeSet m_need_post_exec_action_vars;
 
-        //! oprs that have at least one outputs in m_sys_alloc_static_vars
-        OprNodeArray m_sys_alloc_static_oprs;
-        //! oprs in m_sys_alloc_static_oprs that need on_mem_status_changed()
-        //! callback; initialized in init_dynamic_alloc_opr_info()
-        ThinHashSet<OperatorNodeBase*>
-            m_sys_alloc_static_oprs_need_mem_status_changed_cb;
+    //! oprs that have at least one outputs in m_sys_alloc_static_vars
+    OprNodeArray m_sys_alloc_static_oprs;
+    //! oprs in m_sys_alloc_static_oprs that need on_mem_status_changed()
+    //! callback; initialized in init_dynamic_alloc_opr_info()
+    ThinHashSet<OperatorNodeBase*> m_sys_alloc_static_oprs_need_mem_status_changed_cb;
 
-        SeqMemOptimizer m_seq_mem_opt;
+    SeqMemOptimizer m_seq_mem_opt;
 
-        ImpureMemPlanManager m_impure_mem_plan_mgr;
+    ImpureMemPlanManager m_impure_mem_plan_mgr;
 
-        MGB_MUTEX m_dynamic_alloc_mtx;
-        const size_t* m_run_id_ptr = nullptr;
+    MGB_MUTEX m_dynamic_alloc_mtx;
+    const size_t* m_run_id_ptr = nullptr;
 
-        SyncableCounter m_cpu_async_release_barrier;
+    SyncableCounter m_cpu_async_release_barrier;
 
 // clang-format off
 #define MGB_COMMON_ASYNC_COMPNODE \
@@ -451,81 +428,80 @@ class VarNodeMemManager {
     // clang-format on
 
 #if MGB_COMMON_ASYNC_COMPNODE
-        //! release dynamic var on after compnode event finishes
-        class AsyncVarReleaser;
-        std::unique_ptr<AsyncVarReleaser> m_asyn_var_releaser;
+    //! release dynamic var on after compnode event finishes
+    class AsyncVarReleaser;
+    std::unique_ptr<AsyncVarReleaser> m_asyn_var_releaser;
 #endif
 
-        VarDevMemDefragmenter m_var_dev_mem_defragmenter{this};
+    VarDevMemDefragmenter m_var_dev_mem_defragmenter{this};
 
-        std::shared_ptr<StaticDeviceMemoryManager> m_static_dev_mem_mgr =
-                StaticDeviceMemoryManager::make_default_impl();
-        SmallVector<DeviceTensorStorage> m_static_mem_refholder;
-        size_t m_static_mem_refholder_dev_mem_mgr_version = 0;
+    std::shared_ptr<StaticDeviceMemoryManager> m_static_dev_mem_mgr =
+            StaticDeviceMemoryManager::make_default_impl();
+    SmallVector<DeviceTensorStorage> m_static_mem_refholder;
+    size_t m_static_mem_refholder_dev_mem_mgr_version = 0;
 
-        void assert_in_mem_opt_phase(size_t status);
+    void assert_in_mem_opt_phase(size_t status);
 
-        //! init dynamic allocation info, refcnt and m_need_exec_callback_vars
-        void init_dynamic_alloc_opr_info();
+    //! init dynamic allocation info, refcnt and m_need_exec_callback_vars
+    void init_dynamic_alloc_opr_info();
 
-        /*!
-         * \brief set RT_FORCE_DYNAMIC_MEM_ALLOC for vars that are read by other
-         *      comp nodes
-         */
-        void init_var_force_dynamic_alloc_flag();
+    /*!
+     * \brief set RT_FORCE_DYNAMIC_MEM_ALLOC for vars that are read by other
+     *      comp nodes
+     */
+    void init_var_force_dynamic_alloc_flag();
 
-        //! call add_layout_constraint for all oprs
-        void init_layout_constraint();
+    //! call add_layout_constraint for all oprs
+    void init_layout_constraint();
 
-        /*!
-         * \brief init m_sys_alloc_static_vars, m_sys_alloc_static_oprs and
-         *      m_should_sys_alloc
-         */
-        void init_sys_alloc_info(CompSeqExtraInfo &extra_info);
+    /*!
+     * \brief init m_sys_alloc_static_vars, m_sys_alloc_static_oprs and
+     *      m_should_sys_alloc
+     */
+    void init_sys_alloc_info(CompSeqExtraInfo& extra_info);
 
-        //! init VarNodeMemTrait::seq_force_update_dest for all vars
-        void init_var_seq_force_update_dest();
+    //! init VarNodeMemTrait::seq_force_update_dest for all vars
+    void init_var_seq_force_update_dest();
 
-        //! initialize dev_tensor from the mem plan and given storage
-        static void make_dev_tensor_from_mem_plan_single(
-                VarNode* var, const DeviceTensorStorage& given_storage,
-                size_t offset_in_given_storage = 0);
+    //! initialize dev_tensor from the mem plan and given storage
+    static void make_dev_tensor_from_mem_plan_single(
+            VarNode* var, const DeviceTensorStorage& given_storage,
+            size_t offset_in_given_storage = 0);
 
-        //! initialize mem plans for output vars of a single operator
-        void init_opr_outputs_mem_plan(
-                OperatorNodeBase *opr, bool dynamic);
+    //! initialize mem plans for output vars of a single operator
+    void init_opr_outputs_mem_plan(OperatorNodeBase* opr, bool dynamic);
 
-        /*!
-         * \brief decrease refcnt and release memory if refcnt drops to zero
-         *
-         * Note that the refcnt is decreased asynchronously, which is controlled
-         * by \p dispatch_cn
-         *
-         * \param dispatch_cn refcnt would be decreased after tasks on
-         *      dispatch_cn finishes
-         */
-        void decr_var_mem_refcnt(VarNode *var, CompNode dispatch_cn);
+    /*!
+     * \brief decrease refcnt and release memory if refcnt drops to zero
+     *
+     * Note that the refcnt is decreased asynchronously, which is controlled
+     * by \p dispatch_cn
+     *
+     * \param dispatch_cn refcnt would be decreased after tasks on
+     *      dispatch_cn finishes
+     */
+    void decr_var_mem_refcnt(VarNode* var, CompNode dispatch_cn);
 
-        //! like decr_var_mem_refcnt, but decr refcnt immediately
-        static void decr_var_mem_refcnt_sync(VarNode *var);
+    //! like decr_var_mem_refcnt, but decr refcnt immediately
+    static void decr_var_mem_refcnt_sync(VarNode* var);
 
-        //! print allocation statistics in reset_opr_seq
-        void print_seq_info_log();
+    //! print allocation statistics in reset_opr_seq
+    void print_seq_info_log();
 
-        static inline bool is_inf_refcnt_init(VarNode* var);
+    static inline bool is_inf_refcnt_init(VarNode* var);
 
-        /*!
-         * \brief initialize var dev_tensor for static allocation vars from
-         *      current mem plan
-         *
-         * This should only be called by alloc_var_node_mem_static()
-         *
-         * \return whether memory is reallocated
-         */
-        bool make_static_var_tensor_from_alloc_plan();
+    /*!
+     * \brief initialize var dev_tensor for static allocation vars from
+     *      current mem plan
+     *
+     * This should only be called by alloc_var_node_mem_static()
+     *
+     * \return whether memory is reallocated
+     */
+    bool make_static_var_tensor_from_alloc_plan();
 };
 
-}
-}
+}  // namespace cg
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

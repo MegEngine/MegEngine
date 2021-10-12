@@ -14,9 +14,9 @@
 
 #include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/graph/helper.h"
-#include "megbrain/utils/thread.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
+#include "megbrain/utils/thread.h"
 
 using namespace mgb;
 using namespace cg;
@@ -28,12 +28,12 @@ constexpr size_t INF = std::numeric_limits<size_t>::max() >> 2;
 namespace {
 
 bool is_opr_mutable(OperatorNodeBase* opr) {
-    for (auto &&i : opr->input()) {
+    for (auto&& i : opr->input()) {
         if (!is_const_var_value(i)) {
             return true;
         }
     }
-    for (auto &&i : opr->output()) {
+    for (auto&& i : opr->output()) {
         if (!i->contain_flag(VarNode::Flag::VOLATILE_CONTENT) &&
             !is_const_var_value(i)) {
             return true;
@@ -42,7 +42,7 @@ bool is_opr_mutable(OperatorNodeBase* opr) {
     return false;
 }
 
-}
+}  // namespace
 
 /* ======================== EagerExecEnv ======================== */
 class EagerEvalManager::EagerExecEnv final : public GraphExecutable::ExecEnv {
@@ -56,10 +56,9 @@ public:
         task();
     }
 
-    void dispatch_on_comp_node_with_mask(CompNode, Task&& task,
-                                         ExecutionMask* mask) override {
-        mgb_throw_if(mask, GraphError,
-                     "ExecutionMask not supported in eager mode");
+    void dispatch_on_comp_node_with_mask(
+            CompNode, Task&& task, ExecutionMask* mask) override {
+        mgb_throw_if(mask, GraphError, "ExecutionMask not supported in eager mode");
         task();
     }
 
@@ -75,8 +74,7 @@ EagerEvalManager::EagerEvalManager(ComputingGraph* graph)
 EagerEvalManager::~EagerEvalManager() noexcept {
     if (m_first_opr_enable_status == 1) {
         m_var_sync_mgr_pool.disable_freelist();
-        for (auto&& i :
-             ComputingGraphImpl::downcast(m_owner_graph)->all_oprs()) {
+        for (auto&& i : ComputingGraphImpl::downcast(m_owner_graph)->all_oprs()) {
             for (auto var : i->output()) {
                 auto mgr = VarNodeMemManager::var_node_cn_sync_manager(var);
                 if (mgr) {
@@ -85,7 +83,7 @@ EagerEvalManager::~EagerEvalManager() noexcept {
             }
         }
         m_version_trait_pool.disable_freelist();
-        for (auto&& i: m_opr2version) {
+        for (auto&& i : m_opr2version) {
             m_version_trait_pool.free(i.second);
         }
     }
@@ -133,8 +131,9 @@ void EagerEvalManager::on_opr_insert(OperatorNodeBase* opr) {
     if (m_first_opr_enable_status == -1) {
         m_first_opr_enable_status = enabled();
     }
-    mgb_assert(enabled() == m_first_opr_enable_status,
-               "can not enable/disable eager eval after opr has been inserted");
+    mgb_assert(
+            enabled() == m_first_opr_enable_status,
+            "can not enable/disable eager eval after opr has been inserted");
 
     if (enabled()) {
         MGB_TRY { do_on_opr_insert(opr); }
@@ -154,8 +153,8 @@ int EagerEvalManager::check_version(OperatorNodeBase* opr) {
         using F = VersionTrait::Flag;
         if (is_opr_mutable(opr)) {
             if (opr->input().size()) {
-                for (auto &&i : opr->input()) {
-                    auto &&trait_i = m_opr2version.at(i->owner_opr());
+                for (auto&& i : opr->input()) {
+                    auto&& trait_i = m_opr2version.at(i->owner_opr());
                     trait_i->readers.push_back(trait);
                     if (trait_i->flag & F::MUTABLE_SOURCE) {
                         trait->flag = F::MUTABLE;
@@ -190,11 +189,12 @@ void EagerEvalManager::prepare_for_exec(OperatorNodeBase* opr) {
         using NodeProp = OperatorNodeBase::NodeProp;
         bool is_empty = !i.first->shape().ndim;
         if (NodeProp::is_device_value_dep(i.second)) {
-            mgb_assert(i.first->dev_tensor_valid(),
-                       "var value not valid, but required for opr input: "
-                       "var=%s reader=%s{%s}",
-                       cg::dump_var_info({i.first}).c_str(), opr->cname(),
-                       opr->dyn_typeinfo()->name);
+            mgb_assert(
+                    i.first->dev_tensor_valid(),
+                    "var value not valid, but required for opr input: "
+                    "var=%s reader=%s{%s}",
+                    cg::dump_var_info({i.first}).c_str(), opr->cname(),
+                    opr->dyn_typeinfo()->name);
             if (i.first->dev_tensor().empty()) {
                 is_empty = true;
             } else {
@@ -202,11 +202,12 @@ void EagerEvalManager::prepare_for_exec(OperatorNodeBase* opr) {
             }
         }
         if (is_empty) {
-            mgb_assert(i.second & NodeProp::DepType::VALUE_ALLOW_EMPTY,
-                       "var value is empty but the reader opr does not allow "
-                       "this: var=%s reader=%s{%s}",
-                       cg::dump_var_info({i.first}).c_str(), opr->cname(),
-                       opr->dyn_typeinfo()->name);
+            mgb_assert(
+                    i.second & NodeProp::DepType::VALUE_ALLOW_EMPTY,
+                    "var value is empty but the reader opr does not allow "
+                    "this: var=%s reader=%s{%s}",
+                    cg::dump_var_info({i.first}).c_str(), opr->cname(),
+                    opr->dyn_typeinfo()->name);
         }
     }
 
@@ -223,8 +224,8 @@ void EagerEvalManager::prepare_for_exec(OperatorNodeBase* opr) {
 }
 
 void EagerEvalManager::update_static_infer_result(OperatorNodeBase* opr) {
-    auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
-                         ->static_infer_manager_impl();
+    auto&& mgr =
+            ComputingGraphImpl::downcast(m_owner_graph)->static_infer_manager_impl();
     auto sync_missing_trait =
             [&](static_infer::StaticInferManagerImpl::TagHandler* handler) {
                 auto&& missing = mgr.get_missing_inp(handler);
@@ -243,7 +244,7 @@ void EagerEvalManager::update_static_infer_result(OperatorNodeBase* opr) {
     }
 
     // force udpate mutable src
-    for (auto &&i : opr->output()) {
+    for (auto&& i : opr->output()) {
         if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT))
             continue;
         mgr.update_mutable_src_shape(i);
@@ -252,16 +253,15 @@ void EagerEvalManager::update_static_infer_result(OperatorNodeBase* opr) {
     // set missing shapes/values for input value infer
     for (auto&& dep : opr->node_prop().dep_map()) {
         using Type = OperatorNodeBase::NodeProp::DepType;
-        if ((dep.second & Type::HOST_VALUE) &&
-            !is_static_var_value(dep.first)) {
+        if ((dep.second & Type::HOST_VALUE) && !is_static_var_value(dep.first)) {
             sync_missing_trait(mgr.get_tag_handler_for_value(dep.first));
         }
     }
 }
 
 void EagerEvalManager::ensure_input_layout(VarNode* var) {
-    auto&& mem_mgr = ComputingGraphImpl::downcast(var->owner_graph())
-                             ->var_node_mem_manager();
+    auto&& mem_mgr =
+            ComputingGraphImpl::downcast(var->owner_graph())->var_node_mem_manager();
 
     auto trait = mem_mgr.get_var_node_mem_trait_nullable(var);
     if (!trait || trait->check_layout(var->layout())) {
@@ -280,25 +280,22 @@ void EagerEvalManager::alloc_output_mem(OperatorNodeBase* opr) {
     for (auto i : opr->output()) {
         if (!i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
             ++nr_readable_out;
-            if (i->contain_flag(
-                        VarNode::Flag::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC)) {
+            if (i->contain_flag(VarNode::Flag::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC)) {
                 ++nr_disallow_dynamic;
             }
         }
     }
 
-    auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
-                         ->var_node_mem_manager();
+    auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)->var_node_mem_manager();
     OprNodeArray opr_seq{opr};
 
     auto&& options = m_owner_graph->options();
-    auto old_setting =
-            std::make_pair(options.force_dynamic_alloc, options.log_level);
+    auto old_setting = std::make_pair(options.force_dynamic_alloc, options.log_level);
     MGB_TRY {
         options.log_level = 0;
         options.force_dynamic_alloc = true;
-        mgr.reset_opr_seq_no_clear_dyn_alloc_info(m_comp_seq_extra_info,
-                                                  &opr_seq, &m_run_id);
+        mgr.reset_opr_seq_no_clear_dyn_alloc_info(
+                m_comp_seq_extra_info, &opr_seq, &m_run_id);
         mgr.alloc_var_node_mem_static();
     }
     MGB_FINALLY({
@@ -306,11 +303,12 @@ void EagerEvalManager::alloc_output_mem(OperatorNodeBase* opr) {
     });
 
     if (nr_disallow_dynamic) {
-        mgb_assert(nr_disallow_dynamic == nr_readable_out,
-                   "opr %s{%s} has %zu non-dynamic outputs, but total number "
-                   "of readable outputs is %zu",
-                   opr->cname(), opr->dyn_typeinfo()->name, nr_disallow_dynamic,
-                   nr_readable_out);
+        mgb_assert(
+                nr_disallow_dynamic == nr_readable_out,
+                "opr %s{%s} has %zu non-dynamic outputs, but total number "
+                "of readable outputs is %zu",
+                opr->cname(), opr->dyn_typeinfo()->name, nr_disallow_dynamic,
+                nr_readable_out);
     }
 
     // assume all outputs need to be waited
@@ -348,8 +346,8 @@ void EagerEvalManager::do_on_opr_insert(OperatorNodeBase* opr) {
         if (status) {
             update_static_infer_result(opr);
             alloc_output_mem(opr);
-            auto&& mgr = ComputingGraphImpl::downcast(m_owner_graph)
-                             ->var_node_mem_manager();
+            auto&& mgr =
+                    ComputingGraphImpl::downcast(m_owner_graph)->var_node_mem_manager();
             mgr.on_graph_compile_finished();
             opr->execute(*m_exec_env);
             m_opr2version.at(opr)->update_version();
@@ -390,34 +388,32 @@ size_t EagerEvalManager::get_var_nr_readers(VarNode* var) const {
     }
 }
 
-
-void EagerEvalManager::flush_record_oprs(
-        const VarNodeArray &dest_vars) {
+void EagerEvalManager::flush_record_oprs(const VarNodeArray& dest_vars) {
     if (!enabled()) {
         mgb_assert(m_record_oprs.empty());
         return;
     }
     m_record_mode = false;
     using NodeProp = OperatorNodeBase::NodeProp;
-    ThinHashSet<OperatorNodeBase* > need_exec_oprs;
-    ThinHashSet<OperatorNodeBase* > dest_oprs;
+    ThinHashSet<OperatorNodeBase*> need_exec_oprs;
+    ThinHashSet<OperatorNodeBase*> dest_oprs;
     std::function<void(OperatorNodeBase*)> visit = [&](OperatorNodeBase* opr) {
-        if(!m_record_oprs.count(opr) || need_exec_oprs.count(opr))
+        if (!m_record_oprs.count(opr) || need_exec_oprs.count(opr))
             return;
         need_exec_oprs.insert(opr);
-        for (auto inp: opr->input()) {
+        for (auto inp : opr->input()) {
             visit(inp->owner_opr());
         }
     };
-    for (auto var: dest_vars) {
+    for (auto var : dest_vars) {
         dest_oprs.insert(var->owner_opr());
         visit(var->owner_opr());
     }
-    for (auto opr: need_exec_oprs) {
+    for (auto opr : need_exec_oprs) {
         auto&& node_prop = opr->node_prop();
         for (auto&& pair : node_prop.dep_map()) {
             if (NodeProp::is_device_value_dep(pair.second) &&
-                    need_exec_oprs.count(pair.first->owner_opr())) {
+                need_exec_oprs.count(pair.first->owner_opr())) {
                 if (!dest_oprs.count(pair.first->owner_opr()))
                     m_var2nr_readers[pair.first] += opr->output().size();
             }
@@ -425,7 +421,7 @@ void EagerEvalManager::flush_record_oprs(
     }
     SmallVector<std::pair<OperatorNodeBase*, size_t>> stack;
     ThinHashSet<OperatorNodeBase*> instack;
-    auto push_stack = [&](OperatorNodeBase *opr) {
+    auto push_stack = [&](OperatorNodeBase* opr) {
         if (need_exec_oprs.erase(opr)) {
             stack.push_back({opr, 0});
             instack.insert(opr);
@@ -433,11 +429,11 @@ void EagerEvalManager::flush_record_oprs(
             mgb_assert(instack.count(opr) || m_opr2version.count(opr));
         }
     };
-    for (auto &&var: dest_vars) {
+    for (auto&& var : dest_vars) {
         push_stack(var->owner_opr());
     }
     while (!stack.empty()) {
-        auto &&frame = stack.back();
+        auto&& frame = stack.back();
         auto opr = frame.first;
         if (frame.second < opr->input().size()) {
             auto var = opr->input()[frame.second++];

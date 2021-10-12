@@ -22,8 +22,9 @@ using namespace resize;
 namespace {
 
 template <typename ctype, InterpolationMode imode>
-void resize_direct_nchwxx(const ctype* sptr, ctype* dptr, size_t N, size_t IH,
-                          size_t IW, size_t OH, size_t OW) {
+void resize_direct_nchwxx(
+        const ctype* sptr, ctype* dptr, size_t N, size_t IH, size_t IW, size_t OH,
+        size_t OW) {
     using simd_helper = SIMDHelper<ctype>;
     constexpr size_t PC = simd_helper::simd_width;
     using simd_type = typename simd_helper::simd_type;
@@ -66,7 +67,7 @@ void resize_direct_nchwxx(const ctype* sptr, ctype* dptr, size_t N, size_t IH,
         dptr += OH * OW * PC;
     }
 }
-}
+}  // namespace
 
 void megdnn::arm_common::resize_direct_nearest_nchw44_fp32(
         const ResizeImpl::KernParam<float>& kern_param) {
@@ -89,8 +90,8 @@ void megdnn::arm_common::resize_direct_nearest_nchw88_fp16(
     auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
     auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
     resize_direct_nchwxx<__fp16, InterpolationMode::INTER_NEAREST>(
-            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih,
-            kern_param.iw, kern_param.oh, kern_param.ow);
+            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih, kern_param.iw,
+            kern_param.oh, kern_param.ow);
 }
 
 void megdnn::arm_common::resize_direct_linear_nchw88_fp16(
@@ -98,8 +99,8 @@ void megdnn::arm_common::resize_direct_linear_nchw88_fp16(
     auto sptr = reinterpret_cast<const __fp16*>(kern_param.sptr);
     auto dptr = reinterpret_cast<__fp16*>(kern_param.dptr);
     resize_direct_nchwxx<__fp16, InterpolationMode::INTER_LINEAR>(
-            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih,
-            kern_param.iw, kern_param.oh, kern_param.ow);
+            sptr, dptr, kern_param.n * kern_param.c / 8, kern_param.ih, kern_param.iw,
+            kern_param.oh, kern_param.ow);
 }
 
 #endif

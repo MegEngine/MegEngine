@@ -11,10 +11,9 @@
 
 #include "megcore.h"
 
-#include "test/common/utils.h"
 #include <gtest/gtest.h>
-TEST(MegcoreCPU, COMPUTING)
-{
+#include "test/common/utils.h"
+TEST(MegcoreCPU, COMPUTING) {
     megcoreDeviceHandle_t devHandle;
     megcoreCreateDeviceHandle(&devHandle, megcorePlatformCPU, -1, 0);
 
@@ -31,8 +30,8 @@ TEST(MegcoreCPU, COMPUTING)
 
     unsigned char *src, *dst;
     static const size_t N = 5;
-    megcoreMalloc(devHandle, (void **)&src, N);
-    megcoreMalloc(devHandle, (void **)&dst, N);
+    megcoreMalloc(devHandle, (void**)&src, N);
+    megcoreMalloc(devHandle, (void**)&dst, N);
     megcoreMemset(compHandle, src, 0x0F, N);
     megcoreMemset(compHandle, dst, 0xF0, N);
     megcoreSynchronize(compHandle);

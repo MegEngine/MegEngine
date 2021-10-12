@@ -75,10 +75,10 @@ namespace {
     index += 8;                                  \
     v0 = v2;
 
-void fuse_packb(const float* __restrict src, float* __restrict dst,
-                float* __restrict b_panel, const int OW, const int IC,
-                const int IH, const int IW, const int cur_index,
-                const int block_size) {
+void fuse_packb(
+        const float* __restrict src, float* __restrict dst, float* __restrict b_panel,
+        const int OW, const int IC, const int IH, const int IW, const int cur_index,
+        const int block_size) {
     int start_h = cur_index / OW;
     int cur_remain_w = cur_index % OW;
     int end_h = (cur_index + block_size) / OW;
@@ -160,15 +160,13 @@ void fuse_packb(const float* __restrict src, float* __restrict dst,
 #undef LOAD_AND_STOR_IM2COL_DST
 }  // namespace
 
-template <typename op_ctype, typename op_dtype,
-          megdnn::PostprocessMode postprocess_mode>
-void StrategyFuseXx12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::
-        exec_im2col(const WorkspaceBundle& bundle,
-                    const WorkspaceBundle& bundle_thread,
-                    const StrategyParam& sparam,
-                    const fallback::ConvBiasImpl::NCBKernParam& param,
-                    fallback::MatrixMulImpl::KernParam /*matmul_param*/,
-                    const fallback::MatrixMulImpl::AlgoBase* /*matmul_algo*/) {
+template <
+        typename op_ctype, typename op_dtype, megdnn::PostprocessMode postprocess_mode>
+void StrategyFuseXx12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::exec_im2col(
+        const WorkspaceBundle& bundle, const WorkspaceBundle& bundle_thread,
+        const StrategyParam& sparam, const fallback::ConvBiasImpl::NCBKernParam& param,
+        fallback::MatrixMulImpl::KernParam /*matmul_param*/,
+        const fallback::MatrixMulImpl::AlgoBase* /*matmul_algo*/) {
     size_t ow = param.osz[1];
     size_t ic = param.filter_meta.icpg;
     size_t ih = param.isz[0] + param.filter_meta.padding[0] * 2;
@@ -181,26 +179,26 @@ void StrategyFuseXx12x1Nchw44K3x3S2<op_ctype, op_dtype, postprocess_mode>::
     float* src2 = reinterpret_cast<float*>(
             reinterpret_cast<uintptr_t>(bundle.get(BUNDLE_PADDING_INDEX)) +
             input_offset);
-    bool is_phpwzero = param.filter_meta.padding[0] == 0 &&
-                       param.filter_meta.padding[1] == 0;
+    bool is_phpwzero =
+            param.filter_meta.padding[0] == 0 && param.filter_meta.padding[1] == 0;
     if (is_phpwzero) {
-        src2 = const_cast<float*>(
-                param.src<float>(sparam.batch_id, sparam.group_id));
+        src2 = const_cast<float*>(param.src<float>(sparam.batch_id, sparam.group_id));
     }
-    float* b_panel = reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(
-            bundle_thread.get(THREAD_BUNDLE_PACKB_INDEX)));
+    float* b_panel = reinterpret_cast<float*>(
+            reinterpret_cast<uintptr_t>(bundle_thread.get(THREAD_BUNDLE_PACKB_INDEX)));
     megdnn_assert(ic % 4 == 0, "nchw44_dot with ic is not of time 4");
 
     float* im2col_dst =
             static_cast<float*>(bundle_thread.get(THREAD_BUNDLE_IM2COL_INDEX));
-    fuse_packb(src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
-               sparam.output_block_size);
+    fuse_packb(
+            src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
+            sparam.output_block_size);
 }
 
 namespace megdnn {
 
-template class StrategyFuseXx12x1Nchw44K3x3S2<float, float,
-                                        megdnn::PostprocessMode::FLOAT>;
+template class StrategyFuseXx12x1Nchw44K3x3S2<
+        float, float, megdnn::PostprocessMode::FLOAT>;
 }  // namespace megdnn
 
 #endif

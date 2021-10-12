@@ -26,8 +26,7 @@ namespace {
 // each y-slice of a block works on an (N, CHL_MUL, OH, OW) spatial image at
 // given inp_chl
 template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SW_SET>
-__global__ void kern_fwd_float(T* dst, const T* src, const T* flt_tot,
-                               Param param) {
+__global__ void kern_fwd_float(T* dst, const T* src, const T* flt_tot, Param param) {
     extern __shared__ uint8_t flt_storage[];
     T* const flt = reinterpret_cast<T*>(flt_storage);
 
@@ -69,15 +68,13 @@ __global__ void kern_fwd_float(T* dst, const T* src, const T* flt_tot,
 #pragma unroll
                     for (uint32_t fw = 0; fw < FW; ++fw) {
                         if (static_cast<uint32_t>(fw + iw) < IW) {
-                            sum += flt_base[fh * FW + fw] *
-                                   src_base[fh * IW + fw];
+                            sum += flt_base[fh * FW + fw] * src_base[fh * IW + fw];
                         }
                     }
                 }
             }
         } else {
-            int fhmax = min(int(FH), int(IH - ih)),
-                fwmax = min(int(FW), int(IW - iw));
+            int fhmax = min(int(FH), int(IH - ih)), fwmax = min(int(FW), int(IW - iw));
             for (int fh = max(0, -ih); fh < fhmax; ++fh) {
                 for (int fw = max(0, -iw); fw < fwmax; ++fw) {
                     sum += flt_base[fh * FW + fw] * src_base[fh * IW + fw];
@@ -90,8 +87,8 @@ __global__ void kern_fwd_float(T* dst, const T* src, const T* flt_tot,
 
 #if CUDA_VERSION >= 9000
 template <typename T, int CHL_MUL_SET, int FH_SET, int FW_SET, int SW_SET>
-__global__ void kern_fwd_half(__half* dst, const __half* src,
-                              const __half* flt_tot, Param param) {
+__global__ void kern_fwd_half(
+        __half* dst, const __half* src, const __half* flt_tot, Param param) {
     extern __shared__ uint8_t flt_storage[];
     __half* const flt = reinterpret_cast<__half*>(flt_storage);
 
@@ -122,8 +119,7 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
 
             int ih = int(oh * SH) - int(PH), iw = int(ow * SW) - int(PW);
             const __half* flt_base = flt + chl_mul * FSIZE;
-            const __half* src_base =
-                    src + int(((n * IC + ic) * IH + ih) * IW + iw);
+            const __half* src_base = src + int(((n * IC + ic) * IH + ih) * IW + iw);
 
             __half2 sum{0.0, 0.0};
 
@@ -134,10 +130,8 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
                 if (static_cast<uint32_t>(fh + ih) < IH) {
                     if (FH_SET == 3 && FW_SET == 3 && SW_SET == 1) {
                         __half2 fil0 = {flt_base[fh * FW], flt_base[fh * FW]};
-                        __half2 fil1 = {flt_base[fh * FW + 1],
-                                        flt_base[fh * FW + 1]};
-                        __half2 fil2 = {flt_base[fh * FW + 2],
-                                        flt_base[fh * FW + 2]};
+                        __half2 fil1 = {flt_base[fh * FW + 1], flt_base[fh * FW + 1]};
+                        __half2 fil2 = {flt_base[fh * FW + 2], flt_base[fh * FW + 2]};
 
                         __half2 src0 = {0.0, 0.0};
                         if (static_cast<uint32_t>(iw) < IW)
@@ -157,14 +151,10 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
                         sum = fma2(src1, fil1, sum);
                     } else if (FH_SET == 5 && FW_SET == 5 && SW_SET == 1) {
                         __half2 fil0 = {flt_base[fh * FW], flt_base[fh * FW]};
-                        __half2 fil1 = {flt_base[fh * FW + 1],
-                                        flt_base[fh * FW + 1]};
-                        __half2 fil2 = {flt_base[fh * FW + 2],
-                                        flt_base[fh * FW + 2]};
-                        __half2 fil3 = {flt_base[fh * FW + 3],
-                                        flt_base[fh * FW + 3]};
-                        __half2 fil4 = {flt_base[fh * FW + 4],
-                                        flt_base[fh * FW + 4]};
+                        __half2 fil1 = {flt_base[fh * FW + 1], flt_base[fh * FW + 1]};
+                        __half2 fil2 = {flt_base[fh * FW + 2], flt_base[fh * FW + 2]};
+                        __half2 fil3 = {flt_base[fh * FW + 3], flt_base[fh * FW + 3]};
+                        __half2 fil4 = {flt_base[fh * FW + 4], flt_base[fh * FW + 4]};
 
                         __half2 src0 = {0.0, 0.0};
                         if (static_cast<uint32_t>(iw) < IW)
@@ -196,14 +186,13 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
                     } else {
 #pragma unroll
                         for (uint32_t fw = 0; fw < FW; ++fw) {
-                            __half2 fil = {flt_base[fh * FW + fw],
-                                           flt_base[fh * FW + fw]};
+                            __half2 fil = {
+                                    flt_base[fh * FW + fw], flt_base[fh * FW + fw]};
                             __half2 src = {0.0, 0.0};
-                            if (static_cast<uint32_t>(static_cast<int>(fw) +
-                                                      iw) < IW)
+                            if (static_cast<uint32_t>(static_cast<int>(fw) + iw) < IW)
                                 src.x = src_base[fh * IW + fw];
-                            if (static_cast<uint32_t>(static_cast<int>(fw) +
-                                                      iw + SW) < IW)
+                            if (static_cast<uint32_t>(static_cast<int>(fw) + iw + SW) <
+                                IW)
                                 src.y = src_base[fh * IW + fw + SW];
                             sum = fma2(src, fil, sum);
                         }
@@ -211,10 +200,8 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
                 }
             }
 
-            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow] =
-                    sum.x;
-            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow + 1] =
-                    sum.y;
+            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow] = sum.x;
+            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow + 1] = sum.y;
 
             continue;
         }
@@ -232,8 +219,7 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
 
             int ih = int(oh * SH) - int(PH), iw = int(ow * SW) - int(PW);
             const __half* flt_base = flt + chl_mul * FSIZE;
-            const __half* src_base =
-                    src + int(((n * IC + ic) * IH + ih) * IW + iw);
+            const __half* src_base = src + int(((n * IC + ic) * IH + ih) * IW + iw);
 
             __half sum(0);
 
@@ -246,8 +232,9 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
 #pragma unroll
                         for (uint32_t fw = 0; fw < FW; ++fw) {
                             if (static_cast<uint32_t>(fw + iw) < IW) {
-                                sum = fma(flt_base[fh * FW + fw],
-                                          src_base[fh * IW + fw], sum);
+                                sum =
+                                        fma(flt_base[fh * FW + fw],
+                                            src_base[fh * IW + fw], sum);
                             }
                         }
                     }
@@ -257,16 +244,13 @@ __global__ void kern_fwd_half(__half* dst, const __half* src,
                     fwmax = min(int(FW), int(IW - iw));
                 for (int fh = max(0, -ih); fh < fhmax; ++fh) {
                     for (int fw = max(0, -iw); fw < fwmax; ++fw) {
-                        sum = fma(flt_base[fh * FW + fw],
-                                  src_base[fh * IW + fw], sum);
+                        sum = fma(flt_base[fh * FW + fw], src_base[fh * IW + fw], sum);
                     }
                 }
             }
-            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow] =
-                    sum;
+            dst[(((n * IC + ic) * CHL_MUL + chl_mul) * OH + oh) * OW + ow] = sum;
 
-            if (n == N - 1 && chl_mul == CHL_MUL - 1 && ow == OW - 1 &&
-                oh == OH - 1)
+            if (n == N - 1 && chl_mul == CHL_MUL - 1 && ow == OW - 1 && oh == OH - 1)
                 break;
         }
     }
@@ -335,30 +319,28 @@ namespace conv_bias {
 namespace chanwise {
 
 template <typename T>
-void run_fwd(T* dst, const T* src, const T* flt, const Param& param,
-             cudaStream_t stream) {
+void run_fwd(
+        T* dst, const T* src, const T* flt, const Param& param, cudaStream_t stream) {
     void (*kern)(T*, const T*, const T*, Param);
     kern = get_kern<T>(param).f;
 
     int nr_thread = query_blocksize_for_kernel(kern),
         nr_out_dimx = param.out_h * param.out_w * param.batch * param.chl_mul;
-    dim3 nr_block(param.src_chl,
-                  std::min(512, max(nr_out_dimx / (nr_thread * 4), 1)));
+    dim3 nr_block(param.src_chl, std::min(512, max(nr_out_dimx / (nr_thread * 4), 1)));
     uint32_t shared = param.chl_mul * param.flt_h * param.flt_w * sizeof(T);
     kern<<<nr_block, nr_thread, shared, stream>>>(dst, src, flt, param);
     after_kernel_launch();
 }
 
-template void run_fwd(float*, const float*, const float*, const Param&,
-                      cudaStream_t);
+template void run_fwd(float*, const float*, const float*, const Param&, cudaStream_t);
 
 #if CUDA_VERSION >= 9000
-template void run_fwd(__half*, const __half*, const __half*, const Param&,
-                      cudaStream_t);
+template void run_fwd(
+        __half*, const __half*, const __half*, const Param&, cudaStream_t);
 #endif
 
-template void run_fwd(dt_float16*, const dt_float16*, const dt_float16*,
-                      const Param&, cudaStream_t);
+template void run_fwd(
+        dt_float16*, const dt_float16*, const dt_float16*, const Param&, cudaStream_t);
 
 }  // namespace chanwise
 }  // namespace conv_bias

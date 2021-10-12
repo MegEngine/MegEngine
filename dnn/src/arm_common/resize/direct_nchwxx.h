@@ -16,11 +16,9 @@
 namespace megdnn {
 namespace arm_common {
 
-void resize_direct_linear_nchw44_fp32(
-        const ResizeImpl::KernParam<float>& kern_param);
+void resize_direct_linear_nchw44_fp32(const ResizeImpl::KernParam<float>& kern_param);
 
-void resize_direct_nearest_nchw44_fp32(
-        const ResizeImpl::KernParam<float>& kern_param);
+void resize_direct_nearest_nchw44_fp32(const ResizeImpl::KernParam<float>& kern_param);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 

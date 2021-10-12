@@ -17,9 +17,9 @@ namespace megdnn {
 namespace armv7 {
 namespace matmul_4x8x8 {
 
-static void kern_4x8(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k,
-                     size_t m_remain) {
+static void kern_4x8(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain) {
     K /= 8;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -183,14 +183,14 @@ static void kern_4x8(const int8_t* packA, const int8_t* packB, int K,
             "bne 2b\n"
 
             "3:\n" STORE_C
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [x0] "+r"(x0), [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [m_remain] "+r"(m_remain), [outptr] "+r"(outptr)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [x0] "+r"(x0),
+              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [m_remain] "+r"(m_remain),
+              [outptr] "+r"(outptr)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "r2", "r3", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "r2", "r3", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -198,9 +198,9 @@ static void kern_4x8(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, size_t m_remain,
-                     size_t n_remain) {
+static void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain, size_t n_remain) {
     K /= 8;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -365,13 +365,12 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
             "3:\n" STORE_C
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [outptr] "+r"(outptr),
               [K] "+r"(K), [is_first_k] "+r"(is_first_k), [LDC] "+r"(LDC),
-              [x0] "+r"(x0), [m_remain] "+r"(m_remain),
-              [n_remain] "+r"(n_remain)
+              [x0] "+r"(x0), [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -379,8 +378,9 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_s8_4x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
-                                 int ldin, int y0, int ymax, int k0, int kmax) {
+static void gemm_s8_4x8_pack_A_n(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -438,9 +438,8 @@ static void gemm_s8_4x8_pack_A_n(dt_int8* outptr, const dt_int8* inptr,
     }
 }
 
-static void gemm_s8_4x8_transpose_pack_A_n(dt_int8* out, const dt_int8* in,
-                                           int ldin, int x0, int xmax, int k0,
-                                           int kmax) {
+static void gemm_s8_4x8_transpose_pack_A_n(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
 
@@ -500,8 +499,9 @@ static void gemm_s8_4x8_transpose_pack_A_n(dt_int8* out, const dt_int8* in,
                 }
             }
 
-            transpose_4x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                              inptr6, inptr7, outptr);
+            transpose_4x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
             outptr += ksize4;
         }
 
@@ -534,16 +534,17 @@ static void gemm_s8_4x8_transpose_pack_A_n(dt_int8* out, const dt_int8* in,
                 }
             }
 
-            transpose_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                        inptr7, outptr, 4, xmax - x);
+            transpose_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 4, xmax - x);
         }
 
         outptr_base += 4 * 8;
     }
 }
 
-static void gemm_s8_4x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
-                                 int x0, int xmax, int k0, int kmax) {
+static void gemm_s8_4x8_pack_B_n(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
@@ -605,8 +606,9 @@ static void gemm_s8_4x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
                 }
             }
             outptr_interleave = outptr;
-            interleave_8x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr += ksize8;
         }
 
@@ -641,8 +643,9 @@ static void gemm_s8_4x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
             }
 
             outptr_interleave = outptr;
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr_interleave, 4, 4);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave, 4, 4);
             outptr += ksize4;
         }
 
@@ -676,8 +679,9 @@ static void gemm_s8_4x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
             }
 
             outptr_interleave = outptr;
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr_interleave, 4, xmax - x);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave, 4, xmax - x);
         }
 
         outptr_base += 8 * 8;
@@ -685,9 +689,9 @@ static void gemm_s8_4x8_pack_B_n(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 
-static void gemm_s8_4x8_transpose_pack_B_n(dt_int8* outptr,
-                                           const dt_int8* inptr, int ldin,
-                                           int y0, int ymax, int k0, int kmax) {
+static void gemm_s8_4x8_transpose_pack_B_n(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     constexpr int interleave4 = 32;
@@ -715,14 +719,16 @@ static void gemm_s8_4x8_transpose_pack_B_n(dt_int8* outptr,
 
         int K = kmax - k0;
         for (; K > 7; K -= 8) {
-            transpose_8x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                              inptr6, inptr7, outptr);
+            transpose_8x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
             outptr += interleave8;
         }
 
         if (K > 0) {
-            transpose_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                        inptr7, outptr, 8, K);
+            transpose_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 8, K);
             outptr += interleave8;
         }
     }

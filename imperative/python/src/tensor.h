@@ -14,26 +14,26 @@
 
 #include <variant>
 
-#include "megbrain/imperative/interpreter.h"
-#include "pybind11/pybind11.h"
 #include <string>
 #include <unordered_map>
+#include "megbrain/imperative/interpreter.h"
+#include "pybind11/pybind11.h"
 
 #include "./pyext17.h"
 
 namespace mgb::imperative::python {
 
-template<typename T, typename B = pybind11::object>
+template <typename T, typename B = pybind11::object>
 struct ObjectPtr : B {
     using B::B;
-    T& operator*() {return reinterpret_cast<T&>(*B::ptr());}
-    T* operator->() {return reinterpret_cast<T*>(B::ptr());}
+    T& operator*() { return reinterpret_cast<T&>(*B::ptr()); }
+    T* operator->() { return reinterpret_cast<T*>(B::ptr()); }
 };
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python
 
-#include "./grad_info.h" // for struct GradInfo
-#include "./trace_info.h" // for struct TraceInfo
+#include "./grad_info.h"   // for struct GradInfo
+#include "./trace_info.h"  // for struct TraceInfo
 
 namespace mgb::imperative::python {
 
@@ -47,26 +47,28 @@ class SharedHandle {
     std::shared_ptr<std::remove_pointer_t<Handle>> holder;
 
 public:
-    inline explicit SharedHandle(Handle handle) : holder(handle, [](auto* h){
-        if (h) {
-            interpreter_for_py->del(h);
-        }
-    }) {}
+    inline explicit SharedHandle(Handle handle)
+            : holder(handle, [](auto* h) {
+                  if (h) {
+                      interpreter_for_py->del(h);
+                  }
+              }) {}
     SharedHandle(const SharedHandle&) = default;
     SharedHandle& operator=(const SharedHandle&) = default;
     SharedHandle(SharedHandle&&) = default;
     SharedHandle& operator=(SharedHandle&&) = default;
 
-    inline Handle get() {return holder.get();}
+    inline Handle get() { return holder.get(); }
 };
-
 
 // impl in grad.cpp
 class GradInfoCollection {
 private:
     SmallVector<GradInfo> m_storage;
+
 protected:
     void _shrink();
+
 public:
     bool contains(GradKey* key);
     GradInfo& operator[](GradKey* key);
@@ -83,11 +85,8 @@ public:
         _shrink();
         return m_storage.end();
     }
-    size_t count(GradKey* key) {
-        return contains(key) ? 1 : 0;
-    }
+    size_t count(GradKey* key) { return contains(key) ? 1 : 0; }
 };
-
 
 struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     using flags_t = uint64_t;
@@ -113,8 +112,9 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
 
     inline Tensor() : m_handle(nullptr), m_var(nullptr) {}
     inline explicit Tensor(Handle handle) : m_handle(handle), m_var(nullptr) {}
-    inline explicit Tensor(SharedHandle handle) : m_handle(std::move(handle)), m_var(nullptr) {}
-    inline explicit Tensor(cg::VarNode *var) : m_handle(nullptr), m_var(var) {}
+    inline explicit Tensor(SharedHandle handle)
+            : m_handle(std::move(handle)), m_var(nullptr) {}
+    inline explicit Tensor(cg::VarNode* var) : m_handle(nullptr), m_var(var) {}
 
     ~Tensor() = default;
 
@@ -147,11 +147,11 @@ struct Tensor : std::enable_shared_from_this<Tensor>, NonCopyableObj {
     }
 };
 
-
 struct TensorWrapper {
     std::shared_ptr<Tensor> m_tensor;
 
-    inline TensorWrapper(std::shared_ptr<Tensor> tensor = {}) : m_tensor(std::move(tensor)) {}
+    inline TensorWrapper(std::shared_ptr<Tensor> tensor = {})
+            : m_tensor(std::move(tensor)) {}
     TensorWrapper(PyObject* args, PyObject* kwargs);
     ~TensorWrapper() = default;
 
@@ -160,12 +160,17 @@ struct TensorWrapper {
     using wrap_t = pyext17::wrap<TensorWrapper>;
     friend wrap_t;
 
-    inline static TensorWrapper* cast(PyObject* obj) {return reinterpret_cast<wrap_t*>(obj)->inst();}
+    inline static TensorWrapper* cast(PyObject* obj) {
+        return reinterpret_cast<wrap_t*>(obj)->inst();
+    }
     inline static TensorWrapper* try_cast(PyObject* obj) {
-        if (!wrap_t::type().isinstance(obj)) return nullptr;
+        if (!wrap_t::type().isinstance(obj))
+            return nullptr;
         return cast(obj);
     }
-    inline ObjectPtr<TensorWrapper, pybind11::handle> self() {return wrap_t::pycast(this);}
+    inline ObjectPtr<TensorWrapper, pybind11::handle> self() {
+        return wrap_t::pycast(this);
+    }
 
     template <typename... Args>
     static ObjectPtr<Tensor> make(Args&&... args) {
@@ -175,7 +180,7 @@ struct TensorWrapper {
 
     template <typename... Args>
     static ObjectPtr<Tensor> make(PyTypeObject* pytype, Args&&... args) {
-        auto* op = wrap_t::cnew_with_type(pytype,std::forward<Args>(args)...);
+        auto* op = wrap_t::cnew_with_type(pytype, std::forward<Args>(args)...);
         return pybind11::reinterpret_steal<ObjectPtr<Tensor>>(op);
     }
 
@@ -195,7 +200,7 @@ struct TensorWrapper {
     PyObject* varnode();
     void reset_varnode();
     PyObject* handle();
-    void set_handle(PyObject *);
+    void set_handle(PyObject*);
 
     PyObject* mixin_handle();
     PyObject* recording();
@@ -205,15 +210,15 @@ struct TensorWrapper {
     void set_recording(PyObject*);
 
     PyObject* compiled_info();
-    void set_compiled_info(PyObject *);
+    void set_compiled_info(PyObject*);
     PyObject* trace_mixin_info();
-    void set_trace_mixin_info(PyObject *);
+    void set_trace_mixin_info(PyObject*);
     PyObject* module_trace_info();
-    void set_module_trace_info(PyObject *);
+    void set_module_trace_info(PyObject*);
     PyObject* user_custom_name();
-    void set_user_custom_name(PyObject *);
+    void set_user_custom_name(PyObject*);
     PyObject* automatic_name();
-    void set_automatic_name(PyObject *);
+    void set_automatic_name(PyObject*);
     PyObject* _use_cnt() { return PyLong_FromSize_t(m_tensor.use_count()); };
 };
 
@@ -221,10 +226,11 @@ struct PySymbolVar {
     cg::VarNode* m_node = nullptr;
     bool is_scalar = false;
     PySymbolVar() = default;
-    PySymbolVar(VarNode *m): m_node(m){}
+    PySymbolVar(VarNode* m) : m_node(m) {}
 };
 
-PyObject* py_apply(PyObject* self, PyObject*const* args, size_t nargs/* , PyObject* kwnames */);
+PyObject* py_apply(
+        PyObject* self, PyObject* const* args, size_t nargs /* , PyObject* kwnames */);
 
 struct ApplyContext {
     static Tensor::flags_t global_disable;
@@ -232,7 +238,7 @@ struct ApplyContext {
 
     Tensor::flags_t flags = 0;
     std::shared_ptr<OpDef> op;
-    Tensor*const* args;
+    Tensor* const* args;
     size_t nargs;
     PyTypeObject* pytype = nullptr;
     bool backward = false;
@@ -241,12 +247,11 @@ struct ApplyContext {
         Tensor::flags_t saved_flags;
 
     public:
-        scoped_disable(Tensor::flags_t flags) : saved_flags(ApplyContext::global_disable) {
+        scoped_disable(Tensor::flags_t flags)
+                : saved_flags(ApplyContext::global_disable) {
             ApplyContext::global_disable |= flags;
         }
-        ~scoped_disable() {
-            ApplyContext::global_disable = saved_flags;
-        }
+        ~scoped_disable() { ApplyContext::global_disable = saved_flags; }
     };
 };
 
@@ -270,7 +275,8 @@ decltype(auto) resolve_arrow(T&& p) {
 }
 
 template <typename... Args>
-constexpr bool is_all_tensor_ptr = (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
+constexpr bool is_all_tensor_ptr =
+        (... && std::is_same_v<decltype(resolve_arrow(std::declval<Args>())), Tensor*>);
 
 template <typename... Args, std::enable_if_t<is_all_tensor_ptr<Args...>, int> = 0>
 apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
@@ -283,7 +289,7 @@ apply_result_t apply(std::shared_ptr<OpDef> op, Args&&... args) {
     return apply(ctx);
 }
 
-inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
+inline auto apply(std::shared_ptr<OpDef> op, Tensor* const* args, size_t nargs) {
     ApplyContext ctx;
     ctx.op = std::move(op);
     ctx.nargs = nargs;
@@ -295,9 +301,8 @@ inline auto apply(std::shared_ptr<OpDef> op, Tensor*const* args, size_t nargs) {
 }
 
 template <typename T>
-auto apply(std::shared_ptr<OpDef> op, T&& tensors)
-        -> std::enable_if_t<std::is_same_v<decltype(resolve_arrow(tensors[0])), Tensor*>,
-                            apply_result_t> {
+auto apply(std::shared_ptr<OpDef> op, T&& tensors) -> std::enable_if_t<
+        std::is_same_v<decltype(resolve_arrow(tensors[0])), Tensor*>, apply_result_t> {
     size_t nargs = tensors.size();
     Tensor* args[nargs];
     for (size_t i = 0; i < nargs; ++i) {
@@ -308,21 +313,20 @@ auto apply(std::shared_ptr<OpDef> op, T&& tensors)
 
 std::shared_ptr<Tensor> make_const(imperative::TensorPtr value);
 
-inline auto apply(Subgraph graph, Tensor*const* args, size_t nargs) {
+inline auto apply(Subgraph graph, Tensor* const* args, size_t nargs) {
     SmallVector<std::shared_ptr<Tensor>> inputs;
     for (size_t i = 0; i < nargs; ++i) {
         inputs.push_back(args[i]->shared_from_this());
     }
-    auto apply_functor = [](std::shared_ptr<OpDef> op, SmallVector<std::shared_ptr<Tensor>> inputs, size_t) {
-        return apply(op, std::move(inputs));
-    };
+    auto apply_functor = [](std::shared_ptr<OpDef> op,
+                            SmallVector<std::shared_ptr<Tensor>> inputs,
+                            size_t) { return apply(op, std::move(inputs)); };
     return graph.apply(inputs, apply_functor, &make_const);
 }
 
 template <typename T>
-auto apply(Subgraph graph, T&& tensors)
-        -> std::enable_if_t<std::is_same_v<std::decay_t<decltype(tensors[0])>, Tensor*>,
-                            apply_result_t> {
+auto apply(Subgraph graph, T&& tensors) -> std::enable_if_t<
+        std::is_same_v<std::decay_t<decltype(tensors[0])>, Tensor*>, apply_result_t> {
     size_t nargs = tensors.size();
     Tensor* args[nargs];
     for (size_t i = 0; i < nargs; ++i) {
@@ -333,14 +337,16 @@ auto apply(Subgraph graph, T&& tensors)
 
 void init_tensor(pybind11::module);
 
-extern PyObject *cpp_apply_with_tracing;
-extern PyObject *cpp_apply_backward_varnode;
-extern PyObject *cpp_apply_module_trace;
+extern PyObject* cpp_apply_with_tracing;
+extern PyObject* cpp_apply_backward_varnode;
+extern PyObject* cpp_apply_module_trace;
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python
 
 namespace pybind11::detail {
 
-template<> struct type_caster<mgb::imperative::python::TensorWrapper> : mgb::imperative::python::TensorWrapper::wrap_t::caster {};
+template <>
+struct type_caster<mgb::imperative::python::TensorWrapper>
+        : mgb::imperative::python::TensorWrapper::wrap_t::caster {};
 
-} // namespace pybind11::detail
+}  // namespace pybind11::detail

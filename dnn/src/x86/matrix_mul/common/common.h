@@ -26,8 +26,8 @@ namespace megdnn {
 namespace x86 {
 
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void _mm256_reduce_two_epi32_to_ptr(__m256i& a, __m256i& b,
-                                                  int32_t* output_ptr) {
+static inline void _mm256_reduce_two_epi32_to_ptr(
+        __m256i& a, __m256i& b, int32_t* output_ptr) {
     __m256i vec_zero = _mm256_setzero_si256();
     a = _mm256_hadd_epi32(a, b);
     a = _mm256_hadd_epi32(a, vec_zero);
@@ -37,8 +37,8 @@ static inline void _mm256_reduce_two_epi32_to_ptr(__m256i& a, __m256i& b,
 }
 
 template <typename T>
-static inline void interleave_helper(const T*& inptr, T*& outptr, int unroll_k,
-                                     int ksize, T val = 0) {
+static inline void interleave_helper(
+        const T*& inptr, T*& outptr, int unroll_k, int ksize, T val = 0) {
     int k = 0;
     for (; k < ksize; k++) {
         *outptr++ = *inptr++;
@@ -48,9 +48,9 @@ static inline void interleave_helper(const T*& inptr, T*& outptr, int unroll_k,
     }
 }
 
-static inline void interleave_helper_add_128(const int8_t*& inptr,
-                                             uint8_t*& outptr, int unroll_k,
-                                             int ksize, uint8_t val = 0) {
+static inline void interleave_helper_add_128(
+        const int8_t*& inptr, uint8_t*& outptr, int unroll_k, int ksize,
+        uint8_t val = 0) {
     int k = 0;
     for (; k < ksize; k++) {
         *outptr++ = static_cast<uint8_t>((*inptr++) + 128u);
@@ -60,9 +60,8 @@ static inline void interleave_helper_add_128(const int8_t*& inptr,
     }
 }
 template <typename T>
-static inline void interleave_helper_no_inc(T* outptr, const T* inptr,
-                                            int unroll_k, int ksize,
-                                            T val = 0) {
+static inline void interleave_helper_no_inc(
+        T* outptr, const T* inptr, int unroll_k, int ksize, T val = 0) {
     int k = 0;
     for (; k < ksize; k++) {
         *outptr++ = *inptr++;
@@ -71,42 +70,38 @@ static inline void interleave_helper_no_inc(T* outptr, const T* inptr,
         *outptr++ = val;
     }
 }
-static inline void interleave_2x16_pad(dt_int8* out, const dt_int8* in0,
-                                       const dt_int8* in1, int k) {
+static inline void interleave_2x16_pad(
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, int k) {
     interleave_helper_no_inc(out, in0, 16, k);
     interleave_helper_no_inc(out + 16, in1, 16, k);
 }
-static inline void interleave_4x16_pad(dt_int8* out, const dt_int8* in0,
-                                       const dt_int8* in1, const dt_int8* in2,
-                                       const dt_int8* in3, int k) {
+static inline void interleave_4x16_pad(
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3, int k) {
     interleave_helper_no_inc(out, in0, 16, k);
     interleave_helper_no_inc(out + 16, in1, 16, k);
     interleave_helper_no_inc(out + 32, in2, 16, k);
     interleave_helper_no_inc(out + 48, in3, 16, k);
 }
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void interleave_2x16(dt_int8* out, const dt_int8* in0,
-                                   const dt_int8* in1) {
+static inline void interleave_2x16(
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1) {
     _mm_storeu_si128((__m128i*)out, _mm_loadu_si128((const __m128i*)in0));
-    _mm_storeu_si128((__m128i*)(out + 16),
-                     _mm_loadu_si128((const __m128i*)in1));
+    _mm_storeu_si128((__m128i*)(out + 16), _mm_loadu_si128((const __m128i*)in1));
 }
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void interleave_4x16(dt_int8* out, const dt_int8* in0,
-                                   const dt_int8* in1, const dt_int8* in2,
-                                   const dt_int8* in3) {
+static inline void interleave_4x16(
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3) {
     _mm_storeu_si128((__m128i*)out, _mm_loadu_si128((const __m128i*)in0));
-    _mm_storeu_si128((__m128i*)(out + 16),
-                     _mm_loadu_si128((const __m128i*)in1));
-    _mm_storeu_si128((__m128i*)(out + 32),
-                     _mm_loadu_si128((const __m128i*)in2));
-    _mm_storeu_si128((__m128i*)(out + 48),
-                     _mm_loadu_si128((const __m128i*)in3));
+    _mm_storeu_si128((__m128i*)(out + 16), _mm_loadu_si128((const __m128i*)in1));
+    _mm_storeu_si128((__m128i*)(out + 32), _mm_loadu_si128((const __m128i*)in2));
+    _mm_storeu_si128((__m128i*)(out + 48), _mm_loadu_si128((const __m128i*)in3));
 }
 template <typename T>
-static inline void interleave_4(const T*& inptr0, const T*& inptr1,
-                                const T*& inptr2, const T*& inptr3, T*& outptr,
-                                int unroll_k, int ksize, T val = 0) {
+static inline void interleave_4(
+        const T*& inptr0, const T*& inptr1, const T*& inptr2, const T*& inptr3,
+        T*& outptr, int unroll_k, int ksize, T val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         interleave_helper(inptr0, outptr, unroll_k, size, val);
@@ -116,12 +111,10 @@ static inline void interleave_4(const T*& inptr0, const T*& inptr1,
     }
 }
 
-static inline void interleave_4_add_128(const int8_t*& inptr0,
-                                        const int8_t*& inptr1,
-                                        const int8_t*& inptr2,
-                                        const int8_t*& inptr3, uint8_t*& outptr,
-                                        int unroll_k, int ksize,
-                                        uint8_t val = 0) {
+static inline void interleave_4_add_128(
+        const int8_t*& inptr0, const int8_t*& inptr1, const int8_t*& inptr2,
+        const int8_t*& inptr3, uint8_t*& outptr, int unroll_k, int ksize,
+        uint8_t val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         interleave_helper_add_128(inptr0, outptr, unroll_k, size, val);
@@ -132,8 +125,8 @@ static inline void interleave_4_add_128(const int8_t*& inptr0,
 }
 
 template <typename T>
-static inline void interleave_12(const T* (&input)[12], T*& outptr,
-                                 int unroll_k, int ksize, T val = 0) {
+static inline void interleave_12(
+        const T* (&input)[12], T*& outptr, int unroll_k, int ksize, T val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         for (int i = 0; i < 12; i++)
@@ -141,9 +134,9 @@ static inline void interleave_12(const T* (&input)[12], T*& outptr,
     }
 }
 
-static inline void interleave_12_add_128(const int8_t* (&input)[12],
-                                         uint8_t*& outptr, int unroll_k,
-                                         int ksize, uint8_t val = 0) {
+static inline void interleave_12_add_128(
+        const int8_t* (&input)[12], uint8_t*& outptr, int unroll_k, int ksize,
+        uint8_t val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         for (int i = 0; i < 12; i++)
@@ -152,8 +145,8 @@ static inline void interleave_12_add_128(const int8_t* (&input)[12],
 }
 
 template <typename T>
-static inline void interleave_16(const T* (&input)[16], T*& outptr,
-                                 int unroll_k, int ksize, T val = 0) {
+static inline void interleave_16(
+        const T* (&input)[16], T*& outptr, int unroll_k, int ksize, T val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         for (int i = 0; i < 16; i++)
@@ -162,8 +155,8 @@ static inline void interleave_16(const T* (&input)[16], T*& outptr,
 }
 
 template <typename T>
-static inline void interleave_32(const T* (&input)[32], T*& outptr,
-                                 int unroll_k, int ksize, T val = 0) {
+static inline void interleave_32(
+        const T* (&input)[32], T*& outptr, int unroll_k, int ksize, T val = 0) {
     for (int k = 0; k < ksize; k += unroll_k) {
         int size = std::min(unroll_k, ksize - k);
         for (int i = 0; i < 32; i++)
@@ -172,11 +165,9 @@ static inline void interleave_32(const T* (&input)[32], T*& outptr,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void interleave_4x4_4_b_add_128(const int8_t*& input0,
-                                              const int8_t*& input1,
-                                              const int8_t*& input2,
-                                              const int8_t*& input3,
-                                              uint8_t*& outptr) {
+static inline void interleave_4x4_4_b_add_128(
+        const int8_t*& input0, const int8_t*& input1, const int8_t*& input2,
+        const int8_t*& input3, uint8_t*& outptr) {
     // int8 trick: add 128 means add b1000 0000, it is same to -128
     __m128i const_128 = _mm_set1_epi8(-128);
     __m128i R0 = _mm_loadu_si128((__m128i*)input0);  //    A3 A2 A1 A0
@@ -206,20 +197,16 @@ static inline void interleave_4x4_4_b_add_128(const int8_t*& input0,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void interleave_12x4_4_b_add_128(const int8_t* (&input)[12],
-                                               uint8_t*& outptr) {
+static inline void interleave_12x4_4_b_add_128(
+        const int8_t* (&input)[12], uint8_t*& outptr) {
     __m128i O0[3], O1[3], O2[3], O3[3];
     // int8 trick: add 128 means add b1000 0000, it is same to -128
     __m128i const_128 = _mm_set1_epi8(-128);
     for (int i = 0; i < 3; i++) {
-        __m128i R0 = _mm_loadu_si128(
-                ((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
-        __m128i R1 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 1]));  //    B3 B2 B1 B0
-        __m128i R2 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
-        __m128i R3 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 3]));  //    D3 D2 D1 D0
+        __m128i R0 = _mm_loadu_si128(((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
+        __m128i R1 = _mm_loadu_si128((__m128i*)(input[i * 4 + 1]));  //    B3 B2 B1 B0
+        __m128i R2 = _mm_loadu_si128((__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
+        __m128i R3 = _mm_loadu_si128((__m128i*)(input[i * 4 + 3]));  //    D3 D2 D1 D0
 
         R0 = _mm_add_epi8(R0, const_128);
         R1 = _mm_add_epi8(R1, const_128);
@@ -265,19 +252,15 @@ static inline void interleave_16x4_4_b(const T* (&input)[16], T*& outptr) {
 
     __m128i O0[4], O1[4], O2[4], O3[4];
     for (int i = 0; i < 4; i++) {
-        __m128i R0 = _mm_loadu_si128(
-                ((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
-        __m128i R1 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 1]));      //    B3 B2 B1 B0
-        __m128i R01L = _mm_unpacklo_epi32(R0, R1);  //    B1 A1 B0 A0
-        __m128i R01H = _mm_unpackhi_epi32(R0, R1);  //    B3 A3 B2 A2
+        __m128i R0 = _mm_loadu_si128(((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
+        __m128i R1 = _mm_loadu_si128((__m128i*)(input[i * 4 + 1]));  //    B3 B2 B1 B0
+        __m128i R01L = _mm_unpacklo_epi32(R0, R1);                   //    B1 A1 B0 A0
+        __m128i R01H = _mm_unpackhi_epi32(R0, R1);                   //    B3 A3 B2 A2
 
-        __m128i R2 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
-        __m128i R3 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 3]));      //    D3 D2 D1 D0
-        __m128i R23L = _mm_unpacklo_epi32(R2, R3);  //    D1 C1 D0 C0
-        __m128i R23H = _mm_unpackhi_epi32(R2, R3);  //    D3 C3 D2 C2
+        __m128i R2 = _mm_loadu_si128((__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
+        __m128i R3 = _mm_loadu_si128((__m128i*)(input[i * 4 + 3]));  //    D3 D2 D1 D0
+        __m128i R23L = _mm_unpacklo_epi32(R2, R3);                   //    D1 C1 D0 C0
+        __m128i R23H = _mm_unpackhi_epi32(R2, R3);                   //    D3 C3 D2 C2
 
         O0[i] = _mm_unpacklo_epi64(R01L, R23L);
         O1[i] = _mm_unpackhi_epi64(R01L, R23L);
@@ -313,19 +296,15 @@ static inline void interleave_32x4_4_b(const T* (&input)[32], T*& outptr) {
 
     __m128i O0[8], O1[8], O2[8], O3[8];
     for (int i = 0; i < 8; i++) {
-        __m128i R0 = _mm_loadu_si128(
-                ((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
-        __m128i R1 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 1]));      //    B3 B2 B1 B0
-        __m128i R01L = _mm_unpacklo_epi32(R0, R1);  //    B1 A1 B0 A0
-        __m128i R01H = _mm_unpackhi_epi32(R0, R1);  //    B3 A3 B2 A2
+        __m128i R0 = _mm_loadu_si128(((__m128i*)input[i * 4 + 0]));  //    A3 A2 A1 A0
+        __m128i R1 = _mm_loadu_si128((__m128i*)(input[i * 4 + 1]));  //    B3 B2 B1 B0
+        __m128i R01L = _mm_unpacklo_epi32(R0, R1);                   //    B1 A1 B0 A0
+        __m128i R01H = _mm_unpackhi_epi32(R0, R1);                   //    B3 A3 B2 A2
 
-        __m128i R2 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
-        __m128i R3 = _mm_loadu_si128(
-                (__m128i*)(input[i * 4 + 3]));      //    D3 D2 D1 D0
-        __m128i R23L = _mm_unpacklo_epi32(R2, R3);  //    D1 C1 D0 C0
-        __m128i R23H = _mm_unpackhi_epi32(R2, R3);  //    D3 C3 D2 C2
+        __m128i R2 = _mm_loadu_si128((__m128i*)(input[i * 4 + 2]));  //    C3 C2 C1 C0
+        __m128i R3 = _mm_loadu_si128((__m128i*)(input[i * 4 + 3]));  //    D3 D2 D1 D0
+        __m128i R23L = _mm_unpacklo_epi32(R2, R3);                   //    D1 C1 D0 C0
+        __m128i R23H = _mm_unpackhi_epi32(R2, R3);                   //    D3 C3 D2 C2
 
         O0[i] = _mm_unpacklo_epi64(R01L, R23L);
         O1[i] = _mm_unpackhi_epi64(R01L, R23L);
@@ -354,10 +333,9 @@ static inline void interleave_32x4_4_b(const T* (&input)[32], T*& outptr) {
     }
 }
 static inline void naive_transpose_16xn(
-        dt_int8* out, const dt_int8* in0, const dt_int8* in1,
-        const dt_int8* in2, const dt_int8* in3, const dt_int8* in4,
-        const dt_int8* in5, const dt_int8* in6, const dt_int8* in7,
-        const dt_int8* in8, const dt_int8* in9, const dt_int8* in10,
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3, const dt_int8* in4, const dt_int8* in5, const dt_int8* in6,
+        const dt_int8* in7, const dt_int8* in8, const dt_int8* in9, const dt_int8* in10,
         const dt_int8* in11, const dt_int8* in12, const dt_int8* in13,
         const dt_int8* in14, const dt_int8* in15, int n) {
     for (int i = 0; i < n; ++i) {
@@ -367,8 +345,8 @@ static inline void naive_transpose_16xn(
 #undef cb
     }
 }
-static inline void naive_transpose_nk_k2(dt_int8* out, const dt_int8* in,
-                                         int ldin, int n, int k, int n_unroll) {
+static inline void naive_transpose_nk_k2(
+        dt_int8* out, const dt_int8* in, int ldin, int n, int k, int n_unroll) {
     constexpr int k_step = 2;
     for (int k_iter = 0; k_iter < k; k_iter += k_step) {
         for (int n_iter = 0; n_iter < n; ++n_iter) {
@@ -386,10 +364,9 @@ static inline void naive_transpose_nk_k2(dt_int8* out, const dt_int8* in,
     }
 }
 static inline void naive_transpose_16xk_k2(
-        dt_int8* out, const dt_int8* in0, const dt_int8* in1,
-        const dt_int8* in2, const dt_int8* in3, const dt_int8* in4,
-        const dt_int8* in5, const dt_int8* in6, const dt_int8* in7,
-        const dt_int8* in8, const dt_int8* in9, const dt_int8* in10,
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3, const dt_int8* in4, const dt_int8* in5, const dt_int8* in6,
+        const dt_int8* in7, const dt_int8* in8, const dt_int8* in9, const dt_int8* in10,
         const dt_int8* in11, const dt_int8* in12, const dt_int8* in13,
         const dt_int8* in14, const dt_int8* in15, int k_max) {
     constexpr int k_step = 2;
@@ -413,9 +390,9 @@ static inline void naive_transpose_16xk_k2(
 }
 
 static inline void naive_transpose_8xk_k2(
-        dt_int8* out, const dt_int8* in0, const dt_int8* in1,
-        const dt_int8* in2, const dt_int8* in3, const dt_int8* in4,
-        const dt_int8* in5, const dt_int8* in6, const dt_int8* in7, int k_max) {
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3, const dt_int8* in4, const dt_int8* in5, const dt_int8* in6,
+        const dt_int8* in7, int k_max) {
     constexpr int k_step = 2;
     const int k_end = k_max / k_step * k_step;
     const int k_remain = k_max - k_end;
@@ -435,8 +412,8 @@ static inline void naive_transpose_8xk_k2(
 #undef cb
     }
 }
-static inline void naive_transpose_kn(dt_int8* out, const dt_int8* in, int ldin,
-                                      int k, int n) {
+static inline void naive_transpose_kn(
+        dt_int8* out, const dt_int8* in, int ldin, int k, int n) {
     for (int n_iter = 0; n_iter < n; ++n_iter) {
         for (int k_iter = 0; k_iter < k; ++k_iter) {
             *out++ = *(in + k_iter * ldin + n_iter);
@@ -444,9 +421,9 @@ static inline void naive_transpose_kn(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 template <typename OutType>
-static inline void naive_transpose_kn_pad(OutType* out, const dt_int8* in,
-                                          int ldin, int k, int n, int k_unroll,
-                                          int n_unroll, OutType pad = 0) {
+static inline void naive_transpose_kn_pad(
+        OutType* out, const dt_int8* in, int ldin, int k, int n, int k_unroll,
+        int n_unroll, OutType pad = 0) {
     for (int n_iter = 0; n_iter < n_unroll; ++n_iter) {
         for (int k_iter = 0; k_iter < k_unroll; ++k_iter) {
             if (k_iter < k && n_iter < n) {
@@ -459,9 +436,9 @@ static inline void naive_transpose_kn_pad(OutType* out, const dt_int8* in,
 }
 
 template <typename T>
-static inline void transpose_4(const T*& inptr0, const T*& inptr1,
-                               const T*& inptr2, const T*& inptr3, T* outptr,
-                               int interleave, int size, T val = 0) {
+static inline void transpose_4(
+        const T*& inptr0, const T*& inptr1, const T*& inptr2, const T*& inptr3,
+        T* outptr, int interleave, int size, T val = 0) {
     megdnn_assert(size <= interleave);
     int i = 0;
     for (; i < size; i++) {
@@ -479,9 +456,9 @@ static inline void transpose_4(const T*& inptr0, const T*& inptr1,
 }
 
 template <typename T>
-static inline void transpose_2_no_inc(const T* inptr0, const T* inptr1,
-                                      T* outptr, int interleave, int size,
-                                      T val = 0) {
+static inline void transpose_2_no_inc(
+        const T* inptr0, const T* inptr1, T* outptr, int interleave, int size,
+        T val = 0) {
     megdnn_assert(size <= interleave);
     int i = 0;
     for (; i < size; i++) {
@@ -494,12 +471,10 @@ static inline void transpose_2_no_inc(const T* inptr0, const T* inptr1,
     }
 }
 
-static inline void transpose_4_add_128(const int8_t*& inptr0,
-                                       const int8_t*& inptr1,
-                                       const int8_t*& inptr2,
-                                       const int8_t*& inptr3, uint8_t* outptr,
-                                       int interleave, int size,
-                                       uint8_t val = 0) {
+static inline void transpose_4_add_128(
+        const int8_t*& inptr0, const int8_t*& inptr1, const int8_t*& inptr2,
+        const int8_t*& inptr3, uint8_t* outptr, int interleave, int size,
+        uint8_t val = 0) {
     megdnn_assert(size <= interleave);
     int i = 0;
     for (; i < size; i++) {
@@ -516,8 +491,8 @@ static inline void transpose_4_add_128(const int8_t*& inptr0,
     }
 }
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void transpose_2x32_no_inc(const int8_t* inptr0,
-                                         const int8_t* inptr1, int8_t* outptr) {
+static inline void transpose_2x32_no_inc(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* outptr) {
     //    A32 ... A14 A13 A12 A11 A10 A9 A8 A7 A6 A5 A4 A3 A2 A1 A0
     __m256i r0 = _mm256_loadu_si256((__m256i*)(inptr0));
     //    B32 ... B15 B14 B13 B12 B11 B10 B9 B8 B7 B6 B5 B4 B3 B2 B1 B0
@@ -530,17 +505,14 @@ static inline void transpose_2x32_no_inc(const int8_t* inptr0,
     __m256i r01h = _mm256_unpackhi_epi8(r0, r1);
 
     _mm_storeu_si128((__m128i*)outptr, _mm256_extracti128_si256(r01l, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 16),
-                     _mm256_extracti128_si256(r01h, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 32),
-                     _mm256_extracti128_si256(r01l, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 48),
-                     _mm256_extracti128_si256(r01h, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 16), _mm256_extracti128_si256(r01h, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 32), _mm256_extracti128_si256(r01l, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 48), _mm256_extracti128_si256(r01h, 1));
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void transpose_2x16_no_inc(const int8_t* inptr0,
-                                         const int8_t* inptr1, int8_t* outptr) {
+static inline void transpose_2x16_no_inc(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* outptr) {
     //    A15 A14 A13 A12 A11 A10 A9 A8 A7 A6 A5 A4 A3 A2 A1 A0
     __m128i r0 = _mm_loadu_si128((__m128i*)inptr0);
     //    B15 B14 B13 B12 B11 B10 B9 B8 B7 B6 B5 B4 B3 B2 B1 B0
@@ -555,8 +527,8 @@ static inline void transpose_2x16_no_inc(const int8_t* inptr0,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void transpose_2x8_no_inc(const int8_t* inptr0,
-                                        const int8_t* inptr1, int8_t* outptr) {
+static inline void transpose_2x8_no_inc(
+        const int8_t* inptr0, const int8_t* inptr1, int8_t* outptr) {
     //    A7 A6 A5 A4 A3 A2 A1 A0
     __m128i r0 = _mm_loadl_epi64((__m128i*)inptr0);
     //    B7 B6 B5 B4 B3 B2 B1 B0
@@ -578,9 +550,8 @@ static inline __m128i _mm_cvtepi8_epi16_from_ptr(const int8_t* ptr) {
 }
 
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void transpose_2x16_k2_int8_to_int16(const int8_t* inptr0,
-                                                   const int8_t* inptr1,
-                                                   int16_t* outptr) {
+static inline void transpose_2x16_k2_int8_to_int16(
+        const int8_t* inptr0, const int8_t* inptr1, int16_t* outptr) {
     //    A7 A6 A5 A4 A3 A2 A1 A0
     __m256i r0 = _mm256_cvtepi8_epi16_from_ptr(inptr0);
     //    B7 B6 B5 B4 B3 B2 B1 B0
@@ -592,15 +563,12 @@ static inline void transpose_2x16_k2_int8_to_int16(const int8_t* inptr0,
 
     _mm_storeu_si128((__m128i*)(outptr + 0), _mm256_extracti128_si256(r01l, 0));
     _mm_storeu_si128((__m128i*)(outptr + 8), _mm256_extracti128_si256(r01h, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 16),
-                     _mm256_extracti128_si256(r01l, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 24),
-                     _mm256_extracti128_si256(r01h, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 16), _mm256_extracti128_si256(r01l, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 24), _mm256_extracti128_si256(r01h, 1));
 }
 MEGDNN_ATTRIBUTE_TARGET("avx2")
 static inline void transpose_km_2x16_k2_tile4_int8_to_int16(
-        const int8_t* inptr0, const int8_t* inptr1, int16_t* outptr,
-        int tile_step) {
+        const int8_t* inptr0, const int8_t* inptr1, int16_t* outptr, int tile_step) {
     //    A15 A14 A13 A12 A11 A10 A9 A8 A7 A6 A5 A4 A3 A2 A1 A0
     __m256i r0 = _mm256_cvtepi8_epi16_from_ptr(inptr0);
     //    B15 B14 B13 B12 B11 B10 B9 B8 B7 B6 B5 B4 B3 B2 B1 B0
@@ -610,21 +578,20 @@ static inline void transpose_km_2x16_k2_tile4_int8_to_int16(
     //    B15 A15 B14 A14 B13 A13 B12 A12 B7 A7 B6 A6 B5 A5 B4 A4
     __m256i r01h = _mm256_unpackhi_epi16(r0, r1);
 
-    _mm_storeu_si128((__m128i*)(outptr + 0 * tile_step),
-                     _mm256_extracti128_si256(r01l, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 1 * tile_step),
-                     _mm256_extracti128_si256(r01h, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 2 * tile_step),
-                     _mm256_extracti128_si256(r01l, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 3 * tile_step),
-                     _mm256_extracti128_si256(r01h, 1));
+    _mm_storeu_si128(
+            (__m128i*)(outptr + 0 * tile_step), _mm256_extracti128_si256(r01l, 0));
+    _mm_storeu_si128(
+            (__m128i*)(outptr + 1 * tile_step), _mm256_extracti128_si256(r01h, 0));
+    _mm_storeu_si128(
+            (__m128i*)(outptr + 2 * tile_step), _mm256_extracti128_si256(r01l, 1));
+    _mm_storeu_si128(
+            (__m128i*)(outptr + 3 * tile_step), _mm256_extracti128_si256(r01h, 1));
 }
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-static inline void transpose_8x16_k2(dt_int8* out, const dt_int8* in0,
-                                     const dt_int8* in1, const dt_int8* in2,
-                                     const dt_int8* in3, const dt_int8* in4,
-                                     const dt_int8* in5, const dt_int8* in6,
-                                     const dt_int8* in7) {
+static inline void transpose_8x16_k2(
+        dt_int8* out, const dt_int8* in0, const dt_int8* in1, const dt_int8* in2,
+        const dt_int8* in3, const dt_int8* in4, const dt_int8* in5, const dt_int8* in6,
+        const dt_int8* in7) {
     //    A7 A6 A5 A4 A3 A2 A1 A0
     __m128i r0 = _mm_loadu_si128((__m128i*)in0);
     //    B7 B6 B5 B4 B3 B2 B1 B0
@@ -684,10 +651,8 @@ static inline void transpose_8x16_k2(dt_int8* out, const dt_int8* in0,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-static inline void transpose_km_2x8_k2_tile4_int8_to_int16(const int8_t* inptr0,
-                                                           const int8_t* inptr1,
-                                                           int16_t* outptr,
-                                                           int tile_step) {
+static inline void transpose_km_2x8_k2_tile4_int8_to_int16(
+        const int8_t* inptr0, const int8_t* inptr1, int16_t* outptr, int tile_step) {
     //    A7 A6 A5 A4 A3 A2 A1 A0
     __m128i r0 = _mm_cvtepi8_epi16_from_ptr(inptr0);
     //    B7 B6 B5 B4 B3 B2 B1 B0
@@ -702,11 +667,9 @@ static inline void transpose_km_2x8_k2_tile4_int8_to_int16(const int8_t* inptr0,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void transpose_4x16_k2_int8_to_int16(const int8_t* inptr0,
-                                                   const int8_t* inptr1,
-                                                   const int8_t* inptr2,
-                                                   const int8_t* inptr3,
-                                                   int16_t* outptr) {
+static inline void transpose_4x16_k2_int8_to_int16(
+        const int8_t* inptr0, const int8_t* inptr1, const int8_t* inptr2,
+        const int8_t* inptr3, int16_t* outptr) {
     //    A7 A6 A5 A4 A3 A2 A1 A0
     __m256i r0 = _mm256_cvtepi8_epi16_from_ptr(inptr0);
     //    B7 B6 B5 B4 B3 B2 B1 B0
@@ -731,30 +694,20 @@ static inline void transpose_4x16_k2_int8_to_int16(const int8_t* inptr0,
     __m256i out_2_6 = _mm256_unpacklo_epi64(r01h, r23h);
     __m256i out_3_7 = _mm256_unpackhi_epi64(r01h, r23h);
 
-    _mm_storeu_si128((__m128i*)(outptr + 0),
-                     _mm256_extracti128_si256(out_0_4, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 8),
-                     _mm256_extracti128_si256(out_1_5, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 16),
-                     _mm256_extracti128_si256(out_2_6, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 24),
-                     _mm256_extracti128_si256(out_3_7, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 32),
-                     _mm256_extracti128_si256(out_0_4, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 40),
-                     _mm256_extracti128_si256(out_1_5, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 48),
-                     _mm256_extracti128_si256(out_2_6, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 56),
-                     _mm256_extracti128_si256(out_3_7, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 0), _mm256_extracti128_si256(out_0_4, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 8), _mm256_extracti128_si256(out_1_5, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 16), _mm256_extracti128_si256(out_2_6, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 24), _mm256_extracti128_si256(out_3_7, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 32), _mm256_extracti128_si256(out_0_4, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 40), _mm256_extracti128_si256(out_1_5, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 48), _mm256_extracti128_si256(out_2_6, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 56), _mm256_extracti128_si256(out_3_7, 1));
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse4.1")
-static inline void transpose_4x8_k2_int8_to_int16(const int8_t* inptr0,
-                                                  const int8_t* inptr1,
-                                                  const int8_t* inptr2,
-                                                  const int8_t* inptr3,
-                                                  int16_t* outptr) {
+static inline void transpose_4x8_k2_int8_to_int16(
+        const int8_t* inptr0, const int8_t* inptr1, const int8_t* inptr2,
+        const int8_t* inptr3, int16_t* outptr) {
     //    A3 A2 A1 A0
     __m128i r0 = _mm_cvtepi8_epi16_from_ptr(inptr0);
     //    B3 B2 B1 B0
@@ -831,11 +784,9 @@ static inline __m128i _mm_continue_mask(const int& x) {
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse2")
-static inline void transpose_4xk_int8_to_int16_pad(const int8_t* inptr0,
-                                                   const int8_t* inptr1,
-                                                   const int8_t* inptr2,
-                                                   const int8_t* inptr3,
-                                                   int16_t* outptr, int k) {
+static inline void transpose_4xk_int8_to_int16_pad(
+        const int8_t* inptr0, const int8_t* inptr1, const int8_t* inptr2,
+        const int8_t* inptr3, int16_t* outptr, int k) {
     int i = 0;
     constexpr int k_step = 2;
     const int k_end = k / k_step * k_step;
@@ -863,9 +814,8 @@ static inline void transpose_4xk_int8_to_int16_pad(const int8_t* inptr0,
     }
 }
 MEGDNN_ATTRIBUTE_TARGET("sse2")
-static inline void transpose_2xk_k2_pad(const int8_t* inptr0,
-                                        const int8_t* inptr1, int16_t* outptr,
-                                        int k) {
+static inline void transpose_2xk_k2_pad(
+        const int8_t* inptr0, const int8_t* inptr1, int16_t* outptr, int k) {
     int i = 0;
     constexpr int k_step = 2;
     const int k_end = k / k_step * k_step;
@@ -885,10 +835,9 @@ static inline void transpose_2xk_k2_pad(const int8_t* inptr0,
     }
 }
 MEGDNN_ATTRIBUTE_TARGET("avx2")
-static inline void transpose_4x32_1_b(const int8_t*& inptr0,
-                                      const int8_t*& inptr1,
-                                      const int8_t*& inptr2,
-                                      const int8_t*& inptr3, int8_t* outptr) {
+static inline void transpose_4x32_1_b(
+        const int8_t*& inptr0, const int8_t*& inptr1, const int8_t*& inptr2,
+        const int8_t*& inptr3, int8_t* outptr) {
     //    A32 ... A14 A13 A12 A11 A10 A9 A8 A7 A6 A5 A4 A3 A2 A1 A0
     __m256i R0 = _mm256_loadu_si256((__m256i*)(inptr0));
     //    B32 ... B15 B14 B13 B12 B11 B10 B9 B8 B7 B6 B5 B4 B3 B2 B1 B0
@@ -925,20 +874,13 @@ static inline void transpose_4x32_1_b(const int8_t*& inptr0,
     __m256i Out12_15 = _mm256_unpackhi_epi16(R01H, R23H);
 
     _mm_storeu_si128((__m128i*)outptr, _mm256_extracti128_si256(Out0_3, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 16),
-                     _mm256_extracti128_si256(Out4_7, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 32),
-                     _mm256_extracti128_si256(Out8_11, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 48),
-                     _mm256_extracti128_si256(Out12_15, 0));
-    _mm_storeu_si128((__m128i*)(outptr + 64),
-                     _mm256_extracti128_si256(Out0_3, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 80),
-                     _mm256_extracti128_si256(Out4_7, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 96),
-                     _mm256_extracti128_si256(Out8_11, 1));
-    _mm_storeu_si128((__m128i*)(outptr + 112),
-                     _mm256_extracti128_si256(Out12_15, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 16), _mm256_extracti128_si256(Out4_7, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 32), _mm256_extracti128_si256(Out8_11, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 48), _mm256_extracti128_si256(Out12_15, 0));
+    _mm_storeu_si128((__m128i*)(outptr + 64), _mm256_extracti128_si256(Out0_3, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 80), _mm256_extracti128_si256(Out4_7, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 96), _mm256_extracti128_si256(Out8_11, 1));
+    _mm_storeu_si128((__m128i*)(outptr + 112), _mm256_extracti128_si256(Out12_15, 1));
     inptr0 += 32;
     inptr1 += 32;
     inptr2 += 32;
@@ -947,9 +889,9 @@ static inline void transpose_4x32_1_b(const int8_t*& inptr0,
 
 template <typename T>
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void transpose_4x16_1_b(const T*& inptr0, const T*& inptr1,
-                                      const T*& inptr2, const T*& inptr3,
-                                      T*& outptr) {
+static inline void transpose_4x16_1_b(
+        const T*& inptr0, const T*& inptr1, const T*& inptr2, const T*& inptr3,
+        T*& outptr) {
     static_assert(
             std::is_same<T, int8_t>::value || std::is_same<T, uint8_t>::value,
             "interleave_4x16_1_h only support uint8_t and int8_t");
@@ -992,11 +934,9 @@ static inline void transpose_4x16_1_b(const T*& inptr0, const T*& inptr1,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("sse3")
-static inline void transpose_4x12_1_b_add_128(const int8_t*& inptr0,
-                                              const int8_t*& inptr1,
-                                              const int8_t*& inptr2,
-                                              const int8_t*& inptr3,
-                                              uint8_t*& outptr) {
+static inline void transpose_4x12_1_b_add_128(
+        const int8_t*& inptr0, const int8_t*& inptr1, const int8_t*& inptr2,
+        const int8_t*& inptr3, uint8_t*& outptr) {
     // int8 trick, we want to add 128, means adding b1000 0000, it is same to
     // -128
     __m128i const_128 = _mm_set1_epi8(-128);

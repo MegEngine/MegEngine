@@ -51,26 +51,26 @@ public:
         void init_desc(convolution::CUDNNBwdFilterDescs& desc) const {
             desc.set(*src_layout, *diff_layout, grad_filter_meta, opr->param());
         }
-        SizeArgs(const ConvolutionBackwardFilterImpl* opr,
-                 const TensorLayout& src, const TensorLayout& diff,
-                 const TensorLayout& grad);
-        SizeArgs(const ConvolutionBackwardFilterImpl* opr,
-                 const TensorLayout& src, const TensorLayout& diff,
-                 const TensorLayout& grad,
-                 const CanonizedFilterMeta& grad_meta);
+        SizeArgs(
+                const ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
+                const TensorLayout& diff, const TensorLayout& grad);
+        SizeArgs(
+                const ConvolutionBackwardFilterImpl* opr, const TensorLayout& src,
+                const TensorLayout& diff, const TensorLayout& grad,
+                const CanonizedFilterMeta& grad_meta);
 
         convolution::ForwardSizeArgs as_fwd_args() const {
-            return {handle, src_layout, grad_layout, grad_filter_meta,
-                    diff_layout};
+            return {handle, src_layout, grad_layout, grad_filter_meta, diff_layout};
         }
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *diff_tensor, *grad_tensor;
         Workspace workspace;
 
-        ExecArgs(const ConvolutionBackwardFilterImpl* opr,
-                 _megdnn_tensor_in src, _megdnn_tensor_in diff,
-                 _megdnn_tensor_out grad, _megdnn_workspace workspace);
+        ExecArgs(
+                const ConvolutionBackwardFilterImpl* opr, _megdnn_tensor_in src,
+                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -86,17 +86,16 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
 
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "conv bwd filter algo %s: "
-                      "required workspace %zu bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "conv bwd filter algo %s: "
+                "required workspace %zu bytes, got %zu",
+                name(), req, workspace.size);
         return *this;
     }
 
@@ -108,10 +107,10 @@ class ConvolutionBackwardFilterImpl::AlgoCUDNN final : public AlgoBase {
     CudnnAlgoPack::Attr m_attr;
 
 public:
-    AlgoCUDNN(cudnnConvolutionBwdFilterAlgo_t cudnn_enum)
-            : m_cudnn_enum(cudnn_enum) {
-        megdnn_assert(CudnnAlgoPack::conv_bwd_flt_algos().find(cudnn_enum) !=
-                      CudnnAlgoPack::conv_bwd_flt_algos().end());
+    AlgoCUDNN(cudnnConvolutionBwdFilterAlgo_t cudnn_enum) : m_cudnn_enum(cudnn_enum) {
+        megdnn_assert(
+                CudnnAlgoPack::conv_bwd_flt_algos().find(cudnn_enum) !=
+                CudnnAlgoPack::conv_bwd_flt_algos().end());
         m_attr = CudnnAlgoPack::conv_bwd_flt_algos().at(cudnn_enum);
     }
 
@@ -154,14 +153,12 @@ public:
     void exec(const ExecArgs& args) const override;
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
     AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE |
-               AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::ACCURACY_DEPEND_ON_BATCH;
     }
 };
 
@@ -173,9 +170,7 @@ public:
 
     const char* name() const override { return "CHANNEL_WISE"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_CHANWISE)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 };
 
 class ConvolutionBackwardFilterImpl::AlgoBFloat16 final : public AlgoBase {
@@ -185,16 +180,11 @@ public:
     void exec(const ExecArgs& args) const override;
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
-    const char* name() const override {
-        return "CONVOLUTION_BACKWARD_FILTER_BFLOAT16";
-    }
+    const char* name() const override { return "CONVOLUTION_BACKWARD_FILTER_BFLOAT16"; }
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_BFLOAT16)
 
@@ -203,24 +193,18 @@ private:
 };
 
 //! implement group conv by another algo
-class ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral final
-        : public AlgoBase {
+class ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral final : public AlgoBase {
 public:
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
-    const char* name() const override {
-        return "CUDA:GROUP_CONV_BACKWARD_FILTER";
-    }
+    const char* name() const override { return "CUDA:GROUP_CONV_BACKWARD_FILTER"; }
 
     MEGDNN_DECL_ALGO_TYPE(CUDA_GROUP_CONV_GENERAL)
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
 private:
     WorkspaceBundle get_workspace_bundle(void* ptr, const SizeArgs& args) const;

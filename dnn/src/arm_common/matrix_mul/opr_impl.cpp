@@ -63,12 +63,12 @@ const MatrixMulImpl::AlgoPack& MatrixMulImpl::algo_pack() {
 
 MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(MatrixMulImpl)
 
-SmallVector<fallback::MatrixMulImpl::AlgoBase*>
-MatrixMulImpl::get_all_packed_algo() {
+SmallVector<fallback::MatrixMulImpl::AlgoBase*> MatrixMulImpl::get_all_packed_algo() {
     static AlgoPack s_algo_pack;
     auto&& algos = fallback::MatrixMulImpl::get_all_packed_algo();
-    algos.insert(algos.begin(), algo_pack().all_algos().begin(),
-                 algo_pack().all_algos().end());
+    algos.insert(
+            algos.begin(), algo_pack().all_algos().begin(),
+            algo_pack().all_algos().end());
     return std::move(algos);
 }
 

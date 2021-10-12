@@ -11,10 +11,10 @@
  */
 #include "src/cuda/warp_perspective/common.h"
 
-#include "src/cuda/utils.cuh"
-#include "src/cuda/warp_perspective/common.cuh"
 #include <cstdio>
 #include "src/cuda/cub/util_ptx.cuh"
+#include "src/cuda/utils.cuh"
+#include "src/cuda/warp_perspective/common.cuh"
 
 namespace megdnn {
 namespace cuda {
@@ -28,20 +28,20 @@ __global__ void warp_perspective_bwd_mat_kernel(
     int n = blockIdx.z;
     int ow = blockIdx.x * blockDim.x + threadIdx.x;
     int oh = blockIdx.y * blockDim.y + threadIdx.y;
-    hidden += blockIdx.z * C*OH*OW;
+    hidden += blockIdx.z * C * OH * OW;
     if (midx) {
         in += midx[n] * C * IH * IW;
     } else {
         in += n * C * IH * IW;
     }
-    mat += n * 3*3;
-    grad += n * 3*3;
-    float grad_local[3*3];
+    mat += n * 3 * 3;
+    grad += n * 3 * 3;
+    float grad_local[3 * 3];
     memset(grad_local, 0, sizeof(grad_local));
     if (ow < OW && oh < OH) {
-        float numeratorw = mat[0]*ow + mat[1]*oh + mat[2];
-        float numeratorh = mat[3]*ow + mat[4]*oh + mat[5];
-        float denominator = mat[6]*ow + mat[7]*oh + mat[8];
+        float numeratorw = mat[0] * ow + mat[1] * oh + mat[2];
+        float numeratorh = mat[3] * ow + mat[4] * oh + mat[5];
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
         float denominator2 = sqr(denominator);
         float iw = numeratorw / denominator;
         float ih = numeratorh / denominator;
@@ -55,14 +55,14 @@ __global__ void warp_perspective_bwd_mat_kernel(
         float nbeta = 1.0f - pbeta;
         for (int c = 0; c < C; ++c) {
             float dalpha = 0, dbeta = 0;
-            dalpha -= in[ih0*IW+iw0] * nbeta;
-            dalpha -= in[ih0*IW+iw1] * pbeta;
-            dalpha += in[ih1*IW+iw0] * nbeta;
-            dalpha += in[ih1*IW+iw1] * pbeta;
-            dbeta -= in[ih0*IW+iw0] * nalpha;
-            dbeta += in[ih0*IW+iw1] * nalpha;
-            dbeta -= in[ih1*IW+iw0] * palpha;
-            dbeta += in[ih1*IW+iw1] * palpha;
+            dalpha -= in[ih0 * IW + iw0] * nbeta;
+            dalpha -= in[ih0 * IW + iw1] * pbeta;
+            dalpha += in[ih1 * IW + iw0] * nbeta;
+            dalpha += in[ih1 * IW + iw1] * pbeta;
+            dbeta -= in[ih0 * IW + iw0] * nalpha;
+            dbeta += in[ih0 * IW + iw1] * nalpha;
+            dbeta -= in[ih1 * IW + iw0] * palpha;
+            dbeta += in[ih1 * IW + iw1] * palpha;
             float dw[9], dh[9];
             // dw[i] = d(iw)/d(mat[i])
             dw[0] = ow / denominator;
@@ -91,11 +91,11 @@ __global__ void warp_perspective_bwd_mat_kernel(
                 grad_local[i] += hidden[oh * OW + ow] * dalpha * dh[i] +
                                  hidden[oh * OW + ow] * dbeta * dw[i];
             }
-            hidden += OH*OW;
-            in += IH*IW;
+            hidden += OH * OW;
+            in += IH * IW;
         }
     }
-    volatile __shared__ float grad_shared[16][32][3*3];
+    volatile __shared__ float grad_shared[16][32][3 * 3];
     int tidy = threadIdx.y, tidx = threadIdx.x;
 #pragma unroll
     for (int i = 0; i < 9; ++i)
@@ -105,7 +105,7 @@ __global__ void warp_perspective_bwd_mat_kernel(
         if (tidy < k) {
 #pragma unroll
             for (int i = 0; i < 9; ++i) {
-                grad_shared[tidy][tidx][i] += grad_shared[tidy+k][tidx][i];
+                grad_shared[tidy][tidx][i] += grad_shared[tidy + k][tidx][i];
             }
         }
         __syncthreads();
@@ -115,8 +115,7 @@ __global__ void warp_perspective_bwd_mat_kernel(
             if (tidx < k) {
 #pragma unroll
                 for (int i = 0; i < 9; ++i) {
-                    grad_shared[tidy][tidx][i] +=
-                            grad_shared[tidy][tidx + k][i];
+                    grad_shared[tidy][tidx][i] += grad_shared[tidy][tidx + k][i];
                 }
             }
             cub::WARP_SYNC(0xffffffff);
@@ -125,7 +124,7 @@ __global__ void warp_perspective_bwd_mat_kernel(
     if (tidy == 0 && tidx == 0) {
 #pragma unroll
         for (int i = 0; i < 9; ++i)
-            atomicAdd(grad+i, grad_shared[0][0][i]);
+            atomicAdd(grad + i, grad_shared[0][0][i]);
     }
 }
 
@@ -146,9 +145,9 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
     float grad_local[3 * 3];
     memset(grad_local, 0, sizeof(grad_local));
     if (ow < OW && oh < OH) {
-        float numeratorw = mat[0]*ow + mat[1]*oh + mat[2];
-        float numeratorh = mat[3]*ow + mat[4]*oh + mat[5];
-        float denominator = mat[6]*ow + mat[7]*oh + mat[8];
+        float numeratorw = mat[0] * ow + mat[1] * oh + mat[2];
+        float numeratorh = mat[3] * ow + mat[4] * oh + mat[5];
+        float denominator = mat[6] * ow + mat[7] * oh + mat[8];
         float denominator2 = sqr(denominator);
         float iw = numeratorw / denominator;
         float ih = numeratorh / denominator;
@@ -160,19 +159,19 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
         bool okw1 = (iw1 >= 0 && iw1 < IW);
         bool okh0 = (ih0 >= 0 && ih0 < IH);
         bool okh1 = (ih1 >= 0 && ih1 < IH);
-        iw0 = min(max(iw0, 0), IW-1);
-        iw1 = min(max(iw1, 0), IW-1);
-        ih0 = min(max(ih0, 0), IH-1);
-        ih1 = min(max(ih1, 0), IH-1);
+        iw0 = min(max(iw0, 0), IW - 1);
+        iw1 = min(max(iw1, 0), IW - 1);
+        ih0 = min(max(ih0, 0), IH - 1);
+        ih1 = min(max(ih1, 0), IH - 1);
         float palpha = ih - floor(ih);
         float pbeta = iw - floor(iw);
         float nalpha = 1.0f - palpha;
         float nbeta = 1.0f - pbeta;
         for (int c = 0; c < C; ++c) {
-            float v00 = (okh0 && okw0 ? in[ih0*IW+iw0] : bval);
-            float v01 = (okh0 && okw1 ? in[ih0*IW+iw1] : bval);
-            float v10 = (okh1 && okw0 ? in[ih1*IW+iw0] : bval);
-            float v11 = (okh1 && okw1 ? in[ih1*IW+iw1] : bval);
+            float v00 = (okh0 && okw0 ? in[ih0 * IW + iw0] : bval);
+            float v01 = (okh0 && okw1 ? in[ih0 * IW + iw1] : bval);
+            float v10 = (okh1 && okw0 ? in[ih1 * IW + iw0] : bval);
+            float v11 = (okh1 && okw1 ? in[ih1 * IW + iw1] : bval);
             float dalpha = 0, dbeta = 0;
             dalpha -= v00 * nbeta;
             dalpha -= v01 * pbeta;
@@ -212,11 +211,11 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
                 if (isfinite(delta))
                     grad_local[i] += delta;
             }
-            hidden += OH*OW;
-            in += IH*IW;
+            hidden += OH * OW;
+            in += IH * IW;
         }
     }
-    volatile __shared__ float grad_shared[16][32][3*3];
+    volatile __shared__ float grad_shared[16][32][3 * 3];
     int tidy = threadIdx.y, tidx = threadIdx.x;
 #pragma unroll
     for (int i = 0; i < 9; ++i)
@@ -226,7 +225,7 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
         if (tidy < k) {
 #pragma unroll
             for (int i = 0; i < 9; ++i) {
-                grad_shared[tidy][tidx][i] += grad_shared[tidy+k][tidx][i];
+                grad_shared[tidy][tidx][i] += grad_shared[tidy + k][tidx][i];
             }
         }
         __syncthreads();
@@ -236,8 +235,7 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
             if (tidx < k) {
 #pragma unroll
                 for (int i = 0; i < 9; ++i)
-                    grad_shared[tidy][tidx][i] +=
-                            grad_shared[tidy][tidx + k][i];
+                    grad_shared[tidy][tidx][i] += grad_shared[tidy][tidx + k][i];
             }
             cub::WARP_SYNC(0xffffffff);
         }
@@ -245,18 +243,18 @@ __global__ void warp_perspective_bwd_mat_constant_kernel(
     if (tidy == 0 && tidx == 0) {
 #pragma unroll
         for (int i = 0; i < 9; ++i)
-            atomicAdd(grad+i, grad_shared[0][0][i]);
+            atomicAdd(grad + i, grad_shared[0][0][i]);
     }
 }
 
-void backward_mat_proxy(const float* src, const float* mat, const int* midx,
-                        const float* diff, float* grad, int N, int C, int IH,
-                        int IW, int OH, int OW, float bval, BorderMode mode,
-                        cudaStream_t stream) {
+void backward_mat_proxy(
+        const float* src, const float* mat, const int* midx, const float* diff,
+        float* grad, int N, int C, int IH, int IW, int OH, int OW, float bval,
+        BorderMode mode, cudaStream_t stream) {
     const int BY = 16, BX = 32;
     dim3 threads(BX, BY);
-    dim3 blocks((OW+BX-1)/BX, (OH+BY-1)/BY, N);
-    cuda_check(cudaMemsetAsync(grad, 0, sizeof(float) * N*3*3, stream));
+    dim3 blocks((OW + BX - 1) / BX, (OH + BY - 1) / BY, N);
+    cuda_check(cudaMemsetAsync(grad, 0, sizeof(float) * N * 3 * 3, stream));
 #define DISPATCH(Getter)                                                     \
     warp_perspective_bwd_mat_kernel<Getter><<<blocks, threads, 0, stream>>>( \
             diff, src, mat, midx, grad, N, C, IH, IW, OH, OW);
@@ -274,8 +272,7 @@ void backward_mat_proxy(const float* src, const float* mat, const int* midx,
             DISPATCH(WrapGetter);
             break;
         case BORDER_CONSTANT:
-            warp_perspective_bwd_mat_constant_kernel<<<blocks, threads, 0,
-                                                       stream>>>(
+            warp_perspective_bwd_mat_constant_kernel<<<blocks, threads, 0, stream>>>(
                     diff, src, mat, midx, grad, N, C, IH, IW, OH, OW, bval);
             break;
         default:
@@ -285,8 +282,8 @@ void backward_mat_proxy(const float* src, const float* mat, const int* midx,
     after_kernel_launch();
 }
 
-} // namespace warp_perspective
-} // namespace cuda
-} // namespace megdnn
+}  // namespace warp_perspective
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

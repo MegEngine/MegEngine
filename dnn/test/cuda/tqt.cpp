@@ -46,8 +46,7 @@ TEST_F(CUDA, TQT) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl(
-                {ilayout, {sshape, dtype::Float32()}, ilayout});
+        checker.set_param(param).execl({ilayout, {sshape, dtype::Float32()}, ilayout});
     }
 }
 
@@ -79,11 +78,8 @@ TEST_F(CUDA, TQT_BACKWARD) {
                 {(long int)(ishape[1] * ishape[2] * ishape[3] * 2),
                  (long int)(ishape[2] * ishape[3]), (long int)ishape[3], 1},
                 dtype::Float32());
-        checker.set_param(param).execl({ilayout,
-                                        ilayout,
-                                        {sshape, dtype::Float32()},
-                                        ilayout,
-                                        ilayout});
+        checker.set_param(param).execl(
+                {ilayout, ilayout, {sshape, dtype::Float32()}, ilayout, ilayout});
     }
 }
 

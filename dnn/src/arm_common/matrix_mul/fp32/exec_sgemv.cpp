@@ -30,17 +30,17 @@ namespace {
 #if !defined(__aarch64__)
 #define vaddvq_f32(v) (v)[0] + (v)[1] + (v)[2] + (v)[3]
 #endif
-void sgemv_naive_n(const float* __restrict A, const float* __restrict B,
-                   float* __restrict C, size_t M, size_t N, size_t K,
-                   size_t Astride, size_t Bstride, size_t Cstride) {
+void sgemv_naive_n(
+        const float* __restrict A, const float* __restrict B, float* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 1);
 #define reset_acc(i) acc##i = 0;
-#define acc_calu(i) acc##i += A[(m + i) * Astride + k] * B[k];
+#define acc_calu(i)  acc##i += A[(m + i) * Astride + k] * B[k];
 #define vdupq_sum(i) sum##i = vdupq_n_f32(0.f);
-#define loadA(i) a##i = vld1q_f32(A + (m + i) * Astride + k);
-#define loadB(i) b##i = vld1q_f32(B + k);
+#define loadA(i)     a##i = vld1q_f32(A + (m + i) * Astride + k);
+#define loadB(i)     b##i = vld1q_f32(B + k);
 #define calculate(i) sum##i = vmlaq_f32(sum##i, a##i, b0);
-#define vstore(i) C[(m + i) * Cstride] = vaddvq_f32(sum##i) + acc##i;
+#define vstore(i)    C[(m + i) * Cstride] = vaddvq_f32(sum##i) + acc##i;
     size_t m = 0;
     for (; m < M; m += 1) {
         float acc0;
@@ -69,9 +69,9 @@ void sgemv_naive_n(const float* __restrict A, const float* __restrict B,
 #undef vaddvq_f32
 #endif
 
-void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
-                   float* __restrict C, size_t M, size_t N, size_t K,
-                   size_t Astride, size_t Bstride, size_t Cstride) {
+void sgemv_naive_m(
+        const float* __restrict A, const float* __restrict B, float* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     size_t m = 0;
     for (; m + 4 <= M; m += 4) {
         size_t k = 0;
@@ -79,12 +79,12 @@ void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
         for (; k + 4 <= K; k += 4) {
             size_t n = 0;
             for (; n + 4 <= N; n += 4) {
-                float32x4_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21,
-                        a22, a23, a30, a31, a32, a33;
+                float32x4_t a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23,
+                        a30, a31, a32, a33;
                 float32x4_t b0, b1, b2, b3;
                 float32x4_t c0, c1, c2, c3;
-#define loadB(i) b##i = vld1q_f32(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f32(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f32(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f32(C + (m + i) * Cstride + n);
 #define loadA0(i) a0##i = vdupq_n_f32(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f32(A[(m + 1) * Astride + k + i]);
 #define loadA2(i) a2##i = vdupq_n_f32(A[(m + 2) * Astride + k + i]);
@@ -147,8 +147,8 @@ void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
 #undef vstore
             }
             for (; n < N; n += 1) {
-                float a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22,
-                        a23, a30, a31, a32, a33;
+                float a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30,
+                        a31, a32, a33;
                 float b0, b1, b2, b3;
                 float c0, c1, c2, c3;
 #define loadC(i) c##i = C[(m + i) * Cstride + n];
@@ -342,8 +342,8 @@ void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
                 float32x4_t c0, c1;
 #define loadA0(i) a0##i = vdupq_n_f32(A[(m + 0) * Astride + k + i]);
 #define loadA1(i) a1##i = vdupq_n_f32(A[(m + 1) * Astride + k + i]);
-#define loadB(i) b##i = vld1q_f32(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f32(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f32(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f32(C + (m + i) * Cstride + n);
                 UNROLL_OUT(loadC, 2)
                 UNROLL_OUT(loadB, 4)
                 UNROLL_OUT(loadA0, 4)
@@ -561,8 +561,8 @@ void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
                 float32x4_t b0, b1, b2, b3;
                 float32x4_t c0;
 #define loadA0(i) a0##i = vdupq_n_f32(A[m * Astride + k + i]);
-#define loadB(i) b##i = vld1q_f32(B + (k + i) * Bstride + n);
-#define loadC(i) c##i = vld1q_f32(C + (m + i) * Cstride + n);
+#define loadB(i)  b##i = vld1q_f32(B + (k + i) * Bstride + n);
+#define loadC(i)  c##i = vld1q_f32(C + (m + i) * Cstride + n);
                 UNROLL_OUT(loadC, 1)
                 UNROLL_OUT(loadB, 4)
                 UNROLL_OUT(loadA0, 4)
@@ -755,12 +755,12 @@ void sgemv_naive_m(const float* __restrict A, const float* __restrict B,
     }
 }
 
-void sgemv_naive_n_mk4(const float* __restrict A, const float* __restrict B,
-                       float* __restrict C, size_t M, size_t N, size_t K,
-                       size_t Astride, size_t Bstride, size_t Cstride) {
+void sgemv_naive_n_mk4(
+        const float* __restrict A, const float* __restrict B, float* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     constexpr size_t PACK_SIZE = 4;
-    megdnn_assert(N == 1 && Bstride == PACK_SIZE && M % PACK_SIZE == 0 &&
-                  K % PACK_SIZE == 0);
+    megdnn_assert(
+            N == 1 && Bstride == PACK_SIZE && M % PACK_SIZE == 0 && K % PACK_SIZE == 0);
     auto Aptr = A;
     auto Cptr = C;
     size_t m = 0;
@@ -806,9 +806,9 @@ void sgemv_naive_n_mk4(const float* __restrict A, const float* __restrict B,
 namespace megdnn {
 namespace arm_common {
 
-void gemv_like(const float* __restrict A, const float* __restrict B,
-               float* __restrict C, size_t M, size_t N, size_t K,
-               size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_like(
+        const float* __restrict A, const float* __restrict B, float* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(M < 8 || (M == 8 && K <= 2) || (N == 1 && Bstride == 1));
     if (N == 1) {
         MIDOUT_BEGIN(megdnn_fp32_sgemv, midout_iv("F32_GEMV_NCHW_N"_hash)) {
@@ -823,9 +823,9 @@ void gemv_like(const float* __restrict A, const float* __restrict B,
     }
 }
 
-void gemv_like_mk4(const float* __restrict A, const float* __restrict B,
-                   float* __restrict C, size_t M, size_t N, size_t K,
-                   size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_like_mk4(
+        const float* __restrict A, const float* __restrict B, float* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 4);
     MIDOUT_BEGIN(megdnn_fp32_sgemv, midout_iv("F32_GEMV_NCHW44_N"_hash)) {
         return sgemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride, Cstride);

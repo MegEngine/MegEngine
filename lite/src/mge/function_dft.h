@@ -25,9 +25,8 @@ namespace lite {
 // the functions used for dft's tensor.cpp are as followed:
 
 template <>
-inline std::shared_ptr<Tensor::TensorImplBase>
-call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
-        std::string func_name) {
+inline std::shared_ptr<Tensor::TensorImplBase> call_func<
+        TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(std::string func_name) {
     if (func_name == "create_tensor") {
         return std::make_shared<TensorImplDft>();
     }
@@ -35,10 +34,9 @@ call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
 }
 
 template <>
-inline std::shared_ptr<Tensor::TensorImplBase>
-call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
-        std::string func_name, LiteDeviceType device_type,
-        bool is_pinned_host) {
+inline std::shared_ptr<Tensor::TensorImplBase> call_func<
+        TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
+        std::string func_name, LiteDeviceType device_type, bool is_pinned_host) {
     if (func_name == "create_tensor") {
         return std::make_shared<TensorImplDft>(device_type, is_pinned_host);
     }
@@ -46,37 +44,36 @@ call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
 }
 
 template <>
-inline std::shared_ptr<Tensor::TensorImplBase>
-call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
+inline std::shared_ptr<Tensor::TensorImplBase> call_func<
+        TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
         std::string func_name, int device_id, LiteDeviceType device_type,
         const Layout layout, bool is_pinned_host) {
     if (func_name == "create_tensor") {
-        return std::make_shared<TensorImplDft>(device_id, device_type, layout,
-                                               is_pinned_host);
+        return std::make_shared<TensorImplDft>(
+                device_id, device_type, layout, is_pinned_host);
     }
     THROW_FUNC_ERROR(func_name);
 }
 
 template <>
-inline std::shared_ptr<Tensor::TensorImplBase>
-call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
+inline std::shared_ptr<Tensor::TensorImplBase> call_func<
+        TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
         std::string func_name, LiteDeviceType device_type, const Layout layout,
         bool is_pinned_host) {
     if (func_name == "create_tensor") {
-        return std::make_shared<TensorImplDft>(device_type, layout,
-                                               is_pinned_host);
+        return std::make_shared<TensorImplDft>(device_type, layout, is_pinned_host);
     }
     THROW_FUNC_ERROR(func_name);
 }
 
 template <>
-inline std::shared_ptr<Tensor::TensorImplBase>
-call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
-        std::string func_name, int device_id, int stream_id,
-        LiteDeviceType device_type, bool is_pinned_host) {
+inline std::shared_ptr<Tensor::TensorImplBase> call_func<
+        TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
+        std::string func_name, int device_id, int stream_id, LiteDeviceType device_type,
+        bool is_pinned_host) {
     if (func_name == "create_tensor") {
-        return std::make_shared<TensorImplDft>(device_id, stream_id,
-                                               device_type, is_pinned_host);
+        return std::make_shared<TensorImplDft>(
+                device_id, stream_id, device_type, is_pinned_host);
     }
     THROW_FUNC_ERROR(func_name);
 }
@@ -84,8 +81,8 @@ call_func<TensorImplDft, std::shared_ptr<Tensor::TensorImplBase>>(
 // the functions used for dft's network.cpp are as followed:
 
 template <>
-inline std::unique_ptr<Network::NetworkImplBase>
-call_func<NetworkImplDft, std::unique_ptr<Network::NetworkImplBase>>(
+inline std::unique_ptr<Network::NetworkImplBase> call_func<
+        NetworkImplDft, std::unique_ptr<Network::NetworkImplBase>>(
         std::string func_name) {
     if (func_name == "create_network") {
         return std::make_unique<NetworkImplDft>();
@@ -94,9 +91,8 @@ call_func<NetworkImplDft, std::unique_ptr<Network::NetworkImplBase>>(
 }
 
 template <>
-inline Network::NetworkImplBase*
-try_call_func<NetworkImplDft, Network::NetworkImplBase*>(
-        std::string func_name) {
+inline Network::NetworkImplBase* try_call_func<
+        NetworkImplDft, Network::NetworkImplBase*>(std::string func_name) {
     if (func_name == "parse_model") {
         return new NetworkImplDft();
     }
@@ -108,8 +104,7 @@ try_call_func<NetworkImplDft, Network::NetworkImplBase*>(
 
 template <>
 inline void call_func<NetworkImplDft, void>(
-        std::string func_name, Network::NetworkImplBase* network_impl,
-        size_t num) {
+        std::string func_name, Network::NetworkImplBase* network_impl, size_t num) {
     if (func_name == "set_cpu_threads_number") {
         CALL_FUNC(set_cpu_threads_number, num);
     } else if (func_name == "set_network_algo_workspace_limit") {
@@ -154,8 +149,8 @@ inline void call_func<NetworkImplDft, void>(
         std::string func_name, Network::NetworkImplBase* network_impl,
         ThreadAffinityCallback thread_affinity_callback) {
     if (func_name == "set_runtime_thread_affinity") {
-        return CALL_FUNC(set_runtime_thread_affinity,
-                         std::move(thread_affinity_callback));
+        return CALL_FUNC(
+                set_runtime_thread_affinity, std::move(thread_affinity_callback));
     }
     THROW_FUNC_ERROR(func_name);
 }
@@ -166,8 +161,9 @@ inline void call_func<NetworkImplDft, void>(
         LiteAlgoSelectStrategy strategy, uint32_t shared_batch_size,
         bool binary_equal_between_batch) {
     if (func_name == "set_network_algo_policy") {
-        return CALL_FUNC(set_network_algo_policy, strategy, shared_batch_size,
-                         binary_equal_between_batch);
+        return CALL_FUNC(
+                set_network_algo_policy, strategy, shared_batch_size,
+                binary_equal_between_batch);
     }
     THROW_FUNC_ERROR(func_name);
 }

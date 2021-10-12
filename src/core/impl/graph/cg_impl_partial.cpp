@@ -53,10 +53,11 @@ class ComputingGraphImpl::MultiPartCompiler::ExecOrderChecker final
             }
             return;
         }
-        mgb_throw_if(part != m_next, GraphError,
-                     "multi-part func: expected to execute part %zu, actual "
-                     "part is %zu. Total number of parts: %zu",
-                     m_next, part, m_nr_part);
+        mgb_throw_if(
+                part != m_next, GraphError,
+                "multi-part func: expected to execute part %zu, actual "
+                "part is %zu. Total number of parts: %zu",
+                m_next, part, m_nr_part);
         m_next = m_next == m_nr_part - 1 ? 0 : m_next + 1;
     }
 
@@ -65,9 +66,7 @@ public:
 
     void register_to_graph(ComputingGraph& graph, size_t part);
 
-    void record_dev_tensor(Maybe<DeviceTensorND>* ptr) {
-        m_dev_tensors.push_back(ptr);
-    }
+    void record_dev_tensor(Maybe<DeviceTensorND>* ptr) { m_dev_tensors.push_back(ptr); }
 
     static ExecOrderChecker* get_from_graph(ComputingGraph& graph) {
         auto ret = graph.options().user_data.get_user_data<ExecOrderChecker>();
@@ -79,18 +78,16 @@ MGB_TYPEINFO_OBJ_IMPL(ComputingGraphImpl::MultiPartCompiler::ExecOrderChecker);
 
 void ComputingGraphImpl::MultiPartCompiler::ExecOrderChecker::register_to_graph(
         ComputingGraph& graph, size_t part) {
-    auto cb = [this, part](const event::CompSeqExecBeforeStart&) {
-        on_exec(part);
-    };
-    graph.event().register_receiver_permanent<event::CompSeqExecBeforeStart>(
-            cb);
+    auto cb = [this, part](const event::CompSeqExecBeforeStart&) { on_exec(part); };
+    graph.event().register_receiver_permanent<event::CompSeqExecBeforeStart>(cb);
     m_graphs.push_back(&graph);
     graph.options().user_data.add_user_data(shared_from_this());
 }
 
 /* ======================== ShapeProvider ======================== */
-MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::MultiPartCompiler::ShapeProvider,
-                           cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS(
+        ComputingGraphImpl::MultiPartCompiler::ShapeProvider,
+        cg::SingleCNOperatorNodeBase) // {
     TensorShape m_shape;
 
     void init_output_static_infer_desc() override {
@@ -106,21 +103,22 @@ MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::MultiPartCompiler::ShapeProvider,
     void scn_do_execute() override {}
 
 public:
-    ShapeProvider(ComputingGraph& graph, const TensorShape& shape, DType dtype,
-                  const OperatorNodeConfig& config)
+    ShapeProvider(
+            ComputingGraph& graph, const TensorShape& shape, DType dtype,
+            const OperatorNodeConfig& config)
 
             : Super(&graph, config, "shape_provider", {}), m_shape{shape} {
-        mgb_assert(config.has_comp_node_set(),
-                   "comp node must be set in config for ShapeProvider");
-        add_output(None)
-                ->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
-                .dtype(dtype);
+        mgb_assert(
+                config.has_comp_node_set(),
+                "comp node must be set in config for ShapeProvider");
+        add_output(None)->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC).dtype(dtype);
         comp_node(config.get_single_comp_node());
         add_equivalence_component<ScalarHash<void*>>(this);
     }
 
-    static ShapeProvider* make(ComputingGraph& graph, const TensorShape& shape,
-                               DType dtype, const OperatorNodeConfig& config) {
+    static ShapeProvider* make(
+            ComputingGraph& graph, const TensorShape& shape, DType dtype,
+            const OperatorNodeConfig& config) {
         auto opr = graph.insert_opr(
                 std::make_unique<ShapeProvider>(graph, shape, dtype, config));
         return &opr->cast_final_safe<ShapeProvider>();
@@ -129,8 +127,7 @@ public:
     //! update shape
     void shape(const TensorShape& shape) { m_shape = shape; }
 };
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(
-        ComputingGraphImpl::MultiPartCompiler::ShapeProvider);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ComputingGraphImpl::MultiPartCompiler::ShapeProvider);
 
 /* ======================== DeviceDataProvider ======================== */
 MGB_DEFINE_OPR_CLASS(
@@ -158,21 +155,20 @@ MGB_DEFINE_OPR_CLASS(
     }
 
 public:
-    DeviceDataProvider(ComputingGraph& graph, DType dtype,
-                       const OperatorNodeConfig& config)
+    DeviceDataProvider(
+            ComputingGraph& graph, DType dtype, const OperatorNodeConfig& config)
 
             : Super(&graph, config, "device_value", {}) {
-        mgb_assert(config.has_comp_node_set(),
-                   "comp node must be set in config for DeviceDataProvider");
-        add_output(None)
-                ->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
-                .dtype(dtype);
+        mgb_assert(
+                config.has_comp_node_set(),
+                "comp node must be set in config for DeviceDataProvider");
+        add_output(None)->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC).dtype(dtype);
         comp_node(config.get_single_comp_node());
         add_equivalence_component<ScalarHash<void*>>(this);
     }
 
-    static DeviceDataProvider* make(ComputingGraph& graph, DType dtype,
-                                    const OperatorNodeConfig& config) {
+    static DeviceDataProvider* make(
+            ComputingGraph& graph, DType dtype, const OperatorNodeConfig& config) {
         auto opr = graph.insert_opr(
                 std::make_unique<DeviceDataProvider>(graph, dtype, config));
         return &opr->cast_final_safe<DeviceDataProvider>();
@@ -187,8 +183,7 @@ public:
         }
     }
 };
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(
-        ComputingGraphImpl::MultiPartCompiler::DeviceDataProvider);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ComputingGraphImpl::MultiPartCompiler::DeviceDataProvider);
 
 /* ======================== EmptyExecuteOpr ======================== */
 MGB_DEFINE_OPR_CLASS(
@@ -211,19 +206,16 @@ public:
         comp_node(config.get_single_comp_node());
     }
 
-    static SymbolVar make(ComputingGraph& graph,
-                          const OperatorNodeConfig& config) {
-        return graph
-                .insert_opr(std::make_unique<EmptyExecuteOpr>(graph, config))
+    static SymbolVar make(ComputingGraph& graph, const OperatorNodeConfig& config) {
+        return graph.insert_opr(std::make_unique<EmptyExecuteOpr>(graph, config))
                 ->output(0);
     }
 };
-MGB_DYN_TYPE_OBJ_FINAL_IMPL(
-        ComputingGraphImpl::MultiPartCompiler::EmptyExecuteOpr);
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ComputingGraphImpl::MultiPartCompiler::EmptyExecuteOpr);
 
 /* ======================== VarSinkOpr ======================== */
-MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::MultiPartCompiler::VarSinkOpr,
-                           OperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS(
+        ComputingGraphImpl::MultiPartCompiler::VarSinkOpr, OperatorNodeBase) // {
 public:
     using DepTypeList = SmallVector<DepType>;
 
@@ -235,12 +227,11 @@ public:
      * The two DeviceTensorND arguments would be non-null if the dependency
      * types include DEV_VALUE and HOST_VALUE, respectively
      */
-    using ValueListener = thin_function<void(VarNode*, const DeviceTensorND*,
-                                             const DeviceTensorND*)>;
+    using ValueListener =
+            thin_function<void(VarNode*, const DeviceTensorND*, const DeviceTensorND*)>;
 
     VarSinkOpr(const VarNodeArray& inp, const DepTypeList& deps)
-            : Super(inp[0]->owner_graph(), {}, "var_sink", {}),
-              m_inp_dep_type{deps} {
+            : Super(inp[0]->owner_graph(), {}, "var_sink", {}), m_inp_dep_type{deps} {
         mgb_assert(inp.size() == deps.size());
         for (size_t i = 0; i < inp.size(); ++i) {
             auto var = inp[i];
@@ -269,8 +260,8 @@ public:
     }
 
     //! make a var in another graph that updates according to given \p old_var
-    VarNode* make_var_and_add_listener(ComputingGraph& graph, VarNode* old_var,
-                                       DepType dep_type);
+    VarNode* make_var_and_add_listener(
+            ComputingGraph& graph, VarNode* old_var, DepType dep_type);
 
 private:
     DepTypeList m_inp_dep_type;
@@ -306,8 +297,7 @@ private:
                     dv_ptr = &var->dev_tensor();
                 }
                 if (type & DepType::HOST_VALUE) {
-                    hv_ptr = &owner_graph()->static_infer_manager().infer_value(
-                            var);
+                    hv_ptr = &owner_graph()->static_infer_manager().infer_value(var);
                 }
                 for (auto&& i : m_value_listeners.at(var)) {
                     i(var, dv_ptr, hv_ptr);
@@ -319,8 +309,7 @@ private:
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ComputingGraphImpl::MultiPartCompiler::VarSinkOpr);
 
-VarNode*
-ComputingGraphImpl::MultiPartCompiler::VarSinkOpr::make_var_and_add_listener(
+VarNode* ComputingGraphImpl::MultiPartCompiler::VarSinkOpr::make_var_and_add_listener(
         ComputingGraph& graph, VarNode* old_var, DepType dep_type) {
     VarNode* new_var;
     ValueListener listener;
@@ -329,13 +318,15 @@ ComputingGraphImpl::MultiPartCompiler::VarSinkOpr::make_var_and_add_listener(
         auto host_val = std::make_shared<HostTensorND>(
                 old_var->comp_node(), TensorShape{}, old_var->dtype());
         new_var = opr::Host2DeviceCopy::make(graph, host_val, new_name).node();
-        listener = [host_val](VarNode*, const DeviceTensorND*,
-                              const DeviceTensorND* new_hv) {
+        listener = [host_val](
+                           VarNode*, const DeviceTensorND*,
+                           const DeviceTensorND* new_hv) {
             mgb_assert(new_hv);
             if (new_hv->layout().is_contiguous()) {
                 HostTensorStorage storage;
-                storage.reset(new_hv->comp_node(), new_hv->storage().size(),
-                              new_hv->storage().raw_storage());
+                storage.reset(
+                        new_hv->comp_node(), new_hv->storage().size(),
+                        new_hv->storage().raw_storage());
                 host_val->reset(storage, new_hv->layout());
             } else {
                 host_val->copy_from(*new_hv);
@@ -346,8 +337,9 @@ ComputingGraphImpl::MultiPartCompiler::VarSinkOpr::make_var_and_add_listener(
                 graph, old_var->dtype(),
                 OperatorNodeConfig{old_var->comp_node()}.name(new_name));
         new_var = data_opr->output(0);
-        listener = [data_opr](VarNode*, const DeviceTensorND* new_dv,
-                              const DeviceTensorND*) {
+        listener = [data_opr](
+                           VarNode*, const DeviceTensorND* new_dv,
+                           const DeviceTensorND*) {
             mgb_assert(new_dv);
             data_opr->value(*new_dv);
         };
@@ -356,17 +348,17 @@ ComputingGraphImpl::MultiPartCompiler::VarSinkOpr::make_var_and_add_listener(
                 graph, old_var->shape(), old_var->dtype(),
                 OperatorNodeConfig{old_var->comp_node()}.name(new_name));
         new_var = shp_opr->output(0);
-        listener = [shp_opr](VarNode* var, const DeviceTensorND*,
-                             const DeviceTensorND*) {
+        listener = [shp_opr](
+                           VarNode* var, const DeviceTensorND*, const DeviceTensorND*) {
             shp_opr->shape(var->shape());
         };
     } else {
-        mgb_assert(dep_type == DepType::DEV_COMP_ORDER,
-                   "unhandled dep type: %d", static_cast<int>(dep_type));
+        mgb_assert(
+                dep_type == DepType::DEV_COMP_ORDER, "unhandled dep type: %d",
+                static_cast<int>(dep_type));
         auto cn = old_var->comp_node();
         new_var = EmptyExecuteOpr::make(graph, cn).node();
-        listener = [cn](VarNode* var, const DeviceTensorND*,
-                        const DeviceTensorND*) {
+        listener = [cn](VarNode* var, const DeviceTensorND*, const DeviceTensorND*) {
             mgb_assert(var->comp_node() == cn);
         };
     }
@@ -392,9 +384,8 @@ struct ComputingGraphImpl::MultiPartCompiler::PartIOInfo {
     }
 };
 
-SmallVector<std::unique_ptr<AsyncExecutable>>
-ComputingGraphImpl::MultiPartCompiler::compile(
-        const SmallVector<OutputSpec>& out_specs) {
+SmallVector<std::unique_ptr<AsyncExecutable>> ComputingGraphImpl::MultiPartCompiler::
+        compile(const SmallVector<OutputSpec>& out_specs) {
     mgb_assert(!out_specs.empty(), "can not deal with empty out specs");
     m_out_specs = out_specs;
     update_out_specs();
@@ -453,8 +444,7 @@ void ComputingGraphImpl::MultiPartCompiler::update_out_specs() {
             }
         }
 
-        new_opr->node_prop().attribute().priority =
-                m_opr_trait.at(opr).priority;
+        new_opr->node_prop().attribute().priority = m_opr_trait.at(opr).priority;
 
         auto&& out0 = opr->output();
         auto&& out1 = new_opr->output();
@@ -469,8 +459,7 @@ void ComputingGraphImpl::MultiPartCompiler::update_out_specs() {
     // it is first produced in a part and recorded in the VarSinkOpr)
     ThinHashMap<VarNode*, VarNode*> var_to_sink_inp_map;
     auto part_io_info = make_part_io_info();
-    auto exec_order_checker =
-            std::make_shared<ExecOrderChecker>(m_out_specs.size());
+    auto exec_order_checker = std::make_shared<ExecOrderChecker>(m_out_specs.size());
 
     for (cur_part = 0; cur_part < m_out_specs.size(); ++cur_part) {
         cur_part_var_repl.clear();
@@ -498,8 +487,7 @@ void ComputingGraphImpl::MultiPartCompiler::update_out_specs() {
             auto new_var = part_io_info.at(src_part)
                                    .safe_sink_opr()
                                    ->make_var_and_add_listener(
-                                           *cur_graph, sub_graph_var,
-                                           dep_entry.second);
+                                           *cur_graph, sub_graph_var, dep_entry.second);
             cur_part_var_repl[orig_graph_var] = new_var;
         }
 
@@ -523,8 +511,7 @@ void ComputingGraphImpl::MultiPartCompiler::update_out_specs() {
             if (should_dup_between_part(i.first)) {
                 continue;
             }
-            auto src_var = i.first,
-                 sub_graph_var = cur_part_var_repl.at(src_var);
+            auto src_var = i.first, sub_graph_var = cur_part_var_repl.at(src_var);
             auto ins = var_to_sink_inp_map.insert({src_var, sub_graph_var});
             mgb_assert(ins.second);
             sink_inputs.push_back(sub_graph_var);
@@ -538,8 +525,8 @@ void ComputingGraphImpl::MultiPartCompiler::update_out_specs() {
     }
 }
 
-SmallVector<ComputingGraphImpl::MultiPartCompiler::PartIOInfo>
-ComputingGraphImpl::MultiPartCompiler::make_part_io_info() const {
+SmallVector<ComputingGraphImpl::MultiPartCompiler::PartIOInfo> ComputingGraphImpl::
+        MultiPartCompiler::make_part_io_info() const {
     const size_t nr_part = m_out_specs.size();
     SmallVector<PartIOInfo> ret;
     ret.reserve(nr_part);
@@ -568,8 +555,7 @@ void ComputingGraphImpl::MultiPartCompiler::init_opr_trait_and_var_reader_type(
         // use negative number so they can be sorted before new oprs (actually
         // there should not be any new oprs) and have non-zero priority
         m_opr_trait[opr_seq[i]].priority =
-                static_cast<ptrdiff_t>(i) -
-                static_cast<ptrdiff_t>(opr_seq.size());
+                static_cast<ptrdiff_t>(i) - static_cast<ptrdiff_t>(opr_seq.size());
     }
 
     // assign part number and var reader type
@@ -577,8 +563,7 @@ void ComputingGraphImpl::MultiPartCompiler::init_opr_trait_and_var_reader_type(
     auto on_dep_entry = [&](VarNode* src_var, DepType dep_type) {
         auto src_part = m_opr_trait[src_var->owner_opr()].part;
         if (static_cast<size_t>(src_part) != cur_part) {
-            mgb_assert(src_part != -1 &&
-                       static_cast<size_t>(src_part) < cur_part);
+            mgb_assert(src_part != -1 && static_cast<size_t>(src_part) < cur_part);
             m_var_receiver_type[src_var][cur_part] |= dep_type;
         }
     };
@@ -607,8 +592,7 @@ void ComputingGraphImpl::MultiPartCompiler::init_opr_trait_and_var_reader_type(
     }
 }
 
-const OprNodeArray*
-ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
+const OprNodeArray* ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
     // no callback in out_spec_concat, so CallbackCaller would not be inserted
     OutputSpec out_spec_concat;
     std::vector<bool> out_spec_concat_from_original;
@@ -632,8 +616,7 @@ ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
     }
 
     auto remap_priority = [&](const VarNodeArray& dest_vars,
-                              const TopoSorter::PriorityItem* items,
-                              size_t nr_item) {
+                              const TopoSorter::PriorityItem* items, size_t nr_item) {
         const size_t nr_part = m_out_specs.size();
         mgb_assert(
                 nr_item <= static_cast<size_t>(std::numeric_limits<int>::max()),
@@ -653,8 +636,7 @@ ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
                 } else {
                     // add extra vars to out spec so we do not need to handle
                     // extra_vardeps in graph copy
-                    m_out_specs[part].push_back(
-                            {dest_vars[dest_var_idx - 1], {}});
+                    m_out_specs[part].push_back({dest_vars[dest_var_idx - 1], {}});
                 }
             }
         };
@@ -687,24 +669,23 @@ ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
         for (size_t i = 1; i < part_last_step.size(); ++i) {
             // oprs in the part may have been used in previous parts, so we
             // normalize part_last_step[] for binary search
-            part_last_step[i] =
-                    std::max(part_last_step[i], part_last_step[i - 1]);
+            part_last_step[i] = std::max(part_last_step[i], part_last_step[i - 1]);
         }
         mgb_assert(part_last_step.back() == nr_item - 1);
 
         // sort oprs according to (part, original priority)
         using PriKey = std::pair<int, int>;
-        SmallVector<std::pair<PriKey, const TopoSorter::PriorityItem*>> oprs(
-                nr_item);
+        SmallVector<std::pair<PriKey, const TopoSorter::PriorityItem*>> oprs(nr_item);
         for (size_t i = 0; i < nr_item; ++i) {
-            size_t part = std::lower_bound(part_last_step.begin(),
-                                           part_last_step.end(),
-                                           items[i].dfs_step_num) -
+            size_t part = std::lower_bound(
+                                  part_last_step.begin(), part_last_step.end(),
+                                  items[i].dfs_step_num) -
                           part_last_step.begin();
             mgb_assert(part < m_out_specs.size());
-            oprs[i] = {{static_cast<int>(part),
-                        items[i].opr->node_prop().attribute().priority},
-                       items + i};
+            oprs[i] = {
+                    {static_cast<int>(part),
+                     items[i].opr->node_prop().attribute().priority},
+                    items + i};
         }
         std::sort(oprs.begin(), oprs.end());
 
@@ -723,8 +704,7 @@ ComputingGraphImpl::MultiPartCompiler::concat_and_prepare() {
     return m_owner->compile_prepare(out_spec_concat).opr_seq;
 }
 
-bool ComputingGraphImpl::MultiPartCompiler::should_dup_between_part(
-        VarNode* var) {
+bool ComputingGraphImpl::MultiPartCompiler::should_dup_between_part(VarNode* var) {
     // duplicate SharedDeviceTensor so AddUpdate oprs can work as expected
     auto type = var->owner_opr()->dyn_typeinfo();
     return type == opr::SharedDeviceTensor::typeinfo() ||
@@ -756,8 +736,8 @@ bool ComputingGraphImpl::MultiPartCompiler::has_different_comp_node(
     return false;
 }
 
-SmallVector<Typeinfo*>
-ComputingGraphImpl::MultiPartCompiler::test_get_internal_opr_types() {
+SmallVector<Typeinfo*> ComputingGraphImpl::MultiPartCompiler::
+        test_get_internal_opr_types() {
     return {ShapeProvider::typeinfo(), DeviceDataProvider::typeinfo(),
             EmptyExecuteOpr::typeinfo(), VarSinkOpr::typeinfo()};
 }

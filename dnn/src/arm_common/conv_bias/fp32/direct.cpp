@@ -9,14 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/arm_common/conv_bias/fp32/direct.h"
 #include <cstring>
 #include "include/megdnn/oprs.h"
 #include "midout.h"
-#include "src/arm_common/conv_bias/fp32/direct.h"
-#include "src/arm_common/simd_macro/marm_neon.h"
-#include "src/common/utils.h"
 #include "src/arm_common/conv_bias/postprocess_helper.h"
+#include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/unroll_macro.h"
+#include "src/common/utils.h"
 MIDOUT_DECL(megdnn_arm_conv_f32)
 
 using namespace megdnn;
@@ -28,9 +28,10 @@ namespace {
 
 template <int FH, int height, int width>
 struct do_pixel_proxy {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow);
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow);
 };
 
 #define cb_load(i) data = vld1q_lane_f32(dst + i, data, i);
@@ -96,9 +97,10 @@ struct do_pixel_proxy {
 
 template <int height, int width>
 struct do_pixel_proxy<1, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
@@ -136,9 +138,10 @@ struct do_pixel_proxy<1, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<2, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
@@ -188,9 +191,10 @@ struct do_pixel_proxy<2, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<3, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
@@ -252,9 +256,10 @@ struct do_pixel_proxy<3, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<4, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
@@ -328,14 +333,14 @@ struct do_pixel_proxy<4, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<5, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
-        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4,
-                inp;
+        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4, inp;
         src += ih * IW + iw;
         dst += oh * OW + ow;
         LOAD_OUT;
@@ -417,14 +422,15 @@ struct do_pixel_proxy<5, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<6, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
-        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4,
-                kr5, inp;
+        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4, kr5,
+                inp;
         src += ih * IW + iw;
         dst += oh * OW + ow;
         LOAD_OUT;
@@ -518,14 +524,15 @@ struct do_pixel_proxy<6, height, width> {
 
 template <int height, int width>
 struct do_pixel_proxy<7, height, width> {
-    static void exec(const float* src, const float* filter, float* dst,
-                     const int IH, const int IW, const int OH, const int OW,
-                     const int FW, const int oh, const int ow) {
+    static void exec(
+            const float* src, const float* filter, float* dst, const int IH,
+            const int IW, const int OH, const int OW, const int FW, const int oh,
+            const int ow) {
         (void)IH;
         (void)OH;
         const int ih = oh, iw = ow;
-        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4,
-                kr5, kr6, inp;
+        float32x4_t out0{0}, out1{0}, out2{0}, out3{0}, kr0, kr1, kr2, kr3, kr4, kr5,
+                kr6, inp;
         src += ih * IW + iw;
         dst += oh * OW + ow;
         LOAD_OUT;
@@ -634,17 +641,17 @@ struct do_pixel_proxy<7, height, width> {
 #undef STORE_OUT
 
 template <int FH, int height, int width>
-void do_pixel(const float* src, const float* filter, float* dst, const int IH,
-              const int IW, const int OH, const int OW, const int FW,
-              const int oh, const int ow) {
-    do_pixel_proxy<FH, height, width>::exec(src, filter, dst, IH, IW, OH, OW,
-                                            FW, oh, ow);
+void do_pixel(
+        const float* src, const float* filter, float* dst, const int IH, const int IW,
+        const int OH, const int OW, const int FW, const int oh, const int ow) {
+    do_pixel_proxy<FH, height, width>::exec(
+            src, filter, dst, IH, IW, OH, OW, FW, oh, ow);
 }
 
 template <int FH>
-void do_conv_tpl_enable_prefetch(const float* src, const float* filter,
-                                 float* dst, const int IH, const int IW,
-                                 const int OH, const int OW, const int FW) {
+void do_conv_tpl_enable_prefetch(
+        const float* src, const float* filter, float* dst, const int IH, const int IW,
+        const int OH, const int OW, const int FW) {
     const int hbeg = 0, hend = OH;
     const int wbeg = 0, wend = OW;
     int i, j;
@@ -652,13 +659,11 @@ void do_conv_tpl_enable_prefetch(const float* src, const float* filter,
         for (j = wbeg; j + 4 <= wend; j += 4) {
             // do prefetch
             const int prefetch_index_input =
-                    (j + 16) < wend
-                            ? i * IW + j + 16
-                            : (i + 4) * IW + (((j + 16 - wend) >> 2) << 2);
+                    (j + 16) < wend ? i * IW + j + 16
+                                    : (i + 4) * IW + (((j + 16 - wend) >> 2) << 2);
             const int prefetch_index_output =
-                    (j + 16) < wend
-                            ? i * OW + j + 16
-                            : (i + 4) * OW + (((j + 16 - wend) >> 2) << 2);
+                    (j + 16) < wend ? i * OW + j + 16
+                                    : (i + 4) * OW + (((j + 16 - wend) >> 2) << 2);
             const float* src_prefetch = src + prefetch_index_input;
             const float* dst_prefetch = dst + prefetch_index_output;
             for (int iw_id = 0; iw_id < FH + 3; ++iw_id) {
@@ -699,51 +704,47 @@ void do_conv_tpl_enable_prefetch(const float* src, const float* filter,
 #undef DISPATCH
     }
 
-#define DISPATCH2(height, width)                                             \
-    do {                                                                     \
-        const int prefetch_index_input = IH * IW + 12;                       \
-        const float* src_prefetch = src + prefetch_index_input;              \
-        for (int iw_id = 0; iw_id < FH + 3; ++iw_id) {                       \
-            __builtin_prefetch(src_prefetch + iw_id * IW, 0, 3);             \
-        }                                                                    \
-        do_pixel<FH, height, width>(src, filter, dst, IH, IW, OH, OW, FW, i, \
-                                    j);                                      \
+#define DISPATCH2(height, width)                                                 \
+    do {                                                                         \
+        const int prefetch_index_input = IH * IW + 12;                           \
+        const float* src_prefetch = src + prefetch_index_input;                  \
+        for (int iw_id = 0; iw_id < FH + 3; ++iw_id) {                           \
+            __builtin_prefetch(src_prefetch + iw_id * IW, 0, 3);                 \
+        }                                                                        \
+        do_pixel<FH, height, width>(src, filter, dst, IH, IW, OH, OW, FW, i, j); \
     } while (0)
 
-#define DISPATCH1(height)                                                    \
-    do {                                                                     \
-        for (j = wbeg; j + 4 <= wend; j += 4) {                              \
-            const int prefetch_index_input =                                 \
-                    (j + 16) < wend                                          \
-                            ? i * IW + j + 16                                \
-                            : (i + 4) * IW + (((j + 16 - wend) >> 2) << 2);  \
-            const int prefetch_index_output =                                \
-                    (j + 16) < wend                                          \
-                            ? i * OW + j + 16                                \
-                            : (i + 4) * OW + (((j + 16 - wend) >> 2) << 2);  \
-            const float* src_prefetch = src + prefetch_index_input;          \
-            const float* dst_prefetch = dst + prefetch_index_output;         \
-            for (int iw_id = 0; iw_id < FH + 3; ++iw_id) {                   \
-                __builtin_prefetch(src_prefetch + iw_id * IW, 0, 3);         \
-            }                                                                \
-            __builtin_prefetch(dst_prefetch + 0 * OW, 1, 3);                 \
-            __builtin_prefetch(dst_prefetch + 1 * OW, 1, 3);                 \
-            __builtin_prefetch(dst_prefetch + 2 * OW, 1, 3);                 \
-            __builtin_prefetch(dst_prefetch + 3 * OW, 1, 3);                 \
-            do_pixel<FH, height, 4>(src, filter, dst, IH, IW, OH, OW, FW, i, \
-                                    j);                                      \
-        }                                                                    \
-        switch (wend - j) {                                                  \
-            case 1:                                                          \
-                DISPATCH2(height, 1);                                        \
-                break;                                                       \
-            case 2:                                                          \
-                DISPATCH2(height, 2);                                        \
-                break;                                                       \
-            case 3:                                                          \
-                DISPATCH2(height, 3);                                        \
-                break;                                                       \
-        }                                                                    \
+#define DISPATCH1(height)                                                           \
+    do {                                                                            \
+        for (j = wbeg; j + 4 <= wend; j += 4) {                                     \
+            const int prefetch_index_input =                                        \
+                    (j + 16) < wend ? i * IW + j + 16                               \
+                                    : (i + 4) * IW + (((j + 16 - wend) >> 2) << 2); \
+            const int prefetch_index_output =                                       \
+                    (j + 16) < wend ? i * OW + j + 16                               \
+                                    : (i + 4) * OW + (((j + 16 - wend) >> 2) << 2); \
+            const float* src_prefetch = src + prefetch_index_input;                 \
+            const float* dst_prefetch = dst + prefetch_index_output;                \
+            for (int iw_id = 0; iw_id < FH + 3; ++iw_id) {                          \
+                __builtin_prefetch(src_prefetch + iw_id * IW, 0, 3);                \
+            }                                                                       \
+            __builtin_prefetch(dst_prefetch + 0 * OW, 1, 3);                        \
+            __builtin_prefetch(dst_prefetch + 1 * OW, 1, 3);                        \
+            __builtin_prefetch(dst_prefetch + 2 * OW, 1, 3);                        \
+            __builtin_prefetch(dst_prefetch + 3 * OW, 1, 3);                        \
+            do_pixel<FH, height, 4>(src, filter, dst, IH, IW, OH, OW, FW, i, j);    \
+        }                                                                           \
+        switch (wend - j) {                                                         \
+            case 1:                                                                 \
+                DISPATCH2(height, 1);                                               \
+                break;                                                              \
+            case 2:                                                                 \
+                DISPATCH2(height, 2);                                               \
+                break;                                                              \
+            case 3:                                                                 \
+                DISPATCH2(height, 3);                                               \
+                break;                                                              \
+        }                                                                           \
     } while (0)
     switch (hend - i) {
         case 1:
@@ -760,9 +761,9 @@ void do_conv_tpl_enable_prefetch(const float* src, const float* filter,
 #undef DISPATCH2
 }
 template <int FH>
-void do_conv_tpl_disable_prefetch(const float* src, const float* filter,
-                                  float* dst, const int IH, const int IW,
-                                  const int OH, const int OW, const int FW) {
+void do_conv_tpl_disable_prefetch(
+        const float* src, const float* filter, float* dst, const int IH, const int IW,
+        const int OH, const int OW, const int FW) {
     const int hbeg = 0, hend = OH;
     const int wbeg = 0, wend = OW;
     int i, j;
@@ -787,28 +788,26 @@ void do_conv_tpl_disable_prefetch(const float* src, const float* filter,
         }
 #undef DISPATCH
     }
-#define DISPATCH2(height, width)                                             \
-    do {                                                                     \
-        do_pixel<FH, height, width>(src, filter, dst, IH, IW, OH, OW, FW, i, \
-                                    j);                                      \
+#define DISPATCH2(height, width)                                                 \
+    do {                                                                         \
+        do_pixel<FH, height, width>(src, filter, dst, IH, IW, OH, OW, FW, i, j); \
     } while (0)
-#define DISPATCH1(height)                                                    \
-    do {                                                                     \
-        for (j = wbeg; j + 4 <= wend; j += 4) {                              \
-            do_pixel<FH, height, 4>(src, filter, dst, IH, IW, OH, OW, FW, i, \
-                                    j);                                      \
-        }                                                                    \
-        switch (wend - j) {                                                  \
-            case 1:                                                          \
-                DISPATCH2(height, 1);                                        \
-                break;                                                       \
-            case 2:                                                          \
-                DISPATCH2(height, 2);                                        \
-                break;                                                       \
-            case 3:                                                          \
-                DISPATCH2(height, 3);                                        \
-                break;                                                       \
-        }                                                                    \
+#define DISPATCH1(height)                                                        \
+    do {                                                                         \
+        for (j = wbeg; j + 4 <= wend; j += 4) {                                  \
+            do_pixel<FH, height, 4>(src, filter, dst, IH, IW, OH, OW, FW, i, j); \
+        }                                                                        \
+        switch (wend - j) {                                                      \
+            case 1:                                                              \
+                DISPATCH2(height, 1);                                            \
+                break;                                                           \
+            case 2:                                                              \
+                DISPATCH2(height, 2);                                            \
+                break;                                                           \
+            case 3:                                                              \
+                DISPATCH2(height, 3);                                            \
+                break;                                                           \
+        }                                                                        \
     } while (0)
     switch (hend - i) {
         case 1:
@@ -826,15 +825,14 @@ void do_conv_tpl_disable_prefetch(const float* src, const float* filter,
 }
 }  // anonymous namespace
 
-void conv_bias::kern_direct(const float* src, const float* filter, float* dst,
-                              const int IH, const int IW, const int OH,
-                              const int OW, const int FH, const int FW) {
+void conv_bias::kern_direct(
+        const float* src, const float* filter, float* dst, const int IH, const int IW,
+        const int OH, const int OW, const int FH, const int FW) {
     megdnn_assert_internal(FH <= 7);
     if (IH > 100 && IW > 100) {
-#define GAO(FH)                                                              \
-    do {                                                                     \
-        return do_conv_tpl_enable_prefetch<FH>(src, filter, dst, IH, IW, OH, \
-                                               OW, FW);                      \
+#define GAO(FH)                                                                       \
+    do {                                                                              \
+        return do_conv_tpl_enable_prefetch<FH>(src, filter, dst, IH, IW, OH, OW, FW); \
     } while (0)
         switch (FH) {
             case 1:
@@ -868,10 +866,9 @@ void conv_bias::kern_direct(const float* src, const float* filter, float* dst,
         }
 #undef GAO
     } else {
-#define GAO(FH)                                                               \
-    do {                                                                      \
-        return do_conv_tpl_disable_prefetch<FH>(src, filter, dst, IH, IW, OH, \
-                                                OW, FW);                      \
+#define GAO(FH)                                                                        \
+    do {                                                                               \
+        return do_conv_tpl_disable_prefetch<FH>(src, filter, dst, IH, IW, OH, OW, FW); \
     } while (0)
         switch (FH) {
             case 1:

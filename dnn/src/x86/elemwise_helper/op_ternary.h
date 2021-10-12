@@ -14,22 +14,22 @@
 //////////////////// quantization //////////////////////////////
 namespace megdnn {
 namespace x86 {
-#define cb(op, simd_type)                                             \
-    template <>                                                       \
-    struct op<simd_type, dt_qint8, dt_qint8>                          \
-            : TernaryQuantizationOp<simd_type, dt_qint8, dt_qint8,    \
-                                    op<simd_type, float, float> > {   \
-        using TernaryQuantizationOp<                                  \
-                simd_type, dt_qint8, dt_qint8,                        \
-                op<simd_type, float, float> >::TernaryQuantizationOp; \
-    };                                                                \
-    template <>                                                       \
-    struct op<simd_type, dt_quint8, dt_quint8>                        \
-            : TernaryQuantizationOp<simd_type, dt_quint8, dt_quint8,  \
-                                    op<simd_type, float, float> > {   \
-        using TernaryQuantizationOp<                                  \
-                simd_type, dt_quint8, dt_quint8,                      \
-                op<simd_type, float, float> >::TernaryQuantizationOp; \
+#define cb(op, simd_type)                                                             \
+    template <>                                                                       \
+    struct op<simd_type, dt_qint8, dt_qint8>                                          \
+            : TernaryQuantizationOp<                                                  \
+                      simd_type, dt_qint8, dt_qint8, op<simd_type, float, float>> {   \
+        using TernaryQuantizationOp<                                                  \
+                simd_type, dt_qint8, dt_qint8,                                        \
+                op<simd_type, float, float>>::TernaryQuantizationOp;                  \
+    };                                                                                \
+    template <>                                                                       \
+    struct op<simd_type, dt_quint8, dt_quint8>                                        \
+            : TernaryQuantizationOp<                                                  \
+                      simd_type, dt_quint8, dt_quint8, op<simd_type, float, float>> { \
+        using TernaryQuantizationOp<                                                  \
+                simd_type, dt_quint8, dt_quint8,                                      \
+                op<simd_type, float, float>>::TernaryQuantizationOp;                  \
     };
 
 cb(FuseMulAdd3Op, SIMDType::SSE4_2);

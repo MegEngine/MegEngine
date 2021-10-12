@@ -1,13 +1,13 @@
 /*
-* Copyright 2018-2019 NVIDIA Corporation.  All rights reserved.
-*
-* Please refer to the NVIDIA end user license agreement (EULA) associated
-* with this source code for terms and conditions that govern your use of
-* this software. Any use, reproduction, disclosure, or distribution of
-* this software and related documentation outside the terms of the EULA
-* is strictly prohibited.
-*
-*/
+ * Copyright 2018-2019 NVIDIA Corporation.  All rights reserved.
+ *
+ * Please refer to the NVIDIA end user license agreement (EULA) associated
+ * with this source code for terms and conditions that govern your use of
+ * this software. Any use, reproduction, disclosure, or distribution of
+ * this software and related documentation outside the terms of the EULA
+ * is strictly prohibited.
+ *
+ */
 
 /**
  * \file src/opr/impl/nvof/NvOF.cpp
@@ -32,45 +32,39 @@
 
 #include "NvOF.h"
 
-NvOF::NvOF(uint32_t nWidth, uint32_t nHeight, NV_OF_BUFFER_FORMAT eInBufFmt, NV_OF_MODE eMode, 
-    NV_OF_PERF_LEVEL preset) :
-    m_nOutGridSize(NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX),
-    m_ePreset(preset),
-    m_ofMode(eMode)
-{
+NvOF::NvOF(
+        uint32_t nWidth, uint32_t nHeight, NV_OF_BUFFER_FORMAT eInBufFmt,
+        NV_OF_MODE eMode, NV_OF_PERF_LEVEL preset)
+        : m_nOutGridSize(NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX),
+          m_ePreset(preset),
+          m_ofMode(eMode) {
     m_inputElementSize = 1;
     if (eInBufFmt == NV_OF_BUFFER_FORMAT_ABGR8)
         m_inputElementSize = 4;
-
 
     memset(&m_inputBufferDesc, 0, sizeof(m_inputBufferDesc));
     m_inputBufferDesc.width = nWidth;
     m_inputBufferDesc.height = nHeight;
     m_inputBufferDesc.bufferFormat = eInBufFmt;
     m_inputBufferDesc.bufferUsage = NV_OF_BUFFER_USAGE_INPUT;
-
 }
 
-bool NvOF::CheckGridSize(uint32_t nOutGridSize)
-{
+bool NvOF::CheckGridSize(uint32_t nOutGridSize) {
     uint32_t size;
     DoGetOutputGridSizes(nullptr, &size);
 
     std::unique_ptr<uint32_t[]> val(new uint32_t[size]);
     DoGetOutputGridSizes(val.get(), &size);
 
-    for (uint32_t i = 0; i < size; i++)
-    {
-        if (nOutGridSize == val[i])
-        {
+    for (uint32_t i = 0; i < size; i++) {
+        if (nOutGridSize == val[i]) {
             return true;
         }
     }
     return false;
 }
 
-bool NvOF::GetNextMinGridSize(uint32_t nOutGridSize, uint32_t& nextMinOutGridSize)
-{
+bool NvOF::GetNextMinGridSize(uint32_t nOutGridSize, uint32_t& nextMinOutGridSize) {
     uint32_t size;
     DoGetOutputGridSizes(nullptr, &size);
 
@@ -78,42 +72,35 @@ bool NvOF::GetNextMinGridSize(uint32_t nOutGridSize, uint32_t& nextMinOutGridSiz
     DoGetOutputGridSizes(val.get(), &size);
 
     nextMinOutGridSize = NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX;
-    for (uint32_t i = 0; i < size; i++)
-    {
-        if (nOutGridSize == val[i])
-        {
+    for (uint32_t i = 0; i < size; i++) {
+        if (nOutGridSize == val[i]) {
             nextMinOutGridSize = nOutGridSize;
             return true;
         }
-        if (nOutGridSize < val[i] && val[i] < nextMinOutGridSize)
-        {
+        if (nOutGridSize < val[i] && val[i] < nextMinOutGridSize) {
             nextMinOutGridSize = val[i];
         }
     }
     return (nextMinOutGridSize >= NV_OF_OUTPUT_VECTOR_GRID_SIZE_MAX) ? false : true;
 }
 
-void NvOF::Init(uint32_t nOutGridSize)
-{
+void NvOF::Init(uint32_t nOutGridSize) {
     m_nOutGridSize = nOutGridSize;
 
     auto nOutWidth = (m_inputBufferDesc.width + m_nOutGridSize - 1) / m_nOutGridSize;
     auto nOutHeight = (m_inputBufferDesc.height + m_nOutGridSize - 1) / m_nOutGridSize;
 
     auto outBufFmt = NV_OF_BUFFER_FORMAT_SHORT2;
-    if (m_ofMode == NV_OF_MODE_OPTICALFLOW)
-    {
+    if (m_ofMode == NV_OF_MODE_OPTICALFLOW) {
         outBufFmt = NV_OF_BUFFER_FORMAT_SHORT2;
         m_outputElementSize = sizeof(NV_OF_FLOW_VECTOR);
-    }
-    else if (m_ofMode == NV_OF_MODE_STEREODISPARITY)
-    {
+    } else if (m_ofMode == NV_OF_MODE_STEREODISPARITY) {
         outBufFmt = NV_OF_BUFFER_FORMAT_SHORT;
         m_outputElementSize = sizeof(NV_OF_STEREO_DISPARITY);
-    }
-    else
-    {
-        mgb_throw(MegBrainError, "NVOF: Unsupported OF mode err type: NV_OF_ERR_INVALID_PARAM");
+    } else {
+        mgb_throw(
+                MegBrainError,
+                "NVOF: Unsupported OF mode err type: NV_OF_ERR_INVALID_PARAM");
     }
 
     memset(&m_outputBufferDesc, 0, sizeof(m_outputBufferDesc));
@@ -148,12 +135,9 @@ void NvOF::Init(uint32_t nOutGridSize)
     DoInit(m_initParams);
 }
 
-void NvOF::Execute(NvOFBuffer* image1,
-    NvOFBuffer* image2,
-    NvOFBuffer* outputBuffer,
-    NvOFBuffer* hintBuffer,
-    NvOFBuffer* costBuffer)
-{
+void NvOF::Execute(
+        NvOFBuffer* image1, NvOFBuffer* image2, NvOFBuffer* outputBuffer,
+        NvOFBuffer* hintBuffer, NvOFBuffer* costBuffer) {
     NV_OF_EXECUTE_INPUT_PARAMS exeInParams;
     NV_OF_EXECUTE_OUTPUT_PARAMS exeOutParams;
 
@@ -161,70 +145,59 @@ void NvOF::Execute(NvOFBuffer* image1,
     exeInParams.inputFrame = image1->getOFBufferHandle();
     exeInParams.referenceFrame = image2->getOFBufferHandle();
     exeInParams.disableTemporalHints = NV_OF_FALSE;
-    exeInParams.externalHints = m_initParams.enableExternalHints == NV_OF_TRUE ? hintBuffer->getOFBufferHandle() : nullptr;
+    exeInParams.externalHints = m_initParams.enableExternalHints == NV_OF_TRUE
+                                      ? hintBuffer->getOFBufferHandle()
+                                      : nullptr;
 
     memset(&exeOutParams, 0, sizeof(exeOutParams));
     exeOutParams.outputBuffer = outputBuffer->getOFBufferHandle();
-    exeOutParams.outputCostBuffer = m_initParams.enableOutputCost == NV_OF_TRUE ? costBuffer->getOFBufferHandle() : nullptr;
+    exeOutParams.outputCostBuffer = m_initParams.enableOutputCost == NV_OF_TRUE
+                                          ? costBuffer->getOFBufferHandle()
+                                          : nullptr;
     DoExecute(exeInParams, exeOutParams);
 }
 
-
-std::vector<std::unique_ptr<NvOFBuffer>>
-NvOF::CreateBuffers(NV_OF_BUFFER_USAGE usage, uint32_t numBuffers)
-{
+std::vector<std::unique_ptr<NvOFBuffer>> NvOF::CreateBuffers(
+        NV_OF_BUFFER_USAGE usage, uint32_t numBuffers) {
     std::vector<std::unique_ptr<NvOFBuffer>> ofBuffers;
 
-    if (usage == NV_OF_BUFFER_USAGE_INPUT)
-    {
+    if (usage == NV_OF_BUFFER_USAGE_INPUT) {
         ofBuffers = DoAllocBuffers(m_inputBufferDesc, m_inputElementSize, numBuffers);
-    }
-    else if (usage == NV_OF_BUFFER_USAGE_OUTPUT)
-    {
+    } else if (usage == NV_OF_BUFFER_USAGE_OUTPUT) {
         ofBuffers = DoAllocBuffers(m_outputBufferDesc, m_outputElementSize, numBuffers);
-    }
-    else if (usage == NV_OF_BUFFER_USAGE_COST)
-    {
+    } else if (usage == NV_OF_BUFFER_USAGE_COST) {
         ofBuffers = DoAllocBuffers(m_costBufferDesc, m_costBufElementSize, numBuffers);
-    }
-    else if (usage == NV_OF_BUFFER_USAGE_HINT)
-    {
+    } else if (usage == NV_OF_BUFFER_USAGE_HINT) {
         ofBuffers = DoAllocBuffers(m_hintBufferDesc, m_hintBufElementSize, numBuffers);
-    }
-    else
-    {
+    } else {
         mgb_throw(MegBrainError, "NVOF: Invalid parameter err type: NV_OF_ERR_GENERIC");
     }
 
     return ofBuffers;
 }
 
-std::vector<std::unique_ptr<NvOFBuffer>>
-NvOF::CreateBuffers(uint32_t nWidth, uint32_t nHeight, NV_OF_BUFFER_USAGE usage, uint32_t numBuffers)
-{
+std::vector<std::unique_ptr<NvOFBuffer>> NvOF::CreateBuffers(
+        uint32_t nWidth, uint32_t nHeight, NV_OF_BUFFER_USAGE usage,
+        uint32_t numBuffers) {
     std::vector<std::unique_ptr<NvOFBuffer>> ofBuffers;
 
     NV_OF_BUFFER_DESCRIPTOR bufferDesc;
 
-    if (usage == NV_OF_BUFFER_USAGE_OUTPUT)
-    {
+    if (usage == NV_OF_BUFFER_USAGE_OUTPUT) {
         bufferDesc.width = nWidth;
         bufferDesc.height = nHeight;
         bufferDesc.bufferFormat = m_outputBufferDesc.bufferFormat;
         bufferDesc.bufferUsage = NV_OF_BUFFER_USAGE_OUTPUT;
 
         ofBuffers = DoAllocBuffers(bufferDesc, m_outputElementSize, numBuffers);
-    }
-    else
-    {
+    } else {
         mgb_throw(MegBrainError, "NVOF: Invalid parameter err type: NV_OF_ERR_GENERIC");
     }
 
     return ofBuffers;
 }
 
-void NvOFAPI::LoadNvOFAPI()
-{
+void NvOFAPI::LoadNvOFAPI() {
 #if defined(_WIN32)
 #if defined(_WIN64)
     HMODULE hModule = LoadLibrary(TEXT("nvofapi64.dll"));
@@ -232,10 +205,9 @@ void NvOFAPI::LoadNvOFAPI()
     HMODULE hModule = LoadLibrary(TEXT("nvofapi.dll"));
 #endif
 #else
-    void *hModule = dlopen("libnvidia-opticalflow.so.1", RTLD_LAZY);
+    void* hModule = dlopen("libnvidia-opticalflow.so.1", RTLD_LAZY);
 #endif
-    if (hModule == NULL)
-    {
+    if (hModule == NULL) {
         mgb_throw(
                 MegBrainError,
                 "NVOF: NVOF library file not found. Please ensure that the "

@@ -56,8 +56,8 @@ ExampleFuncMap* lite::example::get_example_function_map() {
     return &static_map;
 }
 
-bool lite::example::register_example(std::string example_name,
-                                     const ExampleFunc& fuction) {
+bool lite::example::register_example(
+        std::string example_name, const ExampleFunc& fuction) {
     auto map = get_example_function_map();
     if (map->find(example_name) != map->end()) {
         printf("Error!!! This example is registed yet\n");
@@ -67,15 +67,14 @@ bool lite::example::register_example(std::string example_name,
     return true;
 }
 
-std::shared_ptr<Tensor> lite::example::parse_npy(const std::string& path,
-                                                 LiteBackend backend) {
+std::shared_ptr<Tensor> lite::example::parse_npy(
+        const std::string& path, LiteBackend backend) {
     std::string type_str;
     std::vector<npy::ndarray_len_t> stl_shape;
     std::vector<int8_t> raw;
     npy::LoadArrayFromNumpy(path, type_str, stl_shape, raw);
 
-    auto lite_tensor =
-            std::make_shared<Tensor>(backend, LiteDeviceType::LITE_CPU);
+    auto lite_tensor = std::make_shared<Tensor>(backend, LiteDeviceType::LITE_CPU);
     Layout layout;
     layout.ndim = stl_shape.size();
     const std::map<std::string, LiteDataType> type_map = {
@@ -100,9 +99,10 @@ std::shared_ptr<Tensor> lite::example::parse_npy(const std::string& path,
     memcpy(dest, raw.data(), length);
     //! rknn not support reshape now
     if (layout.ndim == 3) {
-            lite_tensor->reshape({1, static_cast<int>(layout.shapes[0]),
-                                  static_cast<int>(layout.shapes[1]),
-                                  static_cast<int>(layout.shapes[2])});
+            lite_tensor->reshape(
+                    {1, static_cast<int>(layout.shapes[0]),
+                     static_cast<int>(layout.shapes[1]),
+                     static_cast<int>(layout.shapes[2])});
     }
     return lite_tensor;
 }
@@ -118,8 +118,7 @@ void lite::example::set_cpu_affinity(const std::vector<int>& cpuset) {
     }
     auto err = sched_setaffinity(0, sizeof(mask), &mask);
     if (err) {
-        printf("failed to sched_setaffinity: %s (error ignored)",
-               strerror(errno));
+        printf("failed to sched_setaffinity: %s (error ignored)", strerror(errno));
     }
 #endif
 }

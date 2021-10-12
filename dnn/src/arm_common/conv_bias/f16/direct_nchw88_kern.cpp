@@ -24,13 +24,12 @@ using namespace arm_common;
 
 template <int PC, int BW, int pc, int bw>
 struct compute_fma {
-    static inline void call(const float16x8_t* ri, const float16x8_t* rf,
-                            float16x8_t* rdst) {
+    static inline void call(
+            const float16x8_t* ri, const float16x8_t* rf, float16x8_t* rdst) {
 #if defined(__aarch64__)
         rdst[bw] = vfmaq_laneq_f16(rdst[bw], rf[pc], ri[bw], pc);
 #else
-        rdst[bw] = vfmaq_f16(rdst[bw], rf[pc],
-                             vdupq_n_f16(vgetq_lane_f16(ri[bw], pc)));
+        rdst[bw] = vfmaq_f16(rdst[bw], rf[pc], vdupq_n_f16(vgetq_lane_f16(ri[bw], pc)));
 #endif
         compute_fma<PC, BW, pc, bw + 1>::call(ri, rf, rdst);
     }
@@ -38,16 +37,16 @@ struct compute_fma {
 
 template <int PC, int BW, int pc>
 struct compute_fma<PC, BW, pc, BW> {
-    static inline void call(const float16x8_t* ri, const float16x8_t* rf,
-                            float16x8_t* rdst) {
+    static inline void call(
+            const float16x8_t* ri, const float16x8_t* rf, float16x8_t* rdst) {
         compute_fma<PC, BW, pc + 1, 0>::call(ri, rf, rdst);
     }
 };
 
 template <int PC, int BW>
 struct compute_fma<PC, BW, PC, 0> {
-    static inline void call(const float16x8_t* ri, const float16x8_t* rf,
-                            float16x8_t* rdst) {}
+    static inline void call(
+            const float16x8_t* ri, const float16x8_t* rf, float16x8_t* rdst) {}
 };
 
 template <int PC, int BW, int bw>
@@ -103,9 +102,9 @@ struct store_dst<PC, BW, BW> {
 };
 
 template <int FH, int SH, int BW>
-static inline void do_conv_kern_1xBW(const float16_t*& src, float16_t*& dst,
-                                     const float16_t* filter, int IW, int OW,
-                                     int& ow) {
+static inline void do_conv_kern_1xBW(
+        const float16_t*& src, float16_t*& dst, const float16_t* filter, int IW, int OW,
+        int& ow) {
     constexpr int PC = 8;
     constexpr int FW = FH;
     constexpr int SW = SH;
@@ -125,8 +124,7 @@ static inline void do_conv_kern_1xBW(const float16_t*& src, float16_t*& dst,
                 load_src<PC, SW, BW, 0>::call(ri, src + (fh * IW + fw) * PC);
 
                 if (FH > 1 || FW > 1) {
-                    load_filter<PC, 0>::call(rf,
-                                             filter + (fh * FW + fw) * PC * PC);
+                    load_filter<PC, 0>::call(rf, filter + (fh * FW + fw) * PC * PC);
                 }
 
                 compute_fma<PC, BW, 0, 0>::call(ri, rf, rdst);
@@ -141,8 +139,7 @@ static inline void do_conv_kern_1xBW(const float16_t*& src, float16_t*& dst,
 }
 
 template <BiasMode bias_mode>
-static void do_load_bias_kern(float16_t* dst, const float16_t* bias, int OH,
-                              int OW) {
+static void do_load_bias_kern(float16_t* dst, const float16_t* bias, int OH, int OW) {
     constexpr int PC = 8;
 
     if (bias_mode == BiasMode::NO_BIAS) {
@@ -198,9 +195,9 @@ static void do_op_kern(float16_t* dst, int OH, int OW) {
 }
 
 template <int FH, int SH>
-static void do_conv_kern(const float16_t* src, float16_t* dst,
-                         const float16_t* filter, int IC, int IH, int IW,
-                         int OH, int OW) {
+static void do_conv_kern(
+        const float16_t* src, float16_t* dst, const float16_t* filter, int IC, int IH,
+        int IW, int OH, int OW) {
     constexpr int PC = 8;
     constexpr int FW = FH;
 
@@ -213,13 +210,10 @@ static void do_conv_kern(const float16_t* src, float16_t* dst,
             float16_t* dst_ptr_w = dst_ptr_h;
 
             int ow = 0;
-            do_conv_kern_1xBW<FH, SH, 4>(src_ptr_w, dst_ptr_w, filter, IW, OW,
-                                         ow);
+            do_conv_kern_1xBW<FH, SH, 4>(src_ptr_w, dst_ptr_w, filter, IW, OW, ow);
             if (OW & 3) {
-                do_conv_kern_1xBW<FH, SH, 2>(src_ptr_w, dst_ptr_w, filter, IW,
-                                             OW, ow);
-                do_conv_kern_1xBW<FH, SH, 1>(src_ptr_w, dst_ptr_w, filter, IW,
-                                             OW, ow);
+                do_conv_kern_1xBW<FH, SH, 2>(src_ptr_w, dst_ptr_w, filter, IW, OW, ow);
+                do_conv_kern_1xBW<FH, SH, 1>(src_ptr_w, dst_ptr_w, filter, IW, OW, ow);
             }
             src_ptr_h += SH * IW * PC;
             dst_ptr_h += OW * PC;
@@ -229,8 +223,9 @@ static void do_conv_kern(const float16_t* src, float16_t* dst,
     }
 }
 
-static void do_conv_kern_1x1(const float16_t* src, float16_t* dst,
-                             const float16_t* filter, int IC, int OH, int OW) {
+static void do_conv_kern_1x1(
+        const float16_t* src, float16_t* dst, const float16_t* filter, int IC, int OH,
+        int OW) {
     constexpr int PC = 8;
     const int IH = OH;
     const int IW = OW;
@@ -242,21 +237,18 @@ static void do_conv_kern_1x1(const float16_t* src, float16_t* dst,
         float16_t* dst_ptr_hw = dst;
 
         int ohw = 0;
-        do_conv_kern_1xBW<1, 1, 8>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW,
-                                   ohw);
-        do_conv_kern_1xBW<1, 1, 4>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW,
-                                   ohw);
-        do_conv_kern_1xBW<1, 1, 1>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW,
-                                   ohw);
+        do_conv_kern_1xBW<1, 1, 8>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW, ohw);
+        do_conv_kern_1xBW<1, 1, 4>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW, ohw);
+        do_conv_kern_1xBW<1, 1, 1>(src_ptr_hw, dst_ptr_hw, filter, IHW, OHW, ohw);
         src += IHW * PC;
         filter += PC * PC;
     }
 }
 
 template <size_t FH, size_t SH, BiasMode bias_mode, typename Op>
-void conv_bias::conv_direct_fp16_nchw88(const __fp16* src, const __fp16* filter,
-                                        const __fp16* bias, __fp16* dst, int IC,
-                                        int IH, int IW, int OH, int OW) {
+void conv_bias::conv_direct_fp16_nchw88(
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        int IC, int IH, int IW, int OH, int OW) {
     do_load_bias_kern<bias_mode>(dst, bias, OH, OW);
     if (FH == 1 && SH == 1 && IH == OH && IW == OW) {
         do_conv_kern_1x1(src, dst, filter, IC, OH, OW);
@@ -266,11 +258,10 @@ void conv_bias::conv_direct_fp16_nchw88(const __fp16* src, const __fp16* filter,
     do_op_kern<Op>(dst, OH, OW);
 }
 
-#define INSTANTIATION(stride, filter, bias, Op)                             \
-    template void                                                           \
-    conv_bias::conv_direct_fp16_nchw88<filter, stride, bias, Op>(           \
-            const __fp16*, const __fp16*, const __fp16*, __fp16*, int, int, \
-            int, int, int);
+#define INSTANTIATION(stride, filter, bias, Op)                                       \
+    template void conv_bias::conv_direct_fp16_nchw88<filter, stride, bias, Op>(       \
+            const __fp16*, const __fp16*, const __fp16*, __fp16*, int, int, int, int, \
+            int);
 
 #define FOR_OP(stride, filter, bias)                       \
     INSTANTIATION(stride, filter, bias, SigmoidOp<__fp16>) \

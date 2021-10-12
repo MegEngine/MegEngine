@@ -21,9 +21,9 @@ using namespace argsort;
 namespace {
 
 template <typename T>
-__global__ void backward_kernel(uint32_t dst_w, uint32_t src_w,
-                                uint32_t src_size, T* dst, const T* src_data,
-                                const int* src_idx) {
+__global__ void backward_kernel(
+        uint32_t dst_w, uint32_t src_w, uint32_t src_size, T* dst, const T* src_data,
+        const int* src_idx) {
     uint32_t idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < src_size) {
         uint32_t r = idx / src_w;
@@ -34,9 +34,9 @@ __global__ void backward_kernel(uint32_t dst_w, uint32_t src_w,
 }  // namespace
 
 template <typename T>
-void argsort::backward_proxy(uint32_t dst_h, uint32_t dst_w, uint32_t src_w,
-                             T* dst, const T* src_data, const int* src_idx,
-                             cudaStream_t stream) {
+void argsort::backward_proxy(
+        uint32_t dst_h, uint32_t dst_w, uint32_t src_w, T* dst, const T* src_data,
+        const int* src_idx, cudaStream_t stream) {
     if (dst_w != src_w) {
         cudaMemsetAsync(dst, 0, dst_h * dst_w * sizeof(T), stream);
     }
@@ -51,10 +51,10 @@ namespace megdnn {
 namespace cuda {
 namespace argsort {
 
-#define INST(T)                                                             \
-    template void backward_proxy(uint32_t dst_h, uint32_t dst_w,            \
-                                 uint32_t src_w, T* dst, const T* src_data, \
-                                 const int* src_idx, cudaStream_t stream);
+#define INST(T)                                                                        \
+    template void backward_proxy(                                                      \
+            uint32_t dst_h, uint32_t dst_w, uint32_t src_w, T* dst, const T* src_data, \
+            const int* src_idx, cudaStream_t stream);
 ARGSORT_FOREACH_CTYPE(INST)
 #undef INST
 

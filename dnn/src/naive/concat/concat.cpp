@@ -19,12 +19,11 @@ namespace megdnn {
 namespace naive {
 
 template <typename T>
-void ConcatForwardImpl::exec_internal(const TensorNDArray &srcs,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace workspace)
-{
+void ConcatForwardImpl::exec_internal(
+        const TensorNDArray& srcs, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     size_t A, B, C;
-    size_t *Bv = reinterpret_cast<size_t *>(workspace.raw_ptr);
+    size_t* Bv = reinterpret_cast<size_t*>(workspace.raw_ptr);
     auto srcs_layout = apply_vector<TensorLayout>(m_get_layout, srcs);
     check_exec(srcs_layout, dst.layout, workspace.size);
     auto srcs_shape = apply_vector<TensorShape>(m_get_shape, srcs_layout);
@@ -39,8 +38,8 @@ void ConcatForwardImpl::exec_internal(const TensorNDArray &srcs,
         rep(db, B) {
             auto sptr = srcs[sbi].ptr<T>();
             rep(c, C) {
-                auto didx = a*B*C + db*C + c;
-                auto sidx = a*Bv[sbi]*C + sbo*C + c;
+                auto didx = a * B * C + db * C + c;
+                auto sidx = a * Bv[sbi] * C + sbo * C + c;
                 dptr[didx] = sptr[sidx];
             }
             ++sbo;
@@ -52,16 +51,14 @@ void ConcatForwardImpl::exec_internal(const TensorNDArray &srcs,
     }
 }
 
-void ConcatForwardImpl::exec(_megdnn_in const TensorNDArray &srcs,
-        _megdnn_tensor_out dst,
-        _megdnn_workspace workspace)
-{
-#define cb(DType) \
-    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) { \
-        using ctype = typename DTypeTrait<DType>::ctype; \
-        MEGDNN_DISPATCH_CPU_KERN_OPR( \
-                exec_internal<ctype>(srcs, dst, workspace)); \
-        return; \
+void ConcatForwardImpl::exec(
+        _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
+#define cb(DType)                                                                 \
+    if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                   \
+        using ctype = typename DTypeTrait<DType>::ctype;                          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(srcs, dst, workspace)); \
+        return;                                                                   \
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
@@ -69,7 +66,7 @@ void ConcatForwardImpl::exec(_megdnn_in const TensorNDArray &srcs,
     megdnn_assert_internal(0);
 }
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

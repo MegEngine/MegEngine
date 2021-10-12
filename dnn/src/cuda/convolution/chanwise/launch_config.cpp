@@ -16,9 +16,9 @@ using namespace megdnn;
 using namespace cuda;
 using namespace convolution;
 
-int chanwise::GetFixedBlockSize1(int work_element_count, const void* func,
-                                 int dynamic_shared_memory_size,
-                                 int fixed_block_size) {
+int chanwise::GetFixedBlockSize1(
+        int work_element_count, const void* func, int dynamic_shared_memory_size,
+        int fixed_block_size) {
     int block_count = 0;
 
     cuda_check(cudaOccupancyMaxActiveBlocksPerMultiprocessor(

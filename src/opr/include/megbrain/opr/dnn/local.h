@@ -28,11 +28,10 @@ MGB_DEFINE_MEGDNN_OPR_WRAPPER_BWD3(GroupLocalBackwardData);
 MGB_DEFINE_MEGDNN_OPR_WRAPPER_BWD3(LocalBackwardFilter);
 MGB_DEFINE_MEGDNN_OPR_WRAPPER_BWD3(GroupLocalBackwardFilter);
 
-
 using Local = LocalForward;
 using GroupLocal = GroupLocalForward;
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

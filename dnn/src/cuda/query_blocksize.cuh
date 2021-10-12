@@ -49,12 +49,11 @@ static inline int query_blocksize_for_kernel(T kern) {
 }
 
 namespace detail {
-LaunchConfig query_launch_config_for_kernel_uncached(const void* kern,
-                                                     const SmemGetter& smem);
+LaunchConfig query_launch_config_for_kernel_uncached(
+        const void* kern, const SmemGetter& smem);
 }
 
 }  // namespace cuda
 }  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

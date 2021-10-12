@@ -14,21 +14,17 @@
 
 namespace megdnn {
 
-void ROIPoolingBase::check_layout_fwd(const TensorLayout &src,
-        const TensorLayout &rois,
-        const TensorLayout &dst,
-        const TensorLayout &index)
-{
+void ROIPoolingBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+        const TensorLayout& index) {
     // all should be contiguous
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(rois);
     megdnn_assert_contiguous(dst);
     megdnn_assert_contiguous(index);
     auto errmsg = [&]() {
-        return megdnn_layout_msg(src) + ", "
-        + megdnn_layout_msg(rois) + ", "
-        + megdnn_layout_msg(dst) + ", "
-        + megdnn_layout_msg(index);
+        return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(rois) + ", " +
+               megdnn_layout_msg(dst) + ", " + megdnn_layout_msg(index);
     };
     MEGDNN_MARK_USED_VAR(errmsg);
     // src
@@ -50,32 +46,25 @@ void ROIPoolingBase::check_layout_fwd(const TensorLayout &src,
     megdnn_assert(index.dtype == dtype::Int32());
 }
 
-void ROIPoolingForward::check_exec(const TensorLayout &src,
-        const TensorLayout &rois,
-        const TensorLayout &dst,
-        const TensorLayout &index,
-        size_t workspace_in_bytes)
-{
+void ROIPoolingForward::check_exec(
+        const TensorLayout& src, const TensorLayout& rois, const TensorLayout& dst,
+        const TensorLayout& index, size_t workspace_in_bytes) {
     check_layout_fwd(src, rois, dst, index);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src,
-            rois, dst, index);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, rois, dst, index);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void ROIPoolingBackward::check_exec(const TensorLayout &diff,
-        const TensorLayout &src,
-        const TensorLayout &rois,
-        const TensorLayout &index,
-        const TensorLayout &grad,
-        size_t workspace_in_bytes)
-{
+void ROIPoolingBackward::check_exec(
+        const TensorLayout& diff, const TensorLayout& src, const TensorLayout& rois,
+        const TensorLayout& index, const TensorLayout& grad,
+        size_t workspace_in_bytes) {
     check_layout_fwd(src, rois, diff, index);
     megdnn_assert_eq_layout(src, grad);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(diff,
-            src, rois, index, grad);
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(diff, src, rois, index, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

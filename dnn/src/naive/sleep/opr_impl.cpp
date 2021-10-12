@@ -28,13 +28,12 @@ void SleepForwardImpl::exec() {
     megdnn_trap();
 #else
     double seconds = m_param.time;
-    MEGDNN_DISPATCH_CPU_KERN_OPR(
-            std::this_thread::sleep_for(std::chrono::microseconds(
-                    static_cast<uint64_t>(seconds * 1e6))););
+    MEGDNN_DISPATCH_CPU_KERN_OPR(std::this_thread::sleep_for(std::chrono::microseconds(
+            static_cast<uint64_t>(seconds * 1e6))););
 #endif
 }
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

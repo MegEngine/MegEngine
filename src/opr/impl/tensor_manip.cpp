@@ -10,15 +10,15 @@
  */
 
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/comp_node_env.h"
+#include "megbrain/graph/event.h"
+#include "megbrain/graph/exc_extra_info.h"
+#include "megbrain/graph/grad_impl.h"
 #include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/param_defs.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/opr/io.h"
-#include "megbrain/graph/event.h"
-#include "megbrain/comp_node_env.h"
 #include "megbrain/utils/arith_helper.h"
-#include "megbrain/graph/grad_impl.h"
-#include "megbrain/graph/exc_extra_info.h"
 
 #include "./internal/megdnn_opr_wrapper.inl"
 
@@ -28,63 +28,59 @@ using namespace intl;
 
 /* f{{{ ======================= local utils ======================= */
 namespace {
-    using OptionalAxis = megdnn::param::OptionalAxisV1;
-    //! check whether shp is GetVarShape(a)
-    bool check_is_shape_of(SymbolVar shp, SymbolVar a) {
+using OptionalAxis = megdnn::param::OptionalAxisV1;
+//! check whether shp is GetVarShape(a)
+bool check_is_shape_of(SymbolVar shp, SymbolVar a) {
 #if MGB_BUILD_SLIM_SERVING
-        return false;
+    return false;
 #else
-        auto op = shp.node()->owner_opr();
-        if (op->same_type<GetVarShape>() && op->input().size() == 1 &&
-            op->input()[0] == a.node() &&
-            op->cast_final<GetVarShape>().param().axis ==
-                    OptionalAxis::INVALID_AXIS) {
-            return true;
-        }
-        using namespace cg::static_infer;
-        auto &&mgr = a.node()->owner_graph()->static_infer_manager();
-        if ((mgr.get_infer_type(shp.node()).value & InferType::CONST) &&
-                (mgr.get_infer_type(a.node()).shape & InferType::CONST)) {
-            auto &&a_shp = mgr.infer_shape(a.node());
-            auto &&shp_val = mgr.infer_value(shp.node());
-            TensorShape shp_shp;
-            cg::copy_tensor_value_to_shape(shp_shp, shp_val);
-            return a_shp.eq_shape(shp_shp);
-        }
-        return false;
-#endif
+    auto op = shp.node()->owner_opr();
+    if (op->same_type<GetVarShape>() && op->input().size() == 1 &&
+        op->input()[0] == a.node() &&
+        op->cast_final<GetVarShape>().param().axis == OptionalAxis::INVALID_AXIS) {
+        return true;
     }
+    using namespace cg::static_infer;
+    auto&& mgr = a.node()->owner_graph()->static_infer_manager();
+    if ((mgr.get_infer_type(shp.node()).value & InferType::CONST) &&
+        (mgr.get_infer_type(a.node()).shape & InferType::CONST)) {
+        auto&& a_shp = mgr.infer_shape(a.node());
+        auto&& shp_val = mgr.infer_value(shp.node());
+        TensorShape shp_shp;
+        cg::copy_tensor_value_to_shape(shp_shp, shp_val);
+        return a_shp.eq_shape(shp_shp);
+    }
+    return false;
+#endif
+}
 
 #if !MGB_BUILD_SLIM_SERVING
-    // return x such that shape_of(var) == x
-    GetVarShape* get_shape_shortcut(VarNode *var) {
-        auto opr = var->owner_opr();
-        auto otype = opr->dyn_typeinfo();
-        if (!(otype == Reshape::typeinfo() &&
-              opr->cast_final<Reshape>().param().axis ==
-                      OptionalAxis::INVALID_AXIS) &&
-            otype != Broadcast::typeinfo()) {
-            return nullptr;
-        }
-        auto i1 = opr->input(1)->owner_opr();
-        if (i1->same_type<GetVarShape>())
-            return &i1->cast_final<GetVarShape>();
+// return x such that shape_of(var) == x
+GetVarShape* get_shape_shortcut(VarNode* var) {
+    auto opr = var->owner_opr();
+    auto otype = opr->dyn_typeinfo();
+    if (!(otype == Reshape::typeinfo() &&
+          opr->cast_final<Reshape>().param().axis == OptionalAxis::INVALID_AXIS) &&
+        otype != Broadcast::typeinfo()) {
         return nullptr;
     }
+    auto i1 = opr->input(1)->owner_opr();
+    if (i1->same_type<GetVarShape>())
+        return &i1->cast_final<GetVarShape>();
+    return nullptr;
+}
 #endif
-} // anonymous namespace
+}  // anonymous namespace
 // f}}}
 
 /* f{{{ ======================= GetVarShape ======================= */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GetVarShape);
-GetVarShape::GetVarShape(const VarNodeArrayView &inp, Param axis,
-        const OperatorNodeConfig &config):
-    Super(inp.at(0)->owner_graph(), config, "shape_of", inp),
-    m_axis{axis}
-{
+GetVarShape::GetVarShape(
+        const VarNodeArrayView& inp, Param axis, const OperatorNodeConfig& config)
+        : Super(inp.at(0)->owner_graph(), config, "shape_of", inp), m_axis{axis} {
     m_src_shapes.resize(inp.size());
-    for (auto i: inp)
+    for (auto i : inp)
         add_input({i});
     add_input({}, AddInputSortType::ALL);
     add_output(None)->dtype(dtype::Int32());
@@ -107,8 +103,7 @@ void GetVarShape::update_cached_shape() {
             axis += ishp.ndim;
         }
         mgb_assert(axis >= 0 && axis < (int)ishp.ndim);
-        if (m_cached_shape.ndim == 1 &&
-            m_cached_shape.shape[0] == ishp.shape[axis])
+        if (m_cached_shape.ndim == 1 && m_cached_shape.shape[0] == ishp.shape[axis])
             return;
         m_cached_shape = {ishp.shape[axis]};
     } else {
@@ -122,7 +117,7 @@ void GetVarShape::update_cached_shape() {
 }
 
 void GetVarShape::scn_do_execute() {
-    for (size_t i = 0; i < m_src_shapes.size(); ++ i) {
+    for (size_t i = 0; i < m_src_shapes.size(); ++i) {
         m_src_shapes[i] = input()[i]->shape();
     }
     update_cached_shape();
@@ -133,8 +128,8 @@ void GetVarShape::scn_do_execute() {
     output(0)->dev_tensor().copy_from_fixlayout(m_cached_shape_dev_v);
 }
 
-void GetVarShape::update_for_static_infer(const cg::static_infer::InpVal &inp) {
-    for (size_t i = 0; i < m_src_shapes.size(); ++ i) {
+void GetVarShape::update_for_static_infer(const cg::static_infer::InpVal& inp) {
+    for (size_t i = 0; i < m_src_shapes.size(); ++i) {
         m_src_shapes[i] = inp.val.at(i).shape();
     }
     update_cached_shape();
@@ -142,28 +137,26 @@ void GetVarShape::update_for_static_infer(const cg::static_infer::InpVal &inp) {
 
 void GetVarShape::init_output_static_infer_desc() {
     using namespace cg::static_infer;
-    auto infer_shape = [this](TensorShape &dest, const InpVal &inp) {
+    auto infer_shape = [this](TensorShape& dest, const InpVal& inp) {
         update_for_static_infer(inp);
         dest = m_cached_shape_cpu_v.shape();
         return true;
     };
 
-    auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
         update_for_static_infer(inp);
         dest = m_cached_shape_cpu_v;
         return true;
     };
 
     DepVal deps;
-    for (auto i: input()) {
+    for (auto i : input()) {
         deps.push_back({i, DepType::SHAPE});
     }
 
-    auto &&mgr = owner_graph()->static_infer_manager();
-    mgr.register_shape_infer(output(0),
-            {SourceType::DEP, deps, infer_shape});
-    mgr.register_value_infer(output(0),
-            {SourceType::DEP, deps, infer_value});
+    auto&& mgr = owner_graph()->static_infer_manager();
+    mgr.register_shape_infer(output(0), {SourceType::DEP, deps, infer_shape});
+    mgr.register_value_infer(output(0), {SourceType::DEP, deps, infer_value});
 }
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(GetVarShape) {
@@ -173,8 +166,8 @@ MGB_IMPL_OPR_GRAD(GetVarShape) {
 }
 #endif
 
-SymbolVar GetVarShape::make(const VarNodeArrayView& inp, Param param,
-                            const OperatorNodeConfig& config) {
+SymbolVar GetVarShape::make(
+        const VarNodeArrayView& inp, Param param, const OperatorNodeConfig& config) {
     mgb_assert(!inp.empty());
 
 #if !MGB_BUILD_SLIM_SERVING
@@ -222,32 +215,29 @@ class GetVarShape::ShapeDevValueExecDep final : public ExecDependency {
     DeviceTensorStorage m_val;
 
 public:
-    explicit ShapeDevValueExecDep(DeviceTensorStorage val)
-            : m_val(std::move(val)) {}
+    explicit ShapeDevValueExecDep(DeviceTensorStorage val) : m_val(std::move(val)) {}
 };
 
 void GetVarShape::record_execute_deps(ExecDependencyArray& deps) {
-    deps.emplace_back(std::make_unique<ShapeDevValueExecDep>(
-            m_cached_shape_dev_v.storage()));
+    deps.emplace_back(
+            std::make_unique<ShapeDevValueExecDep>(m_cached_shape_dev_v.storage()));
 }
 
 // f}}}
 
 /* f{{{ ======================= ReshapeBrdcastHelper ======================= */
 
-void ReshapeBrdcastHelper::reshapebrdcast_init(VarNode *inp, VarNode *tshp) {
+void ReshapeBrdcastHelper::reshapebrdcast_init(VarNode* inp, VarNode* tshp) {
     add_input({inp, tshp});
-    add_output(None)->dtype(inp->dtype())
-                    .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    add_output(None)->dtype(inp->dtype()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     if (reshapebrdcast_output_shape_need_input_shape())
         outshape_by_symvar_enable(1, 1);
     else
         outshape_by_symvar_enable(0, 1);
 }
 
-
 void ReshapeBrdcastHelper::mem_plan_fwd_in2out_readonly() {
-    auto &&tshape = output(0)->shape();
+    auto&& tshape = output(0)->shape();
 
     auto inp_layout = input(0)->layout();
     auto dst_layout = reshapebrdcast_get_dest_layout(inp_layout, tshape);
@@ -267,12 +257,10 @@ void ReshapeBrdcastHelper::mem_plan_fwd_in2out_readonly() {
 }
 
 void ReshapeBrdcastHelper::outshape_by_symvar_do_get_output_shape(
-        TensorShape &dest,
-        const ShapeInferInfo &shpinfo) {
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
     if (reshapebrdcast_output_shape_need_input_shape()) {
         TensorShape oshp_given;
-        cg::copy_tensor_value_to_shape(oshp_given,
-                                       *shpinfo.shpval_inp_val.at(0));
+        cg::copy_tensor_value_to_shape(oshp_given, *shpinfo.shpval_inp_val.at(0));
         TensorLayout src;
         src.init_contiguous_stride(shpinfo.shape_inp_shp.at(0));
         dest = reshapebrdcast_get_dest_layout(src, oshp_given).val();
@@ -284,12 +272,12 @@ void ReshapeBrdcastHelper::outshape_by_symvar_do_get_output_shape(
 void ReshapeBrdcastHelper::scn_do_execute() {
     if (m_incompatible_inp_layout) {
         // only happens in reshape
-        auto &&iv = input(0)->dev_tensor();
+        auto&& iv = input(0)->dev_tensor();
         auto ishp = iv.shape();
-        auto &&ov = output(0)->dev_tensor();
+        auto&& ov = output(0)->dev_tensor();
         mgb_assert(ishp.total_nr_elems() == ov.shape().total_nr_elems());
-        ov.sub(SubTensorSpec::make_from_layout({ishp, iv.dtype()})).
-            copy_from_fixlayout(iv);
+        ov.sub(SubTensorSpec::make_from_layout({ishp, iv.dtype()}))
+                .copy_from_fixlayout(iv);
     } else
         rofwd_execute();
 }
@@ -298,13 +286,14 @@ void ReshapeBrdcastHelper::add_input_layout_constraint() {
     if (!cg::is_static_var_value(input(1)))
         return;
 
-    auto check_layout = [this](const TensorLayout &layout) {
+    auto check_layout = [this](const TensorLayout& layout) {
         MGB_TRY {
             TensorShape oshp;
             outshape_by_symvar_do_get_output_shape(
                     oshp, outshape_by_symvar_get_shape_infer_info());
             return reshapebrdcast_get_dest_layout(layout, oshp).valid();
-        } MGB_CATCH(MegBrainError &exc,  {
+        }
+        MGB_CATCH(MegBrainError & exc, {
             if (!exc.extra_info())
                 cg::OperatorNodeExcExtraInfo::record(this, exc);
             throw;
@@ -316,10 +305,10 @@ void ReshapeBrdcastHelper::add_input_layout_constraint() {
 void ReshapeBrdcastHelper::init_output_static_infer_desc() {
     Super::init_output_static_infer_desc();
     using namespace cg::static_infer;
-    auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
         TensorShape oshp;
         cg::copy_tensor_value_to_shape(oshp, inp.val.at(1).value());
-        auto &&iv = inp.val[0].value();
+        auto&& iv = inp.val[0].value();
         auto sub_layout = reshapebrdcast_get_dest_layout(iv.layout(), oshp);
         if (sub_layout.valid()) {
             dest = const_cast<DeviceTensorND&>(iv).sub(
@@ -337,15 +326,13 @@ void ReshapeBrdcastHelper::init_output_static_infer_desc() {
 
     owner_graph()->static_infer_manager().register_value_infer(
             output(0), {SourceType::DEP,
-            {{input(0), DepType::VALUE}, {input(1), DepType::VALUE}},
-            infer_value});
+                        {{input(0), DepType::VALUE}, {input(1), DepType::VALUE}},
+                        infer_value});
 }
 
-ReshapeBrdcastHelper::NodeProp*
-ReshapeBrdcastHelper::do_make_node_prop() const {
+ReshapeBrdcastHelper::NodeProp* ReshapeBrdcastHelper::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return ret;
 }
 
@@ -355,17 +342,18 @@ ReshapeBrdcastHelper::do_make_node_prop() const {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Reshape);
 
-Reshape::Reshape(VarNode *inp, VarNode *tshp, Param unspec_axis,
-                const OperatorNodeConfig &config):
-    Super{inp->owner_graph(), config, "reshape", {inp}},
-    m_unspec_axis{unspec_axis}
-{
+Reshape::Reshape(
+        VarNode* inp, VarNode* tshp, Param unspec_axis,
+        const OperatorNodeConfig& config)
+        : Super{inp->owner_graph(), config, "reshape", {inp}},
+          m_unspec_axis{unspec_axis} {
     reshapebrdcast_init(inp, tshp);
     add_equivalence_component<PODHash<Param>>(&m_unspec_axis);
 }
 
-SymbolVar Reshape::make(SymbolVar inp, SymbolVar tshp,
-        Param unspec_axis, const OperatorNodeConfig &config) {
+SymbolVar Reshape::make(
+        SymbolVar inp, SymbolVar tshp, Param unspec_axis,
+        const OperatorNodeConfig& config) {
     if (check_is_shape_of(tshp, inp))
         return inp;
     return inp.insert_single_output_opr<Reshape>(
@@ -381,7 +369,7 @@ MGB_IMPL_OPR_GRAD(Reshape) {
 #endif
 
 Maybe<TensorLayout> Reshape::reshapebrdcast_get_dest_layout(
-        const TensorLayout &src, const TensorShape &tshape) const {
+        const TensorLayout& src, const TensorShape& tshape) const {
     if (m_unspec_axis.axis == OptionalAxis::INVALID_AXIS) {
         TensorLayout ret;
         if (src.try_reshape(ret, tshape))
@@ -397,17 +385,17 @@ Maybe<TensorLayout> Reshape::reshapebrdcast_get_dest_layout(
     mgb_assert(unspec < tshape.ndim);
     auto actual_tshape = tshape;
     size_t rem_nr_elem = 1;
-    for (size_t i = 0; i < tshape.ndim; ++ i) {
+    for (size_t i = 0; i < tshape.ndim; ++i) {
         if (i != unspec)
             rem_nr_elem *= tshape.shape[i];
     }
     auto tot_nr_elem = src.total_nr_elems();
     actual_tshape.shape[unspec] = 0;
-    mgb_throw_if(!rem_nr_elem || tot_nr_elem % rem_nr_elem, TensorReshapeError,
+    mgb_throw_if(
+            !rem_nr_elem || tot_nr_elem % rem_nr_elem, TensorReshapeError,
             "could not reshape: src=%s tshape=%s unspec_axis=%zd",
             static_cast<const TensorShape&>(src).to_string().c_str(),
-            actual_tshape.to_string().c_str(),
-            unspec);
+            actual_tshape.to_string().c_str(), unspec);
     actual_tshape.shape[unspec] = tot_nr_elem / rem_nr_elem;
     TensorLayout ret;
     if (src.try_reshape(ret, actual_tshape))
@@ -425,33 +413,30 @@ bool Reshape::reshapebrdcast_output_shape_need_input_shape() const {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Broadcast);
 
-Broadcast::Broadcast(VarNode *inp, VarNode *tshp,
-        const OperatorNodeConfig &config):
-    Super{inp->owner_graph(), config, "broadcast", {inp}}
-{
+Broadcast::Broadcast(VarNode* inp, VarNode* tshp, const OperatorNodeConfig& config)
+        : Super{inp->owner_graph(), config, "broadcast", {inp}} {
     reshapebrdcast_init(inp, tshp);
 }
 
-
-SymbolVar Broadcast::make(SymbolVar inp, SymbolVar tshp,
-        const OperatorNodeConfig &config) {
+SymbolVar Broadcast::make(
+        SymbolVar inp, SymbolVar tshp, const OperatorNodeConfig& config) {
     if (check_is_shape_of(tshp, inp))
         return inp;
-    return inp.insert_single_output_opr<Broadcast>(
-            inp.node(), tshp.node(), config);
+    return inp.insert_single_output_opr<Broadcast>(inp.node(), tshp.node(), config);
 }
 
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(Broadcast) {
     if (wrt_idx)
         return InvalidGrad::make(opr, wrt_idx);
-    return Reduce::make(out_grad.at(0), Reduce::Mode::SUM,
-            GetVarShape::make(opr.input(0))).node();
+    return Reduce::make(
+                   out_grad.at(0), Reduce::Mode::SUM, GetVarShape::make(opr.input(0)))
+            .node();
 }
 #endif
 
 Maybe<TensorLayout> Broadcast::reshapebrdcast_get_dest_layout(
-        const TensorLayout &src, const TensorShape &tshape) const {
+        const TensorLayout& src, const TensorShape& tshape) const {
     return src.broadcast(tshape);
 }
 
@@ -474,29 +459,27 @@ void AxisManipOprBase::scn_do_execute() {
 
 void AxisManipOprBase::init_output_static_infer_desc() {
     using namespace cg::static_infer;
-    auto &&mgr = owner_graph()->static_infer_manager();
-    auto infer_shape = [this](TensorShape &dest, const InpVal &inp) {
-        dest = axis_manip_get_output_layout({
-                inp.val.at(0).shape(), input(0)->dtype()});
+    auto&& mgr = owner_graph()->static_infer_manager();
+    auto infer_shape = [this](TensorShape& dest, const InpVal& inp) {
+        dest = axis_manip_get_output_layout({inp.val.at(0).shape(), input(0)->dtype()});
         return true;
     };
-    auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
-        auto &&iv = inp.val.at(0).value();
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
+        auto&& iv = inp.val.at(0).value();
         auto oly = axis_manip_get_output_layout(iv.layout());
         dest = const_cast<DeviceTensorND&>(iv).sub(
                 SubTensorSpec::make_from_layout(oly));
         return true;
     };
-    mgr.register_shape_infer(output(0),
-            {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
-    mgr.register_value_infer(output(0),
-            {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
+    mgr.register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+    mgr.register_value_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::VALUE}}, infer_value});
 }
 
 AxisManipOprBase::NodeProp* AxisManipOprBase::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return ret;
 }
 
@@ -511,44 +494,41 @@ void AxisManipOprBase::axis_manip_init(VarNode* inp) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Dimshuffle);
 
-Dimshuffle::Dimshuffle(VarNode *inp, const std::vector<int> &pattern,
-        size_t ndim, const OperatorNodeConfig &config):
-    Super{inp->owner_graph(), config, "dimshuffle", {inp}},
-    m_pattern(pattern),
-    m_inp_ndim(ndim)
-{
-    mgb_throw_if(m_pattern.size() > TensorShape::MAX_NDIM,
-            GraphError, "Dimshuffle pattern exceeds max length of %zd",
-            TensorShape::MAX_NDIM);
-    for (auto i: m_pattern) {
-        mgb_throw_if(i < -1 || i >= int(ndim), GraphError,
-                "bad Dimshuffle pattern");
+Dimshuffle::Dimshuffle(
+        VarNode* inp, const std::vector<int>& pattern, size_t ndim,
+        const OperatorNodeConfig& config)
+        : Super{inp->owner_graph(), config, "dimshuffle", {inp}},
+          m_pattern(pattern),
+          m_inp_ndim(ndim) {
+    mgb_throw_if(
+            m_pattern.size() > TensorShape::MAX_NDIM, GraphError,
+            "Dimshuffle pattern exceeds max length of %zd", TensorShape::MAX_NDIM);
+    for (auto i : m_pattern) {
+        mgb_throw_if(i < -1 || i >= int(ndim), GraphError, "bad Dimshuffle pattern");
     }
     axis_manip_init(inp);
     add_equivalence_component<PODHash<int>>(m_pattern.data(), m_pattern.size());
 }
 
 SymbolVar Dimshuffle::make(
-        SymbolVar inp, const std::vector<int> &pattern,
-        size_t ndim, const OperatorNodeConfig &config) {
+        SymbolVar inp, const std::vector<int>& pattern, size_t ndim,
+        const OperatorNodeConfig& config) {
     if (!ndim)
         ndim = *std::max_element(pattern.begin(), pattern.end()) + 1;
-    return inp.insert_single_output_opr<Dimshuffle>(inp.node(),
-            pattern, ndim, config);
+    return inp.insert_single_output_opr<Dimshuffle>(inp.node(), pattern, ndim, config);
 }
 
-TensorLayout Dimshuffle::axis_manip_get_output_layout(
-        const TensorLayout &ily) const {
-
-    mgb_assert(ily.ndim == m_inp_ndim,
-            "input ndim mismatch for Dimshuffle: expect=%zd actual=%zd",
-            m_inp_ndim, ily.ndim);
+TensorLayout Dimshuffle::axis_manip_get_output_layout(const TensorLayout& ily) const {
+    mgb_assert(
+            ily.ndim == m_inp_ndim,
+            "input ndim mismatch for Dimshuffle: expect=%zd actual=%zd", m_inp_ndim,
+            ily.ndim);
     TensorLayout oly{ily.dtype};
     oly.ndim = m_pattern.size();
 
     size_t idx = 0;
     bool input_used[TensorLayout::MAX_NDIM] = {0};
-    for (auto i: m_pattern) {
+    for (auto i : m_pattern) {
         if (i < 0) {
             oly.shape[idx] = 1;
             oly.stride[idx] = 1;
@@ -557,27 +537,26 @@ TensorLayout Dimshuffle::axis_manip_get_output_layout(
             oly.shape[idx] = ily.shape[i];
             oly.stride[idx] = ily.stride[i];
         }
-        ++ idx;
+        ++idx;
     }
 
-    for (size_t i = 0; i < m_inp_ndim; ++ i) {
-        mgb_assert(input_used[i] || ily.shape[i] == 1,
+    for (size_t i = 0; i < m_inp_ndim; ++i) {
+        mgb_assert(
+                input_used[i] || ily.shape[i] == 1,
                 "non-1 dim discarded in Dimshuffle: ishp=%s dim=%zd",
-                static_cast<const TensorShape&>(ily).to_string().c_str(),
-                i);
+                static_cast<const TensorShape&>(ily).to_string().c_str(), i);
     }
     return oly;
 }
 
-VarNode* Dimshuffle::grad(
-        size_t /*wrt_idx*/, const VarNodeArray &out_grad) const {
-
+VarNode* Dimshuffle::grad(size_t /*wrt_idx*/, const VarNodeArray& out_grad) const {
     std::vector<int> back(m_inp_ndim, -1);
-    for (size_t i = 0; i < m_pattern.size(); i ++) {
+    for (size_t i = 0; i < m_pattern.size(); i++) {
         // outdim[i] is indim[j]
         auto j = m_pattern[i];
         if (j >= 0) {
-            mgb_assert(back[j] == -1,
+            mgb_assert(
+                    back[j] == -1,
                     "taking grad for Dimshuffle with duplicated "
                     "input axis unsupported");
             back[j] = i;
@@ -599,43 +578,38 @@ MGB_IMPL_OPR_GRAD(Dimshuffle) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(AxisAddRemove);
 
 AxisAddRemove::AxisAddRemove(
-        VarNode *inp, const std::vector<AxisDesc> &desc,
-        const OperatorNodeConfig &config):
-    Super{inp->owner_graph(), config, "axis_add_rm", {inp}},
-    m_desc(desc)
-{
-    mgb_throw_if(desc.empty(), GraphError,
-            "desc for AxisAddRemove could not be empty");
+        VarNode* inp, const std::vector<AxisDesc>& desc,
+        const OperatorNodeConfig& config)
+        : Super{inp->owner_graph(), config, "axis_add_rm", {inp}}, m_desc(desc) {
+    mgb_throw_if(desc.empty(), GraphError, "desc for AxisAddRemove could not be empty");
     axis_manip_init(inp);
     add_equivalence_component<PODHash<AxisDesc>>(m_desc.data(), m_desc.size());
 }
 
-SymbolVar AxisAddRemove::make(SymbolVar inp,
-        const std::vector<AxisDesc> &desc,
-        const OperatorNodeConfig &config) {
+SymbolVar AxisAddRemove::make(
+        SymbolVar inp, const std::vector<AxisDesc>& desc,
+        const OperatorNodeConfig& config) {
     return inp.insert_single_output_opr<AxisAddRemove>(inp.node(), desc, config);
 }
 
 TensorLayout AxisAddRemove::axis_manip_get_output_layout(
-        const TensorLayout &input_layout) const {
+        const TensorLayout& input_layout) const {
     auto layout = input_layout;
 
-    for (auto &&i: m_desc) {
+    for (auto&& i : m_desc) {
         using M = AxisDesc::Method;
         switch (i.method) {
-            case M::REMOVE:
-            {
+            case M::REMOVE: {
                 auto axis = i.axis.get(layout.ndim);
                 if (layout.ndim == 1) {
-                    mgb_assert(layout.shape[0] == 1 && axis == 0,
-                            "can not remove axis %zu from tensor of shape=%s",
-                            axis,
+                    mgb_assert(
+                            layout.shape[0] == 1 && axis == 0,
+                            "can not remove axis %zu from tensor of shape=%s", axis,
                             layout.megdnn::TensorShape::to_string().c_str());
                 } else {
-                    mgb_assert(axis < layout.ndim &&
-                            layout.shape[axis] == 1,
-                            "can not remove axis %zu from tensor of shape=%s",
-                            axis,
+                    mgb_assert(
+                            axis < layout.ndim && layout.shape[axis] == 1,
+                            "can not remove axis %zu from tensor of shape=%s", axis,
                             layout.megdnn::TensorShape::to_string().c_str());
                     layout.remove_axis_inplace(axis);
                 }
@@ -660,15 +634,15 @@ MGB_IMPL_OPR_GRAD(AxisAddRemove) {
 
 /* f{{{ ======================= Subtensor ======================= */
 
-Subtensor::Subtensor(VarNode *inp, const IndexDesc &desc,
-        const OperatorNodeConfig &config):
-    Super({inp->owner_graph(), config, "subtensor", {inp}},
-            inp, nullptr, desc, true) {
+Subtensor::Subtensor(
+        VarNode* inp, const IndexDesc& desc, const OperatorNodeConfig& config)
+        : Super({inp->owner_graph(), config, "subtensor", {inp}}, inp, nullptr, desc,
+                true) {
     output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
-SymbolVar Subtensor::make(SymbolVar inp, const IndexDesc &desc,
-        const OperatorNodeConfig &config) {
+SymbolVar Subtensor::make(
+        SymbolVar inp, const IndexDesc& desc, const OperatorNodeConfig& config) {
     return inp.insert_single_output_opr<Subtensor>(inp.node(), desc, config);
 }
 
@@ -680,8 +654,9 @@ MGB_IMPL_OPR_GRAD(Subtensor) {
         return InvalidGrad::make(opr, wrt_idx);
 
     return IncrSubtensor::make(
-            SymbolVar{opr.input(0)}.fill_retain_dtype(0),
-            out_grad.at(0), opr.index_desc()).node();
+                   SymbolVar{opr.input(0)}.fill_retain_dtype(0), out_grad.at(0),
+                   opr.index_desc())
+            .node();
 }
 #endif
 
@@ -691,14 +666,14 @@ void Subtensor::init_output_static_infer_desc() {
 
     // shape inference only needs slices
     deps.push_back({input(0), DepType::SHAPE});
-    for (size_t i = 1; i < m_input2idxonly_axis_indexer.size(); ++ i) {
+    for (size_t i = 1; i < m_input2idxonly_axis_indexer.size(); ++i) {
         if (!m_input2idxonly_axis_indexer[i])
             deps.push_back({input(i), DepType::VALUE});
     }
-    auto infer_shape = [this](TensorShape &dest, const InpVal &inp) {
-        auto &&ishp = inp.val[0].shape();
-        auto subspec = fancy_indexing_make_sub_spec(
-                {ishp, input(0)->dtype()}, inp, 1, true);
+    auto infer_shape = [this](TensorShape& dest, const InpVal& inp) {
+        auto&& ishp = inp.val[0].shape();
+        auto subspec =
+                fancy_indexing_make_sub_spec({ishp, input(0)->dtype()}, inp, 1, true);
         dest = subspec.layout();
         return true;
     };
@@ -706,11 +681,11 @@ void Subtensor::init_output_static_infer_desc() {
             output(0), {SourceType::DEP, deps, infer_shape});
 
     deps.clear();
-    for (auto i: input())
+    for (auto i : input())
         deps.push_back({i, DepType::VALUE});
     deps[0].type = DepType::VALUE;
-    auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
-        auto &&iv = inp.val[0].value();
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
+        auto&& iv = inp.val[0].value();
         auto subspec = fancy_indexing_make_sub_spec(iv.layout(), inp, 1);
         dest = const_cast<DeviceTensorND&>(iv).sub(subspec);
         return true;
@@ -736,8 +711,7 @@ void Subtensor::init_rt_force_dynamic_mem_alloc_imply_chain() {
 
 Subtensor::NodeProp* Subtensor::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return ret;
 }
 
@@ -752,38 +726,36 @@ void ModifySubtensorImplHelper::scn_do_execute() {
 
 void ModifySubtensorImplHelper::init_output_static_infer_desc() {
     using namespace cg::static_infer;
-    auto &&mgr = owner_graph()->static_infer_manager();
+    auto&& mgr = owner_graph()->static_infer_manager();
 
     // try to register shape infer with subtensor shape check
-    auto try_infer_shape_with_check = [&]() -> bool{
-
-        if (!cg::is_static_var_shape(input(0)) ||
-                !cg::is_static_var_shape(input(1)))
+    auto try_infer_shape_with_check = [&]() -> bool {
+        if (!cg::is_static_var_shape(input(0)) || !cg::is_static_var_shape(input(1)))
             return false;
-        for (size_t i = 2; i < input().size(); ++ i) {
+        for (size_t i = 2; i < input().size(); ++i) {
             if (!cg::is_static_var_value(input(i)) ||
                 !mgr.infer_value_fallible(input(i)))
                 return false;
         }
 
-        auto infer_shape = [this](TensorShape &dest, const InpVal &inp) {
+        auto infer_shape = [this](TensorShape& dest, const InpVal& inp) {
             dest = inp.val.at(0).shape();
             // throw exception if shapes mismatch
-            auto subspec = fancy_indexing_make_sub_spec(
-                    {dest, input(0)->dtype()}, inp, 2);
-            auto &&subshp = inp.val.at(1).shape();
-            mgb_throw_if(!subspec.layout().eq_shape(subshp), TensorReshapeError,
+            auto subspec =
+                    fancy_indexing_make_sub_spec({dest, input(0)->dtype()}, inp, 2);
+            auto&& subshp = inp.val.at(1).shape();
+            mgb_throw_if(
+                    !subspec.layout().eq_shape(subshp), TensorReshapeError,
                     "SetSubtensor shape mismatch: subspec=%s value_shape=%s",
                     subspec.layout().TensorShape::to_string().c_str(),
                     subshp.to_string().c_str());
             return true;
         };
         DepVal deps;
-        for (auto i: input())
+        for (auto i : input())
             deps.push_back({i, DepType::VALUE});
         deps[0].type = deps[1].type = DepType::SHAPE;
-        mgr.register_shape_infer(output(0), {
-                SourceType::DEP, deps, infer_shape});
+        mgr.register_shape_infer(output(0), {SourceType::DEP, deps, infer_shape});
         return true;
     };
 
@@ -791,16 +763,17 @@ void ModifySubtensorImplHelper::init_output_static_infer_desc() {
         mgr.register_shape_infer(output(0), ShapeInferDesc::make_const({}));
     } else {
         if (!try_infer_shape_with_check()) {
-            auto infer_shape = [](TensorShape &dest, const InpVal &inp) {
+            auto infer_shape = [](TensorShape& dest, const InpVal& inp) {
                 dest = inp.val.at(0).shape();
                 return true;
             };
-            mgr.register_shape_infer(output(0), {
-                    SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
+            mgr.register_shape_infer(
+                    output(0),
+                    {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_shape});
         }
     }
 
-    auto infer_value = [this](DeviceTensorND &dest, const InpVal &inp) {
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
         dest.copy_from(inp.val.at(0).value());
         auto subspec = fancy_indexing_make_sub_spec(dest.layout(), inp, 2);
         auto dsub = dest.sub(subspec);
@@ -808,35 +781,36 @@ void ModifySubtensorImplHelper::init_output_static_infer_desc() {
         return true;
     };
     DepVal value_deps;
-    for (auto i: input())
+    for (auto i : input())
         value_deps.push_back({i, DepType::VALUE});
 
-    mgr.register_value_infer(output(0), {
-            SourceType::DEP, value_deps, infer_value});
+    mgr.register_value_infer(output(0), {SourceType::DEP, value_deps, infer_value});
 }
 
 // f}}}
 
 /* f{{{ ======================= SetSubtensor ======================= */
 
-SetSubtensor::SetSubtensor(VarNode *inp, VarNode *value, const IndexDesc &desc,
-        const OperatorNodeConfig &config,
-        const InputTensorReplacer &input_tensor_replacer):
-    Super({inp->owner_graph(), config, "set_subtensor", {inp, value}},
-            inp, value, desc, true, input_tensor_replacer) {
+SetSubtensor::SetSubtensor(
+        VarNode* inp, VarNode* value, const IndexDesc& desc,
+        const OperatorNodeConfig& config,
+        const InputTensorReplacer& input_tensor_replacer)
+        : Super({inp->owner_graph(), config, "set_subtensor", {inp, value}}, inp, value,
+                desc, true, input_tensor_replacer) {
     output(0)->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
 
-SymbolVar SetSubtensor::make(SymbolVar inp, SymbolVar value, const IndexDesc &desc,
-        const OperatorNodeConfig &config,
-        const InputTensorReplacer &input_tensor_replacer) {
+SymbolVar SetSubtensor::make(
+        SymbolVar inp, SymbolVar value, const IndexDesc& desc,
+        const OperatorNodeConfig& config,
+        const InputTensorReplacer& input_tensor_replacer) {
     return inp.insert_single_output_opr<SetSubtensor>(
             inp.node(), value.node(), desc, config, input_tensor_replacer);
 }
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SetSubtensor);
 
-void SetSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
+void SetSubtensor::modify(DeviceTensorND& sub, const DeviceTensorND& val) {
     if (!val.layout().is_empty()) {
         sub.copy_from_fixlayout(val);
     }
@@ -844,10 +818,8 @@ void SetSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
 
 SetSubtensor::NodeProp* SetSubtensor::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
-    ret->add_dep_type_existing_var(input(0),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
-    ret->add_dep_type_existing_var(input(1),
-                                   NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(0), NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    ret->add_dep_type_existing_var(input(1), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     return ret;
 }
 
@@ -856,9 +828,10 @@ MGB_IMPL_OPR_GRAD(SetSubtensor) {
     if (wrt_idx >= 2)
         return InvalidGrad::make(opr, wrt_idx);
     if (wrt_idx == 0) {
-        return SetSubtensor::make(out_grad.at(0),
-                SymbolVar{opr.input(1)}.fill_retain_dtype(0),
-                opr.index_desc()).node();
+        return SetSubtensor::make(
+                       out_grad.at(0), SymbolVar{opr.input(1)}.fill_retain_dtype(0),
+                       opr.index_desc())
+                .node();
     }
     return Subtensor::make(out_grad.at(0), opr.index_desc()).node();
 }
@@ -870,10 +843,9 @@ MGB_IMPL_OPR_GRAD(SetSubtensor) {
 
 MGB_IMPL_FANCY_INDEXING_OPR_MODIFY(IncrSubtensor, "incr_subtensor", true);
 
-void IncrSubtensor::modify(DeviceTensorND &sub, const DeviceTensorND &val) {
+void IncrSubtensor::modify(DeviceTensorND& sub, const DeviceTensorND& val) {
     CompNode opr_comp_node;
-    if (sub.comp_node().locator().device ==
-            CompNode::Locator::DEVICE_CPU_DEFAULT) {
+    if (sub.comp_node().locator().device == CompNode::Locator::DEVICE_CPU_DEFAULT) {
         // for static infer
         opr_comp_node = CompNode::default_cpu();
     } else {
@@ -897,11 +869,11 @@ MGB_IMPL_OPR_GRAD(IncrSubtensor) {
 // f}}}
 
 /* f{{{ ======================= IndexAt ======================= */
-SymbolVar IndexAt::make(SymbolVar inp,
-        const std::vector<std::pair<size_t, SymbolVar>> &index,
-        const OperatorNodeConfig &config) {
+SymbolVar IndexAt::make(
+        SymbolVar inp, const std::vector<std::pair<size_t, SymbolVar>>& index,
+        const OperatorNodeConfig& config) {
     Subtensor::IndexDesc desc;
-    for (auto &&i: index) {
+    for (auto&& i : index) {
         desc.emplace_back();
         desc.back().axis = i.first;
         desc.back().idx = i.second;
@@ -918,15 +890,15 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(Split);
 Split::Options Split::Options::make_average(int axis, size_t nr_part) {
     auto cb = [nr_part](size_t size) {
         std::vector<size_t> part(nr_part, size / nr_part);
-        for (size_t i = 0, it = size % nr_part; i < it; ++ i)
-            ++ part[i];
+        for (size_t i = 0, it = size % nr_part; i < it; ++i)
+            ++part[i];
         return part;
     };
     return make_callback(axis, nr_part, cb);
 }
 
-Split::Options Split::Options::make_partition(int axis,
-        const SymbolVarArray &partition) {
+Split::Options Split::Options::make_partition(
+        int axis, const SymbolVarArray& partition) {
     mgb_assert(!partition.empty());
     Options rst;
     rst.method = Method::SPECIFY;
@@ -935,10 +907,10 @@ Split::Options Split::Options::make_partition(int axis,
     return rst;
 }
 
-Split::Options Split::Options::make_partition(SymbolVar inp, int axis,
-        const std::vector<size_t> &partition) {
+Split::Options Split::Options::make_partition(
+        SymbolVar inp, int axis, const std::vector<size_t>& partition) {
     SymbolVarArray sym_partition;
-    for (auto i: partition)
+    for (auto i : partition)
         sym_partition.push_back(inp.make_scalar(static_cast<int>(i)));
     return make_partition(axis, sym_partition);
 }
@@ -954,31 +926,32 @@ Split::Options Split::Options::make_callback(
     return rst;
 }
 
-SymbolVarArray Split::make(SymbolVar inp, Options opt,
-        const OperatorNodeConfig &config) {
+SymbolVarArray Split::make(
+        SymbolVar inp, Options opt, const OperatorNodeConfig& config) {
     SymbolVarArray ret;
-    auto &&output = inp.node()->owner_graph()->insert_opr(
-            std::make_unique<Split>(inp.node(), opt, config))->output();
-    for (auto i: output) {
+    auto&& output =
+            inp.node()
+                    ->owner_graph()
+                    ->insert_opr(std::make_unique<Split>(inp.node(), opt, config))
+                    ->output();
+    for (auto i : output) {
         ret.emplace_back(i);
     }
     return ret;
 }
 
-Split::Split(VarNode *inp, const Options &opt, const OperatorNodeConfig &config):
-    Super{inp->owner_graph(), config, "split", {inp}},
-    m_opt(opt)
-{
+Split::Split(VarNode* inp, const Options& opt, const OperatorNodeConfig& config)
+        : Super{inp->owner_graph(), config, "split", {inp}}, m_opt(opt) {
     add_input({inp});
 
     add_equivalence_component<ScalarHash<size_t>>(m_opt.axis);
     if (m_opt.method == Options::Method::SPECIFY) {
         mgb_assert(!m_opt.partition.empty());
-        for (auto &&i: m_opt.partition)
+        for (auto&& i : m_opt.partition)
             add_input({i.node()});
         outshape_by_symvar_enable(0, 1);
         m_opt.nr_part = m_opt.partition.size();
-    }  else {
+    } else {
         // disable dedup
         add_equivalence_component<ScalarHash<void*>>(this);
 
@@ -986,8 +959,9 @@ Split::Split(VarNode *inp, const Options &opt, const OperatorNodeConfig &config)
         mgb_assert(m_opt.nr_part);
     }
 
-    for (size_t i = 0; i < m_opt.nr_part; ++ i)
-        add_output(ssprintf("o%zd", i))->dtype(inp->dtype())
+    for (size_t i = 0; i < m_opt.nr_part; ++i)
+        add_output(ssprintf("o%zd", i))
+                ->dtype(inp->dtype())
                 .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 
     m_output_spec.resize(m_opt.nr_part);
@@ -996,47 +970,45 @@ Split::Split(VarNode *inp, const Options &opt, const OperatorNodeConfig &config)
 void Split::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     using namespace std::placeholders;
-    auto &&mgr = owner_graph()->static_infer_manager();
+    auto&& mgr = owner_graph()->static_infer_manager();
 
     DepVal shp_deps{{input(0), DepType::SHAPE}};
     if (m_opt.method == Options::Method::SPECIFY) {
-        for (size_t i = 1; i < input().size(); ++ i)
+        for (size_t i = 1; i < input().size(); ++i)
             shp_deps.push_back({input(i), DepType::VALUE});
     }
 
-    auto infer_value = [this](size_t oidx,
-            DeviceTensorND &dest, const InpVal &inp) {
-        auto &&cur_shp = m_output_spec[oidx].shape;
+    auto infer_value = [this](size_t oidx, DeviceTensorND& dest, const InpVal& inp) {
+        auto&& cur_shp = m_output_spec[oidx].shape;
         mgb_assert(cur_shp.eq_shape(inp.val[1].shape()));
         auto axis = m_opt.axis;
         if (axis < 0)
             axis += m_output_spec[0].shape.ndim;
         size_t offset = 0;
-        for (size_t i = 0; i < oidx; ++ i)
+        for (size_t i = 0; i < oidx; ++i)
             offset += m_output_spec[i].shape[axis];
-        auto &&iv = inp.val[0].value();
-        auto subspec = Slice(offset, offset + cur_shp[axis]).apply(
-                iv.layout(), axis);
+        auto&& iv = inp.val[0].value();
+        auto subspec = Slice(offset, offset + cur_shp[axis]).apply(iv.layout(), axis);
         dest.copy_from(const_cast<DeviceTensorND&>(iv).sub(subspec));
         return true;
     };
 
-    for (size_t i = 0; i < output().size(); ++ i) {
+    for (size_t i = 0; i < output().size(); ++i) {
         auto ov = output(i);
 
-        mgr.register_shape_infer(ov,
-                {SourceType::DEP, shp_deps, std::bind(
-                        &Split::infer_shape, this, i, _1, _2)});
+        mgr.register_shape_infer(
+                ov, {SourceType::DEP, shp_deps,
+                     std::bind(&Split::infer_shape, this, i, _1, _2)});
 
-        mgr.register_value_infer(ov, {
-                SourceType::DEP,
-                {{input(0), DepType::VALUE}, {ov, DepType::SHAPE}},
-                std::bind(infer_value, i, _1, _2)});
+        mgr.register_value_infer(
+                ov, {SourceType::DEP,
+                     {{input(0), DepType::VALUE}, {ov, DepType::SHAPE}},
+                     std::bind(infer_value, i, _1, _2)});
     }
 }
 
-bool Split::infer_shape(size_t out_idx, TensorShape &dest,
-        const cg::static_infer::InpVal &inp) {
+bool Split::infer_shape(
+        size_t out_idx, TensorShape& dest, const cg::static_infer::InpVal& inp) {
     if (inp.run_id != m_output_shape_version) {
         std::vector<size_t> partition;
         auto ishp = inp.val.at(0).shape();
@@ -1044,33 +1016,33 @@ bool Split::infer_shape(size_t out_idx, TensorShape &dest,
         if (axis < 0)
             axis += ishp.ndim;
         if (m_opt.method == Options::Method::SPECIFY) {
-            for (size_t i = 0; i < m_opt.nr_part; ++ i) {
-                auto &&val = inp.val.at(i + 1).value();
-                mgb_assert(val.shape().is_scalar(),
-                        "shapes for Split must be scalars");
+            for (size_t i = 0; i < m_opt.nr_part; ++i) {
+                auto&& val = inp.val.at(i + 1).value();
+                mgb_assert(val.shape().is_scalar(), "shapes for Split must be scalars");
                 size_t cvt;
                 static_cast_dtype_safe(&cvt, val.dtype(), val.raw_ptr());
                 partition.push_back(cvt);
             }
         } else {
             partition = m_opt.callback(ishp.shape[axis]);
-            mgb_assert(partition.size() == m_opt.nr_part,
-                    "nr_part=%zu but split callback returned %zu parts",
-                    m_opt.nr_part, partition.size());
+            mgb_assert(
+                    partition.size() == m_opt.nr_part,
+                    "nr_part=%zu but split callback returned %zu parts", m_opt.nr_part,
+                    partition.size());
         }
         size_t size = 0;
-        for (size_t i = 0; i < m_opt.nr_part; ++ i) {
+        for (size_t i = 0; i < m_opt.nr_part; ++i) {
             auto p = partition[i];
             size += p;
 
-            auto &&cur = m_output_spec[i].shape;
+            auto&& cur = m_output_spec[i].shape;
             cur = ishp;
             cur.shape[axis] = p;
-
         }
-        mgb_assert(size == ishp.shape[axis],
-            "split size sums to %zd, but shape at the axis is %zd",
-            size, ishp.shape[axis]);
+        mgb_assert(
+                size == ishp.shape[axis],
+                "split size sums to %zd, but shape at the axis is %zd", size,
+                ishp.shape[axis]);
         m_output_shape_version = inp.run_id;
     }
 
@@ -1079,19 +1051,19 @@ bool Split::infer_shape(size_t out_idx, TensorShape &dest,
 }
 
 void Split::init_output_comp_node() {
-    auto &&conf_node = config().comp_node();
-    auto &&cn_opt = owner_graph()->seq_comp_node_optimizer();
+    auto&& conf_node = config().comp_node();
+    auto&& cn_opt = owner_graph()->seq_comp_node_optimizer();
 
     // details of each comp_node specified
     if (conf_node.size() > 1) {
-        mgb_assert(conf_node.size() == output().size(),
+        mgb_assert(
+                conf_node.size() == output().size(),
                 "number of CompNodes specified in config should equal to number"
                 " of output, but got %zd configured CompNodes while there are"
                 " %zd output (node_name=%s node_type=%s)",
-                conf_node.size(), output().size(),
-                cname(), dyn_typeinfo()->name);
+                conf_node.size(), output().size(), cname(), dyn_typeinfo()->name);
         auto cn0 = input(0)->comp_node();
-        for (size_t i = 0; i < output().size(); i ++) {
+        for (size_t i = 0; i < output().size(); i++) {
             auto dvar = output(i);
             dvar->comp_node(conf_node[i]);
             if (conf_node[i].mem_node() != cn0.mem_node())
@@ -1108,11 +1080,11 @@ void Split::init_output_comp_node() {
     } else {
         cn = input(0)->comp_node();
     }
-    for (auto i: output())
+    for (auto i : output())
         i->comp_node(cn);
 
     if (cn.mem_node() != input(0)->comp_node().mem_node()) {
-        for (auto i: output())
+        for (auto i : output())
             cn_opt.register_stream_var(
                     i, {CompNode::Stream::COPY,
                         cg::SeqCompNodeOptimizer::StreamPropType::WEAK});
@@ -1127,18 +1099,17 @@ cg::OperatorNodeBase::NodeProp* Split::do_make_node_prop() const {
     return rst;
 }
 
-void Split::do_execute(ExecEnv &env) {
-    for (size_t idx = 0; idx < output().size(); ++ idx) {
+void Split::do_execute(ExecEnv& env) {
+    for (size_t idx = 0; idx < output().size(); ++idx) {
         auto out = output(idx);
 
-        if (!owner_graph()->var_receiver_in_current_comp_seq(out
-                    ).value_needed())
+        if (!owner_graph()->var_receiver_in_current_comp_seq(out).value_needed())
             continue;
 
         auto runner = [idx, this]() {
-            auto &&in = input(0)->dev_tensor();
-            auto &&out = output(idx)->dev_tensor();
-            auto &&spec = m_output_spec.at(idx);
+            auto&& in = input(0)->dev_tensor();
+            auto&& out = output(idx)->dev_tensor();
+            auto&& spec = m_output_spec.at(idx);
             if (out.layout().is_empty()) {
                 mgb_assert(spec.subspec.layout().is_empty());
                 return;
@@ -1146,8 +1117,7 @@ void Split::do_execute(ExecEnv &env) {
             owner_graph()->event().signal_inplace<cg::event::BeforeKernel>(
                     this, out.comp_node());
             if (spec.mem_fwd_success) {
-                mgb_assert(out.raw_ptr() ==
-                        in.raw_ptr() + spec.subspec.offset_byte());
+                mgb_assert(out.raw_ptr() == in.raw_ptr() + spec.subspec.offset_byte());
             } else {
                 out.comp_node().activate();
                 out.copy_from_fixlayout(in.sub(spec.subspec));
@@ -1165,15 +1135,17 @@ MGB_IMPL_OPR_GRAD(Split) {
         return InvalidGrad::make(opr, wrt_idx);
     mgb_assert(out_grad.size() == opr.output().size());
     SymbolVarArray grad;
-    for (size_t i = 0; i < out_grad.size(); ++ i) {
+    for (size_t i = 0; i < out_grad.size(); ++i) {
         auto gval = out_grad[i];
         if (!gval) {
             gval = SymbolVar{opr.output(i)}.fill_retain_dtype(0).node();
         }
         grad.emplace_back(gval);
     }
-    return Concat::make(grad, opr.options().axis,
-            OperatorNodeConfig{}.follow_comp_node(opr.input(0))).node();
+    return Concat::make(
+                   grad, opr.options().axis,
+                   OperatorNodeConfig{}.follow_comp_node(opr.input(0)))
+            .node();
 }
 #endif
 
@@ -1185,8 +1157,8 @@ void Split::mem_plan_fwd_in2out_readonly() {
 void Split::init_subspec(bool memfwd) {
     auto in = input(0);
     size_t begin = 0, end = 0;
-    for (size_t i = 0; i < output().size(); ++ i) {
-        auto &&spec = m_output_spec[i];
+    for (size_t i = 0; i < output().size(); ++i) {
+        auto&& spec = m_output_spec[i];
         auto out = output(i);
         auto real_axis = m_opt.axis;
         if (real_axis < 0)
@@ -1196,8 +1168,7 @@ void Split::init_subspec(bool memfwd) {
         end = begin + spec.shape.shape[real_axis];
         spec.subspec = Slice(begin, end).apply(in->layout(), real_axis);
         if (out->comp_node() == in->comp_node() && memfwd) {
-            spec.mem_fwd_success = out->set_fwd_in2out_readonly(
-                    in, spec.subspec);
+            spec.mem_fwd_success = out->set_fwd_in2out_readonly(in, spec.subspec);
         } else {
             spec.mem_fwd_success = false;
         }
@@ -1205,7 +1176,7 @@ void Split::init_subspec(bool memfwd) {
 }
 
 void Split::outshape_by_symvar_do_get_output_shape(
-        TensorShape &dest, const ShapeInferInfo &shpinfo) {
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
     // shape infer handled in this class
     MGB_MARK_USED_VAR(dest);
     MGB_MARK_USED_VAR(shpinfo);
@@ -1215,7 +1186,7 @@ void Split::outshape_by_symvar_do_get_output_shape(
 void Split::add_input_layout_constraint() {
     m_readonly_fwd_called = false;
     auto cn = input(0)->comp_node();
-    for (auto i: output())
+    for (auto i : output())
         if (i->comp_node() != cn) {
             input(0)->add_layout_constraint_contiguous();
             return;
@@ -1228,18 +1199,16 @@ void Split::on_mem_status_changed() {
     }
 }
 
-cg::OperatorNodeBase::OprEventCallback
-Split::get_opr_event_callback() {
+cg::OperatorNodeBase::OprEventCallback Split::get_opr_event_callback() {
     return {std::bind(&Split::on_mem_status_changed, this)};
 }
 
-void Split::on_output_comp_node_stream_changed() {
-}
+void Split::on_output_comp_node_stream_changed() {}
 
 void Split::init_rt_force_dynamic_mem_alloc_imply_chain() {
     auto inp = input(0);
     auto cn0 = inp->comp_node();
-    for (auto i: output()) {
+    for (auto i : output()) {
         if (i->comp_node() == cn0) {
             i->add_rt_force_dynamic_mem_alloc_imply_chain(inp);
             inp->add_rt_force_dynamic_mem_alloc_imply_chain(i);
@@ -1253,13 +1222,10 @@ void Split::init_rt_force_dynamic_mem_alloc_imply_chain() {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(Concat);
 
-Concat::Concat(const VarNodeArrayView &inp, int axis,
-        const OperatorNodeConfig &config):
-    Super{inp[0]->owner_graph(), config, "concat", inp},
-    m_axis(axis)
-{
+Concat::Concat(const VarNodeArrayView& inp, int axis, const OperatorNodeConfig& config)
+        : Super{inp[0]->owner_graph(), config, "concat", inp}, m_axis(axis) {
     mgb_assert(!inp.empty());
-    for (auto &&i : inp) {
+    for (auto&& i : inp) {
         add_input({i});
     }
     add_equivalence_component<ScalarHash<size_t>>(m_axis);
@@ -1267,49 +1233,50 @@ Concat::Concat(const VarNodeArrayView &inp, int axis,
 }
 
 void Concat::get_output_var_shape(
-        const TensorShapeArray &inp_shape,
-        TensorShapeArray &out_shape) const {
-
+        const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const {
     mgb_assert(inp_shape.size() == input().size());
     mgb_assert(out_shape.size() == 1);
-    auto &&oshp = out_shape[0];
+    auto&& oshp = out_shape[0];
     oshp = inp_shape[0];
-    mgb_throw_if(m_axis >= static_cast<int>(oshp.ndim) ||
-                         m_axis < -static_cast<int>(oshp.ndim),
-                 GraphError, "concat axis out of bound: input_ndim=%zu axis=%d",
-                 oshp.ndim, m_axis);
+    mgb_throw_if(
+            m_axis >= static_cast<int>(oshp.ndim) ||
+                    m_axis < -static_cast<int>(oshp.ndim),
+            GraphError, "concat axis out of bound: input_ndim=%zu axis=%d", oshp.ndim,
+            m_axis);
     auto real_axis = m_axis;
     if (real_axis < 0)
         real_axis += oshp.ndim;
 
-    for (size_t i = 1; i < inp_shape.size(); ++ i) {
-        auto &&tmp = inp_shape[i];
-        mgb_throw_if(oshp.ndim != tmp.ndim, GraphError,
-                "ndim mismatch: shape=%s inp[%zd]=%s",
-                oshp.to_string().c_str(), i, tmp.to_string().c_str());
-        for (int n = 0; n < static_cast<int>(tmp.ndim); ++ n) {
+    for (size_t i = 1; i < inp_shape.size(); ++i) {
+        auto&& tmp = inp_shape[i];
+        mgb_throw_if(
+                oshp.ndim != tmp.ndim, GraphError,
+                "ndim mismatch: shape=%s inp[%zd]=%s", oshp.to_string().c_str(), i,
+                tmp.to_string().c_str());
+        for (int n = 0; n < static_cast<int>(tmp.ndim); ++n) {
             if (n == real_axis) {
                 oshp.shape[n] += tmp.shape[n];
             } else {
-                mgb_throw_if(oshp.shape[n] != tmp.shape[n], GraphError,
+                mgb_throw_if(
+                        oshp.shape[n] != tmp.shape[n], GraphError,
                         "Concat input shapes mismatch: "
                         "accum_out_shape=%s cur_inp_shape=%s inp_idx=%zu"
                         " axis_concat=%d axis_mismatch=%d",
-                        oshp.to_string().c_str(), tmp.to_string().c_str(), i,
-                        real_axis, n);
+                        oshp.to_string().c_str(), tmp.to_string().c_str(), i, real_axis,
+                        n);
             }
         }
     }
 }
 
-SymbolVar Concat::make(const VarNodeArrayView& inp, int axis,
-                       const OperatorNodeConfig& config) {
+SymbolVar Concat::make(
+        const VarNodeArrayView& inp, int axis, const OperatorNodeConfig& config) {
     mgb_assert(!inp.empty());
     if (inp.size() == 1)
         return inp[0];
     intl::BatchedDTypePromotion dtp{inp};
-    return SymbolVar{inp[0]}.insert_single_output_opr<Concat>(dtp.get_vars(),
-                                                              axis, config);
+    return SymbolVar{inp[0]}.insert_single_output_opr<Concat>(
+            dtp.get_vars(), axis, config);
 }
 
 #if MGB_ENABLE_GRAD
@@ -1322,9 +1289,9 @@ MGB_IMPL_OPR_GRAD(Concat) {
         partition.push_back(GetVarShape::make(i, axis));
         comp_node.push_back(i->comp_node());
     }
-    auto ret = Split::make(out_grad[0],
-                           Split::Options::make_partition(axis, partition),
-                           OperatorNodeConfig().comp_node_arr(comp_node));
+    auto ret = Split::make(
+            out_grad[0], Split::Options::make_partition(axis, partition),
+            OperatorNodeConfig().comp_node_arr(comp_node));
     return cg::to_var_node_array(ret);
 }
 #endif
@@ -1340,8 +1307,8 @@ void Concat::scn_do_execute() {
             real_axis += in.shape().ndim;
         end = begin + in.shape().shape[real_axis];
         if (!in.layout().is_empty()) {
-            out.sub(Slice(begin, end).apply(out.layout(), real_axis)).
-                copy_from_fixlayout(in);
+            out.sub(Slice(begin, end).apply(out.layout(), real_axis))
+                    .copy_from_fixlayout(in);
         }
     }
 }
@@ -1349,7 +1316,7 @@ void Concat::scn_do_execute() {
 Concat::NodeProp* Concat::do_make_node_prop() const {
     auto rst = Super::do_make_node_prop();
     rst->add_flag(NodeProp::Flag::CROSS_COMP_NODE_MEMORY);
-    for (auto i: input()) {
+    for (auto i : input()) {
         rst->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);
     }
     return rst;
@@ -1360,39 +1327,36 @@ void Concat::init_output_static_infer_desc() {
 
     using namespace cg::static_infer;
 
-    auto infer_value = [this](
-        DeviceTensorND &dest, const InpVal& inp) {
-
+    auto infer_value = [this](DeviceTensorND& dest, const InpVal& inp) {
         TensorShape oshp = inp.val[0].shape();
         auto real_axis = m_axis;
         if (real_axis < 0)
             m_axis += oshp.ndim;
-        for (size_t i = 1; i < input().size(); ++ i)
+        for (size_t i = 1; i < input().size(); ++i)
             oshp.shape[real_axis] += inp.val.at(i).shape().shape[real_axis];
         dest.resize(oshp);
 
         size_t end = 0;
-        for (size_t i = 0; i < input().size(); ++ i) {
+        for (size_t i = 0; i < input().size(); ++i) {
             auto begin = end;
             end = begin + inp.val[i].shape().shape[real_axis];
-            dest.sub(Slice(begin, end).apply(dest.layout(), real_axis)).
-                copy_from_fixlayout(inp.val[i].value());
+            dest.sub(Slice(begin, end).apply(dest.layout(), real_axis))
+                    .copy_from_fixlayout(inp.val[i].value());
         }
         return true;
     };
 
     DepVal deps;
-    for (auto i: input())
+    for (auto i : input())
         deps.push_back({i, DepType::VALUE});
 
     owner_graph()->static_infer_manager().register_value_infer(
-            output(0),
-            {SourceType::DEP, deps, infer_value});
+            output(0), {SourceType::DEP, deps, infer_value});
 }
 
 void Concat::add_input_layout_constraint() {
     auto cn = output(0)->comp_node();
-    for (auto i: input()) {
+    for (auto i : input()) {
         if (i->comp_node() != cn) {
             i->add_layout_constraint_contiguous();
         }
@@ -1403,12 +1367,11 @@ void Concat::init_output_comp_node() {
     Super::init_output_comp_node();
 
     auto dcn = output(0)->comp_node();
-    for (auto i: input()) {
+    for (auto i : input()) {
         if (i->comp_node().mem_node() != dcn.mem_node()) {
             owner_graph()->seq_comp_node_optimizer().register_stream_var(
-                    output(0),
-                    {CompNode::Stream::COPY,
-                     cg::SeqCompNodeOptimizer::StreamPropType::WEAK});
+                    output(0), {CompNode::Stream::COPY,
+                                cg::SeqCompNodeOptimizer::StreamPropType::WEAK});
             return;
         }
     }
@@ -1419,17 +1382,18 @@ void Concat::init_output_comp_node() {
 /* f{{{ ======================= ParamPackConcat ======================= */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackConcat);
-ParamPackConcat::ParamPackConcat(VarNodeArray& inp, VarNode* table,
-                                 const std::vector<dt_int32> offsets_val,
-                                 const OperatorNodeConfig& config)
+ParamPackConcat::ParamPackConcat(
+        VarNodeArray& inp, VarNode* table, const std::vector<dt_int32> offsets_val,
+        const OperatorNodeConfig& config)
         : Super(inp[0]->owner_graph(), config, "ParamPackConcat", inp),
           m_offsets(offsets_val) {
     CompNode cn = inp[0]->comp_node();
     add_input({inp[0]});
     for (size_t i = 1; i < inp.size(); i++) {
         add_input({inp[i]});
-        mgb_assert(cn == inp[i]->comp_node(),
-                   "input var for param pack must in same comp node");
+        mgb_assert(
+                cn == inp[i]->comp_node(),
+                "input var for param pack must in same comp node");
     }
     add_input({table});
     add_output(None);
@@ -1438,16 +1402,15 @@ ParamPackConcat::ParamPackConcat(VarNodeArray& inp, VarNode* table,
     m_opr = intl::create_megdnn_opr<megdnn::ParamPackConcat>(cn);
 }
 
-void ParamPackConcat::add_input_layout_constraint(){
-    for (auto i: input()) {
+void ParamPackConcat::add_input_layout_constraint() {
+    for (auto i : input()) {
         i->add_layout_constraint_contiguous();
     }
 }
 
-SymbolVar ParamPackConcat::make(const SmallVector<SymbolVar>& inp,
-                                const SymbolVar& offsets,
-                                const std::vector<dt_int32> offsets_val,
-                                const OperatorNodeConfig& config) {
+SymbolVar ParamPackConcat::make(
+        const SmallVector<SymbolVar>& inp, const SymbolVar& offsets,
+        const std::vector<dt_int32> offsets_val, const OperatorNodeConfig& config) {
     VarNodeArray array(inp.size());
     for (size_t i = 0; i < inp.size(); i++) {
         array[i] = inp[i].node();
@@ -1477,9 +1440,9 @@ void ParamPackConcat::init_output_dtype() {
     output(0)->dtype(input(0)->dtype());
 }
 
-void ParamPackConcat::init_output_static_infer_desc(){
+void ParamPackConcat::init_output_static_infer_desc() {
     using namespace cg::static_infer;
-    auto &&mgr = owner_graph()->static_infer_manager();
+    auto&& mgr = owner_graph()->static_infer_manager();
 
     auto infer_out = [this](TensorShape& dest, const InpVal& inp) {
         dest = {static_cast<unsigned int>(m_offsets.back())};
@@ -1487,26 +1450,25 @@ void ParamPackConcat::init_output_static_infer_desc(){
     };
     DepVal shp_deps;
     shp_deps.reserve(input().size());
-    for(auto&& inp : input()){
+    for (auto&& inp : input()) {
         shp_deps.emplace_back(DepElement{inp, DepType::SHAPE});
     }
 
-    auto infer_wk = [this](TensorShape &dest, const InpVal &inp) {
+    auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
         TensorShapeArray shapes;
         auto vals = inp.val;
         shapes.reserve(vals.size() - 1);
-        for(size_t i = 0; i < vals.size() - 1; i++){
+        for (size_t i = 0; i < vals.size() - 1; i++) {
             shapes.push_back(vals[i].shape());
         }
-        dest = {m_opr->get_workspace_in_bytes(shapes, vals.back().shape(),
-                                              dest)};
+        dest = {m_opr->get_workspace_in_bytes(shapes, vals.back().shape(), dest)};
         return true;
     };
     mgr.register_shape_infer(output(0), {SourceType::DEP, shp_deps, infer_out});
     mgr.register_shape_infer(output(1), {SourceType::DEP, shp_deps, infer_wk});
 }
 
-void ParamPackConcat::on_output_comp_node_stream_changed(){
+void ParamPackConcat::on_output_comp_node_stream_changed() {
     Super::on_output_comp_node_stream_changed();
     m_opr = intl::create_megdnn_opr<megdnn::ParamPackConcat>(comp_node());
 }
@@ -1515,34 +1477,33 @@ void ParamPackConcat::on_output_comp_node_stream_changed(){
 /* f{{{ ======================= ParamPackSplit ======================= */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ParamPackSplit);
-ParamPackSplit::ParamPackSplit(VarNode* src,
-                               const std::vector<dt_int32> offsets,
-                               TensorShapeArray& shapes,
-                               const OperatorNodeConfig& config)
+ParamPackSplit::ParamPackSplit(
+        VarNode* src, const std::vector<dt_int32> offsets, TensorShapeArray& shapes,
+        const OperatorNodeConfig& config)
         : Super{src->owner_graph(), config, "ParamPackSplit", {src}},
-          m_shapes(shapes), m_offsets(offsets) {
+          m_shapes(shapes),
+          m_offsets(offsets) {
     add_input({src});
 
     for (size_t i = 0; i < shapes.size(); i++) {
         mgb_assert(shapes[i].total_nr_elems(), "empty param is not allowed!");
         add_output(ssprintf("param_pack_o%zu", i))
-                ->dtype(src->dtype()).shape(shapes[i]);
+                ->dtype(src->dtype())
+                .shape(shapes[i]);
     }
 }
 
-void ParamPackSplit::add_input_layout_constraint(){
+void ParamPackSplit::add_input_layout_constraint() {
     input(0)->add_layout_constraint_contiguous();
 }
 
-SymbolVarArray ParamPackSplit::make(const SymbolVar& src,
-                                    const std::vector<dt_int32> offsets,
-                                    TensorShapeArray shapes,
-                                    const OperatorNodeConfig& config) {
+SymbolVarArray ParamPackSplit::make(
+        const SymbolVar& src, const std::vector<dt_int32> offsets,
+        TensorShapeArray shapes, const OperatorNodeConfig& config) {
     auto&& out = src.node()
                          ->owner_graph()
                          ->insert_opr(std::make_unique<ParamPackSplit>(
-                                 src.node(), offsets,
-                                 shapes, config))
+                                 src.node(), offsets, shapes, config))
                          ->output();
 
     SymbolVarArray ret;
@@ -1574,8 +1535,8 @@ void ParamPackSplit::mem_plan_fwd_in2out_readonly() {
     }
 }
 
-bool ParamPackSplit::infer_shape(size_t index, TensorShape& dest,
-                                 const cg::static_infer::InpVal& inp) {
+bool ParamPackSplit::infer_shape(
+        size_t index, TensorShape& dest, const cg::static_infer::InpVal& inp) {
     dest = m_shapes[index];
     return true;
 }
@@ -1588,7 +1549,8 @@ void ParamPackSplit::init_output_static_infer_desc() {
     for (size_t i = 0; i < output().size(); i++) {
         auto ov = output(i);
         mgr.register_shape_infer(
-                ov, {SourceType::CONSTANT, {},
+                ov, {SourceType::CONSTANT,
+                     {},
                      std::bind(&ParamPackSplit::infer_shape, this, i, _1, _2)});
     }
 }
@@ -1633,7 +1595,7 @@ namespace intl {
 template <>
 struct MegDNNOprInitPostCtor<RelayoutFormat> {
     static void apply(cg::OperatorNodeBase& opr) {
-        if (opr.config().output_dtype().valid()) {            
+        if (opr.config().output_dtype().valid()) {
             opr.output(0)->dtype(opr.config().output_dtype());
         } else {
             opr.output(0)->dtype(opr.input(0)->dtype());
@@ -1656,7 +1618,6 @@ void RelayoutFormat::init_output_format() {
 }
 // f}}}
 //
-
 
 /* f{{{ ======================= PaddingForward ======================= */
 

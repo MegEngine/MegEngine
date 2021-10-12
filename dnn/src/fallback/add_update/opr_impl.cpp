@@ -20,8 +20,9 @@ namespace {
 using namespace megdnn;
 
 template <typename T>
-void forward(_megdnn_tensor_inout dest, _megdnn_tensor_in delta,
-             const AddUpdate::Param& param) {
+void forward(
+        _megdnn_tensor_inout dest, _megdnn_tensor_in delta,
+        const AddUpdate::Param& param) {
     T alpha(param.alpha), beta(param.beta), bias(param.bias);
 
     T* iter0 = dest.ptr<T>();

@@ -18,8 +18,7 @@ namespace rocm {
 
 namespace batch_normalization {
 
-void BNTensorDescHolder::setup(const TensorLayout& x,
-                               const ParamDim& param_dim) {
+void BNTensorDescHolder::setup(const TensorLayout& x, const ParamDim& param_dim) {
     TensorShape xy_shape(x);
 
     switch (param_dim) {
@@ -44,16 +43,14 @@ void BNTensorDescHolder::setup(const TensorLayout& x,
 
 }  // namespace batch_normalization
 
-void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
-                         _megdnn_tensor_in bn_bias, _megdnn_tensor_out mean,
-                         _megdnn_tensor_out variance,
-                         _megdnn_tensor_out batch_mean,
-                         _megdnn_tensor_out batch_inv_variance,
-                         _megdnn_tensor_out, _megdnn_tensor_out dst,
-                         _megdnn_workspace workspace) {
-    check_exec(src.layout, bn_scale.layout, bn_bias.layout, mean.layout,
-               variance.layout, batch_mean.layout, batch_inv_variance.layout,
-               dst.layout, workspace.size);
+void BNForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in bn_scale, _megdnn_tensor_in bn_bias,
+        _megdnn_tensor_out mean, _megdnn_tensor_out variance,
+        _megdnn_tensor_out batch_mean, _megdnn_tensor_out batch_inv_variance,
+        _megdnn_tensor_out, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(
+            src.layout, bn_scale.layout, bn_bias.layout, mean.layout, variance.layout,
+            batch_mean.layout, batch_inv_variance.layout, dst.layout, workspace.size);
     auto handle = concrete_handle(this->handle())->miopen_handle();
     m_tensor_desc.setup(src.layout, m_param.param_dim);
 
@@ -67,35 +64,32 @@ void BNForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
                     m_tensor_desc.xy_desc.desc,     // yDesc
                     dst.raw_ptr,                    // y
                     m_tensor_desc.param_desc.desc,  // bnScaleBiasMeanVarDesc
-                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor,
-                    mean.raw_ptr, variance.raw_ptr, m_param.epsilon,
-                    batch_mean.raw_ptr, batch_inv_variance.raw_ptr));
+                    bn_scale.raw_ptr, bn_bias.raw_ptr, m_param.avg_factor, mean.raw_ptr,
+                    variance.raw_ptr, m_param.epsilon, batch_mean.raw_ptr,
+                    batch_inv_variance.raw_ptr));
 
             break;
         case param::BN::FwdMode::INFERENCE:
             miopen_check(miopenBatchNormalizationForwardInference(
                     handle, m_tensor_desc.bn_mode, &alpha, &beta,
-                    m_tensor_desc.xy_desc.desc, src.raw_ptr,
-                    m_tensor_desc.xy_desc.desc, dst.raw_ptr,
-                    m_tensor_desc.param_desc.desc, bn_scale.raw_ptr,
-                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr,
-                    m_param.epsilon));
+                    m_tensor_desc.xy_desc.desc, src.raw_ptr, m_tensor_desc.xy_desc.desc,
+                    dst.raw_ptr, m_tensor_desc.param_desc.desc, bn_scale.raw_ptr,
+                    bn_bias.raw_ptr, mean.raw_ptr, variance.raw_ptr, m_param.epsilon));
             break;
         default:
             megdnn_throw("Unknown forward mode type of batch normalization.");
     }
 }
 
-void BNBackwardImpl::exec(_megdnn_tensor_in x, _megdnn_tensor_in dy,
-                          _megdnn_tensor_in saved_batch_mean,
-                          _megdnn_tensor_in saved_batch_inv_variance,
-                          _megdnn_tensor_in bn_scale, _megdnn_tensor_in,
-                          _megdnn_tensor_out d_bn_scale,
-                          _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx,
-                          _megdnn_workspace workspace) {
-    check_exec(x.layout, dy.layout, saved_batch_mean.layout,
-               saved_batch_inv_variance.layout, bn_scale.layout,
-               d_bn_scale.layout, d_bn_bias.layout, dx.layout, workspace.size);
+void BNBackwardImpl::exec(
+        _megdnn_tensor_in x, _megdnn_tensor_in dy, _megdnn_tensor_in saved_batch_mean,
+        _megdnn_tensor_in saved_batch_inv_variance, _megdnn_tensor_in bn_scale,
+        _megdnn_tensor_in, _megdnn_tensor_out d_bn_scale, _megdnn_tensor_out d_bn_bias,
+        _megdnn_tensor_out dx, _megdnn_workspace workspace) {
+    check_exec(
+            x.layout, dy.layout, saved_batch_mean.layout,
+            saved_batch_inv_variance.layout, bn_scale.layout, d_bn_scale.layout,
+            d_bn_bias.layout, dx.layout, workspace.size);
     auto handle = concrete_handle(this->handle())->miopen_handle();
     m_tensor_desc.setup(x.layout, m_param.param_dim);
 

@@ -9,11 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "megbrain/comp_node_env.h"
+#include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/comp_node_env.h"
 
 #include "megbrain/test/helper.h"
 
@@ -27,14 +27,14 @@ void run_graph(size_t mem_reserved, bool enable_defrag) {
     CompNode::try_coalesce_all_free_memory();
     CompNode::finalize();
     auto cn = CompNode::load("gpux");
-    cn.sync(); // wait for async init to finish
+    cn.sync();  // wait for async init to finish
     size_t size = mem_reserved / (12.1 * 4);
 
     HostTensorND host_x{cn, dtype::Int32()};
     auto px = host_x.resize({size}).ptr<dt_int32>();
     RNGxorshf rng{next_rand_seed()};
     dt_int32 expect = 0;
-    for (size_t i = 0; i < size; ++ i) {
+    for (size_t i = 0; i < size; ++i) {
         expect += (px[i] = rng());
     }
     expect *= 7;
@@ -50,7 +50,10 @@ void run_graph(size_t mem_reserved, bool enable_defrag) {
 
     auto x0 = opr::SharedDeviceTensor::make(*graph, dev_x).rename("x0"),
          // x1 has rdonly fwd chain
-         x1 = opr::Concat::make({x0, x0}, 0).add_axis(0).reshape({size*2}).rename("x1"),
+            x1 = opr::Concat::make({x0, x0}, 0)
+                         .add_axis(0)
+                         .reshape({size * 2})
+                         .rename("x1"),
          x2 = opr::Concat::make({x1, x0}, 0).rename("x2"),
          x3 = opr::Concat::make({x2, x0}, 0).rename("x3"),
          x4 = opr::Concat::make({x3, x0}, 0).rename("x4"),
@@ -58,7 +61,7 @@ void run_graph(size_t mem_reserved, bool enable_defrag) {
          y1 = opr::reduce_sum(x4, x4.make_scalar(1)).rename("y1"),
          y = opr::add(y0, y1, {cn});
 
-    set_priority(y0, 100); // y0 executes after defrag
+    set_priority(y0, 100);  // y0 executes after defrag
 
     HostTensorND host_y;
     auto func = graph->compile({make_callback_copy(y, host_y)});
@@ -81,7 +84,7 @@ void run_graph(size_t mem_reserved, bool enable_defrag) {
             );
 #endif
 }
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestGraph, Defragment) {
     REQUIRE_GPU(1);
@@ -103,19 +106,13 @@ TEST(TestGraph, Defragment) {
     constexpr const char* KEY = "MGB_CUDA_RESERVE_MEMORY";
     auto old_value = getenv(KEY);
     setenv(KEY, reserve_setting.c_str(), 1);
-    MGB_TRY {
-        do_run();
-    } MGB_FINALLY(
-        if (old_value) {
-            setenv(KEY, old_value, 1);
-        } else {
-            unsetenv(KEY);
-        }
-        CompNode::try_coalesce_all_free_memory();
-        CompNode::finalize();
-    );
+    MGB_TRY { do_run(); }
+    MGB_FINALLY(
+            if (old_value) { setenv(KEY, old_value, 1); } else {
+                unsetenv(KEY);
+            } CompNode::try_coalesce_all_free_memory();
+            CompNode::finalize(););
 }
-#endif // MGB_CUDA && MGB_ENABLE_EXCEPTION
+#endif  // MGB_CUDA && MGB_ENABLE_EXCEPTION
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

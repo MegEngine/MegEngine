@@ -22,8 +22,8 @@ using namespace conv_bias;
 
 template <bool add_to_dst>
 void conv_bias::conv_stride2_2x2_sc_int8_int8_int16(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW) {
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = div_ceil<size_t>(PH, 2),
            OH_stop = div_floor<size_t>(IH + PH - 2, 2) + 1,
            OW_start = div_ceil<size_t>(PW, 2),
@@ -88,10 +88,8 @@ void conv_bias::conv_stride2_2x2_sc_int8_int8_int16(
             dptr += 4;
         }
         for (; ow < OW_stop; ++ow) {
-            int16_t s0 = sptr[0], s1 = sptr[1], s2 = sptr[IW + 0],
-                    s3 = sptr[IW + 1];
-            int16_t f0 = filter[0], f1 = filter[1], f2 = filter[2],
-                    f3 = filter[3];
+            int16_t s0 = sptr[0], s1 = sptr[1], s2 = sptr[IW + 0], s3 = sptr[IW + 1];
+            int16_t f0 = filter[0], f1 = filter[1], f2 = filter[2], f3 = filter[3];
             int16_t d = s0 * f0 + s1 * f1 + s2 * f2 + s3 * f3;
             if (add_to_dst) {
                 *dptr += d;
@@ -106,8 +104,8 @@ void conv_bias::conv_stride2_2x2_sc_int8_int8_int16(
 
 template <bool add_to_dst>
 void conv_bias::conv_stride2_3x3_sc_int8_int8_int16(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW) {
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = div_ceil<size_t>(PH, 2),
            OH_stop = div_floor<size_t>(IH + PH - 3, 2) + 1,
            OW_start = div_ceil<size_t>(PW, 2),
@@ -250,8 +248,8 @@ void conv_bias::conv_stride2_3x3_sc_int8_int8_int16(
 
 template <bool add_to_dst>
 void conv_bias::conv_stride2_5x5_sc_int8_int8_int16(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW) {
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = div_ceil<size_t>(PH, 2),
            OH_stop = div_floor<size_t>(IH + PH - 5, 2) + 1,
            OW_start = div_ceil<size_t>(PW, 2),
@@ -413,29 +411,28 @@ void conv_bias::conv_stride2_5x5_sc_int8_int8_int16(
     }
 }
 template void conv_bias::conv_stride2_2x2_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_stride2_2x2_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_stride2_3x3_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_stride2_3x3_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_stride2_5x5_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_stride2_5x5_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 
 namespace {
-void conv_2x2_optimize_single_channel(const int8_t* src, const uint32_t IH,
-                                      const uint32_t IW, const int8_t* filter,
-                                      int16_t* dst, const uint32_t OH,
-                                      const uint32_t OW) {
+void conv_2x2_optimize_single_channel(
+        const int8_t* src, const uint32_t IH, const uint32_t IW, const int8_t* filter,
+        int16_t* dst, const uint32_t OH, const uint32_t OW) {
     int8_t workspace[16];
     workspace[0] = filter[0];
     workspace[1] = filter[1];
@@ -470,14 +467,11 @@ void conv_2x2_optimize_single_channel(const int8_t* src, const uint32_t IH,
             dst += 4;
         }
         for (; j < IW; j += 2) {
-            (*dst++) += static_cast<int16_t>(src[0]) *
-                                static_cast<int16_t>(filter[0]) +
-                        static_cast<int16_t>(src[1]) *
-                                static_cast<int16_t>(filter[1]) +
-                        static_cast<int16_t>(src[IW]) *
-                                static_cast<int16_t>(filter[2]) +
-                        static_cast<int16_t>(src[IW + 1]) *
-                                static_cast<int16_t>(filter[3]);
+            (*dst++) +=
+                    static_cast<int16_t>(src[0]) * static_cast<int16_t>(filter[0]) +
+                    static_cast<int16_t>(src[1]) * static_cast<int16_t>(filter[1]) +
+                    static_cast<int16_t>(src[IW]) * static_cast<int16_t>(filter[2]) +
+                    static_cast<int16_t>(src[IW + 1]) * static_cast<int16_t>(filter[3]);
             src += 2;
         }
         src += IW;
@@ -501,13 +495,12 @@ bool conv_bias::can_conv_int8x8x16_stride2_flt2(
            param.dst_type.enumv() == DTypeEnum::Int16 && fm.dilation[0] == 1 &&
            fm.dilation[1] == 1 && fm.stride[0] == 2 && fm.stride[1] == 2 &&
            FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5) &&
-           param.isz[0] % 2 == 0 && param.isz[1] % 2 == 0 &&
-           fm.dilation[0] == 1 && fm.dilation[1] == 1 && fm.spatial[0] == 2 &&
-           fm.spatial[1] == 2 && fm.padding[0] == 0 && fm.padding[1] == 0;
+           param.isz[0] % 2 == 0 && param.isz[1] % 2 == 0 && fm.dilation[0] == 1 &&
+           fm.dilation[1] == 1 && fm.spatial[0] == 2 && fm.spatial[1] == 2 &&
+           fm.padding[0] == 0 && fm.padding[1] == 0;
 }
 
-void conv_bias::conv_int8x8x16_stride2_flt2(
-        const ConvBiasImpl::NCBKernParam& param) {
+void conv_bias::conv_int8x8x16_stride2_flt2(const ConvBiasImpl::NCBKernParam& param) {
     UNPACK_CONV_F32_NCB_KERN_SIZES(param);
     megdnn_ignore(FH);
     megdnn_ignore(FW);
@@ -525,8 +518,8 @@ void conv_bias::conv_int8x8x16_stride2_flt2(
         memset(dst, 0, sizeof(dst[0]) * OC * OH * OW);
         for (uint32_t j = 0; j < OC; ++j) {
             for (uint32_t k = 0; k < IC; ++k) {
-                conv_2x2_optimize_single_channel(src + k * shape, IH, IW, fptr,
-                                                 dst, OH, OW);
+                conv_2x2_optimize_single_channel(
+                        src + k * shape, IH, IW, fptr, dst, OH, OW);
                 fptr += 4;
             }
             dst += OH * OW;

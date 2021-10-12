@@ -11,8 +11,8 @@
  */
 #include "src/arm_common/pooling/opr_impl.h"
 #include "src/arm_common/pooling/algo.h"
-#include "src/common/metahelper.h"
 #include "src/common/algo_chooser.h"
+#include "src/common/metahelper.h"
 
 using namespace megdnn;
 using namespace arm_common;
@@ -63,11 +63,10 @@ public:
 PoolingImpl::AlgoPack PoolingImpl::sm_algo_pack;
 
 PoolingImpl::PoolingKernSizeParam PoolingImpl::make_pooling_kern_szie_param(
-        fallback::PoolingImpl* opr, const TensorLayout& src,
-        const TensorLayout& dst) {
+        fallback::PoolingImpl* opr, const TensorLayout& src, const TensorLayout& dst) {
     auto safe_u32 = [](size_t v) -> uint32_t {
-        megdnn_assert(v <= std::numeric_limits<uint32_t>::max(),
-                      "value too large: %zu", v);
+        megdnn_assert(
+                v <= std::numeric_limits<uint32_t>::max(), "value too large: %zu", v);
         return v;
     };
     return {safe_u32(src.shape[0]),
@@ -75,10 +74,8 @@ PoolingImpl::PoolingKernSizeParam PoolingImpl::make_pooling_kern_szie_param(
             {{safe_u32(src.shape[2]), safe_u32(src.shape[3])}},
             {{safe_u32(dst.shape[2]), safe_u32(dst.shape[3])}},
             {{safe_u32(opr->param().pad_h), safe_u32(opr->param().pad_w)}},
-            {{safe_u32(opr->param().window_h),
-              safe_u32(opr->param().window_w)}},
-            {{safe_u32(opr->param().stride_h),
-              safe_u32(opr->param().stride_w)}},
+            {{safe_u32(opr->param().window_h), safe_u32(opr->param().window_w)}},
+            {{safe_u32(opr->param().stride_h), safe_u32(opr->param().stride_w)}},
             src.dtype,
             dst.dtype,
             opr->handle(),
@@ -87,8 +84,8 @@ PoolingImpl::PoolingKernSizeParam PoolingImpl::make_pooling_kern_szie_param(
 };
 
 PoolingImpl::PoolingKernParam PoolingImpl::make_pooling_kern_param(
-        fallback::PoolingImpl* opr, _megdnn_tensor_in src,
-        _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+        fallback::PoolingImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     PoolingKernParam ret;
     static_cast<PoolingKernSizeParam&>(ret) =
             make_pooling_kern_szie_param(opr, src.layout, dst.layout);
@@ -99,12 +96,12 @@ PoolingImpl::PoolingKernParam PoolingImpl::make_pooling_kern_param(
     return ret;
 };
 
-size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                           const TensorLayout& dst) {
+size_t PoolingImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
     TensorLayoutArray layouts{src, dst};
     HeuristicCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(), &this->param(),
-                            sizeof(this->param())};
+                            layouts.data(), layouts.size(),
+                            &this->param(), sizeof(this->param())};
     auto rst = HeuristicCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
@@ -148,8 +145,8 @@ size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
     }
 }
 
-void PoolingImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                       _megdnn_workspace workspace) {
+void PoolingImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     auto param = make_pooling_kern_param(this, src, dst, workspace);
     auto algo = get_algorithm(this, src.layout, dst.layout);
@@ -176,7 +173,7 @@ std::vector<Algorithm*> PoolingImpl::get_all_algorithms(
 }
 std::vector<Algorithm*> PoolingImpl::get_all_algorithms_safe(
         const TensorLayout& src, const TensorLayout& dst) {
-    auto ret_safe = get_all_algorithms(src,dst);
+    auto ret_safe = get_all_algorithms(src, dst);
     megdnn_assert(!ret_safe.empty(), "no usable pooling fwd algorithm");
     return ret_safe;
 }
@@ -193,11 +190,11 @@ Algorithm* PoolingImpl::get_algorithm_heuristic(
             return iter;
         }
     }
-    megdnn_throw(
-            ssprintf("require algorithm with attribute(%s) and without "
-                     "attribute(%s), but can't get suitable algo.\n",
-                     Algorithm::attribute_str(positive_attr).c_str(),
-                     Algorithm::attribute_str(negative_attr).c_str()));
+    megdnn_throw(ssprintf(
+            "require algorithm with attribute(%s) and without "
+            "attribute(%s), but can't get suitable algo.\n",
+            Algorithm::attribute_str(positive_attr).c_str(),
+            Algorithm::attribute_str(negative_attr).c_str()));
     return nullptr;
 }
 

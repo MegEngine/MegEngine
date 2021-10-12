@@ -8,10 +8,10 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/fallback/fixture.h"
-#include "test/common/rng.h"
-#include "test/common/checker.h"
 #include "test/common/matrix_mul.h"
+#include "test/common/checker.h"
+#include "test/common/rng.h"
+#include "test/fallback/fixture.h"
 
 namespace megdnn {
 namespace test {
@@ -47,21 +47,21 @@ TEST_F(FALLBACK, MATRIX_MUL) {
 }
 
 TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK4) {
-    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, handle(), "FB_NAIVE",
-                                 param::MatrixMul::Format::MK4, 1);
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(), "FB_NAIVE",
+            param::MatrixMul::Format::MK4, 1);
 }
 
 TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK8) {
-    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, handle(), "FB_NAIVE",
-                                 param::MatrixMul::Format::MK8, 1);
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(), "FB_NAIVE",
+            param::MatrixMul::Format::MK8, 1);
 }
 
 TEST_F(FALLBACK, MATRIX_MUL_NAIVE_MK4_DOT) {
-    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, handle(), "FB_NAIVE",
-                                 param::MatrixMul::Format::MK4_DOT, 1);
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(), "FB_NAIVE",
+            param::MatrixMul::Format::MK4_DOT, 1);
 }
 
 TEST_F(FALLBACK, MATRIX_MUL_NAIVE) {
@@ -96,7 +96,6 @@ TEST_F(FALLBACK, MATRIX_MUL_NAIVE) {
 }
 
 TEST_F(FALLBACK, BATCHED_MATRIX_MUL) {
-
     Checker<BatchedMatrixMul> checker(handle());
     using Param = MatrixMul::Param;
     auto args = matrix_mul::get_batched_matmul_args();

@@ -24,8 +24,7 @@ static inline FixCase get_fix_mask(Param::FastImpl impl) {
     std::vector<int> fix_32_mask_val{0,  1,  8,  16, 9, 2,  3, 10, 17, 24, 32,
                                      25, 18, 11, 4,  5, 0,  1, 8,  16, 9,  2,
                                      3,  10, 0,  1,  8, 16, 9, 2,  3,  10};
-    megdnn_assert(impl == Param::FastImpl::FIX_32_MASK,
-                  "only support gen FIX_32_MASK");
+    megdnn_assert(impl == Param::FastImpl::FIX_32_MASK, "only support gen FIX_32_MASK");
     return {fix_32_mask_offset, fix_32_mask_val};
 }
 
@@ -62,49 +61,48 @@ CheckerHelper::TensorsConstriant gen_dct_constriant(
             for (size_t ic_idx = 0; ic_idx < ic; ++ic_idx) {
                 size_t random_len = (int)rng_oc.gen_single_val() * block_c;
                 size_t mask_len = (ic_idx == ic - 1) || (remain_oc == 0)
-                                          ? remain_oc
-                                          : random_len % remain_oc;
-                megdnn_assert(mask_len % block_c == 0,
-                              "mask_len mod block_c == 0, but %zu mod %d ",
-                              mask_len, block_c);
+                                        ? remain_oc
+                                        : random_len % remain_oc;
+                megdnn_assert(
+                        mask_len % block_c == 0,
+                        "mask_len mod block_c == 0, but %zu mod %d ", mask_len,
+                        block_c);
                 const size_t oc_idx = mask_offset_vec[ic_idx];
                 remain_oc -= mask_len;
                 mask_offset_vec[ic_idx + 1] = oc_idx + mask_len;
                 for (size_t mask_idx = 0; mask_idx < mask_len; ++mask_idx) {
-                    mask_val_vec[oc_idx + mask_idx] =
-                            (int)mask_rng.gen_single_val();
+                    mask_val_vec[oc_idx + mask_idx] = (int)mask_rng.gen_single_val();
                 }
             }
         }
-        mask_offset = TensorND(mask_offset_vec.data(),
-                               {{mask_offset_vec.size()}, dtype::Int32()});
-        mask_val = TensorND(mask_val_vec.data(),
-                            {{mask_val_vec.size()}, dtype::Int32()});
+        mask_offset = TensorND(
+                mask_offset_vec.data(), {{mask_offset_vec.size()}, dtype::Int32()});
+        mask_val =
+                TensorND(mask_val_vec.data(), {{mask_val_vec.size()}, dtype::Int32()});
         if (tensors_orig.size() > 1) {
             megdnn_assert(tensors_orig.size() == 4, "tensors_orig.size() == 4");
-            megdnn_assert(mask_offset_vec.size() >= 2,
-                          "mask_offset_vec.size() >= 2");
-            megdnn_assert(tensors_orig[1].layout == mask_offset.layout,
-                          "tensors_orig[1].layout == mask_offset.layout");
-            megdnn_assert(tensors_orig[2].layout == mask_val.layout,
-                          "tensors_orig[2].layout == mask_val.layout");
+            megdnn_assert(mask_offset_vec.size() >= 2, "mask_offset_vec.size() >= 2");
+            megdnn_assert(
+                    tensors_orig[1].layout == mask_offset.layout,
+                    "tensors_orig[1].layout == mask_offset.layout");
+            megdnn_assert(
+                    tensors_orig[2].layout == mask_val.layout,
+                    "tensors_orig[2].layout == mask_val.layout");
             auto naive_handle = create_cpu_handle(2, false);
-            megdnn_memcpy_D2D(naive_handle.get(), tensors_orig[1].raw_ptr,
-                              mask_offset.raw_ptr,
-                              mask_offset.layout.span().dist_byte());
-            megdnn_memcpy_D2D(naive_handle.get(), tensors_orig[2].raw_ptr,
-                              mask_val.raw_ptr,
-                              mask_val.layout.span().dist_byte());
+            megdnn_memcpy_D2D(
+                    naive_handle.get(), tensors_orig[1].raw_ptr, mask_offset.raw_ptr,
+                    mask_offset.layout.span().dist_byte());
+            megdnn_memcpy_D2D(
+                    naive_handle.get(), tensors_orig[2].raw_ptr, mask_val.raw_ptr,
+                    mask_val.layout.span().dist_byte());
         }
     };
     return constraint;
 }
 
-std::shared_ptr<DctTestcase> gen_dct_case(const size_t n, const size_t ic,
-                                          const size_t ih, const size_t iw,
-                                          const size_t oc, Param param,
-                                          DType dst_dtype,
-                                          bool correct_result) {
+std::shared_ptr<DctTestcase> gen_dct_case(
+        const size_t n, const size_t ic, const size_t ih, const size_t iw,
+        const size_t oc, Param param, DType dst_dtype, bool correct_result) {
     const size_t block = param.dct_block_size;
     const int block_c = param.format == Param::Format::NCHW4 ? 4 : 1;
     megdnn_assert(oc % block_c == 0, "oc mod block_c must == 0");
@@ -141,24 +139,22 @@ std::shared_ptr<DctTestcase> gen_dct_case(const size_t n, const size_t ic,
         for (size_t ic_idx = 0; ic_idx < ic; ++ic_idx) {
             size_t random_len = (int)rng_oc.gen_single_val() * block_c;
             size_t mask_len = (ic_idx == ic - 1) || (remain_oc == 0)
-                                      ? remain_oc
-                                      : random_len % remain_oc;
-            megdnn_assert(mask_len % block_c == 0,
-                          "mask_len mod block_c == 0, but %zu mod %d ",
-                          mask_len, block_c);
+                                    ? remain_oc
+                                    : random_len % remain_oc;
+            megdnn_assert(
+                    mask_len % block_c == 0,
+                    "mask_len mod block_c == 0, but %zu mod %d ", mask_len, block_c);
             const size_t oc_idx = mask_offset_vec[ic_idx];
             remain_oc -= mask_len;
             mask_offset_vec[ic_idx + 1] = oc_idx + mask_len;
             for (size_t mask_idx = 0; mask_idx < mask_len; ++mask_idx) {
-                mask_val_vec[oc_idx + mask_idx] =
-                        (int)mask_rng.gen_single_val();
+                mask_val_vec[oc_idx + mask_idx] = (int)mask_rng.gen_single_val();
             }
         }
     }
-    mask_offset = TensorND(mask_offset_vec.data(),
-                           {{mask_offset_vec.size()}, dtype::Int32()});
-    mask_val = TensorND(mask_val_vec.data(),
-                        {{mask_val_vec.size()}, dtype::Int32()});
+    mask_offset = TensorND(
+            mask_offset_vec.data(), {{mask_offset_vec.size()}, dtype::Int32()});
+    mask_val = TensorND(mask_val_vec.data(), {{mask_val_vec.size()}, dtype::Int32()});
     if (mask_offset_vec.size() >= 2) {
         test_case.testcase_in = {
                 src, mask_offset, mask_val, {nullptr, {{}, dst_dtype}}};
@@ -174,8 +170,8 @@ std::shared_ptr<DctTestcase> gen_dct_case(const size_t n, const size_t ic,
     TensorLayout temp_dst_layout;
     temp_dst_layout.dtype = dst_dtype;
 
-    TensorLayoutArray layouts{src.layout, mask_offset.layout, mask_val.layout,
-                              temp_dst_layout};
+    TensorLayoutArray layouts{
+            src.layout, mask_offset.layout, mask_val.layout, temp_dst_layout};
     naive_proxy.deduce_layout(opr_naive.get(), layouts);
     const size_t output_elements = layouts[3].total_nr_elems();
     std::vector<float>& output_vec = test_case.output_vec;

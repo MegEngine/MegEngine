@@ -11,26 +11,25 @@
 #include "src/arm_common/pooling/do_max_pooling_3x3_s2x2_float16.h"
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#include <vector>
 #include <algorithm>
-#include <limits>
-#include "src/arm_common/simd_macro/marm_neon.h"
 #include <cstring>
+#include <limits>
+#include <vector>
+#include "src/arm_common/simd_macro/marm_neon.h"
 
 namespace megdnn {
 namespace arm_common {
 
 #define MEGDNN_SIMD_WIDTH 8
-void do_max_pooling_3x3_s2x2_float16_NEON(const __fp16* src, __fp16* dst,
-                                          size_t IH_, size_t IW_, size_t OH_,
-                                          size_t OW_, size_t PH_, size_t PW_,
-                                          const WorkspaceBundle& ws) {
+void do_max_pooling_3x3_s2x2_float16_NEON(
+        const __fp16* src, __fp16* dst, size_t IH_, size_t IW_, size_t OH_, size_t OW_,
+        size_t PH_, size_t PW_, const WorkspaceBundle& ws) {
     int IH = IH_, IW = IW_, OH = OH_, OW = OW_, PH = PH_, PW = PW_;
     // cache[i] stores the answer of the i-th line after
     // pooling along the W dimension.
-    __fp16* cache[3] = {static_cast<__fp16*>(ws.get(0)),
-                        static_cast<__fp16*>(ws.get(1)),
-                        static_cast<__fp16*>(ws.get(2))};
+    __fp16* cache[3] = {
+            static_cast<__fp16*>(ws.get(0)), static_cast<__fp16*>(ws.get(1)),
+            static_cast<__fp16*>(ws.get(2))};
     __fp16* odd = static_cast<__fp16*>(ws.get(3));
     __fp16* even = static_cast<__fp16*>(ws.get(4));
     int ih_next = 0;
@@ -98,8 +97,7 @@ void do_max_pooling_3x3_s2x2_float16_NEON(const __fp16* src, __fp16* dst,
                 vst1q_f16(cache[0] + ow, d);
             }
         } else {
-            for (; ow + MEGDNN_SIMD_WIDTH <= OW_to;
-                 ow += MEGDNN_SIMD_WIDTH) {
+            for (; ow + MEGDNN_SIMD_WIDTH <= OW_to; ow += MEGDNN_SIMD_WIDTH) {
                 float16x8_t d, s0, s1, s2;
                 s0 = vld1q_f16(even + ow - (PW >> 1));
                 s1 = vld1q_f16(odd + ow - (PW >> 1));
@@ -129,15 +127,13 @@ void do_max_pooling_3x3_s2x2_float16_NEON(const __fp16* src, __fp16* dst,
                 vst1q_f16(dptr + ow, d);
             }
             for (; ow < OW; ++ow) {
-                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]),
-                                    cache[2][ow]);
+                dptr[ow] = std::max(std::max(cache[0][ow], cache[1][ow]), cache[2][ow]);
             }
         } else {
             std::memcpy(dptr, cache[0], sizeof(__fp16) * OW);
             for (int i = 1; i < ih_to - ih_from; ++i) {
                 int ow = 0;
-                for (; ow + MEGDNN_SIMD_WIDTH <= OW;
-                     ow += MEGDNN_SIMD_WIDTH) {
+                for (; ow + MEGDNN_SIMD_WIDTH <= OW; ow += MEGDNN_SIMD_WIDTH) {
                     float16x8_t d, s;
                     s = vld1q_f16(cache[i] + ow);
                     d = vld1q_f16(dptr + ow);

@@ -32,10 +32,10 @@
  */
 
 #include "src/common/winograd/winograd_generator.h"
-#include "src/common/utils.h"
 #include <stdio.h>
 #include <cmath>
 #include <cstring>
+#include "src/common/utils.h"
 
 using namespace megdnn;
 using namespace winograd;
@@ -120,8 +120,9 @@ WinogradGenerator::Matrix computeB(const std::vector<float>& a, int alpha) {
 
     WinogradGenerator::Matrix B(alpha, alpha);
     for (int y = 0; y < alpha - 1; ++y) {
-        std::memcpy(B.data() + B.cols() * y, BT.data() + BT.cols() * y,
-                    alpha * sizeof(float));
+        std::memcpy(
+                B.data() + B.cols() * y, BT.data() + BT.cols() * y,
+                alpha * sizeof(float));
     }
     for (int x = 0; x < alpha - 1; ++x) {
         B.at(alpha - 1, x) = 0;
@@ -131,8 +132,7 @@ WinogradGenerator::Matrix computeB(const std::vector<float>& a, int alpha) {
     return B;
 }
 
-WinogradGenerator::Matrix computeFPlusOne(const std::vector<float>& a,
-                                          int alpha) {
+WinogradGenerator::Matrix computeFPlusOne(const std::vector<float>& a, int alpha) {
     auto fdiag = computeF(a, alpha - 1);
     WinogradGenerator::Matrix res(1, alpha);
     for (int i = 0; i < alpha - 1; i++) {
@@ -190,8 +190,7 @@ WinogradGenerator::Matrix WinogradGenerator::Matrix::mul(const Matrix& rhs) {
     return res;
 }
 
-WinogradGenerator::Matrix WinogradGenerator::Matrix::poly_multi(
-        const Matrix& B) {
+WinogradGenerator::Matrix WinogradGenerator::Matrix::poly_multi(const Matrix& B) {
     megdnn_assert(rows() == 1 && B.rows() == 1);
     auto aw = cols();
     auto bw = B.cols();
@@ -211,8 +210,7 @@ WinogradGenerator::Matrix WinogradGenerator::Matrix::poly_multi(
     return res;
 }
 
-void WinogradGenerator::Matrix::div_per_line(
-        const WinogradGenerator::Matrix& line) {
+void WinogradGenerator::Matrix::div_per_line(const WinogradGenerator::Matrix& line) {
     megdnn_assert(line.rows() == 1 && line.cols() >= m_rows);
 
     for (size_t y = 0; y < m_rows; ++y) {
@@ -222,8 +220,7 @@ void WinogradGenerator::Matrix::div_per_line(
     }
 }
 
-void WinogradGenerator::Matrix::mul_per_row(
-        const WinogradGenerator::Matrix& line) {
+void WinogradGenerator::Matrix::mul_per_row(const WinogradGenerator::Matrix& line) {
     megdnn_assert(line.rows() == 1 && line.cols() >= m_cols);
     for (size_t y = 0; y < m_rows; ++y) {
         for (size_t x = 0; x < m_cols; ++x) {
@@ -231,8 +228,6 @@ void WinogradGenerator::Matrix::mul_per_row(
         }
     }
 }
-
-
 
 WinogradGenerator::WinogradGenerator(size_t m, size_t r, float interp) {
     size_t alpha = m + r - 1;
@@ -249,17 +244,18 @@ WinogradGenerator::WinogradGenerator(size_t m, size_t r, float interp) {
     generate(m, r, a);
 }
 
-WinogradGenerator::WinogradGenerator(size_t m, size_t r,
-                                     const std::vector<float>& interp_points) {
-    megdnn_assert(interp_points.size() == m + r - 2,
-                  "interp_points should be %zu, but got: %zu", m + r - 2,
-                  interp_points.size());
+WinogradGenerator::WinogradGenerator(
+        size_t m, size_t r, const std::vector<float>& interp_points) {
+    megdnn_assert(
+            interp_points.size() == m + r - 2,
+            "interp_points should be %zu, but got: %zu", m + r - 2,
+            interp_points.size());
 
     generate(m, r, interp_points);
 }
 
-void WinogradGenerator::generate(size_t m, size_t r,
-                                 const std::vector<float>& interp_points) {
+void WinogradGenerator::generate(
+        size_t m, size_t r, const std::vector<float>& interp_points) {
     size_t alpha = m + r - 1;
     m_A = computeA(interp_points, alpha, m);
     m_A.transpose();

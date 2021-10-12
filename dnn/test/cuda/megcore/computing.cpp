@@ -11,22 +11,19 @@
 #include "megcore.h"
 #include "megcore_cuda.h"
 
+#include <cuda_runtime_api.h>
+#include "./fixture.h"
 #include "test/common/utils.h"
 #include "test/cuda/utils.h"
-#include "./fixture.h"
-#include <cuda_runtime_api.h>
 
-TEST_F(MegcoreCUDA, COMPUTING)
-{
+TEST_F(MegcoreCUDA, COMPUTING) {
     for (int id = -1; id < std::min(nr_devices(), 2); ++id) {
         megcoreDeviceHandle_t devHandle;
-        megcoreCreateDeviceHandle(&devHandle,
-                    megcorePlatformCUDA, id, 0);
+        megcoreCreateDeviceHandle(&devHandle, megcorePlatformCUDA, id, 0);
         megcoreActivate(devHandle);
 
         megcoreComputingHandle_t compHandle;
-        megcoreCreateComputingHandle(&compHandle,
-                    devHandle, 0);
+        megcoreCreateComputingHandle(&compHandle, devHandle, 0);
 
         megcoreDeviceHandle_t devHandle2;
         megcoreGetDeviceHandle(compHandle, &devHandle2);
@@ -39,25 +36,20 @@ TEST_F(MegcoreCUDA, COMPUTING)
         unsigned char *src, *dst;
         static const size_t N = 5;
         unsigned char src_host[N], dst_host[N];
-        megcoreMalloc(devHandle, (void **)&src, N);
-        megcoreMalloc(devHandle, (void **)&dst, N);
+        megcoreMalloc(devHandle, (void**)&src, N);
+        megcoreMalloc(devHandle, (void**)&dst, N);
         megcoreMemset(compHandle, src, 0x0F, N);
         megcoreMemset(compHandle, dst, 0xF0, N);
-        megcoreMemcpy(compHandle, src_host, src, N,
-                    megcoreMemcpyDeviceToHost);
-        megcoreMemcpy(compHandle, dst_host, dst, N,
-                    megcoreMemcpyDeviceToHost);
+        megcoreMemcpy(compHandle, src_host, src, N, megcoreMemcpyDeviceToHost);
+        megcoreMemcpy(compHandle, dst_host, dst, N, megcoreMemcpyDeviceToHost);
         megcoreSynchronize(compHandle);
         for (size_t i = 0; i < N; ++i) {
             ASSERT_EQ(0x0F, src_host[i]);
             ASSERT_EQ(0xF0, dst_host[i]);
         }
-        megcoreMemcpy(compHandle, dst, src, N,
-                    megcoreMemcpyDeviceToDevice);
-        megcoreMemcpy(compHandle, src_host, src, N,
-                    megcoreMemcpyDeviceToHost);
-        megcoreMemcpy(compHandle, dst_host, dst, N,
-                    megcoreMemcpyDeviceToHost);
+        megcoreMemcpy(compHandle, dst, src, N, megcoreMemcpyDeviceToDevice);
+        megcoreMemcpy(compHandle, src_host, src, N, megcoreMemcpyDeviceToHost);
+        megcoreMemcpy(compHandle, dst_host, dst, N, megcoreMemcpyDeviceToHost);
         megcoreSynchronize(compHandle);
         for (size_t i = 0; i < N; ++i) {
             ASSERT_EQ(dst_host[i], src_host[i]);
@@ -70,19 +62,16 @@ TEST_F(MegcoreCUDA, COMPUTING)
     }
 }
 
-TEST_F(MegcoreCUDA, STREAM)
-{
+TEST_F(MegcoreCUDA, STREAM) {
     megcoreDeviceHandle_t devHandle;
-    megcoreCreateDeviceHandle(&devHandle,
-                megcorePlatformCUDA, 0, 0);
+    megcoreCreateDeviceHandle(&devHandle, megcorePlatformCUDA, 0, 0);
     megcoreActivate(devHandle);
 
     cudaStream_t stream;
     cuda_check(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
 
     megcoreComputingHandle_t compHandle;
-    megcoreCreateComputingHandleWithCUDAStream(&compHandle,
-                devHandle, 0, stream);
+    megcoreCreateComputingHandleWithCUDAStream(&compHandle, devHandle, 0, stream);
     {
         cudaStream_t stream2;
         megcoreGetCUDAStream(compHandle, &stream2);
@@ -100,25 +89,20 @@ TEST_F(MegcoreCUDA, STREAM)
     unsigned char *src, *dst;
     static const size_t N = 5;
     unsigned char src_host[N], dst_host[N];
-    megcoreMalloc(devHandle, (void **)&src, N);
-    megcoreMalloc(devHandle, (void **)&dst, N);
+    megcoreMalloc(devHandle, (void**)&src, N);
+    megcoreMalloc(devHandle, (void**)&dst, N);
     megcoreMemset(compHandle, src, 0x0F, N);
     megcoreMemset(compHandle, dst, 0xF0, N);
-    megcoreMemcpy(compHandle, src_host, src, N,
-                megcoreMemcpyDeviceToHost);
-    megcoreMemcpy(compHandle, dst_host, dst, N,
-                megcoreMemcpyDeviceToHost);
+    megcoreMemcpy(compHandle, src_host, src, N, megcoreMemcpyDeviceToHost);
+    megcoreMemcpy(compHandle, dst_host, dst, N, megcoreMemcpyDeviceToHost);
     megcoreSynchronize(compHandle);
     for (size_t i = 0; i < N; ++i) {
         ASSERT_EQ(0x0F, src_host[i]);
         ASSERT_EQ(0xF0, dst_host[i]);
     }
-    megcoreMemcpy(compHandle, dst, src, N,
-                megcoreMemcpyDeviceToDevice);
-    megcoreMemcpy(compHandle, src_host, src, N,
-                megcoreMemcpyDeviceToHost);
-    megcoreMemcpy(compHandle, dst_host, dst, N,
-                megcoreMemcpyDeviceToHost);
+    megcoreMemcpy(compHandle, dst, src, N, megcoreMemcpyDeviceToDevice);
+    megcoreMemcpy(compHandle, src_host, src, N, megcoreMemcpyDeviceToHost);
+    megcoreMemcpy(compHandle, dst_host, dst, N, megcoreMemcpyDeviceToHost);
     megcoreSynchronize(compHandle);
     for (size_t i = 0; i < N; ++i) {
         ASSERT_EQ(dst_host[i], src_host[i]);

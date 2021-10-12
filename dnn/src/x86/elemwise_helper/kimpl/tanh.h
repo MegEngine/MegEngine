@@ -16,8 +16,7 @@
 namespace megdnn {
 namespace x86 {
 
-template <SIMDType simd_type, typename src_ctype,
-          typename dst_ctype = src_ctype>
+template <SIMDType simd_type, typename src_ctype, typename dst_ctype = src_ctype>
 struct TanhOp : UnaryOpBase<simd_type, src_ctype, dst_ctype> {
     using UnaryOpBase<simd_type, src_ctype, dst_ctype>::UnaryOpBase;
     constexpr static size_t SIMD_WIDTH = 1;

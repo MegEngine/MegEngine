@@ -45,9 +45,9 @@ HalideExecutable::TargetTraitUserData* HalideExecutable::TargetTrait::user_data(
 
 HalideExecutable::~HalideExecutable() = default;
 
-HalideExecutable::HalideExecutable(std::shared_ptr<TargetTrait> target_trait,
-                                   const InternalGraph& graph,
-                                   const JITExecutor::Args& args)
+HalideExecutable::HalideExecutable(
+        std::shared_ptr<TargetTrait> target_trait, const InternalGraph& graph,
+        const JITExecutor::Args& args)
         : m_target_trait{std::move(target_trait)} {
     ThinHashMap<VarNode*, const JITExecutor::Args::Data*> placeholders_to_inps;
     for (auto&& inp : args.inputs) {
@@ -69,8 +69,7 @@ HalideExecutable::HalideExecutable(std::shared_ptr<TargetTrait> target_trait,
                 ptr->m_layout = data->layout;
             } else {
                 ptr = mgb_var_to_halide_buffer(data->from);
-                m_value_inputs.emplace_back(static_cast<size_t>(data->idx),
-                                            ptr);
+                m_value_inputs.emplace_back(static_cast<size_t>(data->idx), ptr);
             }
         } else {
             ptr = ast_hl::make_from_opr(opr);
@@ -101,8 +100,7 @@ void HalideExecutable::execute(JITExecutor* fusion_opr) {
         std::pair<std::mutex, FunctionHandle>* func_maker;
         {
             MGB_LOCK_GUARD(m_mtx);
-            func_maker =
-                    &m_feature_set2func[m_target_trait->features(comp_node)];
+            func_maker = &m_feature_set2func[m_target_trait->features(comp_node)];
         }
 
         // compile the function
@@ -133,8 +131,7 @@ void HalideExecutable::execute(JITExecutor* fusion_opr) {
 std::vector<Halide::Argument> HalideExecutable::halide_inputs() const {
     std::vector<Argument> args;
     for (auto&& i : m_value_inputs) {
-        auto&& input_buffer =
-                i.second->cast_final_safe<ast_hl::InputDevValueOp>();
+        auto&& input_buffer = i.second->cast_final_safe<ast_hl::InputDevValueOp>();
         args.emplace_back(input_buffer.m_buffer);
     }
     return args;
@@ -157,8 +154,9 @@ HalideExecutable::FunctionHandle HalideExecutable::compile_and_load(
     return m_target_trait->compile_and_load(comp_node, target, *this);
 }
 
-void HalideExecutable::invoke(void* user_context, const FunctionHandle& handle,
-                              const VarNodeArray& inputs, VarNode* output) {
+void HalideExecutable::invoke(
+        void* user_context, const FunctionHandle& handle, const VarNodeArray& inputs,
+        VarNode* output) {
     mgb_assert(handle.execute && handle.get_device_interface);
     halide_device_interface_t* device_interface = handle.get_device_interface();
 
@@ -201,8 +199,7 @@ void HalideExecutable::invoke(void* user_context, const FunctionHandle& handle,
     mgb_assert(argv_idx == nr_inputs + 2);
     mgb_assert(image_dims_ptr <= image_dims_buf + nr_dims);
     auto err = handle.execute(argv);
-    mgb_throw_if(err, SystemError, "failed to execute halide function: err=%d",
-                 err);
+    mgb_throw_if(err, SystemError, "failed to execute halide function: err=%d", err);
 }
 
 halide_type_t HalideExecutable::dtype_mgb2halide(DType dtype) {
@@ -213,9 +210,9 @@ halide_type_t HalideExecutable::dtype_mgb2halide(DType dtype) {
     } else if (dtype == dtype::Int32()) {
         return halide_type_of<int>();
     } else {
-        mgb_throw(InternalError,
-                  "dtype(%s) is not any of [Float16, Float32, Int32]",
-                  dtype.name());
+        mgb_throw(
+                InternalError, "dtype(%s) is not any of [Float16, Float32, Int32]",
+                dtype.name());
     }
 }
 
@@ -230,9 +227,8 @@ ast_hl::AstNodePtr HalideExecutable::mgb_var_to_halide_buffer(VarNode* var) {
         halide_dim[ndim - 1 - i].stride = res->m_layout.stride[i];
     }
 
-    halide_buffer_t buf{
-            0,    nullptr,    nullptr, 0, dtype_mgb2halide(var->dtype()),
-            ndim, halide_dim, nullptr};
+    halide_buffer_t buf{0,    nullptr,    nullptr, 0, dtype_mgb2halide(var->dtype()),
+                        ndim, halide_dim, nullptr};
 
     res->m_buffer = Buffer<>{buf};
     res->init(nullptr);

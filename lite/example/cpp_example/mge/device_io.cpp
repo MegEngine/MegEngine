@@ -33,8 +33,7 @@ bool lite::example::device_input(const Args& args) {
     network_io.inputs.push_back(device_input);
 
     //! create and load the network
-    std::shared_ptr<Network> network =
-            std::make_shared<Network>(config, network_io);
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, network_io);
     network->load_model(network_path);
 
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
@@ -92,8 +91,7 @@ bool lite::example::device_input_output(const Args& args) {
     network_io.outputs.push_back(device_output);
 
     //! create and load the network
-    std::shared_ptr<Network> network =
-            std::make_shared<Network>(config, network_io);
+    std::shared_ptr<Network> network = std::make_shared<Network>(config, network_io);
     network->load_model(network_path);
 
     std::shared_ptr<Tensor> input_tensor_device = network->get_input_tensor(0);
@@ -117,8 +115,7 @@ bool lite::example::device_input_output(const Args& args) {
     network->wait();
 
     //! output is in device, should copy it to host
-    std::shared_ptr<Tensor> output_tensor_device =
-            network->get_io_tensor(output_name);
+    std::shared_ptr<Tensor> output_tensor_device = network->get_io_tensor(output_name);
 
     auto output_tensor = std::make_shared<Tensor>();
     output_tensor->copy_from(*output_tensor_device);

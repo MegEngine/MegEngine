@@ -42,8 +42,8 @@ TEST_F(X86, CONV_BIAS_FORWARD) {
     }
 }
 
-static void avx2_chanwise_direct_int8x8x32(Handle* handle, uint32_t stride,
-                                           const char* algo) {
+static void avx2_chanwise_direct_int8x8x32(
+        Handle* handle, uint32_t stride, const char* algo) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
@@ -60,12 +60,13 @@ static void avx2_chanwise_direct_int8x8x32(Handle* handle, uint32_t stride,
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel},
-                          TensorShape{1, ic, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{1, ic, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -89,23 +90,22 @@ static void avx2_chanwise_direct_int8x8x32(Handle* handle, uint32_t stride,
     checker.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
 TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE1_INT8x8x32) {
-    avx2_chanwise_direct_int8x8x32(handle(), 1,
-                                   "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1");
+    avx2_chanwise_direct_int8x8x32(
+            handle(), 1, "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE1");
 }
 
 TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE2_INT8x8x32) {
-    avx2_chanwise_direct_int8x8x32(handle(), 2,
-                                   "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE2");
+    avx2_chanwise_direct_int8x8x32(
+            handle(), 2, "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE2");
 }
 
-static void avx2_chanwise_direct_quantizeds32(Handle* handle, uint32_t stride,
-                                              const char* algo) {
+static void avx2_chanwise_direct_quantizeds32(
+        Handle* handle, uint32_t stride, const char* algo) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
@@ -122,12 +122,13 @@ static void avx2_chanwise_direct_quantizeds32(Handle* handle, uint32_t stride,
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel},
-                          TensorShape{1, ic, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{1, ic, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -151,8 +152,7 @@ static void avx2_chanwise_direct_quantizeds32(Handle* handle, uint32_t stride,
     checker.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -166,9 +166,8 @@ TEST_F(X86_MULTI_THREADS, AVX2_CHANWISE_DIRECT_STRIDE2_QuantizedS32) {
             handle(), 2, "X86_CONV_BIAS_CHANWISE_AVX2_INT8_STRIDE2");
 }
 
-static void avx2_chanwise_direct_quantizeds8x8x8(Handle* handle,
-                                                 uint32_t stride,
-                                                 const char* algo) {
+static void avx2_chanwise_direct_quantizeds8x8x8(
+        Handle* handle, uint32_t stride, const char* algo) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
@@ -185,12 +184,13 @@ static void avx2_chanwise_direct_quantizeds8x8x8(Handle* handle,
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{ic, 1, 1, kernel, kernel},
-                          TensorShape{1, ic, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{ic, 1, 1, kernel, kernel},
+                TensorShape{1, ic, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -216,8 +216,7 @@ static void avx2_chanwise_direct_quantizeds8x8x8(Handle* handle,
     checker.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(algo));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -235,8 +234,8 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_INT8x8x32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -248,14 +247,15 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_INT8x8x32) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -264,8 +264,7 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_INT8x8x32) {
                 for (size_t ic : {2, 3, 7, 10})
                     for (size_t h : {10, 11})
                         for (size_t w : {8, 10})
-                            for (NonlineMode nonline_mode :
-                                 {NonlineMode::IDENTITY})
+                            for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
                                 run(oc, ic, w, h, kernel, pad, nonline_mode);
 
     Checker<ConvBias> checker(handle());
@@ -278,20 +277,18 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_INT8x8x32) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_QuantizedS32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -303,14 +300,15 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_QuantizedS32) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -319,8 +317,7 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_QuantizedS32) {
                 for (size_t ic : {2, 3, 7, 10})
                     for (size_t h : {10, 11})
                         for (size_t w : {8, 10})
-                            for (NonlineMode nonline_mode :
-                                 {NonlineMode::IDENTITY})
+                            for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
                                 run(oc, ic, w, h, kernel, pad, nonline_mode);
 
     Checker<ConvBias> checker(handle());
@@ -333,12 +330,10 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_QuantizedS32) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -346,8 +341,8 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_S8S8S8) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -359,22 +354,23 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_S8S8S8) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{1, oc, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -398,12 +394,10 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE1_S8S8S8) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -411,8 +405,8 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_INT8x8x32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -424,14 +418,15 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_INT8x8x32) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -440,8 +435,7 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_INT8x8x32) {
                 for (size_t ic : {2, 3, 7, 10})
                     for (size_t h : {10, 11})
                         for (size_t w : {8, 10, 20})
-                            for (NonlineMode nonline_mode :
-                                 {NonlineMode::IDENTITY})
+                            for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
                                 run(oc, ic, w, h, kernel, pad, nonline_mode);
 
     Checker<ConvBias> checker(handle());
@@ -454,20 +448,18 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_INT8x8x32) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_QuantizedS32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -479,14 +471,15 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_QuantizedS32) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -495,8 +488,7 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_QuantizedS32) {
                 for (size_t ic : {2, 3, 7, 10})
                     for (size_t h : {10, 11})
                         for (size_t w : {8, 10, 19})
-                            for (NonlineMode nonline_mode :
-                                 {NonlineMode::IDENTITY})
+                            for (NonlineMode nonline_mode : {NonlineMode::IDENTITY})
                                 run(oc, ic, w, h, kernel, pad, nonline_mode);
 
     Checker<ConvBias> checker(handle());
@@ -509,12 +501,10 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_QuantizedS32) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -522,8 +512,8 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_S8S8S8) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -535,22 +525,23 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_S8S8S8) {
 
         param.sparse = param::ConvBias::Sparse::DENSE;
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
 
         param.sparse = param::ConvBias::Sparse::GROUP;
         //! no bias
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, 2 * ic, h, w},
-                          TensorShape{2, oc / 2, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, 2 * ic, h, w},
+                TensorShape{2, oc / 2, ic, kernel, kernel}, TensorShape{1, oc, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -574,12 +565,10 @@ TEST_F(X86_MULTI_THREADS, AVX2_CONV_BIAS_DIRECT_STRIDE2_S8S8S8) {
             .set_rng(1, &rng)
             .set_rng(2, &rng)
             .set_epsilon(1e-3);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -587,8 +576,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_DENSE) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -599,17 +588,19 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_DENSE) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
         //! bias
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{2, oc, (h + param.pad_h * 2 - kernel) + 1,
-                                      (w + param.pad_w * 2 - kernel) + 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        2, oc, (h + param.pad_h * 2 - kernel) + 1,
+                        (w + param.pad_w * 2 - kernel) + 1});
     };
 
     for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
@@ -631,12 +622,10 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_DENSE) {
             .set_rng(0, &rng)
             .set_rng(1, &rng)
             .set_rng(2, &rng);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -644,8 +633,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_GROUP) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t group, size_t channel, size_t w, size_t h,
-                   size_t kernel, size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t group, size_t channel, size_t w, size_t h, size_t kernel,
+                   size_t p, NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -662,17 +651,17 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_GROUP) {
                 TensorShape{group, channel / group, channel / group, kernel, kernel},
                 TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, channel, h, w},
-                          TensorShape{group, channel / group, channel / group,
-                                      kernel, kernel},
-                          TensorShape{1, channel, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, channel, h, w},
+                TensorShape{group, channel / group, channel / group, kernel, kernel},
+                TensorShape{1, channel, 1, 1});
         //! bias
         args.emplace_back(
                 param, TensorShape{2, channel, h, w},
-                TensorShape{group, channel / group, channel / group, kernel,
-                            kernel},
-                TensorShape{2, channel, (h + param.pad_h * 2 - kernel) + 1,
-                            (w + param.pad_w * 2 - kernel) + 1});
+                TensorShape{group, channel / group, channel / group, kernel, kernel},
+                TensorShape{
+                        2, channel, (h + param.pad_h * 2 - kernel) + 1,
+                        (w + param.pad_w * 2 - kernel) + 1});
     };
 
     for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
@@ -683,8 +672,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_GROUP) {
                         for (NonlineMode nonline_mode :
                              {NonlineMode::RELU, NonlineMode::SIGMOID,
                               NonlineMode::H_SWISH, NonlineMode::IDENTITY}) {
-                            run(group, channel, size, size, kernel, p,
-                                nonline_mode);
+                            run(group, channel, size, size, kernel, p, nonline_mode);
                         }
 
     Checker<ConvBias> checker(handle());
@@ -695,12 +683,10 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE1_GROUP) {
             .set_rng(0, &rng)
             .set_rng(1, &rng)
             .set_rng(2, &rng);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -708,8 +694,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_DENSE) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -720,8 +706,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_DENSE) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -743,12 +730,10 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_DENSE) {
             .set_rng(0, &rng)
             .set_rng(1, &rng)
             .set_rng(2, &rng);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -756,8 +741,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_GROUP) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t group, size_t channel, size_t w, size_t h,
-                   size_t kernel, size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t group, size_t channel, size_t w, size_t h, size_t kernel,
+                   size_t p, NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -774,17 +759,17 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_GROUP) {
                 TensorShape{group, channel / group, channel / group, kernel, kernel},
                 TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, channel, h, w},
-                          TensorShape{group, channel / group, channel / group,
-                                      kernel, kernel},
-                          TensorShape{1, channel, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, channel, h, w},
+                TensorShape{group, channel / group, channel / group, kernel, kernel},
+                TensorShape{1, channel, 1, 1});
         //! bias
         args.emplace_back(
                 param, TensorShape{2, channel, h, w},
-                TensorShape{group, channel / group, channel / group, kernel,
-                            kernel},
-                TensorShape{2, channel, (h + param.pad_h * 2 - kernel) / 2 + 1,
-                            (w + param.pad_w * 2 - kernel) / 2 + 1});
+                TensorShape{group, channel / group, channel / group, kernel, kernel},
+                TensorShape{
+                        2, channel, (h + param.pad_h * 2 - kernel) / 2 + 1,
+                        (w + param.pad_w * 2 - kernel) / 2 + 1});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -795,8 +780,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_GROUP) {
                         for (NonlineMode nonline_mode :
                              {NonlineMode::RELU, NonlineMode::SIGMOID,
                               NonlineMode::H_SWISH, NonlineMode::IDENTITY}) {
-                            run(group, channel, size, size, kernel, p,
-                                nonline_mode);
+                            run(group, channel, size, size, kernel, p, nonline_mode);
                         }
 
     Checker<ConvBias> checker(handle());
@@ -807,12 +791,10 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_DIRECT_STRIDE2_GROUP) {
             .set_rng(0, &rng)
             .set_rng(1, &rng)
             .set_rng(2, &rng);
-    checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"));
+    checker.set_before_exec_callback(conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
+            "X86_CONV_BIAS_DIRECT_STRIDE2_LARGE_GROUP"));
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -820,8 +802,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -832,15 +814,15 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, (h + 2 * p - kernel) + 1,
-                                      (h + 2 * p - kernel) + 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, (h + 2 * p - kernel) + 1, (h + 2 * p - kernel) + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -848,8 +830,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32) {
             for (size_t oc : {1, 4, 8})
                 for (size_t p : {0, 2})
                     for (size_t size : {20, 21, 24})
-                        for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY}) {
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
     //! test OC block
@@ -917,8 +898,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -929,8 +910,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -938,8 +920,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
             for (size_t oc : {1, 4, 8})
                 for (size_t p : {0, 2})
                     for (size_t size : {20, 21, 24})
-                        for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY}) {
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
     //! test OC block
@@ -1004,13 +985,12 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_INT8X8X32_FILTER_PREPROCESS) {
 #undef cb2
 }
 
-
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1021,16 +1001,17 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
         args.emplace_back(
-                param, TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
-                            (w + 2 * p - kernel) / param.stride_w + 1});
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1045,12 +1026,11 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32) {
 
     run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
     Checker<ConvBias> checker(handle());
-#define cb(algo_name)                                             \
-    checker.set_before_exec_callback(                             \
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
-    for (auto&& arg : args) {                                     \
-        checker.set_param(arg.param).execs(                       \
-                {arg.src, arg.filter, arg.bias, {}, {}});         \
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
     }
 
 #if MEGDNN_X86_WITH_MKL || MEGDNN_X86_WITH_OPENBLAS
@@ -1065,8 +1045,8 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1077,16 +1057,17 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
         args.emplace_back(
-                param, TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
-                            (w + 2 * p - kernel) / param.stride_w + 1});
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1101,12 +1082,11 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32) {
 
     run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
     Checker<ConvBias> checker(handle());
-#define cb(algo_name)                                             \
-    checker.set_before_exec_callback(                             \
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
-    for (auto&& arg : args) {                                     \
-        checker.set_param(arg.param).execs(                       \
-                {arg.src, arg.filter, arg.bias, {}, {}});         \
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
     }
 
     cb("IM2COLMATMUL:X86_F32_BLAS");
@@ -1118,8 +1098,8 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1130,16 +1110,17 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
         args.emplace_back(
-                param, TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
-                            (w + 2 * p - kernel) / param.stride_w + 1});
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1156,12 +1137,11 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle());
-#define cb(algo_name)                                             \
-    checker.set_before_exec_callback(                             \
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
-    for (auto&& arg : args) {                                     \
-        checker.set_param(arg.param).execs(                       \
-                {arg.src, arg.filter, arg.bias, {}, {}});         \
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
     }
     cb("IM2COLMATMUL:X86_F32_BLAS");
 
@@ -1170,14 +1150,13 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
 
 #endif
 
-
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1188,29 +1167,31 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
         args.emplace_back(
-                param, TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
-                            (w + 2 * p - kernel) / param.stride_w + 1});
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
         param.sparse = param::ConvBias::Sparse::GROUP;
-        args.emplace_back(param, TensorShape{1, 2 * ic, h, w},
-                          TensorShape{2, oc, ic, kernel, kernel},
-                          TensorShape{});
-        args.emplace_back(param, TensorShape{1, 2 * ic, h, w},
-                          TensorShape{2, oc, ic, kernel, kernel},
-                          TensorShape{1, oc * 2, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, 2 * ic, h, w},
+                TensorShape{2, oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, 2 * ic, h, w},
+                TensorShape{2, oc, ic, kernel, kernel}, TensorShape{1, oc * 2, 1, 1});
 
         args.emplace_back(
                 param, TensorShape{1, 2 * ic, h, w},
                 TensorShape{2, oc, ic, kernel, kernel},
-                TensorShape{1, 2 * oc, (h + 2 * param.pad_h - kernel) / 1 + 1,
-                            (w + 2 * param.pad_w - kernel) / 1 + 1});
+                TensorShape{
+                        1, 2 * oc, (h + 2 * param.pad_h - kernel) / 1 + 1,
+                        (w + 2 * param.pad_w - kernel) / 1 + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1225,12 +1206,11 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
 
     run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
     Checker<ConvBias> checker(handle());
-#define cb(algo_name)                                             \
-    checker.set_before_exec_callback(                             \
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
-    for (auto&& arg : args) {                                     \
-        checker.set_param(arg.param).execs(                       \
-                {arg.src, arg.filter, arg.bias, {}, {}});         \
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
     }
 
     cb("IM2COLMATMUL:X86_F32_MKL_PACKA:192");
@@ -1242,8 +1222,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA_FILTER_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1254,29 +1234,31 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA_FILTER_PREPROCESS) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
         args.emplace_back(
-                param, TensorShape{1, ic, h, w},
-                TensorShape{oc, ic, kernel, kernel},
-                TensorShape{1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
-                            (w + 2 * p - kernel) / param.stride_w + 1});
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
         param.sparse = param::ConvBias::Sparse::GROUP;
-        args.emplace_back(param, TensorShape{1, 2 * ic, h, w},
-                          TensorShape{2, oc, ic, kernel, kernel},
-                          TensorShape{});
-        args.emplace_back(param, TensorShape{1, 2 * ic, h, w},
-                          TensorShape{2, oc, ic, kernel, kernel},
-                          TensorShape{1, oc * 2, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, 2 * ic, h, w},
+                TensorShape{2, oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, 2 * ic, h, w},
+                TensorShape{2, oc, ic, kernel, kernel}, TensorShape{1, oc * 2, 1, 1});
 
         args.emplace_back(
                 param, TensorShape{1, 2 * ic, h, w},
                 TensorShape{2, oc, ic, kernel, kernel},
-                TensorShape{1, 2 * oc, (h + 2 * param.pad_h - kernel) / 1 + 1,
-                            (w + 2 * param.pad_w - kernel) / 1 + 1});
+                TensorShape{
+                        1, 2 * oc, (h + 2 * param.pad_h - kernel) / 1 + 1,
+                        (w + 2 * param.pad_w - kernel) / 1 + 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1292,12 +1274,11 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA_FILTER_PREPROCESS) {
     run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle());
-#define cb(algo_name)                                             \
-    checker.set_before_exec_callback(                             \
-            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name)); \
-    for (auto&& arg : args) {                                     \
-        checker.set_param(arg.param).execs(                       \
-                {arg.src, arg.filter, arg.bias, {}, {}});         \
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
     }
 
     cb("IM2COLMATMUL:X86_F32_MKL_PACKA:192");
@@ -1307,9 +1288,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA_FILTER_PREPROCESS) {
 
 /**************************** Conv1x1 PackA *************************/
 namespace {
-void checker_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
-                       RNG* rng, float epsilon, DType type0, DType type1,
-                       DType type2, DType type3, const char* algo_name) {
+void checker_conv_bias(
+        std::vector<conv_bias::TestArg> args, Handle* handle, RNG* rng, float epsilon,
+        DType type0, DType type1, DType type2, DType type3, const char* algo_name) {
     using namespace conv_bias;
 
     Checker<ConvBias> checker(handle);
@@ -1324,18 +1305,16 @@ void checker_conv_bias(std::vector<conv_bias::TestArg> args, Handle* handle,
         checker.set_rng(0, rng).set_rng(1, rng).set_rng(2, rng).set_rng(3, rng);
     }
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
-void checker_conv_bias_preprocess(std::vector<conv_bias::TestArg> args, Handle* handle,
-                       RNG* rng, float epsilon, DType type0, DType type1,
-                       DType type2, DType type3, const char* algo_name) {
+void checker_conv_bias_preprocess(
+        std::vector<conv_bias::TestArg> args, Handle* handle, RNG* rng, float epsilon,
+        DType type0, DType type1, DType type2, DType type3, const char* algo_name) {
     using namespace conv_bias;
 
-    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
-            handle);
+    Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(handle);
     checker.set_before_exec_callback(
             conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));
     checker.set_dtype(0, type0);
@@ -1347,11 +1326,9 @@ void checker_conv_bias_preprocess(std::vector<conv_bias::TestArg> args, Handle* 
         checker.set_rng(0, rng).set_rng(1, rng).set_rng(2, rng).set_rng(3, rng);
     }
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
-
 
 }  // namespace
 
@@ -1365,10 +1342,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_PACKA) {
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_PACKA_PREPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
-    checker_conv_bias_preprocess(args, handle(), nullptr, 0.001,
-                                 dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, dtype::Float32{},
-                                 "CONV1x1:X86_F32_MKL_PACKA:24");
+    checker_conv_bias_preprocess(
+            args, handle(), nullptr, 0.001, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{}, dtype::Float32{}, "CONV1x1:X86_F32_MKL_PACKA:24");
 }
 
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_BLAS) {
@@ -1380,10 +1356,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_BLAS) {
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_BLAS_NOPACK_REPROCESS) {
     using namespace conv_bias;
     std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
-    checker_conv_bias_preprocess(args, handle(), nullptr, 0.001,
-                                 dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, dtype::Float32{},
-                                 "CONV1x1:X86_F32_BLAS:24");
+    checker_conv_bias_preprocess(
+            args, handle(), nullptr, 0.001, dtype::Float32{}, dtype::Float32{},
+            dtype::Float32{}, dtype::Float32{}, "CONV1x1:X86_F32_BLAS:24");
 }
 #endif
 
@@ -1394,35 +1369,35 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32) {
     std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, true);
 #if MEGDNN_X86_WITH_MKL_DNN
     if (x86::is_supported(x86::SIMDType::VNNI)) {
-        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_MKLDNN:24");
+        checker_conv_bias(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_MKLDNN:24");
     }
 #endif
 #if MEGDNN_X86_WITH_VNNI
     if (x86::is_supported(x86::SIMDType::VNNI)) {
-        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_VNNI:24");
+        checker_conv_bias(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_VNNI:24");
     }
 #endif
     if (x86::is_supported(x86::SIMDType::AVX2)) {
-        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_AVX2_4X16X2:24");
-        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
-        checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
-                          "CONV1x1:X86_INT8X8X16_AVX2");
+        checker_conv_bias(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_AVX2_4X16X2:24");
+        checker_conv_bias(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
+        checker_conv_bias(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int16{}, dtype::Int16{}, "CONV1x1:X86_INT8X8X16_AVX2");
     }
-    checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                      dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                      "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
-    checker_conv_bias(args, handle(), &rng, epsilon, dtype::Int8{},
-                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
-                      "CONV1x1:X86_INT8X8X16_SSE");
+    checker_conv_bias(
+            args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
+            dtype::Int32{}, "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
+    checker_conv_bias(
+            args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
+            dtype::Int16{}, "CONV1x1:X86_INT8X8X16_SSE");
 }
 
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32_PREPROCESS) {
@@ -1432,28 +1407,28 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32_PREPROCESS) {
     std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, true);
 #if MEGDNN_X86_WITH_VNNI
     if (x86::is_supported(x86::SIMDType::VNNI)) {
-        checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_VNNI:24");
+        checker_conv_bias_preprocess(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_VNNI:24");
     }
 #endif
     if (x86::is_supported(x86::SIMDType::AVX2)) {
-        checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_AVX2_4X16X2:24");
-        checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                          "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
-        checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                          dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
-                          "CONV1x1:X86_INT8X8X16_AVX2");
+        checker_conv_bias_preprocess(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_AVX2_4X16X2:24");
+        checker_conv_bias_preprocess(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int32{}, dtype::Int32{}, "CONV1x1:X86_INT8X8X32_AVX2_2X4X16:24");
+        checker_conv_bias_preprocess(
+                args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{},
+                dtype::Int16{}, dtype::Int16{}, "CONV1x1:X86_INT8X8X16_AVX2");
     }
-    checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                      dtype::Int8{}, dtype::Int32{}, dtype::Int32{},
-                      "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
-    checker_conv_bias_preprocess(args, handle(), &rng, epsilon, dtype::Int8{},
-                      dtype::Int8{}, dtype::Int16{}, dtype::Int16{},
-                      "CONV1x1:X86_INT8X8X16_SSE");
+    checker_conv_bias_preprocess(
+            args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
+            dtype::Int32{}, "CONV1x1:X86_INT8X8X32_SSE_4X8X2:48");
+    checker_conv_bias_preprocess(
+            args, handle(), &rng, epsilon, dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
+            dtype::Int16{}, "CONV1x1:X86_INT8X8X16_SSE");
 }
 
 /************************* End Conv1x1 PackA ************************/
@@ -1464,8 +1439,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1476,12 +1451,13 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1533,8 +1509,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8_FILTER_PREPROCESS) {
     using namespace conv_bias;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1545,12 +1521,13 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8_FILTER_PREPROCESS) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
         //! bias channel
-        args.emplace_back(param, TensorShape{2, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel},
-                          TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{2, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
     };
 
     for (size_t kernel : {2, 3, 4, 5, 6, 7})
@@ -1614,10 +1591,10 @@ static void x86_benchmark_fp32_mkldnn(Handle* handle) {
     benchmarker_im2col.set_display(false).set_times(RUNS);
     benchmarker_im2col.set_before_exec_callback(
             AlgoChecker<ConvBias>("IM2COLMATMUL.+"));
-    auto run = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                   size_t FS, size_t SZ, size_t GROUP = 1) {
-        TensorShape src({N, IC, H, W}), filter({OC, IC, FS, FS}),
-                bias({1, OC, 1, 1}), z({}), dst({N, OC, H / SZ, W / SZ});
+    auto run = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                   size_t SZ, size_t GROUP = 1) {
+        TensorShape src({N, IC, H, W}), filter({OC, IC, FS, FS}), bias({1, OC, 1, 1}),
+                z({}), dst({N, OC, H / SZ, W / SZ});
         param.pad_h = FS / 2;
         param.pad_w = FS / 2;
         param.stride_h = SZ;
@@ -1628,12 +1605,11 @@ static void x86_benchmark_fp32_mkldnn(Handle* handle) {
             param.sparse = param::ConvBias::Sparse::GROUP;
             filter = {GROUP, OC / GROUP, IC / GROUP, FS, FS};
         }
-        auto im2col_used = benchmarker_im2col.set_param(param).exec(
-                                   {src, filter, bias, z, dst}) /
-                           RUNS;
+        auto im2col_used =
+                benchmarker_im2col.set_param(param).exec({src, filter, bias, z, dst}) /
+                RUNS;
 
-        src = IC < 8 ? TensorShape{N, IC, H, W}
-                     : TensorShape{N, IC / 8, H, W, 8};
+        src = IC < 8 ? TensorShape{N, IC, H, W} : TensorShape{N, IC / 8, H, W, 8};
 
         filter = IC < 8 ? TensorShape{OC / 8, FS, FS, IC, 8}
                         : TensorShape{OC / 8, IC / 8, FS, FS, 8, 8};
@@ -1646,14 +1622,13 @@ static void x86_benchmark_fp32_mkldnn(Handle* handle) {
         z = {};
         dst = {N, OC / 8, H / SZ, W / SZ, 8};
         param.format = param::ConvBias::Format::NCHW88;
-        auto mkldnn_used = benchmarker_mkldnn.set_param(param).exec(
-                                   {src, filter, bias, z, dst}) /
-                           RUNS;
+        auto mkldnn_used =
+                benchmarker_mkldnn.set_param(param).exec({src, filter, bias, z, dst}) /
+                RUNS;
         float computations =
                 (IC / GROUP * FS * FS + 1) * dst.total_nr_elems() * 2 * 1e-6;
-        std::cout << "run " << src.to_string() << " " << filter.to_string()
-                  << " " << bias.to_string() << " " << dst.to_string()
-                  << std::endl;
+        std::cout << "run " << src.to_string() << " " << filter.to_string() << " "
+                  << bias.to_string() << " " << dst.to_string() << std::endl;
         std::cout << "im2col: " << im2col_used << " ms, "
                   << (computations / im2col_used) << " Gops, ";
         std::cout << "mkldnn: " << mkldnn_used << " ms, "
@@ -1740,9 +1715,9 @@ std::vector<conv_bias::TestArg> get_winograd_mk_nchw88_args() {
         //! test for multi-thread OC parallel
         cur_param.sparse = param::ConvBias::Sparse::DENSE;
         cur_param.pad_h = cur_param.pad_w = 1;
-        args.emplace_back(cur_param, TensorShape{2, 1, 9, 9, 8},
-                          TensorShape{128, 1, 3, 3, 8, 8},
-                          TensorShape{1, 128, 1, 1, 8});
+        args.emplace_back(
+                cur_param, TensorShape{2, 1, 9, 9, 8}, TensorShape{128, 1, 3, 3, 8, 8},
+                TensorShape{1, 128, 1, 1, 8});
         /*cur_param.sparse = param::ConvBias::Sparse::GROUP;
         args.emplace_back(cur_param, TensorShape{2, 2, 9, 9, 8},
                           TensorShape{2, 128, 1, 3, 3, 8, 8},
@@ -1761,8 +1736,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F63) {
             ssprintf("WINOGRAD:X86_F32MK8_8X8:8:6").c_str()));
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -1776,8 +1750,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F63_WEIGHT_PREPROCESS) {
             ssprintf("WINOGRAD:X86_F32MK8_8X8:8:6").c_str()));
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -1790,8 +1763,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F23) {
             ssprintf("WINOGRAD:X86_F32MK8_8X8:8:2").c_str()));
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -1805,8 +1777,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_NCHW88_F23_WEIGHT_PREPROCESS) {
             ssprintf("WINOGRAD:X86_F32MK8_8X8:8:2").c_str()));
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -1815,9 +1786,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_WEIGHT_PREPROCESS) {
     std::vector<TestArg> args = get_winograd_mk_nchw88_args();
     Checker<ConvBiasForward> checker(handle());
 
-    auto run = [&checker](const std::vector<TestArg>& args, DType A_dtype,
-                          DType B_dtype, DType C_dtype, DType D_dtype,
-                          const float eps) {
+    auto run = [&checker](
+                       const std::vector<TestArg>& args, DType A_dtype, DType B_dtype,
+                       DType C_dtype, DType D_dtype, const float eps) {
         for (auto&& arg : args) {
             checker.set_dtype(0, A_dtype)
                     .set_dtype(1, B_dtype)
@@ -1828,22 +1799,21 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_WINOGRAD_WEIGHT_PREPROCESS) {
                     .execs({arg.src, arg.filter, arg.bias, {}, {}});
         }
     };
-    run(args, dtype::Float32(), dtype::Float32(), dtype::Float32(),
-        dtype::Float32(), 1e-3f);
+    run(args, dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32(),
+        1e-3f);
 }
 
 /*********************************** End winograd ************************/
 #if MEGDNN_X86_WITH_MKL_DNN
 static void x86_correctness_fp32_mkldnn_run(
         Checker<ConvBias>& checker, UniformIntRNG& rng, Handle* handle,
-        ConvBiasForward::BiasMode bias_mode,
-        param::ConvBias::NonlineMode noline_mode, size_t n, size_t stride,
-        size_t kernel, size_t oc, size_t ic, size_t h, size_t w, size_t group) {
+        ConvBiasForward::BiasMode bias_mode, param::ConvBias::NonlineMode noline_mode,
+        size_t n, size_t stride, size_t kernel, size_t oc, size_t ic, size_t h,
+        size_t w, size_t group) {
     auto oc_per_group = oc / group;
     auto ic_per_group = ic / group;
     bool ok_group = oc_per_group % 8 == 0 && oc_per_group > 0 &&
-                    (ic_per_group % 8 == 0 || ic_per_group == 3) &&
-                    ic_per_group > 0;
+                    (ic_per_group % 8 == 0 || ic_per_group == 3) && ic_per_group > 0;
     bool ok_depthwise = oc == ic && oc == group;
     if (!(ok_group || ok_depthwise)) {
         return;
@@ -1863,8 +1833,7 @@ static void x86_correctness_fp32_mkldnn_run(
         src_tensor_shape = TensorShape{n, ic, h, w};
     }
 
-    auto weight_tensor_shape =
-            TensorShape{oc / 8, ic / 8, kernel_h, kernel_w, 8, 8};
+    auto weight_tensor_shape = TensorShape{oc / 8, ic / 8, kernel_h, kernel_w, 8, 8};
     if (ic == 3) {
         weight_tensor_shape = TensorShape{oc / 8, kernel_h, kernel_w, ic, 8};
     }
@@ -1877,9 +1846,9 @@ static void x86_correctness_fp32_mkldnn_run(
         TensorLayout dst_layout;
         auto ConvBiasOp = handle->create_operator<ConvBias>();
         ConvBiasOp->param() = param;
-        ConvBiasOp->deduce_layout({src_tensor_shape, dtype::Float32()},
-                                  {weight_tensor_shape, dtype::Float32()}, {},
-                                  {}, dst_layout);
+        ConvBiasOp->deduce_layout(
+                {src_tensor_shape, dtype::Float32()},
+                {weight_tensor_shape, dtype::Float32()}, {}, {}, dst_layout);
         bias_tensor_shape = dst_layout;
     }
 
@@ -1887,14 +1856,13 @@ static void x86_correctness_fp32_mkldnn_run(
         param.sparse = param::ConvBias::Sparse::DENSE;
     } else if (group > 1 && ic / group == 1 && oc / group == 1) {
         param.sparse = param::ConvBias::Sparse::GROUP;
-        weight_tensor_shape =
-                TensorShape{group / 8, 1, 1, kernel_h, kernel_w, 8};
-    } else if (group > 1 && oc / group % 8 == 0 && oc / group > 0 &&
-               ic / group % 8 == 0 && ic / group > 0) {
+        weight_tensor_shape = TensorShape{group / 8, 1, 1, kernel_h, kernel_w, 8};
+    } else if (
+            group > 1 && oc / group % 8 == 0 && oc / group > 0 && ic / group % 8 == 0 &&
+            ic / group > 0) {
         param.sparse = param::ConvBias::Sparse::GROUP;
         weight_tensor_shape = TensorShape{
-                group, oc / group / 8, ic / group / 8, kernel_h, kernel_w, 8,
-                8};
+                group, oc / group / 8, ic / group / 8, kernel_h, kernel_w, 8, 8};
     }
     checker.set_dtype(0, dtype::Float32())
             .set_dtype(1, dtype::Float32())
@@ -1905,11 +1873,7 @@ static void x86_correctness_fp32_mkldnn_run(
             .set_rng(2, &rng)
             .set_epsilon(1e-3)
             .set_param(param)
-            .execs({src_tensor_shape,
-                    weight_tensor_shape,
-                    bias_tensor_shape,
-                    {},
-                    {}});
+            .execs({src_tensor_shape, weight_tensor_shape, bias_tensor_shape, {}, {}});
 }
 
 static void x86_correctness_fp32_mkldnn(Handle* handle) {
@@ -1917,15 +1881,15 @@ static void x86_correctness_fp32_mkldnn(Handle* handle) {
     UniformIntRNG rng{-127, 127};
 
     checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "MKLDNN_CONV_FP32"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("MKLDNN_CONV_FP32"));
 
     for (auto bias_mode :
          {megdnn::BiasMode::NO_BIAS, megdnn::BiasMode::BROADCAST_CHANNEL_BIAS,
           megdnn::BiasMode::BIAS})
-        for (auto noline_mode : {param::ConvBias::NonlineMode::IDENTITY,
-                                 param::ConvBias::NonlineMode::SIGMOID,
-                                 param::ConvBias::NonlineMode::H_SWISH})
+        for (auto noline_mode :
+             {param::ConvBias::NonlineMode::IDENTITY,
+              param::ConvBias::NonlineMode::SIGMOID,
+              param::ConvBias::NonlineMode::H_SWISH})
             for (size_t n : {1, 2})
                 for (size_t stride : {1, 2})
                     for (size_t kernel : {3, 5, 7})
@@ -1934,13 +1898,11 @@ static void x86_correctness_fp32_mkldnn(Handle* handle) {
                                 for (size_t h : {22, 33})
                                     for (size_t w : {22, 33}) {
                                         for (size_t group = 1;
-                                             group <= std::min(oc, ic);
-                                             ++group) {
+                                             group <= std::min(oc, ic); ++group) {
                                             x86_correctness_fp32_mkldnn_run(
-                                                    checker, rng, handle,
-                                                    bias_mode, noline_mode, n,
-                                                    stride, kernel, oc, ic, h,
-                                                    w, group);
+                                                    checker, rng, handle, bias_mode,
+                                                    noline_mode, n, stride, kernel, oc,
+                                                    ic, h, w, group);
                                         }
                                     }
 }
@@ -1956,8 +1918,8 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_MATMUL_INT8) {
     using namespace conv_bias;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -1968,8 +1930,9 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_MATMUL_INT8) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -1977,15 +1940,13 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_MATMUL_INT8) {
             for (size_t oc : {1, 2, 4})
                 for (size_t p : {0, 2})
                     for (size_t size : {20, 21, 22, 23, 24})
-                        for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY}) {
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
     Checker<ConvBias> checker(handle());
     checker.set_before_exec_callback(
-            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>(
-                    "MKLDNN_MATMUL_INT8"));
+            conv_bias::ConvBiasAlgoChecker<ConvBiasForward>("MKLDNN_MATMUL_INT8"));
     checker.set_epsilon(1);
     UniformIntRNG rng{-50, 50};
     checker.set_dtype(0, dtype::Int8())
@@ -1997,8 +1958,7 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_MATMUL_INT8) {
             .set_rng(2, &rng);
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -2006,8 +1966,8 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_INT8) {
     using namespace conv_bias;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -2018,8 +1978,9 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_INT8) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -2027,8 +1988,7 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_INT8) {
             for (size_t oc : {1, 2, 4})
                 for (size_t p : {0, 2})
                     for (size_t size : {20, 22, 24})
-                        for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY}) {
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -2046,8 +2006,7 @@ TEST_F(X86, CONV_BIAS_MKL_DNN_INT8) {
             .set_rng(2, &rng);
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 
@@ -2055,8 +2014,8 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_MKL_DNN_INT8) {
     using namespace conv_bias;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p, NonlineMode nonline_mode) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::ConvBias param;
@@ -2067,8 +2026,9 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_MKL_DNN_INT8) {
         param.nonlineMode = nonline_mode;
 
         //! no bias
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel}, TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -2076,8 +2036,7 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_MKL_DNN_INT8) {
             for (size_t oc : {1, 2, 4})
                 for (size_t p : {0, 2})
                     for (size_t size : {20, 22, 24})
-                        for (NonlineMode nonline_mode :
-                             {NonlineMode::IDENTITY}) {
+                        for (NonlineMode nonline_mode : {NonlineMode::IDENTITY}) {
                             run(oc, ic, size, size, kernel, p, nonline_mode);
                         }
 
@@ -2095,28 +2054,25 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_MKL_DNN_INT8) {
             .set_rng(2, &rng);
 
     for (auto&& arg : args) {
-        checker.set_param(arg.param).exec(
-                {arg.src, arg.filter, arg.bias, {}, {}});
+        checker.set_param(arg.param).exec({arg.src, arg.filter, arg.bias, {}, {}});
     }
 }
 #endif
 
 #if MEGDNN_WITH_BENCHMARK
 namespace {
-void benchmark_impl(const param::ConvBias param,
-                    std::vector<std::pair<SmallVector<TensorShape>, float>>&
-                            shapes_and_computation,
-                    const std::string algo_name, size_t RUNS,
-                    TaskExecutorConfig&& multi_thread_config,
-                    TaskExecutorConfig&& single_thread_config,
-                    std::vector<DType> dtype_v) {
-    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
-                                    dtype::Float32(), dtype::Float32()};
+void benchmark_impl(
+        const param::ConvBias param,
+        std::vector<std::pair<SmallVector<TensorShape>, float>>& shapes_and_computation,
+        const std::string algo_name, size_t RUNS,
+        TaskExecutorConfig&& multi_thread_config,
+        TaskExecutorConfig&& single_thread_config, std::vector<DType> dtype_v) {
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
 
     std::vector<float> multi_thread_times, single_thread_times;
     {
-        auto multi_thread_hanle =
-                create_cpu_handle(0, true, &multi_thread_config);
+        auto multi_thread_hanle = create_cpu_handle(0, true, &multi_thread_config);
         auto benchmarker = Benchmarker<ConvBias>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS)
                 .set_display(false)
@@ -2126,15 +2082,13 @@ void benchmark_impl(const param::ConvBias param,
                 .set_dtype(4, dtype_v[3])
                 .set_param(param)
                 .set_before_exec_callback(
-                        conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                                algo_name.c_str()));
+                        conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name.c_str()));
         for (auto shape : shapes_and_computation) {
             multi_thread_times.push_back(benchmarker.exec(shape.first) / RUNS);
         }
     }
     {
-        auto single_thread_handle =
-                create_cpu_handle(0, true, &single_thread_config);
+        auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
         auto benchmarker = Benchmarker<ConvBias>(single_thread_handle.get());
         benchmarker.set_times(RUNS)
                 .set_display(false)
@@ -2144,8 +2098,7 @@ void benchmark_impl(const param::ConvBias param,
                 .set_dtype(4, dtype_v[3])
                 .set_param(param)
                 .set_before_exec_callback(
-                        conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                                algo_name.c_str()));
+                        conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name.c_str()));
         for (auto shape : shapes_and_computation) {
             single_thread_times.push_back(benchmarker.exec(shape.first) / RUNS);
         }
@@ -2155,8 +2108,7 @@ void benchmark_impl(const param::ConvBias param,
     for (size_t i = 0; i < multi_thread_config.affinity_core_set.size(); i++) {
         printf("%zu ", multi_thread_config.affinity_core_set[i]);
     }
-    printf(", Single thread core_id %zu\n",
-           single_thread_config.affinity_core_set[0]);
+    printf(", Single thread core_id %zu\n", single_thread_config.affinity_core_set[0]);
     for (size_t i = 0; i < shapes_and_computation.size(); i++) {
         auto shapes = shapes_and_computation[i];
         printf("Bench case: ");
@@ -2166,8 +2118,7 @@ void benchmark_impl(const param::ConvBias param,
         float computations = shapes.second;
         printf("%zu threads gflops: %f,\n single thread gflops: "
                "%f. spead up = %f, speedup/cores=%f\n",
-               multi_thread_config.nr_thread,
-               computations / multi_thread_times[i],
+               multi_thread_config.nr_thread, computations / multi_thread_times[i],
                computations / single_thread_times[i],
                single_thread_times[i] / multi_thread_times[i],
                single_thread_times[i] / multi_thread_times[i] /
@@ -2177,18 +2128,16 @@ void benchmark_impl(const param::ConvBias param,
 
 void benchmark_impl_comp(
         const param::ConvBias param,
-        std::vector<std::pair<SmallVector<TensorShape>, float>>&
-                shapes_and_computation,
+        std::vector<std::pair<SmallVector<TensorShape>, float>>& shapes_and_computation,
         const std::string algo_name, const std::string algo_name1, size_t RUNS,
         TaskExecutorConfig&& multi_thread_config,
         TaskExecutorConfig&& single_thread_config, std::vector<DType> dtype_v) {
-    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
-                                    dtype::Float32(), dtype::Float32()};
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
 
     std::vector<float> multi_thread_times, single_thread_times;
     {
-        auto multi_thread_hanle =
-                create_cpu_handle(0, true, &multi_thread_config);
+        auto multi_thread_hanle = create_cpu_handle(0, true, &multi_thread_config);
         auto benchmarker = Benchmarker<ConvBias>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS)
                 .set_display(false)
@@ -2198,15 +2147,13 @@ void benchmark_impl_comp(
                 .set_dtype(4, dtype_v[3])
                 .set_param(param)
                 .set_before_exec_callback(
-                        conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                                algo_name.c_str()));
+                        conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name.c_str()));
         for (auto shape : shapes_and_computation) {
             multi_thread_times.push_back(benchmarker.exec(shape.first) / RUNS);
         }
     }
     {
-        auto single_thread_handle =
-                create_cpu_handle(0, true, &single_thread_config);
+        auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
         auto benchmarker = Benchmarker<ConvBias>(single_thread_handle.get());
         benchmarker.set_times(RUNS)
                 .set_display(false)
@@ -2216,8 +2163,7 @@ void benchmark_impl_comp(
                 .set_dtype(4, dtype_v[3])
                 .set_param(param)
                 .set_before_exec_callback(
-                        conv_bias::ConvBiasAlgoChecker<ConvBias>(
-                                algo_name1.c_str()));
+                        conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name1.c_str()));
         for (auto shape : shapes_and_computation) {
             single_thread_times.push_back(benchmarker.exec(shape.first) / RUNS);
         }
@@ -2244,27 +2190,24 @@ void benchmark_impl_comp(
 
 }  // namespace
 
-static void benchmark_convbias_chanwise_avx2_int8(uint32_t stride,
-                                                  const char* algo) {
+static void benchmark_convbias_chanwise_avx2_int8(uint32_t stride, const char* algo) {
     constexpr size_t RUNS = 50;
     param::ConvBias param;
     param.stride_h = stride;
     param.stride_w = stride;
     param.sparse = param::ConvBias::Sparse::GROUP;
 
-    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
-                                    dtype::Int32(), dtype::Int32()};
+    std::vector<DType> data_type = {
+            dtype::Int8(), dtype::Int8(), dtype::Int32(), dtype::Int32()};
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
     auto bench_case = [&](size_t N, size_t IC, size_t H, size_t W, size_t FS) {
         param.pad_h = FS / 2;
         param.pad_w = FS / 2;
 
-        SmallVector<TensorShape> shapes{
-                {N, IC, H, W}, {IC, 1, 1, FS, FS}, {}, {}, {}};
-        TensorShape dst{N, IC, (H + 2 * param.pad_h - FS) + 1,
-                        (W + 2 * param.pad_w - FS) + 1};
+        SmallVector<TensorShape> shapes{{N, IC, H, W}, {IC, 1, 1, FS, FS}, {}, {}, {}};
+        TensorShape dst{
+                N, IC, (H + 2 * param.pad_h - FS) + 1, (W + 2 * param.pad_w - FS) + 1};
         float computations = (FS * FS * dst.total_nr_elems() * 2) * 1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
@@ -2299,10 +2242,12 @@ static void benchmark_convbias_chanwise_avx2_int8(uint32_t stride,
 
     std::string algo_name = algo;
     printf("Benchmark %s\n", algo);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_CHANWISE_AVX2_INT8_S1) {
@@ -2322,20 +2267,18 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8) {
     param.stride_w = 1;
     param.sparse = param::ConvBias::Sparse::DENSE;
 
-    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
-                                    dtype::Int32(), dtype::Int32()};
+    std::vector<DType> data_type = {
+            dtype::Int8(), dtype::Int8(), dtype::Int32(), dtype::Int32()};
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                           size_t FS) {
         param.pad_h = FS / 2;
         param.pad_w = FS / 2;
 
-        SmallVector<TensorShape> shapes{
-                {N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
-        TensorShape dst{N, OC, (H + 2 * param.pad_h - FS) + 1,
-                        (W + 2 * param.pad_w - FS) + 1};
+        SmallVector<TensorShape> shapes{{N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
+        TensorShape dst{
+                N, OC, (H + 2 * param.pad_h - FS) + 1, (W + 2 * param.pad_w - FS) + 1};
         float computations = (IC * FS * FS * dst.total_nr_elems() * 2) * 1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
@@ -2378,12 +2321,15 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8) {
 
     std::string algo_name = "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1";
     printf("Benchmark X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE1 algo\n");
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 
@@ -2394,20 +2340,19 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_8816) {
     param.stride_w = 1;
     param.sparse = param::ConvBias::Sparse::DENSE;
 
-    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
-                                    dtype::Int16(), dtype::Int16()};
+    std::vector<DType> data_type = {
+            dtype::Int8(), dtype::Int8(), dtype::Int16(), dtype::Int16()};
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                           size_t FS) {
         param.pad_h = FS / 2;
         param.pad_w = FS / 2;
 
-        SmallVector<TensorShape> shapes{
-                {N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
-        TensorShape dst{N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
-                        (W + 2 * param.pad_w - FS) / param.stride_w + 1};
+        SmallVector<TensorShape> shapes{{N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
+        TensorShape dst{
+                N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
+                (W + 2 * param.pad_w - FS) / param.stride_w + 1};
         float computations = (IC * FS * FS * dst.total_nr_elems() * 2) * 1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
@@ -2415,33 +2360,32 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_8816) {
     bench_case(1, 48, 192, 15, 15, 1);
 
     std::string algo_name = "IM2COLMATMUL:X86_INT8X8X16_AVX2";
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 
-TEST_F(X86_BENCHMARK_MULTI_THREADS,
-       BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8_STRIDE2) {
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECT_AVX2_INT8_STRIDE2) {
     constexpr size_t RUNS = 50;
     param::ConvBias param;
     param.stride_h = 2;
     param.stride_w = 2;
     param.sparse = param::ConvBias::Sparse::DENSE;
 
-    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
-                                    dtype::Int32(), dtype::Int32()};
+    std::vector<DType> data_type = {
+            dtype::Int8(), dtype::Int8(), dtype::Int32(), dtype::Int32()};
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
     auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
                           size_t FS) {
         param.pad_h = FS / 2;
         param.pad_w = FS / 2;
 
-        SmallVector<TensorShape> shapes{
-                {N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
-        TensorShape dst{N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
-                        (W + 2 * param.pad_w - FS) / param.stride_w + 1};
+        SmallVector<TensorShape> shapes{{N, IC, H, W}, {OC, IC, FS, FS}, {}, {}, {}};
+        TensorShape dst{
+                N, OC, (H + 2 * param.pad_h - FS) / param.stride_h + 1,
+                (W + 2 * param.pad_w - FS) / param.stride_w + 1};
         float computations = (IC * FS * FS * dst.total_nr_elems() * 2) * 1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
@@ -2484,12 +2428,15 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS,
 
     std::string algo_name = "X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2";
     printf("Benchmark X86_CONV_BIAS_DIRECT_AVX2_INT8_STRIDE2 algo\n");
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 
@@ -2504,23 +2451,22 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32) {
     param.stride_w = 1;
     param.sparse = param::ConvBias::Sparse::GROUP;
 
-    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
-                                    dtype::Float32(), dtype::Float32()};
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
-    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                          size_t FS, size_t group) {
-        SmallVector<TensorShape> shapes{{N, IC, H, W},
-                                        {group, OC / group, IC / group, FS, FS},
-                                        {1, OC, 1, 1},
-                                        {},
-                                        {N, OC, H, W}};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {group, OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
         TensorShape dst{N, OC, H, W};
-        float computations =
-                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
-                 dst.total_nr_elems()) *
-                1e-6;
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
 
@@ -2535,12 +2481,15 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32) {
 
     std::string algo_name = "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP";
     printf("Benchmark X86_CONV_BIAS_DIRECT_STRIDE1_GROUP algo\n");
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 
     algo_name = "X86_CONV_BIAS_DIRECT_STRIDE1_LARGE_GROUP";
@@ -2549,12 +2498,15 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_DIRECTF32) {
     bench_case(1, 32, 32, 128, 128, 3, 1);
     bench_case(1, 32, 32, 100, 100, 3, 1);
     bench_case(1, 32, 32, 80, 80, 3, 1);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
 }
 
 TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32) {
@@ -2567,22 +2519,21 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32) {
     param.stride_h = 1;
     param.stride_w = 1;
 
-    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
-                                    dtype::Float32(), dtype::Float32()};
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
-    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                          size_t FS, size_t group) {
-        SmallVector<TensorShape> shapes{{N, IC, H, W},
-                                        {OC / group, IC / group, FS, FS},
-                                        {1, OC, 1, 1},
-                                        {},
-                                        {N, OC, H, W}};
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
         TensorShape dst{N, OC, H, W};
-        float computations =
-                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
-                 dst.total_nr_elems()) *
-                1e-6;
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
 
@@ -2618,17 +2569,19 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32) {
 
     std::string algo_name = "IM2COLMATMUL:X86_F32_BLAS:192";
     printf("Benchmark IM2COLMATMUL:X86_F32_BLAS algo\n");
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 
-TEST_F(X86_BENCHMARK_MULTI_THREADS,
-       BENCHMARK_CONVBIAS_IM2COL_F32_single_thread) {
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32_single_thread) {
     constexpr size_t RUNS = 50;
 
     param::ConvBias param;
@@ -2638,22 +2591,21 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS,
     param.stride_h = 1;
     param.stride_w = 1;
 
-    std::vector<DType> data_type = {dtype::Float32(), dtype::Float32(),
-                                    dtype::Float32(), dtype::Float32()};
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
-    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                          size_t FS, size_t group) {
-        SmallVector<TensorShape> shapes{{N, IC, H, W},
-                                        {OC / group, IC / group, FS, FS},
-                                        {1, OC, 1, 1},
-                                        {},
-                                        {N, OC, H, W}};
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
         TensorShape dst{N, OC, H, W};
-        float computations =
-                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
-                 dst.total_nr_elems()) *
-                1e-6;
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
 
@@ -2690,10 +2642,12 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS,
     std::string algo_name = "IM2COLMATMUL:X86_F32_MKL_PACKA:192";
     std::string algo_name1 = "IM2COLMATMUL:X86_F32_BLAS:192";
     printf("Benchmark IM2COLMATMUL:X86_F32_BLAS algo\n");
-    benchmark_impl_comp(param, shapes_and_computation, algo_name, algo_name1,
-                        RUNS, {1, {4}}, {1, {4}}, data_type);
-    benchmark_impl_comp(param, shapes_and_computation, algo_name, algo_name1,
-                        RUNS, {1, {7}}, {1, {7}}, data_type);
+    benchmark_impl_comp(
+            param, shapes_and_computation, algo_name, algo_name1, RUNS, {1, {4}},
+            {1, {4}}, data_type);
+    benchmark_impl_comp(
+            param, shapes_and_computation, algo_name, algo_name1, RUNS, {1, {7}},
+            {1, {7}}, data_type);
     shapes_and_computation.clear();
 }
 
@@ -2706,20 +2660,19 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_INT8X8X32) {
     param.stride_h = 1;
     param.stride_w = 1;
 
-    std::vector<std::pair<SmallVector<TensorShape>, float>>
-            shapes_and_computation;
-    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W,
-                          size_t FS, size_t group) {
-        SmallVector<TensorShape> shapes{{N, IC, H, W},
-                                        {OC / group, IC / group, FS, FS},
-                                        {1, OC, 1, 1},
-                                        {},
-                                        {N, OC, H, W}};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
         TensorShape dst{N, OC, H, W};
-        float computations =
-                ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
-                 dst.total_nr_elems()) *
-                1e-6;
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
         shapes_and_computation.push_back(std::make_pair(shapes, computations));
     };
 
@@ -2753,26 +2706,28 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_INT8X8X32) {
     bench_case(1, 512, 1024, 14, 14, 3, 1);
     bench_case(1, 1024, 1024, 14, 14, 3, 1);
 
-    std::vector<DType> data_type = {dtype::Int8(), dtype::Int8(),
-                                    dtype::Int32(), dtype::Int32()};
+    std::vector<DType> data_type = {
+            dtype::Int8(), dtype::Int8(), dtype::Int32(), dtype::Int32()};
     std::string algo_name = "IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2:192";
     // std::string algo_name = "IM2COLMATMUL:X86_INT8X8X32_AVX2_2X4X16";
     // printf("Benchmark IM2COLMATMUL:X86_INT8X8X32_AVX2_4X16X2 algo\n");
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {4}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS,
-                   {4, {4, 5, 6, 7}}, {1, {7}}, data_type);
-    benchmark_impl(param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}},
-                   {1, {4}}, data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
     shapes_and_computation.clear();
 }
 
 namespace {
-std::vector<conv_bias::TestArg> get_winograd_benchmark_args(size_t kernel,
-                                                            size_t pack_size) {
+std::vector<conv_bias::TestArg> get_winograd_benchmark_args(
+        size_t kernel, size_t pack_size) {
     std::vector<conv_bias::TestArg> args;
-    auto pack = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                    size_t p) {
+    auto pack = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (ic % pack_size != 0 || oc % pack_size != 0)
             return;
         if (w + 2 * p < kernel || h + 2 * p < kernel)
@@ -2815,8 +2770,8 @@ std::vector<conv_bias::TestArg> get_winograd_benchmark_args(size_t kernel,
     return args;
 }
 
-void benchmark_winograd(const char* algo_name, Handle* handle, size_t kernel,
-                        size_t pack_size) {
+void benchmark_winograd(
+        const char* algo_name, Handle* handle, size_t kernel, size_t pack_size) {
     auto&& args = get_winograd_benchmark_args(kernel, pack_size);
     using namespace conv_bias;
     constexpr size_t RUN = 10;
@@ -2832,31 +2787,30 @@ void benchmark_winograd(const char* algo_name, Handle* handle, size_t kernel,
         TensorLayout dst_layout;
         auto opr = handle->create_operator<ConvBias>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()},
-                           {arg.bias, dtype::Float32()}, {}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                {arg.bias, dtype::Float32()}, {}, dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 * 8.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used = benchmark.set_param(arg.param).exec(
-                            {arg.src, arg.filter, {}, {}, {}}) /
-                    RUN;
+        auto used =
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}, {}, {}}) /
+                RUN;
 
         benchmark_winograd.set_param(arg.param);
-        auto used_winograd =
-                algo_benchmark<ConvBias>(benchmark_winograd,
-                                         {arg.src, arg.filter, {}, {}, {}},
-                                         algo_name) /
-                RUN;
+        auto used_winograd = algo_benchmark<ConvBias>(
+                                     benchmark_winograd,
+                                     {arg.src, arg.filter, {}, {}, {}}, algo_name) /
+                             RUN;
 
         printf("%s %s: normal: %f ms %f Gflops winograd: %f ms %f GFlops "
                "speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used, computations / used, used_winograd,
-               computations / used_winograd, used / used_winograd);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used,
+               computations / used, used_winograd, computations / used_winograd,
+               used / used_winograd);
     }
 }
 }  // namespace

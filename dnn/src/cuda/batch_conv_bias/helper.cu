@@ -17,8 +17,8 @@ using namespace cuda;
 using namespace batch_conv_bias;
 
 namespace {
-__global__ void kern_compute_offset(int* __restrict__ offset,
-                                    const convolution::ConvParam param) {
+__global__ void kern_compute_offset(
+        int* __restrict__ offset, const convolution::ConvParam param) {
     const int tid = threadIdx.x + blockDim.x * blockIdx.x;
     const int img_pixels = param.ho * param.wo;
     const int img_pixels_ru128 = DIVUP(img_pixels, 128) * 128;
@@ -33,8 +33,7 @@ __global__ void kern_compute_offset(int* __restrict__ offset,
     const int kw = filter_idx - param.fw * kh;
     const int ih = param.sh * oh - param.ph + kh;
     const int iw = param.sw * ow - param.pw + kw;
-    if (img_idx < img_pixels && ih >= 0 && ih < param.hi && iw >= 0 &&
-        iw < param.wi) {
+    if (img_idx < img_pixels && ih >= 0 && ih < param.hi && iw >= 0 && iw < param.wi) {
         offset[tid] = ih * param.wi + iw;
     } else {
         offset[tid] = -1;

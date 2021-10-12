@@ -34,10 +34,9 @@ struct GradKey : std::enable_shared_from_this<GradKey>, NonCopyableObj {
     void attach(Tensor* tensor, pybind11::object callback);
     void backward(std::vector<TensorWrapper*>, std::vector<TensorWrapper*>);
     void cleanup();
-    bool is_blocked() const {
-        return priority < sm_min_priority;
-    }
+    bool is_blocked() const { return priority < sm_min_priority; }
     inline static bool allow_higher_order_directive = false;
+
 private:
     static int sm_min_priority;
 };
@@ -54,9 +53,9 @@ struct GradKeyWrapper {
     void set_name(pybind11::handle name);
     PyObject* get_priority();
     void set_priority(pybind11::handle priority);
-    void attach(PyObject*const* args, size_t nargs);
+    void attach(PyObject* const* args, size_t nargs);
     void backward(std::vector<TensorWrapper*>, std::vector<TensorWrapper*>);
-    PyObject* is_attached_to(PyObject*const* args, size_t nargs);
+    PyObject* is_attached_to(PyObject* const* args, size_t nargs);
 };
 
 struct BackwardContext {
@@ -69,20 +68,21 @@ struct BackwardContext {
         return TensorWrapper::make(std::move(t));
     }
 
-    auto wrap_tensor(Tensor* t) {
-        return wrap_tensor(t->shared_from_this());
-    }
+    auto wrap_tensor(Tensor* t) { return wrap_tensor(t->shared_from_this()); }
 };
 
 struct CustomBackward {
-    using BackwardFn = std::function<apply_result_t(BackwardContext&, Tensor*const*, size_t)>;
+    using BackwardFn =
+            std::function<apply_result_t(BackwardContext&, Tensor* const*, size_t)>;
     BackwardFn m_backward;
     SmallVector<bool, 8> m_input_has_grad;
-    struct OutputAttr {bool requires_grad = true, captured = true;};
+    struct OutputAttr {
+        bool requires_grad = true, captured = true;
+    };
     SmallVector<OutputAttr> m_output_attrs;
 
 public:
-    template<typename T, typename R>
+    template <typename T, typename R>
     void operator()(BackwardContext& ctx, T&& grads, R&& receiver) {
         size_t nargs = grads.size();
         Tensor* args[nargs];
@@ -97,9 +97,9 @@ public:
         }
     }
 
-    bool input_has_grad(size_t i) {return m_input_has_grad[i];}
-    bool output_requires_grad(size_t i) {return m_output_attrs[i].requires_grad;}
-    bool output_captured(size_t i) {return m_output_attrs[i].captured;}
+    bool input_has_grad(size_t i) { return m_input_has_grad[i]; }
+    bool output_requires_grad(size_t i) { return m_output_attrs[i].requires_grad; }
+    bool output_captured(size_t i) { return m_output_attrs[i].captured; }
 
     class Maker {
         bool output_size_set = false, input_has_grad_initialized = false;
@@ -114,9 +114,10 @@ public:
         }
 
     public:
-        Maker(CustomBackward& target_, ApplyContext& ctx_) : target(target_), ctx(ctx_) {}
+        Maker(CustomBackward& target_, ApplyContext& ctx_)
+                : target(target_), ctx(ctx_) {}
 
-        template<typename F>
+        template <typename F>
         Maker& backward(F&& f) {
             mgb_assert(!target.m_backward);
             target.m_backward = std::forward<F>(f);
@@ -152,10 +153,11 @@ public:
         }
     };
 
-    Maker maker(ApplyContext& ctx) {return {*this, ctx};}
+    Maker maker(ApplyContext& ctx) { return {*this, ctx}; }
 };
 
-using GradRuleFn = std::function<std::optional<apply_result_t>(ApplyContext&, CustomBackward::Maker&)>;
+using GradRuleFn = std::function<std::optional<apply_result_t>(
+        ApplyContext&, CustomBackward::Maker&)>;
 
 std::unordered_map<Typeinfo*, GradRuleFn>& grad_rule_registry();
 
@@ -165,15 +167,17 @@ inline bool input_requires_grad(const ApplyContext& ctx, size_t i) {
 
 struct GradRuleFallback : std::exception {};
 
-template<typename T>
+template <typename T>
 bool register_grad_rule(Typeinfo* typeinfo, T&& rule) {
     return grad_rule_registry().emplace(typeinfo, std::forward<T>(rule)).second;
 }
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python
 
 namespace pybind11::detail {
 
-template<> struct type_caster<mgb::imperative::python::GradKeyWrapper> : mgb::imperative::python::GradKeyWrapper::wrap_t::caster {};
+template <>
+struct type_caster<mgb::imperative::python::GradKeyWrapper>
+        : mgb::imperative::python::GradKeyWrapper::wrap_t::caster {};
 
-} // namespace pybind11::detail
+}  // namespace pybind11::detail

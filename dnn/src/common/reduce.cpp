@@ -30,13 +30,11 @@ DType get_out_dtype(const Reduce::DataType data_type, const DType inp_dtype) {
     }
     if (data_type == Reduce::DataType::QUINT_I8xO32) {
         megdnn_assert(inp_dtype.enumv() == DTypeEnum::Quantized8Asymm);
-        return dtype::QuantizedS32(
-                inp_dtype.param<dtype::Quantized8Asymm>().scale);
+        return dtype::QuantizedS32(inp_dtype.param<dtype::Quantized8Asymm>().scale);
     }
     if (data_type == Reduce::DataType::QINT_I8xO32) {
         megdnn_assert(inp_dtype.enumv() == DTypeEnum::QuantizedS8);
-        return dtype::QuantizedS32(
-                inp_dtype.param<dtype::QuantizedS8>().scale);
+        return dtype::QuantizedS32(inp_dtype.param<dtype::QuantizedS8>().scale);
     }
     megdnn_assert(data_type == Reduce::DataType::DEFAULT);
     return inp_dtype;
@@ -57,13 +55,14 @@ void ReduceForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     dst.init_contiguous_stride();
 }
 
-void ReduceForward::check_exec(const TensorLayout& src, const TensorLayout& dst,
-                               size_t workspace_in_bytes) {
+void ReduceForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(dst);
     };
-    megdnn_assert(param().data_type != Reduce::DataType::FLOAT_IO16xC32,
-                  "FLOAT_IO16xC32 is deprecated");
+    megdnn_assert(
+            param().data_type != Reduce::DataType::FLOAT_IO16xC32,
+            "FLOAT_IO16xC32 is deprecated");
     MEGDNN_MARK_USED_VAR(errmsg);
     megdnn_assert_contiguous(src);
     megdnn_assert_contiguous(dst);
@@ -78,21 +77,24 @@ void ReduceForward::check_exec(const TensorLayout& src, const TensorLayout& dst,
             megdnn_assert(dst.shape[i] == 1_z, "%s", errmsg().c_str());
         }
     }
-    megdnn_assert(src.dtype.category() == dst.dtype.category() ||
-                  param().data_type == Reduce::DataType::FLOAT_O32xC32,
-                  "the category of reduce output and input must be the same,"
-                  " or the data_type is FLOAT_O32xC32");
+    megdnn_assert(
+            src.dtype.category() == dst.dtype.category() ||
+                    param().data_type == Reduce::DataType::FLOAT_O32xC32,
+            "the category of reduce output and input must be the same,"
+            " or the data_type is FLOAT_O32xC32");
     if (param().data_type == DataType::DEFAULT) {
-        megdnn_assert(src.dtype == dst.dtype &&
-                      (src.dtype.category() == DTypeCategory::FLOAT ||
-                       src.dtype.category() == DTypeCategory::INT ||
-                       src.dtype.category() == DTypeCategory::QUANTIZED));
+        megdnn_assert(
+                src.dtype == dst.dtype &&
+                (src.dtype.category() == DTypeCategory::FLOAT ||
+                 src.dtype.category() == DTypeCategory::INT ||
+                 src.dtype.category() == DTypeCategory::QUANTIZED));
     } else if (param().data_type == DataType::QUINT_I8xO32) {
         megdnn_assert(src.dtype.enumv() == DTypeEnum::Quantized8Asymm);
     } else if (param().data_type == DataType::QINT_I8xO32) {
         megdnn_assert(src.dtype.enumv() == DTypeEnum::QuantizedS8);
-    } else if (param().data_type == DataType::FLOAT_IO16xC32 ||
-               param().data_type == DataType::FLOAT_O16xC32) {
+    } else if (
+            param().data_type == DataType::FLOAT_IO16xC32 ||
+            param().data_type == DataType::FLOAT_O16xC32) {
         megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT);
     } else {
         megdnn_assert(param().data_type == DataType::FLOAT_O32xC32);

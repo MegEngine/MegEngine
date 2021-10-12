@@ -12,20 +12,20 @@
 #define LOG_INFER_RESULT 0
 
 #include "./static_infer_impl.h"
-#include "./impl_common.h"
 #include "./cg_impl.h"
-#include "megbrain/graph/var_node.h"
-#include "megbrain/graph/operator_node.h"
-#include "megbrain/graph/helper.h"
+#include "./impl_common.h"
 #include "megbrain/graph/exc_extra_info.h"
+#include "megbrain/graph/helper.h"
+#include "megbrain/graph/operator_node.h"
+#include "megbrain/graph/var_node.h"
 #include "megbrain/utils/shared_set.h"
 
 #if LOG_INFER_RESULT
 #include "megbrain/tensor_iter.h"
 #endif
 
-#include <deque>
 #include <cstring>
+#include <deque>
 
 using namespace mgb;
 using namespace cg;
@@ -33,16 +33,15 @@ using namespace static_infer;
 
 namespace {
 
-constexpr size_t
-    INFER_VALUE_SIZE_THRESH_FOR_WARNING = 1024,
-    INFER_VALUE_CHECK_UNCHANGE_MAX_SIZE = TensorLayout::MAX_NDIM;
+constexpr size_t INFER_VALUE_SIZE_THRESH_FOR_WARNING = 1024,
+                 INFER_VALUE_CHECK_UNCHANGE_MAX_SIZE = TensorLayout::MAX_NDIM;
 
 constexpr bool is_static_infer_type(InferType::Flag t) {
     return t & (InferType::RT_STATIC | InferType::CONST);
 }
 
 #if MGB_ENABLE_EXCEPTION
-[[noreturn]] void update_rethrow_exc(VarNode *var, MegBrainError &exc) {
+[[noreturn]] void update_rethrow_exc(VarNode* var, MegBrainError& exc) {
     if (var && !exc.extra_info()) {
         OperatorNodeExcExtraInfo::record(var->owner_opr(), exc);
     }
@@ -50,86 +49,75 @@ constexpr bool is_static_infer_type(InferType::Flag t) {
 }
 #endif
 
-}
+}  // namespace
 
 /* ===================== nested class decls ===================== */
 
 MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagTraitBase, TagHandler) // {
     const bool m_is_const;
 
-    protected:
-        InferType::Flag m_infer_type = InferType::NO_DESC;
+protected:
+    InferType::Flag m_infer_type = InferType::NO_DESC;
 
-        //! added each time do_infer() is called and returns
-        //! InferResult::CHANGED
-        size_t m_inp_element_version = 0;
+    //! added each time do_infer() is called and returns
+    //! InferResult::CHANGED
+    size_t m_inp_element_version = 0;
 
-        TagTraitBase(Tag tag, bool is_const):
-            Super(tag),
-            m_is_const{is_const}
-        {}
+    TagTraitBase(Tag tag, bool is_const) : Super(tag), m_is_const{is_const} {}
 
+public:
+    using TagTraitArray = SmallVector<TagTraitBase*>;
 
-    public:
-        using TagTraitArray = SmallVector<TagTraitBase*>;
+    /*!
+     * \brief whether this tag is TagConstShapeTrait
+     *
+     * This is not the same as InferType::CONST, which also includes const
+     * value but is lazily inferred.
+     */
+    bool is_const() const { return m_is_const; }
 
-        /*!
-         * \brief whether this tag is TagConstShapeTrait
-         *
-         * This is not the same as InferType::CONST, which also includes const
-         * value but is lazily inferred.
-         */
-        bool is_const() const {
-            return m_is_const;
-        }
+    InferType::Flag infer_type() const { return m_infer_type; }
 
-        InferType::Flag infer_type() const {
-            return m_infer_type;
-        }
+    //! version of most recent infer result
+    size_t infer_result_version() const { return m_inp_element_version; }
 
-        //! version of most recent infer result
-        size_t infer_result_version() const {
-            return m_inp_element_version;
-        }
+    size_t update_infer_result_version() override {
+        infer(false, false);
+        return m_inp_element_version;
+    }
 
-        size_t update_infer_result_version() override {
-            infer(false, false);
-            return m_inp_element_version;
-        }
+    /*!
+     * \brief get inferred value for pure nodes
+     *
+     * Note: inferencing would be skipped if m_inp_element_synced is true
+     *
+     * \param recomp_mutable_srcnode whether to re-compute mutable src
+     *      nodes; if this is true, then this tag must be a mutable src
+     *      (i.e. calling infer() on an intermediate trait with
+     *       recomp_mutable_srcnode being true is not allowed).
+     * \param allow_fail whether to allow returning nullptr result
+     * \return inferred value, or nullptr if failed
+     */
+    const InpElement* infer(bool recomp_mutable_srcnode, bool allow_fail);
 
-        /*!
-         * \brief get inferred value for pure nodes
-         *
-         * Note: inferencing would be skipped if m_inp_element_synced is true
-         *
-         * \param recomp_mutable_srcnode whether to re-compute mutable src
-         *      nodes; if this is true, then this tag must be a mutable src
-         *      (i.e. calling infer() on an intermediate trait with
-         *       recomp_mutable_srcnode being true is not allowed).
-         * \param allow_fail whether to allow returning nullptr result
-         * \return inferred value, or nullptr if failed
-         */
-        const InpElement* infer(bool recomp_mutable_srcnode, bool allow_fail);
+    /*!
+     * \brief core implementation for infer(), without handling exceptions
+     *
+     * If infer result changes, all traits that depend on this one would be
+     * marked as out-of-sync.
+     *
+     * \param[out] cur_active_var current variable, used for backtracing
+     */
+    virtual const InpElement* infer_withoutexc(
+            VarNode** cur_active_var, bool recomp_mutable_srcnode) = 0;
 
-        /*!
-         * \brief core implementation for infer(), without handling exceptions
-         *
-         * If infer result changes, all traits that depend on this one would be
-         * marked as out-of-sync.
-         *
-         * \param[out] cur_active_var current variable, used for backtracing
-         */
-        virtual const InpElement* infer_withoutexc(VarNode **cur_active_var,
-                bool recomp_mutable_srcnode) = 0;
+    virtual const TagTraitArray& deps() const = 0;
 
-        virtual const TagTraitArray& deps() const = 0;
+    //! convert to TagTraitMutableBase; return nullptr on failure
+    inline TagTraitMutableBase* as_mutable();
 
-
-        //! convert to TagTraitMutableBase; return nullptr on failure
-        inline TagTraitMutableBase* as_mutable();
-
-        //! assert this is mutable and convert to TagTraitMutableBase
-        inline TagTraitMutableBase* as_mutable_safe();
+    //! assert this is mutable and convert to TagTraitMutableBase
+    inline TagTraitMutableBase* as_mutable_safe();
 };
 
 /*!
@@ -137,8 +125,8 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagTraitBase, TagHandler) // {
  *
  * This is used to reduce memory usage and shorten the inference chain.
  */
-MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagConstShapeTrait final,
-            TagTraitBase) //  {
+MGB_DEFINE_CLS_WITH_SUPER(
+        StaticInferManagerImpl::TagConstShapeTrait final, TagTraitBase) // {
     struct InferResultCache {
         Spinlock mtx;
 #if __DEPLOY_ON_XP_SP2__
@@ -149,211 +137,185 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagConstShapeTrait final,
     };
     static TagTraitArray sm_empty_deps;
     static InferResultCache sm_result_cache;
-    public:
-        TagConstShapeTrait(Tag tag):
-            Super(tag, true)
+
+public:
+    TagConstShapeTrait(Tag tag) : Super(tag, true) {
+        m_infer_type = InferType::CONST;
+        m_inp_element_version = 1;
+    }
+
+    TagHandlerType handler_type() const override { return TagHandlerType::SHAPE; }
+
+    void sync_from_var() override {
+        mgb_throw(InternalError, "sync_from_var() called on const shape");
+    }
+
+    const InpElement* infer_withoutexc(
+            VarNode** cur_active_var, bool recomp_mutable_srcnode) override {
+        InpElement* ret;
         {
-            m_infer_type = InferType::CONST;
-            m_inp_element_version = 1;
-        }
-
-        TagHandlerType handler_type() const override {
-            return TagHandlerType::SHAPE;
-        }
-
-        void sync_from_var() override {
-            mgb_throw(InternalError, "sync_from_var() called on const shape");
-        }
-
-        const InpElement* infer_withoutexc(VarNode **cur_active_var,
-                bool recomp_mutable_srcnode) override {
-            InpElement *ret;
-            {
-                // thread_local not supported on ios; so we us a manual impl
-                MGB_LOCK_GUARD(sm_result_cache.mtx);
+            // thread_local not supported on ios; so we us a manual impl
+            MGB_LOCK_GUARD(sm_result_cache.mtx);
 #if __DEPLOY_ON_XP_SP2__
-                ret = &sm_result_cache.storage[0];
+            ret = &sm_result_cache.storage[0];
 #else
-                ret = &sm_result_cache.storage[std::this_thread::get_id()];
+            ret = &sm_result_cache.storage[std::this_thread::get_id()];
 #endif
-            }
-            ret->m_shape = &tag()->shape();
-            return ret;
         }
+        ret->m_shape = &tag()->shape();
+        return ret;
+    }
 
-        TagTraitArray& deps() const override {
-            return sm_empty_deps;
-        }
+    TagTraitArray& deps() const override { return sm_empty_deps; }
 };
 StaticInferManagerImpl::TagConstShapeTrait::TagTraitArray
-StaticInferManagerImpl::TagConstShapeTrait::sm_empty_deps;
+        StaticInferManagerImpl::TagConstShapeTrait::sm_empty_deps;
 StaticInferManagerImpl::TagConstShapeTrait::InferResultCache
-StaticInferManagerImpl::TagConstShapeTrait::sm_result_cache;
+        StaticInferManagerImpl::TagConstShapeTrait::sm_result_cache;
 
 //! non-const tag trait that requires inference
-MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagTraitMutableBase,
-            TagTraitBase) //  {
+MGB_DEFINE_CLS_WITH_SUPER(
+        StaticInferManagerImpl::TagTraitMutableBase, TagTraitBase) // {
+public:
+    TagTraitMutableBase(Tag tag) : Super(tag, false) {}
 
-    public:
-        TagTraitMutableBase(Tag tag):
-            Super(tag, false)
-        {
+    /*!
+     * \brief tags on which this tag depends (i.e. required to infer this
+     *      tag)
+     */
+    const TagTraitArray& deps() const final { return m_deps; }
+
+    /*!
+     * \brief sync shape/value from corresponding var, used for
+     *      dependents without shape_desc
+     */
+    void sync_from_var() override;
+
+    const SharedSet<TagHandler*, TagHandlerSet>& missing_inp() {
+        if (!m_initialized && !m_missing_input) {
+            mgb_assert(m_infer_type == InferType::NO_DESC);
+            m_missing_input.insert(this);
         }
+        return m_missing_input;
+    }
 
-        /*!
-         * \brief tags on which this tag depends (i.e. required to infer this
-         *      tag)
-         */
-        const TagTraitArray& deps() const final {
-            return m_deps;
-        }
+    /*!
+     * \brief add an extra receiver to this trait; so when this trait
+     *      changes, *ptr* would be marked out of sync
+     */
+    void add_extra_receiver(TagTraitMutableBase* ptr) {
+        auto rst = m_receivers.insert(ptr);
+        mgb_assert(rst.second);
+    }
 
-        /*!
-         * \brief sync shape/value from corresponding var, used for
-         *      dependents without shape_desc
-         */
-        void sync_from_var() override;
+    /*!
+     * \brief add an extra dependency
+     *
+     * Extra deps can only exist due to implicitly computed value through
+     * sub graph, and only should be added by SubgraphStaticInferHelperImpl
+     */
+    void add_extra_dep(TagTraitBase* t) {
+        mgb_assert(tag()->owner_graph() == t->tag()->owner_graph());
+        m_deps.push_back(t);
+    }
 
-        const SharedSet<TagHandler*, TagHandlerSet>& missing_inp() {
-            if (!m_initialized && !m_missing_input) {
-                mgb_assert(m_infer_type == InferType::NO_DESC);
-                m_missing_input.insert(this);
-            }
-            return m_missing_input;
-        }
+    void remove_extra_receiver(TagTraitMutableBase* ptr) {
+        auto cnt = m_receivers.erase(ptr);
+        mgb_assert(cnt == 1);
+    }
 
-        /*!
-         * \brief add an extra receiver to this trait; so when this trait
-         *      changes, *ptr* would be marked out of sync
-         */
-        void add_extra_receiver(TagTraitMutableBase *ptr) {
-            auto rst = m_receivers.insert(ptr);
-            mgb_assert(rst.second);
-        }
+    //! whether previous inference succeeds
+    bool prev_infer_succeed() const { return m_infer_withoutexc_ret; }
 
-        /*!
-         * \brief add an extra dependency
-         *
-         * Extra deps can only exist due to implicitly computed value through
-         * sub graph, and only should be added by SubgraphStaticInferHelperImpl
-        */
-        void add_extra_dep(TagTraitBase *t) {
-            mgb_assert(tag()->owner_graph() == t->tag()->owner_graph());
-            m_deps.push_back(t);
-        }
+    //! original deps given in the InferDesc by the caller
+    virtual const DepVal& raw_deps() = 0;
 
+protected:
+    //! current infer result, to be used by dependents
+    InpElement m_inp_element;
 
-        void remove_extra_receiver(TagTraitMutableBase *ptr) {
-            auto cnt = m_receivers.erase(ptr);
-            mgb_assert(cnt == 1);
-        }
+    enum class InferResult { UNCHANGED, CHANGED, FAILED };
 
-        //! whether previous inference succeeds
-        bool prev_infer_succeed() const {
-            return m_infer_withoutexc_ret;
-        }
+    /*!
+     * \brief infer the shape or value and update m_inp_element
+     * \return whether its shape or value is actually updated
+     */
+    virtual InferResult do_infer(const InpVal& inp) = 0;
 
-        //! original deps given in the InferDesc by the caller
-        virtual const DepVal& raw_deps() = 0;
+    /*!
+     * \brief set the shape or value from corresponding VarNode
+     * \return whether its shape or value is actually updated
+     */
+    virtual InferResult do_sync_from_var() = 0;
 
-    protected:
-        //! current infer result, to be used by dependents
-        InpElement m_inp_element;
+    /*!
+     * \brief initialize deps and infer_type
+     */
+    void init(SourceType src_type, StaticInferManagerImpl* mgr);
 
-        enum class InferResult {
-            UNCHANGED, CHANGED, FAILED
-        };
+    bool is_mutable_src() const {
+        return m_deps.empty() && m_infer_type == InferType::RT_STATIC;
+    }
 
-        /*!
-         * \brief infer the shape or value and update m_inp_element
-         * \return whether its shape or value is actually updated
-         */
-        virtual InferResult do_infer(const InpVal &inp) = 0;
+    /*!
+     * \brief whether init() has been called (i.e. whether infer desc is
+     *      set)
+     */
+    bool initialized() const { return m_initialized; }
 
-        /*!
-         * \brief set the shape or value from corresponding VarNode
-         * \return whether its shape or value is actually updated
-         */
-        virtual InferResult do_sync_from_var() = 0;
+private:
+    bool m_initialized = false;
 
-        /*!
-         * \brief initialize deps and infer_type
-         */
-        void init(SourceType src_type, StaticInferManagerImpl *mgr);
+    //! whether current m_inp_element reflects newest input value
+    bool m_inp_element_synced = false;
 
-        bool is_mutable_src() const {
-            return m_deps.empty() && m_infer_type == InferType::RT_STATIC;
-        }
+    InpElement* m_infer_withoutexc_ret = nullptr;
 
-        /*!
-         * \brief whether init() has been called (i.e. whether infer desc is
-         *      set)
-         */
-        bool initialized() const {
-            return m_initialized;
-        }
+    //! record previous run_id to skip calling infer() if input is the same
+    size_t m_prev_inp_run_id = 0;
 
-    private:
-        bool m_initialized = false;
+    TagTraitArray m_deps;
 
-        //! whether current m_inp_element reflects newest input value
-        bool m_inp_element_synced = false;
+    ThinHashSet<TagTraitMutableBase*> m_receivers;
 
-        InpElement* m_infer_withoutexc_ret = nullptr;
+    //! all missing inputs
+    SharedSet<TagHandler*, TagHandlerSet> m_missing_input;
 
-        //! record previous run_id to skip calling infer() if input is the same
-        size_t m_prev_inp_run_id = 0;
+    //! recursively set m_inp_element_synced of this and all receivers to
+    //! false
+    void reset_inp_element_synced();
 
-        TagTraitArray m_deps;
-
-        ThinHashSet<TagTraitMutableBase*> m_receivers;
-
-        //! all missing inputs
-        SharedSet<TagHandler*, TagHandlerSet> m_missing_input;
-
-        //! recursively set m_inp_element_synced of this and all receivers to
-        //! false
-        void reset_inp_element_synced();
-
-        const InpElement* infer_withoutexc(VarNode **cur_active_var,
-                bool recomp_mutable_srcnode) override final;
+    const InpElement* infer_withoutexc(
+            VarNode** cur_active_var, bool recomp_mutable_srcnode) override final;
 };
 
 //! mutable shape inference
-MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagShapeTrait final,
-        TagTraitMutableBase) // {
-
+MGB_DEFINE_CLS_WITH_SUPER(
+        StaticInferManagerImpl::TagShapeTrait final, TagTraitMutableBase) // {
     TensorShape m_shape;
     ShapeInferDesc m_desc;
 
-    const DepVal& raw_deps() override {
-        return m_desc.deps;
+    const DepVal& raw_deps() override { return m_desc.deps; }
+
+    TagHandlerType handler_type() const override { return TagHandlerType::SHAPE; }
+
+    InferResult set_shape(const TensorShape& shp);
+    InferResult do_infer(const InpVal& inp) override;
+
+    InferResult do_sync_from_var() override { return set_shape(tag()->shape()); }
+
+public:
+    using Super::Super;
+
+    void init(const ShapeInferDesc& desc, StaticInferManagerImpl* mgr) {
+        m_desc = desc;
+        Super::init(desc.src_type, mgr);
     }
-
-    TagHandlerType handler_type() const override {
-        return TagHandlerType::SHAPE;
-    }
-
-    InferResult set_shape(const TensorShape &shp);
-    InferResult do_infer(const InpVal &inp) override;
-
-    InferResult do_sync_from_var() override {
-        return set_shape(tag()->shape());
-    }
-
-    public:
-        using Super::Super;
-
-        void init(const ShapeInferDesc &desc, StaticInferManagerImpl *mgr) {
-            m_desc = desc;
-            Super::init(desc.src_type, mgr);
-        }
 };
 
 //! mutable value inference
-MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagValueTrait final,
-        TagTraitMutableBase) // {
-
+MGB_DEFINE_CLS_WITH_SUPER(
+        StaticInferManagerImpl::TagValueTrait final, TagTraitMutableBase) // {
     bool m_log_printed = false;
 
     //!< used for detection src value change
@@ -363,20 +325,16 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagValueTrait final,
     DeviceTensorND m_cur_value;
     ValueInferDesc m_desc;
 
-    const DepVal& raw_deps() override {
-        return m_desc.deps;
-    }
+    const DepVal& raw_deps() override { return m_desc.deps; }
 
-    TagHandlerType handler_type() const override {
-        return TagHandlerType::VALUE;
-    }
+    TagHandlerType handler_type() const override { return TagHandlerType::VALUE; }
 
     /*!
      * \brief called after finishing writing to get_writable_value()
      */
     InferResult update_value();
 
-    InferResult do_infer(const InpVal &inp) override;
+    InferResult do_infer(const InpVal& inp) override;
 
     InferResult do_sync_from_var() override {
         // strictly speaking the sync should be implemented by CompNode::Event,
@@ -386,16 +344,14 @@ MGB_DEFINE_CLS_WITH_SUPER(StaticInferManagerImpl::TagValueTrait final,
         return update_value();
     }
 
-    public:
-        TagValueTrait(Tag tag):
-            Super{tag},
-            m_cur_value{CompNode::default_cpu(), tag->dtype()}
-        {}
+public:
+    TagValueTrait(Tag tag)
+            : Super{tag}, m_cur_value{CompNode::default_cpu(), tag->dtype()} {}
 
-        void init(const ValueInferDesc &desc, StaticInferManagerImpl *mgr) {
-            m_desc = desc;
-            Super::init(desc.src_type, mgr);
-        }
+    void init(const ValueInferDesc& desc, StaticInferManagerImpl* mgr) {
+        m_desc = desc;
+        Super::init(desc.src_type, mgr);
+    }
 };
 
 struct StaticInferManagerImpl::TagTraitContainer {
@@ -424,13 +380,13 @@ const DeviceTensorND& InpElement::value() const {
 
 /* ===================== TagTraitBase ===================== */
 
-StaticInferManagerImpl::TagTraitMutableBase*
-StaticInferManagerImpl::TagTraitBase::as_mutable() {
+StaticInferManagerImpl::TagTraitMutableBase* StaticInferManagerImpl::TagTraitBase::
+        as_mutable() {
     return is_const() ? nullptr : static_cast<TagTraitMutableBase*>(this);
 }
 
-StaticInferManagerImpl::TagTraitMutableBase*
-StaticInferManagerImpl::TagTraitBase::as_mutable_safe() {
+StaticInferManagerImpl::TagTraitMutableBase* StaticInferManagerImpl::TagTraitBase::
+        as_mutable_safe() {
     mgb_assert(!is_const());
     return static_cast<TagTraitMutableBase*>(this);
 }
@@ -460,11 +416,12 @@ const InpElement* StaticInferManagerImpl::TagTraitBase::infer(
                 }
                 mgb_assert(found);
             }
-            mgb_throw(GraphError,
-                      "failed to perform static inference for var%s\n"
-                      "NOTE: this is caused by var%s",
-                      cg::dump_var_info({tag()}).c_str(),
-                      cg::dump_var_info({cur_var}).c_str());
+            mgb_throw(
+                    GraphError,
+                    "failed to perform static inference for var%s\n"
+                    "NOTE: this is caused by var%s",
+                    cg::dump_var_info({tag()}).c_str(),
+                    cg::dump_var_info({cur_var}).c_str());
         }
         return ret;
     }
@@ -550,7 +507,7 @@ void StaticInferManagerImpl::TagTraitDepIter::push_stack(TagTraitBase* trait) {
 /* ===================== TagTraitMutableBase ===================== */
 
 void StaticInferManagerImpl::TagTraitMutableBase::init(
-        SourceType src_type, StaticInferManagerImpl *mgr) {
+        SourceType src_type, StaticInferManagerImpl* mgr) {
     mgb_assert(!m_initialized, "can not overwrite infer desc");
     m_initialized = true;
 
@@ -566,10 +523,9 @@ void StaticInferManagerImpl::TagTraitMutableBase::init(
         return;
     }
 
-    mgb_assert(src_type == SourceType::DEP &&
-            !raw_deps().empty());
+    mgb_assert(src_type == SourceType::DEP && !raw_deps().empty());
 
-    for (auto &&i: raw_deps()) {
+    for (auto&& i : raw_deps()) {
         auto dst0 = mgr->get_tag_trait_for_dep(i);
 
         m_deps.push_back(dst0);
@@ -605,8 +561,7 @@ const InpElement* StaticInferManagerImpl::TagTraitMutableBase::infer_withoutexc(
     InpVal inp_val;
 
     auto infer_single_core =
-            [&inp_val,
-             cur_active_var](TagTraitMutableBase* trait) -> InpElement* {
+            [&inp_val, cur_active_var](TagTraitMutableBase* trait) -> InpElement* {
         inp_val.run_id = 0;
         inp_val.val.clear();
 
@@ -627,8 +582,7 @@ const InpElement* StaticInferManagerImpl::TagTraitMutableBase::infer_withoutexc(
             inp_val.run_id += dep->infer_result_version();
         }
 
-        if (!trait->deps().empty() &&
-            inp_val.run_id == trait->m_prev_inp_run_id) {
+        if (!trait->deps().empty() && inp_val.run_id == trait->m_prev_inp_run_id) {
             // inputs unchanged, and middle nodes are required to be pure
             return &trait->m_inp_element;
         }
@@ -680,7 +634,7 @@ void StaticInferManagerImpl::TagTraitMutableBase::sync_from_var() {
     auto rst = do_sync_from_var();
     mgb_assert(rst != InferResult::FAILED);
     if (rst == InferResult::CHANGED) {
-        ++ m_inp_element_version;
+        ++m_inp_element_version;
         reset_inp_element_synced();
     }
 }
@@ -694,7 +648,7 @@ void StaticInferManagerImpl::TagTraitMutableBase::reset_inp_element_synced() {
     while (!stack.empty()) {
         auto top = stack.back();
         stack.pop_back();
-        for (auto i: top->m_receivers) {
+        for (auto i : top->m_receivers) {
             if (i->m_inp_element_synced) {
                 i->m_inp_element_synced = false;
                 stack.push_back(i);
@@ -705,26 +659,27 @@ void StaticInferManagerImpl::TagTraitMutableBase::reset_inp_element_synced() {
 
 /* ===================== TagShapeTrait ===================== */
 
-StaticInferManagerImpl::TagShapeTrait::InferResult
-StaticInferManagerImpl::TagShapeTrait::set_shape(const TensorShape &shp) {
-    mgb_assert(shp.ndim ||
-            tag()->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE));
+StaticInferManagerImpl::TagShapeTrait::InferResult StaticInferManagerImpl::
+        TagShapeTrait::set_shape(const TensorShape& shp) {
+    mgb_assert(shp.ndim || tag()->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE));
     m_inp_element.m_shape = &m_shape;
     if (shp.eq_shape(m_shape))
         return InferResult::UNCHANGED;
 #if LOG_INFER_RESULT
-    mgb_log_debug("shape changed: %s: %s",
-            cg::dump_var_info({tag()}).c_str(), shp.to_string().c_str());
+    mgb_log_debug(
+            "shape changed: %s: %s", cg::dump_var_info({tag()}).c_str(),
+            shp.to_string().c_str());
 #endif
     m_shape = shp;
     return InferResult::CHANGED;
 }
 
-StaticInferManagerImpl::TagShapeTrait::InferResult
-StaticInferManagerImpl::TagShapeTrait::do_infer(const InpVal &inp) {
+StaticInferManagerImpl::TagShapeTrait::InferResult StaticInferManagerImpl::
+        TagShapeTrait::do_infer(const InpVal& inp) {
     if (!initialized()) {
         if (!m_shape.ndim) {
-            mgb_log_debug("uninitialized shape during static infer: var=%s",
+            mgb_log_debug(
+                    "uninitialized shape during static infer: var=%s",
                     cg::dump_var_info({tag()}).c_str());
             return InferResult::FAILED;
         }
@@ -741,35 +696,33 @@ StaticInferManagerImpl::TagShapeTrait::do_infer(const InpVal &inp) {
 
 /* ===================== TagValueTrait ===================== */
 
-StaticInferManagerImpl::TagValueTrait::InferResult
-StaticInferManagerImpl::TagValueTrait::update_value() {
+StaticInferManagerImpl::TagValueTrait::InferResult StaticInferManagerImpl::
+        TagValueTrait::update_value() {
     m_inp_element.m_value = &m_cur_value;
-    mgb_assert(m_cur_value.comp_node() == CompNode::default_cpu() &&
+    mgb_assert(
+            m_cur_value.comp_node() == CompNode::default_cpu() &&
             m_cur_value.layout().ndim && m_cur_value.dtype() == tag()->dtype());
 
     auto span = m_cur_value.layout().span();
-    if (span.dist_elem() >= INFER_VALUE_SIZE_THRESH_FOR_WARNING &&
-            !m_log_printed) {
+    if (span.dist_elem() >= INFER_VALUE_SIZE_THRESH_FOR_WARNING && !m_log_printed) {
         mgb_log_debug(
                 "compute static_infer_value() for %s: "
                 "span dist too large (%zu)",
-                cg::dump_var_info({tag()}).c_str(),
-                span.dist_byte());
+                cg::dump_var_info({tag()}).c_str(), span.dist_byte());
         m_log_printed = true;
     }
 
     // check value change for src nodes and small mid nodes
-    if (deps().empty() || m_cur_value.shape().total_nr_elems() <=
-            INFER_VALUE_CHECK_UNCHANGE_MAX_SIZE) {
+    if (deps().empty() ||
+        m_cur_value.shape().total_nr_elems() <= INFER_VALUE_CHECK_UNCHANGE_MAX_SIZE) {
         if (!m_cur_value.layout().is_contiguous_allow_brdcst()) {
             DeviceTensorND tmp;
             tmp.copy_from(m_cur_value);
             std::swap(m_cur_value, tmp);
         }
-        auto &&cur_storage = m_cur_value.storage();
+        auto&& cur_storage = m_cur_value.storage();
         auto sz = m_cur_value.layout().span().dist_byte();
-        if (m_prev_layout.ndim &&
-                m_prev_layout.eq_layout(m_cur_value.layout())) {
+        if (m_prev_layout.ndim && m_prev_layout.eq_layout(m_cur_value.layout())) {
             mgb_assert(sz <= m_prev_value.size());
             if (!memcmp(cur_storage.ptr(), m_prev_value.ptr(), sz))
                 return InferResult::UNCHANGED;
@@ -782,23 +735,24 @@ StaticInferManagerImpl::TagValueTrait::update_value() {
     }
 
 #if LOG_INFER_RESULT
-    auto &&val = m_cur_value;
+    auto&& val = m_cur_value;
     auto vstr = ssprintf("shape=%s value={", val.shape().to_string().c_str());
-    for (float v: tensor_iter_valonly(val))
+    for (float v : tensor_iter_valonly(val))
         vstr.append(ssprintf("%.3g, ", v));
     vstr.pop_back();
     vstr.back() = '}';
-    mgb_log_debug("value changed: %s: %s",
-            cg::dump_var_info({tag()}).c_str(), vstr.c_str());
+    mgb_log_debug(
+            "value changed: %s: %s", cg::dump_var_info({tag()}).c_str(), vstr.c_str());
 #endif
     return InferResult::CHANGED;
 }
 
-StaticInferManagerImpl::TagValueTrait::InferResult
-StaticInferManagerImpl::TagValueTrait::do_infer(const InpVal &inp) {
+StaticInferManagerImpl::TagValueTrait::InferResult StaticInferManagerImpl::
+        TagValueTrait::do_infer(const InpVal& inp) {
     if (!initialized()) {
         if (m_cur_value.empty()) {
-            mgb_log_debug("uninitialized value during static infer: var=%s",
+            mgb_log_debug(
+                    "uninitialized value during static infer: var=%s",
                     cg::dump_var_info({tag()}).c_str());
             return InferResult::FAILED;
         }
@@ -806,8 +760,8 @@ StaticInferManagerImpl::TagValueTrait::do_infer(const InpVal &inp) {
     }
     bool succ = m_desc.infer_func(m_cur_value, inp);
     if (!succ) {
-        mgb_assert(is_mutable_src(),
-                "infer failed for non-mutable src tag: var: %s",
+        mgb_assert(
+                is_mutable_src(), "infer failed for non-mutable src tag: var: %s",
                 cg::dump_var_info({tag()}).c_str());
         return InferResult::FAILED;
     }
@@ -819,25 +773,22 @@ StaticInferManagerImpl::TagValueTrait::do_infer(const InpVal &inp) {
 StaticInferManagerImpl::~StaticInferManagerImpl() noexcept {
     m_mem_pool_shape_trait.disable_freelist();
     m_mem_pool_value_trait.disable_freelist();
-    for (auto &&i: m_dtor_callbacks)
+    for (auto&& i : m_dtor_callbacks)
         i.second();
-    for (auto &&i: ComputingGraphImpl::downcast(
-                m_owner_graph)->all_oprs()) {
-        for (auto j: i->output()) {
+    for (auto&& i : ComputingGraphImpl::downcast(m_owner_graph)->all_oprs()) {
+        for (auto j : i->output()) {
             clear_tag_handler(j);
         }
     }
 }
 
 void StaticInferManagerImpl::clear_tag_handler(Tag tag) {
-    auto &&container = get_tag_trait_container(tag);
+    auto&& container = get_tag_trait_container(tag);
     if (auto s = container.shape) {
         if (s->is_const()) {
-            m_mem_pool_const_shape_trait.free(
-                    static_cast<TagConstShapeTrait*>(s));
+            m_mem_pool_const_shape_trait.free(static_cast<TagConstShapeTrait*>(s));
         } else {
-            m_mem_pool_shape_trait.free(
-                    static_cast<TagShapeTrait*>(s));
+            m_mem_pool_shape_trait.free(static_cast<TagShapeTrait*>(s));
         }
         container.shape = nullptr;
     }
@@ -847,29 +798,29 @@ void StaticInferManagerImpl::clear_tag_handler(Tag tag) {
     }
 }
 
-StaticInferManagerImpl::TagTraitContainer&
-StaticInferManagerImpl::get_tag_trait_container(Tag tag) {
+StaticInferManagerImpl::TagTraitContainer& StaticInferManagerImpl::
+        get_tag_trait_container(Tag tag) {
     static_assert(
             sizeof(tag->m_static_infer_trait) == sizeof(TagTraitContainer) &&
-            alignof(std::remove_reference<decltype(
-                    tag->m_static_infer_trait)>::type) ==
-            alignof(TagTraitContainer),
+                    alignof(std::remove_reference<
+                            decltype(tag->m_static_infer_trait)>::type) ==
+                            alignof(TagTraitContainer),
             "bad size");
     return *aliased_ptr<TagTraitContainer>(&tag->m_static_infer_trait);
 }
 
 void StaticInferManagerImpl::register_shape_infer(
-        Tag dest, const ShapeInferDesc &desc) {
+        Tag dest, const ShapeInferDesc& desc) {
     mgb_assert(dest->owner_opr() == m_register_allowed_opr);
-    for (auto &&i: desc.deps)
+    for (auto&& i : desc.deps)
         mgb_assert(dest->owner_graph() == i.dest->owner_graph());
 
-    auto &&t = get_tag_trait_container(dest);
+    auto&& t = get_tag_trait_container(dest);
     mgb_assert(!t.shape, "shape desc already inserted");
     auto ptr = m_mem_pool_shape_trait.alloc_unique(dest);
     ptr->init(desc, this);
     if (ptr->infer_type() == InferType::CONST &&
-            !dest->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
+        !dest->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
         // infer const shapes immediately
         auto r = ptr->infer(false, false);
         mgb_assert(r && r->m_shape);
@@ -882,12 +833,12 @@ void StaticInferManagerImpl::register_shape_infer(
 }
 
 void StaticInferManagerImpl::register_value_infer(
-        Tag dest, const ValueInferDesc &desc) {
+        Tag dest, const ValueInferDesc& desc) {
     mgb_assert(dest->owner_opr() == m_register_allowed_opr);
-    for (auto &&i: desc.deps)
+    for (auto&& i : desc.deps)
         mgb_assert(dest->owner_graph() == i.dest->owner_graph());
 
-    auto &&t = get_tag_trait_container(dest);
+    auto&& t = get_tag_trait_container(dest);
     mgb_assert(t.shape, "shape desc not inserted before value desc");
     mgb_assert(!t.value, "value infer already registered");
     t.value = m_mem_pool_value_trait.alloc(dest);
@@ -914,37 +865,36 @@ const DeviceTensorND* StaticInferManagerImpl::infer_value_fallible(Tag dest) {
     return do_infer_value(dest, true);
 }
 
-const StaticInferManagerImpl::TagHandlerSet&
-StaticInferManagerImpl::get_missing_inp(TagHandler *dest_) {
+const StaticInferManagerImpl::TagHandlerSet& StaticInferManagerImpl::get_missing_inp(
+        TagHandler* dest_) {
     auto dest = static_cast<TagTraitBase*>(dest_)->as_mutable_safe();
-    mgb_assert(dest->infer_type() & (
-                InferType::NO_DESC | InferType::MISSING_INP));
+    mgb_assert(dest->infer_type() & (InferType::NO_DESC | InferType::MISSING_INP));
     auto ptr = dest->missing_inp().get();
     mgb_assert(ptr);
     return *ptr;
 }
 
-StaticInferManagerImpl::TagHandler*
-StaticInferManagerImpl::get_tag_handler_for_shape(Tag tag) {
-    auto &&c = get_tag_trait_container(tag);
+StaticInferManagerImpl::TagHandler* StaticInferManagerImpl::get_tag_handler_for_shape(
+        Tag tag) {
+    auto&& c = get_tag_trait_container(tag);
     if (!c.shape) {
         c.shape = m_mem_pool_shape_trait.alloc(tag);
     }
     return c.shape;
 }
 
-StaticInferManagerImpl::TagHandler*
-StaticInferManagerImpl::get_tag_handler_for_value(Tag tag) {
-    auto &&c = get_tag_trait_container(tag);
+StaticInferManagerImpl::TagHandler* StaticInferManagerImpl::get_tag_handler_for_value(
+        Tag tag) {
+    auto&& c = get_tag_trait_container(tag);
     if (!c.value) {
         c.value = m_mem_pool_value_trait.alloc(tag);
     }
     return c.value;
 }
 
-StaticInferManagerImpl::TagTraitBase*
-StaticInferManagerImpl::get_tag_trait_for_dep(const DepElement &dep) {
-    TagHandler *ret;
+StaticInferManagerImpl::TagTraitBase* StaticInferManagerImpl::get_tag_trait_for_dep(
+        const DepElement& dep) {
+    TagHandler* ret;
     switch (dep.type) {
         case DepType::SHAPE:
             ret = get_tag_handler_for_shape(dep.dest);
@@ -958,8 +908,7 @@ StaticInferManagerImpl::get_tag_trait_for_dep(const DepElement &dep) {
     return static_cast<TagTraitBase*>(ret);
 }
 
-DepVal StaticInferManagerImpl::get_rt_static_source_deps(
-        const DepElement& dest) {
+DepVal StaticInferManagerImpl::get_rt_static_source_deps(const DepElement& dest) {
     auto trait_base = get_tag_trait_container(dest.dest).select(dest.type);
     if (!trait_base || trait_base->is_const())
         return {};
@@ -969,11 +918,9 @@ DepVal StaticInferManagerImpl::get_rt_static_source_deps(
     mgb_assert(is_static_infer_type(trait->infer_type()));
 
     DepVal result;
-    auto cb_pre = [&](TagTraitDepIter::VisitedSet& visited,
-                      TagTraitBase* trait) {
+    auto cb_pre = [&](TagTraitDepIter::VisitedSet& visited, TagTraitBase* trait) {
         if (!trait->is_const() && visited.insert(trait).second) {
-            if (trait->deps().empty() &&
-                trait->infer_type() == InferType::RT_STATIC) {
+            if (trait->deps().empty() && trait->infer_type() == InferType::RT_STATIC) {
                 result.push_back({trait->tag(), trait->handler_type()});
                 return false;
             }
@@ -986,14 +933,14 @@ DepVal StaticInferManagerImpl::get_rt_static_source_deps(
     return result;
 }
 
-const TensorShape* StaticInferManagerImpl::do_infer_shape(Tag dest,
-                                                          bool allow_fail) {
+const TensorShape* StaticInferManagerImpl::do_infer_shape(Tag dest, bool allow_fail) {
     MGB_LOCK_GUARD(m_mtx);
     MGB_TRY {
         auto&& container = get_tag_trait_container(dest);
-        mgb_assert(container.shape,
-                   "infer desc for var has not been added for infer_shape: %s",
-                   cg::dump_var_info({dest}).c_str());
+        mgb_assert(
+                container.shape,
+                "infer desc for var has not been added for infer_shape: %s",
+                cg::dump_var_info({dest}).c_str());
         auto ret = container.shape->infer(false, allow_fail);
         if (!ret) {
             mgb_assert(allow_fail);
@@ -1004,14 +951,15 @@ const TensorShape* StaticInferManagerImpl::do_infer_shape(Tag dest,
     MGB_CATCH(MegBrainError & exc, { update_rethrow_exc(dest, exc); })
 }
 
-const DeviceTensorND* StaticInferManagerImpl::do_infer_value(Tag dest,
-                                                             bool allow_fail) {
+const DeviceTensorND* StaticInferManagerImpl::do_infer_value(
+        Tag dest, bool allow_fail) {
     MGB_LOCK_GUARD(m_mtx);
     MGB_TRY {
         auto&& container = get_tag_trait_container(dest);
-        mgb_assert(container.value,
-                   "infer desc for var has not been added for infer_value: %s",
-                   cg::dump_var_info({dest}).c_str());
+        mgb_assert(
+                container.value,
+                "infer desc for var has not been added for infer_value: %s",
+                cg::dump_var_info({dest}).c_str());
         auto ret = container.value->infer(false, allow_fail);
         if (!ret) {
             mgb_assert(allow_fail);
@@ -1035,7 +983,7 @@ void StaticInferManagerImpl::update_mutable_src_shape(Tag dest) {
     MGB_CATCH(MegBrainError & exc, { update_rethrow_exc(dest, exc); })
 }
 
-DepVal StaticInferManagerImpl::get_deps(const DepElement &elem) {
+DepVal StaticInferManagerImpl::get_deps(const DepElement& elem) {
     auto trait_base = get_tag_trait_container(elem.dest).select(elem.type);
     if (!trait_base || trait_base->is_const())
         return {};
@@ -1046,28 +994,23 @@ DepVal StaticInferManagerImpl::get_deps(const DepElement &elem) {
 /* ===================== CompSeqManager ===================== */
 
 class CompSeqManager::VersionedTagTrait {
-    TagTraitBase * const m_trait;
+    TagTraitBase* const m_trait;
     size_t m_version = 0;
 
-    public:
-        VersionedTagTrait(TagTraitBase *trait):
-            m_trait{trait}
-        {}
+public:
+    VersionedTagTrait(TagTraitBase* trait) : m_trait{trait} {}
 
-        /*!
-         * \brief re-infer and assign shape
-         * \return <whether version changed, whether shape changed>
-         */
-        std::pair<bool, bool> update(bool recomp_mutable_srcnode);
+    /*!
+     * \brief re-infer and assign shape
+     * \return <whether version changed, whether shape changed>
+     */
+    std::pair<bool, bool> update(bool recomp_mutable_srcnode);
 
-        TagTraitBase* trait() const {
-            return m_trait;
-        }
+    TagTraitBase* trait() const { return m_trait; }
 };
 
 std::pair<bool, bool> CompSeqManager::VersionedTagTrait::update(
         bool recomp_mutable_srcnode) {
-
     auto rst = m_trait->infer(recomp_mutable_srcnode, false);
     auto version = m_trait->infer_result_version();
 
@@ -1084,19 +1027,15 @@ std::pair<bool, bool> CompSeqManager::VersionedTagTrait::update(
     return {false, false};
 }
 
-CompSeqManager::CompSeqManager(ComputingGraph *graph):
-    m_owner_graph(graph)
-{
-}
+CompSeqManager::CompSeqManager(ComputingGraph* graph) : m_owner_graph(graph) {}
 
 CompSeqManager::~CompSeqManager() noexcept = default;
 
-void CompSeqManager::add_dest(CompSeqExtraInfo &info, TagTraitBase *dest) {
-
+void CompSeqManager::add_dest(CompSeqExtraInfo& info, TagTraitBase* dest) {
     if (!m_added.insert(dest).second)
         return;
 
-    auto &&queue = m_add_dest_queue;
+    auto&& queue = m_add_dest_queue;
     queue.clear();
     queue.push_back(dest);
 
@@ -1105,7 +1044,7 @@ void CompSeqManager::add_dest(CompSeqExtraInfo &info, TagTraitBase *dest) {
         queue.pop_front();
         mgb_assert(qh->tag()->owner_graph() == m_owner_graph);
 
-        for (auto i: qh->deps()) {
+        for (auto i : qh->deps()) {
             if (m_added.insert(i).second)
                 queue.push_back(i);
         }
@@ -1142,7 +1081,7 @@ void CompSeqManager::add_dest(CompSeqExtraInfo &info, TagTraitBase *dest) {
     }
 }
 
-void CompSeqManager::reset_dest(CompSeqExtraInfo &info) {
+void CompSeqManager::reset_dest(CompSeqExtraInfo& info) {
     m_static_first_run = true;
     m_added.clear();
     m_static_infer_const_needed.clear();
@@ -1151,28 +1090,27 @@ void CompSeqManager::reset_dest(CompSeqExtraInfo &info) {
     info.missing_for_shape.clear();
     info.missing_for_value.clear();
 
-    for (auto &&i: info.infer_dest) {
+    for (auto&& i : info.infer_dest) {
         mgb_assert(i->tag()->owner_graph() == m_owner_graph);
         add_dest(info, static_cast<TagTraitBase*>(i));
     }
 
     info.rt_static_infer_src.clear();
-    for (auto &&i: m_static_srcnode) {
+    for (auto&& i : m_static_srcnode) {
         auto trait = i.trait();
         if (trait->infer_type() & InferType::RT_STATIC) {
-            info.rt_static_infer_src.push_back({
-                    trait->tag(), trait->handler_type()});
+            info.rt_static_infer_src.push_back({trait->tag(), trait->handler_type()});
         }
     }
 }
 
 bool CompSeqManager::update_static_check_shape_change() {
     if (m_static_first_run) {
-        for (auto &&i: m_static_infer_const_needed)
+        for (auto&& i : m_static_infer_const_needed)
             i.update(false);
     }
     bool src_changed = false, shape_changed = false;
-    for (auto &&i: m_static_srcnode) {
+    for (auto&& i : m_static_srcnode) {
         auto cur = i.update(true);
         src_changed |= cur.first;
         shape_changed |= cur.second;
@@ -1180,7 +1118,7 @@ bool CompSeqManager::update_static_check_shape_change() {
     if (!src_changed && !m_static_first_run)
         return false;
 
-    for (auto &&i: m_static_mid) {
+    for (auto&& i : m_static_mid) {
         shape_changed |= i.update(false).second;
     }
     m_static_first_run = false;
@@ -1198,8 +1136,8 @@ bool CompSeqManager::update_static_check_shape_change() {
  * and sub graphs) because a trait may be statically inferable in sub graph but
  * not so in parent graph.
  */
-class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
-            public SubgraphStaticInferHelper {
+class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final
+        : public SubgraphStaticInferHelper {
     using TagTraitArray = TagTraitBase::TagTraitArray;
     using RegisterSubgrahInferCallback = thin_function<TagTraitBase*(
             StaticInferManagerImpl& mgr, SourceType src_type,
@@ -1213,30 +1151,26 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
         SharedSet<TagTraitBase*> static_deps;
     };
 
-
     bool m_par_destructed = false;
 
     //! traits registered as extra receiver in parent graph; used deregstering
     //! the sub graph
     std::vector<std::pair<TagTraitMutableBase*, TagTraitMutableBase*>>
-        m_registered_in_par_graph_receiver;
+            m_registered_in_par_graph_receiver;
 
     ComputingGraphImpl *m_sub_graph = nullptr, *m_par_graph = nullptr;
 
-    ThinHashMap<TagTraitBase*, SubgraphTraitDepInPar>
-        m_sub_trait_dep_in_par;
+    ThinHashMap<TagTraitBase*, SubgraphTraitDepInPar> m_sub_trait_dep_in_par;
 
-    void check_graph_par(VarNode *var) {
+    void check_graph_par(VarNode* var) {
         if (mgb_unlikely(!m_par_graph)) {
             m_par_graph = ComputingGraphImpl::downcast(var->owner_graph());
             mgb_assert(m_par_graph != m_sub_graph);
 
-            auto cb = [this]() {
-                m_par_destructed = true;
-            };
+            auto cb = [this]() { m_par_destructed = true; };
 
-            auto ins = m_par_graph->static_infer_manager_impl().
-                m_dtor_callbacks.insert({this, cb});
+            auto ins = m_par_graph->static_infer_manager_impl().m_dtor_callbacks.insert(
+                    {this, cb});
             mgb_assert(ins.second);
 
         } else {
@@ -1244,7 +1178,7 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
         }
     }
 
-    void check_graph_sub(VarNode *var) {
+    void check_graph_sub(VarNode* var) {
         if (mgb_unlikely(!m_sub_graph)) {
             m_sub_graph = ComputingGraphImpl::downcast(var->owner_graph());
             mgb_assert(m_sub_graph != m_par_graph);
@@ -1260,8 +1194,8 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
      *      return tag trait for dest
      * \return true
      */
-    bool helper_register_infer_sub(Tag dest, const DepVal &user_deps,
-            RegisterSubgrahInferCallback callback);
+    bool helper_register_infer_sub(
+            Tag dest, const DepVal& user_deps, RegisterSubgrahInferCallback callback);
 
     /*!
      * \brief helper to implement registering infer func for a var in par graph
@@ -1273,81 +1207,75 @@ class StaticInferManagerImpl::SubgraphStaticInferHelperImpl final:
      *
      * \return whether infer func is registered
      */
-    bool helper_register_infer_par(Tag dest, const DepVal &user_deps,
-            RegisterSubgrahInferCallback callback);
+    bool helper_register_infer_par(
+            Tag dest, const DepVal& user_deps, RegisterSubgrahInferCallback callback);
 
-    bool call_register_for_shape(Tag dest, const ShapeInferDesc &desc,
-            RegisterHelperPtr helper);
+    bool call_register_for_shape(
+            Tag dest, const ShapeInferDesc& desc, RegisterHelperPtr helper);
 
-    bool call_register_for_value(Tag dest, const ValueInferDesc &desc,
-            RegisterHelperPtr helper);
+    bool call_register_for_value(
+            Tag dest, const ValueInferDesc& desc, RegisterHelperPtr helper);
 
     /*!
      * \brief check whether a trait in subgraph only has static deps in par
      *      graph
      */
-    const SubgraphTraitDepInPar& get_sub_trait_dep_in_par(TagTraitBase *trait);
+    const SubgraphTraitDepInPar& get_sub_trait_dep_in_par(TagTraitBase* trait);
 
-    static InpVal prepare_inp_val(const TagTraitArray &deps);
+    static InpVal prepare_inp_val(const TagTraitArray& deps);
 
-    static bool infer_shape_raw(const TagTraitArray &deps,
-            const ShapeInferDesc::infer_func_t &func,
-            TensorShape &dest, const InpVal &);
+    static bool infer_shape_raw(
+            const TagTraitArray& deps, const ShapeInferDesc::infer_func_t& func,
+            TensorShape& dest, const InpVal&);
 
-    static bool infer_value_raw(const TagTraitArray &deps,
-            const ValueInferDesc::infer_func_t &func,
-            DeviceTensorND &dest, const InpVal &);
+    static bool infer_value_raw(
+            const TagTraitArray& deps, const ValueInferDesc::infer_func_t& func,
+            DeviceTensorND& dest, const InpVal&);
 
-    public:
+public:
+    ~SubgraphStaticInferHelperImpl() {
+        if (m_par_destructed || !m_par_graph)
+            return;
 
-        ~SubgraphStaticInferHelperImpl() {
-            if (m_par_destructed || !m_par_graph)
-                return;
+        for (auto&& i : m_registered_in_par_graph_receiver)
+            i.first->remove_extra_receiver(i.second);
+        auto cnt =
+                m_par_graph->static_infer_manager_impl().m_dtor_callbacks.erase(this);
+        mgb_assert(cnt == 1);
+    }
 
-            for (auto &&i: m_registered_in_par_graph_receiver)
-                i.first->remove_extra_receiver(i.second);
-            auto cnt = m_par_graph->static_infer_manager_impl().
-                m_dtor_callbacks.erase(this);
-            mgb_assert(cnt == 1);
-        }
+    void register_shape_infer_sub(Tag dest, const ShapeInferDesc& desc) override {
+        call_register_for_shape(
+                dest, desc, &SubgraphStaticInferHelperImpl::helper_register_infer_sub);
+    }
 
-        void register_shape_infer_sub(
-                Tag dest, const ShapeInferDesc &desc) override {
-            call_register_for_shape(dest, desc,
-                    &SubgraphStaticInferHelperImpl::helper_register_infer_sub);
-        }
+    void register_value_infer_sub(Tag dest, const ValueInferDesc& desc) override {
+        call_register_for_value(
+                dest, desc, &SubgraphStaticInferHelperImpl::helper_register_infer_sub);
+    }
 
-        void register_value_infer_sub(
-                Tag dest, const ValueInferDesc &desc) override {
-            call_register_for_value(dest, desc,
-                    &SubgraphStaticInferHelperImpl::helper_register_infer_sub);
-        }
+    bool register_shape_infer_par(Tag dest, const ShapeInferDesc& desc) override {
+        return call_register_for_shape(
+                dest, desc, &SubgraphStaticInferHelperImpl::helper_register_infer_par);
+    }
 
-        bool register_shape_infer_par(
-                Tag dest, const ShapeInferDesc &desc) override {
-            return call_register_for_shape(dest, desc,
-                    &SubgraphStaticInferHelperImpl::helper_register_infer_par);
-        }
-
-        bool register_value_infer_par(
-                Tag dest, const ValueInferDesc &desc) override {
-            return call_register_for_value(dest, desc,
-                    &SubgraphStaticInferHelperImpl::helper_register_infer_par);
-        }
+    bool register_value_infer_par(Tag dest, const ValueInferDesc& desc) override {
+        return call_register_for_value(
+                dest, desc, &SubgraphStaticInferHelperImpl::helper_register_infer_par);
+    }
 };
 
-bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-        helper_register_infer_sub(Tag dest, const DepVal& user_deps,
-                                  RegisterSubgrahInferCallback callback) {
+bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::helper_register_infer_sub(
+        Tag dest, const DepVal& user_deps, RegisterSubgrahInferCallback callback) {
     check_graph_sub(dest);
     mgb_assert(!user_deps.empty());
 
     bool is_const = true, is_static = true;
-    TagTraitArray deps; // dependency in par graph
-    for (auto &&i: user_deps) {
+    TagTraitArray deps;  // dependency in par graph
+    for (auto&& i : user_deps) {
         check_graph_par(i.dest);
 
-        auto &&par_mgr = m_par_graph->static_infer_manager_impl();
+        auto&& par_mgr = m_par_graph->static_infer_manager_impl();
 
         InferType::Flag infer_type;
         {
@@ -1364,25 +1292,23 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
         deps.push_back(par_mgr.get_tag_trait_for_dep(i));
     }
 
-    auto &&sub_mgr = m_sub_graph->static_infer_manager_impl();
+    auto&& sub_mgr = m_sub_graph->static_infer_manager_impl();
 
-    auto dest_trait = callback(sub_mgr,
-            is_const ? SourceType::CONSTANT : SourceType::MUTABLE,
-            deps);
+    auto dest_trait = callback(
+            sub_mgr, is_const ? SourceType::CONSTANT : SourceType::MUTABLE, deps);
 
-    auto &&dep_info = m_sub_trait_dep_in_par[dest_trait];
+    auto&& dep_info = m_sub_trait_dep_in_par[dest_trait];
     dep_info.only_static_dep = is_static;
     if (is_static) {
-        for (auto i: deps)
+        for (auto i : deps)
             dep_info.static_deps.insert(i);
     }
     if (!is_const) {
         auto non_const_dt = dest_trait->as_mutable_safe();
-        for (auto i0: deps) {
+        for (auto i0 : deps) {
             if (auto i = i0->as_mutable()) {
                 i->add_extra_receiver(non_const_dt);
-                m_registered_in_par_graph_receiver.emplace_back(
-                        i, non_const_dt);
+                m_registered_in_par_graph_receiver.emplace_back(i, non_const_dt);
             }
         }
     }
@@ -1390,31 +1316,29 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
     return true;
 }
 
-bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-        helper_register_infer_par(Tag dest, const DepVal& user_deps,
-                                  RegisterSubgrahInferCallback callback) {
-
+bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::helper_register_infer_par(
+        Tag dest, const DepVal& user_deps, RegisterSubgrahInferCallback callback) {
     mgb_assert(m_sub_graph && m_par_graph);
     check_graph_par(dest);
 
-    auto &&sub_mgr = m_sub_graph->static_infer_manager_impl();
-    auto &&par_mgr = m_par_graph->static_infer_manager_impl();
+    auto&& sub_mgr = m_sub_graph->static_infer_manager_impl();
+    auto&& par_mgr = m_par_graph->static_infer_manager_impl();
 
     TagTraitArray deps;
     bool is_const = true;
 
-    TagTraitArray extra_par_deps; // deps in user_deps in par graph
+    TagTraitArray extra_par_deps;  // deps in user_deps in par graph
 
-    for (auto &&i: user_deps) {
+    for (auto&& i : user_deps) {
         auto iog = i.dest->owner_graph();
         mgb_assert(iog == m_sub_graph || iog == m_par_graph);
-        TagTraitBase *cur_trait;
+        TagTraitBase* cur_trait;
         if (iog == m_sub_graph) {
             cur_trait = sub_mgr.get_tag_trait_for_dep(i);
-            auto &&dep_info = get_sub_trait_dep_in_par(cur_trait);
+            auto&& dep_info = get_sub_trait_dep_in_par(cur_trait);
             if (!dep_info.only_static_dep)
                 return false;
-            for (auto i: dep_info.static_deps)
+            for (auto i : dep_info.static_deps)
                 extra_par_deps.push_back(i);
         } else {
             cur_trait = par_mgr.get_tag_trait_for_dep(i);
@@ -1424,17 +1348,15 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
         deps.push_back(cur_trait);
     }
 
-    auto dest_trait = callback(par_mgr,
-            is_const ? SourceType::CONSTANT : SourceType::MUTABLE,
-            deps);
+    auto dest_trait = callback(
+            par_mgr, is_const ? SourceType::CONSTANT : SourceType::MUTABLE, deps);
 
     if (!is_const) {
         auto non_const_dt = dest_trait->as_mutable_safe();
-        for (auto i0: extra_par_deps) {
+        for (auto i0 : extra_par_deps) {
             if (auto i = i0->as_mutable()) {
                 i->add_extra_receiver(non_const_dt);
-                m_registered_in_par_graph_receiver.emplace_back(
-                        i, non_const_dt);
+                m_registered_in_par_graph_receiver.emplace_back(i, non_const_dt);
                 non_const_dt->add_extra_dep(i);
             }
         }
@@ -1443,19 +1365,16 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
     return true;
 }
 
-bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-        call_register_for_shape(Tag dest, const ShapeInferDesc& desc,
-                                RegisterHelperPtr helper) {
+bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::call_register_for_shape(
+        Tag dest, const ShapeInferDesc& desc, RegisterHelperPtr helper) {
     mgb_assert(desc.src_type == SourceType::DEP);
 
-    auto callback = [&](
-            StaticInferManagerImpl& mgr, SourceType src_type,
-            const TagTraitArray& deps) -> TagTraitBase* {
-
+    auto callback = [&](StaticInferManagerImpl& mgr, SourceType src_type,
+                        const TagTraitArray& deps) -> TagTraitBase* {
         using namespace std::placeholders;
         auto f = std::bind(
-                &SubgraphStaticInferHelperImpl::infer_shape_raw,
-                deps, desc.infer_func, _1, _2);
+                &SubgraphStaticInferHelperImpl::infer_shape_raw, deps, desc.infer_func,
+                _1, _2);
 
         mgr.register_shape_infer(dest, {src_type, {}, f});
         return mgr.get_tag_trait_container(dest).shape;
@@ -1464,20 +1383,16 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
     return (this->*helper)(dest, desc.deps, callback);
 }
 
-bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-        call_register_for_value(Tag dest, const ValueInferDesc& desc,
-                                RegisterHelperPtr helper) {
-
+bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::call_register_for_value(
+        Tag dest, const ValueInferDesc& desc, RegisterHelperPtr helper) {
     mgb_assert(desc.src_type == SourceType::DEP);
 
-    auto callback = [&](
-            StaticInferManagerImpl& mgr, SourceType src_type,
-            const TagTraitArray& deps) -> TagTraitBase* {
-
+    auto callback = [&](StaticInferManagerImpl& mgr, SourceType src_type,
+                        const TagTraitArray& deps) -> TagTraitBase* {
         using namespace std::placeholders;
         auto f = std::bind(
-                &SubgraphStaticInferHelperImpl::infer_value_raw,
-                deps, desc.infer_func, _1, _2);
+                &SubgraphStaticInferHelperImpl::infer_value_raw, deps, desc.infer_func,
+                _1, _2);
 
         mgr.register_value_infer(dest, {src_type, {}, f});
         return mgr.get_tag_trait_container(dest).value;
@@ -1488,12 +1403,11 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
 
 InpVal StaticInferManagerImpl::SubgraphStaticInferHelperImpl::prepare_inp_val(
         const TagTraitArray& deps) {
-
     mgb_assert(!deps.empty());
     InpVal finp;
-    for (auto i: deps) {
+    for (auto i : deps) {
         auto t = i->infer(false, true);
-        if(!t) {
+        if (!t) {
             finp.val.clear();
             return finp;
         }
@@ -1506,7 +1420,6 @@ InpVal StaticInferManagerImpl::SubgraphStaticInferHelperImpl::prepare_inp_val(
 bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::infer_shape_raw(
         const TagTraitArray& deps, const ShapeInferDesc::infer_func_t& func,
         TensorShape& dest, const InpVal&) {
-
     auto finp = prepare_inp_val(deps);
     if (finp.val.empty())
         return false;
@@ -1518,7 +1431,6 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::infer_shape_raw(
 bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::infer_value_raw(
         const TagTraitArray& deps, const ValueInferDesc::infer_func_t& func,
         DeviceTensorND& dest, const InpVal&) {
-
     auto finp = prepare_inp_val(deps);
     if (finp.val.empty())
         return false;
@@ -1527,21 +1439,19 @@ bool StaticInferManagerImpl::SubgraphStaticInferHelperImpl::infer_value_raw(
     return succ;
 }
 
-const StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-        SubgraphTraitDepInPar&
-        StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
-                get_sub_trait_dep_in_par(TagTraitBase* trait) {
-
+const StaticInferManagerImpl::SubgraphStaticInferHelperImpl::SubgraphTraitDepInPar&
+StaticInferManagerImpl::SubgraphStaticInferHelperImpl::get_sub_trait_dep_in_par(
+        TagTraitBase* trait) {
     auto iter = m_sub_trait_dep_in_par.find(trait);
     if (iter != m_sub_trait_dep_in_par.end())
         return iter->second;
 
-    auto &&rst = m_sub_trait_dep_in_par[trait];
+    auto&& rst = m_sub_trait_dep_in_par[trait];
     if (trait->deps().empty()) {
         rst.only_static_dep = trait->infer_type() == InferType::CONST;
     } else {
         rst.only_static_dep = true;
-        for (auto i: trait->deps()) {
+        for (auto i : trait->deps()) {
             if (!get_sub_trait_dep_in_par(i).only_static_dep) {
                 rst.only_static_dep = false;
                 break;
@@ -1549,8 +1459,8 @@ const StaticInferManagerImpl::SubgraphStaticInferHelperImpl::
         }
 
         if (rst.only_static_dep) {
-            for (auto i: trait->deps()) {
-                auto &&t = m_sub_trait_dep_in_par.at(i);
+            for (auto i : trait->deps()) {
+                auto&& t = m_sub_trait_dep_in_par.at(i);
                 rst.static_deps.merge_from(t.static_deps);
             }
         }
@@ -1564,8 +1474,7 @@ std::unique_ptr<SubgraphStaticInferHelper> SubgraphStaticInferHelper::make() {
 }
 
 /* ===================== StaticInferUpdaterImpl ===================== */
-class StaticInferManagerImpl::StaticInferUpdaterImpl final
-        : public StaticInferUpdater {
+class StaticInferManagerImpl::StaticInferUpdaterImpl final : public StaticInferUpdater {
     StaticInferManagerImpl* m_mgr = nullptr;
     bool m_build_done = false;
     SmallVector<TagTraitMutableBase*> m_src, m_dst;
@@ -1591,19 +1500,20 @@ class StaticInferManagerImpl::StaticInferUpdaterImpl final
 
 public:
     StaticInferUpdater& add_dest(const DepElement& dest) override {
-        mgb_throw_if(m_build_done, GraphError,
-                     "add_dest() can not be called after update()");
+        mgb_throw_if(
+                m_build_done, GraphError,
+                "add_dest() can not be called after update()");
         auto mgr = static_cast<StaticInferManagerImpl*>(
                 &dest.dest->owner_graph()->static_infer_manager());
         if (!m_mgr) {
             m_mgr = mgr;
         } else {
-            mgb_throw_if(m_mgr != mgr, GraphError,
-                         "computing graph in StaticInferUpdater changes");
+            mgb_throw_if(
+                    m_mgr != mgr, GraphError,
+                    "computing graph in StaticInferUpdater changes");
         }
 
-        auto trait_base =
-                mgr->get_tag_trait_container(dest.dest).select(dest.type);
+        auto trait_base = mgr->get_tag_trait_container(dest.dest).select(dest.type);
         if (trait_base && trait_base->is_const()) {
             // ignore const infer types
             return *this;
@@ -1635,24 +1545,24 @@ std::unique_ptr<StaticInferUpdater> StaticInferUpdater::make() {
 }
 
 /* ===================== others ===================== */
-ShapeInferDesc ShapeInferDesc::make_identity(VarNode *src) {
-    auto infer_shape = [](TensorShape &dest, const InpVal &inp) {
+ShapeInferDesc ShapeInferDesc::make_identity(VarNode* src) {
+    auto infer_shape = [](TensorShape& dest, const InpVal& inp) {
         dest = inp.val.at(0).shape();
         return true;
     };
     return {SourceType::DEP, {{src, DepType::SHAPE}}, infer_shape};
 }
 
-ShapeInferDesc ShapeInferDesc::make_const(const TensorShape &shp) {
-    auto infer_shape = [shp](TensorShape &dest, const InpVal &) {
+ShapeInferDesc ShapeInferDesc::make_const(const TensorShape& shp) {
+    auto infer_shape = [shp](TensorShape& dest, const InpVal&) {
         dest = shp;
         return true;
     };
     return {SourceType::CONSTANT, {}, infer_shape};
 }
 
-ValueInferDesc ValueInferDesc::make_identity(VarNode *src) {
-    auto infer_value = [](DeviceTensorND &dest, const InpVal &inp) {
+ValueInferDesc ValueInferDesc::make_identity(VarNode* src) {
+    auto infer_value = [](DeviceTensorND& dest, const InpVal& inp) {
         dest = inp.val.at(0).value();
         return true;
     };
@@ -1660,4 +1570,3 @@ ValueInferDesc ValueInferDesc::make_identity(VarNode *src) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

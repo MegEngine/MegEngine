@@ -22,12 +22,12 @@ using namespace opr;
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteSend);
 
-RemoteSend::RemoteSend(const std::string& key, VarNode* var,
-                       std::shared_ptr<GroupClient> group_client,
-                       bool is_grad, std::string backend, const OperatorNodeConfig& config) :
-        Super(var->owner_graph(), config, "remote_send", {var}),
-        m_backend(backend),
-        m_is_grad(is_grad) {
+RemoteSend::RemoteSend(
+        const std::string& key, VarNode* var, std::shared_ptr<GroupClient> group_client,
+        bool is_grad, std::string backend, const OperatorNodeConfig& config)
+        : Super(var->owner_graph(), config, "remote_send", {var}),
+          m_backend(backend),
+          m_is_grad(is_grad) {
     m_key = key;
     m_group_client = group_client;
 
@@ -40,11 +40,12 @@ RemoteSend::RemoteSend(const std::string& key, VarNode* var,
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
-SymbolVar RemoteSend::make(const std::string& key, SymbolVar var,
-                           std::shared_ptr<GroupClient> group_client,
-                           bool is_grad, std::string backend, const OperatorNodeConfig& config) {
-    return var.insert_single_output_opr<RemoteSend>(key, var.node(), group_client,
-                                                    is_grad, backend, config);
+SymbolVar RemoteSend::make(
+        const std::string& key, SymbolVar var,
+        std::shared_ptr<GroupClient> group_client, bool is_grad, std::string backend,
+        const OperatorNodeConfig& config) {
+    return var.insert_single_output_opr<RemoteSend>(
+            key, var.node(), group_client, is_grad, backend, config);
 }
 
 void RemoteSend::scn_do_execute() {
@@ -57,15 +58,16 @@ void RemoteSend::scn_do_execute() {
             reg_info = RegInfoCache::get_info(m_key);
         } else {
             // rank 0 for RemoteSend
-            reg_info = m_group_client->opr_register(m_key, 2, 0, false,
-                    comp_node.get_uid());
+            reg_info = m_group_client->opr_register(
+                    m_key, 2, 0, false, comp_node.get_uid());
             if (use_cache) {
                 RegInfoCache::set_info(m_key, reg_info);
             }
         }
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 0, get_megray_backend(m_backend), m_group_client);
+                reg_info.hash, m_key, 2, 0, get_megray_backend(m_backend),
+                m_group_client);
 
         m_megray_ctx = get_megray_context(output(0)->comp_node());
 
@@ -79,17 +81,15 @@ void RemoteSend::scn_do_execute() {
     for (size_t i = 0; i < ishp.ndim; i++) {
         data_size *= ishp[i];
     }
-    auto status = m_megray_comm->send(tensor.raw_ptr(), data_size,
-                                      get_megray_dtype(tensor.dtype()),
-                                      1, m_megray_ctx);
+    auto status = m_megray_comm->send(
+            tensor.raw_ptr(), data_size, get_megray_dtype(tensor.dtype()), 1,
+            m_megray_ctx);
     mgb_assert(status == MegRay::MEGRAY_OK, "MegRay send failed");
 
     if (m_is_grad) {
         auto&& dest = output(0)->dev_tensor();
         if (m_output_val.empty()) {
-            m_output_val.comp_node(dest.comp_node())
-                    .dtype(dest.dtype())
-                    .resize({1});
+            m_output_val.comp_node(dest.comp_node()).dtype(dest.dtype()).resize({1});
             memset(m_output_val.raw_ptr(), 0, m_output_val.dtype().size());
         }
         dest.copy_from_fixlayout(m_output_val);
@@ -119,11 +119,10 @@ cg::OperatorNodeBase::NodeProp* RemoteSend::do_make_node_prop() const {
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(RemoteSend) {
     mgb_assert(opr.is_grad());
-    return RemoteRecv::make(opr.key() + ":grad",
-                            *opr.owner_graph(), opr.group_client(),
-                            OperatorNodeConfig{opr.comp_node()}.name(
-                                    opr.name() + ":grad_recv"),
-                            opr.input(0)->shape(), opr.input(0)->dtype(), opr.backend())
+    return RemoteRecv::make(
+                   opr.key() + ":grad", *opr.owner_graph(), opr.group_client(),
+                   OperatorNodeConfig{opr.comp_node()}.name(opr.name() + ":grad_recv"),
+                   opr.input(0)->shape(), opr.input(0)->dtype(), opr.backend())
             .node();
 }
 #endif
@@ -132,12 +131,14 @@ MGB_IMPL_OPR_GRAD(RemoteSend) {
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RemoteRecv);
 
-RemoteRecv::RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
-                       std::shared_ptr<GroupClient> group_client,
-                       const OperatorNodeConfig& config,
-                       const TensorShape& shape, DType dtype, std::string backend) :
-        Super(&graph, config, "remote_recv", {}),
-        m_shape(shape), m_dtype(dtype), m_backend(backend) {
+RemoteRecv::RemoteRecv(
+        const std::string& key, cg::ComputingGraph& graph,
+        std::shared_ptr<GroupClient> group_client, const OperatorNodeConfig& config,
+        const TensorShape& shape, DType dtype, std::string backend)
+        : Super(&graph, config, "remote_recv", {}),
+          m_shape(shape),
+          m_dtype(dtype),
+          m_backend(backend) {
     m_key = key;
     m_group_client = group_client;
 
@@ -148,12 +149,14 @@ RemoteRecv::RemoteRecv(const std::string& key, cg::ComputingGraph& graph,
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
-RemoteRecv::RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph& graph,
-                       std::shared_ptr<GroupClient> group_client,
-                       const OperatorNodeConfig& config,
-                       const TensorShape& shape, DType dtype, std::string backend) :
-        Super(&graph, config, "remote_recv", {}),
-        m_shape(shape), m_dtype(dtype), m_backend(backend) {
+RemoteRecv::RemoteRecv(
+        const std::string& key, VarNode* var, cg::ComputingGraph& graph,
+        std::shared_ptr<GroupClient> group_client, const OperatorNodeConfig& config,
+        const TensorShape& shape, DType dtype, std::string backend)
+        : Super(&graph, config, "remote_recv", {}),
+          m_shape(shape),
+          m_dtype(dtype),
+          m_backend(backend) {
     m_key = key;
     m_group_client = group_client;
 
@@ -165,19 +168,19 @@ RemoteRecv::RemoteRecv(const std::string& key, VarNode* var, cg::ComputingGraph&
     add_equivalence_component<ScalarHash<void*>>(this);
 }
 
-SymbolVar RemoteRecv::make(const std::string& key, cg::ComputingGraph& graph,
-                           std::shared_ptr<GroupClient> group_client,
-                           const OperatorNodeConfig& config,
-                           const TensorShape& shape, DType dtype, std::string backend) {
+SymbolVar RemoteRecv::make(
+        const std::string& key, cg::ComputingGraph& graph,
+        std::shared_ptr<GroupClient> group_client, const OperatorNodeConfig& config,
+        const TensorShape& shape, DType dtype, std::string backend) {
     auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
             key, graph, group_client, config, shape, dtype, backend));
     return opr->output(0);
 }
 
-SymbolVar RemoteRecv::make(const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
-                           std::shared_ptr<GroupClient> group_client,
-                           const OperatorNodeConfig& config,
-                           const TensorShape& shape, DType dtype, std::string backend) {
+SymbolVar RemoteRecv::make(
+        const std::string& key, SymbolVar var, cg::ComputingGraph& graph,
+        std::shared_ptr<GroupClient> group_client, const OperatorNodeConfig& config,
+        const TensorShape& shape, DType dtype, std::string backend) {
     auto opr = graph.insert_opr(std::make_unique<RemoteRecv>(
             key, var.node(), graph, group_client, config, shape, dtype, backend));
     return opr->output(0);
@@ -194,15 +197,15 @@ void RemoteRecv::scn_do_execute() {
         } else {
             // rank 1 for RemoteRecv
             reg_info = m_group_client->opr_register(
-                    m_key, 2, false, 1,
-                    comp_node.get_uid());
+                    m_key, 2, false, 1, comp_node.get_uid());
             if (use_cache) {
                 RegInfoCache::set_info(m_key, reg_info);
             }
         }
 
         m_megray_comm = MegRayCommBuilder::get_megray_comm(
-                reg_info.hash, m_key, 2, 1, get_megray_backend(m_backend), m_group_client);
+                reg_info.hash, m_key, 2, 1, get_megray_backend(m_backend),
+                m_group_client);
 
         m_megray_ctx = get_megray_context(output(0)->comp_node());
 
@@ -216,9 +219,9 @@ void RemoteRecv::scn_do_execute() {
     for (size_t i = 0; i < ishp.ndim; i++) {
         data_size *= ishp[i];
     }
-    auto status = m_megray_comm->recv(tensor.raw_ptr(), data_size,
-                                      get_megray_dtype(tensor.dtype()),
-                                      0, m_megray_ctx);
+    auto status = m_megray_comm->recv(
+            tensor.raw_ptr(), data_size, get_megray_dtype(tensor.dtype()), 0,
+            m_megray_ctx);
     mgb_assert(status == MegRay::MEGRAY_OK, "MegRay recv failed");
 }
 
@@ -251,8 +254,9 @@ cg::OperatorNodeBase* opr_shallow_copy_remote_send(
         const OperatorNodeConfig& config) {
     mgb_assert(inputs.size() == 1);
     auto&& opr = opr_.cast_final_safe<RemoteSend>();
-    return RemoteSend::make(opr.key(), inputs[0], opr.group_client(),
-                            opr.is_grad(), opr.backend(), config)
+    return RemoteSend::make(
+                   opr.key(), inputs[0], opr.group_client(), opr.is_grad(),
+                   opr.backend(), config)
             .node()
             ->owner_opr();
 }
@@ -264,16 +268,16 @@ cg::OperatorNodeBase* opr_shallow_copy_remote_recv(
         const OperatorNodeConfig& config) {
     auto&& opr = opr_.cast_final_safe<RemoteRecv>();
     if (inputs.size() == 1) {
-        return RemoteRecv::make(opr.key(), inputs[0], *opr.owner_graph(),
-                                opr.group_client(), config, opr.shape(),
-                                opr.dtype(), opr.backend())
+        return RemoteRecv::make(
+                       opr.key(), inputs[0], *opr.owner_graph(), opr.group_client(),
+                       config, opr.shape(), opr.dtype(), opr.backend())
                 .node()
                 ->owner_opr();
     } else {
         mgb_assert(inputs.size() == 0, "recv should have 1 or 0 input");
-        return RemoteRecv::make(opr.key(), *opr.owner_graph(),
-                                opr.group_client(), config, opr.shape(),
-                                opr.dtype(), opr.backend())
+        return RemoteRecv::make(
+                       opr.key(), *opr.owner_graph(), opr.group_client(), config,
+                       opr.shape(), opr.dtype(), opr.backend())
                 .node()
                 ->owner_opr();
     }

@@ -51,8 +51,7 @@ class SubGraphExtractor {
 public:
     using OprList = ThinHashSet<Typeinfo*>;
     SubGraphExtractor(const OprList& opr_list) : m_opr_list{opr_list} {};
-    std::vector<GraphPartition> extract(
-            const SymbolVarArray& endpoint_vars) const;
+    std::vector<GraphPartition> extract(const SymbolVarArray& endpoint_vars) const;
 
 private:
     class Impl;

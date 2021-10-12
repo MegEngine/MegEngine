@@ -100,7 +100,7 @@ struct GemmKey {
         return (element_A == rhs.element_A) && (layout_A == rhs.layout_A) &&
                (element_B == rhs.element_B) && (layout_B == rhs.layout_B) &&
                (element_C == rhs.element_C) && (layout_C == rhs.layout_C) &&
-               (element_accumulator == rhs.element_accumulator) && 
+               (element_accumulator == rhs.element_accumulator) &&
                (threadblock_shape_m == rhs.threadblock_shape_m) &&
                (threadblock_shape_n == rhs.threadblock_shape_n) &&
                (threadblock_shape_k == rhs.threadblock_shape_k) &&
@@ -111,8 +111,7 @@ struct GemmKey {
                (instruction_shape_n == rhs.instruction_shape_n) &&
                (instruction_shape_k == rhs.instruction_shape_k) &&
                (stages == rhs.stages) && (alignment_A == rhs.alignment_A) &&
-               (alignment_B == rhs.alignment_B) &&
-               (split_k_mode == rhs.split_k_mode);
+               (alignment_B == rhs.alignment_B) && (split_k_mode == rhs.split_k_mode);
     }
 
     inline bool operator!=(GemmKey const& rhs) const { return !(*this == rhs); }
@@ -136,13 +135,13 @@ struct GemmKey {
                "\n    layout_B: " + to_string(layout_B) +
                "\n    element_C: " + to_string(element_C) +
                "\n    layout_C: " + to_string(layout_C) +
-               "\n    element_accumulator: " + to_string(element_accumulator) + 
+               "\n    element_accumulator: " + to_string(element_accumulator) +
                "\n    threadblock_shape: " + threadblock_shape_str +
                "\n    warp_shape: " + warp_shape_str +
                "\n    instruction_shape: " + instruction_shape_str +
                "\n    stages: " + std::to_string(stages) +
-               "\n    alignment_A: " + std::to_string(alignment_A) + 
-               "\n    alignment_B: " + std::to_string(alignment_B) + 
+               "\n    alignment_A: " + std::to_string(alignment_A) +
+               "\n    alignment_B: " + std::to_string(alignment_B) +
                "\n    split_k_mode: " + to_string(split_k_mode) + "\n}";
     }
 };
@@ -156,14 +155,10 @@ struct GemmKeyHasher {
                 .update(&key.layout_B, sizeof(key.layout_B))
                 .update(&key.element_C, sizeof(key.element_C))
                 .update(&key.layout_C, sizeof(key.layout_C))
-                .update(&key.element_accumulator,
-                        sizeof(key.element_accumulator))
-                .update(&key.threadblock_shape_m,
-                        sizeof(key.threadblock_shape_m))
-                .update(&key.threadblock_shape_n,
-                        sizeof(key.threadblock_shape_n))
-                .update(&key.threadblock_shape_k,
-                        sizeof(key.threadblock_shape_k))
+                .update(&key.element_accumulator, sizeof(key.element_accumulator))
+                .update(&key.threadblock_shape_m, sizeof(key.threadblock_shape_m))
+                .update(&key.threadblock_shape_n, sizeof(key.threadblock_shape_n))
+                .update(&key.threadblock_shape_k, sizeof(key.threadblock_shape_k))
                 .update(&key.warp_shape_m, sizeof(key.warp_shape_m))
                 .update(&key.warp_shape_n, sizeof(key.warp_shape_n))
                 .update(&key.warp_shape_k, sizeof(key.warp_shape_k))
@@ -176,8 +171,7 @@ struct GemmKeyHasher {
 };
 
 using GemmOperationMap =
-        std::unordered_map<GemmKey, std::vector<Operation const*>,
-                           GemmKeyHasher>;
+        std::unordered_map<GemmKey, std::vector<Operation const*>, GemmKeyHasher>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //                          Data Structures for ConvolutionOperationMap
@@ -219,10 +213,8 @@ struct ConvolutionKey {
                (layout_src == rhs.layout_src) &&
                (element_filter == rhs.element_filter) &&
                (layout_filter == rhs.layout_filter) &&
-               (element_dst == rhs.element_dst) &&
-               (layout_dst == rhs.layout_dst) &&
-               (element_bias == rhs.element_bias) &&
-               (layout_bias == rhs.layout_bias) &&
+               (element_dst == rhs.element_dst) && (layout_dst == rhs.layout_dst) &&
+               (element_bias == rhs.element_bias) && (layout_bias == rhs.layout_bias) &&
                (convolution_type == rhs.convolution_type) &&
                (threadblock_shape_m == rhs.threadblock_shape_m) &&
                (threadblock_shape_n == rhs.threadblock_shape_n) &&
@@ -238,9 +230,7 @@ struct ConvolutionKey {
                (without_shared_load == rhs.without_shared_load);
     }
 
-    inline bool operator!=(ConvolutionKey const& rhs) const {
-        return !(*this == rhs);
-    }
+    inline bool operator!=(ConvolutionKey const& rhs) const { return !(*this == rhs); }
 
     inline std::string str() const {
         auto tuple_to_str = [](int m, int n, int k) -> std::string {
@@ -270,10 +260,8 @@ struct ConvolutionKey {
                "\n    instruction_shape: " + instruction_shape_str +
                "\n    epilogue_type: " + to_string(epilogue_type) +
                "\n    stages: " + std::to_string(stages) +
-               "\n    special_optimization: " +
-               to_string(special_optimization) +
-               "\n    without_shared_load: " + to_string(without_shared_load) +
-               "\n}";
+               "\n    special_optimization: " + to_string(special_optimization) +
+               "\n    without_shared_load: " + to_string(without_shared_load) + "\n}";
     }
 };
 
@@ -291,34 +279,25 @@ struct ConvolutionKeyHasher {
                 .update(&key.element_bias, sizeof(key.element_bias))
                 .update(&key.layout_bias, sizeof(key.layout_bias))
                 .update(&key.convolution_type, sizeof(key.convolution_type))
-                .update(&key.threadblock_shape_m,
-                        sizeof(key.threadblock_shape_m))
-                .update(&key.threadblock_shape_n,
-                        sizeof(key.threadblock_shape_n))
-                .update(&key.threadblock_shape_k,
-                        sizeof(key.threadblock_shape_k))
+                .update(&key.threadblock_shape_m, sizeof(key.threadblock_shape_m))
+                .update(&key.threadblock_shape_n, sizeof(key.threadblock_shape_n))
+                .update(&key.threadblock_shape_k, sizeof(key.threadblock_shape_k))
                 .update(&key.warp_shape_m, sizeof(key.warp_shape_m))
                 .update(&key.warp_shape_n, sizeof(key.warp_shape_n))
                 .update(&key.warp_shape_k, sizeof(key.warp_shape_k))
-                .update(&key.instruction_shape_m,
-                        sizeof(key.instruction_shape_m))
-                .update(&key.instruction_shape_n,
-                        sizeof(key.instruction_shape_n))
-                .update(&key.instruction_shape_k,
-                        sizeof(key.instruction_shape_k))
+                .update(&key.instruction_shape_m, sizeof(key.instruction_shape_m))
+                .update(&key.instruction_shape_n, sizeof(key.instruction_shape_n))
+                .update(&key.instruction_shape_k, sizeof(key.instruction_shape_k))
                 .update(&key.epilogue_type, sizeof(key.epilogue_type))
                 .update(&key.stages, sizeof(key.stages))
-                .update(&key.special_optimization,
-                        sizeof(key.special_optimization))
-                .update(&key.without_shared_load,
-                        sizeof(key.without_shared_load))
+                .update(&key.special_optimization, sizeof(key.special_optimization))
+                .update(&key.without_shared_load, sizeof(key.without_shared_load))
                 .digest();
     }
 };
 
-using ConvolutionOperationMap =
-        std::unordered_map<ConvolutionKey, std::vector<Operation const*>,
-                           ConvolutionKeyHasher>;
+using ConvolutionOperationMap = std::unordered_map<
+        ConvolutionKey, std::vector<Operation const*>, ConvolutionKeyHasher>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 

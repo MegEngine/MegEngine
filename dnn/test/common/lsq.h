@@ -41,8 +41,9 @@ inline std::vector<TestArg> get_args() {
     cur_param.qmax = 127;
 
     for (size_t i = 10; i < 30; i += 2) {
-        args.emplace_back(cur_param, TensorShape{10, 64, i, i}, TensorShape{1},
-                          TensorShape{1}, TensorShape{1});
+        args.emplace_back(
+                cur_param, TensorShape{10, 64, i, i}, TensorShape{1}, TensorShape{1},
+                TensorShape{1});
     }
 
     return args;

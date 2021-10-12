@@ -21,44 +21,38 @@ void start_gpu_xcorr_pool_with_shared_mem(
         cudaStream_t stream,
         float *input,
         const float *kernel,
-        float *output, 
+        float *output,
         size_t N,
         size_t IC, size_t IH, size_t IW,
         size_t OC, size_t OH, size_t OW,
         size_t FH, size_t FW,
         size_t PH, size_t PW,
         size_t SH, size_t SW,
-        size_t pool_shape, 
+        size_t pool_shape,
         PoolModeCu poolMode = AVERAGE,
         bool relu = true,
         const float *bias = NULL);
 */
 
-class ConvPoolingForwardImpl final: public ConvPoolingForward {
-    public:
-        ConvPoolingForwardImpl(Handle *handle);
-        void exec( const _megdnn_in TensorND src,
-                   const _megdnn_in TensorND filter, 
-                   const _megdnn_in TensorND bias,
-                  _megdnn_out TensorND dst,
-                  _megdnn_out Workspace workspace) override;
-        void deduce_layout(
-                const TensorLayout & src,
-                const TensorLayout & filter,
-                const TensorLayout & bias,
-                TensorLayout & dst) override;
-        void check_layout(
-                const TensorLayout & src,
-                const TensorLayout & filter,
-                const TensorLayout & bias,
-                TensorLayout & dst,
-                size_t workspace_limit_in_bytes) override;
-        size_t get_workspace_in_bytes(const TensorLayout & src,
-                const TensorLayout & filter,
-                const TensorLayout & bias,
-                const TensorLayout & dst) override;
+class ConvPoolingForwardImpl final : public ConvPoolingForward {
+public:
+    ConvPoolingForwardImpl(Handle* handle);
+    void exec(
+            const _megdnn_in TensorND src, const _megdnn_in TensorND filter,
+            const _megdnn_in TensorND bias, _megdnn_out TensorND dst,
+            _megdnn_out Workspace workspace) override;
+    void deduce_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst) override;
+    void check_layout(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, TensorLayout& dst,
+            size_t workspace_limit_in_bytes) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& bias, const TensorLayout& dst) override;
 };
 
-} // namespace cuda
-} // namespace megdnn
-// vim: syntax=cpp.doxygen
+}  // namespace cuda
+}  // namespace megdnn
+   // vim: syntax=cpp.doxygen

@@ -11,11 +11,11 @@
 #include "test/naive/fixture.h"
 
 #include "megdnn/oprs/cv.h"
-#include "test/common/checker.h"
-#include "test/common/warp_perspective.h"
 #include "megdnn/tensor_format.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
 #include "test/common/extra_impl_helper.h"
+#include "test/common/warp_perspective.h"
 
 using namespace megdnn;
 using namespace test;
@@ -70,9 +70,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
 
     auto convert_true_format = [](const TensorLayout& layout) {
         if (layout.ndim == 4)
-            return layout
-                    .reshape(
-                            {layout[0], layout[1] / 4, layout[2], layout[3], 4})
+            return layout.reshape({layout[0], layout[1] / 4, layout[2], layout[3], 4})
                     .dimshuffle({0, 1, 4, 2, 3});
         else
             return layout;
@@ -91,11 +89,10 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
             if (layout.dtype.enumv() == DTypeEnum::QuantizedS8)
                 layout.dtype = dtype::Int8();
             if (layout.ndim == 5) {
-                layout = layout.reshape({layout[0], layout[1] * layout[4],
-                                         layout[2], layout[3]});
+                layout = layout.reshape(
+                        {layout[0], layout[1] * layout[4], layout[2], layout[3]});
             }
-            nchw_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                      layout);
+            nchw_tensors.emplace_back(malloc(layout.span().dist_byte()), layout);
         }
         TensorNDArray nchw4_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
@@ -112,8 +109,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
         relayout->exec(nchw4_tensors[0], nchw_tensors[0]);
         relayout->exec(nchw4_tensors[1], nchw_tensors[1]);
 
-        warp_perspective->exec(nchw_tensors[0], nchw_tensors[1],
-                               nchw_tensors[2], workspace);
+        warp_perspective->exec(
+                nchw_tensors[0], nchw_tensors[1], nchw_tensors[2], workspace);
 
         relayout->exec(nchw_tensors[2], nchw4_tensors[2]);
 
@@ -129,10 +126,10 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
     checker.set_dtype(0, dtype::QuantizedS8(0.1f));
     checker.set_dtype(2, dtype::QuantizedS8(0.1f));
     checker.set_extra_opr_impl(extra_impl);
-    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                       WarpPerspective::BorderMode::REFLECT,
-                       WarpPerspective::BorderMode::REPLICATE,
-                       WarpPerspective::BorderMode::CONSTANT}) {
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
         param.border_val = 0.3f;
         param.bmode = bmode;
         param.imode = Param::InterpolationMode::LINEAR;
@@ -141,8 +138,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW4) {
         checker.set_param(param);
         checker.execs({{2, 1, 10, 11, 4}, {2, 3, 3}, {2, 1, 11, 12, 4}});
         checker.execs({{20, 300, 10, 11, 4}, {20, 3, 3}, {20, 300, 11, 12, 4}});
-        checker.execs(
-                {{2200, 3, 10, 11, 4}, {2200, 3, 3}, {2200, 3, 11, 12, 4}});
+        checker.execs({{2200, 3, 10, 11, 4}, {2200, 3, 3}, {2200, 3, 11, 12, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 25, 510, 4}});
         checker.execs({{1, 25, 25, 510, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 51, 51, 4}});
@@ -159,34 +155,38 @@ TEST_F(NAIVE, WARP_PERSPECTIVE) {
     param.format = WarpPerspective::Param::Format::NCHW;
 
     checker.set_param(param).exect(
-            Testcase{TensorValue({1, 1, 3, 3}, dtype::Uint8{},
-                                 {131, 255, 180, 245, 8, 0, 10, 3, 178}),
+            Testcase{
+                    TensorValue(
+                            {1, 1, 3, 3}, dtype::Uint8{},
+                            {131, 255, 180, 245, 8, 0, 10, 3, 178}),
 
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValue({1, 1, 2, 2}, dtype::Uint8{},
-                                 {156, 183, 181, 195})});
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue({1, 1, 2, 2}, dtype::Uint8{}, {156, 183, 181, 195})});
 
     checker.set_param(param).exect(
-            Testcase{TensorValue({1, 1, 3, 3},
-                                 dtype::Quantized8Asymm{
-                                         1.4f, static_cast<uint8_t>(127)},
-                                 {131, 255, 180, 245, 8, 0, 10, 3, 178}),
+            Testcase{
+                    TensorValue(
+                            {1, 1, 3, 3},
+                            dtype::Quantized8Asymm{1.4f, static_cast<uint8_t>(127)},
+                            {131, 255, 180, 245, 8, 0, 10, 3, 178}),
 
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValue({1, 1, 2, 2},
-                                 dtype::Quantized8Asymm{
-                                         1.4f, static_cast<uint8_t>(127)},
-                                 {156, 183, 181, 195})});
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue(
+                            {1, 1, 2, 2},
+                            dtype::Quantized8Asymm{1.4f, static_cast<uint8_t>(127)},
+                            {156, 183, 181, 195})});
 }
 
 TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QINT4) {
@@ -200,16 +200,18 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QINT4) {
                      output_values = {-1, -2, -2, -2};
 
     checker.set_param(param).exect(
-            Testcase{TensorValueLowbit4({1, 1, 3, 3}, dtype::QuantizedS4(0.1),
-                                        input_values),
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValueLowbit4({1, 1, 2, 2}, dtype::QuantizedS4(0.1),
-                                        output_values)});
+            Testcase{
+                    TensorValueLowbit4(
+                            {1, 1, 3, 3}, dtype::QuantizedS4(0.1), input_values),
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValueLowbit4(
+                            {1, 1, 2, 2}, dtype::QuantizedS4(0.1), output_values)});
 }
 
 TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QUINT4) {
@@ -223,18 +225,19 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW_QUINT4) {
                      output_values = {6, 8, 8, 9};
 
     checker.set_param(param).exect(
-            Testcase{TensorValueLowbit4({1, 1, 3, 3},
-                                        dtype::Quantized4Asymm(0.1, 3),
-                                        input_values),
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValueLowbit4({1, 1, 2, 2},
-                                        dtype::Quantized4Asymm(0.1, 3),
-                                        output_values)});
+            Testcase{
+                    TensorValueLowbit4(
+                            {1, 1, 3, 3}, dtype::Quantized4Asymm(0.1, 3), input_values),
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValueLowbit4(
+                            {1, 1, 2, 2}, dtype::Quantized4Asymm(0.1, 3),
+                            output_values)});
 }
 
 TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
@@ -242,9 +245,7 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
 
     auto convert_true_format = [](const TensorLayout& layout) {
         if (layout.ndim == 4)
-            return layout
-                    .reshape(
-                            {layout[0], layout[1] / 4, layout[2], layout[3], 4})
+            return layout.reshape({layout[0], layout[1] / 4, layout[2], layout[3], 4})
                     .dimshuffle({0, 1, 4, 2, 3});
         else
             return layout;
@@ -263,11 +264,10 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
             if (layout.dtype.enumv() == DTypeEnum::QuantizedS8)
                 layout.dtype = dtype::Int8();
             if (layout.ndim == 5) {
-                layout = layout.reshape({layout[0], layout[1] * layout[4],
-                                         layout[2], layout[3]});
+                layout = layout.reshape(
+                        {layout[0], layout[1] * layout[4], layout[2], layout[3]});
             }
-            nchw_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                      layout);
+            nchw_tensors.emplace_back(malloc(layout.span().dist_byte()), layout);
         }
         TensorNDArray nchw4_tensors;
         for (size_t i = 0; i < tensors.size(); ++i) {
@@ -284,8 +284,8 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
         relayout->exec(nchw4_tensors[0], nchw_tensors[0]);
         relayout->exec(nchw4_tensors[1], nchw_tensors[1]);
 
-        warp_perspective->exec(nchw_tensors[0], nchw_tensors[1],
-                               nchw_tensors[2], workspace);
+        warp_perspective->exec(
+                nchw_tensors[0], nchw_tensors[1], nchw_tensors[2], workspace);
 
         relayout->exec(nchw_tensors[2], nchw4_tensors[2]);
 
@@ -301,10 +301,10 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
     checker.set_dtype(0, dtype::QuantizedS8(0.1f));
     checker.set_dtype(2, dtype::QuantizedS8(0.1f));
     checker.set_extra_opr_impl(extra_impl);
-    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                       WarpPerspective::BorderMode::REFLECT,
-                       WarpPerspective::BorderMode::REPLICATE,
-                       WarpPerspective::BorderMode::CONSTANT}) {
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
         param.border_val = 0.3f;
         param.bmode = bmode;
         param.imode = Param::InterpolationMode::LINEAR;
@@ -313,8 +313,7 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_NCHW4) {
         checker.set_param(param);
         checker.execs({{2, 1, 10, 11, 4}, {2, 3, 3}, {2, 1, 11, 12, 4}});
         checker.execs({{20, 300, 10, 11, 4}, {20, 3, 3}, {20, 300, 11, 12, 4}});
-        checker.execs(
-                {{2200, 3, 10, 11, 4}, {2200, 3, 3}, {2200, 3, 11, 12, 4}});
+        checker.execs({{2200, 3, 10, 11, 4}, {2200, 3, 3}, {2200, 3, 11, 12, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 25, 510, 4}});
         checker.execs({{1, 25, 25, 510, 4}, {1, 3, 3}, {1, 25, 25, 25, 4}});
         checker.execs({{1, 25, 25, 25, 4}, {1, 3, 3}, {1, 25, 51, 51, 4}});
@@ -331,50 +330,53 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE) {
     param.format = WarpPerspective::Param::Format::NCHW;
 
     checker.set_param(param).exect(
-            Testcase{TensorValue({1, 1, 3, 3}, dtype::Uint8{},
-                                 {131, 255, 180, 245, 8, 0, 10, 3, 178}),
+            Testcase{
+                    TensorValue(
+                            {1, 1, 3, 3}, dtype::Uint8{},
+                            {131, 255, 180, 245, 8, 0, 10, 3, 178}),
 
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValue({1, 1, 2, 2}, dtype::Uint8{},
-                                 {156, 183, 181, 195})});
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue({1, 1, 2, 2}, dtype::Uint8{}, {156, 183, 181, 195})});
 
     checker.set_param(param).exect(
-            Testcase{TensorValue({1, 1, 3, 3},
-                                 dtype::Quantized8Asymm{
-                                         1.4f, static_cast<uint8_t>(127)},
-                                 {131, 255, 180, 245, 8, 0, 10, 3, 178}),
+            Testcase{
+                    TensorValue(
+                            {1, 1, 3, 3},
+                            dtype::Quantized8Asymm{1.4f, static_cast<uint8_t>(127)},
+                            {131, 255, 180, 245, 8, 0, 10, 3, 178}),
 
-                     TensorValue({1, 3, 3}, dtype::Float32{},
-                                 {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f,
-                                  1.5f, 3.0f}),
-                     {}},
-            Testcase{{},
-                     {},
-                     TensorValue({1, 1, 2, 2},
-                                 dtype::Quantized8Asymm{
-                                         1.4f, static_cast<uint8_t>(127)},
-                                 {156, 183, 181, 195})});
+                    TensorValue(
+                            {1, 3, 3}, dtype::Float32{},
+                            {1.2f, 1.2f, 0.6f, -1.05f, -2.0f, -0.7f, 1.3f, 1.5f, 3.0f}),
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    TensorValue(
+                            {1, 1, 2, 2},
+                            dtype::Quantized8Asymm{1.4f, static_cast<uint8_t>(127)},
+                            {156, 183, 181, 195})});
 }
 
 TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_FORWARD_HWCD4) {
     auto handle_multi_thread = handle();
     Checker<WarpPerspective> checker(handle(), false);
-    TensorFormat img_fmt =
-            Image2DPack4TensorFormat::make(2, handle_multi_thread);
+    TensorFormat img_fmt = Image2DPack4TensorFormat::make(2, handle_multi_thread);
     checker.set_fmt(0, img_fmt).set_fmt(2, img_fmt);
     for (auto dtype : std::vector<DType>{
                  dtype::Float32(), dtype::Float16(), dtype::QuantizedS8(4.3f),
                  dtype::Quantized8Asymm(2.4f, static_cast<uint8_t>(10))}) {
-        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                           WarpPerspective::BorderMode::REFLECT,
-                           WarpPerspective::BorderMode::CONSTANT,
-                           WarpPerspective::BorderMode::REPLICATE,
-                           WarpPerspective::BorderMode::CONSTANT}) {
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::CONSTANT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
             WarpPerspectiveMatRNG rng;
             checker.set_rng(1, &rng);
             WarpPerspective::Param param;
@@ -425,26 +427,23 @@ TEST_F(NAIVE_MULTI_THREADS, WARP_PERSPECTIVE_FORWARD_HWCD4) {
 
 #if MEGDNN_WITH_BENCHMARK
 namespace {
-void benchmark_impl(const typename WarpPerspective::Param& param,
-                    std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
-                    TaskExecutorConfig&& multi_thread_config,
-                    TaskExecutorConfig&& single_thread_config) {
+void benchmark_impl(
+        const typename WarpPerspective::Param& param,
+        std::vector<SmallVector<TensorShape>> shapes, size_t RUNS,
+        TaskExecutorConfig&& multi_thread_config,
+        TaskExecutorConfig&& single_thread_config) {
     std::vector<float> multi_thread_times, single_thread_times;
     {
-        auto multi_thread_hanle =
-                create_cpu_handle(0, true, &multi_thread_config);
-        auto benchmarker =
-                Benchmarker<WarpPerspective>(multi_thread_hanle.get());
+        auto multi_thread_hanle = create_cpu_handle(0, true, &multi_thread_config);
+        auto benchmarker = Benchmarker<WarpPerspective>(multi_thread_hanle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         for (auto shape : shapes) {
             multi_thread_times.push_back(benchmarker.exec(shape) / RUNS);
         }
     }
     {
-        auto single_thread_handle =
-                create_cpu_handle(0, true, &single_thread_config);
-        auto benchmarker =
-                Benchmarker<WarpPerspective>(single_thread_handle.get());
+        auto single_thread_handle = create_cpu_handle(0, true, &single_thread_config);
+        auto benchmarker = Benchmarker<WarpPerspective>(single_thread_handle.get());
         benchmarker.set_times(RUNS).set_display(false).set_param(param);
         for (auto shape : shapes) {
             single_thread_times.push_back(benchmarker.exec(shape) / RUNS);
@@ -455,8 +454,7 @@ void benchmark_impl(const typename WarpPerspective::Param& param,
     for (size_t i = 0; i < multi_thread_config.affinity_core_set.size(); i++) {
         printf("%zu ", multi_thread_config.affinity_core_set[i]);
     }
-    printf(", Single thread core_id %zu\n",
-           single_thread_config.affinity_core_set[0]);
+    printf(", Single thread core_id %zu\n", single_thread_config.affinity_core_set[0]);
     for (size_t i = 0; i < shapes.size(); i++) {
         auto shape = shapes[i];
         printf("Case: ");
@@ -465,8 +463,7 @@ void benchmark_impl(const typename WarpPerspective::Param& param,
         printf("%zu threads time: %f,\n single thread time: "
                "%f. spead up = %f, speedup/cores=%f\n",
                multi_thread_config.nr_thread, multi_thread_times[i],
-               single_thread_times[i],
-               single_thread_times[i] / multi_thread_times[i],
+               single_thread_times[i], single_thread_times[i] / multi_thread_times[i],
                single_thread_times[i] / multi_thread_times[i] /
                        multi_thread_config.nr_thread);
     }
@@ -486,8 +483,7 @@ TEST_F(NAIVE_BENCHMARK_MULTI_THREADS, BENCHMARK_WARP_PERSPECTIVE) {
 
     std::vector<SmallVector<TensorShape>> shapes;
     auto bench_case = [&](size_t N, size_t H, size_t W, size_t C) {
-        SmallVector<TensorShape> shape{
-                {N, C, H, W}, {N, 3, 3}, {N, C, 224, 224}};
+        SmallVector<TensorShape> shape{{N, C, H, W}, {N, 3, 3}, {N, C, 224, 224}};
         shapes.push_back(shape);
     };
     bench_case(1, 700, 490, 10);
@@ -532,8 +528,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_BACKWARD_DATA_BFLOAT16) {
     p.imode = WarpPerspectiveBackwardData::Param::InterpolationMode::LINEAR;
     p.format = WarpPerspectiveBackwardData::Param::Format::NCHW;
 
-    auto extra_impl =
-            extra_impl_helper<WarpPerspectiveBackwardData>(handle(), p);
+    auto extra_impl = extra_impl_helper<WarpPerspectiveBackwardData>(handle(), p);
     checker.set_param(p)
             .set_dtype(0, dtype::Float32())
             .set_dtype(1, dtype::BFloat16())
@@ -551,8 +546,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16) {
     p.format = WarpPerspectiveBackwardMat::Param::Format::NCHW;
     p.border_val = 0.3f;
 
-    auto extra_impl =
-            extra_impl_helper<WarpPerspectiveBackwardMat>(handle(), p);
+    auto extra_impl = extra_impl_helper<WarpPerspectiveBackwardMat>(handle(), p);
     checker.set_param(p)
             .set_dtype(0, dtype::BFloat16())
             .set_dtype(1, dtype::Float32())
@@ -560,10 +554,7 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_BACKWARD_MAT_BFLOAT16) {
             .set_dtype(3, dtype::Float32())
             .set_extra_opr_impl(extra_impl)
             .set_epsilon(1e-1)
-            .execs({{1000, 3, 11, 12},
-                    {1000, 3, 3},
-                    {1000, 3, 10, 11},
-                    {1000, 3, 3}});
+            .execs({{1000, 3, 11, 12}, {1000, 3, 3}, {1000, 3, 10, 11}, {1000, 3, 3}});
 }
 
 TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
@@ -591,9 +582,9 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
             TensorLayout ly;
             auto layout = tensors[i].layout;
             if (tensors[i].layout.ndim == 5) {
-                ly = TensorLayout{{layout[0], layout[1] * layout[4], layout[2],
-                                   layout[3]},
-                                  layout.dtype};
+                ly = TensorLayout{
+                        {layout[0], layout[1] * layout[4], layout[2], layout[3]},
+                        layout.dtype};
             } else {
                 ly = layout;
             }
@@ -614,8 +605,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
         relayout->exec(nchw64_tensors[0], nchw_tensors[0]);
         relayout->exec(nchw64_tensors[1], nchw_tensors[1]);
 
-        warp_perspective->exec(nchw_tensors[0], nchw_tensors[1],
-                               nchw_tensors[2], workspace);
+        warp_perspective->exec(
+                nchw_tensors[0], nchw_tensors[1], nchw_tensors[2], workspace);
 
         relayout->exec(nchw_tensors[2], nchw64_tensors[2]);
 
@@ -631,10 +622,10 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NCHW64) {
     checker.set_dtype(0, dtype::QuantizedS4(0.1f));
     checker.set_dtype(2, dtype::QuantizedS4(0.1f));
     checker.set_extra_opr_impl(extra_impl);
-    for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                       WarpPerspective::BorderMode::REFLECT,
-                       WarpPerspective::BorderMode::REPLICATE,
-                       WarpPerspective::BorderMode::CONSTANT}) {
+    for (auto bmode :
+         {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+          WarpPerspective::BorderMode::REPLICATE,
+          WarpPerspective::BorderMode::CONSTANT}) {
         param.border_val = 0.3f;
         param.bmode = bmode;
         param.imode = Param::InterpolationMode::LINEAR;
@@ -655,8 +646,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
 
     auto convert_true_format = [](const TensorLayout& layout) {
         if (layout.ndim == 4) {
-            TensorLayout ret{{layout[0], layout[2], layout[3], layout[1]},
-                             layout.dtype};
+            TensorLayout ret{
+                    {layout[0], layout[2], layout[3], layout[1]}, layout.dtype};
             return ret.dimshuffle({0, 3, 1, 2});
         } else
             return layout;
@@ -674,8 +665,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
             TensorLayout ly;
             auto layout = tensors[i].layout;
             if (layout.ndim == 4) {
-                ly = TensorLayout{{layout[0], layout[3], layout[1], layout[2]},
-                                  layout.dtype};
+                ly = TensorLayout{
+                        {layout[0], layout[3], layout[1], layout[2]}, layout.dtype};
             } else {
                 ly = layout;
             }
@@ -696,8 +687,8 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
         relayout->exec(nhwc_tensors[0], nchw_tensors[0]);
         relayout->exec(nhwc_tensors[1], nchw_tensors[1]);
 
-        warp_perspective->exec(nchw_tensors[0], nchw_tensors[1],
-                               nchw_tensors[2], workspace);
+        warp_perspective->exec(
+                nchw_tensors[0], nchw_tensors[1], nchw_tensors[2], workspace);
 
         relayout->exec(nchw_tensors[2], nhwc_tensors[2]);
         free(workspace_ptr);
@@ -713,10 +704,10 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
         checker.set_dtype(0, dtype::QuantizedS4(0.1f));
         checker.set_dtype(2, dtype::QuantizedS4(0.1f));
         checker.set_extra_opr_impl(extra_impl);
-        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                           WarpPerspective::BorderMode::REFLECT,
-                           WarpPerspective::BorderMode::REPLICATE,
-                           WarpPerspective::BorderMode::CONSTANT}) {
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
             param.border_val = 0.3f;
             param.bmode = bmode;
             param.imode = Param::InterpolationMode::LINEAR;
@@ -736,10 +727,10 @@ TEST_F(NAIVE, WARP_PERSPECTIVE_NHWC) {
         checker.set_dtype(0, dtype::Quantized4Asymm(0.1f, 3));
         checker.set_dtype(2, dtype::Quantized4Asymm(0.1f, 3));
         checker.set_extra_opr_impl(extra_impl);
-        for (auto bmode : {WarpPerspective::BorderMode::WRAP,
-                           WarpPerspective::BorderMode::REFLECT,
-                           WarpPerspective::BorderMode::REPLICATE,
-                           WarpPerspective::BorderMode::CONSTANT}) {
+        for (auto bmode :
+             {WarpPerspective::BorderMode::WRAP, WarpPerspective::BorderMode::REFLECT,
+              WarpPerspective::BorderMode::REPLICATE,
+              WarpPerspective::BorderMode::CONSTANT}) {
             param.border_val = 0.3f;
             param.bmode = bmode;
             param.imode = Param::InterpolationMode::LINEAR;

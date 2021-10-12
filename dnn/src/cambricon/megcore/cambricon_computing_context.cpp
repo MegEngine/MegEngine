@@ -38,9 +38,8 @@ CambriconComputingContext::~CambriconComputingContext() {
     }
 }
 
-void CambriconComputingContext::memcpy(void* dst, const void* src,
-                                       size_t size_in_bytes,
-                                       megcoreMemcpyKind_t kind) {
+void CambriconComputingContext::memcpy(
+        void* dst, const void* src, size_t size_in_bytes, megcoreMemcpyKind_t kind) {
     cnrtMemTransDir_t dir;
     switch (kind) {
         case megcoreMemcpyDeviceToHost:
@@ -60,12 +59,11 @@ void CambriconComputingContext::memcpy(void* dst, const void* src,
         cnrt_check(cnrtMemcpy(dst, const_cast<void*>(src), size_in_bytes, dir));
         return;
     }
-    cnrt_check(cnrtMemcpyAsync(dst, const_cast<void*>(src), size_in_bytes,
-                               context_.queue, dir));
+    cnrt_check(cnrtMemcpyAsync(
+            dst, const_cast<void*>(src), size_in_bytes, context_.queue, dir));
 }
 
-void CambriconComputingContext::memset(void* dst, int value,
-                                       size_t size_in_bytes) {
+void CambriconComputingContext::memset(void* dst, int value, size_t size_in_bytes) {
     cnrt_check(cnrtSyncQueue(context_.queue));
     cnrt_check(cnrtMemset(dst, value, size_in_bytes));
 }
@@ -75,4 +73,3 @@ void CambriconComputingContext::synchronize() {
 }
 
 // vim: syntax=cpp.doxygen
-

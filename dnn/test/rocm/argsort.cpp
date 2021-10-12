@@ -121,4 +121,3 @@ TEST_F(ROCM, ARGSORT_BACKWARD_I32) {
 }
 
 // vim: syntax=cpp.doxygen
-

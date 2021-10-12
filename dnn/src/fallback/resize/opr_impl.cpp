@@ -53,14 +53,10 @@ void ResizeImpl::kern_fallback(const KernParam<ctype>& kern_param) {
                 rep(ow, OW) {
                     std::tie(aw0, iw0, aw1, iw1) = table_w[ow];
                     dptr[c * OH * OW + oh * OW + ow] = output_converter(
-                            sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] * ah0 *
-                                    aw0 +
-                            sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] * ah0 *
-                                    aw1 +
-                            sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] * ah1 *
-                                    aw0 +
-                            sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] * ah1 *
-                                    aw1);
+                            sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] * ah0 * aw0 +
+                            sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] * ah0 * aw1 +
+                            sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] * ah1 * aw0 +
+                            sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] * ah1 * aw1);
                 }
             }
         }
@@ -109,8 +105,8 @@ void ResizeImpl::kern_fallback_nhwc(const KernParam<ctype>& kern_param) {
     }
 }
 
-void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_workspace workspace) {
+void ResizeImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     if (param().format == param::Resize::Format::NCHW4 ||
         param().format == param::Resize::Format::NCHW44 ||
@@ -139,8 +135,9 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
             cb(dtype::Uint8, uint8_t);
             cb(dtype::Quantized8Asymm, uint8_t);
             default:
-                megdnn_throw(ssprintf("Unsupported input DType in Resize: %s",
-                                      src.layout.dtype.name())
+                megdnn_throw(ssprintf(
+                                     "Unsupported input DType in Resize: %s",
+                                     src.layout.dtype.name())
                                      .c_str());
                 return;
         }

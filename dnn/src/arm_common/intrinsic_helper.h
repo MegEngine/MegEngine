@@ -17,8 +17,9 @@
 namespace megdnn {
 namespace {
 
-template <int weight_number, int base_offset, int ptr_step, int oc_block,
-          typename Func, typename T, typename T2, typename... XT>
+template <
+        int weight_number, int base_offset, int ptr_step, int oc_block, typename Func,
+        typename T, typename T2, typename... XT>
 struct LoadHelper {
     static __ai void impl(T& weight, T2 ptr, int oc_offset, XT... args);
 };
@@ -26,13 +27,14 @@ struct LoadHelper {
 #define WEIGHT_CB(step) \
     src[step] = Func::impl(ptr + base_offset + step * ptr_step, args...);
 
-#define LOAD_HELPER(step)                                                   \
-    template <int base_offset, int ptr_step, typename Func, typename T,     \
-              typename T2, typename... XT>                                  \
-    struct LoadHelper<step, base_offset, ptr_step, 0, Func, T, T2, XT...> { \
-        static __ai void impl(T& src, T2 ptr, int, XT... args) {            \
-            UNROLL_CALL_RAW(step, WEIGHT_CB);                               \
-        }                                                                   \
+#define LOAD_HELPER(step)                                                          \
+    template <                                                                     \
+            int base_offset, int ptr_step, typename Func, typename T, typename T2, \
+            typename... XT>                                                        \
+    struct LoadHelper<step, base_offset, ptr_step, 0, Func, T, T2, XT...> {        \
+        static __ai void impl(T& src, T2 ptr, int, XT... args) {                   \
+            UNROLL_CALL_RAW(step, WEIGHT_CB);                                      \
+        }                                                                          \
     }
 
 LOAD_HELPER(1);
@@ -56,16 +58,14 @@ LOAD_HELPER(16);
 #undef WEIGHT_CB
 
 ///////////////////////////c_dim = 1/////////////////////////
-#define WEIGHT_CB(step) \
-    src[0][step] = Func::impl(ptr + base_offset + step * ptr_step);
+#define WEIGHT_CB(step) src[0][step] = Func::impl(ptr + base_offset + step * ptr_step);
 
-#define LOAD_HELPER(step)                                               \
-    template <int base_offset, int ptr_step, typename Func, typename T, \
-              typename T2>                                              \
-    struct LoadHelper<step, base_offset, ptr_step, 1, Func, T, T2> {    \
-        static __ai void impl(T& src, T2 ptr, int) {                    \
-            UNROLL_CALL_RAW(step, WEIGHT_CB);                           \
-        }                                                               \
+#define LOAD_HELPER(step)                                                            \
+    template <int base_offset, int ptr_step, typename Func, typename T, typename T2> \
+    struct LoadHelper<step, base_offset, ptr_step, 1, Func, T, T2> {                 \
+        static __ai void impl(T& src, T2 ptr, int) {                                 \
+            UNROLL_CALL_RAW(step, WEIGHT_CB);                                        \
+        }                                                                            \
     }
 
 LOAD_HELPER(1);
@@ -86,13 +86,12 @@ LOAD_HELPER(9);
     src[0][step] = Func::impl(ptr + base_offset + step * ptr_step); \
     src[1][step] = Func::impl(ptr + base_offset + step * ptr_step + oc_offset);
 
-#define LOAD_HELPER(step)                                               \
-    template <int base_offset, int ptr_step, typename Func, typename T, \
-              typename T2>                                              \
-    struct LoadHelper<step, base_offset, ptr_step, 2, Func, T, T2> {    \
-        static __ai void impl(T& src, T2 ptr, int oc_offset) {          \
-            UNROLL_CALL_RAW(step, WEIGHT_CB);                           \
-        }                                                               \
+#define LOAD_HELPER(step)                                                            \
+    template <int base_offset, int ptr_step, typename Func, typename T, typename T2> \
+    struct LoadHelper<step, base_offset, ptr_step, 2, Func, T, T2> {                 \
+        static __ai void impl(T& src, T2 ptr, int oc_offset) {                       \
+            UNROLL_CALL_RAW(step, WEIGHT_CB);                                        \
+        }                                                                            \
     }
 
 LOAD_HELPER(1);
@@ -107,18 +106,20 @@ LOAD_HELPER(8);
 #undef LOAD_HELPER
 #undef WEIGHT_CB
 
-template <int weight_number, int base_offset, int ptr_step, int c_dim,
-          typename Func, typename T, typename T2>
+template <
+        int weight_number, int base_offset, int ptr_step, int c_dim, typename Func,
+        typename T, typename T2>
 __ai void load_helper(T& weight, T2 ptr, int oc_offset) {
     LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2>::impl(
             weight, ptr, oc_offset);
 }
 
-template <int weight_number, int base_offset, int ptr_step, int c_dim,
-          typename Func, typename T, typename T2, typename... XT>
+template <
+        int weight_number, int base_offset, int ptr_step, int c_dim, typename Func,
+        typename T, typename T2, typename... XT>
 __ai void load_helper_x(T& weight, T2 ptr, int oc_offset, XT... args) {
-    LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2,
-               XT...>::impl(weight, ptr, oc_offset, args...);
+    LoadHelper<weight_number, base_offset, ptr_step, c_dim, Func, T, T2, XT...>::impl(
+            weight, ptr, oc_offset, args...);
 }
 
 }  // namespace

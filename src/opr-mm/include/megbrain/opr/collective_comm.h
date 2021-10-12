@@ -12,8 +12,8 @@
 #pragma once
 
 #include "megbrain/graph.h"
-#include "megbrain/opr/param_defs.h"
 #include "megbrain/opr/group_manager.h"
+#include "megbrain/opr/param_defs.h"
 #include "megray.h"
 
 namespace mgb {
@@ -27,11 +27,10 @@ public:
     using Param = megdnn::param::CollectiveComm;
 
     CollectiveComm(
-            VarNodeArray inputs, ComputingGraph* const graph,
-            const std::string& key, const size_t nr_devices, const bool is_root,
-            const int rank, const bool local_grad,
-            std::shared_ptr<GroupClient> group_client, const Param& param,
-            const DType& dtype, const std::string& backend,
+            VarNodeArray inputs, ComputingGraph* const graph, const std::string& key,
+            const size_t nr_devices, const bool is_root, const int rank,
+            const bool local_grad, std::shared_ptr<GroupClient> group_client,
+            const Param& param, const DType& dtype, const std::string& backend,
             const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
             const OperatorNodeConfig& config,
             const std::shared_ptr<DTypeScalar>& disable);
@@ -43,22 +42,19 @@ public:
             std::shared_ptr<GroupClient> group_client,
             const SmallVector<std::shared_ptr<DeviceTensorND>>& dev_buffer_arr,
             const Param& param, const DType& dtype = {},
-            const std::string& backend = "nccl",
-            const OperatorNodeConfig& config = {},
+            const std::string& backend = "nccl", const OperatorNodeConfig& config = {},
             const std::shared_ptr<DTypeScalar>& disable =
                     std::make_shared<DTypeScalar>(0));
 
-    static SymbolVarArray make(const SymbolVarArray& inputs,
-                               ComputingGraph* const graph,
-                               const std::string& key, const size_t nr_devices,
-                               const bool is_root, const int rank,
-                               const bool local_grad,
-                               std::shared_ptr<GroupClient> group_client,
-                               const Param& param, const DType& dtype = {},
-                               const std::string& backend = "nccl",
-                               const OperatorNodeConfig& config = {},
-                               const std::shared_ptr<DTypeScalar>& disable =
-                                       std::make_shared<DTypeScalar>(0));
+    static SymbolVarArray make(
+            const SymbolVarArray& inputs, ComputingGraph* const graph,
+            const std::string& key, const size_t nr_devices, const bool is_root,
+            const int rank, const bool local_grad,
+            std::shared_ptr<GroupClient> group_client, const Param& param,
+            const DType& dtype = {}, const std::string& backend = "nccl",
+            const OperatorNodeConfig& config = {},
+            const std::shared_ptr<DTypeScalar>& disable =
+                    std::make_shared<DTypeScalar>(0));
 
     const Param& param() const { return m_param; }
     const DType& dtype() const { return m_dtype; }
@@ -81,17 +77,13 @@ public:
     //! Operators with same keys belong to the same clique.
     const std::string& key() const { return m_key; }
 
-    std::shared_ptr<GroupClient> group_client() const {
-        return m_group_client;
-    }
+    std::shared_ptr<GroupClient> group_client() const { return m_group_client; }
 
     void set_pack_hash(uint64_t hash) { m_pack_hash = hash; }
 
     uint64_t pack_hash() const { return m_pack_hash; }
 
-    std::shared_ptr<MegRay::Context> megray_ctx() const {
-        return m_megray_ctx;
-    }
+    std::shared_ptr<MegRay::Context> megray_ctx() const { return m_megray_ctx; }
 
     VarNode* grad(VarNode* out_grad) const;
 
@@ -103,8 +95,9 @@ private:
     const std::string m_backend;
     void mem_plan_fwd_in2out_writable() override;
     void add_input_layout_constraint() override;
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
     void init_output_comp_node() override;
     void do_execute(ExecEnv& env) override;
     NodeProp* do_make_node_prop() const override;

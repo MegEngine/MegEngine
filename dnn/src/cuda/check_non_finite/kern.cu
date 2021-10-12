@@ -21,7 +21,7 @@ namespace cuda {
 INST_REDUCE(reduce::CheckNonFiniteOp<dt_float32 COMMA dt_int32 COMMA dt_int32>, false);
 
 #undef COMMA
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen

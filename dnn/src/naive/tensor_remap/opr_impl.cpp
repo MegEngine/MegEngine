@@ -65,33 +65,28 @@ void backward(const TensorND& diff, const TensorND& map, const TensorND& grad) {
 
 }  // anonymous namespace
 
-void IndexingRemapForwardImpl::exec(_megdnn_tensor_in src,
-                                    _megdnn_tensor_in map,
-                                    _megdnn_tensor_out dst,
-                                    _megdnn_workspace workspace) {
+void IndexingRemapForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in map, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, map.layout, dst.layout, workspace.size);
     switch (src.layout.dtype.enumv()) {
-#define cb(dt)                                                  \
-    case DTypeTrait<dt>::enumv:                                 \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                           \
-                forward<DTypeTrait<dt>::ctype>(src, map, dst)); \
+#define cb(dt)                                                                       \
+    case DTypeTrait<dt>::enumv:                                                      \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(forward<DTypeTrait<dt>::ctype>(src, map, dst)); \
         return;
-        cb(dtype::Float32)
-        cb(dtype::Int32)
+        cb(dtype::Float32) cb(dtype::Int32)
 #undef cb
 
-        default:
-            megdnn_throw(
-                    ssprintf("unsupported dtype %s in indexing "
-                             "remap forward naive\n",
-                             src.layout.dtype.name()));
+                default : megdnn_throw(ssprintf(
+                                  "unsupported dtype %s in indexing "
+                                  "remap forward naive\n",
+                                  src.layout.dtype.name()));
     }
 }
 
-void IndexingRemapBackwardImpl::exec(_megdnn_tensor_in diff,
-                                     _megdnn_tensor_in map,
-                                     _megdnn_tensor_out grad,
-                                     _megdnn_workspace workspace) {
+void IndexingRemapBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in map, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
     check_exec(diff.layout, map.layout, grad.layout, workspace.size);
     switch (diff.layout.dtype.enumv()) {
 #define cb(dt)                                                     \
@@ -99,13 +94,12 @@ void IndexingRemapBackwardImpl::exec(_megdnn_tensor_in diff,
         MEGDNN_DISPATCH_CPU_KERN_OPR(                              \
                 backward<DTypeTrait<dt>::ctype>(diff, map, grad)); \
         return;
-        cb(dtype::Float32)
-        cb(dtype::Int32)
+        cb(dtype::Float32) cb(dtype::Int32)
 #undef cb
-        default:
-            megdnn_throw(ssprintf(
-                    "unsupported dtype %s in indexing remap backward naive\n",
-                    diff.layout.dtype.name()));
+                default
+                : megdnn_throw(ssprintf(
+                          "unsupported dtype %s in indexing remap backward naive\n",
+                          diff.layout.dtype.name()));
     }
 }
 

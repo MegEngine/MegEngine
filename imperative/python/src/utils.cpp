@@ -52,9 +52,9 @@ public:
 
 private:
     static py::object logger;
-    static void py_log_handler(mgb::LogLevel level, const char* file,
-                               const char* func, int line, const char* fmt,
-                               va_list ap) {
+    static void py_log_handler(
+            mgb::LogLevel level, const char* file, const char* func, int line,
+            const char* fmt, va_list ap) {
         using mgb::LogLevel;
 
         MGB_MARK_USED_VAR(file);
@@ -113,8 +113,8 @@ py::bytes _get_serialized_dtype(py::object dtype) {
     return py::bytes(sdtype.data(), sdtype.size());
 }
 
-int fork_exec_impl(const std::string& arg0, const std::string& arg1,
-                   const std::string& arg2) {
+int fork_exec_impl(
+        const std::string& arg0, const std::string& arg1, const std::string& arg2) {
 #ifdef WIN32
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
@@ -124,20 +124,21 @@ int fork_exec_impl(const std::string& arg0, const std::string& arg1,
     auto args_str = " " + arg1 + " " + arg2;
 
     // Start the child process.
-    if (!CreateProcess(arg0.c_str(),                         // exe name
-                       const_cast<char*>(args_str.c_str()),  // Command line
-                       NULL,   // Process handle not inheritable
-                       NULL,   // Thread handle not inheritable
-                       FALSE,  // Set handle inheritance to FALSE
-                       0,      // No creation flags
-                       NULL,   // Use parent's environment block
-                       NULL,   // Use parent's starting directory
-                       &si,    // Pointer to STARTUPINFO structure
-                       &pi)    // Pointer to PROCESS_INFORMATION structure
+    if (!CreateProcess(
+                arg0.c_str(),                         // exe name
+                const_cast<char*>(args_str.c_str()),  // Command line
+                NULL,                                 // Process handle not inheritable
+                NULL,                                 // Thread handle not inheritable
+                FALSE,                                // Set handle inheritance to FALSE
+                0,                                    // No creation flags
+                NULL,                                 // Use parent's environment block
+                NULL,                                 // Use parent's starting directory
+                &si,  // Pointer to STARTUPINFO structure
+                &pi)  // Pointer to PROCESS_INFORMATION structure
     ) {
         mgb_log_warn("CreateProcess failed (%lu).\n", GetLastError());
-        fprintf(stderr, "[megbrain] failed to execl %s [%s, %s]\n",
-                arg0.c_str(), arg1.c_str(), arg2.c_str());
+        fprintf(stderr, "[megbrain] failed to execl %s [%s, %s]\n", arg0.c_str(),
+                arg1.c_str(), arg2.c_str());
         __builtin_trap();
     }
     return pi.dwProcessId;
@@ -145,8 +146,8 @@ int fork_exec_impl(const std::string& arg0, const std::string& arg1,
     auto pid = fork();
     if (!pid) {
         execl(arg0.c_str(), arg0.c_str(), arg1.c_str(), arg2.c_str(), nullptr);
-        fprintf(stderr, "[megbrain] failed to execl %s [%s, %s]: %s\n",
-                arg0.c_str(), arg1.c_str(), arg2.c_str(), std::strerror(errno));
+        fprintf(stderr, "[megbrain] failed to execl %s [%s, %s]: %s\n", arg0.c_str(),
+                arg1.c_str(), arg2.c_str(), std::strerror(errno));
         std::terminate();
     }
     mgb_assert(pid > 0, "failed to fork: %s", std::strerror(errno));
@@ -158,25 +159,18 @@ int fork_exec_impl(const std::string& arg0, const std::string& arg1,
 
 void init_utils(py::module m) {
     auto atexit = py::module::import("atexit");
-    atexit.attr("register")(py::cpp_function([]() {
-        g_global_finalized = true;
-    }));
+    atexit.attr("register")(py::cpp_function([]() { g_global_finalized = true; }));
 
     py::class_<std::atomic<uint64_t>>(m, "AtomicUint64")
             .def(py::init<>())
             .def(py::init<uint64_t>())
-            .def("load",
-                 [](const std::atomic<uint64_t>& self) { return self.load(); })
+            .def("load", [](const std::atomic<uint64_t>& self) { return self.load(); })
             .def("store", [](std::atomic<uint64_t>& self,
                              uint64_t value) { return self.store(value); })
-            .def("fetch_add",
-                 [](std::atomic<uint64_t>& self, uint64_t value) {
-                     return self.fetch_add(value);
-                 })
-            .def("fetch_sub",
-                 [](std::atomic<uint64_t>& self, uint64_t value) {
-                     return self.fetch_sub(value);
-                 })
+            .def("fetch_add", [](std::atomic<uint64_t>& self,
+                                 uint64_t value) { return self.fetch_add(value); })
+            .def("fetch_sub", [](std::atomic<uint64_t>& self,
+                                 uint64_t value) { return self.fetch_sub(value); })
             .def(py::self += uint64_t())
             .def(py::self -= uint64_t());
 
@@ -192,8 +186,7 @@ void init_utils(py::module m) {
             .value("Warn", LoggerWrapper::LogLevel::WARN)
             .value("Error", LoggerWrapper::LogLevel::ERROR);
 
-    m.def("_get_dtype_num", &_get_dtype_num,
-          "Convert numpy dtype to internal dtype");
+    m.def("_get_dtype_num", &_get_dtype_num, "Convert numpy dtype to internal dtype");
 
     m.def("_get_serialized_dtype", &_get_serialized_dtype,
           "Convert numpy dtype to internal dtype for serialization");
@@ -204,15 +197,12 @@ void init_utils(py::module m) {
     using mgb::imperative::TensorSanityCheck;
     py::class_<TensorSanityCheck>(m, "TensorSanityCheckImpl")
             .def(py::init<>())
-            .def("enable", 
-                [](TensorSanityCheck& checker) -> TensorSanityCheck& {
-                    checker.enable();
-                    return checker;
-                })
-            .def("disable",
-                [](TensorSanityCheck& checker) {
-                    checker.disable();
-                });
+            .def("enable",
+                 [](TensorSanityCheck& checker) -> TensorSanityCheck& {
+                     checker.enable();
+                     return checker;
+                 })
+            .def("disable", [](TensorSanityCheck& checker) { checker.disable(); });
 
 #if MGB_ENABLE_OPR_MM
     m.def("create_mm_server", &create_zmqrpc_server, py::arg("addr"),
@@ -228,21 +218,21 @@ void init_utils(py::module m) {
     m.def("_defrag", [](const mgb::CompNode& cn) {
         mgb::imperative::BlobManager::inst()->defrag(cn);
     });
-    m.def("_set_fork_exec_path_for_timed_func", [](const std::string& arg0,
-                                                   const ::std::string arg1) {
-        using namespace std::placeholders;
-        mgb::sys::TimedFuncInvoker::ins().set_fork_exec_impl(std::bind(
-                fork_exec_impl, std::string{arg0}, std::string{arg1}, _1));
-    });
-    m.def("_timed_func_exec_cb", [](const std::string& user_data){
+    m.def("_set_fork_exec_path_for_timed_func",
+          [](const std::string& arg0, const ::std::string arg1) {
+              using namespace std::placeholders;
+              mgb::sys::TimedFuncInvoker::ins().set_fork_exec_impl(std::bind(
+                      fork_exec_impl, std::string{arg0}, std::string{arg1}, _1));
+          });
+    m.def("_timed_func_exec_cb", [](const std::string& user_data) {
         mgb::sys::TimedFuncInvoker::ins().fork_exec_impl_mainloop(user_data.c_str());
     });
 
     using mgb::PersistentCache;
-    class PyPersistentCache: public mgb::PersistentCache {
+    class PyPersistentCache : public mgb::PersistentCache {
     private:
         using KeyPair = std::pair<std::string, std::string>;
-        using BlobPtr = std::unique_ptr<Blob, void(*)(Blob*)>;
+        using BlobPtr = std::unique_ptr<Blob, void (*)(Blob*)>;
 
         std::shared_mutex m_mutex;
         std::unordered_map<KeyPair, BlobPtr, mgb::pairhash> m_local_cache;
@@ -257,13 +247,13 @@ void init_utils(py::module m) {
         }
 
         BlobPtr copy_blob(const Blob& blob) {
-            auto blob_deleter = [](Blob* blob){
+            auto blob_deleter = [](Blob* blob) {
                 if (blob) {
                     std::free(const_cast<void*>(blob->ptr));
                     delete blob;
                 }
             };
-            auto blob_ptr = BlobPtr{ new Blob(), blob_deleter };
+            auto blob_ptr = BlobPtr{new Blob(), blob_deleter};
             blob_ptr->ptr = std::malloc(blob.size);
             std::memcpy(const_cast<void*>(blob_ptr->ptr), blob.ptr, blob.size);
             blob_ptr->size = blob.size;
@@ -271,19 +261,22 @@ void init_utils(py::module m) {
         }
 
         BlobPtr str_to_blob(const std::string& str) {
-            auto blob = Blob{ str.data(), str.size() };
+            auto blob = Blob{str.data(), str.size()};
             return copy_blob(blob);
         }
 
-        std::unique_ptr<Blob, void(*)(Blob*)> empty_blob() {
-            return BlobPtr{ nullptr, [](Blob* blob){} };
+        std::unique_ptr<Blob, void (*)(Blob*)> empty_blob() {
+            return BlobPtr{nullptr, [](Blob* blob) {}};
         }
+
     public:
         mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override {
-            auto py_get = [this](const std::string& category, const Blob& key) -> mgb::Maybe<Blob> {
-                PYBIND11_OVERLOAD_PURE(mgb::Maybe<Blob>, PersistentCache, get, category, key);
+            auto py_get = [this](const std::string& category,
+                                 const Blob& key) -> mgb::Maybe<Blob> {
+                PYBIND11_OVERLOAD_PURE(
+                        mgb::Maybe<Blob>, PersistentCache, get, category, key);
             };
-            KeyPair kp = { category, blob_to_str(key) };
+            KeyPair kp = {category, blob_to_str(key)};
             std::shared_lock<decltype(m_mutex)> rlock;
             auto iter = m_local_cache.find(kp);
             if (iter == m_local_cache.end()) {
@@ -300,16 +293,18 @@ void init_utils(py::module m) {
                 return {};
             }
         }
-        void put(const std::string& category, const Blob& key, const Blob& value) override {
-            KeyPair kp = { category, blob_to_str(key) };
+        void put(const std::string& category, const Blob& key, const Blob& value)
+                override {
+            KeyPair kp = {category, blob_to_str(key)};
             std::unique_lock<decltype(m_mutex)> wlock;
             m_local_cache.insert_or_assign(kp, copy_blob(value));
             PYBIND11_OVERLOAD_PURE(void, PersistentCache, put, category, key, value);
         }
     };
-    py::class_<PersistentCache, PyPersistentCache, std::shared_ptr<PersistentCache>>(m, "PersistentCache")
-        .def(py::init<>())
-        .def("get", &PersistentCache::get)
-        .def("put", &PersistentCache::put)
-        .def("reg", &PersistentCache::set_impl);
+    py::class_<PersistentCache, PyPersistentCache, std::shared_ptr<PersistentCache>>(
+            m, "PersistentCache")
+            .def(py::init<>())
+            .def("get", &PersistentCache::get)
+            .def("put", &PersistentCache::put)
+            .def("reg", &PersistentCache::set_impl);
 }

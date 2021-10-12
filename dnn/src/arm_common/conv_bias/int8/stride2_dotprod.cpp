@@ -22,20 +22,18 @@ using namespace arm_common;
 using namespace direct_dotprod_int8_stride2;
 
 namespace {
-bool need_dst_copy(
-        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param) {
+bool need_dst_copy(const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param) {
     return param.osz[1] % 8;
 }
-bool need_src_copy(
-        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param) {
+bool need_src_copy(const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param) {
     if (param.filter_meta.padding[0] || param.filter_meta.padding[1]) {
         return true;
     }
     return need_dst_copy(param);
 }
 void get_rectified_size(
-        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param,
-        size_t& IH2, size_t& IW2, size_t& OH2, size_t& OW2) {
+        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, size_t& IH2,
+        size_t& IW2, size_t& OH2, size_t& OW2) {
     auto&& fm = param.filter_meta;
     size_t SW = fm.stride[1];
     size_t IH = param.isz[0];
@@ -73,19 +71,20 @@ bool direct_dotprod_int8_stride2::can_conv_direct_stride2_int8(
               param.filter_type.enumv() == DTypeEnum::Int8 &&
               param.dst_type.enumv() == DTypeEnum::Int32)) &&
             fm.format == param::Convolution::Format::NCHW && !fm.should_flip &&
-            fm.spatial_ndim == 2 && fm.dilation[0] == 1 &&
-            fm.dilation[1] == 1 && fm.stride[0] == 2 && fm.stride[1] == 2 &&
-            FH == fm.spatial[1] && (FH == 2 || FH == 3 || FH == 5 || FH == 7);
+            fm.spatial_ndim == 2 && fm.dilation[0] == 1 && fm.dilation[1] == 1 &&
+            fm.stride[0] == 2 && fm.stride[1] == 2 && FH == fm.spatial[1] &&
+            (FH == 2 || FH == 3 || FH == 5 || FH == 7);
 
-    bool preferred = (((FH == 2 || FH == 3) &&
-                       (IC == 1 || (IC <= 8 && OC <= 12) || OC <= 8)) ||
-                      (FH == 5 && ((IC == 1 && OC <= 16) || OC <= 12)) ||
-                      (FH == 7 && OC <= 16)) &&
-                     (param.bias_mode != BiasMode::BIAS);
+    bool preferred =
+            (((FH == 2 || FH == 3) && (IC == 1 || (IC <= 8 && OC <= 12) || OC <= 8)) ||
+             (FH == 5 && ((IC == 1 && OC <= 16) || OC <= 12)) ||
+             (FH == 7 && OC <= 16)) &&
+            (param.bias_mode != BiasMode::BIAS);
     if (param.bias_type.valid()) {
-        avaible &= ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
-                     param.bias_type.enumv() == DTypeEnum::QuantizedS32) ||
-                    (param.bias_type.enumv() == param.dst_type.enumv()));
+        avaible &=
+                ((param.src_type.enumv() == DTypeEnum::QuantizedS8 &&
+                  param.bias_type.enumv() == DTypeEnum::QuantizedS32) ||
+                 (param.bias_type.enumv() == param.dst_type.enumv()));
     }
     return avaible && preferred;
 }
@@ -100,9 +99,8 @@ WorkspaceBundle direct_dotprod_int8_stride2::get_bundle(
     get_rectified_size(param, IH2, IW2, OH2, OW2);
     size_t src_size = 0, dst_size = 0;
     if (need_src_copy(param)) {
-        src_size = m_large_group
-                           ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
-                           : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
+        src_size = m_large_group ? IC * IH2 * IW2 * sizeof(int8_t) * nr_threads
+                                 : IC * IH2 * IW2 * sizeof(int8_t) * group * batch;
     };
     if (need_dst_copy(param)) {
         dst_size = OH2 * OW2 * param.dst_type.size() * nr_threads;
@@ -116,10 +114,8 @@ WorkspaceBundle direct_dotprod_int8_stride2::get_bundle(
 }
 //! Process one input channel copy padding
 void direct_dotprod_int8_stride2::copy_padding_kern(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids) {
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     size_t IH = kern_param.isz[0];
     size_t IW = kern_param.isz[1];
     size_t IC = kern_param.filter_meta.icpg;
@@ -133,10 +129,9 @@ void direct_dotprod_int8_stride2::copy_padding_kern(
     size_t padding_group_size = IH2 * IW2 * IC;
 
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1], channel_id = workspace_ids[2];
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1];
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
+           channel_id = workspace_ids[2];
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1];
     const int8_t* sptr = kern_param.src<int8_t>(batch_id, group_id, channel_id);
     if (need_src_copy_var) {
         //! copy to sptr_base to eliminate padding effect
@@ -146,8 +141,9 @@ void direct_dotprod_int8_stride2::copy_padding_kern(
                             channel_id * IH2 * IW2;
         std::memset(sptr_base, 0, sizeof(int8_t) * IH2 * IW2);
         rep(ih, IH) {
-            std::memcpy(sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
-                        sizeof(int8_t) * IW);
+            std::memcpy(
+                    sptr_base + (ih + PH) * IW2 + PW, sptr + ih * IW,
+                    sizeof(int8_t) * IW);
         }
     }
 };
@@ -166,27 +162,23 @@ void direct_dotprod_int8_stride2::do_conv_kern(
     get_rectified_size(kern_param, IH2, IW2, OH2, OW2);
     bool need_src_copy_var = need_src_copy(kern_param);
     bool need_dst_copy_var = need_dst_copy(kern_param);
-    bool need_post_process =
-            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    bool need_post_process = kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
     //! if dst_type is qint32, the op is not used, just fill with (1.0f,4.0f)
     Op op = Op(1.0f, 4.0f);
     if (need_post_process) {
-        float scale_bias =
-                kern_param.bias_type.param<dtype::QuantizedS32>().scale;
+        float scale_bias = kern_param.bias_type.param<dtype::QuantizedS32>().scale;
         float scale_dst = kern_param.dst_type.param<dtype::QuantizedS8>().scale;
         op = Op(scale_bias, scale_dst);
     }
     size_t padding_group_size = IH2 * IW2 * IC;
     //! Used for get the workspace offset
-    size_t workspace_group_id = workspace_ids[0],
-           workspace_batch_id = workspace_ids[1], oc = workspace_ids[2];
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1];
+    size_t workspace_group_id = workspace_ids[0], workspace_batch_id = workspace_ids[1],
+           oc = workspace_ids[2];
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1];
     //! If large group, each thread has its own worspace, set group_id
     //! with thread_id
     const int8_t* sptr = kern_param.src<dt_int8>(batch_id, group_id);
-    const int8_t* fptr =
-            kern_param.filter<dt_int8>(group_id) + oc * FH * FW * IC;
+    const int8_t* fptr = kern_param.filter<dt_int8>(group_id) + oc * FH * FW * IC;
     void* dst = kern_param.dst<void>(batch_id, group_id, oc);
     const int32_t* bptr = kern_param.bias<dt_int32>(batch_id, group_id, oc);
 
@@ -251,13 +243,14 @@ void direct_dotprod_int8_stride2::do_conv_kern(
 #undef KERN1_NO_POST_PROCESS
     if (need_dst_copy_var) {
         rep(oh, OH) {
-            std::memcpy(reinterpret_cast<void*>(
-                                reinterpret_cast<ptrdiff_t>(dst) +
-                                oh * OW * kern_param.dst_type.size()),
-                        reinterpret_cast<void*>(
-                                reinterpret_cast<ptrdiff_t>(dptr) +
-                                oh * OW2 * kern_param.dst_type.size()),
-                        kern_param.dst_type.size() * OW);
+            std::memcpy(
+                    reinterpret_cast<void*>(
+                            reinterpret_cast<ptrdiff_t>(dst) +
+                            oh * OW * kern_param.dst_type.size()),
+                    reinterpret_cast<void*>(
+                            reinterpret_cast<ptrdiff_t>(dptr) +
+                            oh * OW2 * kern_param.dst_type.size()),
+                    kern_param.dst_type.size() * OW);
         }
     }
 }
@@ -275,23 +268,20 @@ SmallVector<ConvBiasImpl::NCBKern> direct_dotprod_int8_stride2::get_kimpls(
 #define DO_CONV_KERN_FUN(filter, bias_mode, op) \
     do_conv_fun = do_conv_kern<filter, bias_mode, op>;
 
-#define GET_OP_PARAM(i, bias_mode)                                       \
-    switch (param.nonlineMode) {                                         \
-        case param::ConvBias::NonlineMode::IDENTITY:                     \
-            DO_CONV_KERN_FUN(i, bias_mode,                               \
-                             TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
-            break;                                                       \
-        case param::ConvBias::NonlineMode::RELU:                         \
-            DO_CONV_KERN_FUN(i, bias_mode,                               \
-                             ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-            break;                                                       \
-        case param::ConvBias::NonlineMode::H_SWISH:                      \
-            DO_CONV_KERN_FUN(i, bias_mode,                               \
-                             HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
-            break;                                                       \
-        default:                                                         \
-            megdnn_assert(0);                                            \
-            break;                                                       \
+#define GET_OP_PARAM(i, bias_mode)                                                     \
+    switch (param.nonlineMode) {                                                       \
+        case param::ConvBias::NonlineMode::IDENTITY:                                   \
+            DO_CONV_KERN_FUN(i, bias_mode, TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
+            break;                                                                     \
+        case param::ConvBias::NonlineMode::RELU:                                       \
+            DO_CONV_KERN_FUN(i, bias_mode, ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+            break;                                                                     \
+        case param::ConvBias::NonlineMode::H_SWISH:                                    \
+            DO_CONV_KERN_FUN(i, bias_mode, HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
+            break;                                                                     \
+        default:                                                                       \
+            megdnn_assert(0);                                                          \
+            break;                                                                     \
     }
 
 #define GET_BIAS_MODE_PARAM(i)                                \
@@ -338,21 +328,21 @@ SmallVector<ConvBiasImpl::NCBKern> direct_dotprod_int8_stride2::get_kimpls(
             size_t OC = fm.ocpg;
             bundle.set(kern_param.workspace_ptr);
             for (size_t ic = 0; ic < IC; ic++) {
-                copy_padding_kern(bundle, kern_param, ncb_index,
-                                  {ncb_index.thread_id, 0, ic});
+                copy_padding_kern(
+                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, ic});
             }
             for (size_t oc = 0; oc < OC; oc++) {
-                do_conv_fun(bundle, kern_param, ncb_index,
-                            {ncb_index.thread_id, 0, oc});
+                do_conv_fun(
+                        bundle, kern_param, ncb_index, {ncb_index.thread_id, 0, oc});
             }
         };
         ret_kerns.push_back({exec_one_group, {group, N, 1_z}});
     } else {
-        auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                     const NCBKernIndex& ncb_index) mutable {
+        auto copy_padding = [bundle](
+                                    const NCBKernParam& kern_param,
+                                    const NCBKernIndex& ncb_index) mutable {
             bundle.set(kern_param.workspace_ptr);
-            copy_padding_kern(bundle, kern_param, ncb_index,
-                              ncb_index.ndrange_id);
+            copy_padding_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id);
         };
         ret_kerns.push_back({copy_padding, {group, N, IC}});
         auto do_conv = [bundle, do_conv_fun](

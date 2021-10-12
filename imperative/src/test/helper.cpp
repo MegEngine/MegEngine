@@ -13,9 +13,9 @@
 #include "megbrain/graph.h"
 #include "megbrain/opr/io.h"
 
-#include <memory>
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h>
+#include <memory>
 
 namespace py = pybind11;
 
@@ -24,11 +24,11 @@ namespace imperative {
 
 namespace {
 
-#define XSTR(s) STR(s)
-#define STR(s) #s
+#define XSTR(s)      STR(s)
+#define STR(s)       #s
 #define CONCAT(a, b) a##b
 #define PYINIT(name) CONCAT(PyInit_, name)
-#define pyinit PYINIT(MODULE_NAME)
+#define pyinit       PYINIT(MODULE_NAME)
 
 #define UNUSED __attribute__((unused))
 
@@ -38,6 +38,7 @@ class PyEnv {
     static std::unique_ptr<PyEnv> m_instance;
     std::unique_ptr<py::scoped_interpreter> m_interpreter;
     PyEnv();
+
 public:
     static PyEnv& instance();
     static py::module get();
@@ -65,8 +66,8 @@ py::module PyEnv::get() {
 }
 
 py::array array(const Tensor& x) {
-     PyEnv::get();
-     return py::cast(x).attr("numpy")();
+    PyEnv::get();
+    return py::cast(x).attr("numpy")();
 }
 
 py::array array(const HostTensorND& x) {
@@ -94,10 +95,9 @@ UNUSED void print(const char* s) {
     py::print(s);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
-OprChecker::OprChecker(std::shared_ptr<OpDef> opdef)
-    : m_op(opdef) {}
+OprChecker::OprChecker(std::shared_ptr<OpDef> opdef) : m_op(opdef) {}
 
 void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
     HostTensorGenerator<> gen;
@@ -106,30 +106,32 @@ void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
     VarNodeArray sym_inp(nr_inps);
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
-    for (size_t i = 0; i < nr_inps; ++ i) {
-        //TODO: remove std::visit for support osx 10.12
-        host_inp[i] = std::visit([&gen](auto&& arg) -> HostTensorND {
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<TensorShape, T>) {
-                    return *gen(arg);
-                } else {
-                    static_assert(std::is_same_v<HostTensorND, T>);
-                    return arg;
-                }
-            }, inp_keys[i]);
+    for (size_t i = 0; i < nr_inps; ++i) {
+        // TODO: remove std::visit for support osx 10.12
+        host_inp[i] = std::visit(
+                [&gen](auto&& arg) -> HostTensorND {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<TensorShape, T>) {
+                        return *gen(arg);
+                    } else {
+                        static_assert(std::is_same_v<HostTensorND, T>);
+                        return arg;
+                    }
+                },
+                inp_keys[i]);
         sym_inp[i] = opr::SharedDeviceTensor::make(*graph, host_inp[i]).node();
     }
     auto sym_oup = OpDef::apply_on_var_node(*m_op, sym_inp);
     size_t nr_oups = sym_oup.size();
     ComputingGraph::OutputSpec oup_spec(nr_oups);
     SmallVector<HostTensorND> host_sym_oup(nr_oups);
-    for (size_t i = 0; i < nr_oups; ++ i) {
+    for (size_t i = 0; i < nr_oups; ++i) {
         oup_spec[i] = make_callback_copy(sym_oup[i], host_sym_oup[i]);
     }
     auto func = graph->compile(oup_spec);
 
     SmallVector<TensorPtr> imp_physical_inp(nr_inps);
-    for (size_t i = 0; i < nr_inps; ++ i) {
+    for (size_t i = 0; i < nr_inps; ++i) {
         imp_physical_inp[i] = Tensor::make(host_inp[i]);
     }
 
@@ -144,13 +146,13 @@ void OprChecker::run(std::vector<InputSpec> inp_keys, std::set<size_t> bypass) {
     }
 
     SmallVector<HostTensorND> host_imp_oup(nr_oups);
-    for (size_t i = 0; i < nr_oups; ++ i) {
+    for (size_t i = 0; i < nr_oups; ++i) {
         host_imp_oup[i].copy_from(imp_oup[i]->dev_tensor()).sync();
     }
 
-    func->execute().wait(); // run last because it may contain inplace operations
+    func->execute().wait();  // run last because it may contain inplace operations
 
-    for(size_t i = 0; i < nr_oups; ++ i) {
+    for (size_t i = 0; i < nr_oups; ++i) {
         if (bypass.find(i) != bypass.end())
             continue;
         MGB_ASSERT_TENSOR_EQ(host_sym_oup[i], host_imp_oup[i]);
@@ -163,7 +165,7 @@ TEST(TestHelper, PyModule) {
     py::print(py::cast(DeviceTensorND()));
 }
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

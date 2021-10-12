@@ -52,7 +52,7 @@ class ThreadLocalPtr {
     std::function<void(T**)> m_destructor = nullptr;
 
     void move_to(T** data) {
-        if(void* d = pthread_getspecific(m_key)){
+        if (void* d = pthread_getspecific(m_key)) {
             *data = *static_cast<ThreadData*>(d)->data;
         }
     }
@@ -83,15 +83,11 @@ public:
         pthread_key_create(&m_key, exit);
     }
 
-    ThreadLocalPtr()
-            : ThreadLocalPtr(std::function<T**()>([] { return new T*(); })) {}
+    ThreadLocalPtr() : ThreadLocalPtr(std::function<T**()>([] { return new T*(); })) {}
 
-    ThreadLocalPtr(std::nullptr_t)
-            : ThreadLocalPtr([] { return new T*(nullptr); }) {}
+    ThreadLocalPtr(std::nullptr_t) : ThreadLocalPtr([] { return new T*(nullptr); }) {}
 
-    ThreadLocalPtr(ThreadLocalPtr&& other) : ThreadLocalPtr() {
-        other.move_to(get());
-    }
+    ThreadLocalPtr(ThreadLocalPtr&& other) : ThreadLocalPtr() { other.move_to(get()); }
 
     ThreadLocalPtr& operator=(ThreadLocalPtr&& other) {
         other.move_to(get());

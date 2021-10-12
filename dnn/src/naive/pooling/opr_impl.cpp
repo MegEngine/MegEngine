@@ -12,8 +12,8 @@
 #include "src/naive/pooling/opr_impl.h"
 
 #include <cstring>
-#include "megdnn/heuristic_cache.h"
 #include "megdnn/dtype.h"
+#include "megdnn/heuristic_cache.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 #include "src/naive/lowbit_utils.h"
@@ -66,13 +66,11 @@ struct MeanIncludePooler : public MeanIncludePoolerBase<T, T> {
 };
 
 template <>
-struct MeanIncludePooler<int8_t>
-        : public MeanIncludePoolerBase<int8_t, int32_t> {
+struct MeanIncludePooler<int8_t> : public MeanIncludePoolerBase<int8_t, int32_t> {
     using MeanIncludePoolerBase::MeanIncludePoolerBase;
     ctype get_ans() {
         return std::min<int32_t>(
-                std::max<int32_t>(std::numeric_limits<int8_t>::min(),
-                                  sum / count),
+                std::max<int32_t>(std::numeric_limits<int8_t>::min(), sum / count),
                 std::numeric_limits<int8_t>::max());
     }
 };
@@ -126,75 +124,81 @@ struct MeanIncludeRoundedPooler {
 };
 
 template <>
-struct MeanIncludePooler<dt_qint32>
-        : MeanIncludeRoundedPooler<dt_qint32, int32_t> {
+struct MeanIncludePooler<dt_qint32> : MeanIncludeRoundedPooler<dt_qint32, int32_t> {
     using MeanIncludeRoundedPooler::MeanIncludeRoundedPooler;
 };
 template <>
-struct MeanIncludePooler<dt_qint8>
-        : MeanIncludeRoundedPooler<dt_qint8, int8_t> {
+struct MeanIncludePooler<dt_qint8> : MeanIncludeRoundedPooler<dt_qint8, int8_t> {
     using MeanIncludeRoundedPooler::MeanIncludeRoundedPooler;
 };
 
 struct NCHWIdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w,
-                          size_t /* N */, size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t /* N */, size_t C, size_t H,
+            size_t W) {
         return ((n * C + c) * H + h) * W + w;
     }
 };
 
 struct NHWCIdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w,
-                          size_t /* N */, size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t /* N */, size_t C, size_t H,
+            size_t W) {
         return ((n * H + h) * W + w) * C + c;
     }
 };
 
 struct NHWCD4IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w,
-                          size_t /* N */, size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t /* N */, size_t C, size_t H,
+            size_t W) {
         return (((n * H + h) * (C >> 2) + (c >> 2)) * W + w) * 4 + (c & 0x3);
     }
 };
 
 struct NCHW4IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
-                          size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t, size_t C, size_t H,
+            size_t W) {
         return (((n * (C >> 2) + (c >> 2)) * H + h) * W + w) * 4 + (c & 0b11);
     }
 };
 struct NCHW88IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
-                          size_t C, size_t H, size_t W) {
-        size_t id =
-                (((n * (C >> 3) + (c >> 3)) * H + h) * W + w) * 8 + (c & 0b111);
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t, size_t C, size_t H,
+            size_t W) {
+        size_t id = (((n * (C >> 3) + (c >> 3)) * H + h) * W + w) * 8 + (c & 0b111);
         return id;
     }
 };
 struct NCHW44IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
-                          size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t, size_t C, size_t H,
+            size_t W) {
         size_t id = (((n * (C >> 2) + (c >> 2)) * H + h) * W + w) * 4 + (c % 4);
         return id;
     }
 };
 
 struct CHWN4IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t N,
-                          size_t, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t N, size_t, size_t H,
+            size_t W) {
         return ((((c >> 2) * H + h) * W + w) * N + n) * 4 + (c & 0b11);
     }
 };
 
 struct NCHW32IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
-                          size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t, size_t C, size_t H,
+            size_t W) {
         return (((n * (C >> 5) + (c >> 5)) * H + h) * W + w) * 32 + (c & 0x1f);
     }
 };
 struct NCHW64IdxGetter {
-    static size_t get_idx(size_t n, size_t c, size_t h, size_t w, size_t,
-                          size_t C, size_t H, size_t W) {
+    static size_t get_idx(
+            size_t n, size_t c, size_t h, size_t w, size_t, size_t C, size_t H,
+            size_t W) {
         return (((n * (C >> 6) + (c >> 6)) * H + h) * W + w) * 64 + (c & 0x3f);
     }
 };
@@ -259,8 +263,7 @@ struct MeanExcludePooler<dt_quint8>
 };
 
 template <>
-struct MeanExcludePooler<dt_qint32>
-        : MeanExcludeRoundedPooler<dt_qint32, int32_t> {
+struct MeanExcludePooler<dt_qint32> : MeanExcludeRoundedPooler<dt_qint32, int32_t> {
     using MeanExcludeRoundedPooler::MeanExcludeRoundedPooler;
 };
 
@@ -270,12 +273,11 @@ struct MeanExcludePooler<dt_qint8>
     using MeanExcludeRoundedPooler::MeanExcludeRoundedPooler;
 };
 
-template <typename Pooler, typename IdxGetter,
-          typename ctype = typename Pooler::ctype>
-void pooling_forward_impl(const ctype* __restrict src, ctype* __restrict dst,
-                          DType src_dtype, size_t N, size_t C, size_t IH,
-                          size_t IW, size_t OH, size_t OW, size_t PH, size_t PW,
-                          size_t SH, size_t SW, size_t FH, size_t FW) {
+template <typename Pooler, typename IdxGetter, typename ctype = typename Pooler::ctype>
+void pooling_forward_impl(
+        const ctype* __restrict src, ctype* __restrict dst, DType src_dtype, size_t N,
+        size_t C, size_t IH, size_t IW, size_t OH, size_t OW, size_t PH, size_t PW,
+        size_t SH, size_t SW, size_t FH, size_t FW) {
     rep(n, N) rep(c, C) rep(oh, OH) rep(ow, OW) {
         Pooler pooler(FH * FW, src_dtype);
         pooler.init();
@@ -293,13 +295,11 @@ void pooling_forward_impl(const ctype* __restrict src, ctype* __restrict dst,
 }
 
 template <typename ctype, typename IdxGetter>
-void pooling_backward_avg_impl(const ctype* __restrict /* src */,
-                               const ctype* __restrict /* dst */,
-                               const ctype* __restrict diff,
-                               ctype* __restrict grad, size_t N, size_t C,
-                               size_t IH, size_t IW, size_t OH, size_t OW,
-                               size_t PH, size_t PW, size_t SH, size_t SW,
-                               size_t FH, size_t FW, bool is_include = true) {
+void pooling_backward_avg_impl(
+        const ctype* __restrict /* src */, const ctype* __restrict /* dst */,
+        const ctype* __restrict diff, ctype* __restrict grad, size_t N, size_t C,
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t PH, size_t PW, size_t SH,
+        size_t SW, size_t FH, size_t FW, bool is_include = true) {
     std::memset(grad, 0, sizeof(ctype) * (N * C * IH * IW));
     rep(n, N) rep(c, C) rep(oh, OH) rep(ow, OW) {
         size_t count = 0u;
@@ -329,26 +329,21 @@ void pooling_backward_avg_impl(const ctype* __restrict /* src */,
 }
 
 template <typename ctype, typename IdxGetter>
-void pooling_backward_avg_expd_impl(const ctype* __restrict src,
-                                    const ctype* __restrict dst,
-                                    const ctype* __restrict diff,
-                                    ctype* __restrict grad, size_t N, size_t C,
-                                    size_t IH, size_t IW, size_t OH, size_t OW,
-                                    size_t PH, size_t PW, size_t SH, size_t SW,
-                                    size_t FH, size_t FW) {
-    pooling_backward_avg_impl<ctype, IdxGetter>(src, dst, diff, grad, N, C, IH,
-                                                IW, OH, OW, PH, PW, SH, SW, FH,
-                                                FW, false);
+void pooling_backward_avg_expd_impl(
+        const ctype* __restrict src, const ctype* __restrict dst,
+        const ctype* __restrict diff, ctype* __restrict grad, size_t N, size_t C,
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t PH, size_t PW, size_t SH,
+        size_t SW, size_t FH, size_t FW) {
+    pooling_backward_avg_impl<ctype, IdxGetter>(
+            src, dst, diff, grad, N, C, IH, IW, OH, OW, PH, PW, SH, SW, FH, FW, false);
 }
 
 template <typename ctype, typename IdxGetter>
-void pooling_backward_max_impl(const ctype* __restrict src,
-                               const ctype* __restrict dst,
-                               const ctype* __restrict diff,
-                               ctype* __restrict grad, size_t N, size_t C,
-                               size_t IH, size_t IW, size_t OH, size_t OW,
-                               size_t PH, size_t PW, size_t SH, size_t SW,
-                               size_t FH, size_t FW) {
+void pooling_backward_max_impl(
+        const ctype* __restrict src, const ctype* __restrict dst,
+        const ctype* __restrict diff, ctype* __restrict grad, size_t N, size_t C,
+        size_t IH, size_t IW, size_t OH, size_t OW, size_t PH, size_t PW, size_t SH,
+        size_t SW, size_t FH, size_t FW) {
     std::memset(grad, 0, sizeof(ctype) * (N * C * IH * IW));
     rep(n, N) rep(c, C) rep(oh, OH) rep(ow, OW) {
         size_t count = 0u;
@@ -401,12 +396,12 @@ WorkspaceBundle PoolingForwardImpl::get_workspace_bundle(
     return {ptr, std::move(sizes)};
 };
 
-size_t PoolingForwardImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                                  const TensorLayout& dst) {
+size_t PoolingForwardImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
     TensorLayoutArray layouts{src, dst};
     HeuristicCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(), &this->param(),
-                            sizeof(this->param())};
+                            layouts.data(), layouts.size(),
+                            &this->param(), sizeof(this->param())};
     auto rst = HeuristicCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
@@ -425,8 +420,8 @@ void post_process(const TensorND& dst, TensorND& comp_dst) {
 
 }  // namespace
 
-void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                              _megdnn_workspace workspace) {
+void PoolingForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     TensorND comp_src = src;
     TensorND comp_dst = dst;
@@ -479,8 +474,7 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         c_pos = 2;
         spatial_pos = 1;
     }
-    size_t N = comp_src.layout.shape[batch_pos],
-           C = comp_src.layout.shape[c_pos],
+    size_t N = comp_src.layout.shape[batch_pos], C = comp_src.layout.shape[c_pos],
            IH = comp_src.layout.shape[spatial_pos + 0],
            IW = comp_src.layout.shape[spatial_pos + 1];
     size_t OH = comp_dst.layout.shape[spatial_pos + 0],
@@ -511,14 +505,14 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     size_t PH = param().pad_h, PW = param().pad_w;
     size_t FH = param().window_h, FW = param().window_w;
     size_t SH = param().stride_h, SW = param().stride_w;
-#define DISPATCH_WITH_POOLER_AND_IDX_GETTER(Pooler, IdxGetter)                 \
-    MIDOUT_BEGIN(megdnn_naive_pooling, midout_iv(#Pooler #IdxGetter##_hash)) { \
-        MEGDNN_DISPATCH_CPU_KERN(                                              \
-                static_cast<naive::HandleImpl*>(handle()),                     \
-                pooling_forward_impl<Pooler MEGDNN_COMMA IdxGetter>(           \
-                        sptr, dptr, comp_src.layout.dtype, N, C, IH, IW, OH,   \
-                        OW, PH, PW, SH, SW, FH, FW));                          \
-    }                                                                          \
+#define DISPATCH_WITH_POOLER_AND_IDX_GETTER(Pooler, IdxGetter)                       \
+    MIDOUT_BEGIN(megdnn_naive_pooling, midout_iv(#Pooler #IdxGetter##_hash)) {       \
+        MEGDNN_DISPATCH_CPU_KERN(                                                    \
+                static_cast<naive::HandleImpl*>(handle()),                           \
+                pooling_forward_impl<Pooler MEGDNN_COMMA IdxGetter>(                 \
+                        sptr, dptr, comp_src.layout.dtype, N, C, IH, IW, OH, OW, PH, \
+                        PW, SH, SW, FH, FW));                                        \
+    }                                                                                \
     MIDOUT_END();
 
 #define DISPATCH_WITH_POOLER(Pooler)                                      \
@@ -593,8 +587,7 @@ void PoolingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 
 PoolingForward::Algorithm* PoolingForwardImpl::get_algorithm_from_desc(
         const AlgorithmDesc& desc) {
-    Algorithm* ret =
-            static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo();
+    Algorithm* ret = static_cast<HandleImpl*>(handle())->default_pooling_fwd_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }
@@ -617,10 +610,8 @@ Algorithm* PoolingForwardImpl::get_algorithm_heuristic(
     return algo;
 }
 
-Algorithm* PoolingBackwardImpl::get_algorithm_from_desc(
-        const AlgorithmDesc& desc) {
-    Algorithm* ret =
-            static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo();
+Algorithm* PoolingBackwardImpl::get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())->default_pooling_bwd_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }
@@ -668,33 +659,30 @@ WorkspaceBundle PoolingBackwardImpl::get_workspace_bundle(
 }
 
 size_t PoolingBackwardImpl::get_workspace_in_bytes(
-        const TensorLayout& src, const TensorLayout& dst,
-        const TensorLayout& diff, const TensorLayout& grad) {
+        const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+        const TensorLayout& grad) {
     TensorLayoutArray layouts{src, dst, diff, grad};
     HeuristicCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(), &this->param(),
-                            sizeof(this->param())};
+                            layouts.data(), layouts.size(),
+                            &this->param(), sizeof(this->param())};
     auto rst = HeuristicCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
     }
-    return get_workspace_bundle(nullptr, src, dst, diff, grad)
-            .total_size_in_bytes();
+    return get_workspace_bundle(nullptr, src, dst, diff, grad).total_size_in_bytes();
 }
 
-void PoolingBackwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_in sdst,
-                               _megdnn_tensor_in sdiff,
-                               _megdnn_tensor_out sgrad,
-                               _megdnn_workspace workspace) {
-    check_exec(ssrc.layout, sdst.layout, sdiff.layout, sgrad.layout,
-               workspace.size);
+void PoolingBackwardImpl::exec(
+        _megdnn_tensor_in ssrc, _megdnn_tensor_in sdst, _megdnn_tensor_in sdiff,
+        _megdnn_tensor_out sgrad, _megdnn_workspace workspace) {
+    check_exec(ssrc.layout, sdst.layout, sdiff.layout, sgrad.layout, workspace.size);
     TensorND src = ssrc;
     TensorND dst = sdst;
     TensorND diff = sdiff;
     TensorND grad = sgrad;
 #if !MEGDNN_DISABLE_FLOAT16
-    auto wsb = get_workspace_bundle(workspace.raw_ptr, ssrc.layout, sdst.layout,
-                                    sdiff.layout, sgrad.layout);
+    auto wsb = get_workspace_bundle(
+            workspace.raw_ptr, ssrc.layout, sdst.layout, sdiff.layout, sgrad.layout);
     auto ctypecvt = CompTypeCvter<dtype::BFloat16, dtype::Float32>(
             static_cast<HandleImpl*>(handle()), &wsb);
     if (ssrc.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
@@ -721,11 +709,12 @@ void PoolingBackwardImpl::exec(_megdnn_tensor_in ssrc, _megdnn_tensor_in sdst,
     size_t PH = param().pad_h, PW = param().pad_w;
     size_t FH = param().window_h, FW = param().window_w;
     size_t SH = param().stride_h, SW = param().stride_w;
-#define DISPATCH_WITH_FUNC_AND_IDX_GETTER(Func, ctype, IdxGetter)            \
-    MEGDNN_DISPATCH_CPU_KERN(static_cast<naive::HandleImpl*>(handle()),      \
-                             Func<ctype MEGDNN_COMMA IdxGetter>(             \
-                                     sptr, dptr, diffptr, gradptr, N, C, IH, \
-                                     IW, OH, OW, PH, PW, SH, SW, FH, FW));   \
+#define DISPATCH_WITH_FUNC_AND_IDX_GETTER(Func, ctype, IdxGetter)                   \
+    MEGDNN_DISPATCH_CPU_KERN(                                                       \
+            static_cast<naive::HandleImpl*>(handle()),                              \
+            Func<ctype MEGDNN_COMMA IdxGetter>(                                     \
+                    sptr, dptr, diffptr, gradptr, N, C, IH, IW, OH, OW, PH, PW, SH, \
+                    SW, FH, FW));
 
 #define DISPATCH_WITH_FUNC(Func, ctype)                                    \
     switch (param().format) {                                              \

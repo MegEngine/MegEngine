@@ -24,12 +24,11 @@ MIDOUT_DECL(megdnn_arm_resize)
 namespace megdnn {
 namespace arm_common {
 
-void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_workspace workspace) {
+void ResizeImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
 
-    bool is_contiguous =
-            src.layout.is_contiguous() && dst.layout.is_contiguous();
+    bool is_contiguous = src.layout.is_contiguous() && dst.layout.is_contiguous();
     bool is_dtype_same = src.layout.dtype == dst.layout.dtype;
     bool is_dtype_fp32 = src.layout.dtype == dtype::Float32();
     bool is_dtype_fp16 =
@@ -56,8 +55,7 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
     bool usable = is_contiguous && is_dtype_supported && is_imode_supported;
 
     if (param().format == param::Resize::Format::NHWC &&
-        (src.layout[3] == 1 || src.layout[3] == 3) &&
-        is_nhwc_contig_wc(src.layout)) {
+        (src.layout[3] == 1 || src.layout[3] == 3) && is_nhwc_contig_wc(src.layout)) {
         MEGDNN_DISPATCH_CPU_KERN_OPR(resize_cv_exec(src, dst, param().imode));
     } else if (!usable) {
         fallback::ResizeImpl::exec(src, dst, workspace);
@@ -69,16 +67,14 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                 if (is_imode_nearest) {
                     MIDOUT_BEGIN(megdnn_arm_resize, midout_iv(0)) {
                         MEGDNN_DISPATCH_CPU_KERN_OPR(
-                                resize_nearest_upsample2_nchw44_fp32(
-                                        kern_param));
+                                resize_nearest_upsample2_nchw44_fp32(kern_param));
                     }
                     MIDOUT_END();
                 } else {
                     megdnn_assert(is_imode_linear, "invalid imode");
                     MIDOUT_BEGIN(megdnn_arm_resize, midout_iv(1)) {
                         MEGDNN_DISPATCH_CPU_KERN_OPR(
-                                resize_linear_upsample2_nchw44_fp32(
-                                        kern_param));
+                                resize_linear_upsample2_nchw44_fp32(kern_param));
                     }
                     MIDOUT_END();
                 }
@@ -129,16 +125,14 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
                 if (is_imode_nearest) {
                     MIDOUT_BEGIN(megdnn_arm_resize, midout_iv(6)) {
                         MEGDNN_DISPATCH_CPU_KERN_OPR(
-                                resize_nearest_upsample2_nchw88_fp16(
-                                        kern_param));
+                                resize_nearest_upsample2_nchw88_fp16(kern_param));
                     }
                     MIDOUT_END();
                 } else {
                     megdnn_assert(is_imode_linear, "invalid imode");
                     MIDOUT_BEGIN(megdnn_arm_resize, midout_iv(7)) {
                         MEGDNN_DISPATCH_CPU_KERN_OPR(
-                                resize_linear_upsample2_nchw88_fp16(
-                                        kern_param));
+                                resize_linear_upsample2_nchw88_fp16(kern_param));
                     }
                     MIDOUT_END();
                 }

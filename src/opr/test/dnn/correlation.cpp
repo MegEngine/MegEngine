@@ -40,15 +40,13 @@ void run_forward(bool is_multiply) {
     param.stride1 = 2;
     param.stride2 = 2;
 
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         auto o0 = opr::CorrelationForward::make(inputs[0], inputs[1], param);
         return {o0};
     };
 
     auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto opr = megdnn_naive_handle()
-                           ->create_operator<megdnn::CorrelationForward>();
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::CorrelationForward>();
         opr->param() = param;
         auto inp_shape = inp[0]->shape();
         auto num = inp_shape[0];
@@ -73,30 +71,27 @@ void run_forward(bool is_multiply) {
                      static_cast<float>(stride1));
         uint32_t neighborhood_grid_radius = max_displacement / stride2;
         uint32_t neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
-        uint32_t top_channels =
-                neighborhood_grid_width * neighborhood_grid_width;
-        megdnn::TensorShape target_shape{num, top_channels, top_height,
-                                         top_width};
+        uint32_t top_channels = neighborhood_grid_width * neighborhood_grid_width;
+        megdnn::TensorShape target_shape{num, top_channels, top_height, top_width};
 
         dest[0].dtype(dtype::Float32())
                 .comp_node(inp[0]->comp_node())
                 .resize(target_shape);
-        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(),
-                  {});
+        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(), {});
     };
 
     auto rand_real = [&](float lo, float hi) {
         std::uniform_real_distribution<float> dist(lo, hi);
         return dist(rng);
     };
-    auto gen_inp1 = [&](HostTensorND &inp) {
+    auto gen_inp1 = [&](HostTensorND& inp) {
         auto ptr = inp.ptr<float>();
         for (size_t i = 0; i < inp.shape().total_nr_elems(); ++i) {
             ptr[i] = rand_real(0.06f, 0.1f);
         };
     };
 
-    auto gen_inp2 = [&](HostTensorND &inp) {
+    auto gen_inp2 = [&](HostTensorND& inp) {
         auto ptr = inp.ptr<float>();
         for (size_t i = 0; i < inp.shape().total_nr_elems(); ++i) {
             ptr[i] = rand_real(0.01f, 0.04f);
@@ -113,8 +108,7 @@ void run_forward(bool is_multiply) {
 
     checker.run({TensorShape{1, 1, 10, 10}, TensorShape{1, 1, 10, 10}}, option)
             .run({TensorShape{1, 3, 50, 50}, TensorShape{1, 3, 50, 50}}, option)
-            .run({TensorShape{1, 1, 100, 100}, TensorShape{1, 1, 100, 100}},
-                 option);
+            .run({TensorShape{1, 1, 100, 100}, TensorShape{1, 1, 100, 100}}, option);
 }
 
 TEST(TestOprDNN, CorrelationForwardMultiply) {

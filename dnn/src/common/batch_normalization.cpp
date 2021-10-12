@@ -14,10 +14,10 @@
 
 namespace megdnn {
 
-void BNForward::deduce_layout(const TensorLayout& src, const TensorLayout&,
-                              const TensorLayout&, TensorLayout&, TensorLayout&,
-                              TensorLayout&, TensorLayout&,
-                              TensorLayout& reserve, TensorLayout& dst) {
+void BNForward::deduce_layout(
+        const TensorLayout& src, const TensorLayout&, const TensorLayout&,
+        TensorLayout&, TensorLayout&, TensorLayout&, TensorLayout&,
+        TensorLayout& reserve, TensorLayout& dst) {
     reserve = {{get_reserve_in_bytes(src)}, dtype::Byte()};
     dst = src;
 }
@@ -35,21 +35,19 @@ void BNForward::check_exec(
     megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT);
     megdnn_assert(bn_scale.dtype.category() == DTypeCategory::FLOAT);
     auto required_workspace_in_bytes = get_workspace_in_bytes(
-            src, bn_scale, bn_bias, mean, variance, batch_mean,
-            batch_inv_variance, {}, dst);
+            src, bn_scale, bn_bias, mean, variance, batch_mean, batch_inv_variance, {},
+            dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     auto required_reserve_in_bytes = get_reserve_in_bytes(src);
     megdnn_assert(reserve_in_bytes >= required_reserve_in_bytes);
 }
 
-void BNBackward::check_exec(const TensorLayout& x, const TensorLayout& dy,
-                            const TensorLayout& saved_batch_mean,
-                            const TensorLayout& saved_batch_variance,
-                            const TensorLayout& bn_scale,
-                            const TensorLayout& d_bn_scale,
-                            const TensorLayout& d_bn_bias,
-                            const TensorLayout& dx, size_t workspace_in_bytes,
-                            size_t reserve_in_bytes) {
+void BNBackward::check_exec(
+        const TensorLayout& x, const TensorLayout& dy,
+        const TensorLayout& saved_batch_mean, const TensorLayout& saved_batch_variance,
+        const TensorLayout& bn_scale, const TensorLayout& d_bn_scale,
+        const TensorLayout& d_bn_bias, const TensorLayout& dx,
+        size_t workspace_in_bytes, size_t reserve_in_bytes) {
     megdnn_assert_contiguous(x);
     megdnn_assert_eq_layout(x, dy);
     megdnn_assert_eq_layout(x, dx);
@@ -60,13 +58,14 @@ void BNBackward::check_exec(const TensorLayout& x, const TensorLayout& dy,
     megdnn_assert(x.dtype.category() == DTypeCategory::FLOAT);
     megdnn_assert(bn_scale.dtype.category() == DTypeCategory::FLOAT);
     auto required_workspace_in_bytes = get_workspace_in_bytes(
-            x, dy, saved_batch_mean, saved_batch_variance, bn_scale, {},
-            d_bn_scale, d_bn_bias, dx);
+            x, dy, saved_batch_mean, saved_batch_variance, bn_scale, {}, d_bn_scale,
+            d_bn_bias, dx);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     auto required_reserve_in_bytes = get_reserve_in_bytes(x);
     megdnn_assert(reserve_in_bytes >= required_reserve_in_bytes);
-    megdnn_assert(param().fwd_mode == Param::FwdMode::TRAINING,
-                  "BNBackward only support TRAINING mode");
+    megdnn_assert(
+            param().fwd_mode == Param::FwdMode::TRAINING,
+            "BNBackward only support TRAINING mode");
 }
 
 }  // namespace megdnn

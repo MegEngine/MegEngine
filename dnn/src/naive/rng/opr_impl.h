@@ -78,11 +78,12 @@ class GammaRNGImpl : public GammaRNG {
 public:
     using GammaRNG::GammaRNG;
 
-    void exec(_megdnn_tensor_in shape,_megdnn_tensor_in scale, _megdnn_tensor_out dst,
-              _megdnn_workspace) override;
+    void exec(
+            _megdnn_tensor_in shape, _megdnn_tensor_in scale, _megdnn_tensor_out dst,
+            _megdnn_workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };
@@ -93,11 +94,10 @@ class PoissonRNGImpl : public PoissonRNG {
 public:
     using PoissonRNG::PoissonRNG;
 
-    void exec(_megdnn_tensor_in lam, _megdnn_tensor_inout dst,
-              _megdnn_workspace) override;
+    void exec(_megdnn_tensor_in lam, _megdnn_tensor_inout dst, _megdnn_workspace)
+            override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };
@@ -108,12 +108,12 @@ class BetaRNGImpl : public BetaRNG {
 public:
     using BetaRNG::BetaRNG;
 
-    void exec(_megdnn_tensor_in alpha,_megdnn_tensor_in beta, _megdnn_tensor_out dst,
-              _megdnn_workspace) override;
+    void exec(
+            _megdnn_tensor_in alpha, _megdnn_tensor_in beta, _megdnn_tensor_out dst,
+            _megdnn_workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                 const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };
@@ -134,11 +134,11 @@ class ShuffleRNGForwardImpl : public ShuffleRNGForward {
 
 public:
     using ShuffleRNGForward::ShuffleRNGForward;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_tensor_out indices, _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_tensor_out indices,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };
@@ -148,11 +148,11 @@ class ShuffleRNGBackwardImpl : public ShuffleRNGBackward {
 
 public:
     using ShuffleRNGBackward::ShuffleRNGBackward;
-    void exec(_megdnn_tensor_in diff, _megdnn_tensor_in indices,
-              _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_in indices, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };

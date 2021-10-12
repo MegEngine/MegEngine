@@ -24,8 +24,9 @@ using Bwd = DeformablePSROIPoolingBackwardImpl;
 
 namespace {
 
-float bilinear_interp(const float* data, const int /* IH */, const int IW,
-                      const float h, const float w) {
+float bilinear_interp(
+        const float* data, const int /* IH */, const int IW, const float h,
+        const float w) {
     int h1 = floor(h), h2 = ceil(h);
     int w1 = floor(w), w2 = ceil(w);
     float dist_h = (float)(h - h1);
@@ -35,18 +36,16 @@ float bilinear_interp(const float* data, const int /* IH */, const int IW,
     float value21 = data[h1 * IW + w2];
     float value22 = data[h2 * IW + w2];
     float value = (1 - dist_w) * (1 - dist_h) * value11 +
-                  (1 - dist_w) * dist_h * value12 +
-                  dist_w * (1 - dist_h) * value21 + dist_w * dist_h * value22;
+                  (1 - dist_w) * dist_h * value12 + dist_w * (1 - dist_h) * value21 +
+                  dist_w * dist_h * value22;
     return value;
 }
 
-void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
-                                       const float* trans, float* out_data,
-                                       float* out_count, int IC, int IH, int IW,
-                                       bool no_trans, int nr_bbox, int nr_cls,
-                                       int pool_h, int pool_w, int part_sz,
-                                       int sample_per_part, float trans_std,
-                                       float scale) {
+void deformable_ps_roi_pooling_forward(
+        const float* data, const float* rois, const float* trans, float* out_data,
+        float* out_count, int IC, int IH, int IW, bool no_trans, int nr_bbox,
+        int nr_cls, int pool_h, int pool_w, int part_sz, int sample_per_part,
+        float trans_std, float scale) {
     const int icpcls = IC / nr_cls;
 
     for (int n = 0; n < nr_bbox; ++n)
@@ -59,19 +58,13 @@ void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
                     int roi_batch_idx = rois_ptr[0];
 
                     float roi_w_l =
-                            static_cast<float>(round(rois_ptr[1])) * scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[1])) * scale - 0.5;
                     float roi_h_l =
-                            static_cast<float>(round(rois_ptr[2])) * scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[2])) * scale - 0.5;
                     float roi_w_r =
-                            static_cast<float>(round(rois_ptr[3]) + 1.) *
-                                    scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[3]) + 1.) * scale - 0.5;
                     float roi_h_r =
-                            static_cast<float>(round(rois_ptr[4]) + 1.) *
-                                    scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[4]) + 1.) * scale - 0.5;
 
                     // Force too small ROIs to be 1x1
                     float roi_w = std::max(roi_w_r - roi_w_l, 0.1f);  // avoid 0
@@ -81,10 +74,8 @@ void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
                     float bin_sz_h = roi_h / static_cast<float>(pool_h);
                     float bin_sz_w = roi_w / static_cast<float>(pool_w);
 
-                    float sub_bin_sz_h =
-                            bin_sz_h / static_cast<float>(sample_per_part);
-                    float sub_bin_sz_w =
-                            bin_sz_w / static_cast<float>(sample_per_part);
+                    float sub_bin_sz_h = bin_sz_h / static_cast<float>(sample_per_part);
+                    float sub_bin_sz_w = bin_sz_w / static_cast<float>(sample_per_part);
 
                     int count = 0;
                     int cls_id = ic / icpcls;
@@ -93,18 +84,15 @@ void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
                     float hstart = static_cast<float>(ph) * bin_sz_h + roi_h_l;
 
                     if (!no_trans) {
-                        int part_h = floor(static_cast<float>(ph) / pool_h *
-                                           part_sz);
-                        int part_w = floor(static_cast<float>(pw) / pool_w *
-                                           part_sz);
-                        int x_idx = (((n * nr_cls + cls_id) * 2) * part_sz +
-                                     part_h) *
+                        int part_h = floor(static_cast<float>(ph) / pool_h * part_sz);
+                        int part_w = floor(static_cast<float>(pw) / pool_w * part_sz);
+                        int x_idx = (((n * nr_cls + cls_id) * 2) * part_sz + part_h) *
                                             part_sz +
                                     part_w;
-                        int y_idx = (((n * nr_cls + cls_id) * 2 + 1) * part_sz +
-                                     part_h) *
-                                            part_sz +
-                                    part_w;
+                        int y_idx =
+                                (((n * nr_cls + cls_id) * 2 + 1) * part_sz + part_h) *
+                                        part_sz +
+                                part_w;
                         trans_x = trans[x_idx] * static_cast<float>(trans_std);
                         trans_y = trans[y_idx] * static_cast<float>(trans_std);
                     }
@@ -112,16 +100,14 @@ void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
                     wstart += trans_x * roi_w;
                     hstart += trans_y * roi_h;
 
-                    const float* data_ptr =
-                            data + (roi_batch_idx * IC + ic) * IH * IW;
+                    const float* data_ptr = data + (roi_batch_idx * IC + ic) * IH * IW;
 
                     for (int ih = 0; ih < sample_per_part; ih++) {
                         for (int iw = 0; iw < sample_per_part; iw++) {
                             float w = wstart + iw * sub_bin_sz_w;
                             float h = hstart + ih * sub_bin_sz_h;
                             // bilinear interpolation
-                            if (w < -0.5 || w > IW - 0.5 || h < -0.5 ||
-                                h > IH - 0.5)
+                            if (w < -0.5 || w > IW - 0.5 || h < -0.5 || h > IH - 0.5)
                                 continue;
                             w = std::min(std::max(w, 0.f), IW - 1.f);
                             h = std::min(std::max(h, 0.f), IH - 1.f);
@@ -135,11 +121,10 @@ void deformable_ps_roi_pooling_forward(const float* data, const float* rois,
 }
 
 void deformable_ps_roi_pool_backward_acc_kernel(
-        const float* data, const float* rois, const float* trans,
-        const float* out_diff, const float* out_count, float* data_diff,
-        float* trans_diff, int IC, int IH, int IW, bool no_trans, int nr_bbox,
-        int nr_cls, int pool_h, int pool_w, int part_sz, int sample_per_part,
-        float trans_std, float scale) {
+        const float* data, const float* rois, const float* trans, const float* out_diff,
+        const float* out_count, float* data_diff, float* trans_diff, int IC, int IH,
+        int IW, bool no_trans, int nr_bbox, int nr_cls, int pool_h, int pool_w,
+        int part_sz, int sample_per_part, float trans_std, float scale) {
     const int icpcls = IC / nr_cls;
     for (int n = 0; n < nr_bbox; ++n)
         for (int ic = 0; ic < IC; ++ic)
@@ -151,19 +136,13 @@ void deformable_ps_roi_pool_backward_acc_kernel(
                     int roi_batch_idx = rois_ptr[0];
 
                     float roi_w_l =
-                            static_cast<float>(round(rois_ptr[1])) * scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[1])) * scale - 0.5;
                     float roi_h_l =
-                            static_cast<float>(round(rois_ptr[2])) * scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[2])) * scale - 0.5;
                     float roi_w_r =
-                            static_cast<float>(round(rois_ptr[3]) + 1.) *
-                                    scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[3]) + 1.) * scale - 0.5;
                     float roi_h_r =
-                            static_cast<float>(round(rois_ptr[4]) + 1.) *
-                                    scale -
-                            0.5;
+                            static_cast<float>(round(rois_ptr[4]) + 1.) * scale - 0.5;
 
                     // Force too small ROIs to be 1x1
                     float roi_w = std::max(roi_w_r - roi_w_l, 0.1f);  // avoid 0
@@ -173,10 +152,8 @@ void deformable_ps_roi_pool_backward_acc_kernel(
                     float bin_sz_h = roi_h / static_cast<float>(pool_h);
                     float bin_sz_w = roi_w / static_cast<float>(pool_w);
 
-                    float sub_bin_sz_h =
-                            bin_sz_h / static_cast<float>(sample_per_part);
-                    float sub_bin_sz_w =
-                            bin_sz_w / static_cast<float>(sample_per_part);
+                    float sub_bin_sz_h = bin_sz_h / static_cast<float>(sample_per_part);
+                    float sub_bin_sz_w = bin_sz_w / static_cast<float>(sample_per_part);
 
                     int part_h = 0, part_w = 0, cls_id = ic / icpcls;
                     float trans_x = 0, trans_y = 0;
@@ -184,18 +161,15 @@ void deformable_ps_roi_pool_backward_acc_kernel(
                     float hstart = static_cast<float>(ph) * bin_sz_h + roi_h_l;
 
                     if (!no_trans) {
-                        part_h = floor(static_cast<float>(ph) / pool_h *
-                                       part_sz);
-                        part_w = floor(static_cast<float>(pw) / pool_w *
-                                       part_sz);
-                        int x_idx = (((n * nr_cls + cls_id) * 2) * part_sz +
-                                     part_h) *
+                        part_h = floor(static_cast<float>(ph) / pool_h * part_sz);
+                        part_w = floor(static_cast<float>(pw) / pool_w * part_sz);
+                        int x_idx = (((n * nr_cls + cls_id) * 2) * part_sz + part_h) *
                                             part_sz +
                                     part_w;
-                        int y_idx = (((n * nr_cls + cls_id) * 2 + 1) * part_sz +
-                                     part_h) *
-                                            part_sz +
-                                    part_w;
+                        int y_idx =
+                                (((n * nr_cls + cls_id) * 2 + 1) * part_sz + part_h) *
+                                        part_sz +
+                                part_w;
                         trans_x = trans[x_idx] * static_cast<float>(trans_std);
                         trans_y = trans[y_idx] * static_cast<float>(trans_std);
                     }
@@ -218,8 +192,7 @@ void deformable_ps_roi_pool_backward_acc_kernel(
                             float w = wstart + iw * sub_bin_sz_w;
                             float h = hstart + ih * sub_bin_sz_h;
                             // bilinear interpolation
-                            if (w < -0.5 || w > IW - 0.5 || h < -0.5 ||
-                                h > IH - 0.5)
+                            if (w < -0.5 || w > IW - 0.5 || h < -0.5 || h > IH - 0.5)
                                 continue;
                             w = std::min(std::max(w, 0.f), IW - 1.f),
                             h = std::min(std::max(h, 0.f), IH - 1.f);
@@ -259,8 +232,7 @@ void deformable_ps_roi_pool_backward_acc_kernel(
                             diff_x *= roi_w, diff_y *= roi_h;
 
                             int diff_x_idx =
-                                    (((n * nr_cls + cls_id) * 2) * part_sz +
-                                     part_h) *
+                                    (((n * nr_cls + cls_id) * 2) * part_sz + part_h) *
                                             part_sz +
                                     part_w;
                             int diff_y_idx =
@@ -278,18 +250,19 @@ void deformable_ps_roi_pool_backward_acc_kernel(
 
 }  // namespace
 
-void Fwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
-               _megdnn_tensor_in trans, _megdnn_tensor_out out_data,
-               _megdnn_tensor_out out_count, _megdnn_workspace workspace) {
-    check_exec(data.layout, rois.layout, trans.layout, out_data.layout,
-               out_count.layout, workspace.size);
+void Fwd::exec(
+        _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
+        _megdnn_tensor_out out_data, _megdnn_tensor_out out_count,
+        _megdnn_workspace workspace) {
+    check_exec(
+            data.layout, rois.layout, trans.layout, out_data.layout, out_count.layout,
+            workspace.size);
 
     auto kern = [data, rois, trans, out_data,
                  out_count](const DeformablePSROIPoolingBase::Param& param) {
         bool no_trans = param.no_trans;
         size_t pool_h = param.pooled_h, pool_w = param.pooled_w;
-        size_t part_sz = param.part_size,
-               sample_per_part = param.sample_per_part;
+        size_t part_sz = param.part_size, sample_per_part = param.sample_per_part;
         float trans_std = param.trans_std, scale = param.spatial_scale;
 
         size_t nr_bbox = rois.layout[0];
@@ -312,9 +285,9 @@ void Fwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
         memset(out_count_ptr, 0, out_count_bytes);
 
         deformable_ps_roi_pooling_forward(
-                data_ptr, rois_ptr, trans_ptr, out_data_ptr, out_count_ptr, IC,
-                IH, IW, no_trans, nr_bbox, nr_cls, pool_h, pool_w, part_sz,
-                sample_per_part, trans_std, scale);
+                data_ptr, rois_ptr, trans_ptr, out_data_ptr, out_count_ptr, IC, IH, IW,
+                no_trans, nr_bbox, nr_cls, pool_h, pool_w, part_sz, sample_per_part,
+                trans_std, scale);
     };
 
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern(param()));
@@ -323,19 +296,19 @@ void Fwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
 
 /* ============== Bwd Implementation ============== */
 
-void Bwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
-               _megdnn_tensor_in trans, _megdnn_tensor_in out_diff,
-               _megdnn_tensor_in out_count, _megdnn_tensor_out data_diff,
-               _megdnn_tensor_out trans_diff, _megdnn_workspace workspace) {
-    check_exec(data.layout, rois.layout, trans.layout, out_diff.layout,
-               out_count.layout, data_diff.layout, trans_diff.layout,
-               workspace.size);
+void Bwd::exec(
+        _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
+        _megdnn_tensor_in out_diff, _megdnn_tensor_in out_count,
+        _megdnn_tensor_out data_diff, _megdnn_tensor_out trans_diff,
+        _megdnn_workspace workspace) {
+    check_exec(
+            data.layout, rois.layout, trans.layout, out_diff.layout, out_count.layout,
+            data_diff.layout, trans_diff.layout, workspace.size);
     auto kern = [data, rois, trans, out_diff, out_count, data_diff,
                  trans_diff](const DeformablePSROIPoolingBase::Param& param) {
         bool no_trans = param.no_trans;
         size_t pool_h = param.pooled_h, pool_w = param.pooled_w;
-        size_t part_sz = param.part_size,
-               sample_per_part = param.sample_per_part;
+        size_t part_sz = param.part_size, sample_per_part = param.sample_per_part;
         float trans_std = param.trans_std, scale = param.spatial_scale;
 
         size_t nr_bbox = rois.layout[0];
@@ -360,9 +333,8 @@ void Bwd::exec(_megdnn_tensor_in data, _megdnn_tensor_in rois,
         memset(trans_diff_ptr, 0, trans_diff_bytes);
         deformable_ps_roi_pool_backward_acc_kernel(
                 data_ptr, rois_ptr, trans_ptr, out_diff_ptr, out_count_ptr,
-                data_diff_ptr, trans_diff_ptr, IC, IH, IW, no_trans, nr_bbox,
-                nr_cls, pool_h, pool_w, part_sz, sample_per_part, trans_std,
-                scale);
+                data_diff_ptr, trans_diff_ptr, IC, IH, IW, no_trans, nr_bbox, nr_cls,
+                pool_h, pool_w, part_sz, sample_per_part, trans_std, scale);
     };
 
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern(param()));

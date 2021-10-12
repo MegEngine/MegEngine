@@ -73,8 +73,7 @@ bool lite::example::reset_input_output(const Args& args) {
     //! set output ptr to store the network output
     std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
     auto result_tensor = std::make_shared<Tensor>(
-            LiteDeviceType::LITE_CPU,
-            Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
+            LiteDeviceType::LITE_CPU, Layout{{1, 1000}, 2, LiteDataType::LITE_FLOAT});
 
     void* out_data = result_tensor->get_memory_ptr();
     output_tensor->reset(out_data, result_tensor->get_layout());

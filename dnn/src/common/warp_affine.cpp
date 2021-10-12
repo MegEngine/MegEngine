@@ -14,9 +14,8 @@
 
 namespace megdnn {
 
-void WarpAffineBase::check_layout_fwd(const TensorLayout& src,
-                                      const TensorLayout& mat,
-                                      const TensorLayout& dst) {
+void WarpAffineBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst) {
     megdnn_assert_contiguous(mat);
     auto errmsg = [&]() {
         return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(mat) + ", " +
@@ -33,21 +32,20 @@ void WarpAffineBase::check_layout_fwd(const TensorLayout& src,
     if (param().format == Param::Format::NCHW) {
         megdnn_assert(src.ndim == 4_z, "%s", errmsg().c_str());
         megdnn_assert(dst.ndim == 4_z, "%s", errmsg().c_str());
-        megdnn_assert(src.dtype.enumv() == DTypeEnum::Float32 ||
-                              DNN_FLOAT16_SELECT(
-                                      src.dtype.enumv() == DTypeEnum::Float16,
-                                      false) ||
-                              src.dtype.enumv() == DTypeEnum::Int8 ||
-                              src.dtype.enumv() == DTypeEnum::Uint8 ||
-                              (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
-                               src.dtype.enumv() == DTypeEnum::Quantized8Asymm),
-                      "WarpAffine NCHW input dtype should be "
-                      "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
-                              "/Float16", "") ".");
+        megdnn_assert(
+                src.dtype.enumv() == DTypeEnum::Float32 ||
+                        DNN_FLOAT16_SELECT(
+                                src.dtype.enumv() == DTypeEnum::Float16, false) ||
+                        src.dtype.enumv() == DTypeEnum::Int8 ||
+                        src.dtype.enumv() == DTypeEnum::Uint8 ||
+                        (src.dtype.enumv() == DTypeEnum::QuantizedS8 ||
+                         src.dtype.enumv() == DTypeEnum::Quantized8Asymm),
+                "WarpAffine NCHW input dtype should be "
+                "Float32/Int8/Uint8/QInt8/QUint8" DNN_FLOAT16_SELECT(
+                        "/Float16", "") ".");
         megdnn_assert(
                 (src.dtype.category() == DTypeCategory::FLOAT &&
-                 (src.dtype == mat.dtype ||
-                  mat.dtype.enumv() == DTypeEnum::Float32)) ||
+                 (src.dtype == mat.dtype || mat.dtype.enumv() == DTypeEnum::Float32)) ||
                         ((src.dtype.category() == DTypeCategory::INT ||
                           src.dtype.category() == DTypeCategory::QUANTIZED) &&
                          mat.dtype.enumv() == DTypeEnum::Float32),
@@ -58,36 +56,35 @@ void WarpAffineBase::check_layout_fwd(const TensorLayout& src,
                 mat.dtype.name());
 
         megdnn_assert(src.shape[1] == dst.shape[1], "%s", errmsg().c_str());
-        megdnn_assert(param().imode ==
-                      param::WarpPerspective::InterpolationMode::LINEAR);
-        megdnn_assert(param().border_mode !=
-                      param::WarpPerspective::BorderMode::TRANSPARENT);
-        megdnn_assert(param().border_mode !=
-                      param::WarpPerspective::BorderMode::ISOLATED);
+        megdnn_assert(
+                param().imode == param::WarpPerspective::InterpolationMode::LINEAR);
+        megdnn_assert(
+                param().border_mode != param::WarpPerspective::BorderMode::TRANSPARENT);
+        megdnn_assert(
+                param().border_mode != param::WarpPerspective::BorderMode::ISOLATED);
 
     } else if (param().format == Param::Format::NHWC) {
         megdnn_assert(src.ndim == 4_z, "%s", errmsg().c_str());
         megdnn_assert(dst.ndim == 4_z, "%s", errmsg().c_str());
         megdnn_assert(src.shape[3] == dst.shape[3], "%s", errmsg().c_str());
-        megdnn_assert(param().imode !=
-                      param::WarpPerspective::InterpolationMode::AREA);
+        megdnn_assert(param().imode != param::WarpPerspective::InterpolationMode::AREA);
     } else {
         megdnn_assert(src.shape[2] == dst.shape[2], "%s", errmsg().c_str());
         megdnn_assert(src.ndim == 5_z, "%s", errmsg().c_str());
         megdnn_assert(dst.ndim == 5_z, "%s", errmsg().c_str());
         megdnn_assert(param().format == Param::Format::NHWCD4);
-        megdnn_assert(param().imode ==
-                      param::WarpPerspective::InterpolationMode::LINEAR);
-        megdnn_assert(param().border_mode !=
-                      param::WarpPerspective::BorderMode::TRANSPARENT);
-        megdnn_assert(param().border_mode !=
-                      param::WarpPerspective::BorderMode::ISOLATED);
+        megdnn_assert(
+                param().imode == param::WarpPerspective::InterpolationMode::LINEAR);
+        megdnn_assert(
+                param().border_mode != param::WarpPerspective::BorderMode::TRANSPARENT);
+        megdnn_assert(
+                param().border_mode != param::WarpPerspective::BorderMode::ISOLATED);
     }
 }
 
-void WarpAffine::check_exec(const TensorLayout& src, const TensorLayout& mat,
-                            const TensorLayout& dst,
-                            size_t workspace_in_bytes) {
+void WarpAffine::check_exec(
+        const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst,
+        size_t workspace_in_bytes) {
     check_layout_fwd(src, mat, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, mat, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);

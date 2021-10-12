@@ -12,21 +12,23 @@
 #include "src/common/handle_impl.h"
 #include "src/common/version_symbol.h"
 
+#include "megdnn/common.h"
 #include "src/cuda/handle.h"
 #include "src/cuda/utils.h"
-#include "megdnn/common.h"
 
 #include <cuda.h>
 #include <cstring>
 
 #define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
+#define STR(x)        STR_HELPER(x)
 
-#define CUDNN_VERSION_STR STR(CUDNN_MAJOR) "." STR(CUDNN_MINOR) "." STR(CUDNN_PATCHLEVEL)
+#define CUDNN_VERSION_STR \
+    STR(CUDNN_MAJOR) "." STR(CUDNN_MINOR) "." STR(CUDNN_PATCHLEVEL)
 
 #pragma message "compile with cuDNN " CUDNN_VERSION_STR " "
 
-static_assert(!(CUDNN_MAJOR == 5 && CUDNN_MINOR == 1),
+static_assert(
+        !(CUDNN_MAJOR == 5 && CUDNN_MINOR == 1),
         "cuDNN 5.1.x series has bugs. Use 5.0.x instead.");
 
 #undef STR
@@ -35,9 +37,8 @@ static_assert(!(CUDNN_MAJOR == 5 && CUDNN_MINOR == 1),
 namespace megdnn {
 namespace cuda {
 
-HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
-    HandleImplHelper(comp_handle, HandleType::CUDA)
-{
+HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
+        : HandleImplHelper(comp_handle, HandleType::CUDA) {
     // Get megcore device handle
     megcoreDeviceHandle_t dev_handle;
     megcoreGetDeviceHandle(comp_handle, &dev_handle);
@@ -49,12 +50,14 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
     m_device_id = dev_id;
     m_device_prop = get_device_prop(dev_id);
     // Get stream from MegCore computing handle.
-    megdnn_assert(CUDNN_VERSION == cudnnGetVersion(),
-        "cudnn version mismatch: compiled with %d; detected %zu at runtime",
-        CUDNN_VERSION, cudnnGetVersion());
+    megdnn_assert(
+            CUDNN_VERSION == cudnnGetVersion(),
+            "cudnn version mismatch: compiled with %d; detected %zu at runtime",
+            CUDNN_VERSION, cudnnGetVersion());
 #if CUDA_VERSION >= 10010
-    megdnn_assert(cublasLtGetVersion() >= 10010,
-        "cuda library version is too low to run cublasLt");
+    megdnn_assert(
+            cublasLtGetVersion() >= 10010,
+            "cuda library version is too low to run cublasLt");
 #endif
 #if CUDNN_VERSION >= 8000
     if (!MGB_GETENV("CUDA_CACHE_PATH")) {
@@ -77,15 +80,15 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle):
 
     // Note that all cublas scalars (alpha, beta) and scalar results such as dot
     // output resides at device side.
-    cublas_check(cublasSetPointerMode(m_cublas_handle,
-                CUBLAS_POINTER_MODE_DEVICE));
+    cublas_check(cublasSetPointerMode(m_cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
 
     // init const scalars
     cuda_check(cudaMalloc(&m_const_scalars, sizeof(ConstScalars)));
     ConstScalars const_scalars_val;
     const_scalars_val.init();
-    cuda_check(cudaMemcpyAsync(m_const_scalars, &const_scalars_val,
-                sizeof(ConstScalars), cudaMemcpyHostToDevice, stream()));
+    cuda_check(cudaMemcpyAsync(
+            m_const_scalars, &const_scalars_val, sizeof(ConstScalars),
+            cudaMemcpyHostToDevice, stream()));
     cuda_check(cudaStreamSynchronize(stream()));
 
     // check tk1
@@ -106,13 +109,16 @@ HandleImpl::~HandleImpl() noexcept {
 }
 
 void HandleImpl::ConstScalars::init() {
-    f16[0].megdnn_x = 0; f16[1].megdnn_x = 1;
-    f32[0] = 0; f32[1] = 1;
-    i32[0] = 0; i32[1] = 1;
+    f16[0].megdnn_x = 0;
+    f16[1].megdnn_x = 1;
+    f32[0] = 0;
+    f32[1] = 1;
+    i32[0] = 0;
+    i32[1] = 1;
 }
 
 size_t HandleImpl::alignment_requirement() const {
-    auto &&prop = m_device_prop;
+    auto&& prop = m_device_prop;
     return std::max(prop->textureAlignment, prop->texturePitchAlignment);
 }
 
@@ -136,8 +142,8 @@ HandleImpl::HandleVendorType HandleImpl::vendor_type() const {
     return HandleVendorType::CUDA;
 }
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 MEGDNN_VERSION_SYMBOL(CUDA, CUDA_VERSION);
 MEGDNN_VERSION_SYMBOL3(CUDNN, CUDNN_MAJOR, CUDNN_MINOR, CUDNN_PATCHLEVEL);

@@ -20,11 +20,9 @@ using namespace chanwise;
 
 namespace {
 
-__host__ __device__ void get_receptive_field_size(uint32_t OH, uint32_t OW,
-                                                  uint32_t FH, uint32_t FW,
-                                                  uint32_t SH, uint32_t SW,
-                                                  uint32_t DH, uint32_t DW,
-                                                  uint32_t* RH, uint32_t* RW) {
+__host__ __device__ void get_receptive_field_size(
+        uint32_t OH, uint32_t OW, uint32_t FH, uint32_t FW, uint32_t SH, uint32_t SW,
+        uint32_t DH, uint32_t DW, uint32_t* RH, uint32_t* RW) {
     // DFH = dilationd FH, DFW = dilationd FW
     // RH = receptive field height, RW = receptive field width
     uint32_t DFH = (FH - 1) * DH + 1, DFW = (FW - 1) * DW + 1;
@@ -37,11 +35,10 @@ __host__ __device__ void get_receptive_field_size(uint32_t OH, uint32_t OW,
 // F == 0: FH/FW should be retrieved from param
 // F != 0: FH/FW should use F
 template <uint32_t F>
-__global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt,
-                     Param param) {
+__global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt, Param param) {
     // each block would process 128 channels at every 4x4 spatial area.
-    uint32_t C = param.src_chl, IH = param.src_h, IW = param.src_w,
-             OH = param.out_h, OW = param.out_w, FH = F == 0 ? param.flt_h : F,
+    uint32_t C = param.src_chl, IH = param.src_h, IW = param.src_w, OH = param.out_h,
+             OW = param.out_w, FH = F == 0 ? param.flt_h : F,
              FW = F == 0 ? param.flt_w : F, PH = param.pad_h, PW = param.pad_w,
              SH = param.stride_h, SW = param.stride_w, DH = param.dilation_h,
              DW = param.dilation_w;
@@ -52,9 +49,8 @@ __global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt,
     uint32_t c_beg = blockIdx.x * 128, c_end = min((blockIdx.x + 1) * 128, C),
              c_cur = c_beg + threadIdx.x * 4;
     uint32_t tidx = threadIdx.x, tidy = threadIdx.y, tidz = threadIdx.z,
-             tid = (tidx << 0) | (tidy << 5) | (tidz << 7),
-             tid_stride = 32 * 4 * 4, tidyz = (tidy << 0) | (tidz << 2),
-             tidyz_stride = 4 * 4;
+             tid = (tidx << 0) | (tidy << 5) | (tidz << 7), tid_stride = 32 * 4 * 4,
+             tidyz = (tidy << 0) | (tidz << 2), tidyz_stride = 4 * 4;
     uint32_t oh = bidz * 4 + tidz, ow = bidy * 4 + tidy;
     uint32_t C_32 = C >> 2;
     // calculate receptive field of 4x4 output pixels
@@ -70,14 +66,13 @@ __global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt,
             static_cast<void*>(shared + 128 * FH * FW * sizeof(int8_t)));
     uint32_t* flt_shared_32 = reinterpret_cast<uint32_t*>(flt_shared);
 
-    int8_t* src_shared = static_cast<int8_t*>(
-            static_cast<void*>(shared + 128 * FH * FW * sizeof(int8_t) +
-                               128 * FH * FW * sizeof(int8_t)));
+    int8_t* src_shared = static_cast<int8_t*>(static_cast<void*>(
+            shared + 128 * FH * FW * sizeof(int8_t) + 128 * FH * FW * sizeof(int8_t)));
     uint32_t* src_shared_32 = reinterpret_cast<uint32_t*>(src_shared);
 
     int32_t* dst_shared = static_cast<int32_t*>(static_cast<void*>(
-            shared + 128 * FH * FW * sizeof(int8_t) +
-            128 * FH * FW * sizeof(int8_t) + 128 * RH * RW * sizeof(int8_t)));
+            shared + 128 * FH * FW * sizeof(int8_t) + 128 * FH * FW * sizeof(int8_t) +
+            128 * RH * RW * sizeof(int8_t)));
 
     // read original filter to shared memory
     // *_int8 vars must be multiples of 4 here.
@@ -152,8 +147,7 @@ __global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt,
         for (uint32_t k = 0; k < 4; ++k) {
             uint32_t c = c_beg + tidx + k * 32;
             if (c < c_end) {
-                dst[(oh * OW + ow) * C + c] =
-                        dst_shared[tidyz * 129 + tidx + k * 32];
+                dst[(oh * OW + ow) * C + c] = dst_shared[tidyz * 129 + tidx + k * 32];
             }
         }
     }
@@ -161,15 +155,13 @@ __global__ void kern(int32_t* dst, const int8_t* src, const int8_t* flt,
 
 }  // anonymous namespace
 
-void megdnn::cuda::conv_bias::chanwise::run_fwd_8x8x32(int32_t* dst,
-                                                       const int8_t* src,
-                                                       const int8_t* flt,
-                                                       const Param& param,
-                                                       cudaStream_t stream) {
-    uint32_t N = param.batch, C = param.src_chl, IH = param.src_h,
-             IW = param.src_w, OH = param.out_h, OW = param.out_w,
-             FH = param.flt_h, FW = param.flt_w, SH = param.stride_h,
-             SW = param.stride_w, DH = param.dilation_h, DW = param.dilation_w;
+void megdnn::cuda::conv_bias::chanwise::run_fwd_8x8x32(
+        int32_t* dst, const int8_t* src, const int8_t* flt, const Param& param,
+        cudaStream_t stream) {
+    uint32_t N = param.batch, C = param.src_chl, IH = param.src_h, IW = param.src_w,
+             OH = param.out_h, OW = param.out_w, FH = param.flt_h, FW = param.flt_w,
+             SH = param.stride_h, SW = param.stride_w, DH = param.dilation_h,
+             DW = param.dilation_w;
 
     dim3 threads(32, 4, 4);
     dim3 blocks(DIVUP(C, 128), DIVUP(OW, 4), DIVUP(OH, 4));
@@ -185,8 +177,8 @@ void megdnn::cuda::conv_bias::chanwise::run_fwd_8x8x32(int32_t* dst,
     // use 129 instead of 128 to avoid shared memory bank conflict
     uint32_t dst_shared_mem_size = 129 * 4 * 4 * sizeof(int32_t);
 
-    uint32_t shared_mem_size = 2 * filter_shared_mem_size +
-                               src_shared_mem_size + dst_shared_mem_size;
+    uint32_t shared_mem_size =
+            2 * filter_shared_mem_size + src_shared_mem_size + dst_shared_mem_size;
 
     void (*kptr)(int32_t*, const int8_t*, const int8_t*, Param) = kern<0>;
     if (FH == 1 && FW == 1)
@@ -200,8 +192,7 @@ void megdnn::cuda::conv_bias::chanwise::run_fwd_8x8x32(int32_t* dst,
         int32_t* dptr = dst + n * C * OH * OW;
         const int8_t* sptr = src + n * C * IH * IW;
         const int8_t* fptr = flt;
-        kptr<<<blocks, threads, shared_mem_size, stream>>>(dptr, sptr, fptr,
-                                                           param);
+        kptr<<<blocks, threads, shared_mem_size, stream>>>(dptr, sptr, fptr, param);
     }
     after_kernel_launch();
 }

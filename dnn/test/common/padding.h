@@ -35,7 +35,7 @@ inline std::vector<TestArg> get_args() {
     size_t src_shape_dim4 = 5;
     size_t src_shape_dim5 = 5;
     size_t src_shape_dim6 = 5;
-    
+
     size_t dst_shape_dim0 = 8;
     size_t dst_shape_dim1 = 8;
     size_t dst_shape_dim2 = 8;
@@ -47,7 +47,7 @@ inline std::vector<TestArg> get_args() {
     std::vector<TestArg> args;
 
     param::Padding cur_param;
-    
+
     cur_param.front_offset_dim0 = 0;
     cur_param.front_offset_dim1 = 0;
     cur_param.front_offset_dim2 = 0;
@@ -69,76 +69,76 @@ inline std::vector<TestArg> get_args() {
     cur_param.back_offset_dim0 = 2;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.front_offset_dim1 = 2;
     cur_param.back_offset_dim1 = 1;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.front_offset_dim2 = 1;
     cur_param.back_offset_dim2 = 2;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.front_offset_dim3 = 0;
     cur_param.back_offset_dim3 = 3;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.front_offset_dim4 = 3;
     cur_param.back_offset_dim4 = 0;
@@ -146,26 +146,32 @@ inline std::vector<TestArg> get_args() {
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.front_offset_dim5 = 1;
     cur_param.back_offset_dim5 = 2;
@@ -173,26 +179,32 @@ inline std::vector<TestArg> get_args() {
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.front_offset_dim6 = 0;
     cur_param.front_offset_dim6 = 3;
@@ -200,35 +212,34 @@ inline std::vector<TestArg> get_args() {
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     return args;
-
 }
 
 inline std::vector<TestArg> get_args_backward() {
@@ -239,7 +250,7 @@ inline std::vector<TestArg> get_args_backward() {
     size_t src_shape_dim4 = 8;
     size_t src_shape_dim5 = 8;
     size_t src_shape_dim6 = 8;
-    
+
     size_t dst_shape_dim0 = 5;
     size_t dst_shape_dim1 = 5;
     size_t dst_shape_dim2 = 5;
@@ -251,7 +262,7 @@ inline std::vector<TestArg> get_args_backward() {
     std::vector<TestArg> args;
 
     param::Padding cur_param;
-    
+
     cur_param.front_offset_dim0 = 0;
     cur_param.front_offset_dim1 = 0;
     cur_param.front_offset_dim2 = 0;
@@ -273,104 +284,109 @@ inline std::vector<TestArg> get_args_backward() {
     cur_param.back_offset_dim0 = 2;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0},
-                      TensorShape{dst_shape_dim0});
-                 
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0}, TensorShape{dst_shape_dim0});
 
     cur_param.front_offset_dim1 = 2;
     cur_param.back_offset_dim1 = 1;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1});
+    args.emplace_back(
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1},
+            TensorShape{dst_shape_dim0, dst_shape_dim1});
 
     cur_param.front_offset_dim2 = 1;
     cur_param.back_offset_dim2 = 2;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
-            cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
+            cur_param, TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2},
             TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2});
 
     cur_param.front_offset_dim3 = 0;
     cur_param.back_offset_dim3 = 3;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
-    args.emplace_back(cur_param,
-                      TensorShape{src_shape_dim0, src_shape_dim1,
-                                  src_shape_dim2, src_shape_dim3},
-                      TensorShape{dst_shape_dim0, dst_shape_dim1,
-                                  dst_shape_dim2, dst_shape_dim3});
+    args.emplace_back(
+            cur_param,
+            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3});
 
     cur_param.front_offset_dim4 = 3;
-    cur_param.back_offset_dim4 =0;
+    cur_param.back_offset_dim4 = 0;
 
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4});
 
     cur_param.front_offset_dim5 = 1;
     cur_param.back_offset_dim5 = 2;
@@ -378,26 +394,32 @@ inline std::vector<TestArg> get_args_backward() {
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5});
 
     cur_param.front_offset_dim6 = 0;
     cur_param.back_offset_dim6 = 3;
@@ -405,35 +427,34 @@ inline std::vector<TestArg> get_args_backward() {
     cur_param.padding_mode = param::Padding::PaddingMode::CONSTANT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REPLICATE;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     cur_param.padding_mode = param::Padding::PaddingMode::REFLECT;
     args.emplace_back(
             cur_param,
-            TensorShape{src_shape_dim0, src_shape_dim1, src_shape_dim2,
-                        src_shape_dim3, src_shape_dim4, src_shape_dim5,
-                        src_shape_dim6},
-            TensorShape{dst_shape_dim0, dst_shape_dim1, dst_shape_dim2,
-                        dst_shape_dim3, dst_shape_dim4, dst_shape_dim5,
-                        dst_shape_dim6});
+            TensorShape{
+                    src_shape_dim0, src_shape_dim1, src_shape_dim2, src_shape_dim3,
+                    src_shape_dim4, src_shape_dim5, src_shape_dim6},
+            TensorShape{
+                    dst_shape_dim0, dst_shape_dim1, dst_shape_dim2, dst_shape_dim3,
+                    dst_shape_dim4, dst_shape_dim5, dst_shape_dim6});
 
     return args;
-
 }
 
 }  // namespace padding

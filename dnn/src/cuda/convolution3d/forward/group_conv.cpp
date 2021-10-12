@@ -45,8 +45,8 @@ std::pair<TensorLayoutArray, Convolution3DForwardImpl::Param> sub_opr_config(
     return ret;
 }
 
-std::pair<TensorLayoutArray, std::unique_ptr<Convolution3DForward>>
-prepare_sub_opr(const Convolution3DForwardImpl::AlgoBase::SizeArgs& args) {
+std::pair<TensorLayoutArray, std::unique_ptr<Convolution3DForward>> prepare_sub_opr(
+        const Convolution3DForwardImpl::AlgoBase::SizeArgs& args) {
     auto conv3d_opr = args.handle->create_operator<Convolution3D>();
     set_execution_policy<Convolution3DForward, Convolution3DForward*>(
             args.opr, conv3d_opr.get());
@@ -57,21 +57,21 @@ prepare_sub_opr(const Convolution3DForwardImpl::AlgoBase::SizeArgs& args) {
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-Convolution3DForwardImpl::AlgoGroupConvGeneral::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
-    AlgoBase::SizeArgs args{static_cast<const Convolution3DForwardImpl*>(opr),
-                            layouts[0], layouts[1], layouts[2]};
+std::vector<Algorithm::SearchItem> Convolution3DForwardImpl::AlgoGroupConvGeneral::
+        get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+    AlgoBase::SizeArgs args{
+            static_cast<const Convolution3DForwardImpl*>(opr), layouts[0], layouts[1],
+            layouts[2]};
     auto&& config = sub_opr_config(args);
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::CONVOLUTION3D_FORWARD, param_str,
-             config.first}};
+    return {{Algorithm::OprType::CONVOLUTION3D_FORWARD, param_str, config.first}};
 }
 
 bool Convolution3DForwardImpl::AlgoGroupConvGeneral::is_available(
-        const SizeArgs &args) const {
+        const SizeArgs& args) const {
     if (args.filter_meta.group <= 1)
         return false;
     if (args.filter_meta.format != Param::Format::NCDHW &&
@@ -86,8 +86,7 @@ bool Convolution3DForwardImpl::AlgoGroupConvGeneral::is_available(
             config.first[0], config.first[1], config.first[2]);
 }
 
-WorkspaceBundle
-Convolution3DForwardImpl::AlgoGroupConvGeneral::get_workspace_bundle(
+WorkspaceBundle Convolution3DForwardImpl::AlgoGroupConvGeneral::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
     auto config = prepare_sub_opr(args);
     size_t sizes = config.second->get_workspace_in_bytes(
@@ -100,8 +99,7 @@ size_t Convolution3DForwardImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
 
-void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(
-        const ExecArgs& args) const {
+void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(const ExecArgs& args) const {
     auto bundle = get_workspace_bundle(args.workspace.raw_ptr, args);
     {
         auto config = prepare_sub_opr(args);
@@ -113,18 +111,17 @@ void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(
         if (args.filter_meta.format == Param::Format::NCDHW) {
             c_pos = 1;
         } else {
-            megdnn_assert(args.filter_meta.format == Param::Format::NDHWC,
-                          "invalid conv format");
+            megdnn_assert(
+                    args.filter_meta.format == Param::Format::NDHWC,
+                    "invalid conv format");
             c_pos = 4;
         }
 
         auto grp = args.filter_meta.group;
 
         auto&& fm = args.filter_meta;
-        auto strd_src = tsrc.layout.stride[c_pos] * fm.icpg *
-                        tsrc.layout.dtype.size(),
-             strd_dst = tdst.layout.stride[c_pos] * fm.ocpg *
-                        tdst.layout.dtype.size(),
+        auto strd_src = tsrc.layout.stride[c_pos] * fm.icpg * tsrc.layout.dtype.size(),
+             strd_dst = tdst.layout.stride[c_pos] * fm.ocpg * tdst.layout.dtype.size(),
              strd_flt = fm.icpg * fm.ocpg * fm.spatial[0] * fm.spatial[1] *
                         fm.spatial[2] * tfilter.layout.dtype.size();
 
@@ -138,4 +135,3 @@ void Convolution3DForwardImpl::AlgoGroupConvGeneral::exec(
 }
 
 // vim: syntax=cpp.doxygen
-

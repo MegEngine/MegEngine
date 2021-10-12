@@ -105,8 +105,8 @@ std::vector<uint8_t> RC4Impl::decrypt_model() {
  * be broken, and finally the model body will be broken.
  */
 std::vector<uint8_t> RC4Impl::encrypt_model() {
-    size_t total_length = (m_model_length + (sizeof(size_t) - 1)) /
-                          sizeof(size_t) * sizeof(size_t);
+    size_t total_length =
+            (m_model_length + (sizeof(size_t) - 1)) / sizeof(size_t) * sizeof(size_t);
     std::vector<uint8_t> pad_model(total_length, 0);
     memcpy(pad_model.data(), m_model_mem, m_model_length);
 
@@ -191,8 +191,8 @@ std::vector<uint8_t> SimpleFastRC4Impl::decrypt_model() {
 }
 
 std::vector<uint8_t> SimpleFastRC4Impl::encrypt_model() {
-    size_t total_length = (m_model_length + (sizeof(size_t) - 1)) /
-                          sizeof(size_t) * sizeof(size_t);
+    size_t total_length =
+            (m_model_length + (sizeof(size_t) - 1)) / sizeof(size_t) * sizeof(size_t);
     std::vector<uint8_t> pad_model(total_length, 0);
     memcpy(pad_model.data(), m_model_mem, m_model_length);
 

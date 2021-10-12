@@ -10,11 +10,11 @@
  */
 
 #include "./macros.h"
-#include "./cpp_class.h"
 #include "../emitter.h"
+#include "./cpp_class.h"
 
 namespace mlir::tblgen {
-bool gen_enum_param_list_macro(raw_ostream &os, llvm::RecordKeeper &keeper) {
+bool gen_enum_param_list_macro(raw_ostream& os, llvm::RecordKeeper& keeper) {
     std::vector<std::pair<std::string, std::string>> enums;
     std::vector<std::pair<std::string, std::string>> bit_enums;
     Environment env;
@@ -24,8 +24,9 @@ bool gen_enum_param_list_macro(raw_ostream &os, llvm::RecordKeeper &keeper) {
                 auto insert = [&](const MgbEnumAttr& attr) {
                     auto&& item = std::make_pair(
                             attr.getParentNamespace(), attr.getEnumName());
-                    if (env.enumAlias.emplace(
-                            attr.getBaseRecord()->getID(), std::move(item)).second) {
+                    if (env.enumAlias
+                                .emplace(attr.getBaseRecord()->getID(), std::move(item))
+                                .second) {
                         if (attr.getEnumCombinedFlag()) {
                             bit_enums.emplace_back(item);
                         } else {
@@ -43,15 +44,15 @@ bool gen_enum_param_list_macro(raw_ostream &os, llvm::RecordKeeper &keeper) {
         }
     });
     os << "#define FOR_EACH_ENUM_PARAM(cb)";
-    for (auto && i : enums) {
+    for (auto&& i : enums) {
         os << formatv(" \\\n    cb({0}::{1});", i.first, i.second);
     }
     os << "\n";
     os << "#define FOR_EACH_BIT_COMBINED_ENUM_PARAM(cb)";
-    for (auto && i : bit_enums) {
+    for (auto&& i : bit_enums) {
         os << formatv(" \\\n    cb({0}::{1});", i.first, i.second);
     }
     os << "\n";
     return false;
 }
-} // namespace mlir::tblgen
+}  // namespace mlir::tblgen

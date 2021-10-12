@@ -15,7 +15,7 @@
 
 #if defined(_WIN32)
 #include <io.h>
-#define F_OK 0
+#define F_OK         0
 #define access(a, b) _access(a, b)
 #elif __linux__ || __unix__ || __APPLE__
 #include <unistd.h>
@@ -25,16 +25,17 @@ using namespace mgb;
 
 /* ========================== TensorRTEngineCache ========================== */
 bool TensorRTEngineCache::sm_enable_engine_cache = false;
-std::string TensorRTEngineCache::make_key_from_trt_opr(
-        const opr::TensorRTOpr* opr) {
+std::string TensorRTEngineCache::make_key_from_trt_opr(const opr::TensorRTOpr* opr) {
     auto&& env = CompNodeEnv::from_comp_node(opr->output(0)->comp_node());
-    mgb_assert(env.property().type == CompNode::DeviceType::CUDA,
-               "tensorrt opr only support CompNode with DeviceType::CUDA");
+    mgb_assert(
+            env.property().type == CompNode::DeviceType::CUDA,
+            "tensorrt opr only support CompNode with DeviceType::CUDA");
     auto&& prop = env.cuda_env().device_prop;
     std::string key;
     int tensorrt_version = getInferLibVersion();
-    key = ssprintf("dev=%s;cap=%d.%d;trt=%d;", prop.name, prop.major,
-                   prop.minor, tensorrt_version);
+    key = ssprintf(
+            "dev=%s;cap=%d.%d;trt=%d;", prop.name, prop.major, prop.minor,
+            tensorrt_version);
     key.append(opr->cname());
     return key;
 }
@@ -64,8 +65,9 @@ class TensorRTEngineCacheMemory final : public TensorRTEngineCache {
 
     template <typename T>
     void read(T& val) {
-        static_assert(std::is_trivially_copyable<T>::value,
-                      "only support trivially copyable type");
+        static_assert(
+                std::is_trivially_copyable<T>::value,
+                "only support trivially copyable type");
         mgb_assert(m_offset + sizeof(T) <= m_size);
         memcpy(&val, m_ptr, sizeof(T));
         m_offset += sizeof(T);
@@ -74,8 +76,9 @@ class TensorRTEngineCacheMemory final : public TensorRTEngineCache {
 
     template <typename T>
     void read(T* buf, size_t size) {
-        static_assert(std::is_trivially_copyable<T>::value && sizeof(T) == 1,
-                      "only support read bytes");
+        static_assert(
+                std::is_trivially_copyable<T>::value && sizeof(T) == 1,
+                "only support read bytes");
         mgb_assert(m_offset + size <= m_size);
         memcpy(buf, m_ptr, size);
         m_offset += size;
@@ -163,14 +166,14 @@ TensorRTEngineCacheIO::TensorRTEngineCacheIO(std::string filename)
         : m_filename{std::move(filename)} {
     mgb_log_debug("create tensorrt engine cache: %s", m_filename.c_str());
     if (access(m_filename.c_str(), F_OK) == 0) {
-        mgb_log(
-                "tensorrt engine cache %s already exists, read from binary "
+        mgb_log("tensorrt engine cache %s already exists, read from binary "
                 "file.",
                 m_filename.c_str());
         m_ptr = fopen(m_filename.c_str(), "r+b");
-        mgb_throw_if(m_ptr == nullptr, SystemError,
-                     "failed to open tensorrt engine file %s %s",
-                     m_filename.c_str(), strerror(errno));
+        mgb_throw_if(
+                m_ptr == nullptr, SystemError,
+                "failed to open tensorrt engine file %s %s", m_filename.c_str(),
+                strerror(errno));
         std::unique_ptr<FILE, int (*)(FILE*)> fptr_close{m_ptr, ::fclose};
         read_cache();
         m_update_cache = true;
@@ -189,9 +192,9 @@ void TensorRTEngineCacheIO::dump_cache() {
                 "rewritten during dumping cache to this file.",
                 m_filename.c_str());
     m_ptr = fopen(m_filename.c_str(), "wb");
-    mgb_throw_if(m_ptr == nullptr, SystemError,
-                 "failed to open tensorrt engine file %s %s",
-                 m_filename.c_str(), strerror(errno));
+    mgb_throw_if(
+            m_ptr == nullptr, SystemError, "failed to open tensorrt engine file %s %s",
+            m_filename.c_str(), strerror(errno));
     std::unique_ptr<FILE, int (*)(FILE*)> fptr_close{m_ptr, ::fclose};
     uint32_t nr_engines = m_cache.size();
     write(nr_engines);
@@ -203,8 +206,7 @@ void TensorRTEngineCacheIO::dump_cache() {
     }
 }
 
-Maybe<TensorRTEngineCache::Engine> TensorRTEngineCacheIO::get(
-        const std::string& key) {
+Maybe<TensorRTEngineCache::Engine> TensorRTEngineCacheIO::get(const std::string& key) {
     MGB_LOCK_GUARD(m_mtx);
     auto find = m_cache.find(key);
     if (find == m_cache.end())

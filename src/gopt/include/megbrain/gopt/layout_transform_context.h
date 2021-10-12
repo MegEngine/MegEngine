@@ -51,24 +51,22 @@ public:
     using OprTensorFormatsDispatcher =
             OprTensorFormatsConfiguration::OprTensorFormatsDispatcher;
     using OprConfigTrait =
-            ThinHashMap<Typeinfo*,
-                        ThinHashMap<OprFormat, OprTensorFormatsDispatcher*>>;
+            ThinHashMap<Typeinfo*, ThinHashMap<OprFormat, OprTensorFormatsDispatcher*>>;
     using Target = GraphTuningOptions::Target;
     using ReformatAttribute = ReformatManager::ReformatKey::Attribute;
     struct Attribute {
-        OprFormat base_opr_format;  /// the base opr format indicates that the
-                                    /// network to be optimized is constructed
-                                    /// in the base opr format, i.e. all the
-                                    /// format aware operators (conv, conv_bias,
-                                    /// deconv, pooling etc.) are built in
-                                    /// this format.
-        TensorFormats
-                base_tensor_formats;  /// the base tensor format indicates that
-                                      /// all the format agnostic operators
-                                      /// (like elemwise, elemwise multi type,
-                                      /// typecvt etc.) are built in the base
-                                      /// tensor format.
-        Target target;                /// target which indicates the device type
+        OprFormat base_opr_format;          /// the base opr format indicates that the
+                                            /// network to be optimized is constructed
+                                            /// in the base opr format, i.e. all the
+                                            /// format aware operators (conv, conv_bias,
+                                            /// deconv, pooling etc.) are built in
+                                            /// this format.
+        TensorFormats base_tensor_formats;  /// the base tensor format indicates that
+                                            /// all the format agnostic operators
+                                            /// (like elemwise, elemwise multi type,
+                                            /// typecvt etc.) are built in the base
+                                            /// tensor format.
+        Target target;                      /// target which indicates the device type
         ReformatAttribute reformat_attribute =
                 ReformatAttribute::DEFAULT;  /// additional reformat attribute,
                                              /// which indicates whether to pad
@@ -77,15 +75,15 @@ public:
                                              /// platform to use image object
     };
     LayoutTransformContext() = delete;
-    LayoutTransformContext(OprList opr_list,
-                           SmallVector<TensorFormats> available_tensor_formats,
-                           Attribute attribute)
+    LayoutTransformContext(
+            OprList opr_list, SmallVector<TensorFormats> available_tensor_formats,
+            Attribute attribute)
             : m_opr_list{std::move(opr_list)},
               m_available_tensor_formats{std::move(available_tensor_formats)},
               m_attribute{attribute} {}
-    LayoutTransformContext(OprList opr_list,
-                           SmallVector<TensorFormats> available_tensor_formats,
-                           OprConfigTrait opr_configs, Attribute attribute)
+    LayoutTransformContext(
+            OprList opr_list, SmallVector<TensorFormats> available_tensor_formats,
+            OprConfigTrait opr_configs, Attribute attribute)
             : m_opr_list{std::move(opr_list)},
               m_available_tensor_formats{std::move(available_tensor_formats)},
               m_opr_configs{std::move(opr_configs)},
@@ -110,11 +108,10 @@ public:
      * \param opr_format op format configuration which to be enabled in the
      * layout transform problem
      */
-    LayoutTransformContext& add_opr_config(Typeinfo* opr,
-                                           SmallVector<OprFormat> opr_formats);
+    LayoutTransformContext& add_opr_config(
+            Typeinfo* opr, SmallVector<OprFormat> opr_formats);
     static std::unique_ptr<LayoutTransformContext> make(
-            Target target = Target::UNSPEC,
-            OprFormat base_opr_format = OprFormat::NCHW,
+            Target target = Target::UNSPEC, OprFormat base_opr_format = OprFormat::NCHW,
             TensorFormats base_tensor_format = TensorFormats::NCHW);
 
 private:
@@ -124,9 +121,9 @@ private:
                                          /// for format agnostic operators (like
                                          /// elemwise, elemwise multi type,
                                          /// typecvt, etc.
-    OprConfigTrait m_opr_configs;  /// the available opr format configurations,
-                                   /// used for format aware operators (like
-                                   /// conv, deconv, conv_bias, etc.
+    OprConfigTrait m_opr_configs;        /// the available opr format configurations,
+                                         /// used for format aware operators (like
+                                         /// conv, deconv, conv_bias, etc.
     Attribute m_attribute;  /// the extra attributes to describe the problem
 };
 
@@ -138,8 +135,7 @@ public:
     using OprConfigTrait = LayoutTransformContext::OprConfigTrait;
     using Attribute = LayoutTransformContext::Attribute;
 
-    Problem(const GraphPartition& graph_partition,
-            const LayoutTransformContext& ctx)
+    Problem(const GraphPartition& graph_partition, const LayoutTransformContext& ctx)
             : m_graph_partition{graph_partition}, m_ctx{ctx} {}
     ~Problem() noexcept = default;
 
@@ -148,16 +144,13 @@ public:
     const SmallVector<TensorFormats>& available_tensor_formats() const {
         return m_ctx.available_tensor_formats();
     }
-    TensorFormats base_format() const {
-        return m_ctx.attribute().base_tensor_formats;
-    }
+    TensorFormats base_format() const { return m_ctx.attribute().base_tensor_formats; }
     Attribute attribute() const { return m_ctx.attribute(); }
     /*!
      * \brief return the tensor formats configuration of an operator in the
      * default op format
      */
-    OprTensorFormatsConfiguration base_config(
-            const cg::OperatorNodeBase* opr) const {
+    OprTensorFormatsConfiguration base_config(const cg::OperatorNodeBase* opr) const {
         auto _ = OprTensorFormatsConfiguration::find_dispatcher_by_type_format(
                 opr->dyn_typeinfo(), m_ctx.attribute().base_opr_format);
         auto rst = (*_)(opr);

@@ -16,9 +16,9 @@
 namespace megdnn {
 namespace cuda {
 
-void TQTForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                          _megdnn_tensor_out output,
-                          _megdnn_workspace workspace) {
+void TQTForwardImpl::exec(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_out output,
+        _megdnn_workspace workspace) {
     check_exec(input.layout, scale.layout, output.layout, workspace.size);
 
     if (!input.layout.is_contiguous() || !output.layout.is_contiguous())
@@ -31,20 +31,18 @@ void TQTForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                   \
-    if (input.layout.dtype == DType()) {                            \
-        using T = typename DTypeTrait<DType>::ctype;                \
-        run_elemwise<TQTKernOp<T>, T, 1>(ele_param, stream,         \
-                                         {input, output, m_param}); \
-        return;                                                     \
+#define cb(DType)                                                                      \
+    if (input.layout.dtype == DType()) {                                               \
+        using T = typename DTypeTrait<DType>::ctype;                                   \
+        run_elemwise<TQTKernOp<T>, T, 1>(ele_param, stream, {input, output, m_param}); \
+        return;                                                                        \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void TQTForwardImpl::exec_noncontig(_megdnn_tensor_in input,
-                                    _megdnn_tensor_in scale,
-                                    _megdnn_tensor_out output) {
+void TQTForwardImpl::exec_noncontig(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_out output) {
     ElemwiseOpParamN<3> ele_param;
     ele_param[0] = input;
     ele_param[1] = scale;
@@ -54,23 +52,23 @@ void TQTForwardImpl::exec_noncontig(_megdnn_tensor_in input,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                    \
-    if (input.layout.dtype == DType()) {                             \
-        using T = typename DTypeTrait<DType>::ctype;                 \
-        run_elemwise<TQTKernOpNonContig<T>, T, 3>(ele_param, stream, \
-                                                  {m_param});        \
-        return;                                                      \
+#define cb(DType)                                                                \
+    if (input.layout.dtype == DType()) {                                         \
+        using T = typename DTypeTrait<DType>::ctype;                             \
+        run_elemwise<TQTKernOpNonContig<T>, T, 3>(ele_param, stream, {m_param}); \
+        return;                                                                  \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void TQTBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                           _megdnn_tensor_in scale, _megdnn_tensor_out grad_x,
-                           _megdnn_tensor_out grad_s,
-                           _megdnn_workspace workspace) {
-    check_exec(diff.layout, input.layout, scale.layout, grad_x.layout,
-               grad_s.layout, workspace.size);
+void TQTBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+        _megdnn_workspace workspace) {
+    check_exec(
+            diff.layout, input.layout, scale.layout, grad_x.layout, grad_s.layout,
+            workspace.size);
 
     if (!input.layout.is_contiguous() || !diff.layout.is_contiguous() ||
         !grad_x.layout.is_contiguous() || !grad_s.layout.is_contiguous())
@@ -94,11 +92,9 @@ void TQTBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
 #undef cb
 }
 
-void TQTBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
-                                     _megdnn_tensor_in input,
-                                     _megdnn_tensor_in scale,
-                                     _megdnn_tensor_out grad_x,
-                                     _megdnn_tensor_out grad_s) {
+void TQTBackwardImpl::exec_noncontig(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s) {
     ElemwiseOpParamN<5> ele_param;
     ele_param[0] = diff;
     ele_param[1] = input;
@@ -110,12 +106,11 @@ void TQTBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                       \
-    if (input.layout.dtype == DType()) {                                \
-        using T = typename DTypeTrait<DType>::ctype;                    \
-        run_elemwise<TQTBwdKernOpNonContig<T>, T, 5>(ele_param, stream, \
-                                                     {m_param});        \
-        return;                                                         \
+#define cb(DType)                                                                   \
+    if (input.layout.dtype == DType()) {                                            \
+        using T = typename DTypeTrait<DType>::ctype;                                \
+        run_elemwise<TQTBwdKernOpNonContig<T>, T, 5>(ele_param, stream, {m_param}); \
+        return;                                                                     \
     }
     cb(megdnn::dtype::Float32)
 #undef cb

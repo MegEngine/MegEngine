@@ -17,8 +17,7 @@ namespace test {
 template <>
 std::function<void(const TensorNDArray&)> extra_impl_helper<AddUpdate>(
         Handle* h, const AddUpdate::Param& p) {
-    auto impl = [](const TensorNDArray& tensors, Handle* h,
-                   const AddUpdate::Param& p) {
+    auto impl = [](const TensorNDArray& tensors, Handle* h, const AddUpdate::Param& p) {
         auto fp32_opr = h->create_operator<AddUpdate>();
         auto type_cvt = h->create_operator<TypeCvt>();
         fp32_opr->param() = p;
@@ -27,8 +26,7 @@ std::function<void(const TensorNDArray&)> extra_impl_helper<AddUpdate>(
         for (size_t i = 0; i < tensors.size(); ++i) {
             auto layout = tensors[i].layout;
             layout.dtype = dtype::Float32();
-            fp32_tensors.emplace_back(malloc(layout.span().dist_byte()),
-                                      layout);
+            fp32_tensors.emplace_back(malloc(layout.span().dist_byte()), layout);
             type_cvt->exec(tensors[i], fp32_tensors[i]);
         }
 
@@ -43,7 +41,7 @@ std::function<void(const TensorNDArray&)> extra_impl_helper<AddUpdate>(
     return std::bind(impl, std::placeholders::_1, h, std::cref(p));
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

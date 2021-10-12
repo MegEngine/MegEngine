@@ -11,9 +11,9 @@
 
 #include "src/arm_common/simd_macro/marm_neon.h"
 
+#include "megdnn/oprs.h"
 #include "src/arm_common/matrix_mul/int8/gemv.h"
 #include "src/common/utils.h"
-#include "megdnn/oprs.h"
 
 #include "midout.h"
 MIDOUT_DECL(megdnn_arm_common_int8_gemv)
@@ -21,12 +21,11 @@ MIDOUT_DECL(megdnn_arm_common_int8_gemv)
 using namespace megdnn;
 using namespace arm_common;
 
-
 namespace {
 
-void gemv_naive_n(const int8_t* __restrict A, const int8_t* __restrict B,
-                  int32_t* __restrict C, size_t M, size_t N, size_t K,
-                  size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_naive_n(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 1);
     size_t m = 0;
     for (; m + 2 <= M; m += 2) {
@@ -95,9 +94,9 @@ void gemv_naive_n(const int8_t* __restrict A, const int8_t* __restrict B,
     }
 }
 
-void gemv_naive_n_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
-                      int32_t* __restrict C, size_t M, size_t N, size_t K,
-                      size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_naive_n_mk4(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     constexpr size_t PACK_SIZE = 4;
     megdnn_assert(N == 1 && Bstride == 4);
     auto Aptr = A;
@@ -173,9 +172,9 @@ void gemv_naive_n_mk4(const int8_t* __restrict A, const int8_t* __restrict B,
 #if MGB_ENABLE_DOT
 namespace {
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void gemv_naive_n_dot(const int8_t* __restrict A, const int8_t* __restrict B,
-                  int32_t* __restrict C, size_t M, size_t N, size_t K,
-                  size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_naive_n_dot(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1 && Bstride == 1);
     size_t m = 0;
     for (; m + 2 <= M; m += 2) {
@@ -184,8 +183,7 @@ void gemv_naive_n_dot(const int8_t* __restrict A, const int8_t* __restrict B,
         size_t k = 0;
         for (; k + 16 <= K; k += 16) {
             int64x2_t a0 = vreinterpretq_s64_s8(vld1q_s8(A + m * Astride + k));
-            int64x2_t a1 =
-                    vreinterpretq_s64_s8(vld1q_s8(A + (m + 1) * Astride + k));
+            int64x2_t a1 = vreinterpretq_s64_s8(vld1q_s8(A + (m + 1) * Astride + k));
             //! the first 8 elements is m, the last 8 elements is m + 1
             int8x16_t a2 = vreinterpretq_s8_s64(vzip1q_s64(a0, a1));
             int8x16_t a3 = vreinterpretq_s8_s64(vzip2q_s64(a0, a1));
@@ -243,9 +241,9 @@ void gemv_naive_n_dot(const int8_t* __restrict A, const int8_t* __restrict B,
 }
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void gemv_naive_n_mk4_dotprod(const int8_t* __restrict A, const int8_t* __restrict B,
-                      int32_t* __restrict C, size_t M, size_t N, size_t K,
-                      size_t Astride, size_t Bstride, size_t Cstride) {
+void gemv_naive_n_mk4_dotprod(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     constexpr size_t PACK_SIZE = 4;
     megdnn_assert(N == 1 && Bstride == 4);
 
@@ -323,10 +321,9 @@ void gemv_naive_n_mk4_dotprod(const int8_t* __restrict A, const int8_t* __restri
 }
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void gemv_naive_n_mk4_dot(const int8_t* __restrict A,
-                          const int8_t* __restrict B, int32_t* __restrict C,
-                          size_t M, size_t N, size_t K, size_t Astride,
-                          size_t Bstride, size_t Cstride) {
+void gemv_naive_n_mk4_dot(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     constexpr size_t PACK_SIZE = 4;
     megdnn_assert(N == 1 && Bstride == 4);
 
@@ -379,10 +376,9 @@ void gemv_naive_n_mk4_dot(const int8_t* __restrict A,
 }  // namespace
 #endif
 
-bool arm_common::is_gemv_like_preferred_int8(bool transposeA, bool transposeB,
-                                             size_t M, size_t N, size_t K,
-                                             size_t LDA, size_t LDB,
-                                             size_t LDC) {
+bool arm_common::is_gemv_like_preferred_int8(
+        bool transposeA, bool transposeB, size_t M, size_t N, size_t K, size_t LDA,
+        size_t LDB, size_t LDC) {
     MEGDNN_MARK_USED_VAR(LDA);
     MEGDNN_MARK_USED_VAR(LDB);
     MEGDNN_MARK_USED_VAR(LDC);
@@ -396,17 +392,14 @@ bool arm_common::is_gemv_like_preferred_int8(bool transposeA, bool transposeB,
     return N == 1 && LDB == 1;
 }
 
-void arm_common::gemv_like(const int8_t* __restrict A,
-                           const int8_t* __restrict B, int32_t* __restrict C,
-                           size_t M, size_t N, size_t K, size_t Astride,
-                           size_t Bstride, size_t Cstride) {
+void arm_common::gemv_like(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1);
-    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
-                 midout_iv("INT8_gemv_like"_hash)) {
+    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv, midout_iv("INT8_gemv_like"_hash)) {
 #if MGB_ENABLE_DOT
         if (cpuinfo_has_arm_neon_dot()) {
-            return gemv_naive_n_dot(A, B, C, M, N, K, Astride, Bstride,
-                                    Cstride);
+            return gemv_naive_n_dot(A, B, C, M, N, K, Astride, Bstride, Cstride);
         } else {
             return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride);
         }
@@ -417,21 +410,17 @@ void arm_common::gemv_like(const int8_t* __restrict A,
     MIDOUT_END();
 }
 
-void arm_common::gemv_like_mk4(const int8_t* __restrict A,
-                               const int8_t* __restrict B,
-                               int32_t* __restrict C, size_t M, size_t N,
-                               size_t K, size_t Astride, size_t Bstride,
-                               size_t Cstride) {
+void arm_common::gemv_like_mk4(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1);
-    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
-                 midout_iv("INT8_gemv_like_mk4"_hash)) {
+    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv, midout_iv("INT8_gemv_like_mk4"_hash)) {
 #if MGB_ENABLE_DOT
         if (cpuinfo_has_arm_neon_dot()) {
-            return gemv_naive_n_mk4_dotprod(A, B, C, M, N, K, Astride, Bstride,
-                                            Cstride);
+            return gemv_naive_n_mk4_dotprod(
+                    A, B, C, M, N, K, Astride, Bstride, Cstride);
         } else {
-            return gemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride,
-                                    Cstride);
+            return gemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride, Cstride);
         }
 #else
         return gemv_naive_n_mk4(A, B, C, M, N, K, Astride, Bstride, Cstride);
@@ -441,20 +430,16 @@ void arm_common::gemv_like_mk4(const int8_t* __restrict A,
 }
 
 #if MGB_ENABLE_DOT
-void arm_common::gemv_like_mk4_dot(const int8_t* __restrict A,
-                                   const int8_t* __restrict B,
-                                   int32_t* __restrict C, size_t M, size_t N,
-                                   size_t K, size_t Astride, size_t Bstride,
-                                   size_t Cstride) {
+void arm_common::gemv_like_mk4_dot(
+        const int8_t* __restrict A, const int8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride) {
     megdnn_assert(N == 1);
-    MIDOUT_BEGIN(megdnn_arm_common_int8_gemv,
-                 midout_iv("INT8_gemv_like_mk4_dot"_hash)) {
-        return gemv_naive_n_mk4_dot(A, B, C, M, N, K, Astride, Bstride,
-                                    Cstride);
+    MIDOUT_BEGIN(
+            megdnn_arm_common_int8_gemv, midout_iv("INT8_gemv_like_mk4_dot"_hash)) {
+        return gemv_naive_n_mk4_dot(A, B, C, M, N, K, Astride, Bstride, Cstride);
     }
     MIDOUT_END();
 }
 #endif
-
 
 // vim: syntax=cpp.doxygen

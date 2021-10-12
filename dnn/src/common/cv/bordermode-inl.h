@@ -64,8 +64,9 @@ static inline int border_interpolate(int p, int len, BorderMode bmode) {
         ;
     else if (bmode == BorderMode::BORDER_REPLICATE)
         p = p < 0 ? 0 : len - 1;
-    else if (bmode == BorderMode::BORDER_REFLECT ||
-             bmode == BorderMode::BORDER_REFLECT_101) {
+    else if (
+            bmode == BorderMode::BORDER_REFLECT ||
+            bmode == BorderMode::BORDER_REFLECT_101) {
         int delta = (bmode == BorderMode::BORDER_REFLECT_101);
         if (len == 1)
             return 0;
@@ -82,8 +83,9 @@ static inline int border_interpolate(int p, int len, BorderMode bmode) {
         while (p >= len) {
             p -= len;
         }
-    } else if (bmode == BorderMode::BORDER_CONSTANT ||
-               bmode == BorderMode::BORDER_TRANSPARENT)
+    } else if (
+            bmode == BorderMode::BORDER_CONSTANT ||
+            bmode == BorderMode::BORDER_TRANSPARENT)
         p = -1;
     else
         MegCVException("Unknown/unsupported border type");

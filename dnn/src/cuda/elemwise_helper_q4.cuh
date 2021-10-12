@@ -24,14 +24,16 @@ namespace cuda {
 
 template <typename ctype>
 struct IsNotTypeQ4 {
-    static constexpr bool value = !(std::is_same<ctype, dt_qint4>::value ||
-                                    std::is_same<ctype, dt_quint4>::value);
+    static constexpr bool value =
+            !(std::is_same<ctype, dt_qint4>::value ||
+              std::is_same<ctype, dt_quint4>::value);
 };
 
 template <typename ctype>
 struct IsTypeQ4 {
-    static constexpr bool value = (std::is_same<ctype, dt_qint4>::value ||
-                                   std::is_same<ctype, dt_quint4>::value);
+    static constexpr bool value =
+            (std::is_same<ctype, dt_qint4>::value ||
+             std::is_same<ctype, dt_quint4>::value);
 };
 
 //! internals for element-wise
@@ -111,9 +113,7 @@ struct OpCallerToQ4<Op, 1, PVisSrc, PVisDst, true> {
     PVisSrc par_src[1];
     PVisDst par_dst[1];
 
-    devfunc void on(uint32_t access_idx) {
-        op(access_idx, par_src[0].at(access_idx));
-    }
+    devfunc void on(uint32_t access_idx) { op(access_idx, par_src[0].at(access_idx)); }
 };
 //! specialization for arity == 2
 template <class Op, class PVisSrc, class PVisDst>
@@ -161,8 +161,7 @@ __global__ void cuda_kern_q4(OpCaller op_caller, uint32_t size) {
 /* f{{{ UserOpInvoker specializations */
 
 //! run op by promoting all params to same ndim
-template <class Op, typename src_ctype, typename dst_ctype, int arity,
-          bool BetweenQ4>
+template <class Op, typename src_ctype, typename dst_ctype, int arity, bool BetweenQ4>
 class UserOpInvokerQ4 {
     const ElemwiseOpParamN<arity>& m_src_param;
     const ElemwiseOpParamN<1>& m_dst_param;
@@ -186,16 +185,16 @@ class UserOpInvokerQ4 {
                 BetweenQ4, ParamVectVisitor<ndim, src_ctype, BCAST_OTHER>,
                 ParamElemVisitor<ndim, src_ctype, BCAST_OTHER>>::type;
 
-        typedef OpCallerToQ4<Op, arity, PVisSrc,
-                             ParamVectVisitor<ndim, dst_ctype, BCAST_OTHER>,
-                             BetweenQ4>
+        typedef OpCallerToQ4<
+                Op, arity, PVisSrc, ParamVectVisitor<ndim, dst_ctype, BCAST_OTHER>,
+                BetweenQ4>
                 Caller;
 
         size_t size = m_dst_param[0].layout.access_bytes();
         int grid_size, block_size;
         void (*fptr)(Caller, uint32_t) = cuda_kern_q4<Caller>;
-        get_launch_spec(reinterpret_cast<const void*>(fptr), size, &grid_size,
-                        &block_size);
+        get_launch_spec(
+                reinterpret_cast<const void*>(fptr), size, &grid_size, &block_size);
 
         Caller caller;
         caller.op = m_op;
@@ -207,9 +206,9 @@ class UserOpInvokerQ4 {
     }
 
 public:
-    UserOpInvokerQ4(const ElemwiseOpParamN<arity>& src_param,
-                    const ElemwiseOpParamN<1>& dst_param, cudaStream_t stream,
-                    const Op& op)
+    UserOpInvokerQ4(
+            const ElemwiseOpParamN<arity>& src_param,
+            const ElemwiseOpParamN<1>& dst_param, cudaStream_t stream, const Op& op)
             : m_src_param(src_param),
               m_dst_param(dst_param),
               m_stream(stream),
@@ -224,30 +223,30 @@ public:
 }  // namespace elemwise_intl
 
 template <class Op, typename src_ctype, typename dst_ctype, int arity>
-void run_elemwise(const ElemwiseOpParamN<arity>& src_param,
-                  const ElemwiseOpParamN<1>& dst_param, cudaStream_t stream,
-                  const Op& op = Op());
+void run_elemwise(
+        const ElemwiseOpParamN<arity>& src_param, const ElemwiseOpParamN<1>& dst_param,
+        cudaStream_t stream, const Op& op = Op());
 #if MEGDNN_CC_CUDA
 
 template <class Op, typename src_ctype, typename dst_ctype, int arity>
-void run_elemwise(const ElemwiseOpParamN<arity>& src_param,
-                  const ElemwiseOpParamN<1>& dst_param, cudaStream_t stream,
-                  const Op& op) {
+void run_elemwise(
+        const ElemwiseOpParamN<arity>& src_param, const ElemwiseOpParamN<1>& dst_param,
+        cudaStream_t stream, const Op& op) {
     src_param.assert_initialized();
     dst_param.assert_initialized();
     // TODO: Maybe 2bit?
     megdnn_assert(dst_param[0].layout.dtype.is_low_bit());
     megdnn_assert(dst_param[0].layout.is_contiguous());
 
-    elemwise_intl::UserOpInvokerQ4<Op, src_ctype, dst_ctype, arity,
-                                   IsTypeQ4<src_ctype>::value>(
+    elemwise_intl::UserOpInvokerQ4<
+            Op, src_ctype, dst_ctype, arity, IsTypeQ4<src_ctype>::value>(
             src_param, dst_param, stream, op);
 }
 
-#define INST_RUN_ELEMWISE_LOWBIT(Op, src_ctype, dst_ctype, arity)       \
-    template void run_elemwise<Op, src_ctype, dst_ctype, arity>(        \
-            const ElemwiseOpParamN<arity>&, const ElemwiseOpParamN<1>&, \
-            cudaStream_t, const Op&)
+#define INST_RUN_ELEMWISE_LOWBIT(Op, src_ctype, dst_ctype, arity)                     \
+    template void run_elemwise<Op, src_ctype, dst_ctype, arity>(                      \
+            const ElemwiseOpParamN<arity>&, const ElemwiseOpParamN<1>&, cudaStream_t, \
+            const Op&)
 #endif
 
 }  // namespace cuda

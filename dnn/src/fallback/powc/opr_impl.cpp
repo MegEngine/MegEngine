@@ -12,7 +12,6 @@
 #include "./opr_impl.h"
 #include "src/naive/handle.h"
 
-
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #include "src/arm_common/simd_macro/marm_neon.h"
 #endif
@@ -163,16 +162,16 @@ void pow_invoke(const T* src, T* dst, size_t size, ExpFunc expfunc) {
     size_t i;
     for (i = 0; i + 4 <= size; i += 4) {
         T a0 = src[i], a1 = src[i + 1], a2 = src[i + 2], a3 = src[i + 3];
-        T b0 = expfunc.apply(a0), b1 = expfunc.apply(a1),
-          b2 = expfunc.apply(a2), b3 = expfunc.apply(a3);
+        T b0 = expfunc.apply(a0), b1 = expfunc.apply(a1), b2 = expfunc.apply(a2),
+          b3 = expfunc.apply(a3);
         dst[i] = b0;
         dst[i + 1] = b1;
         dst[i + 2] = b2;
         dst[i + 3] = b3;
     }
 #if MEGDNN_FIX_AARCH32_BUG
-    // FIXME: as llvm may cause cannot select error if enable vectorize
-    #pragma clang loop vectorize(disable)
+// FIXME: as llvm may cause cannot select error if enable vectorize
+#pragma clang loop vectorize(disable)
 #endif
     for (; i < size; ++i) {
         dst[i] = expfunc.apply(src[i]);
@@ -186,20 +185,21 @@ bool float_eq(float x, float y) {
 }  // anonymous namespace
 
 template <typename T>
-void PowCImpl::do_exec_ct(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                          const float* exp_f, const int* exp_i) {
+void PowCImpl::do_exec_ct(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, const float* exp_f,
+        const int* exp_i) {
     auto handle = static_cast<naive::HandleImpl*>(this->handle());
     auto sptr = reinterpret_cast<T*>(src.raw_ptr);
     auto dptr = reinterpret_cast<T*>(dst.raw_ptr);
     auto size = src.layout.total_nr_elems();
 
-#define CALL(_expfunc)                                           \
-    do {                                                         \
-        auto kern = [ sptr, dptr, size, expfunc = _expfunc ]() { \
-            pow_invoke(sptr, dptr, size, expfunc);               \
-        };                                                       \
-        handle->dispatch_kern(kern);                             \
-        return;                                                  \
+#define CALL(_expfunc)                                         \
+    do {                                                       \
+        auto kern = [sptr, dptr, size, expfunc = _expfunc]() { \
+            pow_invoke(sptr, dptr, size, expfunc);             \
+        };                                                     \
+        handle->dispatch_kern(kern);                           \
+        return;                                                \
     } while (0)
     if (exp_f) {
         float fv = *exp_f;
@@ -246,8 +246,9 @@ void PowCImpl::do_exec_ct(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 #undef CALL
 }
 
-void PowCImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                       const float* exp_f, const int* exp_i) {
+void PowCImpl::do_exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, const float* exp_f,
+        const int* exp_i) {
     if (!src.layout.is_contiguous()) {
         naive::PowCImpl::do_exec(src, dst, exp_f, exp_i);
         return;
@@ -262,11 +263,9 @@ void PowCImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
 #if !MEGDNN_DISABLE_FLOAT16
         case DTypeTrait<dtype::Float16>::enumv:
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-            return DNN_INC_FLOAT16(
-                    do_exec_ct<__fp16>(src, dst, exp_f, exp_i));
+            return DNN_INC_FLOAT16(do_exec_ct<__fp16>(src, dst, exp_f, exp_i));
 #else
-            return DNN_INC_FLOAT16(
-                    do_exec_ct<dt_float16>(src, dst, exp_f, exp_i));
+            return DNN_INC_FLOAT16(do_exec_ct<dt_float16>(src, dst, exp_f, exp_i));
 #endif
 #endif
         default:

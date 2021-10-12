@@ -64,28 +64,27 @@ bool ElemwiseImpl::AlgoUnary::is_available(const KernParam& kern_param) const {
 }
 
 void ElemwiseImpl::AlgoUnary::exec(const KernParam& kern_param) const {
-#define DISPATCH_UNARY(_mode, _case, _type, _type_midout_id, _op)           \
-    case Mode::_mode:                                                       \
-        MIDOUT_BEGIN(megdnn_arm_common_elemwise_unary, midout_iv(_case),    \
-                     midout_iv(Mode::_mode), midout_iv(_type_midout_id)) {  \
-            thin_function<void(const _type*, _type*, DType, DType, size_t)> \
-                    run = OpCallerUnary<_op<_type, _type>,                  \
-                                        BcastType::VEC>::run;               \
-            auto kernel = [nr_elems, nr_elems_per_thread, src0, dst_tensor, \
-                           run](size_t task_id, size_t) {                   \
-                size_t offset = task_id * nr_elems_per_thread;              \
-                size_t nr_elems_thread =                                    \
-                        std::min(nr_elems - offset, nr_elems_per_thread);   \
-                run(static_cast<const _type*>(src0.raw_ptr) + offset,       \
-                    static_cast<_type*>(dst_tensor.raw_ptr) + offset,       \
-                    src0.layout.dtype, dst_tensor.layout.dtype,             \
-                    nr_elems_thread);                                       \
-            };                                                              \
-            MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                          \
-                    static_cast<naive::HandleImpl*>(kern_param.handle),     \
-                    nr_threads, kernel);                                    \
-        }                                                                   \
-        MIDOUT_END();                                                       \
+#define DISPATCH_UNARY(_mode, _case, _type, _type_midout_id, _op)                   \
+    case Mode::_mode:                                                               \
+        MIDOUT_BEGIN(                                                               \
+                megdnn_arm_common_elemwise_unary, midout_iv(_case),                 \
+                midout_iv(Mode::_mode), midout_iv(_type_midout_id)) {               \
+            thin_function<void(const _type*, _type*, DType, DType, size_t)> run =   \
+                    OpCallerUnary<_op<_type, _type>, BcastType::VEC>::run;          \
+            auto kernel = [nr_elems, nr_elems_per_thread, src0, dst_tensor, run](   \
+                                  size_t task_id, size_t) {                         \
+                size_t offset = task_id * nr_elems_per_thread;                      \
+                size_t nr_elems_thread =                                            \
+                        std::min(nr_elems - offset, nr_elems_per_thread);           \
+                run(static_cast<const _type*>(src0.raw_ptr) + offset,               \
+                    static_cast<_type*>(dst_tensor.raw_ptr) + offset,               \
+                    src0.layout.dtype, dst_tensor.layout.dtype, nr_elems_thread);   \
+            };                                                                      \
+            MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                  \
+                    static_cast<naive::HandleImpl*>(kern_param.handle), nr_threads, \
+                    kernel);                                                        \
+        }                                                                           \
+        MIDOUT_END();                                                               \
         return
 
     auto& elparam = kern_param.unary_elparam;
@@ -110,17 +109,19 @@ void ElemwiseImpl::AlgoUnary::exec(const KernParam& kern_param) const {
         DISPATCH_UNARY(FAST_TANH, _case, _type, _type_midout_id, FastTanhOp); \
         DISPATCH_UNARY(H_SWISH, _case, _type, _type_midout_id, HSwishOp);     \
         default:                                                              \
-            megdnn_throw(ssprintf("No avaiable algo find for: %d",            \
-                                  static_cast<int>(kern_param.mode)));        \
+            megdnn_throw(ssprintf(                                            \
+                    "No avaiable algo find for: %d",                          \
+                    static_cast<int>(kern_param.mode)));                      \
     }
 
-#define DISPATCH_MODE_INT(_case, _type, _type_midout_id)               \
-    switch (kern_param.mode) {                                         \
-        DISPATCH_UNARY(RELU, _case, _type, _type_midout_id, ReluOp);   \
-        DISPATCH_UNARY(ABS, _case, _type, _type_midout_id, AbsOp);     \
-        default:                                                       \
-            megdnn_throw(ssprintf("No avaiable algo find for: %d",     \
-                                  static_cast<int>(kern_param.mode))); \
+#define DISPATCH_MODE_INT(_case, _type, _type_midout_id)             \
+    switch (kern_param.mode) {                                       \
+        DISPATCH_UNARY(RELU, _case, _type, _type_midout_id, ReluOp); \
+        DISPATCH_UNARY(ABS, _case, _type, _type_midout_id, AbsOp);   \
+        default:                                                     \
+            megdnn_throw(ssprintf(                                   \
+                    "No avaiable algo find for: %d",                 \
+                    static_cast<int>(kern_param.mode)));             \
     }
 
     DISPATCH_TYPE("AlgoUnary::exec"_hash);

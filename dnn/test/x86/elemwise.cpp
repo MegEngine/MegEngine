@@ -87,19 +87,17 @@ TEST_F(X86, ELEMWISE_FORWARD_UNARY) {
     BINARY_TEST_CASE(MIN)      \
     BINARY_TEST_CASE(MAX)
 
-#define BINARY_COMPLATE_TEST_CASE(_optr)                                    \
-    printf("Check binary optr %s by all cases.\n", #_optr);                 \
-    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {}});       \
-    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 4, 1, 1}, {}}); \
-    checker.set_param(Mode::_optr)                                          \
-            .execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});                 \
-    checker.set_param(Mode::_optr)                                          \
-            .execs({{3, 4, 5, 7, 8}, {1, 4, 1, 1, 8}, {}});                 \
-    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {1, 4, 1}, {}});       \
-    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 1, 1, 1}, {}}); \
-    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {}});             \
-    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 2, 1}, {}});       \
-    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 1, 1}, {}});       \
+#define BINARY_COMPLATE_TEST_CASE(_optr)                                          \
+    printf("Check binary optr %s by all cases.\n", #_optr);                       \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {}});             \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 4, 1, 1}, {}});       \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}}); \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7, 8}, {1, 4, 1, 1, 8}, {}}); \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {1, 4, 1}, {}});             \
+    checker.set_param(Mode::_optr).execs({{3, 4, 5, 7}, {1, 1, 1, 1}, {}});       \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {}});                   \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 2, 1}, {}});             \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 1, 1}, {}});             \
     checker.set_param(Mode::_optr).execs({{3, 4, 1}, {3, 4, 1}, {}});
 
 #define BUILD_BINARY_COMPLATE_TEST_CASE \
@@ -172,25 +170,20 @@ TEST_F(X86, ELEMWISE_FORWARD_BINARY) {
     BUILD_BINARY_COMPLATE_TEST_CASE
 }
 
-#define TERNARY_COMPLATE_TEST_CASE(_optr)                               \
-    printf("Check ternary optr %s by all cases.\n", #_optr);            \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}}); \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}});              \
+#define TERNARY_COMPLATE_TEST_CASE(_optr)                                        \
+    printf("Check ternary optr %s by all cases.\n", #_optr);                     \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}}); \
+    checker.set_param(Mode::_optr)                                               \
+            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});              \
+    checker.set_param(Mode::_optr).execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}}); \
+    checker.set_param(Mode::_optr)                                               \
+            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});              \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}});          \
+    checker.set_param(Mode::_optr).execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}}); \
     checker.set_param(Mode::_optr).execs({{3, 4, 1}, {3, 4, 1}, {3, 4, 1}, {}});
 
-#define BUILD_TERNARY_COMPLATE_TEST_CASE \
-    TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
+#define BUILD_TERNARY_COMPLATE_TEST_CASE TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
 
 TEST_F(X86, ELEMWISE_FORWARD_TERNARY) {
     using Mode = ElemwiseForward::Param::Mode;

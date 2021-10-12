@@ -11,7 +11,7 @@
  */
 
 #include "./module_trace.h"
-#include "./helper.h" // include op pybind11 caster
+#include "./helper.h"  // include op pybind11 caster
 
 namespace py = pybind11;
 
@@ -26,7 +26,8 @@ apply_result_t apply_module_trace(ApplyContext& ctx) {
         args[i + 1] = TensorWrapper::make(ctx.args[i]->shared_from_this());
     }
     auto pyout = PyObject_Call(cpp_apply_module_trace, args.ptr(), nullptr);
-    if (!pyout) throw py::error_already_set();
+    if (!pyout)
+        throw py::error_already_set();
     auto ret = py::reinterpret_steal<py::object>(pyout);
 
     // assumption: python function always returns PyList
@@ -38,4 +39,4 @@ apply_result_t apply_module_trace(ApplyContext& ctx) {
     return outputs;
 }
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

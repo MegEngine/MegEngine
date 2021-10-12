@@ -11,17 +11,15 @@
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "megcore.h"
 
-#include "test/common/utils.h"
 #include "./fixture.h"
-#include "test/rocm/utils.h"
 #include "hip_header.h"
+#include "test/common/utils.h"
+#include "test/rocm/utils.h"
 
-TEST_F(MegcoreROCM, DEVICE)
-{
+TEST_F(MegcoreROCM, DEVICE) {
     for (int id = -1; id < std::min(nr_devices(), 2); ++id) {
         megcoreDeviceHandle_t handle;
-        megcoreCreateDeviceHandle(&handle, megcorePlatformROCM,
-                    id, 0);
+        megcoreCreateDeviceHandle(&handle, megcorePlatformROCM, id, 0);
 
         int deviceID;
         megcoreGetDeviceID(handle, &deviceID);
@@ -40,7 +38,7 @@ TEST_F(MegcoreROCM, DEVICE)
 
         megcoreActivate(handle);
 
-        void *ptr;
+        void* ptr;
         megcoreMalloc(handle, &ptr, 256);
         megcoreFree(handle, ptr);
 
@@ -52,8 +50,7 @@ TEST_F(MegcoreROCM, ERROR_MSG) {
 #if MEGDNN_ENABLE_EXCEPTIONS
     megcoreDeviceHandle_t handle;
     ASSERT_THROW(
-            megcoreCreateDeviceHandle(
-                &handle, megcorePlatformROCM, nr_devices(), 0),
+            megcoreCreateDeviceHandle(&handle, megcorePlatformROCM, nr_devices(), 0),
             megdnn::test::MegDNNError);
     hipGetLastError();
     hip_check(hipGetLastError());

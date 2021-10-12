@@ -62,50 +62,47 @@ void fuse_mul_add4(ctype* dest, const ElemwiseOpParamN<4>& param) {
                 m_dst->ptr<ctype>());                                  \
     }
 
-#define _cb_dispatch_mode(_m)                                                  \
-    case Mode::_m:                                                             \
-        do {                                                                   \
-            using KernImpl =                                                   \
-                    ElemwiseKern<megcorePlatformCPU,                           \
-                                 param_enumv::Elemwise::Mode::_m, ctype>;      \
-            MIDOUT_BEGIN(megdnn_naive_elemwise,                                \
-                         midout_iv(param_enumv::Elemwise::Mode::_m)) {         \
-                MEGDNN_DISPATCH_CPU_KERN(                                      \
-                        handle,                                                \
-                        ElemArithKernCaller<arity MEGDNN_COMMA KernImpl>::run( \
-                                dst, src));                                    \
-                return;                                                        \
-            }                                                                  \
-            MIDOUT_END();                                                      \
+#define _cb_dispatch_mode(_m)                                                          \
+    case Mode::_m:                                                                     \
+        do {                                                                           \
+            using KernImpl = ElemwiseKern<                                             \
+                    megcorePlatformCPU, param_enumv::Elemwise::Mode::_m, ctype>;       \
+            MIDOUT_BEGIN(                                                              \
+                    megdnn_naive_elemwise,                                             \
+                    midout_iv(param_enumv::Elemwise::Mode::_m)) {                      \
+                MEGDNN_DISPATCH_CPU_KERN(                                              \
+                        handle, ElemArithKernCaller<arity MEGDNN_COMMA KernImpl>::run( \
+                                        dst, src));                                    \
+                return;                                                                \
+            }                                                                          \
+            MIDOUT_END();                                                              \
         } while (0);
 
-#define IMPL_MODE_DISPATCHER(_arity, _dtype_cat)                            \
-    template <typename ctype>                                               \
-    struct ElemwiseForwardImpl::ModeDispatcher<_arity, _dtype_cat, ctype> { \
-        static constexpr int arity = _arity;                                \
-        static void run(HandleImpl* handle,                                 \
-                        const ElemwiseOpParamN<arity>& src, Mode mode,      \
-                        ctype* dst) {                                       \
-            switch (mode) {                                                 \
-                FOREACH(_cb_dispatch_mode)                                  \
-                default:                                                    \
-                    megdnn_throw("bad mode");                               \
-            }                                                               \
-        }                                                                   \
+#define IMPL_MODE_DISPATCHER(_arity, _dtype_cat)                                   \
+    template <typename ctype>                                                      \
+    struct ElemwiseForwardImpl::ModeDispatcher<_arity, _dtype_cat, ctype> {        \
+        static constexpr int arity = _arity;                                       \
+        static void run(                                                           \
+                HandleImpl* handle, const ElemwiseOpParamN<arity>& src, Mode mode, \
+                ctype* dst) {                                                      \
+            switch (mode) {                                                        \
+                FOREACH(_cb_dispatch_mode)                                         \
+                default:                                                           \
+                    megdnn_throw("bad mode");                                      \
+            }                                                                      \
+        }                                                                          \
     }
 
 #include "src/common/elemwise/opr_impl_body.inl"
 
 template <typename ctype, bool c_is_scalar>
-void ElemwiseForwardImpl::impl_fuse_mul_add3(
-        const ElemwiseOpParamN<3>& params) {
+void ElemwiseForwardImpl::impl_fuse_mul_add3(const ElemwiseOpParamN<3>& params) {
     auto dptr = m_dst->ptr<ctype>();
     MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add3<c_is_scalar>(dptr, params));
 }
 
 template <typename ctype>
-void ElemwiseForwardImpl::impl_fuse_mul_add4(
-        const ElemwiseOpParamN<4>& params) {
+void ElemwiseForwardImpl::impl_fuse_mul_add4(const ElemwiseOpParamN<4>& params) {
     auto dptr = m_dst->ptr<ctype>();
     MEGDNN_DISPATCH_CPU_KERN_OPR(fuse_mul_add4(dptr, params));
 }

@@ -30,19 +30,18 @@ public:
         ctype *sptr, *dptr;
         Workspace workspace;
 
-        static KernParam from_tensors(Format format, InterpolationMode imode,
-                                      _megdnn_tensor_in src,
-                                      _megdnn_tensor_out dst,
-                                      _megdnn_workspace workspace);
+        static KernParam from_tensors(
+                Format format, InterpolationMode imode, _megdnn_tensor_in src,
+                _megdnn_tensor_out dst, _megdnn_workspace workspace);
     };
 
     using Resize::Resize;
 
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -77,10 +76,10 @@ private:
 class ResizeBackwardImpl : public ResizeBackward {
 public:
     using ResizeBackward::ResizeBackward;
-    void exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override {
+    void exec(
+            _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 };

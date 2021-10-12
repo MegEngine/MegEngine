@@ -14,24 +14,24 @@
 #include "megdnn/handle.h"
 #include "src/common/utils.h"
 
-#include <memory>
-#include <cstdlib>
-#include <cmath>
-#include <iostream>
 #include <gtest/gtest.h>
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
 
 #if MEGDNN_ENABLE_MULTI_THREADS
 #include <atomic>
 #endif
 
-#define megcore_check(x)                                           \
-    do {                                                           \
-        auto status = (x);                                         \
-        if (status != megcoreSuccess) {                            \
-            std::cerr << "megcore_check error: "                   \
-                      << megcoreGetErrorName(status) << std::endl; \
-            megdnn_trap();                                         \
-        }                                                          \
+#define megcore_check(x)                                                        \
+    do {                                                                        \
+        auto status = (x);                                                      \
+        if (status != megcoreSuccess) {                                         \
+            std::cerr << "megcore_check error: " << megcoreGetErrorName(status) \
+                      << std::endl;                                             \
+            megdnn_trap();                                                      \
+        }                                                                       \
     } while (0)
 
 namespace megdnn {
@@ -187,20 +187,17 @@ public:
         --sm_inst_counter.cnt();
     }
 
-    static std::unique_ptr<MegcoreCPUDispatcher> make(
-            TaskExecutorConfig* config) {
-        return std::unique_ptr<MegcoreCPUDispatcher>(
-                new CpuDispatchChecker(config));
+    static std::unique_ptr<MegcoreCPUDispatcher> make(TaskExecutorConfig* config) {
+        return std::unique_ptr<MegcoreCPUDispatcher>(new CpuDispatchChecker(config));
     }
 };
 
-std::unique_ptr<Handle> create_cpu_handle(int debug_level,
-                                          bool check_dispatch = true,
-                                          TaskExecutorConfig* config = nullptr);
+std::unique_ptr<Handle> create_cpu_handle(
+        int debug_level, bool check_dispatch = true,
+        TaskExecutorConfig* config = nullptr);
 
 std::unique_ptr<Handle> create_cpu_handle_with_dispatcher(
-        int debug_level,
-        const std::shared_ptr<MegcoreCPUDispatcher>& dispatcher);
+        int debug_level, const std::shared_ptr<MegcoreCPUDispatcher>& dispatcher);
 
 static inline dt_float32 diff(dt_float32 x, dt_float32 y) {
     auto numerator = x - y;
@@ -254,21 +251,19 @@ inline TensorShape cvt_filter_nchw2nhwc(const TensorShape& shape) {
         return TensorShape{OC, FH, FW, IC};
     } else {
         megdnn_assert(shape.ndim == 5);
-        auto G = shape[0], OC = shape[1], IC = shape[2], FH = shape[3],
-             FW = shape[4];
+        auto G = shape[0], OC = shape[1], IC = shape[2], FH = shape[3], FW = shape[4];
         return TensorShape{G, OC, FH, FW, IC};
     }
 }
 
 inline TensorShape cvt_filter_ncdhw2ndhwc(const TensorShape& shape) {
     if (shape.ndim == 5) {
-        auto OC = shape[0], IC = shape[1], FD = shape[2], FH = shape[3],
-             FW = shape[4];
+        auto OC = shape[0], IC = shape[1], FD = shape[2], FH = shape[3], FW = shape[4];
         return TensorShape{OC, FD, FH, FW, IC};
     } else {
         megdnn_assert(shape.ndim == 6);
-        auto G = shape[0], OC = shape[1], IC = shape[2], FD = shape[3],
-             FH = shape[4], FW = shape[5];
+        auto G = shape[0], OC = shape[1], IC = shape[2], FD = shape[3], FH = shape[4],
+             FW = shape[5];
         return TensorShape{G, OC, FD, FH, FW, IC};
     }
 }
@@ -276,12 +271,12 @@ inline TensorShape cvt_filter_ncdhw2ndhwc(const TensorShape& shape) {
 void megdnn_sync(Handle* handle);
 void* megdnn_malloc(Handle* handle, size_t size_in_bytes);
 void megdnn_free(Handle* handle, void* ptr);
-void megdnn_memcpy_D2H(Handle* handle, void* dst, const void* src,
-                       size_t size_in_bytes);
-void megdnn_memcpy_H2D(Handle* handle, void* dst, const void* src,
-                       size_t size_in_bytes);
-void megdnn_memcpy_D2D(Handle* handle, void* dst, const void* src,
-                       size_t size_in_bytes);
+void megdnn_memcpy_D2H(
+        Handle* handle, void* dst, const void* src, size_t size_in_bytes);
+void megdnn_memcpy_H2D(
+        Handle* handle, void* dst, const void* src, size_t size_in_bytes);
+void megdnn_memcpy_D2D(
+        Handle* handle, void* dst, const void* src, size_t size_in_bytes);
 
 //! default implementation for DynOutMallocPolicy
 class DynOutMallocPolicyImpl final : public DynOutMallocPolicy {
@@ -290,8 +285,8 @@ class DynOutMallocPolicyImpl final : public DynOutMallocPolicy {
 public:
     DynOutMallocPolicyImpl(Handle* handle) : m_handle{handle} {}
 
-    TensorND alloc_output(size_t id, DType dtype, const TensorShape& shape,
-                          void* user_data) override;
+    TensorND alloc_output(
+            size_t id, DType dtype, const TensorShape& shape, void* user_data) override;
     void* alloc_workspace(size_t sz, void* user_data) override;
     void free_workspace(void* ptr, void* user_data) override;
 
@@ -387,8 +382,7 @@ static inline bool operator==(const TensorLayout& a, const TensorLayout& b) {
     return a.eq_layout(b);
 }
 
-static inline std::ostream& operator<<(std::ostream& ostr,
-                                       const TensorLayout& layout) {
+static inline std::ostream& operator<<(std::ostream& ostr, const TensorLayout& layout) {
     return ostr << layout.to_string();
 }
 

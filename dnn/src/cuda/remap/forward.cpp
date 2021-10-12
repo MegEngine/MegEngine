@@ -19,18 +19,19 @@
 using namespace megdnn;
 using namespace cuda;
 
-void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
-                     _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+void RemapImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out map_xy, _megdnn_tensor_in dst,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, map_xy.layout, dst.layout, workspace.size);
-    megdnn_assert(map_xy.layout.dtype.enumv() ==
-                  DTypeTrait<dtype::Float32>::enumv);
+    megdnn_assert(map_xy.layout.dtype.enumv() == DTypeTrait<dtype::Float32>::enumv);
     auto stream = cuda_stream(this->handle());
     int N, C, IH, IW, OH, OW;
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
 
-    megdnn_assert(param().imode == param::Remap::InterpolationMode::LINEAR,
-                  "only support LINEAR interpolationMode");
+    megdnn_assert(
+            param().imode == param::Remap::InterpolationMode::LINEAR,
+            "only support LINEAR interpolationMode");
 
     if (param().format == param::Remap::Format::NCHW) {
         N = src.layout.shape[0];
@@ -46,17 +47,17 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out map_xy,
         megdnn_throw("unsupported format, cuda remap");
     }
 
-#define cb(dt, _format, bmode)                                           \
-    if (param().format == param::Remap::Format::_format &&               \
-        param().border_type == param::Remap::BorderMode::bmode) {        \
-        using ctype = DTypeTrait<dt>::ctype;                             \
-        remap::forward_proxy<ctype, param_enumv::Remap::Format::_format, \
-                             ::BorderMode::BORDER_##bmode>(              \
-                src.compatible_ptr<ctype>(),                             \
-                map_xy.compatible_ptr<dt_float32>(),                     \
-                dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW,       \
-                param().scalar, stream);                                 \
-        break;                                                           \
+#define cb(dt, _format, bmode)                                                     \
+    if (param().format == param::Remap::Format::_format &&                         \
+        param().border_type == param::Remap::BorderMode::bmode) {                  \
+        using ctype = DTypeTrait<dt>::ctype;                                       \
+        remap::forward_proxy<                                                      \
+                ctype, param_enumv::Remap::Format::_format,                        \
+                ::BorderMode::BORDER_##bmode>(                                     \
+                src.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(),  \
+                dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, param().scalar, \
+                stream);                                                           \
+        break;                                                                     \
     }
 
 #define support_dtype(dt)                                      \

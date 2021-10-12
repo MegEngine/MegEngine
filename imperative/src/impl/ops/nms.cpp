@@ -20,9 +20,7 @@ namespace imperative {
 using NMSKeepOpr = opr::standalone::NMSKeep;
 
 namespace {
-cg::OperatorNodeBase* apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs) {
+cg::OperatorNodeBase* apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& nms_keep = def.cast_final_safe<NMSKeep>();
 
     NMSKeepOpr::Param param;
@@ -35,9 +33,9 @@ cg::OperatorNodeBase* apply_on_var_node(
 }
 
 OP_TRAIT_REG(NMSKeep, NMSKeep, NMSKeepOpr)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-} // anonymous namespace
+        .apply_on_var_node(apply_on_var_node)
+        .fallback();
+}  // anonymous namespace
 
 }  // namespace imperative
 }  // namespace mgb

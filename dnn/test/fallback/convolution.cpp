@@ -40,8 +40,9 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         printf("fp32 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -55,8 +56,8 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL) {
         param.pad_w = kernel / 2;
         param.pad_h = 0;
         param.pad_w = 0;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, w, h, stride, kernel);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               w, h, stride, kernel);
 
         run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
     };
@@ -93,8 +94,9 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8832) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         printf("fp32 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -108,8 +110,8 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8832) {
         param.pad_w = kernel / 2;
         param.pad_h = 0;
         param.pad_w = 0;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, w, h, stride, kernel);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               w, h, stride, kernel);
 
         run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
     };
@@ -137,8 +139,9 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8816) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         printf("fp32 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -152,8 +155,8 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_MATRIX_MUL_8816) {
         param.pad_w = kernel / 2;
         param.pad_h = 0;
         param.pad_w = 0;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, w, h, stride, kernel);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               w, h, stride, kernel);
 
         run({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
     };
@@ -174,16 +177,16 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA) {
                 .set_dtype(1, dtype::Float32{})
                 .set_times(RUN)
                 .set_param(param);
-        auto tmatmul = benchmarker_fallback
-                               .set_before_exec_callback(
-                                       AlgoChecker<ConvolutionBackwardData>(
-                                               "DeconvMatmul"))
-                               .exec(tensors);
-        auto tdirect = benchmarker_fallback
-                               .set_before_exec_callback(
-                                       AlgoChecker<ConvolutionBackwardData>(
-                                               "DeconvDirect"))
-                               .exec(tensors);
+        auto tmatmul =
+                benchmarker_fallback
+                        .set_before_exec_callback(
+                                AlgoChecker<ConvolutionBackwardData>("DeconvMatmul"))
+                        .exec(tensors);
+        auto tdirect =
+                benchmarker_fallback
+                        .set_before_exec_callback(
+                                AlgoChecker<ConvolutionBackwardData>("DeconvDirect"))
+                        .exec(tensors);
         size_t IC = tensors[0][1];
         size_t FH = tensors[0][2];
         size_t FW = tensors[0][3];
@@ -195,14 +198,13 @@ TEST_F(FALLBACK, BENCHMARK_CONVOLUTION_BACKWARD_DATA) {
         printf("speedup: %.3f\n", tdirect / tmatmul);
     };
 
-    auto profile = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                       size_t fh, size_t fw, size_t stride = 1,
-                       size_t padding = 0) {
+    auto profile = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                       size_t fw, size_t stride = 1, size_t padding = 0) {
         Param param;
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, ow, oh, stride, fh);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               ow, oh, stride, fh);
 
         TensorLayout diff = TensorLayout{{n, oc, oh, ow}, dtype::Float32()};
         TensorLayout filter = TensorLayout{{oc, ic, fh, fw}, dtype::Float32()};
@@ -231,8 +233,8 @@ TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL) {
 
     Param param;
     param.sparse = param::Convolution::Sparse::DENSE;
-    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t fh, size_t fw) {
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc, size_t fh,
+                   size_t fw) {
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
         checker.set_param(param);
@@ -253,9 +255,8 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_8816) {
     Checker<Convolution> checker(handle());
     using Param = Convolution::Param;
     checker.set_before_exec_callback(AlgoChecker<Convolution>(".+FB_GEMV.+"));
-    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t fh, size_t fw, size_t pad, size_t stride,
-                   size_t group) {
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc, size_t fh,
+                   size_t fw, size_t pad, size_t stride, size_t group) {
         Param param;
         param.sparse = group > 1 ? param::Convolution::Sparse::GROUP
                                  : param::Convolution::Sparse::DENSE;
@@ -268,9 +269,10 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_8816) {
                      {{group, oc / group, ic / group, fh, fw}, dtype::Int8()},
                      {{}, dtype::Int16()}});
         } else {
-            checker.execl({{{n, ic, ih, iw}, dtype::Int8()},
-                           {{oc, ic, fh, fw}, dtype::Int8()},
-                           {{}, dtype::Int16()}});
+            checker.execl(
+                    {{{n, ic, ih, iw}, dtype::Int8()},
+                     {{oc, ic, fh, fw}, dtype::Int8()},
+                     {{}, dtype::Int16()}});
         }
     };
 
@@ -282,11 +284,11 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_8816) {
                         for (auto filter : {1, 2, 3, 5, 7})
                             for (auto stride : {1, 2})
                                 for (auto pad : {0, filter / 2}) {
-                                    run(n, ic, ih, iw, oc, filter, filter, pad,
-                                        stride, 1);
+                                    run(n, ic, ih, iw, oc, filter, filter, pad, stride,
+                                        1);
                                     if (ic == oc) {
-                                        run(n, ic, ih, iw, oc, filter, filter,
-                                            pad, stride, ic);
+                                        run(n, ic, ih, iw, oc, filter, filter, pad,
+                                            stride, ic);
                                     }
                                 }
 }
@@ -295,17 +297,15 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_8816) {
 TEST_F(FALLBACK, CONVOLUTION_NAIVE_ALGO_FP16) {
     Checker<Convolution> checker(handle());
     using Param = Convolution::Param;
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionForward>("NAIVE_ALGO"));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>("NAIVE_ALGO"));
     Param param;
     param.sparse = param::Convolution::Sparse::DENSE;
-    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t fh, size_t fw) {
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc, size_t fh,
+                   size_t fw) {
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
-        for (auto cmode :
-             std::vector<Param::ComputeMode>{Param::ComputeMode::DEFAULT,
-                                             Param::ComputeMode::FLOAT32}) {
+        for (auto cmode : std::vector<Param::ComputeMode>{
+                     Param::ComputeMode::DEFAULT, Param::ComputeMode::FLOAT32}) {
             param.compute_mode = cmode;
             checker.set_param(param)
                     .set_dtype(0, dtype::Float16())
@@ -323,16 +323,14 @@ TEST_F(FALLBACK, CONVOLUTION_NAIVE_ALGO_FP16) {
 TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_NAIVE_FALLBACK) {
     Checker<Convolution> checker(handle());
     using Param = Convolution::Param;
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionForward>("FALLBACK_ALGO"));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>("FALLBACK_ALGO"));
     Param param;
-    auto run = [&](size_t n, size_t group, size_t ic, size_t ih, size_t iw,
-                   size_t oc, size_t fh, size_t fw) {
+    auto run = [&](size_t n, size_t group, size_t ic, size_t ih, size_t iw, size_t oc,
+                   size_t fh, size_t fw) {
         param.sparse = param::Convolution::Sparse::GROUP;
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
-        TensorShape src{n, ic, ih, iw},
-                filter{group, oc / group, ic / group, fh, fw};
+        TensorShape src{n, ic, ih, iw}, filter{group, oc / group, ic / group, fh, fw};
         checker.set_param(param)
                 .set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -349,16 +347,14 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_NAIVE_FALLBACK) {
 TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_NAIVE_ALGO) {
     Checker<Convolution> checker(handle());
     using Param = Convolution::Param;
-    checker.set_before_exec_callback(
-            AlgoChecker<ConvolutionForward>("NAIVE_ALGO"));
+    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>("NAIVE_ALGO"));
     Param param;
-    auto run = [&](size_t n, size_t group, size_t ic, size_t ih, size_t iw,
-                   size_t oc, size_t fh, size_t fw) {
+    auto run = [&](size_t n, size_t group, size_t ic, size_t ih, size_t iw, size_t oc,
+                   size_t fh, size_t fw) {
         param.sparse = param::Convolution::Sparse::GROUP;
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
-        TensorShape src{n, ic, ih, iw},
-                filter{group, oc / group, ic / group, fh, fw};
+        TensorShape src{n, ic, ih, iw}, filter{group, oc / group, ic / group, fh, fw};
         checker.set_param(param).set_dtype(2, {});
         //! float32
         checker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
@@ -371,10 +367,8 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVOLUTION_NAIVE_ALGO) {
                 .set_dtype(1, dtype::QuantizedS8(0.32f));
         checker.execs({src, filter, {}});
         //! Quint8
-        checker.set_dtype(0, dtype::Quantized8Asymm(3.34f,
-                                                    static_cast<uint8_t>(21)))
-                .set_dtype(1, dtype::Quantized8Asymm(0.32f,
-                                                     static_cast<uint8_t>(15)));
+        checker.set_dtype(0, dtype::Quantized8Asymm(3.34f, static_cast<uint8_t>(21)))
+                .set_dtype(1, dtype::Quantized8Asymm(0.32f, static_cast<uint8_t>(15)));
         checker.execs({src, filter, {}});
     };
     run(4, 1, 3, 21, 15, 5, 3, 3);
@@ -390,8 +384,8 @@ TEST_F(FALLBACK, CONVOLUTION_MATRIX_MUL_SINT8) {
 
     Param param;
     param.sparse = param::Convolution::Sparse::DENSE;
-    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc,
-                   size_t fh, size_t fw) {
+    auto run = [&](size_t n, size_t ic, size_t ih, size_t iw, size_t oc, size_t fh,
+                   size_t fw) {
         param.pad_h = param.pad_w = 1;
         param.stride_h = param.stride_w = 1;
         checker.set_param(param)
@@ -416,15 +410,14 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA) {
     using Param = ConvolutionBackwardData::Param;
 
     Param param;
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t dilate = 1, size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
         param.dilate_h = param.dilate_w = dilate;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -446,8 +439,7 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA) {
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
         run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
@@ -465,15 +457,14 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
     using Param = ConvolutionBackwardData::Param;
     Param param;
 
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t dilate = 1, size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
         param.dilate_h = param.dilate_w = dilate;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Int8()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Int8()};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -496,8 +487,7 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
         run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
@@ -515,9 +505,9 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_SINT8) {
     using Param = ConvolutionBackwardData::Param;
     Param param;
 
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t dilate = 1, size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
         param.dilate_h = param.dilate_w = dilate;
@@ -546,8 +536,7 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_SINT8) {
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
         run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
@@ -565,26 +554,25 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_QUINT8) {
     using Param = ConvolutionBackwardData::Param;
     Param param;
 
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t dilate = 1, size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
         param.dilate_h = param.dilate_w = dilate;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow},
-                             dtype::Quantized8Asymm(1.3f, (uint8_t)129)};
+        TensorLayout diff = TensorLayout{
+                {n, oc * group, oh, ow}, dtype::Quantized8Asymm(1.3f, (uint8_t)129)};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
             param.sparse = Param::Sparse::DENSE;
-            filter = {{oc, ic, fh, fw},
-                      dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
+            filter = {{oc, ic, fh, fw}, dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
         } else {
             param.sparse = Param::Sparse::GROUP;
-            filter = {{group, oc, ic, fh, fw},
-                      dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
+            filter = {
+                    {group, oc, ic, fh, fw},
+                    dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
         }
         // TensorLayout grad;
         {
@@ -601,8 +589,7 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_QUINT8) {
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
         run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);
@@ -622,15 +609,14 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_NAIVE_ALGO) {
     using Param = ConvolutionBackwardData::Param;
     Param param;
 
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t padding,
-                   size_t dilate = 1, size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t padding, size_t dilate = 1,
+                   size_t group = 1) {
         param.pad_h = param.pad_w = padding;
         param.stride_h = param.stride_w = stride;
         param.dilate_h = param.dilate_w = dilate;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Float32()};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -650,8 +636,7 @@ TEST_F(FALLBACK, CONVOLUTION_BACKWARD_DATA_NAIVE_ALGO) {
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
 
-    for (auto mode :
-         {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
+    for (auto mode : {Param::Mode::CONVOLUTION, Param::Mode::CROSS_CORRELATION}) {
         param.mode = mode;
         run(4, 3, 10, 13, 5, 1, 1, 1, 0, 1, 1);
         run(5, 5, 24, 43, 11, 9, 3, 3, 12, 1, 2);

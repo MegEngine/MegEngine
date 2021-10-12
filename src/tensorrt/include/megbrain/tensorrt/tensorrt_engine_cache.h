@@ -80,27 +80,30 @@ class TensorRTEngineCacheIO final : public TensorRTEngineCache {
     void read(T& val) {
         auto ret = fread(&val, sizeof(T), 1, m_ptr);
         MGB_MARK_USED_VAR(ret);
-        mgb_throw_if(ret != 1, SystemError,
-                     "failed to read block with size (%zu) from file %s %s",
-                     sizeof(T), m_filename.c_str(), strerror(errno));
+        mgb_throw_if(
+                ret != 1, SystemError,
+                "failed to read block with size (%zu) from file %s %s", sizeof(T),
+                m_filename.c_str(), strerror(errno));
     }
 
     template <typename T>
     void read(T* buf, size_t size) {
         auto ret = fread(buf, size, 1, m_ptr);
         MGB_MARK_USED_VAR(ret);
-        mgb_throw_if(ret != 1, SystemError,
-                     "failed to read block with size (%zu) from file %s %s",
-                     size, m_filename.c_str(), strerror(errno));
+        mgb_throw_if(
+                ret != 1, SystemError,
+                "failed to read block with size (%zu) from file %s %s", size,
+                m_filename.c_str(), strerror(errno));
     }
 
     template <typename T>
     void write(T val) {
         auto ret = fwrite(&val, sizeof(T), 1, m_ptr);
         MGB_MARK_USED_VAR(ret);
-        mgb_throw_if(ret != 1, SystemError,
-                     "failed to write block with size (%zu) to file %s %s",
-                     sizeof(T), m_filename.c_str(), strerror(errno));
+        mgb_throw_if(
+                ret != 1, SystemError,
+                "failed to write block with size (%zu) to file %s %s", sizeof(T),
+                m_filename.c_str(), strerror(errno));
     }
 
     template <typename T>
@@ -108,9 +111,10 @@ class TensorRTEngineCacheIO final : public TensorRTEngineCache {
         static_assert(sizeof(T) == 1, "only support write bytes");
         auto ret = fwrite(buf, size, 1, m_ptr);
         MGB_MARK_USED_VAR(ret);
-        mgb_throw_if(ret != 1, SystemError,
-                     "failed to write block with size (%zu) to file %s %s", size,
-                     m_filename.c_str(), strerror(errno));
+        mgb_throw_if(
+                ret != 1, SystemError,
+                "failed to write block with size (%zu) to file %s %s", size,
+                m_filename.c_str(), strerror(errno));
     }
 
     void read_cache();

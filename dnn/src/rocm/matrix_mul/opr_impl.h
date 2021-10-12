@@ -17,10 +17,11 @@ namespace rocm {
 class MatrixMulForwardImpl : public MatrixMulForward {
 public:
     using MatrixMulForward::MatrixMulForward;
-    void exec(_megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
-              _megdnn_workspace workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override;
+    void exec(
+            _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
     bool is_thread_safe() const override { return true; }
 
@@ -46,9 +47,7 @@ private:
             const AlgoAttribute& /*positive_attr*/,
             const AlgoAttribute& /*negative_attr*/) override;
 
-    const char* get_algorithm_set_name() const override {
-        return "ROCM MATMUL";
-    }
+    const char* get_algorithm_set_name() const override { return "ROCM MATMUL"; }
 
     static AlgoPack sm_algo_pack;
 };

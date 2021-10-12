@@ -32,12 +32,14 @@ class TensorImplDft final : public Tensor::TensorImplBase {
 public:
     TensorImplDft();
     TensorImplDft(LiteDeviceType device, bool is_pinned_host = false);
-    TensorImplDft(LiteDeviceType device, const Layout& layout,
-                  bool is_pinned_host = false);
-    TensorImplDft(int device_id, LiteDeviceType device,
-                  const Layout& layout = {}, bool is_pinned_host = false);
-    TensorImplDft(int device_id, int stream_id, LiteDeviceType device,
-                  bool is_pinned_host = false);
+    TensorImplDft(
+            LiteDeviceType device, const Layout& layout, bool is_pinned_host = false);
+    TensorImplDft(
+            int device_id, LiteDeviceType device, const Layout& layout = {},
+            bool is_pinned_host = false);
+    TensorImplDft(
+            int device_id, int stream_id, LiteDeviceType device,
+            bool is_pinned_host = false);
 
     virtual ~TensorImplDft() = default;
 
@@ -45,9 +47,7 @@ public:
 
     int get_device_id() const override;
 
-    LiteBackend get_backend_type() const override {
-        return LiteBackend::LITE_DEFAULT;
-    }
+    LiteBackend get_backend_type() const override { return LiteBackend::LITE_DEFAULT; }
     Layout get_layout() const override;
 
     bool is_pinned_host() const override;
@@ -96,13 +96,9 @@ public:
     bool is_continue_memory() const override;
 
     //! get host tensor
-    std::shared_ptr<mgb::HostTensorND> host_tensor() const {
-        return m_host_tensor;
-    }
+    std::shared_ptr<mgb::HostTensorND> host_tensor() const { return m_host_tensor; }
     //! get device tensor
-    std::shared_ptr<mgb::DeviceTensorND> dev_tensor() const {
-        return m_dev_tensor;
-    }
+    std::shared_ptr<mgb::DeviceTensorND> dev_tensor() const { return m_dev_tensor; }
     //! copy from mgb tensor
     void copy_from_mge_tensor(const mgb::DeviceTensorND& dv);
 

@@ -16,15 +16,15 @@
 namespace megdnn {
 namespace arm_common {
 
-bool is_hgemv_preferred(bool transposeA, bool transposeB, size_t M, size_t N,
-                        size_t K, size_t /*LDA*/, size_t LDB, size_t /*LDC*/);
+bool is_hgemv_preferred(
+        bool transposeA, bool transposeB, size_t M, size_t N, size_t K, size_t /*LDA*/,
+        size_t LDB, size_t /*LDC*/);
 
-void gemv_like(const __fp16* __restrict A, const __fp16* __restrict B,
-               __fp16* __restrict C, size_t M, size_t N, size_t K,
-               size_t Astride, size_t Bstride, size_t Cstride);
+void gemv_like(
+        const __fp16* __restrict A, const __fp16* __restrict B, __fp16* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride);
 
-
-}  // namespace aarch64
+}  // namespace arm_common
 }  // namespace megdnn
 
 #endif

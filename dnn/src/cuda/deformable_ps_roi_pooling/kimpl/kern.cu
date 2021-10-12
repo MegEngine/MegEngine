@@ -16,8 +16,8 @@ namespace {
 
 using Param = megdnn::cuda::deformable_ps_roi_pooling::Param;
 
-__device__ float bilinear_interp(const float* data, const int IH, const int IW,
-                                 const float h, const float w) {
+__device__ float bilinear_interp(
+        const float* data, const int IH, const int IW, const float h, const float w) {
     int h1 = floor(h), h2 = ceil(h);
     int w1 = floor(w), w2 = ceil(w);
     float dist_h = (float)(h - h1);
@@ -27,16 +27,14 @@ __device__ float bilinear_interp(const float* data, const int IH, const int IW,
     float value21 = data[h1 * IW + w2];
     float value22 = data[h2 * IW + w2];
     float value = (1 - dist_w) * (1 - dist_h) * value11 +
-                  (1 - dist_w) * dist_h * value12 +
-                  dist_w * (1 - dist_h) * value21 + dist_w * dist_h * value22;
+                  (1 - dist_w) * dist_h * value12 + dist_w * (1 - dist_h) * value21 +
+                  dist_w * dist_h * value22;
     return value;
 }
 
-__global__ void DeformablePSROIPoolForwardKern(Param p, const float* data,
-                                               const float* rois,
-                                               const float* trans,
-                                               float* out_data,
-                                               float* out_count) {
+__global__ void DeformablePSROIPoolForwardKern(
+        Param p, const float* data, const float* rois, const float* trans,
+        float* out_data, float* out_count) {
     const int loops = p.nr_bbox * p.IC * p.pool_h * p.pool_w;
     const int icpcls = p.IC / p.nr_cls;
 
@@ -51,10 +49,8 @@ __global__ void DeformablePSROIPoolForwardKern(Param p, const float* data,
 
         float roi_w_l = static_cast<float>(round(rois_ptr[1])) * p.scale - 0.5;
         float roi_h_l = static_cast<float>(round(rois_ptr[2])) * p.scale - 0.5;
-        float roi_w_r =
-                static_cast<float>(round(rois_ptr[3]) + 1.) * p.scale - 0.5;
-        float roi_h_r =
-                static_cast<float>(round(rois_ptr[4]) + 1.) * p.scale - 0.5;
+        float roi_w_r = static_cast<float>(round(rois_ptr[3]) + 1.) * p.scale - 0.5;
+        float roi_h_r = static_cast<float>(round(rois_ptr[4]) + 1.) * p.scale - 0.5;
 
         // Force too small ROIs to be 1x1
         float roi_w = max(roi_w_r - roi_w_l, 0.1);  // avoid 0
@@ -76,13 +72,12 @@ __global__ void DeformablePSROIPoolForwardKern(Param p, const float* data,
         if (!p.no_trans) {
             int part_h = floor(static_cast<float>(ph) / p.pool_h * p.part_sz);
             int part_w = floor(static_cast<float>(pw) / p.pool_w * p.part_sz);
-            int x_idx = (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) *
+            int x_idx =
+                    (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) * p.part_sz +
+                    part_w;
+            int y_idx = (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz + part_h) *
                                 p.part_sz +
                         part_w;
-            int y_idx =
-                    (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz + part_h) *
-                            p.part_sz +
-                    part_w;
             trans_x = trans[x_idx] * static_cast<float>(p.trans_std);
             trans_y = trans[y_idx] * static_cast<float>(p.trans_std);
         }
@@ -90,8 +85,7 @@ __global__ void DeformablePSROIPoolForwardKern(Param p, const float* data,
         wstart += trans_x * roi_w;
         hstart += trans_y * roi_h;
 
-        const float* data_ptr =
-                data + (roi_batch_idx * p.IC + ic) * p.IH * p.IW;
+        const float* data_ptr = data + (roi_batch_idx * p.IC + ic) * p.IH * p.IW;
 
         for (int ih = 0; ih < p.sample_per_part; ih++) {
             for (int iw = 0; iw < p.sample_per_part; iw++) {
@@ -130,10 +124,8 @@ __global__ void DeformablePSROIPoolBackwardAccKern(
 
         float roi_w_l = static_cast<float>(round(rois_ptr[1])) * p.scale - 0.5;
         float roi_h_l = static_cast<float>(round(rois_ptr[2])) * p.scale - 0.5;
-        float roi_w_r =
-                static_cast<float>(round(rois_ptr[3]) + 1.) * p.scale - 0.5;
-        float roi_h_r =
-                static_cast<float>(round(rois_ptr[4]) + 1.) * p.scale - 0.5;
+        float roi_w_r = static_cast<float>(round(rois_ptr[3]) + 1.) * p.scale - 0.5;
+        float roi_h_r = static_cast<float>(round(rois_ptr[4]) + 1.) * p.scale - 0.5;
 
         // Force too small ROIs to be 1x1
         float roi_w = max(roi_w_r - roi_w_l, 0.1);  // avoid 0
@@ -154,13 +146,12 @@ __global__ void DeformablePSROIPoolBackwardAccKern(
         if (!p.no_trans) {
             part_h = floor(static_cast<float>(ph) / p.pool_h * p.part_sz);
             part_w = floor(static_cast<float>(pw) / p.pool_w * p.part_sz);
-            int x_idx = (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) *
+            int x_idx =
+                    (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) * p.part_sz +
+                    part_w;
+            int y_idx = (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz + part_h) *
                                 p.part_sz +
                         part_w;
-            int y_idx =
-                    (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz + part_h) *
-                            p.part_sz +
-                    part_w;
             trans_x = trans[x_idx] * static_cast<float>(p.trans_std);
             trans_y = trans[y_idx] * static_cast<float>(p.trans_std);
         }
@@ -212,22 +203,20 @@ __global__ void DeformablePSROIPoolBackwardAccKern(
                 float U10 = data_ptr[y0 * p.IW + x1];
                 float U11 = data_ptr[y1 * p.IW + x1];
 
-                float diff_x = (U11 * dist_y + U10 * (1 - dist_y) -
-                                U01 * dist_y - U00 * (1 - dist_y)) *
+                float diff_x = (U11 * dist_y + U10 * (1 - dist_y) - U01 * dist_y -
+                                U00 * (1 - dist_y)) *
                                p.trans_std * diff_val;
-                float diff_y = (U11 * dist_x + U01 * (1 - dist_x) -
-                                U10 * dist_x - U00 * (1 - dist_x)) *
+                float diff_y = (U11 * dist_x + U01 * (1 - dist_x) - U10 * dist_x -
+                                U00 * (1 - dist_x)) *
                                p.trans_std * diff_val;
 
                 diff_x *= roi_w, diff_y *= roi_h;
 
-                int diff_x_idx =
-                        (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) *
-                                p.part_sz +
-                        part_w;
+                int diff_x_idx = (((n * p.nr_cls + cls_id) * 2) * p.part_sz + part_h) *
+                                         p.part_sz +
+                                 part_w;
                 int diff_y_idx =
-                        (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz +
-                         part_h) *
+                        (((n * p.nr_cls + cls_id) * 2 + 1) * p.part_sz + part_h) *
                                 p.part_sz +
                         part_w;
 
@@ -243,9 +232,9 @@ namespace megdnn {
 namespace cuda {
 namespace deformable_ps_roi_pooling {
 
-void DeformablePSROIPoolForward(const TensorND& data, const TensorND& rois,
-                                const TensorND& trans, const TensorND& out_data,
-                                const TensorND& out_count, Param& p) {
+void DeformablePSROIPoolForward(
+        const TensorND& data, const TensorND& rois, const TensorND& trans,
+        const TensorND& out_data, const TensorND& out_count, Param& p) {
     const int loops = p.nr_bbox * p.IC * p.pool_h * p.pool_w;
     int nr_thds = query_blocksize_for_kernel(DeformablePSROIPoolForwardKern);
     const int blks = DIVUP(loops, nr_thds);
@@ -270,15 +259,12 @@ void DeformablePSROIPoolForward(const TensorND& data, const TensorND& rois,
     after_kernel_launch();
 }
 
-void DeformablePSROIPoolBackwardAcc(const TensorND& data, const TensorND& rois,
-                                    const TensorND& trans,
-                                    const TensorND& out_diff,
-                                    const TensorND& out_count,
-                                    const TensorND& data_diff,
-                                    const TensorND& trans_diff, Param& p) {
+void DeformablePSROIPoolBackwardAcc(
+        const TensorND& data, const TensorND& rois, const TensorND& trans,
+        const TensorND& out_diff, const TensorND& out_count, const TensorND& data_diff,
+        const TensorND& trans_diff, Param& p) {
     const int loops = p.nr_bbox * p.IC * p.pool_h * p.pool_w;
-    int nr_thds =
-            query_blocksize_for_kernel(DeformablePSROIPoolBackwardAccKern);
+    int nr_thds = query_blocksize_for_kernel(DeformablePSROIPoolBackwardAccKern);
     const int blks = DIVUP(loops, nr_thds);
 
     const float* data_ptr = data.ptr<float>();

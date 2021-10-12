@@ -49,11 +49,11 @@ template <int size>
 void compute_vec(float32x4_t& dst, float32x4_t* src, float32x4_t* filter);
 
 #define cb(i) dst = vmlaq_f32(dst, src[i], filter[i]);
-#define COMPUTE_MACRO(n)                                             \
-    template <>                                                      \
-    inline void compute_vec<n>(float32x4_t & dst, float32x4_t * src, \
-                               float32x4_t * filter) {               \
-        UNROLL_CALL_NOWRAPPER(n, cb);                                \
+#define COMPUTE_MACRO(n)                                                  \
+    template <>                                                           \
+    inline void compute_vec<n>(                                           \
+            float32x4_t & dst, float32x4_t * src, float32x4_t * filter) { \
+        UNROLL_CALL_NOWRAPPER(n, cb);                                     \
     }
 COMPUTE_MACRO(2);
 COMPUTE_MACRO(3);
@@ -67,17 +67,17 @@ struct load_bias_vec;
 #define cb_bias(i) dst[i] = vld1q_f32((bptr) + i * 4);
 #define cb_init(i) dst[i] = init;
 
-#define INIT_BIAS_MACRO(n)                                          \
-    template <BiasMode bias_mode>                                   \
-    struct load_bias_vec<bias_mode, n> {                            \
-        static void impl(float32x4_t* dst, const float32x4_t& init, \
-                         const float* bptr) {                       \
-            if (bias_mode == BiasMode::BIAS) {                      \
-                UNROLL_CALL_NOWRAPPER(n, cb_bias);                  \
-            } else {                                                \
-                UNROLL_CALL_NOWRAPPER(n, cb_init);                  \
-            }                                                       \
-        }                                                           \
+#define INIT_BIAS_MACRO(n)                                                      \
+    template <BiasMode bias_mode>                                               \
+    struct load_bias_vec<bias_mode, n> {                                        \
+        static void impl(                                                       \
+                float32x4_t* dst, const float32x4_t& init, const float* bptr) { \
+            if (bias_mode == BiasMode::BIAS) {                                  \
+                UNROLL_CALL_NOWRAPPER(n, cb_bias);                              \
+            } else {                                                            \
+                UNROLL_CALL_NOWRAPPER(n, cb_init);                              \
+            }                                                                   \
+        }                                                                       \
     };
 
 INIT_BIAS_MACRO(1);
@@ -88,34 +88,32 @@ INIT_BIAS_MACRO(4);
 #undef INIT_BIAS_MACRO
 }  // namespace
 
-#define COMPUTE_PADDING_KERNEL()                                              \
-    do {                                                                      \
-        int iw = ow * stride - PW;                                            \
-        float32x4_t result;                                                   \
-        load_bias_vec<bias_mode, 1>::impl(&result, init,                      \
-                                          bias + oh * OW * 4 + ow * 4);       \
-        for (int kh = 0; kh < fh; kh++) {                                     \
-            if (kh + ih < 0 || kh + ih >= static_cast<int>(IH))               \
-                continue;                                                     \
-            for (int kw = 0; kw < fh; kw++) {                                 \
-                if (kw + iw < 0 || kw + iw >= static_cast<int>(IW))           \
-                    continue;                                                 \
-                const float* sptr = src + (kh + ih) * IW * 4 + (kw + iw) * 4; \
-                result = vmlaq_f32(result, kernel[kh * fh + kw],              \
-                                   vld1q_f32(sptr));                          \
-            }                                                                 \
-        }                                                                     \
-        float* output = dst + oh * OW * 4 + ow * 4;                           \
-        op(result, output);                                                   \
+#define COMPUTE_PADDING_KERNEL()                                                       \
+    do {                                                                               \
+        int iw = ow * stride - PW;                                                     \
+        float32x4_t result;                                                            \
+        load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4 + ow * 4); \
+        for (int kh = 0; kh < fh; kh++) {                                              \
+            if (kh + ih < 0 || kh + ih >= static_cast<int>(IH))                        \
+                continue;                                                              \
+            for (int kw = 0; kw < fh; kw++) {                                          \
+                if (kw + iw < 0 || kw + iw >= static_cast<int>(IW))                    \
+                    continue;                                                          \
+                const float* sptr = src + (kh + ih) * IW * 4 + (kw + iw) * 4;          \
+                result = vmlaq_f32(result, kernel[kh * fh + kw], vld1q_f32(sptr));     \
+            }                                                                          \
+        }                                                                              \
+        float* output = dst + oh * OW * 4 + ow * 4;                                    \
+        op(result, output);                                                            \
     } while (0)
 
 template <BiasMode bias_mode, typename Op>
 struct PaddingCompute {
-    static void compute(const float* src, const float* bias, float* dst,
-                        const int fh, const int stride, const size_t IH,
-                        const size_t IW, const size_t OH, const size_t OW,
-                        const size_t PH, const size_t PW,
-                        const float32x4_t* kernel, const float32x4_t& init) {
+    static void compute(
+            const float* src, const float* bias, float* dst, const int fh,
+            const int stride, const size_t IH, const size_t IW, const size_t OH,
+            const size_t OW, const size_t PH, const size_t PW,
+            const float32x4_t* kernel, const float32x4_t& init) {
         size_t oh_start = (PH + stride - 1) / stride;
         size_t ow_start = (PW + stride - 1) / stride;
         size_t oh_end = (IH + PH - fh) / stride + 1;
@@ -147,17 +145,18 @@ struct PaddingCompute {
 
 template <BiasMode bias_mode, typename Op>
 struct PaddingComputeK3P1 {
-    static void compute(const float* src, const float* bias, float* dst,
-                        const size_t stride, const size_t IH, const size_t IW,
-                        const size_t OH, const size_t OW,
-                        const float32x4_t* kernel, const float32x4_t& init) {
+    static void compute(
+            const float* src, const float* bias, float* dst, const size_t stride,
+            const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+            const float32x4_t* kernel, const float32x4_t& init) {
         constexpr size_t PH = 1, PW = 1, FH = 3;
         size_t oh_start = (PH + stride - 1) / stride;
         size_t ow_start = (PW + stride - 1) / stride;
         size_t oh_end = (IH + PH - FH) / stride + 1;
         size_t ow_end = (IW + PW - FH) / stride + 1;
-        megdnn_assert(oh_start == ow_start && oh_start == 1,
-                      "channel wise padding param error");
+        megdnn_assert(
+                oh_start == ow_start && oh_start == 1,
+                "channel wise padding param error");
         megdnn_assert(ow_end == OW - 1 || ow_end == OW, "padding PW error");
         megdnn_assert(oh_end == OH - 1 || oh_end == OH, "padding PH error");
         Op op;
@@ -190,8 +189,7 @@ struct PaddingComputeK3P1 {
         // line one right
         if (OW != ow_end) {
             float32x4_t result;
-            load_bias_vec<bias_mode, 1>::impl(&result, init,
-                                              bias + (OW - 1) * 4);
+            load_bias_vec<bias_mode, 1>::impl(&result, init, bias + (OW - 1) * 4);
             const float* sptr = src + (ow_end * stride - PW) * 4;
             result = vmlaq_f32(result, kernel[3], vld1q_f32(sptr));
             result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + 4));
@@ -206,18 +204,14 @@ struct PaddingComputeK3P1 {
             // left
             {
                 float32x4_t result;
-                load_bias_vec<bias_mode, 1>::impl(&result, init,
-                                                  bias + oh * OW * 4);
+                load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4);
                 const float* sptr = src + ih * IW * 4;
                 result = vmlaq_f32(result, kernel[1], vld1q_f32(sptr));
                 result = vmlaq_f32(result, kernel[2], vld1q_f32(sptr + 4));
                 result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + IW * 4));
-                result = vmlaq_f32(result, kernel[5],
-                                   vld1q_f32(sptr + IW * 4 + 4));
-                result = vmlaq_f32(result, kernel[7],
-                                   vld1q_f32(sptr + 2 * IW * 4));
-                result = vmlaq_f32(result, kernel[8],
-                                   vld1q_f32(sptr + 2 * IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[5], vld1q_f32(sptr + IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[7], vld1q_f32(sptr + 2 * IW * 4));
+                result = vmlaq_f32(result, kernel[8], vld1q_f32(sptr + 2 * IW * 4 + 4));
                 float* output = dst + oh * OW * 4;
                 op(result, output);
             }
@@ -226,17 +220,13 @@ struct PaddingComputeK3P1 {
                 float32x4_t result;
                 load_bias_vec<bias_mode, 1>::impl(
                         &result, init, bias + oh * OW * 4 + (OW - 1) * 4);
-                const float* sptr =
-                        src + ih * IW * 4 + (ow_end * stride - PW) * 4;
+                const float* sptr = src + ih * IW * 4 + (ow_end * stride - PW) * 4;
                 result = vmlaq_f32(result, kernel[0], vld1q_f32(sptr));
                 result = vmlaq_f32(result, kernel[1], vld1q_f32(sptr + 4));
                 result = vmlaq_f32(result, kernel[3], vld1q_f32(sptr + IW * 4));
-                result = vmlaq_f32(result, kernel[4],
-                                   vld1q_f32(sptr + IW * 4 + 4));
-                result = vmlaq_f32(result, kernel[6],
-                                   vld1q_f32(sptr + 2 * IW * 4));
-                result = vmlaq_f32(result, kernel[7],
-                                   vld1q_f32(sptr + 2 * IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[6], vld1q_f32(sptr + 2 * IW * 4));
+                result = vmlaq_f32(result, kernel[7], vld1q_f32(sptr + 2 * IW * 4 + 4));
                 float* output = dst + oh * OW * 4 + ow_end * 4;
                 op(result, output);
             }
@@ -246,14 +236,12 @@ struct PaddingComputeK3P1 {
             size_t oh = OH - 1;
             {
                 float32x4_t result;
-                load_bias_vec<bias_mode, 1>::impl(&result, init,
-                                                  bias + oh * OW * 4);
+                load_bias_vec<bias_mode, 1>::impl(&result, init, bias + oh * OW * 4);
                 const float* sptr = src + (oh_end * stride - PH) * IW * 4;
                 result = vmlaq_f32(result, kernel[1], vld1q_f32(sptr));
                 result = vmlaq_f32(result, kernel[2], vld1q_f32(sptr + 4));
                 result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + IW * 4));
-                result = vmlaq_f32(result, kernel[5],
-                                   vld1q_f32(sptr + IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[5], vld1q_f32(sptr + IW * 4 + 4));
                 float* output = dst + oh_end * OW * 4;
                 op(result, output);
             }
@@ -261,18 +249,15 @@ struct PaddingComputeK3P1 {
             for (size_t ow = ow_start; ow < ow_end; ow++) {
                 int iw = ow * stride - PW;
                 float32x4_t result;
-                load_bias_vec<bias_mode, 1>::impl(&result, init,
-                                                  bias + oh * OW * 4 + ow * 4);
-                const float* sptr =
-                        src + (oh_end * stride - PH) * IW * 4 + iw * 4;
+                load_bias_vec<bias_mode, 1>::impl(
+                        &result, init, bias + oh * OW * 4 + ow * 4);
+                const float* sptr = src + (oh_end * stride - PH) * IW * 4 + iw * 4;
                 result = vmlaq_f32(result, kernel[0], vld1q_f32(sptr));
                 result = vmlaq_f32(result, kernel[1], vld1q_f32(sptr + 4));
                 result = vmlaq_f32(result, kernel[2], vld1q_f32(sptr + 8));
                 result = vmlaq_f32(result, kernel[3], vld1q_f32(sptr + IW * 4));
-                result = vmlaq_f32(result, kernel[4],
-                                   vld1q_f32(sptr + IW * 4 + 4));
-                result = vmlaq_f32(result, kernel[5],
-                                   vld1q_f32(sptr + IW * 4 + 8));
+                result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[5], vld1q_f32(sptr + IW * 4 + 8));
                 float* output = dst + oh_end * OW * 4 + ow * 4;
                 op(result, output);
             }
@@ -286,8 +271,7 @@ struct PaddingComputeK3P1 {
                 result = vmlaq_f32(result, kernel[0], vld1q_f32(sptr));
                 result = vmlaq_f32(result, kernel[1], vld1q_f32(sptr + 4));
                 result = vmlaq_f32(result, kernel[3], vld1q_f32(sptr + IW * 4));
-                result = vmlaq_f32(result, kernel[4],
-                                   vld1q_f32(sptr + IW * 4 + 4));
+                result = vmlaq_f32(result, kernel[4], vld1q_f32(sptr + IW * 4 + 4));
                 float* output = dst + oh_end * OW * 4 + ow_end * 4;
                 op(result, output);
             }
@@ -314,8 +298,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
     size_t oh_end = IH + PH - 1;
     size_t ow_end = IW + PW - 1;
     if (PH || PW) {
-        PaddingCompute<bias_mode, Op>::compute(src, bias, dst, 2, 1, IH, IW, OH,
-                                               OW, PH, PW, kernel, init);
+        PaddingCompute<bias_mode, Op>::compute(
+                src, bias, dst, 2, 1, IH, IW, OH, OW, PH, PW, kernel, init);
     }
 #define COMPUTE_2X2(dst, src, kernel)        \
     compute_vec<2>(dst[0], &src[0], kernel); \
@@ -332,8 +316,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][4];
-            load_bias_vec<bias_mode, 4>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 4>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[3][5];
@@ -355,8 +339,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[3][2];
@@ -380,8 +364,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[1][4];
-            load_bias_vec<bias_mode, 4>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 4>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[2][5];
             load_vec<5>(src_v[0], input);
             COMPUTE_2X2(dst_v[0], src_v[0], &kernel[0]);
@@ -396,8 +380,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
@@ -416,8 +400,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
     if (IH == OH && IW == OW && IH >= 3 && IW >= 3 && PH == 1 && PW == 1) {
-        channel_wise_nchw44_float::do_conv_kern_3x3_stride1_padding1<bias_mode,
-                                                                     Op>(
+        channel_wise_nchw44_float::do_conv_kern_3x3_stride1_padding1<bias_mode, Op>(
                 src, dst, filter, bias, OH, OW);
         return;
     }
@@ -434,8 +417,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
     size_t oh_end = IH + PH - 2;
     size_t ow_end = IW + PW - 2;
     if (PH || PW) {
-        PaddingCompute<bias_mode, Op>::compute(src, bias, dst, 3, 1, IH, IW, OH,
-                                               OW, PH, PW, kernel, init);
+        PaddingCompute<bias_mode, Op>::compute(
+                src, bias, dst, 3, 1, IH, IW, OH, OW, PH, PW, kernel, init);
     }
     size_t oh = oh_start;
     for (; oh + 1 < oh_end; oh += 2) {
@@ -446,8 +429,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][4];
-            load_bias_vec<bias_mode, 4>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 4>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[2][6];
@@ -490,8 +473,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[2][3];
@@ -518,8 +501,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[4];
-            load_bias_vec<bias_mode, 4>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 4>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[2][6];
             load_vec<6>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
@@ -544,8 +527,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v, &src_v[0][0], &kernel[0]);
@@ -564,8 +547,7 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
         const size_t IH, const size_t IW, const size_t OH, const size_t OW,
         const size_t PH, const size_t PW) {
     if (IH == OH && IW == OW && IH >= 5 && IW >= 5 && PH == 2 && PW == 2) {
-        channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2<bias_mode,
-                                                                     Op>(
+        channel_wise_nchw44_float::do_conv_kern_5x5_stride1_padding2<bias_mode, Op>(
                 src, dst, filter, bias, OH, OW);
         return;
     }
@@ -593,8 +575,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t kernel[2][5];
@@ -632,8 +614,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][1];
-            load_bias_vec<bias_mode, 1>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t kernel[2][5];
@@ -671,8 +653,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[1][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             float32x4_t kernel[2][5];
             float32x4_t src_v[2][6];
 #define COMPUTE_5X5_2(i, dst, src, kernel)      \
@@ -698,8 +680,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride1_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t kernel[2][5];
             float32x4_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
@@ -739,8 +721,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
     size_t oh_end = (IH + PH) / 2;
     size_t ow_end = (IW + PW) / 2;
     if (PH || PW) {
-        PaddingCompute<bias_mode, Op>::compute(src, bias, dst, 2, 2, IH, IW, OH,
-                                               OW, PH, PW, kernel, init);
+        PaddingCompute<bias_mode, Op>::compute(
+                src, bias, dst, 2, 2, IH, IW, OH, OW, PH, PW, kernel, init);
     }
 #define COMPUTE_2X2(dst, src, kernel)        \
     compute_vec<2>(dst[0], &src[0], kernel); \
@@ -756,8 +738,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[4];
-            load_bias_vec<bias_mode, 4>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 4>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[2][8];
             load_vec<8>(src_v[0], input);
             COMPUTE_2X2(dst_v, src_v[0], &kernel[0]);
@@ -772,8 +754,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_2x2(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
@@ -803,11 +785,11 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
     size_t oh_end = (IH + PH - 3) / 2 + 1;
     size_t ow_end = (IW + PW - 3) / 2 + 1;
     if (PH == 1 && PW == 1) {
-        PaddingComputeK3P1<bias_mode, Op>::compute(src, bias, dst, 2, IH, IW,
-                                                   OH, OW, kernel, init);
+        PaddingComputeK3P1<bias_mode, Op>::compute(
+                src, bias, dst, 2, IH, IW, OH, OW, kernel, init);
     } else if (PH || PW) {
-        PaddingCompute<bias_mode, Op>::compute(src, bias, dst, 3, 2, IH, IW, OH,
-                                               OW, PH, PW, kernel, init);
+        PaddingCompute<bias_mode, Op>::compute(
+                src, bias, dst, 3, 2, IH, IW, OH, OW, PH, PW, kernel, init);
     }
     size_t oh = oh_start;
     for (; oh + 1 < oh_end; oh += 2) {
@@ -818,8 +800,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[2][5];
@@ -849,8 +831,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t src_v[2][3];
@@ -878,8 +860,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2];
-            load_bias_vec<bias_mode, 2>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 2>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[3][5];
             load_vec<5>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
@@ -897,8 +879,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_3x3(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v, &src_v[0][0], &kernel[0]);
@@ -940,8 +922,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t kernel[3][5];
@@ -984,8 +966,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 4 + ow * 4);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 4 + ow * 4);
             float32x4_t kernel[3][5];
@@ -1029,8 +1011,8 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
             const float* input = src + ih * IW * 4 + iw * 4;
             float* output = dst + oh * OW * 4 + ow * 4;
             float32x4_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 4 + ow * 4);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 4 + ow * 4);
             float32x4_t kernel[2][5];
             float32x4_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
@@ -1053,13 +1035,12 @@ void channel_wise_nchw44_float::do_conv_kern_stride2_5x5(
     }
 }
 
-#define INSTANTIATION(stride, i, bias, Op)                                     \
-    template void                                                              \
-            channel_wise_nchw44_float::do_conv_kern_##stride##_##i##x##i<bias, \
-                                                                         Op>(  \
-                    const float*, const float*, const float*, float*,          \
-                    const size_t, const size_t, const size_t, const size_t,    \
-                    const size_t, const size_t);
+#define INSTANTIATION(stride, i, bias, Op)                                          \
+    template void                                                                   \
+            channel_wise_nchw44_float::do_conv_kern_##stride##_##i##x##i<bias, Op>( \
+                    const float*, const float*, const float*, float*, const size_t, \
+                    const size_t, const size_t, const size_t, const size_t,         \
+                    const size_t);
 
 #define FOR_OP(stride, i, bias)                           \
     INSTANTIATION(stride, i, bias, SigmoidOp<dt_float32>) \

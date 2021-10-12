@@ -26,8 +26,8 @@ TEST_F(X86, POOLING) {
 
 TEST_F(X86, S1POOLING88) {
     Checker<Pooling> checker(handle());
-    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH,
-                   size_t SW, size_t N, size_t C, size_t H, size_t W) {
+    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH, size_t SW,
+                   size_t N, size_t C, size_t H, size_t W) {
         Pooling::Param param;
         param.format = param::Pooling::Format::NCHW88;
         param.window_h = WH;
@@ -58,8 +58,8 @@ TEST_F(X86, S1POOLING88) {
 
 TEST_F(X86_MULTI_THREADS, S1POOLING88) {
     Checker<Pooling> checker(handle());
-    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH,
-                   size_t SW, size_t N, size_t C, size_t H, size_t W) {
+    auto run = [&](size_t WH, size_t WW, size_t PH, size_t PW, size_t SH, size_t SW,
+                   size_t N, size_t C, size_t H, size_t W) {
         Pooling::Param param;
         param.format = param::Pooling::Format::NCHW88;
         param.window_h = WH;
@@ -140,12 +140,12 @@ static void test_x86_megdnn_pooling(Handle* handle) {
         float computation =
                 dst_layout.total_nr_elems() * window_size * window_size * 1e-9;
 
-        auto pooling_used =
-                benchmarker_pooling
-                        .set_param({param::Pooling::Mode::MAX, pad, pad, stride,
-                                    stride, window_size, window_size})
-                        .exec(TensorShapeArray{shape, {}}) /
-                RUNS;
+        auto pooling_used = benchmarker_pooling
+                                    .set_param(
+                                            {param::Pooling::Mode::MAX, pad, pad,
+                                             stride, stride, window_size, window_size})
+                                    .exec(TensorShapeArray{shape, {}}) /
+                            RUNS;
         float through_put = computation / pooling_used * 1e3;
         std::cout << "{" << pad << "," << stride << "," << window_size << ","
                   << in_number << "," << in_channel << "," << in_height << ","

@@ -60,8 +60,7 @@ static inline void shift_src(float16x8_t rsrc[3][4]) {
 }
 
 template <BiasMode bias_mode>
-static inline float16x8_t load_bias(const float16_t* bias,
-                                    const float16x8_t& init) {
+static inline float16x8_t load_bias(const float16_t* bias, const float16x8_t& init) {
     if (bias_mode == BiasMode::BIAS) {
         return vld1q_f16(bias);
     } else {
@@ -72,11 +71,10 @@ static inline float16x8_t load_bias(const float16_t* bias,
 template <int BW, int bw, bool has_top, bool has_bottom, BiasMode bias_mode>
 struct compute_element {
     template <typename Op>
-    static inline void call(const float16_t*& src0, const float16_t*& src1,
-                            const float16_t*& src2, float16_t*& dst,
-                            const float16_t*& bias, const float16x8_t& init,
-                            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3],
-                            const Op& op) {
+    static inline void call(
+            const float16_t*& src0, const float16_t*& src1, const float16_t*& src2,
+            float16_t*& dst, const float16_t*& bias, const float16x8_t& init,
+            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3], const Op& op) {
 #define RSRC(i, j) rsrc[i][((j) + bw) % 4]
         float16x8_t rdst = load_bias<bias_mode>(bias, init);
         if (has_top) {
@@ -123,19 +121,18 @@ struct compute_element {
 template <int BW, bool has_top, bool has_bottom, BiasMode bias_mode>
 struct compute_element<BW, BW, has_top, has_bottom, bias_mode> {
     template <typename Op>
-    static inline void call(const float16_t*& src0, const float16_t*& src1,
-                            const float16_t*& src2, float16_t*& dst,
-                            const float16_t*& bias, const float16x8_t& init,
-                            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3],
-                            const Op& op) {}
+    static inline void call(
+            const float16_t*& src0, const float16_t*& src1, const float16_t*& src2,
+            float16_t*& dst, const float16_t*& bias, const float16x8_t& init,
+            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3], const Op& op) {}
 };
 
 template <bool has_top, bool has_bottom, BiasMode bias_mode>
 struct compute_element_right {
     template <typename Op>
-    static inline void call(float16_t*& dst, const float16_t*& bias,
-                            const float16x8_t& init, float16x8_t rsrc[3][4],
-                            float16x8_t rfilter[3][3], const Op& op) {
+    static inline void call(
+            float16_t*& dst, const float16_t*& bias, const float16x8_t& init,
+            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3], const Op& op) {
         float16x8_t rdst = load_bias<bias_mode>(bias, init);
 
         if (has_top) {
@@ -164,9 +161,9 @@ struct compute_element_right {
 template <bool has_top, bool has_bottom, BiasMode bias_mode>
 struct compute_element_right_pad {
     template <typename Op>
-    static inline void call(float16_t*& dst, const float16_t*& bias,
-                            const float16x8_t& init, float16x8_t rsrc[3][4],
-                            float16x8_t rfilter[3][3], const Op& op) {
+    static inline void call(
+            float16_t*& dst, const float16_t*& bias, const float16x8_t& init,
+            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3], const Op& op) {
         float16x8_t rdst = load_bias<bias_mode>(bias, init);
 
         if (has_top) {
@@ -191,11 +188,10 @@ struct compute_element_right_pad {
 template <bool has_top, bool has_bottom, BiasMode bias_mode>
 struct compute_row {
     template <typename Op>
-    static inline void call(const float16_t*& src0, const float16_t*& src1,
-                            const float16_t*& src2, float16_t*& dst,
-                            const float16_t*& bias, const float16x8_t& init,
-                            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3],
-                            int W, const Op& op) {
+    static inline void call(
+            const float16_t*& src0, const float16_t*& src1, const float16_t*& src2,
+            float16_t*& dst, const float16_t*& bias, const float16x8_t& init,
+            float16x8_t rsrc[3][4], float16x8_t rfilter[3][3], int W, const Op& op) {
         if (has_top) {
             rsrc[0][0] = vdupq_n_f16(0);
             rsrc[0][1] = vld1q_f16(src0 + 0);
@@ -283,23 +279,22 @@ void channel_wise_nchw88::do_conv_kern_3x3_stride1_padding1(
 
     float16x8_t rsrc[3][4];
 
-    compute_row<false, true, bias_mode>::call(src0, src1, src2, dst, bias, init,
-                                              rsrc, rfilter, W, op);
+    compute_row<false, true, bias_mode>::call(
+            src0, src1, src2, dst, bias, init, rsrc, rfilter, W, op);
 
     for (int h = 1; h < H - 1; h += 1) {
-        compute_row<true, true, bias_mode>::call(src0, src1, src2, dst, bias,
-                                                 init, rsrc, rfilter, W, op);
+        compute_row<true, true, bias_mode>::call(
+                src0, src1, src2, dst, bias, init, rsrc, rfilter, W, op);
     }
 
-    compute_row<true, false, bias_mode>::call(src0, src1, src2, dst, bias, init,
-                                              rsrc, rfilter, W, op);
+    compute_row<true, false, bias_mode>::call(
+            src0, src1, src2, dst, bias, init, rsrc, rfilter, W, op);
 }
 
-#define INSTANTIATION(bias, Op)                                               \
-    template void                                                             \
-    channel_wise_nchw88::do_conv_kern_3x3_stride1_padding1<bias, Op>(         \
-            const float16_t*, float16_t*, const float16_t*, const float16_t*, \
-            int, int);
+#define INSTANTIATION(bias, Op)                                                     \
+    template void channel_wise_nchw88::do_conv_kern_3x3_stride1_padding1<bias, Op>( \
+            const float16_t*, float16_t*, const float16_t*, const float16_t*, int,  \
+            int);
 
 #define FOR_OP(bias)                       \
     INSTANTIATION(bias, SigmoidOp<__fp16>) \

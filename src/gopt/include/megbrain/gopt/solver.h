@@ -12,18 +12,18 @@
 
 #pragma once
 #include "megbrain/gopt/framework.h"
+#include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/layout_transform_context.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/plugin/opr_footprint.h"
-#include "megbrain/gopt/inference.h"
 
 namespace mgb {
 namespace gopt {
 
 class ProfilerBase;
 
-/*! 
- * \brief abstract solver 
+/*!
+ * \brief abstract solver
  */
 class SolverBase {
 public:
@@ -45,7 +45,7 @@ public:
 /*!
  * \brief solvers that will first collect the costs of operators in different op
  * format and the costs of layout transform of varnode with a user provided
- * profiler on the target device. This will lead to time consuming. 
+ * profiler on the target device. This will lead to time consuming.
  */
 class ProfilingBasedSolver : public SolverBase {
 public:
@@ -56,8 +56,9 @@ public:
      * \note some graph partition (for example, graph partition without format
      * aware operators like conv, deconv, warp, resize etc.) will be filtered by
      * the GraphPartitionFilter, which can reduce the profiling time. */
-    ProfilingBasedSolver(std::unique_ptr<ProfilerBase> profiler,
-                         GraphPartitionFilter graph_partition_filter)
+    ProfilingBasedSolver(
+            std::unique_ptr<ProfilerBase> profiler,
+            GraphPartitionFilter graph_partition_filter)
             : m_profiler{std::move(profiler)},
               m_graph_partition_filter{std::move(graph_partition_filter)} {}
     virtual ~ProfilingBasedSolver() = default;
@@ -79,10 +80,11 @@ class DynamicProgrammingSolver final : public ProfilingBasedSolver {
 public:
     DynamicProgrammingSolver(std::unique_ptr<ProfilerBase> profiler)
             : ProfilingBasedSolver(std::move(profiler)){};
-    DynamicProgrammingSolver(std::unique_ptr<ProfilerBase> profiler,
-                             GraphPartitionFilter graph_partition_filter)
-            : ProfilingBasedSolver(std::move(profiler),
-                                   std::move(graph_partition_filter)){};
+    DynamicProgrammingSolver(
+            std::unique_ptr<ProfilerBase> profiler,
+            GraphPartitionFilter graph_partition_filter)
+            : ProfilingBasedSolver(
+                      std::move(profiler), std::move(graph_partition_filter)){};
     ~DynamicProgrammingSolver() noexcept = default;
     Solution do_solve(const Problem& problem) const override;
     bool can_solve(const Problem& problem) const override;

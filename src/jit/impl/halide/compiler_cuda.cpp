@@ -28,8 +28,7 @@ using namespace Halide;
 
 /* =================== HalideCudaTargetTrait ==================== */
 
-struct HalideCudaTargetTrait::UserData
-        : public HalideExecutable::TargetTraitUserData {
+struct HalideCudaTargetTrait::UserData : public HalideExecutable::TargetTraitUserData {
     DeviceProp dev_prop;  //!< dev prop used to generate schedule the func
     Halide::Pipeline pipeline;
     std::mutex mtx;
@@ -54,35 +53,34 @@ HalideCudaTargetTrait::FeatureSet HalideCudaTargetTrait::features(
     } else if (in(61, 70)) {
         set.set(Target::CUDACapability61);
     } else {
-        mgb_log_warn("cuda capability(%d.%d) not support for Halide, using compute capability 6.1",
-                  prop.major, prop.minor);
+        mgb_log_warn(
+                "cuda capability(%d.%d) not support for Halide, using compute "
+                "capability 6.1",
+                prop.major, prop.minor);
         set.set(Target::CUDACapability61);
     }
     return set;
 }
 
 HalideCudaTargetTrait::FunctionHandle HalideCudaTargetTrait::compile_and_load(
-        CompNode comp_node, Halide::Target target,
-        const HalideExecutable& hl_exec) {
+        CompNode comp_node, Halide::Target target, const HalideExecutable& hl_exec) {
     auto&& dev_prop = get_dev_prop(comp_node);
     auto func_name = next_kernel_name();
     auto&& helper = ExecutableHelper::get();
-    auto make_ud =
-            [&]() -> std::unique_ptr<HalideExecutable::TargetTraitUserData> {
+    auto make_ud = [&]() -> std::unique_ptr<HalideExecutable::TargetTraitUserData> {
         auto ret = std::make_unique<UserData>();
         ret->dev_prop = dev_prop;
-        ret->pipeline =
-                gen_halide_pipeline_schedule(hl_exec.halide_output(), dev_prop);
+        ret->pipeline = gen_halide_pipeline_schedule(hl_exec.halide_output(), dev_prop);
         return ret;
     };
     auto ud = static_cast<UserData*>(user_data(hl_exec, make_ud));
     // since halide func and schedule are coupled, we need to copy the func to
     // use a different schedule
-    mgb_throw_if(dev_prop.max_threads_per_block !=
-                         ud->dev_prop.max_threads_per_block,
-                 InternalError,
-                 "halide on multiple devices with different "
-                 "max_threads_per_block is currently not supported");
+    mgb_throw_if(
+            dev_prop.max_threads_per_block != ud->dev_prop.max_threads_per_block,
+            InternalError,
+            "halide on multiple devices with different "
+            "max_threads_per_block is currently not supported");
     auto&& pipeline = ud->pipeline;
 
     auto halide_inputs = hl_exec.halide_inputs();
@@ -91,12 +89,11 @@ HalideCudaTargetTrait::FunctionHandle HalideCudaTargetTrait::compile_and_load(
         // this compile seems not thread safe
         MGB_LOCK_GUARD(ud->mtx);
 
-        pipeline.compile_to_object(helper.realpath(func_name + ".o"),
-                                   halide_inputs, func_name, target);
+        pipeline.compile_to_object(
+                helper.realpath(func_name + ".o"), halide_inputs, func_name, target);
         if (ExecutableHelper::keep_interm()) {
             pipeline.compile_to_lowered_stmt(
-                    helper.realpath(func_name + ".stmt"), halide_inputs, Text,
-                    target);
+                    helper.realpath(func_name + ".stmt"), halide_inputs, Text, target);
         }
     }
     auto time_compile = timer.get_msecs_reset();
@@ -105,20 +102,18 @@ HalideCudaTargetTrait::FunctionHandle HalideCudaTargetTrait::compile_and_load(
     ret.init_uctx_map();
     auto obj_name = func_name + ".o";
     ret.dl_handle = helper.link_and_load(
-            {HalideCudaCompiler::cuda_runtime_lib(), obj_name},
-            func_name + ".so");
+            {HalideCudaCompiler::cuda_runtime_lib(), obj_name}, func_name + ".so");
     helper.remove_interm(obj_name);
 
-    helper.resolve_func(ret.get_device_interface, ret.dl_handle,
-                        "halide_cuda_device_interface");
+    helper.resolve_func(
+            ret.get_device_interface, ret.dl_handle, "halide_cuda_device_interface");
     helper.resolve_func(ret.execute, ret.dl_handle, func_name + "_argv");
-    helper.resolve_func(ret.device_release, ret.dl_handle,
-                        "halide_cuda_device_release");
+    helper.resolve_func(
+            ret.device_release, ret.dl_handle, "halide_cuda_device_release");
     auto time_link = timer.get_msecs_reset();
     mgb_log("Halide CUDA JIT: compile %s for %s: time_compile=%.3fms "
             "time_link=%.3fms",
-            func_name.c_str(), comp_node.to_string().c_str(), time_compile,
-            time_link);
+            func_name.c_str(), comp_node.to_string().c_str(), time_compile, time_link);
     return ret;
 }
 
@@ -201,16 +196,14 @@ Halide::Pipeline HalideCudaTargetTrait::gen_halide_pipeline_schedule(
         const int max_blocks = 65536;
         const int max_threads_num = device_prop.max_threads_per_block;
         bool need_block_split =
-                total_nr_elems >
-                static_cast<size_t>(max_blocks * max_threads_num);
+                total_nr_elems > static_cast<size_t>(max_blocks * max_threads_num);
         const int bt = max_blocks * max_threads_num;
 
         if (need_block_split) {
             Var xo, xi;
             Var bx, tx;
             f.split(fused, xo, xi, bt, TailStrategy::GuardWithIf);
-            f.split(xi, bx, tx, Expr{max_threads_num},
-                    TailStrategy::GuardWithIf);
+            f.split(xi, bx, tx, Expr{max_threads_num}, TailStrategy::GuardWithIf);
             f.reorder(xo, tx, bx);
             f.unroll(xo);
             f.gpu_threads(tx);
@@ -241,8 +234,7 @@ Halide::Pipeline HalideCudaTargetTrait::gen_halide_pipeline_schedule(
         auto layout = output->m_layout;
         size_t total_nr_elems = layout.total_nr_elems();
         for (int i = layout.ndim - 1; i >= 0; i--) {
-            real_out.bound(vars[layout.ndim - 1 - i], 0,
-                           static_cast<int>(layout[i]));
+            real_out.bound(vars[layout.ndim - 1 - i], 0, static_cast<int>(layout[i]));
         }
 
         Var fused = vars[0];
@@ -252,16 +244,15 @@ Halide::Pipeline HalideCudaTargetTrait::gen_halide_pipeline_schedule(
         const int max_blocks = 65536;
         const int max_threads_num = device_prop.max_threads_per_block;
         bool need_block_split =
-                total_nr_elems >
-                static_cast<size_t>(max_blocks * max_threads_num);
+                total_nr_elems > static_cast<size_t>(max_blocks * max_threads_num);
         const int bt = max_blocks * max_threads_num;
 
         if (need_block_split) {
             Var xo, xi;
             Var bx, tx;
             real_out.split(fused, xo, xi, bt, TailStrategy::GuardWithIf);
-            real_out.split(xi, bx, tx, Expr{max_threads_num},
-                           TailStrategy::GuardWithIf);
+            real_out.split(
+                    xi, bx, tx, Expr{max_threads_num}, TailStrategy::GuardWithIf);
             real_out.reorder(xo, tx, bx);
             real_out.unroll(xo);
             real_out.gpu_threads(tx);
@@ -272,8 +263,7 @@ Halide::Pipeline HalideCudaTargetTrait::gen_halide_pipeline_schedule(
             process_reduce(real_out, tx);
         } else {
             Var bx, tx;
-            real_out.split(fused, bx, tx, max_threads_num,
-                           TailStrategy::GuardWithIf);
+            real_out.split(fused, bx, tx, max_threads_num, TailStrategy::GuardWithIf);
             real_out.gpu_threads(tx);
             real_out.gpu_blocks(bx);
             f.compute_at(real_out, tx);
@@ -345,9 +335,8 @@ extern "C" int halide_cuda_get_stream(void* user_context, CUcontext ctx,
 }
 )";
 
-    static std::string name =
-            ExecutableHelper::get().compile_cpp_source_secondary(
-                    source, "halide_cuda_runtime_override");
+    static std::string name = ExecutableHelper::get().compile_cpp_source_secondary(
+            source, "halide_cuda_runtime_override");
     return name;
 }
 

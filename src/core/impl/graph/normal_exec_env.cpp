@@ -114,8 +114,8 @@ void NormalExecEnv::dispatch_on_comp_node(CompNode cn, Task&& task) {
     dispatch_on_comp_node_with_mask(cn, std::move(task), mask);
 }
 
-void NormalExecEnv::dispatch_on_comp_node_with_mask(CompNode cn, Task&& task,
-                                                    ExecutionMask* mask) {
+void NormalExecEnv::dispatch_on_comp_node_with_mask(
+        CompNode cn, Task&& task, ExecutionMask* mask) {
     if (m_async_level) {
         normalize_comp_node(cn);
         m_worker_task_queue.at(cn).emplace_back(
@@ -137,12 +137,11 @@ void NormalExecEnv::start_exec() {
             if (m_worker_set.empty()) {
                 // init async dispatch workers
                 for (auto&& i : m_worker_task_queue) {
-                    auto runner = [ this, cn = i.first ]() {
+                    auto runner = [this, cn = i.first]() {
                         run_task_seq<true>(m_worker_task_queue.at(cn));
                     };
                     m_worker_set.add_worker(
-                            "comp_node_dispatch:" + i.first.to_string(),
-                            runner);
+                            "comp_node_dispatch:" + i.first.to_string(), runner);
                 }
             }
             m_worker_set.start();

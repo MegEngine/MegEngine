@@ -82,15 +82,13 @@ MIDOUT_DECL(remapBilinear_ch)
 namespace megdnn {
 namespace warp {
 
-bool is_cv_available(const TensorLayout& src, const TensorLayout& mat,
-                     const TensorLayout& dst,
-                     param::WarpAffine::InterpolationMode imode,
-                     param::WarpAffine::Format format);
+bool is_cv_available(
+        const TensorLayout& src, const TensorLayout& mat, const TensorLayout& dst,
+        param::WarpAffine::InterpolationMode imode, param::WarpAffine::Format format);
 
-bool is_dnn_available(const TensorLayout&, const TensorLayout&,
-                      const TensorLayout&,
-                      param::WarpAffine::InterpolationMode imode,
-                      param::WarpAffine::Format format);
+bool is_dnn_available(
+        const TensorLayout&, const TensorLayout&, const TensorLayout&,
+        param::WarpAffine::InterpolationMode imode, param::WarpAffine::Format format);
 
 using namespace megcv;
 using IMode = InterpolationMode;
@@ -104,8 +102,8 @@ constexpr int INTER_REMAP_COEF_SCALE = InterpTable::INTER_REMAP_COEF_SCALE;
 
 template <typename T, size_t CH>
 struct RemapVec {
-    int operator()(const Mat<T>&, void*, const short*, const ushort*,
-                   const void*, int) const {
+    int operator()(
+            const Mat<T>&, void*, const short*, const ushort*, const void*, int) const {
         return 0;
     }
 };
@@ -114,16 +112,17 @@ struct RemapVec {
 
 template <size_t CH>
 struct RemapVec<uchar, CH> {
-    int operator()(const Mat8u& _src, void* _dst, const short* XY,
-                   const ushort* FXY, const void* _wtab, int width) const {
+    int operator()(
+            const Mat8u& _src, void* _dst, const short* XY, const ushort* FXY,
+            const void* _wtab, int width) const {
         int x = 0, sstep = (int)_src.step();
 
         if ((CH != 1 && CH != 3) || sstep > 0x8000)
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
-        const short* wtab = CH == 1 ? (const short*)_wtab
-                                    : InterpTable::get_linear_ic4_table();
+        const short* wtab =
+                CH == 1 ? (const short*)_wtab : InterpTable::get_linear_ic4_table();
         uchar* D = (uchar*)_dst;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE / 2);
         __m128i xy2ofs = _mm_set1_epi32(CH + (sstep << 16));
@@ -143,18 +142,12 @@ struct RemapVec<uchar, CH> {
                 _mm_store_si128((__m128i*)iofs0, xy0);
                 _mm_store_si128((__m128i*)iofs1, xy1);
 
-                i0 = *(ushort*)(S0 + iofs0[0]) +
-                     (*(ushort*)(S0 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs0[2]) +
-                     (*(ushort*)(S0 + iofs0[3]) << 16);
-                v0 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0),
-                                        _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs0[0]) +
-                     (*(ushort*)(S1 + iofs0[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs0[2]) +
-                     (*(ushort*)(S1 + iofs0[3]) << 16);
-                v1 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0),
-                                        _mm_cvtsi32_si128(i1));
+                i0 = *(ushort*)(S0 + iofs0[0]) + (*(ushort*)(S0 + iofs0[1]) << 16);
+                i1 = *(ushort*)(S0 + iofs0[2]) + (*(ushort*)(S0 + iofs0[3]) << 16);
+                v0 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
+                i0 = *(ushort*)(S1 + iofs0[0]) + (*(ushort*)(S1 + iofs0[1]) << 16);
+                i1 = *(ushort*)(S1 + iofs0[2]) + (*(ushort*)(S1 + iofs0[3]) << 16);
+                v1 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
                 v0 = _mm_unpacklo_epi8(v0, z);
                 v1 = _mm_unpacklo_epi8(v1, z);
 
@@ -170,18 +163,12 @@ struct RemapVec<uchar, CH> {
                 v1 = _mm_madd_epi16(v1, b1);
                 v0 = _mm_add_epi32(_mm_add_epi32(v0, v1), delta);
 
-                i0 = *(ushort*)(S0 + iofs1[0]) +
-                     (*(ushort*)(S0 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S0 + iofs1[2]) +
-                     (*(ushort*)(S0 + iofs1[3]) << 16);
-                v2 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0),
-                                        _mm_cvtsi32_si128(i1));
-                i0 = *(ushort*)(S1 + iofs1[0]) +
-                     (*(ushort*)(S1 + iofs1[1]) << 16);
-                i1 = *(ushort*)(S1 + iofs1[2]) +
-                     (*(ushort*)(S1 + iofs1[3]) << 16);
-                v3 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0),
-                                        _mm_cvtsi32_si128(i1));
+                i0 = *(ushort*)(S0 + iofs1[0]) + (*(ushort*)(S0 + iofs1[1]) << 16);
+                i1 = *(ushort*)(S0 + iofs1[2]) + (*(ushort*)(S0 + iofs1[3]) << 16);
+                v2 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
+                i0 = *(ushort*)(S1 + iofs1[0]) + (*(ushort*)(S1 + iofs1[1]) << 16);
+                i1 = *(ushort*)(S1 + iofs1[2]) + (*(ushort*)(S1 + iofs1[3]) << 16);
+                v3 = _mm_unpacklo_epi32(_mm_cvtsi32_si128(i0), _mm_cvtsi32_si128(i1));
                 v2 = _mm_unpacklo_epi8(v2, z);
                 v3 = _mm_unpacklo_epi8(v3, z);
 
@@ -229,14 +216,12 @@ struct RemapVec<uchar, CH> {
                 v0 = _mm_unpacklo_epi8(v0, z);
                 u1 = _mm_unpacklo_epi8(u1, z);
                 v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]),
-                                   _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]),
-                                   _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta),
-                                    INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta),
-                                    INTER_REMAP_COEF_BITS);
+                u0 = _mm_add_epi32(
+                        _mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
+                u1 = _mm_add_epi32(
+                        _mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
+                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
+                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
                 u0 = _mm_slli_si128(u0, 4);
                 u0 = _mm_packs_epi32(u0, u1);
                 u0 = _mm_packus_epi16(u0, u0);
@@ -261,14 +246,12 @@ struct RemapVec<uchar, CH> {
                 v0 = _mm_unpacklo_epi8(v0, z);
                 u1 = _mm_unpacklo_epi8(u1, z);
                 v1 = _mm_unpacklo_epi8(v1, z);
-                u0 = _mm_add_epi32(_mm_madd_epi16(u0, w0[0]),
-                                   _mm_madd_epi16(v0, w0[1]));
-                u1 = _mm_add_epi32(_mm_madd_epi16(u1, w1[0]),
-                                   _mm_madd_epi16(v1, w1[1]));
-                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta),
-                                    INTER_REMAP_COEF_BITS);
-                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta),
-                                    INTER_REMAP_COEF_BITS);
+                u0 = _mm_add_epi32(
+                        _mm_madd_epi16(u0, w0[0]), _mm_madd_epi16(v0, w0[1]));
+                u1 = _mm_add_epi32(
+                        _mm_madd_epi16(u1, w1[0]), _mm_madd_epi16(v1, w1[1]));
+                u0 = _mm_srai_epi32(_mm_add_epi32(u0, delta), INTER_REMAP_COEF_BITS);
+                u1 = _mm_srai_epi32(_mm_add_epi32(u1, delta), INTER_REMAP_COEF_BITS);
                 u0 = _mm_slli_si128(u0, 4);
                 u0 = _mm_packs_epi32(u0, u1);
                 u0 = _mm_packus_epi16(u0, u0);
@@ -282,16 +265,16 @@ struct RemapVec<uchar, CH> {
 #endif
 
 template <typename T, BorderMode bmode>
-using RemapNNFunc = void (*)(const Mat<T>& _src, Mat<T>& _dst,
-                             const Mat<short>& _xy, const T* bvalue);
+using RemapNNFunc = void (*)(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy, const T* bvalue);
 template <typename T, BorderMode bmode>
-using RemapFunc = void (*)(const Mat<T>& _src, Mat<T>& _dst,
-                           const Mat<short>& _xy, const Mat<ushort>& _fxy,
-                           const void* _wtab, const T* bvalue);
+using RemapFunc = void (*)(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy,
+        const Mat<ushort>& _fxy, const void* _wtab, const T* bvalue);
 
 template <typename T, BorderMode bmode, size_t CH>
-static void remapNearest(const Mat<T>& _src, Mat<T>& _dst,
-                         const Mat<short>& _xy, const T* bvalue) {
+static void remapNearest(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy, const T* bvalue) {
     const T* S0 = _src.ptr();
     size_t sstep = _src.step();
     int dx, dy;
@@ -356,11 +339,10 @@ static void remapNearest(const Mat<T>& _src, Mat<T>& _dst,
     }
 }
 
-template <class CastOp, typename AT, int ONE, typename T, BorderMode bmode,
-          size_t CH>
-static void remapBicubic(const Mat<T>& _src, Mat<T>& _dst,
-                         const Mat<short>& _xy, const Mat<ushort>& _fxy,
-                         const void* _wtab, const T* bvalue) {
+template <class CastOp, typename AT, int ONE, typename T, BorderMode bmode, size_t CH>
+static void remapBicubic(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy,
+        const Mat<ushort>& _fxy, const void* _wtab, const T* bvalue) {
     typedef typename CastOp::type1 WT;
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr();
@@ -369,8 +351,7 @@ static void remapBicubic(const Mat<T>& _src, Mat<T>& _dst,
     CastOp castOp;
     int swidth = _src.width(), sheight = _src.height();
     int dwidth = _dst.width(), dheight = _dst.height();
-    unsigned width1 = std::max(swidth - 3, 0),
-             height1 = std::max(sheight - 3, 0);
+    unsigned width1 = std::max(swidth - 3, 0), height1 = std::max(sheight - 3, 0);
     if (_dst.is_continuous() && _xy.is_continuous() && _fxy.is_continuous()) {
         dwidth *= dheight;
         dheight = 1;
@@ -407,8 +388,7 @@ static void remapBicubic(const Mat<T>& _src, Mat<T>& _dst,
                      (unsigned)(sy + 1) >= (unsigned)sheight))
                     continue;
                 if (bmode == BMode::BORDER_CONSTANT &&
-                    (sx >= swidth || sx + 4 <= 0 || sy >= sheight ||
-                     sy + 4 <= 0)) {
+                    (sx >= swidth || sx + 4 <= 0 || sy >= sheight || sy + 4 <= 0)) {
                     for (size_t i = 0; i < CH; i++) {
                         D[i] = bvalue[i];
                     }
@@ -442,198 +422,198 @@ static void remapBicubic(const Mat<T>& _src, Mat<T>& _dst,
     }
 }
 
-template <class CastOp, class VecOp, typename AT, typename T, BorderMode bmode,
-          size_t CH>
-static void remapBilinear(const Mat<T>& _src, Mat<T>& _dst,
-                          const Mat<short>& _xy, const Mat<ushort>& _fxy,
-                          const void* _wtab, const T* bvalue) {
+template <
+        class CastOp, class VecOp, typename AT, typename T, BorderMode bmode, size_t CH>
+static void remapBilinear(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy,
+        const Mat<ushort>& _fxy, const void* _wtab, const T* bvalue) {
     MIDOUT_BEGIN(remapBilinear_bmode, midout_iv(bmode)) {
-    typedef typename CastOp::type1 WT;
-    const AT* wtab = (const AT*)_wtab;
-    const T* S0 = _src.ptr();
-    size_t sstep = _src.step();
-    int dx, dy;
-    CastOp castOp;
-    VecOp vecOp;
-    int swidth = _src.width(), sheight = _src.height();
-    int dwidth = _dst.width(), dheight = _dst.height();
-    unsigned width1 = std::max(swidth - 1, 0),
-             height1 = std::max(sheight - 1, 0);
-    for (dy = 0; dy < dheight; dy++) {
-        T* D = _dst.ptr(dy);
-        const short* XY = _xy.ptr(dy);
-        const ushort* FXY = _fxy.ptr(dy);
-        int X0 = 0;
-        bool prevInlier = false;
+        typedef typename CastOp::type1 WT;
+        const AT* wtab = (const AT*)_wtab;
+        const T* S0 = _src.ptr();
+        size_t sstep = _src.step();
+        int dx, dy;
+        CastOp castOp;
+        VecOp vecOp;
+        int swidth = _src.width(), sheight = _src.height();
+        int dwidth = _dst.width(), dheight = _dst.height();
+        unsigned width1 = std::max(swidth - 1, 0), height1 = std::max(sheight - 1, 0);
+        for (dy = 0; dy < dheight; dy++) {
+            T* D = _dst.ptr(dy);
+            const short* XY = _xy.ptr(dy);
+            const ushort* FXY = _fxy.ptr(dy);
+            int X0 = 0;
+            bool prevInlier = false;
 
-        for (dx = 0; dx <= dwidth; dx++) {
-            bool curInlier =
-                    dx < dwidth ? (unsigned)XY[dx * 2] < width1 &&
-                                          (unsigned)XY[dx * 2 + 1] < height1
-                                : !prevInlier;
-            if (curInlier == prevInlier)
-                continue;
-
-            int X1 = dx;
-            dx = X0;
-            X0 = X1;
-            prevInlier = curInlier;
-
-            if (!curInlier) {
-                int len = vecOp(_src, D, XY + dx * 2, FXY + dx, wtab, X1 - dx);
-                D += len * CH;
-                dx += len;
-
-                if (CH == 1) {
-                    MIDOUT_BEGIN(remapBilinear_bmode, 0, 1) {
-                        for (; dx < X1; dx++, D++) {
-                            int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
-                            const AT* w = wtab + FXY[dx] * 4;
-                            const T* S = S0 + sy * sstep + sx;
-                            *D = castOp(WT(S[0] * w[0] + S[1] * w[1] +
-                                           S[sstep] * w[2] + S[sstep + 1] * w[3]));
-                        }
-                    }
-                    MIDOUT_END();
-                } else if (CH == 2) {
-                    MIDOUT_BEGIN(remapBilinear_bmode, 0, 2) {
-                        for (; dx < X1; dx++, D += 2) {
-                            int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
-                            const AT* w = wtab + FXY[dx] * 4;
-                            const T* S = S0 + sy * sstep + sx * 2;
-                            WT t0 = S[0] * w[0] + S[2] * w[1] + S[sstep] * w[2] +
-                                    S[sstep + 2] * w[3];
-                            WT t1 = S[1] * w[0] + S[3] * w[1] +
-                                    S[sstep + 1] * w[2] + S[sstep + 3] * w[3];
-                            D[0] = castOp(t0);
-                            D[1] = castOp(t1);
-                        }
-                    }
-                    MIDOUT_END();
-                } else if (CH == 3)
-                    MIDOUT_BEGIN(remapBilinear_bmode, 0, 3) {
-                        for (; dx < X1; dx++, D += 3) {
-                            int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
-                            const AT* w = wtab + FXY[dx] * 4;
-                            const T* S = S0 + sy * sstep + sx * 3;
-                            WT t0 = S[0] * w[0] + S[3] * w[1] + S[sstep] * w[2] +
-                                    S[sstep + 3] * w[3];
-                            WT t1 = S[1] * w[0] + S[4] * w[1] +
-                                    S[sstep + 1] * w[2] + S[sstep + 4] * w[3];
-                            WT t2 = S[2] * w[0] + S[5] * w[1] +
-                                    S[sstep + 2] * w[2] + S[sstep + 5] * w[3];
-                            D[0] = castOp(t0);
-                            D[1] = castOp(t1);
-                            D[2] = castOp(t2);
-                        }
-                    }
-                    MIDOUT_END();
-                else
-                    megdnn_throw("nr. of channels must be 1/2/3.");
-
-            } else {
-                if (bmode == BMode::BORDER_TRANSPARENT && CH != 3) {
-                    megdnn_throw(
-                            "unsupported Linear InterpolationMode"
-                            " with BORDER_TRANSPARENT and channel size 1");
+            for (dx = 0; dx <= dwidth; dx++) {
+                bool curInlier = dx < dwidth
+                                       ? (unsigned)XY[dx * 2] < width1 &&
+                                                 (unsigned)XY[dx * 2 + 1] < height1
+                                       : !prevInlier;
+                if (curInlier == prevInlier)
                     continue;
-                }
-                if (CH == 1) {
-                    MIDOUT_BEGIN(remapBilinear_bmode, 1, 1) {
-                        for (; dx < X1; dx++, D++) {
+
+                int X1 = dx;
+                dx = X0;
+                X0 = X1;
+                prevInlier = curInlier;
+
+                if (!curInlier) {
+                    int len = vecOp(_src, D, XY + dx * 2, FXY + dx, wtab, X1 - dx);
+                    D += len * CH;
+                    dx += len;
+
+                    if (CH == 1) {
+                        MIDOUT_BEGIN(remapBilinear_bmode, 0, 1) {
+                            for (; dx < X1; dx++, D++) {
+                                int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
+                                const AT* w = wtab + FXY[dx] * 4;
+                                const T* S = S0 + sy * sstep + sx;
+                                *D = castOp(
+                                        WT(S[0] * w[0] + S[1] * w[1] + S[sstep] * w[2] +
+                                           S[sstep + 1] * w[3]));
+                            }
+                        }
+                        MIDOUT_END();
+                    } else if (CH == 2) {
+                        MIDOUT_BEGIN(remapBilinear_bmode, 0, 2) {
+                            for (; dx < X1; dx++, D += 2) {
+                                int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
+                                const AT* w = wtab + FXY[dx] * 4;
+                                const T* S = S0 + sy * sstep + sx * 2;
+                                WT t0 = S[0] * w[0] + S[2] * w[1] + S[sstep] * w[2] +
+                                        S[sstep + 2] * w[3];
+                                WT t1 = S[1] * w[0] + S[3] * w[1] +
+                                        S[sstep + 1] * w[2] + S[sstep + 3] * w[3];
+                                D[0] = castOp(t0);
+                                D[1] = castOp(t1);
+                            }
+                        }
+                        MIDOUT_END();
+                    } else if (CH == 3)
+                        MIDOUT_BEGIN(remapBilinear_bmode, 0, 3) {
+                            for (; dx < X1; dx++, D += 3) {
+                                int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
+                                const AT* w = wtab + FXY[dx] * 4;
+                                const T* S = S0 + sy * sstep + sx * 3;
+                                WT t0 = S[0] * w[0] + S[3] * w[1] + S[sstep] * w[2] +
+                                        S[sstep + 3] * w[3];
+                                WT t1 = S[1] * w[0] + S[4] * w[1] +
+                                        S[sstep + 1] * w[2] + S[sstep + 4] * w[3];
+                                WT t2 = S[2] * w[0] + S[5] * w[1] +
+                                        S[sstep + 2] * w[2] + S[sstep + 5] * w[3];
+                                D[0] = castOp(t0);
+                                D[1] = castOp(t1);
+                                D[2] = castOp(t2);
+                            }
+                        }
+                    MIDOUT_END();
+                    else megdnn_throw("nr. of channels must be 1/2/3.");
+
+                } else {
+                    if (bmode == BMode::BORDER_TRANSPARENT && CH != 3) {
+                        megdnn_throw(
+                                "unsupported Linear InterpolationMode"
+                                " with BORDER_TRANSPARENT and channel size 1");
+                        continue;
+                    }
+                    if (CH == 1) {
+                        MIDOUT_BEGIN(remapBilinear_bmode, 1, 1) {
+                            for (; dx < X1; dx++, D++) {
+                                int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
+                                if (bmode == BMode::BORDER_CONSTANT &&
+                                    (sx >= swidth || sx + 1 < 0 || sy >= sheight ||
+                                     sy + 1 < 0)) {
+                                    D[0] = bvalue[0];
+                                } else {
+                                    int sx0, sx1, sy0, sy1;
+                                    T v0, v1, v2, v3;
+                                    const AT* w = wtab + FXY[dx] * 4;
+                                    if (bmode == BMode::BORDER_REPLICATE) {
+                                        sx0 = saturate(sx, 0, swidth);
+                                        sx1 = saturate(sx + 1, 0, swidth);
+                                        sy0 = saturate(sy, 0, sheight);
+                                        sy1 = saturate(sy + 1, 0, sheight);
+                                        v0 = S0[sy0 * sstep + sx0];
+                                        v1 = S0[sy0 * sstep + sx1];
+                                        v2 = S0[sy1 * sstep + sx0];
+                                        v3 = S0[sy1 * sstep + sx1];
+                                    } else {
+                                        sx0 = border_interpolate<bmode>(sx, swidth);
+                                        sx1 = border_interpolate<bmode>(sx + 1, swidth);
+                                        sy0 = border_interpolate<bmode>(sy, sheight);
+                                        sy1 = border_interpolate<bmode>(
+                                                sy + 1, sheight);
+                                        v0 = sx0 >= 0 && sy0 >= 0
+                                                   ? S0[sy0 * sstep + sx0]
+                                                   : bvalue[0];
+                                        v1 = sx1 >= 0 && sy0 >= 0
+                                                   ? S0[sy0 * sstep + sx1]
+                                                   : bvalue[0];
+                                        v2 = sx0 >= 0 && sy1 >= 0
+                                                   ? S0[sy1 * sstep + sx0]
+                                                   : bvalue[0];
+                                        v3 = sx1 >= 0 && sy1 >= 0
+                                                   ? S0[sy1 * sstep + sx1]
+                                                   : bvalue[0];
+                                    }
+                                    D[0] = castOp(
+                                            WT(v0 * w[0] + v1 * w[1] + v2 * w[2] +
+                                               v3 * w[3]));
+                                }
+                            }
+                        }
+                        MIDOUT_END();
+                    } else {
+                        for (; dx < X1; dx++, D += CH) {
                             int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
                             if (bmode == BMode::BORDER_CONSTANT &&
                                 (sx >= swidth || sx + 1 < 0 || sy >= sheight ||
                                  sy + 1 < 0)) {
-                                D[0] = bvalue[0];
+                                for (size_t k = 0; k < CH; k++)
+                                    D[k] = bvalue[k];
                             } else {
                                 int sx0, sx1, sy0, sy1;
-                                T v0, v1, v2, v3;
+                                const T *v0, *v1, *v2, *v3;
                                 const AT* w = wtab + FXY[dx] * 4;
                                 if (bmode == BMode::BORDER_REPLICATE) {
                                     sx0 = saturate(sx, 0, swidth);
                                     sx1 = saturate(sx + 1, 0, swidth);
                                     sy0 = saturate(sy, 0, sheight);
                                     sy1 = saturate(sy + 1, 0, sheight);
-                                    v0 = S0[sy0 * sstep + sx0];
-                                    v1 = S0[sy0 * sstep + sx1];
-                                    v2 = S0[sy1 * sstep + sx0];
-                                    v3 = S0[sy1 * sstep + sx1];
-                                } else {
+                                    v0 = S0 + sy0 * sstep + sx0 * CH;
+                                    v1 = S0 + sy0 * sstep + sx1 * CH;
+                                    v2 = S0 + sy1 * sstep + sx0 * CH;
+                                    v3 = S0 + sy1 * sstep + sx1 * CH;
+                                } else if (
+                                        bmode == BMode::BORDER_TRANSPARENT &&
+                                        ((unsigned)sx >= (unsigned)(swidth - 1) ||
+                                         (unsigned)sy >= (unsigned)(sheight - 1)))
+                                    continue;
+                                else {
                                     sx0 = border_interpolate<bmode>(sx, swidth);
                                     sx1 = border_interpolate<bmode>(sx + 1, swidth);
                                     sy0 = border_interpolate<bmode>(sy, sheight);
-                                    sy1 = border_interpolate<bmode>(sy + 1,
-                                                                    sheight);
+                                    sy1 = border_interpolate<bmode>(sy + 1, sheight);
                                     v0 = sx0 >= 0 && sy0 >= 0
-                                                 ? S0[sy0 * sstep + sx0]
-                                                 : bvalue[0];
+                                               ? S0 + sy0 * sstep + sx0 * CH
+                                               : &bvalue[0];
                                     v1 = sx1 >= 0 && sy0 >= 0
-                                                 ? S0[sy0 * sstep + sx1]
-                                                 : bvalue[0];
+                                               ? S0 + sy0 * sstep + sx1 * CH
+                                               : &bvalue[0];
                                     v2 = sx0 >= 0 && sy1 >= 0
-                                                 ? S0[sy1 * sstep + sx0]
-                                                 : bvalue[0];
+                                               ? S0 + sy1 * sstep + sx0 * CH
+                                               : &bvalue[0];
                                     v3 = sx1 >= 0 && sy1 >= 0
-                                                 ? S0[sy1 * sstep + sx1]
-                                                 : bvalue[0];
+                                               ? S0 + sy1 * sstep + sx1 * CH
+                                               : &bvalue[0];
                                 }
-                                D[0] = castOp(WT(v0 * w[0] + v1 * w[1] + v2 * w[2] +
-                                                 v3 * w[3]));
-                            }
-                        }
-                    }
-                    MIDOUT_END();
-                } else {
-                    for (; dx < X1; dx++, D += CH) {
-                        int sx = XY[dx * 2], sy = XY[dx * 2 + 1];
-                        if (bmode == BMode::BORDER_CONSTANT &&
-                            (sx >= swidth || sx + 1 < 0 || sy >= sheight ||
-                             sy + 1 < 0)) {
-                            for (size_t k = 0; k < CH; k++)
-                                D[k] = bvalue[k];
-                        } else {
-                            int sx0, sx1, sy0, sy1;
-                            const T *v0, *v1, *v2, *v3;
-                            const AT* w = wtab + FXY[dx] * 4;
-                            if (bmode == BMode::BORDER_REPLICATE) {
-                                sx0 = saturate(sx, 0, swidth);
-                                sx1 = saturate(sx + 1, 0, swidth);
-                                sy0 = saturate(sy, 0, sheight);
-                                sy1 = saturate(sy + 1, 0, sheight);
-                                v0 = S0 + sy0 * sstep + sx0 * CH;
-                                v1 = S0 + sy0 * sstep + sx1 * CH;
-                                v2 = S0 + sy1 * sstep + sx0 * CH;
-                                v3 = S0 + sy1 * sstep + sx1 * CH;
-                            } else if (bmode == BMode::BORDER_TRANSPARENT &&
-                                       ((unsigned)sx >=
-                                                (unsigned)(swidth - 1) ||
-                                        (unsigned)sy >=
-                                                (unsigned)(sheight - 1)))
-                                continue;
-                            else {
-                                sx0 = border_interpolate<bmode>(sx, swidth);
-                                sx1 = border_interpolate<bmode>(sx + 1, swidth);
-                                sy0 = border_interpolate<bmode>(sy, sheight);
-                                sy1 = border_interpolate<bmode>(sy + 1,
-                                                                sheight);
-                                v0 = sx0 >= 0 && sy0 >= 0
-                                             ? S0 + sy0 * sstep + sx0 * CH
-                                             : &bvalue[0];
-                                v1 = sx1 >= 0 && sy0 >= 0
-                                             ? S0 + sy0 * sstep + sx1 * CH
-                                             : &bvalue[0];
-                                v2 = sx0 >= 0 && sy1 >= 0
-                                             ? S0 + sy1 * sstep + sx0 * CH
-                                             : &bvalue[0];
-                                v3 = sx1 >= 0 && sy1 >= 0
-                                             ? S0 + sy1 * sstep + sx1 * CH
-                                             : &bvalue[0];
-                            }
 
-                            for (size_t k = 0; k < CH; k++) {
-                                D[k] = castOp(WT(v0[k] * w[0] + v1[k] * w[1] +
-                                                 v2[k] * w[2] + v3[k] * w[3]));
+                                for (size_t k = 0; k < CH; k++) {
+                                    D[k] = castOp(
+                                            WT(v0[k] * w[0] + v1[k] * w[1] +
+                                               v2[k] * w[2] + v3[k] * w[3]));
+                                }
                             }
                         }
                     }
@@ -641,15 +621,13 @@ static void remapBilinear(const Mat<T>& _src, Mat<T>& _dst,
             }
         }
     }
-    }
     MIDOUT_END();
 }
 
-template <class CastOp, typename AT, int ONE, typename T, BorderMode bmode,
-          size_t CH>
-static void remapLanczos4(const Mat<T>& _src, Mat<T>& _dst,
-                          const Mat<short>& _xy, const Mat<ushort>& _fxy,
-                          const void* _wtab, const T* bvalue) {
+template <class CastOp, typename AT, int ONE, typename T, BorderMode bmode, size_t CH>
+static void remapLanczos4(
+        const Mat<T>& _src, Mat<T>& _dst, const Mat<short>& _xy,
+        const Mat<ushort>& _fxy, const void* _wtab, const T* bvalue) {
     typedef typename CastOp::type1 WT;
     const AT* wtab = (const AT*)_wtab;
     const T* S0 = _src.ptr();
@@ -658,8 +636,7 @@ static void remapLanczos4(const Mat<T>& _src, Mat<T>& _dst,
     CastOp castOp;
     int swidth = _src.width(), sheight = _src.height();
     int dwidth = _dst.width(), dheight = _dst.height();
-    unsigned width1 = std::max(swidth - 7, 0),
-             height1 = std::max(sheight - 7, 0);
+    unsigned width1 = std::max(swidth - 7, 0), height1 = std::max(sheight - 7, 0);
     if (_dst.is_continuous() && _xy.is_continuous() && _fxy.is_continuous()) {
         dwidth *= dheight;
         dheight = 1;
@@ -678,9 +655,8 @@ static void remapLanczos4(const Mat<T>& _src, Mat<T>& _dst,
                     WT sum = 0;
                     for (int r = 0; r < 8; r++, S += sstep, w += 8)
                         sum += S[0] * w[0] + S[CH] * w[1] + S[CH * 2] * w[2] +
-                               S[CH * 3] * w[3] + S[CH * 4] * w[4] +
-                               S[CH * 5] * w[5] + S[CH * 6] * w[6] +
-                               S[CH * 7] * w[7];
+                               S[CH * 3] * w[3] + S[CH * 4] * w[4] + S[CH * 5] * w[5] +
+                               S[CH * 6] * w[6] + S[CH * 7] * w[7];
                     w -= 64;
                     S -= sstep * 8 - 1;
                     D[k] = castOp(sum);
@@ -692,8 +668,7 @@ static void remapLanczos4(const Mat<T>& _src, Mat<T>& _dst,
                      (unsigned)(sy + 3) >= (unsigned)sheight))
                     continue;
                 if (bmode == BMode::BORDER_CONSTANT &&
-                    (sx >= swidth || sx + 8 <= 0 || sy >= sheight ||
-                     sy + 8 <= 0)) {
+                    (sx >= swidth || sx + 8 <= 0 || sy >= sheight || sy + 8 <= 0)) {
                     for (size_t i = 0; i < CH; i++) {
                         D[i] = bvalue[i];
                     }
@@ -735,15 +710,15 @@ static void remapLanczos4(const Mat<T>& _src, Mat<T>& _dst,
     }
 }
 
-template <typename T, InterpolationMode imode, BorderMode bmode, size_t CH,
-          typename RemapVec>
+template <
+        typename T, InterpolationMode imode, BorderMode bmode, size_t CH,
+        typename RemapVec>
 struct RemapFuncHolder;
 
-template <InterpolationMode imode, BorderMode bmode, size_t CH,
-          typename RemapVec>
+template <InterpolationMode imode, BorderMode bmode, size_t CH, typename RemapVec>
 struct RemapFuncHolder<uchar, imode, bmode, CH, RemapVec> {
-    static void get_funcs(RemapNNFunc<uchar, bmode>& nnfunc,
-                          RemapFunc<uchar, bmode>& ifunc) {
+    static void get_funcs(
+            RemapNNFunc<uchar, bmode>& nnfunc, RemapFunc<uchar, bmode>& ifunc) {
         switch (imode) {
             case IMode::INTER_NEAREST:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(0)) {
@@ -754,24 +729,24 @@ struct RemapFuncHolder<uchar, imode, bmode, CH, RemapVec> {
             case IMode::INTER_LINEAR:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(1)) {
                     ifunc = remapBilinear<
-                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>,
-                            RemapVec, short, uchar, bmode, CH>;
+                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec,
+                            short, uchar, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
             case IMode::INTER_CUBIC:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(2)) {
                     ifunc = remapBicubic<
-                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>,
-                            short, INTER_REMAP_COEF_SCALE, uchar, bmode, CH>;
+                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short,
+                            INTER_REMAP_COEF_SCALE, uchar, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
             case IMode::INTER_LANCZOS4:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(3)) {
                     ifunc = remapLanczos4<
-                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>,
-                            short, INTER_REMAP_COEF_SCALE, uchar, bmode, CH>;
+                            FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short,
+                            INTER_REMAP_COEF_SCALE, uchar, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
@@ -781,11 +756,10 @@ struct RemapFuncHolder<uchar, imode, bmode, CH, RemapVec> {
     }
 };
 
-template <InterpolationMode imode, BorderMode bmode, size_t CH,
-          typename RemapVec>
+template <InterpolationMode imode, BorderMode bmode, size_t CH, typename RemapVec>
 struct RemapFuncHolder<float, imode, bmode, CH, RemapVec> {
-    static void get_funcs(RemapNNFunc<float, bmode>& nnfunc,
-                          RemapFunc<float, bmode>& ifunc) {
+    static void get_funcs(
+            RemapNNFunc<float, bmode>& nnfunc, RemapFunc<float, bmode>& ifunc) {
         switch (imode) {
             case IMode::INTER_NEAREST:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(0)) {
@@ -795,22 +769,22 @@ struct RemapFuncHolder<float, imode, bmode, CH, RemapVec> {
                 break;
             case IMode::INTER_LINEAR:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(1)) {
-                    ifunc = remapBilinear<Cast<float, float>, RemapVec, float,
-                                          float, bmode, CH>;
+                    ifunc = remapBilinear<
+                            Cast<float, float>, RemapVec, float, float, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
             case IMode::INTER_CUBIC:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(2)) {
-                    ifunc = remapBicubic<Cast<float, float>, float, 1, float,
-                                         bmode, CH>;
+                    ifunc = remapBicubic<
+                            Cast<float, float>, float, 1, float, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
             case IMode::INTER_LANCZOS4:
                 MIDOUT_BEGIN(megdnn_warp, midout_iv(3)) {
-                    ifunc = remapLanczos4<Cast<float, float>, float, 1, float,
-                                          bmode, CH>;
+                    ifunc = remapLanczos4<
+                            Cast<float, float>, float, 1, float, bmode, CH>;
                 }
                 MIDOUT_END();
                 break;
@@ -820,13 +794,15 @@ struct RemapFuncHolder<float, imode, bmode, CH, RemapVec> {
     }
 };
 
-template <typename T, InterpolationMode imode, BorderMode bmode, size_t CH,
-          typename RemapVec>
+template <
+        typename T, InterpolationMode imode, BorderMode bmode, size_t CH,
+        typename RemapVec>
 #if MEGDNN_X86
 MEGDNN_ATTRIBUTE_TARGET("sse3")
 #endif
-void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
-           const T* bvalue) {
+void remap(
+        const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
+        const T* bvalue) {
     RemapNNFunc<T, bmode> nnfunc = 0;
     RemapFunc<T, bmode> ifunc = 0;
     bool fixpt = std::is_same<T, uchar>::value;
@@ -864,8 +840,7 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
                     x1 = 0;
 #if MEGDNN_X86
                     __m128i sA_data, d_data;
-                    __m128i v_INTER_TAB_SIZE2 =
-                            _mm_set1_epi16(INTER_TAB_SIZE2 - 1);
+                    __m128i v_INTER_TAB_SIZE2 = _mm_set1_epi16(INTER_TAB_SIZE2 - 1);
 
                     for (; x1 <= bcols - 8; x1 += 8) {
                         __m128i const* src = (__m128i const*)(sA + x1);
@@ -878,8 +853,7 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
 #elif MEGDNN_AARCH64 || MEGDNN_ARMV7
                     uint16x8_t v_scale = vdupq_n_u16(INTER_TAB_SIZE2 - 1);
                     for (; x1 <= bcols - 8; x1 += 8)
-                        vst1q_u16(A + x1,
-                                  vandq_u16(vld1q_u16(sA + x1), v_scale));
+                        vst1q_u16(A + x1, vandq_u16(vld1q_u16(sA + x1), v_scale));
 #endif
                     for (; x1 < bcols; ++x1)
                         A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2 - 1));
@@ -889,24 +863,23 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
     }
 }
 
-#define DISPATCH_CHANNEL(_imode, _bmode, _ch, _cb)                         \
-    switch (_ch) {                                                         \
-        case 1: {                                                          \
-            _cb(_imode, _bmode, 1);                                        \
-            break;                                                         \
-        }                                                                  \
-        case 2: {                                                          \
-            _cb(_imode, _bmode, 2);                                        \
-            break;                                                         \
-        }                                                                  \
-        case 3: {                                                          \
-            _cb(_imode, _bmode, 3);                                        \
-            break;                                                         \
-        }                                                                  \
-        default: {                                                         \
-            megdnn_assert(0, "unsupport channels: %zu, only supprt 1/2/3", \
-                          _ch);                                            \
-        }                                                                  \
+#define DISPATCH_CHANNEL(_imode, _bmode, _ch, _cb)                               \
+    switch (_ch) {                                                               \
+        case 1: {                                                                \
+            _cb(_imode, _bmode, 1);                                              \
+            break;                                                               \
+        }                                                                        \
+        case 2: {                                                                \
+            _cb(_imode, _bmode, 2);                                              \
+            break;                                                               \
+        }                                                                        \
+        case 3: {                                                                \
+            _cb(_imode, _bmode, 3);                                              \
+            break;                                                               \
+        }                                                                        \
+        default: {                                                               \
+            megdnn_assert(0, "unsupport channels: %zu, only supprt 1/2/3", _ch); \
+        }                                                                        \
     }
 
 #define DISPATCH_BMODE(_imode, _bmode, _ch, _cb)                         \
@@ -931,32 +904,36 @@ void remap(const Mat<T>& src, Mat<T>& dst, Mat<short>& map1, Mat<ushort>& map2,
             DISPATCH_CHANNEL(_imode, BorderMode::CONSTANT, _ch, _cb);    \
             break;                                                       \
         }                                                                \
-        default: { megdnn_assert(0, "unsupport border mode for cv"); }   \
+        default: {                                                       \
+            megdnn_assert(0, "unsupport border mode for cv");            \
+        }                                                                \
     }
 
-#define DISPATCH_IMODE(_imode, _bmode, _ch, _cb)                              \
-    switch (_imode) {                                                         \
-        case InterpolationMode::NEAREST: {                                    \
-            DISPATCH_BMODE(InterpolationMode::NEAREST, _bmode, _ch, _cb);     \
-            break;                                                            \
-        }                                                                     \
-        case InterpolationMode::LINEAR: {                                     \
-            DISPATCH_BMODE(InterpolationMode::LINEAR, _bmode, _ch, _cb);      \
-            break;                                                            \
-        }                                                                     \
-        case InterpolationMode::AREA: {                                       \
-            DISPATCH_BMODE(InterpolationMode::AREA, _bmode, _ch, _cb);        \
-            break;                                                            \
-        }                                                                     \
-        case InterpolationMode::CUBIC: {                                      \
-            DISPATCH_BMODE(InterpolationMode::CUBIC, _bmode, _ch, _cb);       \
-            break;                                                            \
-        }                                                                     \
-        case InterpolationMode::LANCZOS4: {                                   \
-            DISPATCH_BMODE(InterpolationMode::LANCZOS4, _bmode, _ch, _cb);    \
-            break;                                                            \
-        }                                                                     \
-        default: { megdnn_assert(0, "unsupport interpolation mode for cv"); } \
+#define DISPATCH_IMODE(_imode, _bmode, _ch, _cb)                           \
+    switch (_imode) {                                                      \
+        case InterpolationMode::NEAREST: {                                 \
+            DISPATCH_BMODE(InterpolationMode::NEAREST, _bmode, _ch, _cb);  \
+            break;                                                         \
+        }                                                                  \
+        case InterpolationMode::LINEAR: {                                  \
+            DISPATCH_BMODE(InterpolationMode::LINEAR, _bmode, _ch, _cb);   \
+            break;                                                         \
+        }                                                                  \
+        case InterpolationMode::AREA: {                                    \
+            DISPATCH_BMODE(InterpolationMode::AREA, _bmode, _ch, _cb);     \
+            break;                                                         \
+        }                                                                  \
+        case InterpolationMode::CUBIC: {                                   \
+            DISPATCH_BMODE(InterpolationMode::CUBIC, _bmode, _ch, _cb);    \
+            break;                                                         \
+        }                                                                  \
+        case InterpolationMode::LANCZOS4: {                                \
+            DISPATCH_BMODE(InterpolationMode::LANCZOS4, _bmode, _ch, _cb); \
+            break;                                                         \
+        }                                                                  \
+        default: {                                                         \
+            megdnn_assert(0, "unsupport interpolation mode for cv");       \
+        }                                                                  \
     }
 
 }  // namespace warp

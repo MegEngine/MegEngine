@@ -29,17 +29,15 @@ struct pairhash {
 public:
     template <typename T, typename U>
     size_t operator()(const std::pair<T, U>& x) const {
-        return hash_pair_combine(std::hash<T>{}(x.first),
-                                 std::hash<U>{}(x.second));
+        return hash_pair_combine(std::hash<T>{}(x.first), std::hash<U>{}(x.second));
     }
 };
 }  // anonymous namespace
 
-LaunchConfig cuda::query_launch_config_for_kernel(const void* kern,
-                                                  const SmemGetter& smem) {
+LaunchConfig cuda::query_launch_config_for_kernel(
+        const void* kern, const SmemGetter& smem) {
     static std::mutex mtx;
-    static std::unordered_map<std::pair<int, const void*>, LaunchConfig,
-                              pairhash>
+    static std::unordered_map<std::pair<int, const void*>, LaunchConfig, pairhash>
             cache;
     std::lock_guard<std::mutex> _lock{mtx};
 
@@ -47,11 +45,9 @@ LaunchConfig cuda::query_launch_config_for_kernel(const void* kern,
     cuda_check(cudaGetDevice(&device));
     auto ins = cache.insert({{device, kern}, LaunchConfig{}});
     if (ins.second) {
-        ins.first->second =
-                detail::query_launch_config_for_kernel_uncached(kern, smem);
+        ins.first->second = detail::query_launch_config_for_kernel_uncached(kern, smem);
     }
     return ins.first->second;
 }
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

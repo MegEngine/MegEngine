@@ -49,9 +49,8 @@ public:
     template <int arity>
     static ElemwiseOpParamN<arity> make_elemwise_op_param(
             void* opr,
-            void (*check_layout_and_broadcast)(void*,
-                                               const TensorLayoutPtrArray&,
-                                               const TensorLayout&),
+            void (*check_layout_and_broadcast)(
+                    void*, const TensorLayoutPtrArray&, const TensorLayout&),
             const TensorNDArray& src, const TensorND& dst);
 
     //! check whether given layout is 1D contig
@@ -67,8 +66,7 @@ public:
      *
      * Note: input can be one-dimensional.
      */
-    static bool is_broadcasted_1x(const TensorLayout& layout,
-                                  Broadcast1xInfo& binfo);
+    static bool is_broadcasted_1x(const TensorLayout& layout, Broadcast1xInfo& binfo);
 
     //! check whether given layout is broadcasted scalar
     static bool is_broadcasted_scalar(const TensorLayout& layout);
@@ -79,8 +77,8 @@ public:
      * Note that Input can also be 2-dimensional, and must be [y, 1] broadacsted
      * into [y, z]; in such case x would be set to 1.
      */
-    static bool is_broadcasted_channel_like(const TensorLayout& layout,
-                                            BroadcastChannelInfo& info);
+    static bool is_broadcasted_channel_like(
+            const TensorLayout& layout, BroadcastChannelInfo& info);
 
     /*!
      * \brief check whether layout matches BroadcastChannelInfo
@@ -89,17 +87,16 @@ public:
      * broadacsted into [x, y, z]
      */
     template <size_t slice_size>
-    static bool is_broadcastedx_channel_like(const TensorLayout& layout,
-                                             BroadcastChannelInfo& info);
+    static bool is_broadcastedx_channel_like(
+            const TensorLayout& layout, BroadcastChannelInfo& info);
 };
 
 class ElemwiseForwardImplHelper : public ElemwiseForward,
                                   protected ElemwiseLayoutHelper {
-    static void call_check_layout_and_broadcast(void* opr,
-                                                const TensorLayoutPtrArray& src,
-                                                const TensorLayout& dst) {
-        return static_cast<ElemwiseForwardImplHelper*>(opr)
-                ->check_layout_and_broadcast(src, dst);
+    static void call_check_layout_and_broadcast(
+            void* opr, const TensorLayoutPtrArray& src, const TensorLayout& dst) {
+        return static_cast<ElemwiseForwardImplHelper*>(opr)->check_layout_and_broadcast(
+                src, dst);
     }
 
 protected:

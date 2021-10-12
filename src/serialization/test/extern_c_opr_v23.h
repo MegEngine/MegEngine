@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #define MGB_EXTERN_C_OPR_VERSION 0x23
-#define MGB_TENSOR_MAX_NDIM 8
+#define MGB_TENSOR_MAX_NDIM      8
 
 //! data types
 typedef enum MGBDType { MGB_DTYPE_FLOAT32, MGB_DTYPE_INT32 } MGBDType;
@@ -69,12 +69,13 @@ typedef struct MGBOprDesc {
     int (*is_same)(const struct MGBOprDesc* self, const struct MGBOprDesc* rhs);
 
     //! perform the computation
-    void (*execute)(const struct MGBOprDesc* self, const MGBTensor* input,
-                    MGBTensor* output);
+    void (*execute)(
+            const struct MGBOprDesc* self, const MGBTensor* input, MGBTensor* output);
 
     //! infer output shapes from input shapes
-    void (*infer_shape)(const struct MGBOprDesc* self,
-                        const MGBTensorShape* input, MGBTensorShape* output);
+    void (*infer_shape)(
+            const struct MGBOprDesc* self, const MGBTensorShape* input,
+            MGBTensorShape* output);
 
     //! custom user data to be associated with this descriptor
     void* user_data;
@@ -95,8 +96,7 @@ typedef struct MGBOprLoader {
     const char* name;
 
     //! create a new descriptor from saved buffer
-    MGBOprDesc* (*create_desc)(size_t nr_input, const void* buf,
-                               size_t buf_len);
+    MGBOprDesc* (*create_desc)(size_t nr_input, const void* buf, size_t buf_len);
 } MGBOprLoader;
 
 //! APIs provided by megbrain
@@ -118,8 +118,7 @@ typedef struct MGBExternCOprApi {
 } MGBExternCOprApi;
 
 //! get API ptr for specific version; return nullptr if version mismatch
-MGB_PUBLIC const MGBExternCOprApi* mgb_get_extern_c_opr_api_versioned(
-        int version);
+MGB_PUBLIC const MGBExternCOprApi* mgb_get_extern_c_opr_api_versioned(int version);
 
 #ifdef __cplusplus
 }

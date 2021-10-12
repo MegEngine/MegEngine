@@ -181,8 +181,7 @@ __device__ inline int border_interpolate<BORDER_CONSTANT>(int p, int len) {
 template <InterpolationMode imode>
 __device__ void interpolate_coefs(float x, float* coeffs);
 template <>
-__device__ inline void interpolate_coefs<INTER_NEAREST>(float x,
-                                                        float* coeffs) {}
+__device__ inline void interpolate_coefs<INTER_NEAREST>(float x, float* coeffs) {}
 template <>
 __device__ inline void interpolate_coefs<INTER_LINEAR>(float x, float* coeffs) {
     interpolate_linear_coefs(x, coeffs);
@@ -192,8 +191,7 @@ __device__ inline void interpolate_coefs<INTER_CUBIC>(float x, float* coeffs) {
     megdnn::resize::interpolate_cubic(x, coeffs);
 }
 template <>
-__device__ inline void interpolate_coefs<INTER_LANCZOS4>(float x,
-                                                         float* coeffs) {
+__device__ inline void interpolate_coefs<INTER_LANCZOS4>(float x, float* coeffs) {
     interpolate_lanczos4_coefs(x, coeffs);
 }
 

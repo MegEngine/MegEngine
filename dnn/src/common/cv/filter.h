@@ -66,7 +66,7 @@
 
 #include <type_traits>
 
-namespace megdnn  {
+namespace megdnn {
 namespace megcv {
 namespace filter_common {
 
@@ -92,8 +92,8 @@ struct RowNoVec {
      * \param width The width of the src
      * \param cn The channel size
      */
-    int operator()(const uchar* /*src*/, uchar* /*dst*/, int /*width*/,
-                   int /*cn*/) const {
+    int operator()(
+            const uchar* /*src*/, uchar* /*dst*/, int /*width*/, int /*cn*/) const {
         return 0;
     }
 };
@@ -117,8 +117,8 @@ struct ColumnNoVec {
      * \param count The count of rows that this column kernel processed.
      * \param width The width of the src
      */
-    int operator()(const uchar** /*src*/, uchar* /*dst*/, int& /*count*/,
-                   int /*width*/) const {
+    int operator()(const uchar** /*src*/, uchar* /*dst*/, int& /*count*/, int /*width*/)
+            const {
         return 0;
     }
 };
@@ -148,8 +148,7 @@ public:
 
     //! the filtering operator. Must be overridden in the derived classes. The
     //! horizontal border interpolation is done outside of the class.
-    virtual void operator()(const uchar* src, uchar* dst, int width,
-                            int cn) = 0;
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
 
     //! The size of the kernel
     int ksize;
@@ -164,8 +163,8 @@ public:
 
     //! the filtering operator. Must be overridden in the derived classes. The
     //! vertical border interpolation is done outside of the class.
-    virtual void operator()(const uchar** src, uchar* dst, int dststep,
-                            int dstcount, int width) = 0;
+    virtual void operator()(
+            const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
     //! resets the internal buffers, if any
     virtual void reset() {}
 
@@ -184,8 +183,7 @@ public:
  */
 template <typename ST, typename DT, class VecOp>
 struct RowFilter : public BaseRowFilter {
-    RowFilter(const Mat<DT>& kernel_, int anchor_,
-              const VecOp& vec_op_ = VecOp()) {
+    RowFilter(const Mat<DT>& kernel_, int anchor_, const VecOp& vec_op_ = VecOp()) {
         anchor = anchor_;
         kernel = kernel_.clone();
         ksize = kernel.cols();
@@ -240,8 +238,8 @@ struct RowFilter : public BaseRowFilter {
 
 template <typename ST, typename DT, class VecOp>
 struct SymmRowSmallFilter : public RowFilter<ST, DT, VecOp> {
-    SymmRowSmallFilter(const Mat<DT>& kernel_, int anchor_,
-                       const VecOp& vec_op_ = VecOp())
+    SymmRowSmallFilter(
+            const Mat<DT>& kernel_, int anchor_, const VecOp& vec_op_ = VecOp())
             : RowFilter<ST, DT, VecOp>(kernel_, anchor_, vec_op_) {}
 
     void operator()(const uchar* src, uchar* dst, int width, int cn) {
@@ -287,7 +285,6 @@ struct SymmRowSmallFilter : public RowFilter<ST, DT, VecOp> {
                 s0 += kx[k] * (S[j] + S[-j]);
             D[i] = s0;
         }
-
     }
 };
 
@@ -296,9 +293,9 @@ struct ColumnFilter : public BaseColumnFilter {
     typedef typename CastOp::type1 ST;
     typedef typename CastOp::rtype DT;
 
-    ColumnFilter(const Mat<ST>& kernel_, int anchor_,
-                     const CastOp& cast_op_ = CastOp(),
-                     const VecOp& vec_op_ = VecOp()) {
+    ColumnFilter(
+            const Mat<ST>& kernel_, int anchor_, const CastOp& cast_op_ = CastOp(),
+            const VecOp& vec_op_ = VecOp()) {
         kernel = kernel_.clone();
         anchor = anchor_;
         ksize = kernel.cols();
@@ -306,43 +303,39 @@ struct ColumnFilter : public BaseColumnFilter {
         vec_op = vec_op_;
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
-    {
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) {
         const ST* ky = this->kernel.ptr();
         int i = 0, k;
         CastOp castOp = this->cast_op;
         {
-            for( ; count > 0; count--, dst += dststep, src++ )
-            {
+            for (; count > 0; count--, dst += dststep, src++) {
                 DT* D = (DT*)dst;
                 i = (this->vec_op)(src, dst, count, width);
 #if MEGCV_ENABLE_UNROLLED
-                for( ; i <= width - 4; i += 4 )
-                {
+                for (; i <= width - 4; i += 4) {
                     ST f = ky[0];
                     const ST* S = (const ST*)src[0] + i;
-                    ST s0 = f*S[0], s1 = f*S[1],
-                       s2 = f*S[2], s3 = f*S[3];
+                    ST s0 = f * S[0], s1 = f * S[1], s2 = f * S[2], s3 = f * S[3];
 
-                    for( k = 1; k < ksize; k++ )
-                    {
+                    for (k = 1; k < ksize; k++) {
                         S = (const ST*)src[k] + i;
                         f = ky[k];
-                        s0 += f*S[0];
-                        s1 += f*S[1];
-                        s2 += f*S[2];
-                        s3 += f*S[3];
+                        s0 += f * S[0];
+                        s1 += f * S[1];
+                        s2 += f * S[2];
+                        s3 += f * S[3];
                     }
 
-                    D[i] = castOp(s0); D[i+1] = castOp(s1);
-                    D[i+2] = castOp(s2); D[i+3] = castOp(s3);
+                    D[i] = castOp(s0);
+                    D[i + 1] = castOp(s1);
+                    D[i + 2] = castOp(s2);
+                    D[i + 3] = castOp(s3);
                 }
 #endif
-                for( ; i < width; i++ )
-                {
+                for (; i < width; i++) {
                     ST s0 = 0;
-                    for( k = 0; k < ksize; k++ ) {
-                        s0 += ky[k]* ((const ST*)src[k])[i];
+                    for (k = 0; k < ksize; k++) {
+                        s0 += ky[k] * ((const ST*)src[k])[i];
                     }
                     D[i] = castOp(s0);
                 }
@@ -360,15 +353,12 @@ struct SymmColumnFilter : public ColumnFilter<CastOp, VecOp> {
     typedef typename CastOp::type1 ST;
     typedef typename CastOp::rtype DT;
 
-    SymmColumnFilter(const Mat<ST>& kernel_, int anchor_,
-                     const CastOp& cast_op_ = CastOp(),
-                     const VecOp& vec_op_ = VecOp())
-            : ColumnFilter<CastOp, VecOp>(kernel_, anchor_, cast_op_,
-                                              vec_op_) {
-    }
+    SymmColumnFilter(
+            const Mat<ST>& kernel_, int anchor_, const CastOp& cast_op_ = CastOp(),
+            const VecOp& vec_op_ = VecOp())
+            : ColumnFilter<CastOp, VecOp>(kernel_, anchor_, cast_op_, vec_op_) {}
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count,
-                    int width) {
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) {
         int ksize2 = this->ksize / 2;
         const ST* ky = this->kernel.ptr() + ksize2;
         int i, k;
@@ -402,8 +392,7 @@ struct SymmColumnFilter : public ColumnFilter<CastOp, VecOp> {
             for (; i < width; i++) {
                 ST s0 = ky[0] * ((const ST*)src[0])[i];
                 for (k = 1; k <= ksize2; k++) {
-                    s0 += ky[k] *
-                          (((const ST*)src[k])[i] + ((const ST*)src[-k])[i]);
+                    s0 += ky[k] * (((const ST*)src[k])[i] + ((const ST*)src[-k])[i]);
                 }
                 D[i] = this->cast_op(s0);
             }
@@ -416,17 +405,15 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp> {
     typedef typename CastOp::type1 ST;
     typedef typename CastOp::rtype DT;
 
-    SymmColumnSmallFilter(const Mat<ST>& kernel_, int anchor_,
-                          const CastOp& cast_op_ = CastOp(),
-                          const VecOp& vec_op_ = VecOp())
-            : SymmColumnFilter<CastOp, VecOp>(kernel_, anchor_, cast_op_,
-                                              vec_op_) {
+    SymmColumnSmallFilter(
+            const Mat<ST>& kernel_, int anchor_, const CastOp& cast_op_ = CastOp(),
+            const VecOp& vec_op_ = VecOp())
+            : SymmColumnFilter<CastOp, VecOp>(kernel_, anchor_, cast_op_, vec_op_) {
         //! \warning Only process if the kernel size is 3
         megdnn_assert(this->ksize == 3);
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count,
-                    int width) {
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) {
         int ksize2 = this->ksize / 2;
         const ST* ky = this->kernel.ptr() + ksize2;
         int i;
@@ -488,8 +475,9 @@ public:
      * \brief Init the filter and border.
      * \warning row_filter and column_filter must be non-null
      */
-    FilterEngine(BaseRowFilter* row_filter, BaseColumnFilter* column_filter,
-                 size_t ch, const ST* border_value, BorderMode bmode);
+    FilterEngine(
+            BaseRowFilter* row_filter, BaseColumnFilter* column_filter, size_t ch,
+            const ST* border_value, BorderMode bmode);
 
     //! the destructor
     ~FilterEngine();
@@ -500,8 +488,7 @@ private:
     //! starts filtering of the src image.
     void start(const Mat<ST>& src);
     //! processes the next srcCount rows of the image.
-    int proceed(const uchar* src, int srcStep, int srcCount, uchar* dst,
-                        int dstStep);
+    int proceed(const uchar* src, int srcStep, int srcCount, uchar* dst, int dstStep);
 
     //! row filter filter
     BaseRowFilter* m_row_filter;

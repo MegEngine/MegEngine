@@ -11,11 +11,11 @@
 #pragma once
 
 #include "megdnn/basic_types.h"
-#include "test/common/opr_proxy.h"
 #include "megdnn/tensor_format.h"
+#include "src/rocm/utils.h"
+#include "test/common/opr_proxy.h"
 #include "test/common/rng.h"
 #include "test/rocm/fixture.h"
-#include "src/rocm/utils.h"
 
 #include "hip_header.h"
 
@@ -43,9 +43,7 @@ public:
     float exec(TensorLayoutArray layouts);
 
     //! disabiguate overloaded exec
-    float execs(const TensorShapeArray& shapes) {
-        return exec(make_layouts(shapes));
-    }
+    float execs(const TensorShapeArray& shapes) { return exec(make_layouts(shapes)); }
     float execl(const TensorLayoutArray& layouts) { return exec(layouts); }
     ROCMBenchmarker& set_param(Param param) {
         m_param = param;
@@ -75,11 +73,11 @@ public:
     TensorLayoutArray make_layouts(const TensorShapeArray& shapes) {
         TensorLayoutArray layouts(shapes.size());
         for (size_t i = 0; i < shapes.size(); ++i) {
-            DType dt = (m_dtype.find(i) != m_dtype.end() ? m_dtype[i]
-                                                         : dtype::Float32());
-            TensorFormat fmt = (m_fmt.find(i) != m_fmt.end()
-                                        ? m_fmt[i]
-                                        : DefaultTensorFormat::make());
+            DType dt =
+                    (m_dtype.find(i) != m_dtype.end() ? m_dtype[i] : dtype::Float32());
+            TensorFormat fmt =
+                    (m_fmt.find(i) != m_fmt.end() ? m_fmt[i]
+                                                  : DefaultTensorFormat::make());
             layouts[i] = TensorLayout(shapes[i], dt, fmt);
         }
         return layouts;

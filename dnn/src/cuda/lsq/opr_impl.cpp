@@ -16,13 +16,13 @@
 namespace megdnn {
 namespace cuda {
 
-void LSQForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                          _megdnn_tensor_in zero_point,
-                          _megdnn_tensor_in grad_scale,
-                          _megdnn_tensor_out output,
-                          _megdnn_workspace workspace) {
-    check_exec(input.layout, scale.layout, zero_point.layout, grad_scale.layout,
-               output.layout, workspace.size);
+void LSQForwardImpl::exec(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+        _megdnn_tensor_in grad_scale, _megdnn_tensor_out output,
+        _megdnn_workspace workspace) {
+    check_exec(
+            input.layout, scale.layout, zero_point.layout, grad_scale.layout,
+            output.layout, workspace.size);
 
     if (!input.layout.is_contiguous() || !output.layout.is_contiguous())
         return exec_noncontig(input, scale, zero_point, grad_scale, output);
@@ -38,22 +38,19 @@ void LSQForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                   \
-    if (input.layout.dtype == DType()) {                            \
-        using T = typename DTypeTrait<DType>::ctype;                \
-        run_elemwise<LSQKernOp<T>, T, 3>(ele_param, stream,         \
-                                         {input, output, m_param}); \
-        return;                                                     \
+#define cb(DType)                                                                      \
+    if (input.layout.dtype == DType()) {                                               \
+        using T = typename DTypeTrait<DType>::ctype;                                   \
+        run_elemwise<LSQKernOp<T>, T, 3>(ele_param, stream, {input, output, m_param}); \
+        return;                                                                        \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void LSQForwardImpl::exec_noncontig(_megdnn_tensor_in input,
-                                    _megdnn_tensor_in scale,
-                                    _megdnn_tensor_in zero_point,
-                                    _megdnn_tensor_in grad_scale,
-                                    _megdnn_tensor_out output) {
+void LSQForwardImpl::exec_noncontig(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+        _megdnn_tensor_in grad_scale, _megdnn_tensor_out output) {
     ElemwiseOpParamN<5> ele_param;
     ele_param[0] = output;
     ele_param[1] = input;
@@ -67,30 +64,29 @@ void LSQForwardImpl::exec_noncontig(_megdnn_tensor_in input,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                    \
-    if (input.layout.dtype == DType()) {                             \
-        using T = typename DTypeTrait<DType>::ctype;                 \
-        run_elemwise<LSQKernOpNonContig<T>, T, 5>(ele_param, stream, \
-                                                  {m_param});        \
-        return;                                                      \
+#define cb(DType)                                                                \
+    if (input.layout.dtype == DType()) {                                         \
+        using T = typename DTypeTrait<DType>::ctype;                             \
+        run_elemwise<LSQKernOpNonContig<T>, T, 5>(ele_param, stream, {m_param}); \
+        return;                                                                  \
     }
     cb(megdnn::dtype::Float32)
 #undef cb
 }
 
-void LSQBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                           _megdnn_tensor_in scale,
-                           _megdnn_tensor_in zero_point,
-                           _megdnn_tensor_in grad_scale,
-                           _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
-                           _megdnn_workspace workspace) {
-    check_exec(diff.layout, input.layout, scale.layout, zero_point.layout,
-               grad_scale.layout, grad_x.layout, grad_s.layout, workspace.size);
+void LSQBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+        _megdnn_workspace workspace) {
+    check_exec(
+            diff.layout, input.layout, scale.layout, zero_point.layout,
+            grad_scale.layout, grad_x.layout, grad_s.layout, workspace.size);
 
     if (!input.layout.is_contiguous() || !diff.layout.is_contiguous() ||
         !grad_x.layout.is_contiguous() || !grad_s.layout.is_contiguous())
-        return exec_noncontig(diff, input, scale, zero_point, grad_scale,
-                              grad_x, grad_s);
+        return exec_noncontig(
+                diff, input, scale, zero_point, grad_scale, grad_x, grad_s);
 
     ElemwiseOpParamN<3> ele_param;
     ele_param[0] = scale;
@@ -114,13 +110,10 @@ void LSQBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
 #undef cb
 }
 
-void LSQBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
-                                     _megdnn_tensor_in input,
-                                     _megdnn_tensor_in scale,
-                                     _megdnn_tensor_in zero_point,
-                                     _megdnn_tensor_in grad_scale,
-                                     _megdnn_tensor_out grad_x,
-                                     _megdnn_tensor_out grad_s) {
+void LSQBackwardImpl::exec_noncontig(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s) {
     ElemwiseOpParamN<7> ele_param;
     ele_param[0] = grad_x;
     ele_param[1] = grad_s;
@@ -136,12 +129,11 @@ void LSQBackwardImpl::exec_noncontig(_megdnn_tensor_in diff,
     auto m_param = param();
     auto stream = cuda_stream(handle());
 
-#define cb(DType)                                                       \
-    if (input.layout.dtype == DType()) {                                \
-        using T = typename DTypeTrait<DType>::ctype;                    \
-        run_elemwise<LSQBwdKernOpNonContig<T>, T, 7>(ele_param, stream, \
-                                                     {m_param});        \
-        return;                                                         \
+#define cb(DType)                                                                   \
+    if (input.layout.dtype == DType()) {                                            \
+        using T = typename DTypeTrait<DType>::ctype;                                \
+        run_elemwise<LSQBwdKernOpNonContig<T>, T, 7>(ele_param, stream, {m_param}); \
+        return;                                                                     \
     }
     cb(megdnn::dtype::Float32)
 #undef cb

@@ -21,10 +21,9 @@ template <>
 struct OprMaker<opr::ShuffleRNG, 1> {
     using Opr = opr::ShuffleRNG;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         auto out = Opr::make(inputs[0], param, config);
         return out[0].node()->owner_opr();

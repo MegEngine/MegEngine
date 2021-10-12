@@ -15,9 +15,9 @@
 namespace megdnn {
 namespace cuda {
 namespace batch_conv_bias {
-void compute_offset(int* offset, const convolution::ConvParam& param,
-                    cudaStream_t stream);
-}  // namespace batched_conv2d
+void compute_offset(
+        int* offset, const convolution::ConvParam& param, cudaStream_t stream);
+}  // namespace batch_conv_bias
 }  // namespace cuda
 }  // namespace megdnn
 

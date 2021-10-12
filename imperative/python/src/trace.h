@@ -9,20 +9,20 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./tensor.h"
 #include <stdexcept>
+#include "./tensor.h"
 
 namespace mgb::imperative::python {
 
 class TraceReadError : public std::exception {
 public:
-    explicit TraceReadError(const char * m) : message{m} {}
-    const char * what() const noexcept override {return message.c_str();}
+    explicit TraceReadError(const char* m) : message{m} {}
+    const char* what() const noexcept override { return message.c_str(); }
+
 private:
     std::string message = "";
 };
 
-
 apply_result_t apply_trace(ApplyContext& ctx);
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

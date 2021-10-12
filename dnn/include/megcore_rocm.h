@@ -23,7 +23,9 @@ struct ROCMContext {
     hipStream_t stream = nullptr;
 
     static std::atomic_bool sm_miopen_algo_search;
-    static inline bool enable_miopen_algo_search() { return sm_miopen_algo_search.load(); }
+    static inline bool enable_miopen_algo_search() {
+        return sm_miopen_algo_search.load();
+    }
     static inline void enable_miopen_algo_search(bool enable_algo_search) {
         sm_miopen_algo_search.store(enable_algo_search);
     }
@@ -40,8 +42,7 @@ megcoreStatus_t createComputingHandleWithROCMContext(
         megcoreComputingHandle_t* compHandle, megcoreDeviceHandle_t devHandle,
         unsigned int flags, const ROCMContext& ctx);
 
-megcoreStatus_t getROCMContext(megcoreComputingHandle_t handle,
-                               ROCMContext* ctx);
+megcoreStatus_t getROCMContext(megcoreComputingHandle_t handle, ROCMContext* ctx);
 
 // Set MIOpen algo search enabled or disabled
 megcoreStatus_t enableMIOpenAlgoSearch(bool enable_algo_search = true);
@@ -55,8 +56,8 @@ static inline megcoreStatus_t megcoreCreateComputingHandleWithROCMStream(
         unsigned int flags, hipStream_t stream) {
     megcore::ROCMContext ctx;
     ctx.stream = stream;
-    return megcore::createComputingHandleWithROCMContext(compHandle, devHandle,
-                                                         flags, ctx);
+    return megcore::createComputingHandleWithROCMContext(
+            compHandle, devHandle, flags, ctx);
 }
 
 static inline megcoreStatus_t megcoreGetROCMStream(

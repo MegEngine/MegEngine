@@ -69,8 +69,9 @@ TEST_F(FALLBACK, WARP_PERSPECTIVE) {
     checker.set_rng(1, &rng);
     using BMode = param::WarpPerspective::BorderMode;
     param.imode = param::WarpPerspective::InterpolationMode::LINEAR;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -102,7 +103,6 @@ TEST_F(FALLBACK, WARP_PERSPECTIFVE_NCHW_INT8) {
 TEST_F(FALLBACK, WARP_PERSPECTIFVE_NCHW_QUINT8) {
     warp_perspective::run_quint8_test(handle());
 }
-
 
 }  // namespace test
 }  // namespace megdnn

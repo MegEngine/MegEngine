@@ -47,8 +47,7 @@ class GemmInterleaved<Strategy, true> {
     size_t get_a_workspace_size() const {
         size_t M = round_up(m_strategy.block_m, m_strategy.KERNEL_H);
         size_t K = round_up(m_strategy.block_k, m_strategy.UNROLL_K);
-        return round_up(sizeof(pack_a_type) * M * K, CACHELINE_SIZE) +
-               m_align_size;
+        return round_up(sizeof(pack_a_type) * M * K, CACHELINE_SIZE) + m_align_size;
     }
 
     size_t get_b_workspace_size() const {
@@ -69,9 +68,7 @@ class GemmInterleaved<Strategy, true> {
     }
 
 public:
-    size_t get_workspace_size() const {
-        return get_bundle().total_size_in_bytes();
-    }
+    size_t get_workspace_size() const { return get_bundle().total_size_in_bytes(); }
 
     WorkspaceBundle get_bundle() const {
         return {nullptr,
@@ -79,9 +76,9 @@ public:
                  get_c_workspace_size()}};
     }
 
-    GemmInterleaved(const size_t M, const size_t N, const size_t K,
-                    const bool trA, const bool trB, const Strategy& strategy,
-                    size_t align_size = 16)
+    GemmInterleaved(
+            const size_t M, const size_t N, const size_t K, const bool trA,
+            const bool trB, const Strategy& strategy, size_t align_size = 16)
             : m_M(M),
               m_N(N),
               m_K(K),
@@ -91,9 +88,10 @@ public:
               m_align_size(align_size) {}
 
     // Actually execute the GEMM.
-    void execute(const stype* A, const size_t LDA, const stype* B,
-                 const size_t LDB, dtype* C, const size_t LDC, void* workspace,
-                 const compute_type* bias = nullptr) const {
+    void execute(
+            const stype* A, const size_t LDA, const stype* B, const size_t LDB,
+            dtype* C, const size_t LDC, void* workspace,
+            const compute_type* bias = nullptr) const {
         megdnn_assert(workspace);
         int8_t* workspace_bytes = reinterpret_cast<int8_t*>(workspace);
         intptr_t workspace_int = reinterpret_cast<intptr_t>(workspace_bytes);
@@ -104,61 +102,63 @@ public:
             diff = m_align_size - (workspace_int & (m_align_size - 1));
         }
 
-        pack_a_type* a_panel =
-                reinterpret_cast<pack_a_type*>(workspace_bytes + diff);
+        pack_a_type* a_panel = reinterpret_cast<pack_a_type*>(workspace_bytes + diff);
         stype* b_panel = reinterpret_cast<stype*>(
                 workspace_bytes + get_a_workspace_size() + diff);
 
         compute_type* c_panel = reinterpret_cast<compute_type*>(
-                workspace_bytes + get_a_workspace_size() +
-                get_b_workspace_size() + diff);
+                workspace_bytes + get_a_workspace_size() + get_b_workspace_size() +
+                diff);
 
         for (size_t k = 0; k < m_K; k += m_strategy.block_k) {
             size_t kmax = std::min(k + m_strategy.block_k, m_K);
             for (size_t m = 0; m < m_M; m += m_strategy.block_m) {
                 size_t mmax = std::min(m + m_strategy.block_m, m_M);
-                m_strategy.pack_A(a_panel, A, LDA, m, mmax, k, kmax,
-                                  m_transpose_A);
+                m_strategy.pack_A(a_panel, A, LDA, m, mmax, k, kmax, m_transpose_A);
 
                 for (size_t n = 0; n < m_N; n += m_strategy.block_n) {
                     size_t nmax = std::min(n + m_strategy.block_n, m_N);
-                    m_strategy.pack_B(b_panel, B, LDB, n, nmax, k, kmax,
-                                      m_transpose_B);
+                    m_strategy.pack_B(b_panel, B, LDB, n, nmax, k, kmax, m_transpose_B);
 
-                    m_strategy.kern(a_panel, b_panel, mmax - m, nmax - n,
-                                    kmax - k, C + m * LDC + n, LDC, k == 0,
-                                    bias, c_panel);
+                    m_strategy.kern(
+                            a_panel, b_panel, mmax - m, nmax - n, kmax - k,
+                            C + m * LDC + n, LDC, k == 0, bias, c_panel);
                 }
             }
         }
     }
     void pack_A(pack_a_type* out, const stype* in, int ldin, int y0, int ymax) {
         megdnn_assert(out);
-        megdnn_assert(m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
-                              m_K <= m_strategy.block_k,
-                      "currently we only support 1-level blocking");
-        m_strategy.pack_A(out, in, ldin, y0, ymax, 0,
-                          std::min(m_strategy.block_k, m_K), m_transpose_A);
+        megdnn_assert(
+                m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
+                        m_K <= m_strategy.block_k,
+                "currently we only support 1-level blocking");
+        m_strategy.pack_A(
+                out, in, ldin, y0, ymax, 0, std::min(m_strategy.block_k, m_K),
+                m_transpose_A);
     }
 
     void pack_B(stype* out, const stype* in, int ldin, int x0, int xmax) {
         megdnn_assert(out);
-        megdnn_assert(m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
-                              m_K <= m_strategy.block_k,
-                      "currently we only support 1-level blocking");
-        m_strategy.pack_B(out, in, ldin, x0, xmax, 0,
-                          std::min(m_strategy.block_k, m_K), m_transpose_B);
+        megdnn_assert(
+                m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
+                        m_K <= m_strategy.block_k,
+                "currently we only support 1-level blocking");
+        m_strategy.pack_B(
+                out, in, ldin, x0, xmax, 0, std::min(m_strategy.block_k, m_K),
+                m_transpose_B);
     }
 
-    void execute_naked(dtype* C, const size_t LDC, /* void* workspace,*/
-                       const void* packed_a, const void* packed_b) const {
+    void execute_naked(
+            dtype* C, const size_t LDC, /* void* workspace,*/
+            const void* packed_a, const void* packed_b) const {
         megdnn_assert(packed_a);
         megdnn_assert(packed_b);
-        megdnn_assert(m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
-                              m_K <= m_strategy.block_k,
-                      "currently we only support 1-level blocking");
-        pack_a_type* a_panel =
-                static_cast<pack_a_type*>(const_cast<void*>(packed_a));
+        megdnn_assert(
+                m_M <= m_strategy.block_m && m_N <= m_strategy.block_n &&
+                        m_K <= m_strategy.block_k,
+                "currently we only support 1-level blocking");
+        pack_a_type* a_panel = static_cast<pack_a_type*>(const_cast<void*>(packed_a));
         stype* b_panel = static_cast<stype*>(const_cast<void*>(packed_b));
         for (size_t k = 0; k < m_K; k += m_strategy.block_k) {
             size_t kmax = std::min(k + m_strategy.block_k, m_K);
@@ -166,8 +166,9 @@ public:
                 size_t mmax = std::min(m + m_strategy.block_m, m_M);
                 for (size_t n = 0; n < m_N; n += m_strategy.block_n) {
                     size_t nmax = std::min(n + m_strategy.block_n, m_N);
-                    m_strategy.kern(a_panel, b_panel, mmax - m, nmax - n,
-                                    kmax - k, C + m * LDC + n, LDC, k == 0);
+                    m_strategy.kern(
+                            a_panel, b_panel, mmax - m, nmax - n, kmax - k,
+                            C + m * LDC + n, LDC, k == 0);
                 }
             }
         }
@@ -190,12 +191,11 @@ class GemmInterleaved<Strategy, false> {
     Strategy m_strategy;
 
 public:
-    size_t get_workspace_size() const {
-        return m_strategy.get_workspace_size();
-    }
+    size_t get_workspace_size() const { return m_strategy.get_workspace_size(); }
 
-    GemmInterleaved(const size_t M, const size_t N, const size_t K,
-                    const bool trA, const bool trB, const Strategy& strategy)
+    GemmInterleaved(
+            const size_t M, const size_t N, const size_t K, const bool trA,
+            const bool trB, const Strategy& strategy)
             : m_M(M),
               m_N(N),
               m_K(K),
@@ -204,11 +204,13 @@ public:
               m_strategy(strategy) {}
 
     // Actually execute the GEMM.
-    void execute(const stype* A, const size_t LDA, const stype* B,
-                 const size_t LDB, dtype* C, const size_t LDC, void* workspace,
-                 const compute_type* bias = nullptr) const {
-        m_strategy.kern(A, LDA, B, LDB, C, LDC, m_M, m_K, m_N, bias, workspace,
-                        m_transpose_A, m_transpose_B);
+    void execute(
+            const stype* A, const size_t LDA, const stype* B, const size_t LDB,
+            dtype* C, const size_t LDC, void* workspace,
+            const compute_type* bias = nullptr) const {
+        m_strategy.kern(
+                A, LDA, B, LDB, C, LDC, m_M, m_K, m_N, bias, workspace, m_transpose_A,
+                m_transpose_B);
     }
 };
 

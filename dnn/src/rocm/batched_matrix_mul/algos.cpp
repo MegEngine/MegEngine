@@ -29,13 +29,13 @@ BatchedMatrixMulForwardImpl::AlgoPack BatchedMatrixMulForwardImpl::sm_algo_pack;
 MEGDNN_DEF_GET_ALGO_FROM_DESC(BatchedMatrixMulForwardImpl)
 
 BatchedMatrixMulForwardImpl::AlgoBase::SizeArgs::SizeArgs(
-        BatchedMatrixMulForwardImpl* o, const TensorLayout& A,
-        const TensorLayout& B, const TensorLayout& C)
+        BatchedMatrixMulForwardImpl* o, const TensorLayout& A, const TensorLayout& B,
+        const TensorLayout& C)
         : opr{o}, layout_a{A}, layout_b{B}, layout_c{C} {}
 
 BatchedMatrixMulForwardImpl::AlgoBase::ExecArgs::ExecArgs(
-        BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A,
-        _megdnn_tensor_in B, _megdnn_tensor_out C, _megdnn_workspace workspace)
+        BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A, _megdnn_tensor_in B,
+        _megdnn_tensor_out C, _megdnn_workspace workspace)
         : SizeArgs(opr, A.layout, B.layout, C.layout),
           tensor_a{A},
           tensor_b{B},
@@ -52,8 +52,8 @@ std::string BatchedMatrixMulForwardImpl::AlgoBase::SizeArgs::to_string() const {
     return ssprintf(
             "A={%zux%zu},B={%zux%zu},C={%zux%zu},Transpose A=%d,Transpose "
             "B=%d,ldA=%zu,ldB=%zu,ldC=%zu",
-            m, k, k, n, m, n, param.transposeA, param.transposeB,
-            layout_a.stride[0], layout_b.stride[0], layout_c.stride[0]);
+            m, k, k, n, m, n, param.transposeA, param.transposeB, layout_a.stride[0],
+            layout_b.stride[0], layout_c.stride[0]);
 }
 
 // vim: syntax=cpp.doxygen

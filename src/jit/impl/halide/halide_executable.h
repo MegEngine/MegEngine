@@ -59,8 +59,8 @@ public:
         int (*device_release)(void* user_context) = nullptr;
 
         void swap(FunctionHandle& rhs) {
-            using T = std::aligned_storage_t<sizeof(FunctionHandle),
-                                             alignof(FunctionHandle)>;
+            using T = std::aligned_storage_t<
+                    sizeof(FunctionHandle), alignof(FunctionHandle)>;
             T tmp;
             tmp = *reinterpret_cast<T*>(this);
             *reinterpret_cast<T*>(this) = reinterpret_cast<T&>(rhs);
@@ -130,8 +130,9 @@ public:
                 thin_function<std::unique_ptr<TargetTraitUserData>()> maker);
     };
 
-    HalideExecutable(std::shared_ptr<TargetTrait> trait,
-                     const InternalGraph& graph, const JITExecutor::Args& args);
+    HalideExecutable(
+            std::shared_ptr<TargetTrait> trait, const InternalGraph& graph,
+            const JITExecutor::Args& args);
     ~HalideExecutable();
 
     void execute(JITExecutor* fusion_opr) override;
@@ -152,16 +153,16 @@ private:
     SmallVector<std::pair<size_t, ast_hl::AstNodePtr>> m_value_inputs;
 
     std::mutex m_mtx;
-    std::unordered_map<TargetTrait::FeatureSet,
-                       std::pair<std::mutex, FunctionHandle>>
+    std::unordered_map<TargetTrait::FeatureSet, std::pair<std::mutex, FunctionHandle>>
             m_feature_set2func;
     CompNode::UnorderedMap<std::atomic<FunctionHandle*>> m_cn2func;
 
     mutable std::unique_ptr<TargetTraitUserData> m_target_trait_user_data;
     mutable std::mutex m_target_trait_user_data_mtx;
 
-    void invoke(void* user_context, const FunctionHandle& handle,
-                const VarNodeArray& inputs, VarNode* output);
+    void invoke(
+            void* user_context, const FunctionHandle& handle,
+            const VarNodeArray& inputs, VarNode* output);
     static ast_hl::AstNodePtr mgb_var_to_halide_buffer(VarNode* var);
 
     //! prepare args and call TargetTrait::compile_and_load for given comp node

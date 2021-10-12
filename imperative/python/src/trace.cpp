@@ -30,7 +30,8 @@ apply_result_t apply_trace(ApplyContext& ctx) {
         }
         py::object pyout = py::reinterpret_steal<py::object>(
                 PyObject_Call(cpp_apply_backward_varnode, args.ptr(), nullptr));
-        if (!pyout) throw py::error_already_set();
+        if (!pyout)
+            throw py::error_already_set();
 
         // assumption: python function always returns PyList
         auto tup = py::reinterpret_borrow<py::list>(pyout);
@@ -47,7 +48,8 @@ apply_result_t apply_trace(ApplyContext& ctx) {
         args[i + 1] = TensorWrapper::make(ctx.args[i]->shared_from_this());
     }
     auto pyout = PyObject_Call(cpp_apply_with_tracing, args.ptr(), nullptr);
-    if (!pyout) throw py::error_already_set();
+    if (!pyout)
+        throw py::error_already_set();
 
     // assumption: python function always returns PyList
     auto tup = py::reinterpret_steal<py::list>(pyout);
@@ -58,4 +60,4 @@ apply_result_t apply_trace(ApplyContext& ctx) {
     return outputs;
 }
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

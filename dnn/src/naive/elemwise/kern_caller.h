@@ -17,15 +17,13 @@
 namespace megdnn {
 namespace naive {
 
-    template<int arity, class KernImpl>
-    struct ElemArithKernCaller {
-        typedef typename KernImpl::ctype ctype;
-        static void run(ctype *dest, const ElemwiseOpParamN<arity> &param);
-    };
+template <int arity, class KernImpl>
+struct ElemArithKernCaller {
+    typedef typename KernImpl::ctype ctype;
+    static void run(ctype* dest, const ElemwiseOpParamN<arity>& param);
+};
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen
-
-

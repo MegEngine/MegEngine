@@ -55,17 +55,16 @@ private:
     };
 
     struct OprReplaceInfo {
-        OperatorNodeBase
-                *recomp = nullptr,  //!< recomp operator from replaced input
-                *dup = nullptr;     //!< duplicated operator due to discarding
+        OperatorNodeBase *recomp = nullptr,  //!< recomp operator from replaced input
+                *dup = nullptr;              //!< duplicated operator due to discarding
     };
 
     //! map from original operator to its replace info; used for sanity check
     ThinHashMap<OperatorNodeBase*, OprReplaceInfo> m_opr2replace_info;
 
     //! map from thread ID to corresponding ModifyActionPlanner as a worker
-    std::unordered_map<std::thread::id,
-                       std::unique_ptr<ModifyActionPlanner, InternalDeleter>>
+    std::unordered_map<
+            std::thread::id, std::unique_ptr<ModifyActionPlanner, InternalDeleter>>
             m_thread2planner;
 
     //! thread pool to run ModifyActionPlanner
@@ -77,7 +76,8 @@ private:
     void reset_opr_seq(const OprNodeArray& oprseq);
 
     //! search for best action based on *cn2oprseq*
-    SeqModifyAction search_action(const CompNode::UnorderedMap<OprNodeArray>* cn2oprseq);
+    SeqModifyAction search_action(
+            const CompNode::UnorderedMap<OprNodeArray>* cn2oprseq);
 
     //! apply action and store result to m_var_map
     void apply_action(SeqModifyAction& action, const OprNodeArray& oprseq);

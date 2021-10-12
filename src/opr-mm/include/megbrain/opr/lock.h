@@ -18,72 +18,67 @@ namespace mgb {
 namespace opr {
 
 namespace intl {
-    MGB_DEFINE_CLS_WITH_SUPER(LockBase, ForwardInputToOutput) // {
-        public:
-            enum Action {
-                ACQUIRE, RELEASE
-            };
+MGB_DEFINE_CLS_WITH_SUPER(LockBase, ForwardInputToOutput) // {
+public:
+    enum Action { ACQUIRE, RELEASE };
 
-            /*!
-             * lock works on a group of vars; when all vars in a group are
-             * produced, a global lock indexed by lock_id would be acquired
-             *
-             * lock_id is global, but group is limited to a comp graph
-             */
-            struct LockParam {
-                size_t lock_id, group_id;
-            };
-
-            LockBase(const OperatorNodeBaseCtorParam &opr_param,
-                    VarNode *var, const LockParam &param, Action action);
-            ~LockBase();
-
-        private:
-            struct LockPool;
-            struct LockGroup;
-            class LockGroupSet;
-            static LockPool sm_lock_pool;
-            const LockParam m_param;
-            Action m_action;
-            LockGroup *m_cur_group = nullptr;
-
-            void add_input_layout_constraint() override;
-            void scn_do_execute_finish(const DeviceTensorND &val) override;
+    /*!
+     * lock works on a group of vars; when all vars in a group are
+     * produced, a global lock indexed by lock_id would be acquired
+     *
+     * lock_id is global, but group is limited to a comp graph
+     */
+    struct LockParam {
+        size_t lock_id, group_id;
     };
 
-    template<typename Opr>
-    MGB_DEFINE_CLS_WITH_SUPER(LockMaker, LockBase) // {
-        protected:
-            using Super::Super;
-        public:
-            static SymbolVar make(
-                    SymbolVar var,
-                    const LockParam &param,
-                    const OperatorNodeConfig &config = {});
-    };
-}
+    LockBase(
+            const OperatorNodeBaseCtorParam& opr_param, VarNode* var,
+            const LockParam& param, Action action);
+    ~LockBase();
+
+private:
+    struct LockPool;
+    struct LockGroup;
+    class LockGroupSet;
+    static LockPool sm_lock_pool;
+    const LockParam m_param;
+    Action m_action;
+    LockGroup* m_cur_group = nullptr;
+
+    void add_input_layout_constraint() override;
+    void scn_do_execute_finish(const DeviceTensorND& val) override;
+};
+
+template <typename Opr>
+MGB_DEFINE_CLS_WITH_SUPER(LockMaker, LockBase) // {
+protected:
+    using Super::Super;
+
+public:
+    static SymbolVar make(
+            SymbolVar var, const LockParam& param,
+            const OperatorNodeConfig& config = {});
+};
+}  // namespace intl
 
 /*!
  * \brief acquire a global lock when all vars in the group are ready
  */
 MGB_DEFINE_OPR_CLASS(LockAcquire, intl::LockMaker<LockAcquire>) // {
-    public:
-        LockAcquire(VarNode *var, const LockParam &param,
-                const OperatorNodeConfig &config);
+public:
+    LockAcquire(VarNode* var, const LockParam& param, const OperatorNodeConfig& config);
 };
 
 /*!
  * \brief release the global lock when all vars in the group are ready
  */
 MGB_DEFINE_OPR_CLASS(LockRelease, intl::LockMaker<LockRelease>) // {
-    public:
-        LockRelease(VarNode *var, const LockParam &param,
-                const OperatorNodeConfig &config);
+public:
+    LockRelease(VarNode* var, const LockParam& param, const OperatorNodeConfig& config);
 };
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
-

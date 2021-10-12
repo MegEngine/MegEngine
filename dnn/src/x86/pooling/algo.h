@@ -15,8 +15,8 @@
 #include <unordered_map>
 #include "src/common/algo_base.h"
 #include "src/common/metahelper.h"
-#include "src/x86/pooling/opr_impl.h"
 #include "src/x86/handle.h"
+#include "src/x86/pooling/opr_impl.h"
 
 namespace megdnn {
 namespace x86 {
@@ -45,15 +45,15 @@ public:
         const TensorLayout layout_src, layout_dst;
 
         std::string to_string() const;
-        SizeArgs(PoolingImpl* opr, const TensorLayout& src,
-                 const TensorLayout& dst);
+        SizeArgs(PoolingImpl* opr, const TensorLayout& src, const TensorLayout& dst);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND *src_tensor, *dst_tensor;
         Workspace workspace;
 
-        ExecArgs(PoolingImpl* opr, _megdnn_tensor_in src,
-                 _megdnn_tensor_out dst, _megdnn_workspace workspace);
+        ExecArgs(
+                PoolingImpl* opr, _megdnn_tensor_in src, _megdnn_tensor_out dst,
+                _megdnn_workspace workspace);
     };
 
     virtual bool is_available(const SizeArgs& args) const = 0;
@@ -97,11 +97,10 @@ ALGO_IMPL(MKLDNNNCHW88)
 
 class PoolingImpl::AlgoFallback final : public AlgoBase {
     std::string m_algo_name;
+
 public:
     AlgoFallback() : m_algo_name("FALLBACK_POOLING") {}
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    };
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; };
     const char* name() const override { return m_algo_name.c_str(); }
     bool is_available(const SizeArgs&) const override { return true; }
     void exec(const ExecArgs&) const override {}

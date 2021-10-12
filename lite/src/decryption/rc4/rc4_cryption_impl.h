@@ -53,8 +53,8 @@ class SimpleFastRC4Impl {
     } m_state;
 
 public:
-    SimpleFastRC4Impl(const void* model_mem, size_t size,
-                      const std::vector<uint8_t>& key)
+    SimpleFastRC4Impl(
+            const void* model_mem, size_t size, const std::vector<uint8_t>& key)
             : m_model_mem(model_mem), m_model_length(size) {
         const uint8_t* data = key.data();
         m_hash_key = *reinterpret_cast<const uint64_t*>(data);

@@ -18,15 +18,13 @@ namespace megdnn {
 namespace arm_common {
 
 class ConvBiasImpl::AlgoQU8DirectStride1 final : public AlgoBase {
-
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "QU8STRD1"; }
 
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -38,14 +36,12 @@ public:
 };
 
 class ConvBiasImpl::AlgoQU8DirectStride2 final : public AlgoBase {
-
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "QU8STRD2"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -57,15 +53,13 @@ public:
 };
 #if MGB_ENABLE_DOT
 class ConvBiasImpl::AlgoDotU8DirectStride1 final : public AlgoBase {
-
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARMDOTU8STRD1"; }
 
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(
@@ -77,14 +71,12 @@ public:
 };
 
 class ConvBiasImpl::AlgoDotU8DirectStride2 final : public AlgoBase {
-
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "ARMDOTU8STRD2"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
 
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     virtual SmallVector<NCBKern> dispatch_kerns(

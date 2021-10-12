@@ -26,8 +26,7 @@ namespace chanwise {
 /*!
  * \brief return a / b and set mod to a % b
  */
-__device__ __forceinline__ uint32_t div_mod(uint32_t a, uint32_t b,
-                                            uint32_t& mod) {
+__device__ __forceinline__ uint32_t div_mod(uint32_t a, uint32_t b, uint32_t& mod) {
     uint32_t ret = a / b;
     mod = a - ret * b;
     return ret;
@@ -38,8 +37,7 @@ __device__ __forceinline__ uint32_t div_mod(uint32_t a, uint32_t b,
  * \param rs row stride
  */
 template <typename T>
-__device__ __forceinline__ void block_memcpy(T* dst, const T* src,
-                                             uint32_t size) {
+__device__ __forceinline__ void block_memcpy(T* dst, const T* src, uint32_t size) {
     for (uint32_t i = threadIdx.x; i < size; i += blockDim.x) {
         dst[i] = src[i];
     }

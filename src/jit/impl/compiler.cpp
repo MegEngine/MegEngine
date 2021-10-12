@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "./mlir/compiler.h"
 #include "./halide/compiler_cuda.h"
 #include "./nvrtc/compiler_cuda.h"
-#include "./mlir/compiler.h"
 
 #include "megbrain/jit/compiler.h"
 #include "megbrain/utils/hash.h"
@@ -43,8 +43,8 @@ public:
 
     void init_workspace_size_infer(JITExecutor*) {}
 
-    std::unique_ptr<Executable> do_compile(const InternalGraph&,
-                                           const JITExecutor::Args&) {
+    std::unique_ptr<Executable> do_compile(
+            const InternalGraph&, const JITExecutor::Args&) {
         mgb_throw(InternalError, "EmptyCompiler should not be used");
     }
 };
@@ -74,8 +74,7 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
     {
         static std::mutex mtx;
         MGB_LOCK_GUARD(mtx);
-        holder = graph.options()
-                         .user_data.get_user_data_or_create<CompilerHolder>();
+        holder = graph.options().user_data.get_user_data_or_create<CompilerHolder>();
     }
     MGB_LOCK_GUARD(holder->mtx);
     auto&& compiler = holder->dev2compiler[comp_node.device_type()];
@@ -92,8 +91,8 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
 #endif
 #if MGB_JIT_MLIR
                 if (!backend || !strcmp(backend, "MLIR")) {
-                    compiler = std::make_unique<MLIRCompiler>(
-                            CompNode::DeviceType::CUDA);
+                    compiler =
+                            std::make_unique<MLIRCompiler>(CompNode::DeviceType::CUDA);
                     break;
                 }
 #endif
@@ -107,18 +106,19 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
             case CompNode::DeviceType::CPU:
 #if MGB_JIT_MLIR
                 if (!backend || !strcmp(backend, "MLIR")) {
-                    compiler = std::make_unique<MLIRCompiler>(
-                            CompNode::DeviceType::CPU);
+                    compiler =
+                            std::make_unique<MLIRCompiler>(CompNode::DeviceType::CPU);
                     break;
                 }
 #endif
                 mgb_throw(InternalError, "No compiler support for cpu");
                 break;
             default:
-                mgb_throw(InternalError,
-                          "unsupported JIT config: "
-                          "comp_node=%s backend_setting=%s",
-                          comp_node.to_string().c_str(), backend);
+                mgb_throw(
+                        InternalError,
+                        "unsupported JIT config: "
+                        "comp_node=%s backend_setting=%s",
+                        comp_node.to_string().c_str(), backend);
         }
     }
 

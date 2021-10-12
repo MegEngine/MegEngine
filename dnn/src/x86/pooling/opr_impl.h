@@ -33,10 +33,9 @@ private:
 public:
     using fallback::PoolingImpl::PoolingImpl;
     class AlgoBase;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace) override;
-    size_t get_workspace_in_bytes(const TensorLayout&,
-                                  const TensorLayout&) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override;
 
     static size_t constexpr MAX_SPATIAL_DIM = 2;
 
@@ -49,8 +48,8 @@ public:
             const TensorLayout& src, const TensorLayout& dst,
             size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
             const AlgoAttribute& negative_attr) {
-        return get_algorithm_heuristic(src, dst, workspace_limit_in_bytes,
-                                       positive_attr, negative_attr)
+        return get_algorithm_heuristic(
+                       src, dst, workspace_limit_in_bytes, positive_attr, negative_attr)
                 ->info();
     }
 
@@ -71,8 +70,8 @@ protected:
             const AlgoAttribute& negative_attr) override;
 };
 
-WorkspaceBundle get_bundle(const TensorLayout& src, const TensorLayout& dst,
-                           const param::Pooling& param);
+WorkspaceBundle get_bundle(
+        const TensorLayout& src, const TensorLayout& dst, const param::Pooling& param);
 
 }  // namespace x86
 }  // namespace megdnn

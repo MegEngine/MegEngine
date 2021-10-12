@@ -11,12 +11,12 @@
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "test/rocm/fixture.h"
 
+#include "megdnn/oprs.h"
+#include "src/rocm/utils.h"
+#include "test/common/benchmarker.h"
 #include "test/common/tensor.h"
 #include "test/common/timer.h"
-#include "megdnn/oprs.h"
 #include "test/common/workspace_wrapper.h"
-#include "test/common/benchmarker.h"
-#include "src/rocm/utils.h"
 #include "test/rocm/benchmarker.h"
 
 namespace megdnn {
@@ -43,7 +43,6 @@ TEST_F(ROCM, REDUCE_BENCHMARK) {
         auto io = (double)(A * B * C + A * C) * dtype.size();
         auto gbps = io / (time_ms * 1e6);
         printf("io %.2fGB, flops %.3fGB/s\n", io / 1e9, gbps);
-
     };
     run(65536, 64, 1);
     run(1, 268435455, 1);
@@ -67,9 +66,8 @@ TEST_F(ROCM, BATCHED_MATRIX_MUL_BENCHMARK) {
         time_ms = benchmarker.execs({{b, m, k}, {b, k, n}, {}});
         double flo = 2.0 * b * m * n * k;
         double flops = flo / (time_ms * 1e9);
-        printf("mxnxk=%zux%zux%zu flo %.2fGB, flops %.3fTFLOPS\n", m, n, k,
-               flo / 1e9, flops);
-
+        printf("mxnxk=%zux%zux%zu flo %.2fGB, flops %.3fTFLOPS\n", m, n, k, flo / 1e9,
+               flops);
     };
     run(32, 128, 128, 128);
     run(32, 256, 256, 256);
@@ -99,8 +97,8 @@ TEST_F(ROCM, BATCHED_MATRIX_MUL_BENCHMARK) {
 
 TEST_F(ROCM, MATRIX_MUL_BENCHMARK) {
     megdnn::rocm::enable_miopen_algo_search(handle_rocm(), true);
-    auto benchmarker = ROCMBenchmarker<MatrixMulForward>(handle_rocm(),
-                                                         handle_naive(false));
+    auto benchmarker =
+            ROCMBenchmarker<MatrixMulForward>(handle_rocm(), handle_naive(false));
     auto run = [&](size_t m, size_t n, size_t k) {
         auto dtype = dtype::Float32();
         benchmarker.set_dtype(0, dtype).set_dtype(1, dtype);
@@ -112,9 +110,8 @@ TEST_F(ROCM, MATRIX_MUL_BENCHMARK) {
         time_ms = benchmarker.execs({{m, k}, {k, n}, {}});
         double flo = 2.0 * m * n * k;
         double flops = flo / (time_ms * 1e9);
-        printf("mxnxk=%zux%zux%zu flo %.2fGB, flops %.3fTFLOPS\n", m, n, k,
-               flo / 1e9, flops);
-
+        printf("mxnxk=%zux%zux%zu flo %.2fGB, flops %.3fTFLOPS\n", m, n, k, flo / 1e9,
+               flops);
     };
     run(128, 128, 128);
     run(256, 256, 256);
@@ -144,7 +141,7 @@ TEST_F(ROCM, MATRIX_MUL_BENCHMARK) {
 
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

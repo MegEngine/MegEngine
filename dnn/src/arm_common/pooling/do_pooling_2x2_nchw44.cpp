@@ -17,11 +17,9 @@
 namespace megdnn {
 namespace arm_common {
 
-void do_max_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                                 size_t IH, size_t IW,
-                                                 size_t OH, size_t OW,
-                                                 size_t PH, size_t PW,
-                                                 const WorkspaceBundle& ws) {
+void do_max_pooling_2x2_stride1_int8_nchw44_NEON(
+        const int8_t* src, int8_t* dst, size_t IH, size_t IW, size_t OH, size_t OW,
+        size_t PH, size_t PW, const WorkspaceBundle& ws) {
     const int8_t* sptr = nullptr;
     size_t IH2, IW2;
     sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws, true);
@@ -63,11 +61,9 @@ void do_max_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
         }
     }
 }
-void do_max_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                                 size_t IH, size_t IW,
-                                                 size_t OH, size_t OW,
-                                                 size_t PH, size_t PW,
-                                                 const WorkspaceBundle& ws) {
+void do_max_pooling_2x2_stride2_int8_nchw44_NEON(
+        const int8_t* src, int8_t* dst, size_t IH, size_t IW, size_t OH, size_t OW,
+        size_t PH, size_t PW, const WorkspaceBundle& ws) {
     const int8_t* sptr = nullptr;
     size_t IH2, IW2;
     sptr = handle_padding(src, IH, IW, IH2, IW2, PH, PW, ws, true);
@@ -81,21 +77,21 @@ void do_max_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
         for (; ow + 3 < OW; ow += 4) {
             int8x16_t src00 = vld1q_s8(sptr0);
             int8x16_t src04 = vld1q_s8(sptr0 + 4 * 4);
-            int32x4x2_t src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00),
-                                            vreinterpretq_s32_s8(src04));
+            int32x4x2_t src_tmp =
+                    vuzpq_s32(vreinterpretq_s32_s8(src00), vreinterpretq_s32_s8(src04));
             int32x4_t src0246 = src_tmp.val[0];
             int32x4_t src1357 = src_tmp.val[1];
-            int8x16_t max0 = vmaxq_s8(vreinterpretq_s8_s32(src0246),
-                                      vreinterpretq_s8_s32(src1357));
+            int8x16_t max0 = vmaxq_s8(
+                    vreinterpretq_s8_s32(src0246), vreinterpretq_s8_s32(src1357));
 
             src00 = vld1q_s8(sptr1);
             src04 = vld1q_s8(sptr1 + 4 * 4);
-            src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00),
-                                vreinterpretq_s32_s8(src04));
+            src_tmp =
+                    vuzpq_s32(vreinterpretq_s32_s8(src00), vreinterpretq_s32_s8(src04));
             src0246 = src_tmp.val[0];
             src1357 = src_tmp.val[1];
-            int8x16_t max1 = vmaxq_s8(vreinterpretq_s8_s32(src0246),
-                                      vreinterpretq_s8_s32(src1357));
+            int8x16_t max1 = vmaxq_s8(
+                    vreinterpretq_s8_s32(src0246), vreinterpretq_s8_s32(src1357));
 
             int8x16_t max_out = vmaxq_s8(max0, max1);
 
@@ -120,11 +116,9 @@ void do_max_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
     }
 }
 
-void do_avg_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                                 size_t IH, size_t IW,
-                                                 size_t OH, size_t OW,
-                                                 size_t PH, size_t PW,
-                                                 const WorkspaceBundle& ws) {
+void do_avg_pooling_2x2_stride1_int8_nchw44_NEON(
+        const int8_t* src, int8_t* dst, size_t IH, size_t IW, size_t OH, size_t OW,
+        size_t PH, size_t PW, const WorkspaceBundle& ws) {
     int16_t filter_size = 4;
     const int8_t* sptr = nullptr;
     size_t IH2, IW2;
@@ -159,18 +153,14 @@ void do_avg_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
 #define sum_define(i) int16_t sum##i;
             UNROLL_CALL_NOWRAPPER(8, sum_define)
 
-#define sum01_avg(i)                                                  \
-    sum##i = vgetq_lane_s16(sum01, i) > 0                             \
-                     ? (vgetq_lane_s16(sum01, i) + filter_size / 2) / \
-                               filter_size                            \
-                     : (vgetq_lane_s16(sum01, i) - filter_size / 2) / \
-                               filter_size;
-#define sum23_avg(i)                                                  \
-    sum##i = vgetq_lane_s16(sum23, i) > 0                             \
-                     ? (vgetq_lane_s16(sum23, i) + filter_size / 2) / \
-                               filter_size                            \
-                     : (vgetq_lane_s16(sum23, i) - filter_size / 2) / \
-                               filter_size;
+#define sum01_avg(i)                                                            \
+    sum##i = vgetq_lane_s16(sum01, i) > 0                                       \
+                   ? (vgetq_lane_s16(sum01, i) + filter_size / 2) / filter_size \
+                   : (vgetq_lane_s16(sum01, i) - filter_size / 2) / filter_size;
+#define sum23_avg(i)                                                            \
+    sum##i = vgetq_lane_s16(sum23, i) > 0                                       \
+                   ? (vgetq_lane_s16(sum23, i) + filter_size / 2) / filter_size \
+                   : (vgetq_lane_s16(sum23, i) - filter_size / 2) / filter_size;
 
 #define store_sum01(i) *(dptr + i) = static_cast<int8_t>(sum##i);
 #define store_sum23(i) *(dptr + i + 8) = static_cast<int8_t>(sum##i);
@@ -197,9 +187,8 @@ void do_avg_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
             int16x8_t src00 = vmovl_s8(src001);
             int16x8_t src10 = vmovl_s8(src101);
             int16x8_t max_tmp = vaddq_s16(src00, src10);
-#define do_acc(i)    \
-    int16_t sum##i = \
-            vgetq_lane_s16(max_tmp, i) + vgetq_lane_s16(max_tmp, i + 4);
+#define do_acc(i) \
+    int16_t sum##i = vgetq_lane_s16(max_tmp, i) + vgetq_lane_s16(max_tmp, i + 4);
 #define do_avg(i)                                                  \
     sum##i = sum##i > 0 ? (sum##i + filter_size / 2) / filter_size \
                         : (sum##i - filter_size / 2) / filter_size;
@@ -217,11 +206,9 @@ void do_avg_pooling_2x2_stride1_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
     }
 }
 
-void do_avg_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
-                                                 size_t IH, size_t IW,
-                                                 size_t OH, size_t OW,
-                                                 size_t PH, size_t PW,
-                                                 const WorkspaceBundle& ws) {
+void do_avg_pooling_2x2_stride2_int8_nchw44_NEON(
+        const int8_t* src, int8_t* dst, size_t IH, size_t IW, size_t OH, size_t OW,
+        size_t PH, size_t PW, const WorkspaceBundle& ws) {
     int16_t filter_size = 4;
     const int8_t* sptr = nullptr;
     size_t IH2, IW2;
@@ -241,20 +228,19 @@ void do_avg_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
             int16x8_t sum01 = vdupq_n_s16(0);
             int16x8_t sum23 = vdupq_n_s16(0);
 
-#define CACULATE_ROW(i)                                            \
-    src00 = vld1q_s8(sptr##i);                                     \
-    src04 = vld1q_s8(sptr##i + 4 * 4);                             \
-    src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00),               \
-                        vreinterpretq_s32_s8(src04));              \
-    src0246 = src_tmp.val[0];                                      \
-    src1357 = src_tmp.val[1];                                      \
-    src02 = vmovl_s8(vget_low_s8(vreinterpretq_s8_s32(src0246)));  \
-    src46 = vmovl_s8(vget_high_s8(vreinterpretq_s8_s32(src0246))); \
-    src13 = vmovl_s8(vget_low_s8(vreinterpretq_s8_s32(src1357)));  \
-    src57 = vmovl_s8(vget_high_s8(vreinterpretq_s8_s32(src1357))); \
-    sum01 = vaddq_s16(sum01, src02);                               \
-    sum01 = vaddq_s16(sum01, src13);                               \
-    sum23 = vaddq_s16(sum23, src46);                               \
+#define CACULATE_ROW(i)                                                            \
+    src00 = vld1q_s8(sptr##i);                                                     \
+    src04 = vld1q_s8(sptr##i + 4 * 4);                                             \
+    src_tmp = vuzpq_s32(vreinterpretq_s32_s8(src00), vreinterpretq_s32_s8(src04)); \
+    src0246 = src_tmp.val[0];                                                      \
+    src1357 = src_tmp.val[1];                                                      \
+    src02 = vmovl_s8(vget_low_s8(vreinterpretq_s8_s32(src0246)));                  \
+    src46 = vmovl_s8(vget_high_s8(vreinterpretq_s8_s32(src0246)));                 \
+    src13 = vmovl_s8(vget_low_s8(vreinterpretq_s8_s32(src1357)));                  \
+    src57 = vmovl_s8(vget_high_s8(vreinterpretq_s8_s32(src1357)));                 \
+    sum01 = vaddq_s16(sum01, src02);                                               \
+    sum01 = vaddq_s16(sum01, src13);                                               \
+    sum23 = vaddq_s16(sum23, src46);                                               \
     sum23 = vaddq_s16(sum23, src57);
 
             UNROLL_CALL_NOWRAPPER(2, CACULATE_ROW)
@@ -262,18 +248,14 @@ void do_avg_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
 #define sum_define(i) int16_t sum##i;
             UNROLL_CALL_NOWRAPPER(8, sum_define)
 
-#define sum01_avg(i)                                                  \
-    sum##i = vgetq_lane_s16(sum01, i) > 0                             \
-                     ? (vgetq_lane_s16(sum01, i) + filter_size / 2) / \
-                               filter_size                            \
-                     : (vgetq_lane_s16(sum01, i) - filter_size / 2) / \
-                               filter_size;
-#define sum23_avg(i)                                                  \
-    sum##i = vgetq_lane_s16(sum23, i) > 0                             \
-                     ? (vgetq_lane_s16(sum23, i) + filter_size / 2) / \
-                               filter_size                            \
-                     : (vgetq_lane_s16(sum23, i) - filter_size / 2) / \
-                               filter_size;
+#define sum01_avg(i)                                                            \
+    sum##i = vgetq_lane_s16(sum01, i) > 0                                       \
+                   ? (vgetq_lane_s16(sum01, i) + filter_size / 2) / filter_size \
+                   : (vgetq_lane_s16(sum01, i) - filter_size / 2) / filter_size;
+#define sum23_avg(i)                                                            \
+    sum##i = vgetq_lane_s16(sum23, i) > 0                                       \
+                   ? (vgetq_lane_s16(sum23, i) + filter_size / 2) / filter_size \
+                   : (vgetq_lane_s16(sum23, i) - filter_size / 2) / filter_size;
 #define store_sum01(i) *(dptr + i) = static_cast<int8_t>(sum##i);
 #define store_sum23(i) *(dptr + i + 8) = static_cast<int8_t>(sum##i);
 
@@ -300,9 +282,8 @@ void do_avg_pooling_2x2_stride2_int8_nchw44_NEON(const int8_t* src, int8_t* dst,
             int16x8_t src10 = vmovl_s8(src101);
             int16x8_t max_tmp = vaddq_s16(src00, src10);
 
-#define do_acc(i)    \
-    int16_t sum##i = \
-            vgetq_lane_s16(max_tmp, i) + vgetq_lane_s16(max_tmp, i + 4);
+#define do_acc(i) \
+    int16_t sum##i = vgetq_lane_s16(max_tmp, i) + vgetq_lane_s16(max_tmp, i + 4);
 #define do_avg(i)                                                  \
     sum##i = sum##i > 0 ? (sum##i + filter_size / 2) / filter_size \
                         : (sum##i - filter_size / 2) / filter_size;

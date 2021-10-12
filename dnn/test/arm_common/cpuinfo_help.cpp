@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
-#include "src/common/utils.h"
 #include "test/arm_common/cpuinfo_help.h"
+#include "src/common/utils.h"
 #if MGB_ENABLE_CPUINFO
 std::mutex CpuInfoTmpReplace::m_cpuinfo_lock;
 #endif

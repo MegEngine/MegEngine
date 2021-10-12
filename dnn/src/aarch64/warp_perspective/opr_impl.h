@@ -19,9 +19,9 @@ class WarpPerspectiveImpl : public arm_common::WarpPerspectiveImpl {
 public:
     using arm_common::WarpPerspectiveImpl::WarpPerspectiveImpl;
 
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-              _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
+            _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
 };
 
 }  // namespace aarch64

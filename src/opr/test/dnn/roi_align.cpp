@@ -9,17 +9,17 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/test/helper.h"
-#include "megbrain/test/autocheck.h"
-#include "megbrain/test/megdnn_helper.h"
 #include "megbrain/opr/dnn/roi_align.h"
+#include "megbrain/test/autocheck.h"
+#include "megbrain/test/helper.h"
+#include "megbrain/test/megdnn_helper.h"
 
 #include "megdnn/oprs.h"
 
 #include <cmath>
+#include <iomanip>
 #include <random>
 #include <sstream>
-#include <iomanip>
 
 using namespace mgb;
 
@@ -41,25 +41,21 @@ void run(Param::Mode mode) {
     param.pooled_width = 3;
     param.sample_height = 5;
     param.sample_width = 6;
-    
-    TensorShape dst_shp{M, C, param.pooled_height, param.pooled_width};
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
 
-        auto o0 = opr::ROIAlignForward::make(inputs[0], inputs[1],
-                param);
+    TensorShape dst_shp{M, C, param.pooled_height, param.pooled_width};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto o0 = opr::ROIAlignForward::make(inputs[0], inputs[1], param);
         return {o0, o0.node()->owner_opr()->output(1)};
     };
 
-    auto fwd = [&](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
         auto opr = megdnn_naive_handle()->create_operator<megdnn::ROIAlign>();
         opr->param() = param;
-        dest[0].dtype(dtype::Float32()).
-            comp_node(inp[0]->comp_node()).resize(dst_shp);
-        dest[1].dtype(dtype::Int32()).
-            comp_node(inp[0]->comp_node()).resize(dst_shp);
-        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(),
-                dest[0].as_megdnn(), dest[1].as_megdnn(), {});
+        dest[0].dtype(dtype::Float32()).comp_node(inp[0]->comp_node()).resize(dst_shp);
+        dest[1].dtype(dtype::Int32()).comp_node(inp[0]->comp_node()).resize(dst_shp);
+        opr->exec(
+                inp[0]->as_megdnn(), inp[1]->as_megdnn(), dest[0].as_megdnn(),
+                dest[1].as_megdnn(), {});
     };
     auto rand_int = [&](int lo, int hi) {
         std::uniform_int_distribution<int> dist(lo, hi);
@@ -69,10 +65,10 @@ void run(Param::Mode mode) {
         std::uniform_real_distribution<float> dist(lo, hi);
         return dist(rng);
     };
-    auto gen_rois = [&](HostTensorND &rois) {
+    auto gen_rois = [&](HostTensorND& rois) {
         auto ptr = rois.ptr<float>();
         for (size_t i = 0; i < M; ++i) {
-            ptr[0] = rand_int(0, N-1);
+            ptr[0] = rand_int(0, N - 1);
             ptr[1] = rand_real(0.0f, 1.0f);
             ptr[2] = rand_real(0.0f, 1.0f);
             ptr[3] = rand_real(0.0f, 1.0f);
@@ -90,22 +86,22 @@ void run(Param::Mode mode) {
     option.numdiff_max_err = 1e-2;
     Checker checker{make_graph, fwd};
 
-    checker.
-        set_input_generator(1, gen_rois).
-        // we cannot take gradient wrt. rois
-        set_input_allow_grad(1, false).
-        // we cannot take gradient wrt. temporary output
-        set_output_allow_grad(1, false);
+    checker.set_input_generator(1, gen_rois)
+            .
+            // we cannot take gradient wrt. rois
+            set_input_allow_grad(1, false)
+            .
+            // we cannot take gradient wrt. temporary output
+            set_output_allow_grad(1, false);
 
     if (mode == Param::Mode::AVERAGE)
         checker.set_output_allow_check(1, false);
 
-    checker.
-        run({TensorShape{M, C, 5, 6}, rois_shp}, option).
-        run({TensorShape{M, C, 7, 8}, rois_shp}, option).
-        run({TensorShape{M, C, 4, 2}, rois_shp}, option);
+    checker.run({TensorShape{M, C, 5, 6}, rois_shp}, option)
+            .run({TensorShape{M, C, 7, 8}, rois_shp}, option)
+            .run({TensorShape{M, C, 4, 2}, rois_shp}, option);
 }
-} // anonymous namespace
+}  // anonymous namespace
 
 TEST(TestOprDNN, ROIAlignMax) {
     // TODO: fix me, add correct backward of cpu

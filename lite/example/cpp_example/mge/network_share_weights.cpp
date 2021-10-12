@@ -34,8 +34,7 @@ bool lite::example::network_share_same_weights(const Args& args) {
     //! set input data to input tensor
     std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
     void* dst_ptr = input_tensor->get_memory_ptr();
-    std::shared_ptr<Tensor> input_tensor2 =
-            weight_shared_network->get_input_tensor(0);
+    std::shared_ptr<Tensor> input_tensor2 = weight_shared_network->get_input_tensor(0);
     void* dst_ptr2 = input_tensor2->get_memory_ptr();
     //! copy or forward data to network
     size_t length = input_tensor->get_tensor_total_size_in_byte();

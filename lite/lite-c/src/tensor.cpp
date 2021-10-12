@@ -10,32 +10,29 @@
  */
 
 #include "lite/tensor.h"
-#include "../../src/tensor_impl_base.h"
-#include "common.h"
-#include "lite-c/tensor_c.h"
 #include <set>
 #include <string>
 #include <unordered_map>
+#include "../../src/tensor_impl_base.h"
+#include "common.h"
+#include "lite-c/tensor_c.h"
 
-const LiteLayout default_layout = {.shapes = {0, 0, 0, 0, 0},
-                                   .ndim = 0,
-                                   .data_type = LiteDataType::LITE_FLOAT};
+const LiteLayout default_layout = {
+        .shapes = {0, 0, 0, 0, 0}, .ndim = 0, .data_type = LiteDataType::LITE_FLOAT};
 
-const LiteTensorDesc default_desc = {.is_pinned_host = false,
-                                     .layout = default_layout,
-                                     .device_type = LiteDeviceType::LITE_CPU,
-                                     .device_id = 0};
+const LiteTensorDesc default_desc = {
+        .is_pinned_host = false,
+        .layout = default_layout,
+        .device_type = LiteDeviceType::LITE_CPU,
+        .device_id = 0};
 namespace {
-std::unordered_map<void*, std::shared_ptr<lite::Tensor>>&
-get_global_tensor_holder() {
+std::unordered_map<void*, std::shared_ptr<lite::Tensor>>& get_global_tensor_holder() {
     static thread_local std::unordered_map<void*, std::shared_ptr<lite::Tensor>>
             global_holder;
     return global_holder;
 }
-std::unordered_map<std::string, lite::LiteAny>&
-get_global_tensor_attr_holder() {
-    static thread_local std::unordered_map<std::string, lite::LiteAny>
-            global_holder;
+std::unordered_map<std::string, lite::LiteAny>& get_global_tensor_attr_holder() {
+    static thread_local std::unordered_map<std::string, lite::LiteAny> global_holder;
     return global_holder;
 }
 }  // namespace
@@ -91,23 +88,20 @@ int LITE_set_tensor_layout(LiteTensor tensor, const LiteLayout layout) {
     LITE_CAPI_END();
 }
 
-int LITE_reset_tensor_memory(LiteTensor tensor, void* prepared_data,
-                             size_t data_length_in_byte) {
+int LITE_reset_tensor_memory(
+        LiteTensor tensor, void* prepared_data, size_t data_length_in_byte) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(prepared_data, "The prepared_data pass to LITE c_api is null");
-    static_cast<lite::Tensor*>(tensor)->reset(prepared_data,
-                                              data_length_in_byte);
+    static_cast<lite::Tensor*>(tensor)->reset(prepared_data, data_length_in_byte);
     LITE_CAPI_END();
 }
 
-int LITE_reset_tensor(LiteTensor tensor, const LiteLayout layout,
-                      void* prepared_data) {
+int LITE_reset_tensor(LiteTensor tensor, const LiteLayout layout, void* prepared_data) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(prepared_data, "The prepared_data pass to LITE c_api is null");
-    static_cast<lite::Tensor*>(tensor)->reset(prepared_data,
-                                              convert_to_layout(layout));
+    static_cast<lite::Tensor*>(tensor)->reset(prepared_data, convert_to_layout(layout));
     LITE_CAPI_END();
 }
 
@@ -122,12 +116,13 @@ int LITE_tensor_reshape(LiteTensor tensor, const int* shape, int size) {
     LITE_CAPI_END();
 }
 
-int LITE_tensor_slice(const LiteTensor tensor, const size_t* start,
-                      const size_t* end, const size_t* step, size_t size,
-                      LiteTensor* slice_tensor) {
+int LITE_tensor_slice(
+        const LiteTensor tensor, const size_t* start, const size_t* end,
+        const size_t* step, size_t size, LiteTensor* slice_tensor) {
     LITE_CAPI_BEGIN();
-    LITE_ASSERT(tensor && start && end && slice_tensor,
-                "The tensor pass to LITE c_api is null");
+    LITE_ASSERT(
+            tensor && start && end && slice_tensor,
+            "The tensor pass to LITE c_api is null");
     std::vector<size_t> starts, ends, steps;
     for (size_t i = 0; i < size; i++) {
         starts.push_back(start[i]);
@@ -136,8 +131,7 @@ int LITE_tensor_slice(const LiteTensor tensor, const size_t* start,
             steps.push_back(step[i]);
         }
     }
-    auto ret_tensor =
-            static_cast<lite::Tensor*>(tensor)->slice(starts, ends, steps);
+    auto ret_tensor = static_cast<lite::Tensor*>(tensor)->slice(starts, ends, steps);
     get_global_tensor_holder()[ret_tensor.get()] = ret_tensor;
     *slice_tensor = ret_tensor.get();
     LITE_CAPI_END();
@@ -152,18 +146,15 @@ int LITE_tensor_fill_zero(LiteTensor tensor) {
 
 int LITE_tensor_copy(LiteTensor dst_tensor, const LiteTensor src_tensor) {
     LITE_CAPI_BEGIN();
-    LITE_ASSERT(dst_tensor && src_tensor,
-                "The tensor pass to LITE c_api is null");
+    LITE_ASSERT(dst_tensor && src_tensor, "The tensor pass to LITE c_api is null");
     static_cast<lite::Tensor*>(dst_tensor)
             ->copy_from(*static_cast<lite::Tensor*>(src_tensor));
     LITE_CAPI_END();
 }
 
-int LITE_tensor_share_memory_with(LiteTensor dst_tensor,
-                                  const LiteTensor src_tensor) {
+int LITE_tensor_share_memory_with(LiteTensor dst_tensor, const LiteTensor src_tensor) {
     LITE_CAPI_BEGIN();
-    LITE_ASSERT(dst_tensor && src_tensor,
-                "The tensor pass to LITE c_api is null");
+    LITE_ASSERT(dst_tensor && src_tensor, "The tensor pass to LITE c_api is null");
     static_cast<lite::Tensor*>(dst_tensor)
             ->share_memory_with(*static_cast<lite::Tensor*>(src_tensor));
     LITE_CAPI_END();
@@ -177,12 +168,10 @@ int LITE_get_tensor_memory(const LiteTensor tensor, void** data) {
     LITE_CAPI_END();
 }
 
-int LITE_get_tensor_memory_with_index(const LiteTensor tensor,
-                                      const size_t* index, size_t size,
-                                      void** data) {
+int LITE_get_tensor_memory_with_index(
+        const LiteTensor tensor, const size_t* index, size_t size, void** data) {
     LITE_CAPI_BEGIN();
-    LITE_ASSERT(tensor && index && data,
-                "The tensor pass to LITE c_api is null");
+    LITE_ASSERT(tensor && index && data, "The tensor pass to LITE c_api is null");
     std::vector<size_t> index_v;
     for (size_t i = 0; i < size; i++) {
         index_v.push_back(index[i]);
@@ -203,13 +192,11 @@ int LITE_get_tensor_layout(const LiteTensor tensor, LiteLayout* layout) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(layout, "The layout ptr pass to LITE c_api is null");
-    *layout = convert_to_clayout(
-            static_cast<lite::Tensor*>(tensor)->get_layout());
+    *layout = convert_to_clayout(static_cast<lite::Tensor*>(tensor)->get_layout());
     LITE_CAPI_END();
 }
 
-int LITE_get_tensor_device_type(const LiteTensor tensor,
-                           LiteDeviceType* device_type) {
+int LITE_get_tensor_device_type(const LiteTensor tensor, LiteDeviceType* device_type) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
     LITE_ASSERT(device_type, "The device ptr pass to LITE c_api is null");
@@ -227,8 +214,7 @@ int LITE_get_tensor_device_id(const LiteTensor tensor, int* device_id) {
 int LITE_is_pinned_host(const LiteTensor tensor, int* is_pinned_host) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
-    LITE_ASSERT(is_pinned_host,
-                "The is_pinned_host ptr pass to LITE c_api is null");
+    LITE_ASSERT(is_pinned_host, "The is_pinned_host ptr pass to LITE c_api is null");
     *is_pinned_host = static_cast<lite::Tensor*>(tensor)->is_pinned_host();
     LITE_CAPI_END();
 }
@@ -241,16 +227,15 @@ int LITE_is_memory_continue(const LiteTensor tensor, int* is_continue) {
     LITE_CAPI_END();
 }
 
-int LITE_tensor_concat(LiteTensor* tensors, int nr_tensor, int dim,
-                       LiteDeviceType dst_device, int device_id,
-                       LiteTensor* result_tensor) {
+int LITE_tensor_concat(
+        LiteTensor* tensors, int nr_tensor, int dim, LiteDeviceType dst_device,
+        int device_id, LiteTensor* result_tensor) {
     LITE_CAPI_BEGIN();
     std::vector<lite::Tensor> v_tensors;
     for (int i = 0; i < nr_tensor; i++) {
         v_tensors.push_back(*static_cast<lite::Tensor*>(tensors[i]));
     }
-    auto tensor =
-            lite::TensorUtils::concat(v_tensors, dim, dst_device, device_id);
+    auto tensor = lite::TensorUtils::concat(v_tensors, dim, dst_device, device_id);
     get_global_tensor_holder()[tensor.get()] = tensor;
     *result_tensor = tensor.get();
     LITE_CAPI_END()

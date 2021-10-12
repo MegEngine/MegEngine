@@ -28,8 +28,7 @@ namespace jit {
  */
 class MLIRCPUExecutable final : public Executable {
 public:
-    MLIRCPUExecutable(mlir::OwningModuleRef& module,
-                      const std::string& kernel_name);
+    MLIRCPUExecutable(mlir::OwningModuleRef& module, const std::string& kernel_name);
     ~MLIRCPUExecutable();
 
     /*!

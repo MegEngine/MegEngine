@@ -12,8 +12,8 @@
 #include "lite_build_config.h"
 
 #if LITE_BUILD_WITH_MGE
-#include "tensor_impl.h"
 #include "common.h"
+#include "tensor_impl.h"
 
 #include "lite/tensor.h"
 
@@ -29,8 +29,7 @@ using namespace lite;
 LITE_DYN_TYPE_OBJ_FINAL_IMPL(TensorImplDft);
 
 TensorImplDft::TensorImplDft() {
-    m_host_tensor =
-            std::make_shared<mgb::HostTensorND>(mgb::CompNode::default_cpu());
+    m_host_tensor = std::make_shared<mgb::HostTensorND>(mgb::CompNode::default_cpu());
 }
 
 TensorImplDft::TensorImplDft(LiteDeviceType device, bool is_pinned_host) {
@@ -39,8 +38,8 @@ TensorImplDft::TensorImplDft(LiteDeviceType device, bool is_pinned_host) {
         device = LiteDeviceType::LITE_CPU;
     }
     if (device == LiteDeviceType::LITE_CPU) {
-        m_host_tensor = std::make_shared<mgb::HostTensorND>(
-                mgb::CompNode::default_cpu());
+        m_host_tensor =
+                std::make_shared<mgb::HostTensorND>(mgb::CompNode::default_cpu());
     } else if (is_pinned_host) {
         m_host_tensor = std::make_shared<mgb::HostTensorND>(cn);
     } else {
@@ -48,8 +47,8 @@ TensorImplDft::TensorImplDft(LiteDeviceType device, bool is_pinned_host) {
     }
 }
 
-TensorImplDft::TensorImplDft(LiteDeviceType device, const Layout& layout,
-                             bool is_pinned_host) {
+TensorImplDft::TensorImplDft(
+        LiteDeviceType device, const Layout& layout, bool is_pinned_host) {
     auto cn = mgb::CompNode::load(to_compnode_locator(device));
     auto mge_layout = to_impl_layout(layout);
     if (device == LiteDeviceType::LITE_DEVICE_DEFAULT) {
@@ -65,8 +64,9 @@ TensorImplDft::TensorImplDft(LiteDeviceType device, const Layout& layout,
     }
 }
 
-TensorImplDft::TensorImplDft(int device_id, LiteDeviceType device_type,
-                             const Layout& layout, bool is_pinned_host) {
+TensorImplDft::TensorImplDft(
+        int device_id, LiteDeviceType device_type, const Layout& layout,
+        bool is_pinned_host) {
     auto locator = to_compnode_locator(device_type);
     locator.device = device_id;
     auto cn = mgb::CompNode::load(locator);
@@ -81,13 +81,12 @@ TensorImplDft::TensorImplDft(int device_id, LiteDeviceType device_type,
         } else if (is_pinned_host) {
             m_host_tensor = std::make_shared<mgb::HostTensorND>(cn, mge_layout);
         } else {
-            m_dev_tensor =
-                    std::make_shared<mgb::DeviceTensorND>(cn, mge_layout);
+            m_dev_tensor = std::make_shared<mgb::DeviceTensorND>(cn, mge_layout);
         }
     } else {
         if (device_type == LiteDeviceType::LITE_CPU) {
-            m_host_tensor = std::make_shared<mgb::HostTensorND>(
-                    mgb::CompNode::default_cpu());
+            m_host_tensor =
+                    std::make_shared<mgb::HostTensorND>(mgb::CompNode::default_cpu());
         } else if (is_pinned_host) {
             m_host_tensor = std::make_shared<mgb::HostTensorND>(cn);
         } else {
@@ -96,15 +95,15 @@ TensorImplDft::TensorImplDft(int device_id, LiteDeviceType device_type,
     }
 }
 
-TensorImplDft::TensorImplDft(int device_id, int stream_id,
-                             LiteDeviceType device_type, bool is_pinned_host) {
+TensorImplDft::TensorImplDft(
+        int device_id, int stream_id, LiteDeviceType device_type, bool is_pinned_host) {
     auto locator = to_compnode_locator(device_type);
     locator.device = device_id;
     locator.stream = stream_id;
     auto cn = mgb::CompNode::load(locator);
     if (get_device_from_locator(locator) == LiteDeviceType::LITE_CPU) {
-        m_host_tensor = std::make_shared<mgb::HostTensorND>(
-                mgb::CompNode::default_cpu());
+        m_host_tensor =
+                std::make_shared<mgb::HostTensorND>(mgb::CompNode::default_cpu());
     } else if (is_pinned_host) {
         m_host_tensor = std::make_shared<mgb::HostTensorND>(cn);
     } else {
@@ -129,9 +128,8 @@ int TensorImplDft::get_device_id() const {
 }
 
 bool TensorImplDft::is_pinned_host() const {
-    return is_host() &&
-           get_device_from_locator(m_host_tensor->comp_node().locator()) !=
-                   LiteDeviceType::LITE_CPU;
+    return is_host() && get_device_from_locator(m_host_tensor->comp_node().locator()) !=
+                                LiteDeviceType::LITE_CPU;
 }
 
 void TensorImplDft::set_mge_tensor_compnode(const mgb::CompNode& comp_node) {
@@ -212,13 +210,13 @@ std::shared_ptr<Tensor> TensorImplDft::slice(
     }
 
     size_t length = start.size();
-    LITE_ASSERT(length == end.size() && length <= layout.ndim,
-                "The start and end must be the same size and less than layout "
-                "ndim.");
+    LITE_ASSERT(
+            length == end.size() && length <= layout.ndim,
+            "The start and end must be the same size and less than layout "
+            "ndim.");
     std::vector<mgb::Slice> slices;
     if (step.size()) {
-        LITE_ASSERT(length == step.size(),
-                    "The start and step must be the same size.");
+        LITE_ASSERT(length == step.size(), "The start and step must be the same size.");
         for (size_t i = 0; i < length; i++) {
             slices.push_back(mgb::Slice{start[i], end[i], step[i]});
         }
@@ -238,8 +236,8 @@ std::shared_ptr<Tensor> TensorImplDft::slice(
     if (is_host()) {
         *impl.m_host_tensor = m_host_tensor->sub(subspec);
     } else {
-        impl.m_dev_tensor = std::make_shared<mgb::DeviceTensorND>(
-                m_dev_tensor->sub(subspec));
+        impl.m_dev_tensor =
+                std::make_shared<mgb::DeviceTensorND>(m_dev_tensor->sub(subspec));
         impl.m_host_tensor = nullptr;
     }
     LITE_ASSERT(is_host() == impl.is_host());
@@ -251,11 +249,10 @@ void TensorImplDft::fill_zero() {
         auto mge_layout = m_host_tensor->layout();
         if (m_host_tensor->layout().is_physical_contiguous()) {
             auto ptr = get_memory_ptr();
-            std::memset(ptr, 0,
-                        mge_layout.dtype.size(mge_layout.total_nr_elems()));
+            std::memset(ptr, 0, mge_layout.dtype.size(mge_layout.total_nr_elems()));
         } else {
-            TensorImplDft tmp(LiteDeviceType::LITE_CPU,
-                              to_lite_layout(mge_layout), true);
+            TensorImplDft tmp(
+                    LiteDeviceType::LITE_CPU, to_lite_layout(mge_layout), true);
             tmp.fill_zero();
             this->copy_from(&tmp);
         }
@@ -267,8 +264,9 @@ void TensorImplDft::fill_zero() {
 
 void TensorImplDft::share_memory_with(const TensorImplBase* src_tensor_impl) {
     auto src_dft_tensor = static_cast<const TensorImplDft*>(src_tensor_impl);
-    LITE_ASSERT(is_host() == src_dft_tensor->is_host(),
-                "share memory must happen in same device");
+    LITE_ASSERT(
+            is_host() == src_dft_tensor->is_host(),
+            "share memory must happen in same device");
     //! make shape the src memory is ready
     src_tensor_impl->get_memory_ptr();
     if (is_host()) {

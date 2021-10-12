@@ -9,17 +9,16 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "src/cuda/relayout/kern_contiguous.cuh"
 #include "src/common/utils.h"
 #include "src/cuda/query_blocksize.cuh"
-#include "src/cuda/relayout/kern_contiguous.cuh"
 
 namespace megdnn {
 namespace cuda {
 
-
-void get_last_contiguous_launch_spec(const void *kern, size_t size,
-                                     size_t contiguous_size, int *grid_size,
-                                     int *block_size) {
+void get_last_contiguous_launch_spec(
+        const void* kern, size_t size, size_t contiguous_size, int* grid_size,
+        int* block_size) {
     safe_size_in_kern(size);
     LaunchConfig config = query_launch_config_for_kernel(kern);
     *block_size = config.block_size;
@@ -34,12 +33,11 @@ void get_last_contiguous_launch_spec(const void *kern, size_t size,
     }
 
     // because we unroll contiguous_size times in the kernel
-    megdnn_assert(static_cast<size_t>(*block_size) * *grid_size *
-                      contiguous_size >=
-                  size);
+    megdnn_assert(
+            static_cast<size_t>(*block_size) * *grid_size * contiguous_size >= size);
 }
 
-}  // cuda
-}  // megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen
