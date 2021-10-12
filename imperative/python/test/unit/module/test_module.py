@@ -124,6 +124,30 @@ def test_module_api(test_traced_module):
         ("i.bn.weight", m.i.bn.weight),
         ("param", m.param),
     ]
+    assert list(m.tensors()) == [
+        m.bn.bias,
+        m.bn.running_mean,
+        m.bn.running_var,
+        m.bn.weight,
+        m.buff,
+        m.i.bn.bias,
+        m.i.bn.running_mean,
+        m.i.bn.running_var,
+        m.i.bn.weight,
+        m.param,
+    ]
+    assert list(m.named_tensors()) == [
+        ("bn.bias", m.bn.bias),
+        ("bn.running_mean", m.bn.running_mean),
+        ("bn.running_var", m.bn.running_var),
+        ("bn.weight", m.bn.weight),
+        ("buff", m.buff),
+        ("i.bn.bias", m.i.bn.bias),
+        ("i.bn.running_mean", m.i.bn.running_mean),
+        ("i.bn.running_var", m.i.bn.running_var),
+        ("i.bn.weight", m.i.bn.weight),
+        ("param", m.param),
+    ]
     m.eval()
     assert (
         m.training == False
