@@ -115,7 +115,7 @@ union OperatorParam {
     param.SlidingWindowTranspose = 81,
     param.Padding = 82,
     param.ShuffleRNG = 83,
-    param.Repeat = 84,
+    param.TileRepeat = 84,
 }
 
 table Operator {

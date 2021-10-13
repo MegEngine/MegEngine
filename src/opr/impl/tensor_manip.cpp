@@ -1644,4 +1644,25 @@ MEGDNN_OPR_INIT2(PaddingBackward, "padding_backward", 1, false);
 
 // f}}}
 
+/* f{{{ ======================= RepeatForward ======================= */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
+
+RepeatForward::RepeatForward(
+        VarNode* src, const megdnn::TileRepeatBase::Param& param, const OperatorNodeConfig& config)
+        : Super(OperatorNodeBaseCtorParam{src->owner_graph(), config, "repeat", {src}}) {
+    init_megdnn_opr(*this, param);
+    add_input({src});
+    intl::MegDNNOprInitPostCtor<RepeatForward>::apply(*this);
+}
+
+SymbolVar RepeatForward::make(
+        SymbolVar src, const megdnn::TileRepeatBase::Param& param,
+        const OperatorNodeConfig& config) {
+    intl::MegDNNOprInitInputsModifier<RepeatForward>::apply(param, {&src});  
+    return src.insert_single_output_opr<RepeatForward>(src.node(), param, config);
+}
+
+// f}}}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

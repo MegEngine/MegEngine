@@ -636,11 +636,29 @@ public:
 
 MGB_DEFINE_OPR_CLASS(RepeatForward, intl::MegDNNOprWrapperFwd<megdnn::RepeatForward>) // {
     public:
+        // used for serialization
         struct Param {
             static constexpr uint32_t TAG = param_tag::Repeat,
                              MAX_TIMES_SIZE = TensorShape::MAX_NDIM;
             TensorShape times;
         };
+        RepeatForward(VarNode* src, const Param& param, const OperatorNodeConfig& config) {
+            megdnn::TileRepeatBase::Param dnn_param;
+                dnn_param.times = TensorShape(param.times);
+            RepeatForward(src, dnn_param, config);
+        }
+        RepeatForward(VarNode* src, const megdnn::TileRepeatBase::Param& param, const OperatorNodeConfig& config);
+        
+        static SymbolVar make(
+            SymbolVar src, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
+                megdnn::TileRepeatBase::Param dnn_param;
+                dnn_param.times = TensorShape(param.times);
+                return make(src, dnn_param, config);
+            }
+        static SymbolVar make(
+            SymbolVar src, const megdnn::TileRepeatBase::Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 using Repeat = RepeatForward;
 

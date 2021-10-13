@@ -150,6 +150,33 @@ struct ParamConverter<opr::AxisAddRemove::Param> {
         return param::CreateAxisAddRemoveDirect(builder, &desc);
     }
 };
+template <>
+struct ParamConverter<opr::Repeat::Param> {
+    using FlatBufferType = param::TileRepeat;
+    static opr::Repeat::Param to_param(const FlatBufferType* fb) {
+        opr::Repeat::Param param;
+        mgb_assert(
+                    fb->nr_times() <= sizeof(param.times.shape) / sizeof(param.times.shape[0]));
+        param.times.ndim = fb->nr_times();
+        if (fb->times()) {
+            mgb_assert(fb->nr_times() != 0);
+            memcpy(param.times.shape, fb->times()->data(),
+                   sizeof(param.times.shape[0]) * fb->nr_times());
+        } else {
+            mgb_assert(fb->nr_times() == 0);
+        }
+        return param;
+    }
+    static flatbuffers::Offset<FlatBufferType> to_flatbuffer(
+            flatbuffers::FlatBufferBuilder& builder, const opr::Repeat::Param& p) {
+        uint times[p.times.ndim];
+        for (size_t i = 0; i < p.times.ndim; ++i) {
+            times[i] = static_cast<uint>(p.times.shape[i]);
+        }
+        return param::CreateTileRepeat(
+                builder, builder.CreateVector(times, p.times.ndim), static_cast<uint>(p.times.ndim));
+    }
+};
 }  // namespace fbs
 #endif
 }  // namespace serialization

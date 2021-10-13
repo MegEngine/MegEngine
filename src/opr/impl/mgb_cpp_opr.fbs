@@ -24,6 +24,11 @@ table Dimshuffle {
     ndim:uint;
 }
 
+table TileRepeat {
+    times:[uint];
+    nr_times:uint;
+}
+
 enum AxisDescMethod : byte {
     ADD_1,
     REMOVE,
