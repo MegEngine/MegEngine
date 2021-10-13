@@ -72,9 +72,9 @@ LiteNetworkIO* default_network_io() {
 }
 
 namespace {
+static LITE_MUTEX mtx_network;
 std::unordered_map<void*, std::shared_ptr<lite::Network>>& get_gloabl_network_holder() {
-    static thread_local std::unordered_map<void*, std::shared_ptr<lite::Network>>
-            network_holder;
+    static std::unordered_map<void*, std::shared_ptr<lite::Network>> network_holder;
     return network_holder;
 }
 
@@ -168,6 +168,7 @@ int LITE_make_default_network(LiteNetwork* network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
     auto lite_network = std::make_shared<lite::Network>();
+    LITE_LOCK_GUARD(mtx_network);
     get_gloabl_network_holder()[lite_network.get()] = lite_network;
     *network = lite_network.get();
     LITE_CAPI_END();
@@ -179,6 +180,7 @@ int LITE_make_network(
     LITE_ASSERT(network, "The network pass to LITE api is null");
     auto lite_network = std::make_shared<lite::Network>(
             convert_to_lite_config(config), convert_to_lite_io(network_io));
+    LITE_LOCK_GUARD(mtx_network);
     get_gloabl_network_holder()[lite_network.get()] = lite_network;
     *network = lite_network.get();
     LITE_CAPI_END();
@@ -188,6 +190,7 @@ int LITE_make_network_config(LiteNetwork* network, const LiteConfig config) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
     auto lite_network = std::make_shared<lite::Network>(convert_to_lite_config(config));
+    LITE_LOCK_GUARD(mtx_network);
     get_gloabl_network_holder()[lite_network.get()] = lite_network;
     *network = lite_network.get();
     LITE_CAPI_END();
@@ -212,6 +215,7 @@ int LITE_load_model_from_path(LiteNetwork network, const char* model_path) {
 int LITE_destroy_network(LiteNetwork network) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(network, "The network pass to LITE api is null");
+    LITE_LOCK_GUARD(mtx_network);
     get_gloabl_network_holder().erase(network);
     LITE_CAPI_END();
 }

@@ -13,11 +13,7 @@
 #include "common.h"
 #include "lite-c/global_c.h"
 
-#include <exception>
-#include <mutex>
-
 namespace {
-
 class ErrorMsg {
 public:
     std::string& get_error_msg() { return error_msg; }
@@ -26,18 +22,22 @@ public:
 private:
     std::string error_msg;
 };
+
+static LITE_MUTEX mtx_error;
 ErrorMsg& get_global_error() {
-    static thread_local ErrorMsg error_msg;
+    static ErrorMsg error_msg;
     return error_msg;
 }
 }  // namespace
 
 int LiteHandleException(const std::exception& e) {
+    LITE_LOCK_GUARD(mtx_error);
     get_global_error().set_error_msg(e.what());
     return -1;
 }
 
 const char* LITE_get_last_error() {
+    LITE_LOCK_GUARD(mtx_error);
     return get_global_error().get_error_msg().c_str();
 }
 

@@ -17,8 +17,10 @@
 #include "lite-c/tensor_c.h"
 #include "lite/network.h"
 
+#if LITE_ENABLE_EXCEPTION
 #include <exception>
 #include <stdexcept>
+#endif
 
 //! convert c Layout to lite::Layout
 lite::Layout convert_to_layout(const LiteLayout& layout);

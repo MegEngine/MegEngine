@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <thread>
 
 TEST(TestCapiTensor, Basic) {
     LiteTensor c_tensor0, c_tensor1;
@@ -303,6 +304,23 @@ TEST(TestCapiTensor, GetMemoryByIndex) {
     ASSERT_EQ(ptr3, static_cast<float*>(ptr0) + 5 * 20);
 
     LITE_destroy_tensor(c_tensor0);
+}
+
+TEST(TestCapiTensor, ThreadLocalError) {
+    LiteTensor c_tensor0;
+    LiteTensorDesc description = default_desc;
+    description.layout = LiteLayout{{20, 20}, 2, LiteDataType::LITE_FLOAT};
+    void *ptr0, *ptr1;
+    std::thread thread1([&]() {
+        LITE_make_tensor(description, &c_tensor0);
+        LITE_get_tensor_memory(c_tensor0, &ptr0);
+    });
+    thread1.join();
+    std::thread thread2([&]() {
+        LITE_get_tensor_memory(c_tensor0, &ptr1);
+        LITE_destroy_tensor(c_tensor0);
+    });
+    thread2.join();
 }
 
 #endif

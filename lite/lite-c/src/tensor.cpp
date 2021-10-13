@@ -26,13 +26,16 @@ const LiteTensorDesc default_desc = {
         .device_type = LiteDeviceType::LITE_CPU,
         .device_id = 0};
 namespace {
+
+static LITE_MUTEX mtx_tensor;
 std::unordered_map<void*, std::shared_ptr<lite::Tensor>>& get_global_tensor_holder() {
-    static thread_local std::unordered_map<void*, std::shared_ptr<lite::Tensor>>
-            global_holder;
+    static std::unordered_map<void*, std::shared_ptr<lite::Tensor>> global_holder;
     return global_holder;
 }
+
+static LITE_MUTEX mtx_attr;
 std::unordered_map<std::string, lite::LiteAny>& get_global_tensor_attr_holder() {
-    static thread_local std::unordered_map<std::string, lite::LiteAny> global_holder;
+    static std::unordered_map<std::string, lite::LiteAny> global_holder;
     return global_holder;
 }
 }  // namespace
@@ -68,6 +71,7 @@ int LITE_make_tensor(const LiteTensorDesc tensor_describe, LiteTensor* tensor) {
     auto lite_tensor = std::make_shared<lite::Tensor>(
             tensor_describe.device_id, tensor_describe.device_type, layout,
             tensor_describe.is_pinned_host);
+    LITE_LOCK_GUARD(mtx_tensor);
     get_global_tensor_holder()[lite_tensor.get()] = lite_tensor;
     *tensor = lite_tensor.get();
     LITE_CAPI_END();
@@ -76,6 +80,7 @@ int LITE_make_tensor(const LiteTensorDesc tensor_describe, LiteTensor* tensor) {
 int LITE_destroy_tensor(LiteTensor tensor) {
     LITE_CAPI_BEGIN();
     LITE_ASSERT(tensor, "The tensor pass to LITE c_api is null");
+    LITE_LOCK_GUARD(mtx_tensor);
     get_global_tensor_holder().erase(tensor);
     LITE_CAPI_END();
 }
@@ -132,6 +137,7 @@ int LITE_tensor_slice(
         }
     }
     auto ret_tensor = static_cast<lite::Tensor*>(tensor)->slice(starts, ends, steps);
+    LITE_LOCK_GUARD(mtx_tensor);
     get_global_tensor_holder()[ret_tensor.get()] = ret_tensor;
     *slice_tensor = ret_tensor.get();
     LITE_CAPI_END();
