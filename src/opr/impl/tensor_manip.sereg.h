@@ -225,6 +225,8 @@ MGB_SEREG_OPR(RelayoutFormatV1, 1);
 MGB_SEREG_OPR(Padding, 1);
 
 MGB_SEREG_OPR(PaddingBackward, 2);
+
+MGB_SEREG_OPR(Repeat, 1);
 }  // namespace opr
 
 }  // namespace mgb

@@ -1155,23 +1155,10 @@ def repeat(inp: Tensor, repeats: int, axis: Optional[int] = None):
     assert axis >= 0 and axis <= max_axis
     assert repeats >= 1
 
-    base_shape, bcast_shape, target_shape = [], [], []
-    if axis != 0:
-        target_shape.append(shape[:axis])
-    base_shape.extend([shape[: axis + 1], [1,]])
-    bcast_shape.extend([shape[: axis + 1], [repeats,]])
-    target_shape.extend(
-        [shape[axis] * repeats,]
-    )
-    if axis + 1 <= max_axis:
-        base_shape.append(shape[axis + 1 :])
-        bcast_shape.append(shape[axis + 1 :])
-        target_shape.append(shape[axis + 1 :])
-
-    out = broadcast_to(inp.reshape(concat(base_shape)), concat(bcast_shape)).reshape(
-        concat(target_shape)
-    )
-    return out
+    times = [repeats if i == axis else 1 for i in range(len(shape))]
+    op = builtin.Repeat(times=times)
+    (result,) = apply(op, inp)
+    return result
 
 
 def _tile_one_dim(inp, rep, axis):
