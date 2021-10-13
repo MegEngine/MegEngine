@@ -101,6 +101,22 @@ OP_TRAIT_REG(RemoveAxis, RemoveAxis).apply_on_var_node(apply_on_var_node).fallba
 }  // namespace
 
 namespace {
+namespace repeat {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& repeat = static_cast<const Repeat&>(def);
+    mgb_assert(repeat.times.size() <= opr::Repeat::Param ::MAX_DESC_SIZE);
+    param.times.ndim = repeat.times.size();
+    for (size_t i = 0; i < repeat.times.size(), ++i) {
+        param.times.shape[i] = repeat.times[i]
+    }
+    OperatorNodeConfig config{repeat.make_name()};
+    return opr::Repeat::make(inputs[0], param, config);
+}
+
+OP_TRAIT_REG(Repeat, Repeat).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace repeat
+}  // namespace
+namespace {
 namespace top_k {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& topk = static_cast<const TopK&>(def);

@@ -330,6 +330,12 @@ def RemoveAxis: MgbHashableOp<"RemoveAxis"> {
   );
 }
 
+def Repeat: MgbHashableOp<"Repeat"> {
+  let extraArguments = (ins
+    MgbArrayAttr<MgbI32Attr>:$times
+  );
+}
+
 class FancyIndexingBase<string name>: MgbHashableOp<name> {
   let extraArguments = (ins
     MgbArrayAttr<MgbTupleAttr<

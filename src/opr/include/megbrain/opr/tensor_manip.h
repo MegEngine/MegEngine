@@ -633,6 +633,17 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
+
+MGB_DEFINE_OPR_CLASS(RepeatForward, intl::MegDNNOprWrapperFwd<megdnn::RepeatForward>) // {
+    public:
+        struct Param {
+            static constexpr uint32_t TAG = param_tag::Repeat,
+                             MAX_TIMES_SIZE = TensorShape::MAX_NDIM;
+            TensorShape times;
+        };
+};
+using Repeat = RepeatForward;
+
 }  // namespace opr
 }  // namespace mgb
 

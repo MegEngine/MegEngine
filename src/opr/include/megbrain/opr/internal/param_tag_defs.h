@@ -18,7 +18,7 @@ namespace mgb {
 namespace opr {
 
 namespace param_tag {
-enum ParamTag : uint32_t {
+enum ParamTag: uint32_t {
     ADD_UPDATE = 1,
     DIMSHUFFLE,
     AXIS_ADD_REMOVE,
@@ -27,11 +27,14 @@ enum ParamTag : uint32_t {
     LOOP,
     LOOP_INPUT_MAKER,
     SLEEP,
-    NNLIB_EMPTY_CONST
+    NNLIB_EMPTY_CONST,
+    Repeat,
 };
 }
 
 }  // namespace opr
 }  // namespace mgb
+
+
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
