@@ -132,6 +132,25 @@ TEST_F(CUDA, INDEXING_MULTI_AXIS_VEC) {
              TensorLayout{TensorShape{9}, {-1}, dtype::Int32()}});
 }
 
+TEST_F(CUDA, INDEXING_MULTI_AXIS_VEC_ND_INDEX) {
+    run_check<IndexingMultiAxisVec>(handle_cuda());
+    Checker<IndexingMultiAxisVec> checker(handle_cuda());
+    OrderedRNG rng;
+    checker.set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Int32())
+            .set_dtype(3, dtype::Int32())
+            .set_dtype(4, dtype::Int32())
+            .set_rng(0, &rng)
+            .set_rng(1, &rng)
+            .set_rng(2, &rng)
+            .set_rng(3, &rng)
+            .set_rng(4, &rng);
+
+    checker.set_proxy({{1, 2, 3}})
+            .execs({{5, 5, 6, 7, 3}, {5, 2, 3, 4, 3}, {3, 1}, {2, 1, 1}, {1, 4}});
+}
+
 TEST_F(CUDA, INDEXING_INCR_MULTI_AXIS_VEC) {
     run_check<IndexingIncrMultiAxisVec>(handle_cuda());
     Checker<IndexingIncrMultiAxisVec> checker(handle_cuda());

@@ -1115,7 +1115,7 @@ public:
      *      access *data*; stride of layout on that axis would be zero, and
      *      strides on other axes correspond to the strides in *data*
      */
-    static std::pair<TensorLayout, size_t> get_value_iter_optimized_layout(
+    static std::tuple<TensorLayout, size_t, TensorShape> get_value_iter_optimized_layout(
             const TensorLayout& data, const TensorLayout& value, const IndexDesc& index,
             size_t idx_axis);
 
@@ -1159,7 +1159,8 @@ public:
      * \brief get workspace size based on output shape and indexing axes
      */
     size_t get_workspace_in_bytes(
-            const TensorShape& dst, const size_t* axes, size_t nr_axes);
+            const TensorShape& dst, const size_t* axes, size_t nr_axes,
+            size_t idx_ndim);
 
     static void deduce_layout(
             const TensorLayout& data, const IndexDescLayoutOnly& index,
@@ -1193,7 +1194,8 @@ public:
      *      axes
      */
     size_t get_workspace_in_bytes(
-            const TensorShape& value, const size_t* axes, size_t nr_axes);
+            const TensorShape& value, const size_t* axes, size_t nr_axes,
+            size_t idx_ndim);
 
 protected:
     ExecInfo check_exec(
@@ -1223,7 +1225,7 @@ public:
     using AxisIndexerLayoutOnly = IndexingMultiAxisVecBase::AxisIndexerLayoutOnly;
     using IndexDescLayoutOnly = IndexingMultiAxisVecBase::IndexDescLayoutOnly;
 
-    size_t get_workspace_in_bytes(const TensorShape&, const size_t*, size_t) {
+    size_t get_workspace_in_bytes(const TensorShape&, const size_t*, size_t, size_t) {
         return 0;
     }
 

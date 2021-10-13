@@ -15,8 +15,10 @@
 using namespace megdnn;
 
 namespace {
+
+// we need a workspace to store offset base table, which has same size with index
 size_t get_index_size_for_workspace(
-        const TensorShape& shp, const size_t* axes, size_t nr_axes) {
+        const TensorShape& shp, const size_t* axes, size_t nr_axes, size_t idx_ndim) {
     size_t idx_axis = axes[0];
     megdnn_assert(shp.ndim && nr_axes);
     for (size_t i = 1; i < nr_axes; ++i) {
@@ -29,7 +31,11 @@ size_t get_index_size_for_workspace(
     megdnn_assert(
             shp.ndim > idx_axis, "index on the %zuth axis; but shape is %s", idx_axis,
             shp.to_string().c_str());
-    return shp.shape[idx_axis];
+    size_t idx_size = 1;
+    for (size_t i = 0; i < idx_ndim; ++i) {
+        idx_size *= shp.shape[idx_axis + i];
+    }
+    return idx_size;
 }
 }  // anonymous namespace
 
@@ -47,23 +53,17 @@ size_t IndexingMultiAxisVecBase::deduce_layout_fwd(
         const TensorLayout& data, const IndexDescLayoutOnly& index, TensorLayout& dst) {
     megdnn_assert(!index.empty());
     megdnn_assert(data.ndim >= index.size());
-    dst.ndim = data.ndim - index.size() + 1;
-    dst.shape[0] = 1;
+    dst.ndim = data.ndim - index.size();
     dst.dtype = data.dtype;
 
+    TensorShapeArray index_shapes;
+
     auto brdcast = [&](const TensorLayout& ly) {
-        if (ly.ndim != 1)
-            return false;
-        if (dst.shape[0] == ly.shape[0])
-            return true;
-        if (dst.shape[0] == 1) {
-            dst.shape[0] = ly.shape[0];
-            return true;
-        }
-        return ly.shape[0] == 1;
+        megdnn_assert(ly.dtype == dtype::Int32{});
+        index_shapes.push_back(ly);
     };
 
-    size_t dst_axis = 1;
+    size_t dst_axis = 0;
     ptrdiff_t prev_axis = -1;
     for (size_t axis = 0; axis < index.size(); ++axis) {
         auto&& idx = index[axis];
@@ -73,10 +73,7 @@ size_t IndexingMultiAxisVecBase::deduce_layout_fwd(
         megdnn_assert(
                 idx.axis<data.ndim&& static_cast<ptrdiff_t>(idx.axis)> prev_axis,
                 "index %zu requests invalid axis %zu", axis, idx.axis);
-        auto brd_succ = brdcast(idx.layout);
-        megdnn_assert(
-                brd_succ, "invalid layout at index %zu: %s", axis,
-                idx.layout.to_string().c_str());
+        brdcast(idx.layout);
 
         for (size_t i = prev_axis + 1; i < idx.axis; ++i) {
             dst.shape[dst_axis++] = data.shape[i];
@@ -99,13 +96,16 @@ size_t IndexingMultiAxisVecBase::deduce_layout_fwd(
             }
         }
         if (contig_idx) {
-            auto shp0 = dst.shape[0];
             idx_axis = index[0].axis;
-            for (size_t i = 0; i < idx_axis; ++i) {
-                dst.shape[i] = dst.shape[i + 1];
-            }
-            dst.shape[idx_axis] = shp0;
         }
+    }
+
+    TensorShape index_shape;
+    Elemwise::deduce_shape(index_shapes, index_shape);
+
+    for (size_t i = 0; i < index_shape.ndim; ++i) {
+        dst.add_axis_inplace(idx_axis + i, 1, 0);
+        dst.shape[idx_axis + i] = index_shape.shape[i];
     }
 
     dst.init_contiguous_stride();
@@ -145,15 +145,26 @@ IndexingMultiAxisVecBase::ExecInfo IndexingMultiAxisVecBase::check_exec_noworksp
     return ret;
 }
 
-std::pair<TensorLayout, size_t> IndexingMultiAxisVecBase::
+std::tuple<TensorLayout, size_t, TensorShape> IndexingMultiAxisVecBase::
         get_value_iter_optimized_layout(
                 const TensorLayout& data, const TensorLayout& value,
                 const IndexDesc& index, size_t idx_axis) {
     size_t data_axes[TensorLayout::MAX_NDIM],
             nr_axes = get_nonindex_axes(data.ndim, index, data_axes);
 
+    // broadcast index shapes
+    TensorLayout index_shape;
+    {
+        TensorShapeArray index_shapes;
+        for (auto& idx : index) {
+            megdnn_assert(idx.vec.layout.dtype == dtype::Int32{});
+            index_shapes.push_back(idx.vec.layout);
+        }
+        Elemwise::deduce_shape(index_shapes, index_shape);
+    }
+
     megdnn_assert(
-            nr_axes == value.ndim - 1 && idx_axis < value.ndim &&
+            nr_axes == value.ndim - index_shape.ndim && idx_axis < value.ndim &&
             nr_axes + index.size() == data.ndim);
 
     TensorLayout ret;
@@ -165,10 +176,13 @@ std::pair<TensorLayout, size_t> IndexingMultiAxisVecBase::
         }
         ret = ret.collapse_contiguous();
     }
-    ret.shape[ret.ndim] = value.shape[idx_axis];
-    ret.stride[ret.ndim] = 0;
+
     size_t ret_idx_axis = ret.ndim;
-    ++ret.ndim;
+    for (size_t i = 0; i < index_shape.ndim; ++i) {
+        ret.shape[ret.ndim] = value.shape[idx_axis + i];
+        ret.stride[ret.ndim] = 0;
+        ++ret.ndim;
+    }
 
     if (idx_axis < nr_axes) {
         TensorLayout tail;
@@ -185,12 +199,13 @@ std::pair<TensorLayout, size_t> IndexingMultiAxisVecBase::
         }
     }
 
-    return {ret, ret_idx_axis};
+    return std::make_tuple(ret, ret_idx_axis, index_shape);
 }
 
 size_t IndexingMultiAxisVec::get_workspace_in_bytes(
-        const TensorShape& dst, const size_t* axes, size_t nr_axes) {
-    return get_workspace_in_bytes(get_index_size_for_workspace(dst, axes, nr_axes));
+        const TensorShape& dst, const size_t* axes, size_t nr_axes, size_t idx_ndim) {
+    return get_workspace_in_bytes(
+            get_index_size_for_workspace(dst, axes, nr_axes, idx_ndim));
 }
 
 IndexingMultiAxisVec::ExecInfo IndexingMultiAxisVec::check_exec(
@@ -205,8 +220,9 @@ IndexingMultiAxisVec::ExecInfo IndexingMultiAxisVec::check_exec(
 }
 
 size_t IndexingModifyMultiAxisVecBase::get_workspace_in_bytes(
-        const TensorShape& value, const size_t* axes, size_t nr_axes) {
-    return get_workspace_in_bytes(get_index_size_for_workspace(value, axes, nr_axes));
+        const TensorShape& value, const size_t* axes, size_t nr_axes, size_t idx_ndim) {
+    return get_workspace_in_bytes(
+            get_index_size_for_workspace(value, axes, nr_axes, idx_ndim));
 }
 
 IndexingModifyMultiAxisVecBase::ExecInfo IndexingModifyMultiAxisVecBase::check_exec(

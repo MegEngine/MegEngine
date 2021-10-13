@@ -29,11 +29,23 @@ namespace {
         uint32_t oidx = threadIdx.x + blockDim.x * blockIdx.x;
         if (oidx < param.tot_size) {
             int offset = 0, coidx = oidx;
-            int all_ax_idx[ndim];
+            // offset in index
+            int idx_flat = 0;
+            // for non-indexed axes get offset
 #pragma unroll
             for (int i = ndim - 1; i >= 0; -- i) {
                 int next_coidx, ax_idx;
+                // [..., indexed_axes... |, ...]
+                if (i + 1 == param.idx_axis_end) {
+                    idx_flat = coidx;
+                }
+                // [... |, indexed_axes..., ...]
+                if (i + 1 == param.idx_axis) {
+                    idx_flat -= coidx * param.idx_nelems;
+                }
+                // shape[i] was storaged at shape[i-1]
                 if (i) {
+                    // fast divide
                     next_coidx = coidx / param.value_ly_on_data.shape[i - 1];
                     ax_idx =
                         coidx -
@@ -44,9 +56,9 @@ namespace {
                     ax_idx = coidx;
                 }
                 offset += param.value_ly_on_data.stride[i] * ax_idx;
-                all_ax_idx[i] = ax_idx;
             }
-            offset += param.offset_base[all_ax_idx[param.idx_axis]];
+            // offset from index, which was generated before
+            offset += param.offset_base[idx_flat];
             Opr::apply(
                     param.data[offset],
                     param.value[oidx * param.value_stride]);

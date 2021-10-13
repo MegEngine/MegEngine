@@ -197,9 +197,15 @@ Opr& mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::megdnn_opr(
 template <class Opr>
 void mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::register_workspace_infer(
         const indexing::IndexDesc& index_desc, cg::SingleCNOperatorNodeBase& opr,
-        VarNode* data, VarNode* value) {
+        VarNode* data, VarNode* value, VarNodeArray idx_arr) {
     using namespace cg::static_infer;
-    auto infer_shape = [this, &index_desc, &opr](TensorShape& dest, const InpVal& inp) {
+    DepVal deps = {{data, DepType::SHAPE}, {value, DepType::SHAPE}};
+
+    for (auto&& idx : idx_arr) {
+        deps.push_back({idx, DepType::SHAPE});
+    }
+    auto infer_shape = [this, &index_desc, &opr, nr_idx = idx_arr.size()](
+                               TensorShape& dest, const InpVal& inp) {
         size_t axes[TensorShape::MAX_NDIM], nr_axes = 0;
         auto ndim = inp.val[0].shape().ndim;
         for (auto&& i : reverse_adaptor(index_desc)) {
@@ -207,18 +213,22 @@ void mixin::IndexingMultiAxisVecMegDNNOprHolder<Opr>::register_workspace_infer(
                 axes[nr_axes++] = i.axis.get(ndim);
             }
         }
+        mgb_assert(nr_axes == nr_idx);
         if (!nr_axes) {
             dest = {0};
         } else {
+            size_t idx_ndim = 0;
+            for (size_t i = 0; i < nr_idx; ++i) {
+                idx_ndim = std::max(idx_ndim, inp.val[2 + i].shape().ndim);
+            }
+            mgb_assert(idx_ndim > 0);
             dest = {megdnn_opr(opr).get_workspace_in_bytes(
-                    inp.val[1].shape(), axes, nr_axes)};
+                    inp.val[1].shape(), axes, nr_axes, idx_ndim)};
         }
         return true;
     };
     opr.owner_graph()->static_infer_manager().register_shape_infer(
-            opr.output(1), {SourceType::DEP,
-                            {{data, DepType::SHAPE}, {value, DepType::SHAPE}},
-                            infer_shape});
+            opr.output(1), {SourceType::DEP, deps, infer_shape});
 }
 
 template <class Opr>
@@ -342,8 +352,13 @@ void IndexingMultiAxisVecBase<Opr>::init_output_static_infer_desc() {
     };
     owner_graph()->static_infer_manager().register_shape_infer(
             output(0), {SourceType::DEP, deps, infer_shape});
-
-    this->register_workspace_infer(index_desc(), *this, input(0), output(0));
+    VarNodeArray idx_arr;
+    for (size_t i = 1; i < m_input2idxonly_axis_indexer.size(); ++i) {
+        if (m_input2idxonly_axis_indexer[i]) {
+            idx_arr.push_back(input(i));
+        }
+    }
+    this->register_workspace_infer(index_desc(), *this, input(0), output(0), idx_arr);
 }
 
 template <class Opr>
@@ -401,7 +416,13 @@ void intl::IndexingModifyMultiAxisVecHelper<Opr>::init_output_static_infer_desc(
     this->owner_graph()->static_infer_manager().register_shape_infer(
             this->output(0), ShapeInferDesc::make_identity(this->input(0)));
 
-    this->register_workspace_infer(index_desc(), *this, input(0), input(1));
+    VarNodeArray idx_arr;
+    for (size_t i = 1; i < m_input2idxonly_axis_indexer.size(); ++i) {
+        if (m_input2idxonly_axis_indexer[i]) {
+            idx_arr.push_back(input(i));
+        }
+    }
+    this->register_workspace_infer(index_desc(), *this, input(0), input(1), idx_arr);
 }
 
 template <class Opr>

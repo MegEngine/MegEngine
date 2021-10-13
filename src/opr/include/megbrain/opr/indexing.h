@@ -96,7 +96,7 @@ protected:
 
     void register_workspace_infer(
             const indexing::IndexDesc& index_desc, cg::SingleCNOperatorNodeBase& opr,
-            VarNode* data, VarNode* value);
+            VarNode* data, VarNode* value, VarNodeArray idx_arr);
 
     void record_megdnn_opr(mgb::cg::GraphExecutable::ExecDependencyArray& deps);
 };

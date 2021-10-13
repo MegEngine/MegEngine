@@ -21,9 +21,10 @@ using namespace indexing_multi_axis_vec;
 
 namespace {
 class ExecImplHelper {
+    template <int nidx, int idx_ndim>
+    void dispatch_gen_offset_base_nidx_ndim();
     template <int nidx>
     void dispatch_gen_offset_base_nidx();
-
     void dispatch_gen_offset_base();
 
 protected:
@@ -38,6 +39,7 @@ protected:
     int* const m_offset_base;
     TensorLayout m_value_layout_on_data;
     size_t m_idx_axis;
+    TensorShape m_idx_shape;
     int m_value_stride;
 
 public:
@@ -76,34 +78,48 @@ ExecImplHelper::ExecImplHelper(
           m_exec_info{&exec_info},
           m_offset_base{workspace.ptr<int>()} {
     safe_size_in_kern(data.layout.total_nr_elems());
-    dispatch_gen_offset_base();
-
-    std::tie(m_value_layout_on_data, m_idx_axis) =
+    std::tie(m_value_layout_on_data, m_idx_axis, m_idx_shape) =
             IndexingMultiAxisVec::get_value_iter_optimized_layout(
                     data.layout, value.layout, index, exec_info.idx_axis);
+    dispatch_gen_offset_base();
     m_value_stride = exec_info.value_stride;
 }
 
-template <int nidx>
-void ExecImplHelper::dispatch_gen_offset_base_nidx() {
-    GenOffsetBaseParam<nidx> param;
-    param.size = m_value->layout.shape[m_exec_info->idx_axis];
+template <int nidx, int idx_ndim>
+void ExecImplHelper::dispatch_gen_offset_base_nidx_ndim() {
+    GenOffsetBaseParam<nidx, idx_ndim> param;
+    param.size = m_idx_shape.total_nr_elems();
     param.output = m_offset_base;
     param.error_tracker = m_exec_info->error_tracker;
     param.error_info = m_exec_info->error_info;
+    megdnn_assert(m_idx_shape.ndim == idx_ndim);
     for (int i = 0; i < nidx; ++i) {
         auto&& dst = param.indexer[i];
-        auto&& src = m_index->operator[](i);
-        megdnn_assert(src.vec.layout.ndim == 1);
-        dst.stride = src.vec.layout.stride[0];
-        if (src.vec.layout.shape[0] == 1) {
-            dst.stride = 0;
+        auto&& src = m_index->at(i);
+        auto src_layout = src.vec.layout.broadcast(m_idx_shape);
+        for (size_t i = 0; i < idx_ndim; ++i) {
+            if (i) {
+                dst.shape[i - 1] = src_layout.shape[i];
+            }
+            dst.stride[i] = src_layout.stride[i];
         }
         dst.ptr = src.vec.ptr<int>();
         param.data_shape[i] = m_data->layout.shape[src.axis];
         param.data_stride[i] = m_data->layout.stride[src.axis];
     }
     gen_offset_base(param, m_stream);
+}
+
+template <int nidx>
+void ExecImplHelper::dispatch_gen_offset_base_nidx() {
+    switch (m_idx_shape.ndim) {
+#define cb(_n) \
+    case _n:   \
+        return dispatch_gen_offset_base_nidx_ndim<nidx, _n>();
+        MEGDNN_FOREACH_TENSOR_NDIM(cb)
+#undef cb
+    }
+    megdnn_throw("bad index ndim");
 }
 
 void ExecImplHelper::dispatch_gen_offset_base() {
@@ -153,6 +169,8 @@ void ExecImpl<Opr>::dispatch_exec_ctype_ndim() {
     param.data = m_data->ptr<ctype>();
     param.value = m_value->ptr<ctype>();
     param.idx_axis = m_idx_axis;
+    param.idx_axis_end = m_idx_axis + m_idx_shape.ndim;
+    param.idx_nelems = m_idx_shape.total_nr_elems();
     param.value_stride = m_value_stride;
     for (int i = 0; i < ndim; ++i) {
         param.value_ly_on_data.stride[i] = m_value_layout_on_data.stride[i];

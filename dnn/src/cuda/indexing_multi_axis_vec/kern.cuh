@@ -21,17 +21,24 @@ namespace cuda {
 namespace indexing_multi_axis_vec {
 
 //! AxisIndexer equiv in kernel
+template <int idx_ndim>
 struct KAxisIndexer {
-    int stride;
+    int stride[idx_ndim];
+#ifdef WIN32
+    Uint32Fastdiv shape[idx_ndim];
+#else
+    // original shape[0] not storaged
+    Uint32Fastdiv shape[idx_ndim - 1];
+#endif
     const int* ptr;
 };
 
 //! param for gen_offset_base
-template <int nidx>
+template <int nidx, int idx_ndim>
 struct GenOffsetBaseParam {
     uint32_t size;  //!< number of outputs; also size of each index
     int* output;    //!< output ptr
-    KAxisIndexer indexer[nidx];
+    KAxisIndexer<idx_ndim> indexer[nidx];
     uint32_t data_shape[nidx];
     int data_stride[nidx];
 
@@ -59,7 +66,12 @@ struct ApplyOprParam {
     const int* offset_base;
     ctype *data, *value;
 
+    // first idx axis
     int idx_axis;
+    // last idx axis + 1
+    int idx_axis_end;
+    // number of elements for idx shape
+    int idx_nelems;
 
     int value_stride;
 
@@ -68,8 +80,9 @@ struct ApplyOprParam {
 };
 
 //! generate offset bases for first axis in the output
-template <int nidx>
-void gen_offset_base(const GenOffsetBaseParam<nidx>& param, cudaStream_t stream);
+template <int nidx, int idx_ndim>
+void gen_offset_base(
+        const GenOffsetBaseParam<nidx, idx_ndim>& param, cudaStream_t stream);
 
 struct OprAtomicIncr {
 #if MEGDNN_CC_CUDA

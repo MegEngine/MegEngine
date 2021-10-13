@@ -708,3 +708,19 @@ def test_indexingSetMultiAxisVec_on_empty_tensor(symbolic):
     run_test((10, 10, 0), test4)
     run_test((10, 10, 10), test3)
     run_test((10, 10, 10), test4)
+
+
+@pytest.mark.parametrize("symbolic", [True, False, None])
+def test_nd_int_indexing(symbolic):
+    inp = np.arange(11)
+    idx = np.random.randint(11, size=(5, 7))
+
+    def run_test(args, fn):
+        npy_out = fn(*args)
+        if symbolic:
+            fn = jit.trace(symbolic=symbolic)(fn)
+        for _ in range(3):
+            out = fn(*[Tensor(arg) for arg in args])
+            np.testing.assert_equal(out.numpy(), npy_out)
+
+    run_test([inp, idx], lambda inp, idx: inp[idx])

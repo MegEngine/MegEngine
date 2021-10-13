@@ -27,7 +27,7 @@ namespace test {
             WorkspaceWrapper W(                                                       \
                     opr->handle(),                                                    \
                     opr->get_workspace_in_bytes(                                      \
-                            tensors[1].layout, axes, tensors.size() - 2));            \
+                            tensors[1].layout, axes, tensors.size() - 2, 1));         \
             opr->exec(                                                                \
                     tensors[0], make_index_desc(tensors), tensors[1], W.workspace()); \
         }                                                                             \
@@ -46,7 +46,7 @@ namespace test {
             WorkspaceWrapper W(                                                       \
                     opr->handle(),                                                    \
                     opr->get_workspace_in_bytes(                                      \
-                            tensors[1].layout, axes, tensors.size() - 2));            \
+                            tensors[1].layout, axes, tensors.size() - 2, 1));         \
             opr->exec(                                                                \
                     tensors[0], tensors[1], make_index_desc(tensors), W.workspace()); \
         }                                                                             \

@@ -33,37 +33,46 @@ void do_exec(
 
     auto data_layout = data.layout;
     auto data_ptr = data.ptr<data_type>();
-    std::tuple<size_t, const idx_type*, ptrdiff_t> index_raw[TensorLayout::MAX_NDIM];
+    std::tuple<size_t, const idx_type*, TensorLayout> index_raw[TensorLayout::MAX_NDIM];
     size_t nr_index = index.size();
+    TensorShape idx_shape;
+    {
+        TensorShapeArray idx_shapes;
+        for (size_t i = 0; i < nr_index; ++i) {
+            idx_shapes.push_back(index[i].vec.layout);
+        }
+        Elemwise::deduce_shape(idx_shapes, idx_shape);
+    }
     for (size_t i = 0; i < nr_index; ++i) {
         auto&& s = index[i];
-        index_raw[i] =
-                std::make_tuple(s.axis, s.vec.ptr<idx_type>(), s.vec.layout.stride[0]);
-
-        if (s.vec.layout.shape[0] == 1)
-            std::get<2>(index_raw[i]) = 0;
+        index_raw[i] = std::make_tuple(
+                s.axis, s.vec.ptr<idx_type>(), s.vec.layout.broadcast(idx_shape));
     }
 
     auto value_iter = tensor_iter<data_type>(value).begin();
     for (size_t _ = 0, _t = value.layout.total_nr_elems(); _ < _t; ++_) {
         ptrdiff_t offset = 0;
-        auto index_idx = value_iter.idx()[exec_info.idx_axis];
+        auto* index_idx = value_iter.idx() + exec_info.idx_axis;
         for (size_t i = 0; i < nr_index; ++i) {
             size_t axis = std::get<0>(index_raw[i]),
                    data_shape = data_layout.shape[axis];
             ptrdiff_t data_stride = data_layout.stride[axis];
-            idx_type data_idx =
-                    std::get<1>(index_raw[i])[std::get<2>(index_raw[i]) * index_idx];
+            size_t index_offset = 0;
+            TensorLayout& index_layout = std::get<2>(index_raw[i]);
+            for (size_t i = 0; i < index_layout.ndim; ++i) {
+                index_offset += index_idx[i] * index_layout.stride[i];
+            }
+            idx_type data_idx = std::get<1>(index_raw[i])[index_offset];
             if (data_idx < 0)
                 data_idx += data_shape;
             megdnn_assert(
                     data_idx >= 0 && static_cast<size_t>(data_idx) < data_shape,
-                    "bad index value for index %zu at output %zu", i, index_idx);
+                    "bad index value for index %zu at output %zu", i, *index_idx);
             offset += data_stride * data_idx;
         }
         for (size_t i = 0; i < nr_nonidx_axes; ++i) {
             auto stride = data_layout.stride[nonidx_axes[i]];
-            auto idx = value_iter.idx()[i + (i >= exec_info.idx_axis)];
+            auto idx = value_iter.idx()[i + (i >= exec_info.idx_axis) * idx_shape.ndim];
             offset += stride * idx;
         }
         Opr::apply(data_ptr[offset], *value_iter);

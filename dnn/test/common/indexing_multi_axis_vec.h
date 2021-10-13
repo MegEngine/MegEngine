@@ -46,6 +46,15 @@ struct OprProxyIndexingMultiAxisVecHelper {
         return ret;
     }
 
+    size_t get_index_ndim(const TensorNDArray& tensors) const {
+        megdnn_assert(tensors.size() >= 3);
+        size_t ndim = 0;
+        for (size_t i = 2; i < tensors.size(); ++i) {
+            ndim = std::max(tensors[i].layout.ndim, ndim);
+        }
+        return ndim;
+    }
+
     IndexingMultiAxisVec::IndexDescLayoutOnly make_index_layout(
             const TensorLayoutArray& layouts) const {
         megdnn_assert(layouts.size() >= 3);
@@ -65,7 +74,8 @@ struct OprProxy<IndexingMultiAxisVec> : public OprProxyIndexingMultiAxisVecHelpe
     void exec(IndexingMultiAxisVec* opr, const TensorNDArray& tensors) const {
         WorkspaceWrapper W(
                 opr->handle(), opr->get_workspace_in_bytes(
-                                       tensors[1].layout, axes, tensors.size() - 2));
+                                       tensors[1].layout, axes, tensors.size() - 2,
+                                       get_index_ndim(tensors)));
         opr->exec(tensors[0], make_index_desc(tensors), tensors[1], W.workspace());
     }
 
@@ -81,7 +91,8 @@ struct OprProxy<IndexingIncrMultiAxisVec> : public OprProxyIndexingMultiAxisVecH
     void exec(IndexingIncrMultiAxisVec* opr, const TensorNDArray& tensors) const {
         WorkspaceWrapper W(
                 opr->handle(), opr->get_workspace_in_bytes(
-                                       tensors[1].layout, axes, tensors.size() - 2));
+                                       tensors[1].layout, axes, tensors.size() - 2,
+                                       get_index_ndim(tensors)));
         opr->exec(tensors[0], tensors[1], make_index_desc(tensors), W.workspace());
     }
 
@@ -95,7 +106,8 @@ struct OprProxy<IndexingSetMultiAxisVec> : public OprProxyIndexingMultiAxisVecHe
     void exec(IndexingSetMultiAxisVec* opr, const TensorNDArray& tensors) const {
         WorkspaceWrapper W(
                 opr->handle(), opr->get_workspace_in_bytes(
-                                       tensors[1].layout, axes, tensors.size() - 2));
+                                       tensors[1].layout, axes, tensors.size() - 2,
+                                       get_index_ndim(tensors)));
         opr->exec(tensors[0], tensors[1], make_index_desc(tensors), W.workspace());
     }
 
