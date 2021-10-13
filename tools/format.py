@@ -104,6 +104,21 @@ def main():
         else:
             raise ValueError("Invalid path {}".format(path))
 
+    # check version, we only support 12.0.1 now
+    version = subprocess.check_output(
+        [
+            args.clang_format,
+            "--version",
+        ],
+    )
+    version = version.decode("utf-8")
+
+    need_version = '12.0.1'
+    if version.find(need_version) < 0:
+        print('We only support {} now, please install {} version, find version: {}'
+                .format(need_version, need_version, version))
+        raise RuntimeError('clang-format version not equal {}'.format(need_version))
+
     process_map(
         partial(process_file, clang_format=args.clang_format, write=args.write,),
         files,
