@@ -352,19 +352,19 @@ void NetworkImplDft::load_model(
 
     //! config some flag get from json config file
     if (separate_config_map.find("device_id") != separate_config_map.end()) {
-        set_device_id(separate_config_map["device_id"].unsafe_cast<int>());
+        set_device_id(separate_config_map["device_id"].safe_cast<int>());
     }
     if (separate_config_map.find("number_threads") != separate_config_map.end() &&
-        separate_config_map["number_threads"].unsafe_cast<size_t>() > 1) {
+        separate_config_map["number_threads"].safe_cast<uint32_t>() > 1) {
         set_cpu_threads_number(
-                separate_config_map["number_threads"].unsafe_cast<size_t>());
+                separate_config_map["number_threads"].safe_cast<uint32_t>());
     }
     if (separate_config_map.find("enable_inplace_model") != separate_config_map.end() &&
-        separate_config_map["enable_inplace_model"].unsafe_cast<bool>()) {
+        separate_config_map["enable_inplace_model"].safe_cast<bool>()) {
         set_cpu_inplace_mode();
     }
     if (separate_config_map.find("use_tensorrt") != separate_config_map.end() &&
-        separate_config_map["use_tensorrt"].unsafe_cast<bool>()) {
+        separate_config_map["use_tensorrt"].safe_cast<bool>()) {
         use_tensorrt();
     }
 

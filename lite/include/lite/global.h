@@ -77,7 +77,7 @@ LITE_API bool update_decryption_or_key(
  * other config not inclue in config and networkIO, ParseInfoFunc can fill it
  * with the information in json, now support:
  * "device_id" : int, default 0
- * "number_threads" : size_t, default 1
+ * "number_threads" : uint32_t, default 1
  * "is_inplace_model" : bool, default false
  * "use_tensorrt" : bool, default false
  */

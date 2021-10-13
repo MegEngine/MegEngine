@@ -127,7 +127,8 @@ int LITE_register_parse_info_func(
                     separate_config_map["device_id"] = device_id;
                 }
                 if (nr_threads != 1) {
-                    separate_config_map["nr_threads"] = nr_threads;
+                    separate_config_map["nr_threads"] =
+                            static_cast<uint32_t>(nr_threads);
                 }
                 if (is_cpu_inplace_mode != false) {
                     separate_config_map["is_inplace_mode"] = is_cpu_inplace_mode;

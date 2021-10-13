@@ -149,28 +149,42 @@ private:
  */
 class LITE_API LiteAny {
 public:
+    enum Type {
+        STRING = 0,
+        INT32 = 1,
+        UINT32 = 2,
+        UINT8 = 3,
+        INT8 = 4,
+        INT64 = 5,
+        UINT64 = 6,
+        BOOL = 7,
+        VOID_PTR = 8,
+        FLOAT = 9,
+        NONE_SUPPORT = 10,
+    };
     LiteAny() = default;
     template <class T>
     LiteAny(T value) : m_holder(new AnyHolder<T>(value)) {
-        m_is_string = std::is_same<std::string, T>();
+        m_type = get_type<T>();
     }
 
     LiteAny(const LiteAny& any) {
         m_holder = any.m_holder->clone();
-        m_is_string = any.is_string();
+        m_type = any.m_type;
     }
     LiteAny& operator=(const LiteAny& any) {
         m_holder = any.m_holder->clone();
-        m_is_string = any.is_string();
+        m_type = any.m_type;
         return *this;
     }
-    bool is_string() const { return m_is_string; }
+
+    template <class T>
+    Type get_type() const;
 
     class HolderBase {
     public:
         virtual ~HolderBase() = default;
         virtual std::shared_ptr<HolderBase> clone() = 0;
-        virtual size_t type_length() const = 0;
     };
 
     template <class T>
@@ -180,7 +194,6 @@ public:
         virtual std::shared_ptr<HolderBase> clone() override {
             return std::make_shared<AnyHolder>(m_value);
         }
-        virtual size_t type_length() const override { return sizeof(T); }
 
     public:
         T m_value;
@@ -188,13 +201,20 @@ public:
     //! if type is miss matching, it will throw
     void type_missmatch(size_t expect, size_t get) const;
 
-    //! only check the storage type and the visit type length, so it's not safe
     template <class T>
-    T unsafe_cast() const {
-        if (sizeof(T) != m_holder->type_length()) {
-            type_missmatch(m_holder->type_length(), sizeof(T));
+    T safe_cast() const {
+        if (get_type<T>() != m_type) {
+            type_missmatch(m_type, get_type<T>());
         }
         return static_cast<LiteAny::AnyHolder<T>*>(m_holder.get())->m_value;
+    }
+    template <class T>
+    bool try_cast() const {
+        if (get_type<T>() == m_type) {
+            return true;
+        } else {
+            return false;
+        }
     }
     //! only check the storage type and the visit type length, so it's not safe
     void* cast_void_ptr() const {
@@ -203,7 +223,7 @@ public:
 
 private:
     std::shared_ptr<HolderBase> m_holder;
-    bool m_is_string = false;
+    Type m_type = NONE_SUPPORT;
 };
 
 /*********************** special tensor function ***************/

@@ -277,9 +277,27 @@ void Tensor::update_from_implement() {
 void LiteAny::type_missmatch(size_t expect, size_t get) const {
     LITE_THROW(ssprintf(
             "The type store in LiteAny is not match the visit type, type of "
-            "storage length is %zu, type of visit length is %zu.",
+            "storage enum is %zu, type of visit enum is %zu.",
             expect, get));
 }
+
+namespace lite {
+#define GET_TYPE(ctype, ENUM)                        \
+    template <>                                      \
+    LiteAny::Type LiteAny::get_type<ctype>() const { \
+        return ENUM;                                 \
+    }
+GET_TYPE(std::string, STRING)
+GET_TYPE(int32_t, INT32)
+GET_TYPE(uint32_t, UINT32)
+GET_TYPE(int8_t, INT8)
+GET_TYPE(uint8_t, UINT8)
+GET_TYPE(int64_t, INT64)
+GET_TYPE(uint64_t, UINT64)
+GET_TYPE(float, FLOAT)
+GET_TYPE(bool, BOOL)
+GET_TYPE(void*, VOID_PTR)
+}  // namespace lite
 
 std::shared_ptr<Tensor> TensorUtils::concat(
         const std::vector<Tensor>& tensors, int dim, LiteDeviceType dst_device,

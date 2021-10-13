@@ -84,7 +84,7 @@ bool default_parse_info(
         }
         if (device_json.contains("number_threads")) {
             separate_config_map["number_threads"] =
-                    static_cast<size_t>(device_json["number_threads"]);
+                    static_cast<uint32_t>(device_json["number_threads"]);
         }
         if (device_json.contains("enable_inplace_model")) {
             separate_config_map["enable_inplace_model"] =
