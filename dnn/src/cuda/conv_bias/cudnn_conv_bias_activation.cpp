@@ -73,10 +73,12 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivation::is_available(
         return false;
     }
 
-    //! FIXME: conv kernel of cudnn for NCHW4_NCHW tensor format causes illegal
-    //! memory access errors, so we have to disable this kernel here.
-    if (param.format == param::ConvBias::Format::NCHW4_NCHW ||
-        param.format == param::ConvBias::Format::NCHW4_NCHW32 ||
+#if CUDNN_MAJOR < 8
+    if (m_cudnn_enum == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM &&
+        param.format == param::ConvBias::Format::NCHW4_NCHW)
+        return false;
+#endif
+    if (param.format == param::ConvBias::Format::NCHW4_NCHW32 ||
         param.format == param::ConvBias::Format::NCHW32_NCHW4)
         return false;
     if (param.format == param::ConvBias::Format::NCHW &&
