@@ -1649,16 +1649,20 @@ MEGDNN_OPR_INIT2(PaddingBackward, "padding_backward", 1, false);
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
 
 RepeatForward::RepeatForward(
-        VarNode* src, const megdnn::TileRepeatBase::Param& param, const OperatorNodeConfig& config)
+        VarNode* src, const Param& param, const OperatorNodeConfig& config)
         : Super(OperatorNodeBaseCtorParam{src->owner_graph(), config, "repeat", {src}}) {
-    init_megdnn_opr(*this, param);
+    megdnn::TileRepeatBase::Param dnn_param;
+    dnn_param.times = TensorShape(param.times);
+    init_megdnn_opr(*this, dnn_param);
     add_input({src});
     intl::MegDNNOprInitPostCtor<RepeatForward>::apply(*this);
 }
 
 SymbolVar RepeatForward::make(
-        SymbolVar src, const megdnn::TileRepeatBase::Param& param,
+        SymbolVar src, const Param& param,
         const OperatorNodeConfig& config) {
+    // megdnn::TileRepeatBase::Param dnn_param;
+    // dnn_param.times = TensorShape(param.times);
     intl::MegDNNOprInitInputsModifier<RepeatForward>::apply(param, {&src});  
     return src.insert_single_output_opr<RepeatForward>(src.node(), param, config);
 }
@@ -1666,3 +1670,16 @@ SymbolVar RepeatForward::make(
 // f}}}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
+
+
+//  {
+//             megdnn::TileRepeatBase::Param dnn_param;
+//                 dnn_param.times = TensorShape(param.times);
+//             RepeatForward(src, dnn_param, config);
+//         }
+
+
+//         megdnn_utils::add_output_vars(opr, MegDNNOpr::NR_OUTPUTS, add_workspace);
+//         m_param = param;
+//         if (!std::is_empty<Param>::value)
+//             opr.add_equivalence_component<PODHash<Param>>(&m_param);
