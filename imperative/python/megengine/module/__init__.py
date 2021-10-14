@@ -20,6 +20,7 @@ from .conv import (
     ConvTranspose2d,
     ConvTranspose3d,
     DeformableConv2d,
+    PartialConv2d,
     LocalConv2d,
 )
 from .conv_bn import ConvBn2d, ConvBnRelu2d

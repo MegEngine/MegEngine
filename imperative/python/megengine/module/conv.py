@@ -17,6 +17,7 @@ from ..functional import (
     conv_transpose2d,
     conv_transpose3d,
     deformable_conv2d,
+    partial_conv2d,
     local_conv2d,
     relu,
 )
@@ -926,3 +927,83 @@ class ConvTranspose3d(_ConvNd):
         return conv_transpose3d(
             inp, self.weight, self.bias, self.stride, self.padding, self.dilation,
         )
+
+
+class PartialConv2d(_ConvNd):
+    r"""Implementation for partial convolution.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        groups: int = 1,
+        bias: bool = True,
+        conv_mode: str = "cross_correlation",
+        compute_mode: str = "default",
+        **kwargs
+    ):
+        kernel_size = _pair_nonzero(kernel_size)
+        stride = _pair_nonzero(stride)
+        padding = _pair(padding)
+        dilation = _pair_nonzero(dilation)
+        self.conv_mode = conv_mode
+        self.compute_mode = compute_mode
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            **kwargs,
+        )
+
+    def _get_fanin(self):
+        kh, kw = self.kernel_size
+        ic = self.in_channels
+        return kh * kw * ic
+
+    def _infer_weight_shape(self):
+        group = self.groups
+        ichl = self.in_channels
+        ochl = self.out_channels
+        kh, kw = self.kernel_size
+        if group == 1:
+            # Assume format is NCHW
+            return (ochl, ichl, kh, kw)
+
+        assert (
+            ichl % group == 0 and ochl % group == 0
+        ), "invalid config: in_channels={} out_channels={} group={}".format(
+            ichl, ochl, group
+        )
+        # Assume format is NCHW
+        return (group, ochl // group, ichl // group, kh, kw)
+
+    def _infer_bias_shape(self):
+        # Assume format is NCHW
+        return (1, self.out_channels, 1, 1)
+
+    def calc_conv(self, inp, weight, bias):
+        return partial_conv2d(
+            inp,
+            mask,
+            weight,
+            bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.conv_mode,
+            self.compute_mode,
+        )
+
+    def forward(self, inp):
+        return self.calc_conv(inp, self.mask, self.weight, self.bias)

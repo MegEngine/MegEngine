@@ -1177,3 +1177,49 @@ def test_pad():
     dst = np.pad(src, ((2, 2), (2, 2)), "reflect")
     res = F.nn.pad(tensor(src), ((2, 2), (2, 2)), "REFLECT")
     np.testing.assert_allclose(res, dst, atol=1e-5)
+
+
+def test_partial_conv2d():
+
+    def run(
+        N,
+        IC,
+        OC,
+        IH,
+        IW,
+        KH,
+        KW,
+        PH=0,
+        PW=0,
+        SH=1,
+        SW=1,
+        DH=1,
+        DW=1,
+        has_bias=True,
+        nonlinear_mode="identity",
+    ):
+        inp = np.random.normal(size=(N, IC, IH, IW))
+        w = np.random.normal(size=(OC, IC, KH, KW))
+        b = np.random.normal(size=(1, OC, 1, 1))
+        OH = (IH + 2 * PH - ((KH - 1) * DH + 1)) // SH + 1
+        OW = (IW + 2 * PW - ((KW - 1) * DW + 1)) // SW + 1
+        mask = np.random.random_integers(0, 1, size=(OH, OW))
+        y0 = F.conv2d(inp, w, None, 2, 0, 1, 1)
+
+        def run_conv2d_mask(inp, w, b, mask):
+            y0 = F.conv2d(
+                inp, w, b if has_bias else None, stride=(SH, SW), padding=(PH, PW),
+            )
+            for n in range(N):
+                for oc in range(OC):
+                    for oh in range(OH):
+                        for ow in range(OW):
+                            if mask[oh, ow] == 0:
+                                y0[n, oc, oh, ow] = 0
+            return y0 
+        y1 = F.partial_conv2d(inp, mask, w, b, stride=(SH, SW), padding=(PH, PW))        
+        np.testing.assert_equal(y0.numpy(), y1.numpy())
+
+    run(1, 1, 1, 5, 5, 3, 3)
+    run(10, 2, 3, 24, 24, 3, 3, SH=2, DH=3, DW=2)
+    run(10, 2, 3, 24, 24, 3, 3, SW=2, DH=3, DW=2, PH=2, PW=1)
