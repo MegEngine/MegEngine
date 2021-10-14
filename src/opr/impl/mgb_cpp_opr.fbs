@@ -25,6 +25,7 @@ table Dimshuffle {
 }
 
 table TileRepeat {
+    TAG:uint;
     times:[uint];
     nr_times:uint;
 }

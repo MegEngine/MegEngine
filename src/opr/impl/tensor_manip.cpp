@@ -1651,9 +1651,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
 RepeatForward::RepeatForward(
         VarNode* src, const Param& param, const OperatorNodeConfig& config)
         : Super(OperatorNodeBaseCtorParam{src->owner_graph(), config, "repeat", {src}}) {
-    megdnn::TileRepeatBase::Param dnn_param;
-    dnn_param.times = TensorShape(param.times);
-    init_megdnn_opr(*this, dnn_param);
+    // Param& tagged_param = const_cast<Param *>(param);
+    // tagged_param.TAG = param_tag::Repeat; // with problem 
+    init_megdnn_opr(*this, param);
     add_input({src});
     intl::MegDNNOprInitPostCtor<RepeatForward>::apply(*this);
 }
@@ -1661,8 +1661,6 @@ RepeatForward::RepeatForward(
 SymbolVar RepeatForward::make(
         SymbolVar src, const Param& param,
         const OperatorNodeConfig& config) {
-    // megdnn::TileRepeatBase::Param dnn_param;
-    // dnn_param.times = TensorShape(param.times);
     intl::MegDNNOprInitInputsModifier<RepeatForward>::apply(param, {&src});  
     return src.insert_single_output_opr<RepeatForward>(src.node(), param, config);
 }

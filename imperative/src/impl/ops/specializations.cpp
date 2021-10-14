@@ -104,10 +104,11 @@ namespace {
 namespace repeat {
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& repeat = static_cast<const Repeat&>(def);
-    mgb_assert(repeat.times.size() <= opr::Repeat::Param ::MAX_DESC_SIZE);
+    mgb_assert(repeat.times.size() <= TensorShape::MAX_NDIM);
+    opr::Repeat::Param param;
     param.times.ndim = repeat.times.size();
-    for (size_t i = 0; i < repeat.times.size(), ++i) {
-        param.times.shape[i] = repeat.times[i]
+    for (size_t i = 0; i < repeat.times.size(); ++i) {
+        param.times.shape[i] = repeat.times[i];
     }
     OperatorNodeConfig config{repeat.make_name()};
     return opr::Repeat::make(inputs[0], param, config);
