@@ -1651,9 +1651,10 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(RepeatForward);
 RepeatForward::RepeatForward(
         VarNode* src, const Param& param, const OperatorNodeConfig& config)
         : Super(OperatorNodeBaseCtorParam{src->owner_graph(), config, "repeat", {src}}) {
-    // Param& tagged_param = const_cast<Param *>(param);
-    // tagged_param.TAG = param_tag::Repeat; // with problem 
-    init_megdnn_opr(*this, param);
+    Param tagged_param;
+    tagged_param.times = param.times;
+    tagged_param.TAG = param_tag::Repeat;
+    init_megdnn_opr(*this, tagged_param);
     add_input({src});
     intl::MegDNNOprInitPostCtor<RepeatForward>::apply(*this);
 }
@@ -1668,16 +1669,3 @@ SymbolVar RepeatForward::make(
 // f}}}
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-
-
-//  {
-//             megdnn::TileRepeatBase::Param dnn_param;
-//                 dnn_param.times = TensorShape(param.times);
-//             RepeatForward(src, dnn_param, config);
-//         }
-
-
-//         megdnn_utils::add_output_vars(opr, MegDNNOpr::NR_OUTPUTS, add_workspace);
-//         m_param = param;
-//         if (!std::is_empty<Param>::value)
-//             opr.add_equivalence_component<PODHash<Param>>(&m_param);
