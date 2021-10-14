@@ -28,9 +28,8 @@ using namespace gopt;
 using namespace cg;
 
 MIDOUT_DECL(megbrain_global_layout_transform)
-#define MIDOUT_B(tag)                              \
-    MIDOUT_BEGIN(megbrain_global_layout_transform, \
-                 midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_global_layout_transform, midout_iv(MGB_HASH_STR(tag))) {
 #define MIDOUT_E \
     }            \
     MIDOUT_END();
@@ -38,8 +37,8 @@ MIDOUT_DECL(megbrain_global_layout_transform)
 /* =================== LayoutTransformPass ======================*/
 void LayoutTransformPass::apply(OptState& opt) const {
     MIDOUT_B("apply")
-    opt.set_var_replace_check_flag(VarReplaceCheckFlag::CHECK_ALL ^
-                                   VarReplaceCheckFlag::CHECK_SHAPE);
+    opt.set_var_replace_check_flag(
+            VarReplaceCheckFlag::CHECK_ALL ^ VarReplaceCheckFlag::CHECK_SHAPE);
     SubGraphExtractor extractor(m_ctx->opr_list());
     auto partitions = extractor.extract(opt.graph().endpoint_vars());
 
@@ -69,9 +68,8 @@ void LayoutTransformPass::apply(OptState& opt) const {
 #undef cb
     };
     auto rewriter = opt.graph().make_rewriter();
-    auto on_opr = [&opr_configs, &base_fmt, &reformat_attribute, &rewriter,
-                   &solution, &var2fmts,
-                   &endpoint_vars](OperatorNodeBase* opr) {
+    auto on_opr = [&opr_configs, &base_fmt, &reformat_attribute, &rewriter, &solution,
+                   &var2fmts, &endpoint_vars](OperatorNodeBase* opr) {
         auto it = solution.find(opr);
         if (it != solution.end()) {
             auto opr_fmt = it->second;
@@ -84,8 +82,7 @@ void LayoutTransformPass::apply(OptState& opt) const {
             size_t nr_inps = opr->input().size();
             TensorFormats out_fmt;
             if (fmtcfg.valid()) {
-                nr_inps = std::min(fmtcfg.val().input_tensor_formats.size(),
-                                   nr_inps);
+                nr_inps = std::min(fmtcfg.val().input_tensor_formats.size(), nr_inps);
                 out_fmt = fmtcfg.val().output_tensor_formats[0];
             } else {
                 out_fmt = opr_format_to_tensor_formats(opr_fmt);
@@ -101,12 +98,11 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 } else {
                     from = find->second;
                 }
-                auto to = fmtcfg.valid()
-                                  ? fmtcfg.val().input_tensor_formats[i]
-                                  : opr_format_to_tensor_formats(opr_fmt);
+                auto to = fmtcfg.valid() ? fmtcfg.val().input_tensor_formats[i]
+                                         : opr_format_to_tensor_formats(opr_fmt);
                 bool is_parameter =
-                        fmtcfg.valid() && fmtcfg.val().input_tensor_types[i] ==
-                                                  TensorType::WEIGHT;
+                        fmtcfg.valid() &&
+                        fmtcfg.val().input_tensor_types[i] == TensorType::WEIGHT;
                 // need relayout
                 if (from != to && !new_var->shape().is_scalar()) {
                     ReformatManager::ReformatImpl reformat;
@@ -114,8 +110,8 @@ void LayoutTransformPass::apply(OptState& opt) const {
                             from, to, reformat_attribute, var->dtype().enumv(),
                             var->dtype().enumv()};
                     if (is_parameter) {
-                        auto aligned_desc = ReformatManager::make_aligned_desc(
-                                base_fmt, out_fmt);
+                        auto aligned_desc =
+                                ReformatManager::make_aligned_desc(base_fmt, out_fmt);
                         reformat = ReformatManager::instance()
                                            .auto_aligned_reformat_weight(
                                                    var, key, aligned_desc);
@@ -132,21 +128,20 @@ void LayoutTransformPass::apply(OptState& opt) const {
             if (format_aware_oprs.count(opr->dyn_typeinfo()) > 0) {
                 new_out = intl::modify_opr_format(opr_fmt, new_inp, opr);
             } else {
-                new_out = serialization::copy_opr_shallow(*opr, new_inp,
-                                                          opr->config())
+                new_out = serialization::copy_opr_shallow(*opr, new_inp, opr->config())
                                   ->output(0);
             }
-            auto &&out0 = opr->output(),
-                 &&out1 = new_out->owner_opr()->output();
-            mgb_assert(opr->usable_output().size() ==
-                               new_out->owner_opr()->usable_output().size(),
-                       "bad opr replace: src=%s{%s} dst=%s{%s}, "
-                       "src.size=%zu "
-                       "dst.size=%zu",
-                       opr->cname(), opr->dyn_typeinfo()->name,
-                       new_out->owner_opr()->cname(),
-                       new_out->owner_opr()->dyn_typeinfo()->name, out0.size(),
-                       out1.size());
+            auto &&out0 = opr->output(), &&out1 = new_out->owner_opr()->output();
+            mgb_assert(
+                    opr->usable_output().size() ==
+                            new_out->owner_opr()->usable_output().size(),
+                    "bad opr replace: src=%s{%s} dst=%s{%s}, "
+                    "src.size=%zu "
+                    "dst.size=%zu",
+                    opr->cname(), opr->dyn_typeinfo()->name,
+                    new_out->owner_opr()->cname(),
+                    new_out->owner_opr()->dyn_typeinfo()->name, out0.size(),
+                    out1.size());
             size_t nr_outs = opr->usable_output().size();
             for (size_t i = 0; i < nr_outs; ++i) {
                 const auto& ovar = out0[i];
@@ -155,9 +150,9 @@ void LayoutTransformPass::apply(OptState& opt) const {
                     ReformatManager::ReformatKey key{
                             out_fmt, base_fmt, reformat_attribute,
                             ovar->dtype().enumv(), ovar->dtype().enumv()};
-                    auto reformat = ReformatManager::instance()
-                                            .auto_aligned_reformat_featrue(
-                                                    ovar, base_fmt, key);
+                    auto reformat =
+                            ReformatManager::instance().auto_aligned_reformat_featrue(
+                                    ovar, base_fmt, key);
                     new_ovar = reformat({new_ovar});
                     var2fmts[new_ovar] = base_fmt;
                 } else {
@@ -165,10 +160,11 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 }
                 rewriter.replace_var(
                         ovar, new_ovar,
-                        mgb_cstr_log(ssprintf("replace opr(%s) to new opr "
-                                              "format(%s)",
-                                              opr->cname(),
-                                              opr_format_to_string(opr_fmt))
+                        mgb_cstr_log(ssprintf(
+                                             "replace opr(%s) to new opr "
+                                             "format(%s)",
+                                             opr->cname(),
+                                             opr_format_to_string(opr_fmt))
                                              .c_str()));
             }
         } else {
@@ -190,8 +186,7 @@ std::unique_ptr<LayoutTransformPass> LayoutTransformPass::make(
     std::unique_ptr<SolverBase> solver{
             new DynamicProgrammingSolver(std::move(profiler))};
     auto ctx = LayoutTransformContext::make(target);
-    return std::make_unique<LayoutTransformPass>(std::move(ctx),
-                                                 std::move(solver));
+    return std::make_unique<LayoutTransformPass>(std::move(ctx), std::move(solver));
     MIDOUT_E
 }
 

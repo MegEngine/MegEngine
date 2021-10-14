@@ -1,5 +1,6 @@
 /**
- * \file dnn/src/cuda/local_share/backward_filter/local_share_bwd_filter_f32_implicit_gemm.cu
+ * \file
+ * dnn/src/cuda/local_share/backward_filter/local_share_bwd_filter_f32_implicit_gemm.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -32,8 +33,7 @@ struct ThreadConfig {
 template <typename UnrollConfig, typename ThreadConfig>
 struct DiffTileCount {
     static int const tile_batch = UnrollConfig::unroll_n;
-    static int const tile_co =
-            UnrollConfig::unroll_co * ThreadConfig::nr_thread_x;
+    static int const tile_co = UnrollConfig::unroll_co * ThreadConfig::nr_thread_x;
 
     static int const load_x = tile_batch > 32 ? 32 : tile_batch;
     static int const load_y = ThreadConfig::nr_threads / load_x;
@@ -52,8 +52,7 @@ struct DiffTileCount {
 template <typename UnrollConfig, typename ThreadConfig>
 struct DataTileCount {
     static int const tile_batch = UnrollConfig::unroll_n;
-    static int const tile_ci =
-            ThreadConfig::nr_thread_y * UnrollConfig::unroll_ci;
+    static int const tile_ci = ThreadConfig::nr_thread_y * UnrollConfig::unroll_ci;
 
     static int const load_x = tile_batch > 32 ? 32 : tile_batch;
     static int const load_y = ThreadConfig::nr_threads / load_x;
@@ -156,21 +155,16 @@ struct Global2ShareMemVisitor {
         return &smem[y * TileCount::smem_stride + x];
     }
 
-    __device__ __forceinline__ void move_forward() {
-        g_ptr += TileCount::tile_batch;
-    }
+    __device__ __forceinline__ void move_forward() { g_ptr += TileCount::tile_batch; }
 };
 
 template <bool check_bounds, typename UnrollConfig, typename ThreadConfig>
 __device__ __forceinline__ void consume_block(
-        Global2ShareMemVisitor<check_bounds,
-                               DataTileCount<UnrollConfig, ThreadConfig>>&
+        Global2ShareMemVisitor<check_bounds, DataTileCount<UnrollConfig, ThreadConfig>>&
                 src_gl2sh_visitor,
-        Global2ShareMemVisitor<check_bounds,
-                               DiffTileCount<UnrollConfig, ThreadConfig>>&
+        Global2ShareMemVisitor<check_bounds, DiffTileCount<UnrollConfig, ThreadConfig>>&
                 diff_gl2sh_visitor,
-        float r_src[UnrollConfig::unroll_ci],
-        float r_diff[UnrollConfig::unroll_co],
+        float r_src[UnrollConfig::unroll_ci], float r_diff[UnrollConfig::unroll_co],
         float r_grad[UnrollConfig::unroll_ci][UnrollConfig::unroll_co]) {
     const int tidx = threadIdx.x;
     const int tidy = threadIdx.y;
@@ -237,11 +231,10 @@ __global__ void local_share_bwd_filter_device_template_f32(
     const float* __restrict__ g_ptr_diff = diff + b_co * ho * wo * param.n;
     float* __restrict__ g_ptr_grad =
             grad +
-            sp_grp_idx * filter_sizes * param.co *
-                    param.ci                  // spatial group stride
-            + t_ci * filter_sizes * param.co  // input channel stride
-            + kern_spatial * param.co         // kernel spatial stride
-            + t_co;                           // output channel stride
+            sp_grp_idx * filter_sizes * param.co * param.ci  // spatial group stride
+            + t_ci * filter_sizes * param.co                 // input channel stride
+            + kern_spatial * param.co                        // kernel spatial stride
+            + t_co;                                          // output channel stride
 
     Global2ShareMemVisitor<check_bounds, DataTileCount> src_gl2sh_visitor{
             sh_src, param.hi * param.wi * param.n, param.ci - b_ci};
@@ -265,8 +258,7 @@ __global__ void local_share_bwd_filter_device_template_f32(
     int sp_grp_w_start = sgw_idx * param.grp_wo;
     int sp_grp_w_end = sgw_idx * param.grp_wo + param.grp_wo - 1;
     int height_start = (param.ph - kh + sh - 1) / sh;
-    height_start =
-            sp_grp_h_start >= height_start ? sp_grp_h_start : height_start;
+    height_start = sp_grp_h_start >= height_start ? sp_grp_h_start : height_start;
     int width_start = (param.pw - kw + sw - 1) / sw;
     width_start = sp_grp_w_start >= width_start ? sp_grp_w_start : width_start;
     int height_end = (param.hi - 1 + param.ph - kh) / sh;
@@ -274,15 +266,12 @@ __global__ void local_share_bwd_filter_device_template_f32(
     int width_end = (param.wi - 1 + param.pw - kw) / sw;
     width_end = sp_grp_w_end <= width_end ? sp_grp_w_end : width_end;
 
-    const int b_blks =
-            (param.n + UnrollConfig::unroll_n - 1) / UnrollConfig::unroll_n;
+    const int b_blks = (param.n + UnrollConfig::unroll_n - 1) / UnrollConfig::unroll_n;
 
     int ih_idx = height_start * sh - param.ph + kh;
     int iw_idx = width_start * sw - param.pw + kw;
-    src_gl2sh_visitor.g_ptr =
-            g_ptr_src + (ih_idx * param.wi + iw_idx) * param.n;
-    diff_gl2sh_visitor.g_ptr =
-            g_ptr_diff + (height_start * wo + width_start) * param.n;
+    src_gl2sh_visitor.g_ptr = g_ptr_src + (ih_idx * param.wi + iw_idx) * param.n;
+    diff_gl2sh_visitor.g_ptr = g_ptr_diff + (height_start * wo + width_start) * param.n;
 
     if (height_start <= height_end && width_start <= width_end) {
         src_gl2sh_visitor.first_copy();
@@ -303,8 +292,7 @@ __global__ void local_share_bwd_filter_device_template_f32(
                         int iw_idx = w_next * sw - param.pw + kw;
 
                         src_gl2sh_visitor.g_ptr =
-                                g_ptr_src +
-                                (ih_idx * param.wi + iw_idx) * param.n;
+                                g_ptr_src + (ih_idx * param.wi + iw_idx) * param.n;
                         diff_gl2sh_visitor.g_ptr =
                                 g_ptr_diff + (h_next * wo + w_next) * param.n;
                         src_gl2sh_visitor.copy();
@@ -318,12 +306,10 @@ __global__ void local_share_bwd_filter_device_template_f32(
                 }
 
                 consume_block<check_bounds, UnrollConfig, ThreadConfig>(
-                        src_gl2sh_visitor, diff_gl2sh_visitor, r_src, r_diff,
-                        r_grad);
+                        src_gl2sh_visitor, diff_gl2sh_visitor, r_src, r_diff, r_grad);
 
                 // last tile
-                if (!(h == height_end && w == width_end &&
-                      b_outer == b_blks - 1)) {
+                if (!(h == height_end && w == width_end && b_outer == b_blks - 1)) {
                     __syncthreads();
                     src_gl2sh_visitor.commit();
                     diff_gl2sh_visitor.commit();
@@ -339,58 +325,51 @@ __global__ void local_share_bwd_filter_device_template_f32(
     for (int i = 0; i < UnrollConfig::unroll_ci; ++i) {
 #pragma unroll
         for (int j = 0; j < UnrollConfig::unroll_co; ++j) {
-            if (check_bounds &&
-                (t_co + j * ThreadConfig::nr_thread_x >= param.co ||
-                 t_ci + i * ThreadConfig::nr_thread_y >= param.ci)) {
+            if (check_bounds && (t_co + j * ThreadConfig::nr_thread_x >= param.co ||
+                                 t_ci + i * ThreadConfig::nr_thread_y >= param.ci)) {
             } else {
-                g_ptr_grad[j * ThreadConfig::nr_thread_x +
-                           i * ThreadConfig::nr_thread_y * ci_stride] =
-                        r_grad[i][j];
+                g_ptr_grad
+                        [j * ThreadConfig::nr_thread_x +
+                         i * ThreadConfig::nr_thread_y * ci_stride] = r_grad[i][j];
             }
         }
     }
 }
 
-void (*get_kern(const Param& param, const int filter_sizes,
-                LaunchConfig& launch_config))(const float* __restrict__,
-                                              const float* __restrict__,
-                                              float* __restrict__, Param, int,
-                                              int, int, int) {
-    void (*kern)(const float* __restrict__, const float* __restrict__,
-                 float* __restrict__, Param, int, int, int, int);
+void (*get_kern(
+        const Param& param, const int filter_sizes, LaunchConfig& launch_config))(
+        const float* __restrict__, const float* __restrict__, float* __restrict__,
+        Param, int, int, int, int) {
+    void (*kern)(
+            const float* __restrict__, const float* __restrict__, float* __restrict__,
+            Param, int, int, int, int);
     kern = nullptr;
-#define CHK3(ci_, co_, n_, tx_, ty_)                                         \
-    if (param.ci >= ci_) {                                                   \
-        if (param.co >= co_) {                                               \
-            if (param.n % n_ == 0) {                                         \
-                static constexpr int unroll_ci = (ci_ + ty_ - 1) / ty_;      \
-                static constexpr int unroll_co = (co_ + tx_ - 1) / tx_;      \
-                static constexpr int unroll_n = n_;                          \
-                static constexpr int thread_x = tx_;                         \
-                static constexpr int thread_y = ty_;                         \
-                typedef UnrollConfig<unroll_ci, unroll_co, unroll_n>         \
-                        UnrollConfig;                                        \
-                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;       \
-                typedef DataTileCount<UnrollConfig, ThreadConfig>            \
-                        DataTileCount;                                       \
-                typedef DiffTileCount<UnrollConfig, ThreadConfig>            \
-                        DiffTileCount;                                       \
-                kern = local_share_bwd_filter_device_template_f32<           \
-                        true, UnrollConfig, ThreadConfig>;                   \
-                launch_config.nr_threads_x = thread_x;                       \
-                launch_config.nr_threads_y = thread_y;                       \
-                launch_config.nr_threads_z = 1;                              \
-                launch_config.nr_blocks_x =                                  \
-                        param.sgh * param.sgw * filter_sizes;                \
-                launch_config.nr_blocks_y =                                  \
-                        DIVUP(param.co, DiffTileCount::tile_co);             \
-                launch_config.nr_blocks_z =                                  \
-                        DIVUP(param.ci, DataTileCount::tile_ci);             \
-                launch_config.smem_size_in_bytes =                           \
-                        sizeof(float) *                                      \
-                        (DataTileCount::smem_tot + DiffTileCount::smem_tot); \
-            }                                                                \
-        }                                                                    \
+#define CHK3(ci_, co_, n_, tx_, ty_)                                                 \
+    if (param.ci >= ci_) {                                                           \
+        if (param.co >= co_) {                                                       \
+            if (param.n % n_ == 0) {                                                 \
+                static constexpr int unroll_ci = (ci_ + ty_ - 1) / ty_;              \
+                static constexpr int unroll_co = (co_ + tx_ - 1) / tx_;              \
+                static constexpr int unroll_n = n_;                                  \
+                static constexpr int thread_x = tx_;                                 \
+                static constexpr int thread_y = ty_;                                 \
+                typedef UnrollConfig<unroll_ci, unroll_co, unroll_n> UnrollConfig;   \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;               \
+                typedef DataTileCount<UnrollConfig, ThreadConfig> DataTileCount;     \
+                typedef DiffTileCount<UnrollConfig, ThreadConfig> DiffTileCount;     \
+                kern = local_share_bwd_filter_device_template_f32<                   \
+                        true, UnrollConfig, ThreadConfig>;                           \
+                launch_config.nr_threads_x = thread_x;                               \
+                launch_config.nr_threads_y = thread_y;                               \
+                launch_config.nr_threads_z = 1;                                      \
+                launch_config.nr_blocks_x = param.sgh * param.sgw * filter_sizes;    \
+                launch_config.nr_blocks_y = DIVUP(param.co, DiffTileCount::tile_co); \
+                launch_config.nr_blocks_z = DIVUP(param.ci, DataTileCount::tile_ci); \
+                launch_config.smem_size_in_bytes =                                   \
+                        sizeof(float) *                                              \
+                        (DataTileCount::smem_tot + DiffTileCount::smem_tot);         \
+            }                                                                        \
+        }                                                                            \
     }
 #define CHK2(ci_, co_)       \
     CHK3(ci_, co_, 4, 16, 8) \
@@ -411,46 +390,39 @@ void (*get_kern(const Param& param, const int filter_sizes,
 #undef CHK2
 #undef CHK2_
 #undef CHK3
-#define CHK3(ci_, co_, n_, tx_, ty_)                                         \
-    if (param.ci % ci_ == 0) {                                               \
-        if (param.co % co_ == 0) {                                           \
-            if (param.n % n_ == 0) {                                         \
-                static constexpr int unroll_ci = (ci_) / (ty_);              \
-                static constexpr int unroll_co = (co_) / (tx_);              \
-                static constexpr int unroll_n = n_;                          \
-                static constexpr int thread_x = tx_;                         \
-                static constexpr int thread_y = ty_;                         \
-                typedef UnrollConfig<unroll_ci, unroll_co, unroll_n>         \
-                        UnrollConfig;                                        \
-                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;       \
-                typedef DataTileCount<UnrollConfig, ThreadConfig>            \
-                        DataTileCount;                                       \
-                typedef DiffTileCount<UnrollConfig, ThreadConfig>            \
-                        DiffTileCount;                                       \
-                kern = local_share_bwd_filter_device_template_f32<           \
-                        false, UnrollConfig, ThreadConfig>;                  \
-                launch_config.nr_threads_x = thread_x;                       \
-                launch_config.nr_threads_y = thread_y;                       \
-                launch_config.nr_threads_z = 1;                              \
-                launch_config.nr_blocks_x =                                  \
-                        param.sgh * param.sgw * filter_sizes;                \
-                launch_config.nr_blocks_y =                                  \
-                        DIVUP(param.co, DiffTileCount::tile_co);             \
-                launch_config.nr_blocks_z =                                  \
-                        DIVUP(param.ci, DataTileCount::tile_ci);             \
-                launch_config.smem_size_in_bytes =                           \
-                        sizeof(float) *                                      \
-                        (DataTileCount::smem_tot + DiffTileCount::smem_tot); \
-            }                                                                \
-        }                                                                    \
+#define CHK3(ci_, co_, n_, tx_, ty_)                                                 \
+    if (param.ci % ci_ == 0) {                                                       \
+        if (param.co % co_ == 0) {                                                   \
+            if (param.n % n_ == 0) {                                                 \
+                static constexpr int unroll_ci = (ci_) / (ty_);                      \
+                static constexpr int unroll_co = (co_) / (tx_);                      \
+                static constexpr int unroll_n = n_;                                  \
+                static constexpr int thread_x = tx_;                                 \
+                static constexpr int thread_y = ty_;                                 \
+                typedef UnrollConfig<unroll_ci, unroll_co, unroll_n> UnrollConfig;   \
+                typedef ThreadConfig<thread_x, thread_y> ThreadConfig;               \
+                typedef DataTileCount<UnrollConfig, ThreadConfig> DataTileCount;     \
+                typedef DiffTileCount<UnrollConfig, ThreadConfig> DiffTileCount;     \
+                kern = local_share_bwd_filter_device_template_f32<                   \
+                        false, UnrollConfig, ThreadConfig>;                          \
+                launch_config.nr_threads_x = thread_x;                               \
+                launch_config.nr_threads_y = thread_y;                               \
+                launch_config.nr_threads_z = 1;                                      \
+                launch_config.nr_blocks_x = param.sgh * param.sgw * filter_sizes;    \
+                launch_config.nr_blocks_y = DIVUP(param.co, DiffTileCount::tile_co); \
+                launch_config.nr_blocks_z = DIVUP(param.ci, DataTileCount::tile_ci); \
+                launch_config.smem_size_in_bytes =                                   \
+                        sizeof(float) *                                              \
+                        (DataTileCount::smem_tot + DiffTileCount::smem_tot);         \
+            }                                                                        \
+        }                                                                            \
     }
-#define CHK2(ci_, co_) \
-    CHK3(ci_, co_, 4, 8, 8) CHK3(ci_, co_, 8, 8, 8)
-#define CHK(ci_)                                      \
-    CHK2(ci_, 8)                                      \
-    CHK2(ci_, 16)                                     \
-    CHK2(ci_, 32)                                     \
-    CHK2(ci_, 64)                                     \
+#define CHK2(ci_, co_) CHK3(ci_, co_, 4, 8, 8) CHK3(ci_, co_, 8, 8, 8)
+#define CHK(ci_)  \
+    CHK2(ci_, 8)  \
+    CHK2(ci_, 16) \
+    CHK2(ci_, 32) \
+    CHK2(ci_, 64) \
     CHK3(ci_, 128, 4, 16, 8) CHK3(ci_, 128, 8, 16, 8)
     CHK(8);
     CHK(16);
@@ -460,20 +432,19 @@ void (*get_kern(const Param& param, const int filter_sizes,
 #undef CHK
 #undef CHK2
 #undef CHK3
-    megdnn_assert(kern != nullptr,
-                  "no usable kernel implementation for local share "
-                  "backward data (batch,co,ci)=(%d,%d,%d)",
-                  param.n, param.co, param.ci);
+    megdnn_assert(
+            kern != nullptr,
+            "no usable kernel implementation for local share "
+            "backward data (batch,co,ci)=(%d,%d,%d)",
+            param.n, param.co, param.ci);
     return kern;
 }
 }  // namespace
 
-void megdnn::cuda::local_share_bwd_filter::
-        _do_local_share_bwd_filter_implicit_gemm(
-                const float* d_src, const float* d_diff, float* d_grad,
-                float* workspace, int fh, int fw, int sh, int sw,
-                const Param& param, cublasHandle_t cublas_handle,
-                cudaStream_t stream, float* one, float* zero) {
+void megdnn::cuda::local_share_bwd_filter::_do_local_share_bwd_filter_implicit_gemm(
+        const float* d_src, const float* d_diff, float* d_grad, float* workspace,
+        int fh, int fw, int sh, int sw, const Param& param,
+        cublasHandle_t cublas_handle, cudaStream_t stream, float* one, float* zero) {
     int ho = param.grp_ho * param.sgh, wo = param.grp_wo * param.sgw;
     size_t nr_src_total = param.n * param.ci * param.hi * param.wi;
     float* ws_src = workspace;
@@ -484,9 +455,9 @@ void megdnn::cuda::local_share_bwd_filter::
         int lda, ldb;
         lda = ldb = param.ci * param.hi * param.wi;
         int ldc = param.n;
-        cublas_check(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n,
-                                 one, d_src, lda, zero, d_src, ldb, ws_src,
-                                 ldc));
+        cublas_check(cublasSgeam(
+                cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, one, d_src, lda, zero,
+                d_src, ldb, ws_src, ldc));
     }
 
     {
@@ -494,15 +465,16 @@ void megdnn::cuda::local_share_bwd_filter::
         int lda, ldb;
         lda = ldb = param.co * ho * wo;
         int ldc = param.n;
-        cublas_check(cublasSgeam(cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n,
-                                 one, d_diff, lda, zero, d_diff, ldb, ws_diff,
-                                 ldc));
+        cublas_check(cublasSgeam(
+                cublas_handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, one, d_diff, lda, zero,
+                d_diff, ldb, ws_diff, ldc));
     }
 
     {
         int filter_sizes = fh * fw;
-        void (*kern)(const float* __restrict__, const float* __restrict__,
-                     float* __restrict__, Param, int, int, int, int);
+        void (*kern)(
+                const float* __restrict__, const float* __restrict__,
+                float* __restrict__, Param, int, int, int, int);
         LaunchConfig launch_config;
         kern = get_kern(param, filter_sizes, launch_config);
 

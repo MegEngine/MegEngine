@@ -811,7 +811,8 @@ def test_batch_conv_bias():
     run(1, 4, 4, 5, 5, 3, 3, 0, 0, 1, 1, True)
 
 
-def test_conv2d_io16c32():
+def test_conv2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
     inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
     weight = tensor(np.random.randn(64, 3, 7, 7), dtype=np.float32)
@@ -918,11 +919,14 @@ def test_layer_norm():
     assert abs(outvar.mean()) < 1e-7
 
 
-def test_batchnorm2d_io16c32():
+def test_batchnorm2d_autocast():
+    """check amp's result is equal to manually converted result"""
     amp.enabled = True
-    inp = tensor(np.random.randn(1, 3, 224, 224), dtype=np.float32)
-    weight = tensor(np.ones((1, 3, 1, 1)), dtype=np.float32)
-    bias = tensor(np.zeros((1, 3, 1, 1)), dtype=np.float32)
+    tshape = (1, 3, 224, 224)
+    pshape = (1, 3, 1, 1)
+    inp = tensor(np.random.randn(*tshape), dtype=np.float32)
+    weight = tensor(np.ones(pshape, dtype=np.float32))
+    bias = tensor(np.zeros(pshape, dtype=np.float32))
 
     out = F.batch_norm(inp, weight=weight, bias=bias, training=True, inplace=False)
 
@@ -944,7 +948,6 @@ def test_conv3d():
     inp = tensor(np.ones((2, 2, 4, 4, 4), dtype=np.float32))
     weight = tensor(np.ones((3, 2, 2, 2, 2), dtype=np.float32))
     out = F.conv3d(inp, weight, None, 2, 0, 1, 1)
-    print(out.numpy().shape)
     np.testing.assert_equal(
         out.numpy(), np.ones((2, 3, 2, 2, 2), dtype=np.float32) * 16
     )
@@ -1054,11 +1057,18 @@ def test_cvt_color():
     def rgb2gray(rgb):
         return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
 
+    def bgr2gray(bgr):
+        return np.dot(bgr[..., :3], [0.114, 0.587, 0.299])
+
     inp = np.random.randn(3, 3, 3, 3).astype(np.float32)
     out = np.expand_dims(rgb2gray(inp), 3).astype(np.float32)
     x = tensor(inp)
     y = F.vision.cvt_color(x, mode="RGB2GRAY")
     np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+    out1 = np.expand_dims(bgr2gray(inp), 3).astype(np.float32)
+    y1 = F.vision.cvt_color(x, mode="BGR2GRAY")
+    np.testing.assert_allclose(y1.numpy(), out1, atol=1e-5)
 
 
 @pytest.mark.parametrize("val", [2, [2,], [2, 3]])
@@ -1179,6 +1189,7 @@ def test_pad():
     np.testing.assert_allclose(res, dst, atol=1e-5)
 
 
+
 def test_partial_conv2d():
 
     def run(
@@ -1223,3 +1234,74 @@ def test_partial_conv2d():
     run(1, 1, 1, 5, 5, 3, 3)
     run(10, 2, 3, 24, 24, 3, 3, SH=2, DH=3, DW=2)
     run(10, 2, 3, 24, 24, 3, 3, SW=2, DH=3, DW=2, PH=2, PW=1)
+
+def pixel_shuffle(data, r):
+    high_dim = data.shape[:-3]
+    data = data.reshape(-1, data.shape[-3], data.shape[-2], data.shape[-1])
+    inn, ic, ih, iw = data.shape
+    res = np.zeros((inn, int(ic / (r * r)), ih * r, iw * r))
+    for n in range(inn):
+        for c in range(ic):
+            for h in range(ih):
+                for w in range(iw):
+                    res[
+                        n,
+                        int(c / r / r),
+                        h * r + int((c % (r * r)) / r),
+                        w * r + c % r,
+                    ] = data[n, c, h, w]
+    if len(high_dim) > 0:
+        res = res.reshape((*high_dim, int(ic / r / r), ih * r, iw * r))
+    else:
+        res = res[0]
+    return res
+
+
+def test_pixel_shuffle():
+    # ndim = 3
+    inp = np.arange(16 * 3 * 3).reshape(16, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=4)
+    golden = pixel_shuffle(inp, 4)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 4
+    inp = np.arange(3 * 18 * 3 * 3).reshape(3, 18, 3, 3)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=3)
+    golden = pixel_shuffle(inp, 3)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 5
+    inp = np.arange(5 * 3 * 20 * 3 * 4).reshape(5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 6
+    inp = np.arange(6 * 5 * 3 * 25 * 3 * 4).reshape(6, 5, 3, 25, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=5)
+    golden = pixel_shuffle(inp, 5)
+    np.testing.assert_equal(out.numpy(), golden)
+
+    # ndim = 7
+    inp = np.arange(2 * 3 * 5 * 3 * 20 * 3 * 4).reshape(2, 3, 5, 3, 20, 3, 4)
+    out = F.pixel_shuffle(tensor(inp), upscale_factor=2)
+    golden = pixel_shuffle(inp, 2)
+    np.testing.assert_equal(out.numpy(), golden)
+
+
+@pytest.mark.parametrize("is_symbolic", [False, True])
+def test_pixel_shuffle_symbolic(is_symbolic):
+    def fn(inp, upscale_factor):
+        return F.pixel_shuffle(inp, upscale_factor=upscale_factor)
+
+    if is_symbolic is not None:
+        fn = jit.trace(symbolic=is_symbolic)(fn)
+
+    inp = tensor(np.arange(3 * 4 * 5 * 5).reshape(3, 4, 5, 5))
+    golden = pixel_shuffle(inp, 2)
+    for _ in range(3):
+        out = fn(inp, 2)
+        np.testing.assert_equal(out.numpy(), golden)
+        if is_symbolic is None:
+            break
+

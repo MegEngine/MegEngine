@@ -39,4 +39,3 @@ MEGDNN_NORETURN void __throw_cnrt_error__(cnrtRet_t err, const char* msg);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

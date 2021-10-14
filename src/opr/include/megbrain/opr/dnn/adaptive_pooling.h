@@ -25,26 +25,25 @@ MGB_DEFINE_OPR_CLASS(
         intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
                 mixin::MegDNNOprHolderImpl<megdnn::AdaptivePoolingForward>>>) // {
 public:
-    AdaptivePoolingForward(VarNode * src, VarNode * out_shape,
-                           const Param& param,
-                           const OperatorNodeConfig& config);
-    static SymbolVar make(SymbolVar src, SymbolVar out_shape,
-                          const Param& param,
-                          const OperatorNodeConfig& config = {});
-    static SymbolVar make(SymbolVar src, const TensorShape& out_shape,
-                          const Param& param,
-                          const OperatorNodeConfig& config = {}) {
-        return make(src, cg::var_from_tensor_shape(src, out_shape), param,
-                    config);
+    AdaptivePoolingForward(
+            VarNode* src, VarNode* out_shape, const Param& param,
+            const OperatorNodeConfig& config);
+    static SymbolVar make(
+            SymbolVar src, SymbolVar out_shape, const Param& param,
+            const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar src, const TensorShape& out_shape, const Param& param,
+            const OperatorNodeConfig& config = {}) {
+        return make(src, cg::var_from_tensor_shape(src, out_shape), param, config);
     }
 
 private:
     void scn_do_execute() override;
     void outshape_by_symvar_do_get_output_shape(
-            TensorShape & dest, const ShapeInferInfo& shpinfo) override;
-    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
-                                    const TensorShapeArray& output_shapes)
-            const override;
+            TensorShape& dest, const ShapeInferInfo& shpinfo) override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
     void init_output_dtype() override;
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
@@ -56,18 +55,18 @@ MGB_DEFINE_OPR_CLASS(
         AdaptivePoolingBackward,
         intl::MegDNNOprWrapperBwd<megdnn::AdaptivePoolingBackward>) // {
 public:
-    AdaptivePoolingBackward(VarNode * src, VarNode * out_shape, VarNode * dst,
-                            VarNode * diff, const Param& param,
-                            const OperatorNodeConfig& config);
-    static SymbolVar make(SymbolVar src, SymbolVar out_shape, SymbolVar dst,
-                          SymbolVar diff, const Param& param,
-                          const OperatorNodeConfig& config = {});
+    AdaptivePoolingBackward(
+            VarNode* src, VarNode* out_shape, VarNode* dst, VarNode* diff,
+            const Param& param, const OperatorNodeConfig& config);
+    static SymbolVar make(
+            SymbolVar src, SymbolVar out_shape, SymbolVar dst, SymbolVar diff,
+            const Param& param, const OperatorNodeConfig& config = {});
 
 private:
     void scn_do_execute() override;
-    size_t get_workspace_size_bytes(const TensorShapeArray& input_shapes,
-                                    const TensorShapeArray& output_shapes)
-            const override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
 };
 
 }  // namespace opr

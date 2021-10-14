@@ -38,13 +38,13 @@
 #include <mlir/Target/NVVMIR.h>
 #include <mlir/Transforms/Passes.h>
 
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Pass.h>
+#include <llvm/Support/TargetSelect.h>
 
-#include <dlfcn.h>
 #include <dirent.h>
+#include <dlfcn.h>
 
 using namespace mgb;
 using namespace jit;
@@ -60,17 +60,18 @@ struct LLVMInitializer {
 static LLVMInitializer initializer;
 
 #if MGB_CUDA
-mlir::OwnedBlob compile_ptx_to_cubin(const std::string ptx, mlir::Location,
-                                     llvm::StringRef) {
-    OwnedBlob result = std::make_unique<std::vector<char>>(
-            ptx.data(), ptx.data() + ptx.size());
+mlir::OwnedBlob compile_ptx_to_cubin(
+        const std::string ptx, mlir::Location, llvm::StringRef) {
+    OwnedBlob result =
+            std::make_unique<std::vector<char>>(ptx.data(), ptx.data() + ptx.size());
 
     return result;
 }
 
 std::unique_ptr<llvm::Module> translate_module_to_nvvm_ir_and_link_device(
         Operation* m, llvm::LLVMContext& llvmContext, llvm::StringRef name) {
-    std::unique_ptr<llvm::Module> module = mlir::translateModuleToNVVMIR(m, llvmContext);
+    std::unique_ptr<llvm::Module> module =
+            mlir::translateModuleToNVVMIR(m, llvmContext);
     auto get_device_path = []() -> std::string {
         auto cuda_path = getenv("CUDA_BIN_PATH");
         std::string device_dir;
@@ -78,10 +79,10 @@ std::unique_ptr<llvm::Module> translate_module_to_nvvm_ir_and_link_device(
             char cuda_lib_path[PATH_MAX];
             auto handle = dlopen("libcudart.so", RTLD_GLOBAL | RTLD_LAZY);
             mgb_assert(handle != nullptr, "%s", dlerror());
-            mgb_assert(dlinfo(handle, RTLD_DI_ORIGIN, &cuda_lib_path) != -1,
-                       "%s", dlerror());
-            device_dir =
-                    std::string(cuda_lib_path) + "/../../../nvvm/libdevice/";
+            mgb_assert(
+                    dlinfo(handle, RTLD_DI_ORIGIN, &cuda_lib_path) != -1, "%s",
+                    dlerror());
+            device_dir = std::string(cuda_lib_path) + "/../../../nvvm/libdevice/";
             mgb_assert(!dlclose(handle), "fail to dlclose handle");
         } else {
             device_dir = std::string(cuda_path) + "/nvvm/libdevice/";
@@ -105,16 +106,16 @@ std::unique_ptr<llvm::Module> translate_module_to_nvvm_ir_and_link_device(
     //! load libdevice.bc
     llvm::SMDiagnostic err;
     auto libdevice_path = get_device_path();
-    std::unique_ptr<llvm::Module> mlib = llvm::parseIRFile(
-            libdevice_path.c_str(), err, module->getContext());
+    std::unique_ptr<llvm::Module> mlib =
+            llvm::parseIRFile(libdevice_path.c_str(), err, module->getContext());
     if (mlib.get()) {
         mlib->setTargetTriple(module->getTargetTriple());
         mlib->setDataLayout(module->getDataLayout());
 
         RealTimer timer;
         mgb_assert(
-                !llvm::Linker::linkModules(*module, std::move(mlib),
-                                           llvm::Linker::Flags::LinkOnlyNeeded),
+                !llvm::Linker::linkModules(
+                        *module, std::move(mlib), llvm::Linker::Flags::LinkOnlyNeeded),
                 "failed to parse ir file libdevice.bc");
         mgb_log("MLIR JIT: link libdevice.bc, used: %.3fms", timer.get_msecs());
     } else {
@@ -143,8 +144,8 @@ void add_cpu_lowering_pass(mlir::PassManager& manager) {
 }
 
 #if MGB_CUDA
-void add_cuda_lowering_pass(mlir::PassManager& manager,
-                            const std::string& target_chip) {
+void add_cuda_lowering_pass(
+        mlir::PassManager& manager, const std::string& target_chip) {
     {
         mlir::OpPassManager& opt_pm = manager.nest<mlir::FuncOp>();
         opt_pm.addPass(mlir::createCanonicalizerPass());
@@ -160,9 +161,9 @@ void add_cuda_lowering_pass(mlir::PassManager& manager,
         opt_pm.addPass(mlir::createCSEPass());
         opt_pm.addPass(mlir::createLowerGpuOpsToNVVMOpsPass());
         opt_pm.addPass(mlir::createConvertGPUKernelToBlobPass(
-                translate_module_to_nvvm_ir_and_link_device,
-                compile_ptx_to_cubin, "nvptx64-nvidia-cuda", target_chip,
-                "+ptx60", MLIRCUDAExecutable::sm_blob_annotation));
+                translate_module_to_nvvm_ir_and_link_device, compile_ptx_to_cubin,
+                "nvptx64-nvidia-cuda", target_chip, "+ptx60",
+                MLIRCUDAExecutable::sm_blob_annotation));
     }
 }
 #endif
@@ -185,8 +186,7 @@ MLIRCompiler::MLIRCompiler(CompNode::DeviceType device_type)
 #endif
 }
 
-void MLIRCompiler::run_lowering_pass(mlir::OwningModuleRef& module,
-                                     CompNode cn) {
+void MLIRCompiler::run_lowering_pass(mlir::OwningModuleRef& module, CompNode cn) {
     mgb_assert(cn.device_type() == m_device_type);
     mlir::PassManager manager(module->getContext());
     std::string target_chip;
@@ -196,17 +196,16 @@ void MLIRCompiler::run_lowering_pass(mlir::OwningModuleRef& module,
             break;
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA: {
-            auto&& prop =
-                    CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
-            std::string target_chip =
-                    ssprintf("sm_%d%d", prop.major, prop.minor);
+            auto&& prop = CompNodeEnv::from_comp_node(cn).cuda_env().device_prop;
+            std::string target_chip = ssprintf("sm_%d%d", prop.major, prop.minor);
             add_cuda_lowering_pass(manager, target_chip);
             break;
         }
 #endif
         default:
-            mgb_throw(InternalError, "Unsupport device type: %d",
-                      static_cast<int>(m_device_type));
+            mgb_throw(
+                    InternalError, "Unsupport device type: %d",
+                    static_cast<int>(m_device_type));
             break;
     }
     RealTimer timer;
@@ -228,16 +227,15 @@ std::unique_ptr<Executable> MLIRCompiler::do_compile(
     run_lowering_pass(res.second, cn);
     switch (cn.device_type()) {
         case CompNode::DeviceType::CPU:
-            return std::make_unique<MLIRCPUExecutable>(res.second,
-                                                       res.first.str());
+            return std::make_unique<MLIRCPUExecutable>(res.second, res.first.str());
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA:
-            return std::make_unique<MLIRCUDAExecutable>(res.second,
-                                                        res.first.str());
+            return std::make_unique<MLIRCUDAExecutable>(res.second, res.first.str());
 #endif
         default:
-            mgb_throw(InternalError, "Unsupport device type: %d",
-                      static_cast<int>(cn.device_type()));
+            mgb_throw(
+                    InternalError, "Unsupport device type: %d",
+                    static_cast<int>(cn.device_type()));
             return nullptr;
     }
 }

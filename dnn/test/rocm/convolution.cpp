@@ -70,23 +70,22 @@ std::vector<TestArg> get_group_conv_args() {
                                         for (size_t dh : {1, 2}) {
                                             param::Convolution param;
                                             size_t groups = 2;
-                                            param.sparse = param::Convolution::
-                                                    Sparse::GROUP;
+                                            param.sparse =
+                                                    param::Convolution::Sparse::GROUP;
 
-                                            param.mode = param::Convolution::
-                                                    Mode::CROSS_CORRELATION;
-                                            param.stride_h = param.stride_w =
-                                                    sh;
+                                            param.mode = param::Convolution::Mode::
+                                                    CROSS_CORRELATION;
+                                            param.stride_h = param.stride_w = sh;
                                             param.pad_h = param.pad_w = ph;
-                                            param.dilate_h = param.dilate_w =
-                                                    dh;
+                                            param.dilate_h = param.dilate_w = dh;
                                             args.emplace_back(
                                                     param,
-                                                    TensorShape{batch_size,
-                                                                icpg * groups,
-                                                                ih, iw},
-                                                    TensorShape{groups, ocpg,
-                                                                icpg, fh, fw});
+                                                    TensorShape{
+                                                            batch_size, icpg * groups,
+                                                            ih, iw},
+                                                    TensorShape{
+                                                            groups, ocpg, icpg, fh,
+                                                            fw});
                                         }
                                     }
                                 }
@@ -100,7 +99,7 @@ std::vector<TestArg> get_group_conv_args() {
 
     return args;
 }
-} // namespace convolution
+}  // namespace convolution
 
 TEST_F(ROCM, CONV_GROUP) {
     megdnn::rocm::enable_miopen_algo_search(handle_rocm(), false);
@@ -153,8 +152,7 @@ TEST_F(ROCM, CONVOLUTION_FORWARD_0) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -189,8 +187,7 @@ TEST_F(ROCM, CONVOLUTION_FORWARD_1) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -225,8 +222,7 @@ TEST_F(ROCM, CONVOLUTION_FORWARD_2) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -256,8 +252,7 @@ TEST_F(ROCM, CONVOLUTION_1X1_FORWARD) {
     Checker<ConvolutionForward> checker(handle_rocm());
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale =
-                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_dtype(0, dtype::Float32())
                 .set_dtype(1, dtype::Float32())
@@ -281,10 +276,9 @@ TEST_F(ROCM, CONVOLUTION_1X1_FORWARD_ALL_ALGOS) {
 
     auto get_computation = [&](TestArg arg) -> float {
         megdnn_assert(arg.param.format == param::Convolution::Format::NCHW);
-        size_t N = arg.src[0], IC = arg.src[1], IH = arg.src[2],
-               IW = arg.src[3], OC = arg.filter[0], FH = arg.filter[2],
-               FW = arg.filter[3], SH = arg.param.stride_h,
-               SW = arg.param.stride_w, PH = arg.param.pad_h,
+        size_t N = arg.src[0], IC = arg.src[1], IH = arg.src[2], IW = arg.src[3],
+               OC = arg.filter[0], FH = arg.filter[2], FW = arg.filter[3],
+               SH = arg.param.stride_h, SW = arg.param.stride_w, PH = arg.param.pad_h,
                PW = arg.param.pad_w;
 
         size_t OH = infer_conv_shape(IH, FH, SH, PH);
@@ -296,8 +290,7 @@ TEST_F(ROCM, CONVOLUTION_1X1_FORWARD_ALL_ALGOS) {
     std::vector<TestArg> args = get_1x1_args();
     NormalRNG default_rng;
     for (auto&& arg : args) {
-        float scale =
-                1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[1] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         checker.set_proxy(proxy)
                 .set_dtype(0, dtype::Float32())
@@ -309,8 +302,8 @@ TEST_F(ROCM, CONVOLUTION_1X1_FORWARD_ALL_ALGOS) {
         float flops = get_computation(arg);
         printf("inp=%s,flt=%s,flops=%.2fGflo,time = %.2f ms, perf = %.2f "
                "GFLOPS\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               flops / 1e9, time_in_ms, flops / (1e6 * time_in_ms));
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), flops / 1e9,
+               time_in_ms, flops / (1e6 * time_in_ms));
     }
 }
 #endif
@@ -327,8 +320,7 @@ TEST_F(ROCM, CONVOLUTION_BACKWARD_DATA_0) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
@@ -367,8 +359,7 @@ TEST_F(ROCM, CONVOLUTION_BACKWARD_DATA_1) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
@@ -408,8 +399,7 @@ TEST_F(ROCM, CONVOLUTION_BACKWARD_DATA_2) {
         if (arg.param.mode == Mode::CONVOLUTION) {
             continue;
         }
-        float scale =
-                1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
+        float scale = 1.0f / sqrt(arg.filter[0] * arg.filter[2] * arg.filter[3]);
         UniformFloatRNG rng(scale, 2 * scale);
         auto src = TensorLayout(arg.src, dtype::Float32());
         auto filter = TensorLayout(arg.filter, dtype::Float32());
@@ -489,12 +479,11 @@ TEST_F(ROCM, DISABLED_CONVOLUTION_BACKWARD_FILTER) {
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(ROCM, CONV_FWD_BENCHMARK) {
     megdnn::rocm::enable_miopen_algo_search(handle_rocm(), true);
-    auto benchmarker = ROCMBenchmarker<ConvolutionForward>(handle_rocm(),
-                                                           handle_naive(false));
-    auto run = [&](size_t N, size_t OC, size_t IC, size_t IH, size_t IW,
-                   size_t SH = 1, size_t SW = 1, size_t FH = 1, size_t FW = 1,
-                   size_t PH = 0, size_t PW = 0,
-                   DType dtype = dtype::Float32()) {
+    auto benchmarker =
+            ROCMBenchmarker<ConvolutionForward>(handle_rocm(), handle_naive(false));
+    auto run = [&](size_t N, size_t OC, size_t IC, size_t IH, size_t IW, size_t SH = 1,
+                   size_t SW = 1, size_t FH = 1, size_t FW = 1, size_t PH = 0,
+                   size_t PW = 0, DType dtype = dtype::Float32()) {
         benchmarker.set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(2, dtype);
         benchmarker.set_display(true);
         ConvolutionForward::Param param;
@@ -508,8 +497,8 @@ TEST_F(ROCM, CONV_FWD_BENCHMARK) {
         // warm up find best algo
         benchmarker.execs({{N, IC, IH, IW}, {OC, IC, FH, FW}, {N, OC, OH, OW}});
         // do actual benchmark
-        auto time_ms = benchmarker.execs(
-                {{N, IC, IH, IW}, {OC, IC, FH, FW}, {N, OC, OH, OW}});
+        auto time_ms =
+                benchmarker.execs({{N, IC, IH, IW}, {OC, IC, FH, FW}, {N, OC, OH, OW}});
         auto flo = (double)N * OC * IC * OH * OW * FH * FW * 2;
         auto flops = flo / (time_ms * 1e9);
         printf("%.3fG FLO, flops %.3fTFLOPS\n", flo / 1e9, flops);
@@ -528,7 +517,7 @@ TEST_F(ROCM, CONV_FWD_BENCHMARK) {
 }
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

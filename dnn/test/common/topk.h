@@ -43,10 +43,8 @@ public:
         }
         if (tensors.size() == 3) {
             m_workspace.update(opr->get_workspace_in_bytes(
-                    m_k, tensors[0].layout, tensors[1].layout,
-                    tensors[2].layout));
-            opr->exec(m_k, tensors[0], tensors[1], tensors[2],
-                      m_workspace.workspace());
+                    m_k, tensors[0].layout, tensors[1].layout, tensors[2].layout));
+            opr->exec(m_k, tensors[0], tensors[1], tensors[2], m_workspace.workspace());
         } else {
             m_workspace.update(opr->get_workspace_in_bytes(
                     m_k, tensors[0].layout, tensors[1].layout, {}));

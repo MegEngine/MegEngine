@@ -34,39 +34,39 @@ struct HSwishOpBase : UnaryOpBase<src_ctype, dst_ctype> {
 template <typename src_ctype, typename dst_ctype = src_ctype>
 struct HSwishOp;
 
-#define OP(_ctype, _neon_type, _neon_type2, _func_suffix, _simd_width)         \
-    template <>                                                                \
-    struct HSwishOp<_ctype> : HSwishOpBase<_ctype> {                           \
-        using HSwishOpBase::HSwishOpBase;                                      \
-        using HSwishOpBase::operator();                                        \
-        constexpr static size_t SIMD_WIDTH = _simd_width;                      \
-        void operator()(const _neon_type2& src, _ctype* dst) const {           \
-            auto vitem = operator()(src);                                      \
-            vst1q_##_func_suffix(dst, vitem.val[0]);                           \
-            vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);              \
-        }                                                                      \
-        void operator()(const _neon_type& src, _ctype* dst) const {            \
-            auto vitem = operator()(src);                                      \
-            vst1q_##_func_suffix(dst, vitem);                                  \
-        }                                                                      \
-        _neon_type2 operator()(const _neon_type2& src) const {                 \
-            auto val1 = src.val[0];                                            \
-            auto val2 = src.val[1];                                            \
-            H_SWISH_KERN(_func_suffix, val1, val2);                            \
-            return {{val1, val2}};                                             \
-        }                                                                      \
-        _neon_type operator()(const _neon_type& src) const {                   \
-            auto val_zero = vdupq_n_##_func_suffix(0.f);                       \
-            auto val_six = vdupq_n_##_func_suffix(6.f);                        \
-            auto val_three = vdupq_n_##_func_suffix(3.f);                      \
-            auto val_rec_six = vdupq_n_##_func_suffix(1.f / 6.f);              \
-            auto clip1 = vmaxq_##_func_suffix(                                 \
-                    vminq_##_func_suffix(vaddq_##_func_suffix(src, val_three), \
-                                         val_six),                             \
-                    val_zero);                                                 \
-            return vmulq_##_func_suffix(vmulq_##_func_suffix(src, clip1),      \
-                                        val_rec_six);                          \
-        }                                                                      \
+#define OP(_ctype, _neon_type, _neon_type2, _func_suffix, _simd_width)      \
+    template <>                                                             \
+    struct HSwishOp<_ctype> : HSwishOpBase<_ctype> {                        \
+        using HSwishOpBase::HSwishOpBase;                                   \
+        using HSwishOpBase::operator();                                     \
+        constexpr static size_t SIMD_WIDTH = _simd_width;                   \
+        void operator()(const _neon_type2& src, _ctype* dst) const {        \
+            auto vitem = operator()(src);                                   \
+            vst1q_##_func_suffix(dst, vitem.val[0]);                        \
+            vst1q_##_func_suffix(dst + SIMD_WIDTH, vitem.val[1]);           \
+        }                                                                   \
+        void operator()(const _neon_type& src, _ctype* dst) const {         \
+            auto vitem = operator()(src);                                   \
+            vst1q_##_func_suffix(dst, vitem);                               \
+        }                                                                   \
+        _neon_type2 operator()(const _neon_type2& src) const {              \
+            auto val1 = src.val[0];                                         \
+            auto val2 = src.val[1];                                         \
+            H_SWISH_KERN(_func_suffix, val1, val2);                         \
+            return {{val1, val2}};                                          \
+        }                                                                   \
+        _neon_type operator()(const _neon_type& src) const {                \
+            auto val_zero = vdupq_n_##_func_suffix(0.f);                    \
+            auto val_six = vdupq_n_##_func_suffix(6.f);                     \
+            auto val_three = vdupq_n_##_func_suffix(3.f);                   \
+            auto val_rec_six = vdupq_n_##_func_suffix(1.f / 6.f);           \
+            auto clip1 = vmaxq_##_func_suffix(                              \
+                    vminq_##_func_suffix(                                   \
+                            vaddq_##_func_suffix(src, val_three), val_six), \
+                    val_zero);                                              \
+            return vmulq_##_func_suffix(                                    \
+                    vmulq_##_func_suffix(src, clip1), val_rec_six);         \
+        }                                                                   \
     };
 
 OP(dt_float32, float32x4_t, float32x4x2_t, f32, 4)
@@ -115,8 +115,8 @@ struct HSwishOp<dt_qint32, dt_qint8> : HSwishOpBase<dt_qint32, dt_qint8> {
         vst1_s8(reinterpret_cast<int8_t*>(dst), operator()(vsrc));
     }
     void operator()(const int32x4_t& vsrc, dt_qint8* dst) const {
-        vst1_lane_s32(reinterpret_cast<int32_t*>(dst),
-                      (int32x2_t)(operator()(vsrc)), 0);
+        vst1_lane_s32(
+                reinterpret_cast<int32_t*>(dst), (int32x2_t)(operator()(vsrc)), 0);
     }
 
     int8x8_t operator()(const int32x4x2_t& vsrc) const {
@@ -156,8 +156,8 @@ struct HSwishOp<dt_qint32, dt_quint8> : HSwishOpBase<dt_qint32, dt_quint8> {
         vitem0 = vmulq_f32(vitem0, this->vscale_dst);
         vitem1 = vmulq_f32(vitem1, this->vscale_dst);
 
-        return QConverter::convert<uint8x8_t, float32x4x2_t>({{vitem0, vitem1}},
-                                                             this->vzp);
+        return QConverter::convert<uint8x8_t, float32x4x2_t>(
+                {{vitem0, vitem1}}, this->vzp);
     }
 };
 

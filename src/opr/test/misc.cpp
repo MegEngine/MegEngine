@@ -25,82 +25,80 @@
 using namespace mgb;
 
 namespace {
-    void shape_abc(const TensorShape &shape, size_t axis,
-            size_t &A, size_t &B, size_t &C) {
-        auto acc_mul = [](const size_t *first, const size_t *last) {
-            return std::accumulate(
-                    first, last, 1u, std::multiplies<size_t>());
-        };
-        A = acc_mul(shape.shape, shape.shape+axis);
-        B = shape.shape[axis];
-        C = acc_mul(shape.shape+axis+1, shape.shape+shape.ndim);
-    }
+void shape_abc(const TensorShape& shape, size_t axis, size_t& A, size_t& B, size_t& C) {
+    auto acc_mul = [](const size_t* first, const size_t* last) {
+        return std::accumulate(first, last, 1u, std::multiplies<size_t>());
+    };
+    A = acc_mul(shape.shape, shape.shape + axis);
+    B = shape.shape[axis];
+    C = acc_mul(shape.shape + axis + 1, shape.shape + shape.ndim);
+}
 
-    void argsort_data_gen(HostTensorND& dest) {
-        mgb_assert(dest.layout().ndim == 2 && dest.layout().is_contiguous());
-        size_t m = dest.layout()[0], n = dest.layout()[1];
-        auto ptr = dest.ptr<float>();
-        RNGxorshf rng{next_rand_seed()};
-        std::uniform_real_distribution<float> dist_base{-10.f, 10.f},
-                dist_delta{0.1f, 1.2f};
-        for (size_t i = 0; i < m; ++i) {
-            auto v = dist_base(rng);
-            for (size_t j = 0; j < n; ++j) {
-                ptr[j] = v;
-                v += dist_delta(rng);
-            }
-            std::shuffle(ptr, ptr + n, rng);
-            ptr += n;
+void argsort_data_gen(HostTensorND& dest) {
+    mgb_assert(dest.layout().ndim == 2 && dest.layout().is_contiguous());
+    size_t m = dest.layout()[0], n = dest.layout()[1];
+    auto ptr = dest.ptr<float>();
+    RNGxorshf rng{next_rand_seed()};
+    std::uniform_real_distribution<float> dist_base{-10.f, 10.f},
+            dist_delta{0.1f, 1.2f};
+    for (size_t i = 0; i < m; ++i) {
+        auto v = dist_base(rng);
+        for (size_t j = 0; j < n; ++j) {
+            ptr[j] = v;
+            v += dist_delta(rng);
         }
+        std::shuffle(ptr, ptr + n, rng);
+        ptr += n;
     }
 }
+}  // namespace
 
 TEST(TestOprMisc, Argmxx) {
     auto run = [](bool is_max, int32_t axis, TensorShape sshape) {
         auto dshape = sshape;
         dshape.shape[axis] = 1;
         using Checker = AutoOprChecker<1, 1>;
-        auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             if (is_max)
                 return {opr::Argmax::make(inputs[0], {axis})};
             else
                 return {opr::Argmin::make(inputs[0], {axis})};
         };
-        auto better_than = [&](float curr, float best)
-        {
+        auto better_than = [&](float curr, float best) {
             if (is_max)
                 return curr > best;
             else
                 return curr < best;
         };
-        auto fwd = [&](Checker::NumOutArray &out, Checker::NumInpArray inp) {
+        auto fwd = [&](Checker::NumOutArray& out, Checker::NumInpArray inp) {
             out[0].dtype(dtype::Int32()).resize(dshape);
             size_t A, B, C;
             shape_abc(sshape, axis, A, B, C);
-            for (size_t a = 0; a < A; ++a) for (size_t c = 0; c < C; ++c) {
-                float best_val;
-                size_t best_arg = -1;
-                if (is_max)
-                    best_val = std::numeric_limits<float>::lowest();
-                else
-                    best_val = std::numeric_limits<float>::max();
-                for (size_t b = 0; b < B; ++b) {
-                    float curr_val = inp[0]->ptr<float>()[(a*B+b)*C+c];
-                    if (better_than(curr_val, best_val)) {
-                        best_val = curr_val;
-                        best_arg = b;
+            for (size_t a = 0; a < A; ++a)
+                for (size_t c = 0; c < C; ++c) {
+                    float best_val;
+                    size_t best_arg = -1;
+                    if (is_max)
+                        best_val = std::numeric_limits<float>::lowest();
+                    else
+                        best_val = std::numeric_limits<float>::max();
+                    for (size_t b = 0; b < B; ++b) {
+                        float curr_val = inp[0]->ptr<float>()[(a * B + b) * C + c];
+                        if (better_than(curr_val, best_val)) {
+                            best_val = curr_val;
+                            best_arg = b;
+                        }
                     }
+                    out[0].ptr<int>()[a * C + c] = best_arg;
                 }
-                out[0].ptr<int>()[a*C+c] = best_arg;
-            }
         };
-        Checker{make_graph, fwd}.
-            set_input_allow_grad(0, false).
-            set_output_allow_grad(0, false).
-            run({sshape}).
-            run({sshape}).
-            run({sshape});
+        Checker{make_graph, fwd}
+                .set_input_allow_grad(0, false)
+                .set_output_allow_grad(0, false)
+                .run({sshape})
+                .run({sshape})
+                .run({sshape});
     };
     run(true, 0, {5});
     run(true, 1, {2, 3, 4, 5});
@@ -116,8 +114,8 @@ TEST(TestOprMisc, Argsort) {
     using Order = opr::Argsort::Param::Order;
     auto run = [](Order order) {
         using Checker = AutoOprChecker<1, 2>;
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             return opr::Argsort::make(inputs[0], order);
         };
         auto fwd = [&](Checker::NumOutArray& out, Checker::NumInpArray inp) {
@@ -160,27 +158,27 @@ TEST(TestOprMisc, Argsort) {
 
 TEST(TestOprMisc, Cumsum) {
     using Param = opr::Cumsum::Param;
-    auto run = [](const Param &param) {
+    auto run = [](const Param& param) {
         using Checker = AutoOprChecker<1, 1>;
-        auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
-                return {opr::Cumsum::make(inputs[0], param)};
-            };
-        auto fwd = [&](Checker::NumOutArray &out, Checker::NumInpArray inp) {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+            return {opr::Cumsum::make(inputs[0], param)};
+        };
+        auto fwd = [&](Checker::NumOutArray& out, Checker::NumInpArray inp) {
             out[0].resize(inp[0]->shape());
 
             auto pin = inp[0]->ptr<float>(), pout = out[0].ptr<float>();
             size_t A, B, C;
             int real_axis = param.axis;
-            if (real_axis < 0) real_axis += 3;
+            if (real_axis < 0)
+                real_axis += 3;
             shape_abc(inp[0]->shape(), real_axis, A, B, C);
             ptrdiff_t stride = C;
             if (param.reverse)
                 stride = -stride;
-            for (size_t i = 0; i < A; ++ i) {
-                for (size_t k = 0; k < C; ++ k) {
-                    auto pi = pin + i * B * C + k,
-                         po = pout + i * B * C + k;
+            for (size_t i = 0; i < A; ++i) {
+                for (size_t k = 0; k < C; ++k) {
+                    auto pi = pin + i * B * C + k, po = pout + i * B * C + k;
                     if (param.reverse) {
                         pi += (B - 1) * C;
                         po += (B - 1) * C;
@@ -190,7 +188,7 @@ TEST(TestOprMisc, Cumsum) {
                         po += stride;
                     }
                     float sum = 0;
-                    for (size_t j = 0; j < B - 1; ++ j) {
+                    for (size_t j = 0; j < B - 1; ++j) {
                         sum += pi[j * stride];
                         po[j * stride] = sum;
                     }
@@ -200,10 +198,10 @@ TEST(TestOprMisc, Cumsum) {
                 }
             }
         };
-        Checker{make_graph, fwd}.
-            run({TensorShape{2, 3, 4}}).
-            run({TensorShape{3, 1, 2}}).
-            run({TensorShape{4, 2, 3}});
+        Checker{make_graph, fwd}
+                .run({TensorShape{2, 3, 4}})
+                .run({TensorShape{3, 1, 2}})
+                .run({TensorShape{4, 2, 3}});
     };
 
     // test negative axis
@@ -215,45 +213,42 @@ TEST(TestOprMisc, Cumsum) {
 TEST(TestOprMisc, CondTake) {
     using Param = opr::CondTake::Param;
     using Checker = AutoOprChecker<2, 1>;
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-            Checker::SymOutArray {
-        return {opr::CondTake::make(
-                inputs[0], inputs[1], {Param::Mode::LT})[0]};
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::CondTake::make(inputs[0], inputs[1], {Param::Mode::LT})[0]};
     };
 
-    auto fwd = [&](Checker::NumOutArray &out, Checker::NumInpArray inp) {
+    auto fwd = [&](Checker::NumOutArray& out, Checker::NumInpArray inp) {
         std::vector<float> values;
         auto data = inp[0]->ptr<float>(), mask = inp[1]->ptr<float>();
         auto isize = inp[0]->shape().total_nr_elems();
-        for (size_t i = 0; i < isize; ++ i) {
+        for (size_t i = 0; i < isize; ++i) {
             if (mask[i] < 0) {
                 values.push_back(data[i]);
             }
         }
         out[0].resize({values.size()});
-        memcpy(out[0].ptr<float>(),
-                values.data(), sizeof(float) * values.size());
+        memcpy(out[0].ptr<float>(), values.data(), sizeof(float) * values.size());
     };
 
     auto ensure_nonempty = [](Checker::NumInpArray inp) {
         auto mask = inp[1]->ptr<float>();
         auto isize = inp[1]->shape().total_nr_elems();
-        for (size_t i = 0; i < isize; ++ i) {
+        for (size_t i = 0; i < isize; ++i) {
             if (mask[i] < 0)
                 return;
         }
         mask[isize - 1] = -1;
     };
 
-    auto mki = [](const TensorShape &shp) -> Checker::ShapeInpArray {
+    auto mki = [](const TensorShape& shp) -> Checker::ShapeInpArray {
         return {shp, shp};
     };
-    Checker{make_graph, fwd}.
-        set_input_allow_grad(1, false).
-        set_input_coordinator(ensure_nonempty).
-        run(mki({2})).
-        run(mki({3, 5, 8})).
-        run(mki({100}));
+    Checker{make_graph, fwd}
+            .set_input_allow_grad(1, false)
+            .set_input_coordinator(ensure_nonempty)
+            .run(mki({2}))
+            .run(mki({3, 5, 8}))
+            .run(mki({100}));
 }
 
 TEST(TestOprMisc, CondTakeEmptyIO) {
@@ -266,8 +261,9 @@ TEST(TestOprMisc, CondTakeEmptyIO) {
         auto y = x + 1;
         auto out = opr::CondTake::make(x, y, {Param::Mode::EQ});
         HostTensorND host_out0, host_out1;
-        auto func = graph->compile({make_callback_copy(out[0], host_out0),
-                make_callback_copy(out[1], host_out1)});
+        auto func = graph->compile(
+                {make_callback_copy(out[0], host_out0),
+                 make_callback_copy(out[1], host_out1)});
         func->execute();
         ASSERT_EQ(TensorShape{0}, host_out0.shape());
         ASSERT_EQ(TensorShape{0}, host_out1.shape());
@@ -284,8 +280,8 @@ TEST(TestOprMisc, TopKValueOnly) {
 
         SymbolVar var_x0, var_x1;
 
-        auto make_graph = [&](const Checker::SymInpArray& inputs)
-                -> Checker::SymOutArray {
+        auto make_graph =
+                [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
             auto k = opr::Host2DeviceCopy::make(
                     *inputs[0].node()->owner_graph(), host_k);
             if (dyn_k) {
@@ -296,8 +292,7 @@ TEST(TestOprMisc, TopKValueOnly) {
                 var_x0 = x;
                 x = opr::Subtensor::make(
                         x, {opr::Subtensor::AxisIndexer::make_interval(
-                                   1, None, opr::GetVarShape::make(x, 1) / 2,
-                                   None)});
+                                   1, None, opr::GetVarShape::make(x, 1) / 2, None)});
                 var_x1 = x;
             }
             auto outs = opr::TopK::make(x, k, opr::TopK::Param::Mode::KTH_ONLY);
@@ -316,22 +311,21 @@ TEST(TestOprMisc, TopKValueOnly) {
             TensorLayout outl0, outl1;
             opr->deduce_layout(k, x.layout(), outl0, outl1);
 
-            size_t wk_size =
-                    opr->get_workspace_in_bytes(k, x.layout(), outl0, outl1);
+            size_t wk_size = opr->get_workspace_in_bytes(k, x.layout(), outl0, outl1);
             std::unique_ptr<dt_byte[]> wk_store{new dt_byte[wk_size]};
-            opr->exec(k, x.as_megdnn(), out[0].resize(outl0).as_megdnn(), {},
-                      {wk_store.get(), wk_size});
+            opr->exec(
+                    k, x.as_megdnn(), out[0].resize(outl0).as_megdnn(), {},
+                    {wk_store.get(), wk_size});
         };
         Checker checker{make_graph, fwd};
         checker.set_input_generator(0, argsort_data_gen);
 
-        host_k = std::make_shared<HostTensorND>(checker.comp_node(),
-                                                TensorShape{1}, dtype::Int32{});
+        host_k = std::make_shared<HostTensorND>(
+                checker.comp_node(), TensorShape{1}, dtype::Int32{});
         host_k->ptr<int>()[0] = 1;
         Checker::RunOptions opt;
         opt.numdiff_eps = 0.047;
         auto invoke = [&](int k, size_t m, size_t n) {
-
             host_k->ptr<int>()[0] = k;
             checker.run({TensorShape{m, n}}, opt);
         };
@@ -361,10 +355,8 @@ TEST(TestOprMisc, TopKSorted) {
     std::shared_ptr<HostTensorND> host_k;
     auto constexpr mode = opr::TopK::Param::Mode::VALUE_IDX_SORTED;
 
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        auto k = opr::Host2DeviceCopy::make(*inputs[0].node()->owner_graph(),
-                                            host_k);
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto k = opr::Host2DeviceCopy::make(*inputs[0].node()->owner_graph(), host_k);
         auto x = inputs[0];
         return opr::TopK::make(x, k, mode);
     };
@@ -375,23 +367,21 @@ TEST(TestOprMisc, TopKSorted) {
         TensorLayout outl0, outl1;
         opr->deduce_layout(k, inp[0]->layout(), outl0, outl1);
 
-        size_t wk_size =
-                opr->get_workspace_in_bytes(k, inp[0]->layout(), outl0, outl1);
+        size_t wk_size = opr->get_workspace_in_bytes(k, inp[0]->layout(), outl0, outl1);
         std::unique_ptr<dt_byte[]> wk_store{new dt_byte[wk_size]};
-        opr->exec(k, inp[0]->as_megdnn(), out[0].resize(outl0).as_megdnn(),
-                  out[1].resize(outl1).as_megdnn(), {wk_store.get(), wk_size});
+        opr->exec(
+                k, inp[0]->as_megdnn(), out[0].resize(outl0).as_megdnn(),
+                out[1].resize(outl1).as_megdnn(), {wk_store.get(), wk_size});
     };
     Checker checker{make_graph, fwd};
-    checker.set_input_generator(0, argsort_data_gen)
-            .set_output_allow_grad(1, false);
+    checker.set_input_generator(0, argsort_data_gen).set_output_allow_grad(1, false);
 
-    host_k = std::make_shared<HostTensorND>(checker.comp_node(), TensorShape{1},
-                                            dtype::Int32{});
+    host_k = std::make_shared<HostTensorND>(
+            checker.comp_node(), TensorShape{1}, dtype::Int32{});
     host_k->ptr<int>()[0] = 1;
     Checker::RunOptions opt;
     opt.numdiff_eps = 0.047;
     auto invoke = [&](int k, size_t m, size_t n) {
-
         host_k->ptr<int>()[0] = k;
         checker.run({TensorShape{m, n}}, opt);
     };
@@ -411,8 +401,8 @@ TEST(TestOprMisc, TopKSortedIdxOnly) {
         host_y->ptr<float>()[i] = 0.0f;
     }
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
-         idx = opr::TopK::make(x, x.make_scalar(3),
-                               opr::TopK::Param::Mode::VALUE_IDX_SORTED)[1],
+         idx = opr::TopK::make(
+                 x, x.make_scalar(3), opr::TopK::Param::Mode::VALUE_IDX_SORTED)[1],
          y = opr::TypeCvt::make(idx, dtype::Float32{}),
          gx = cg::grad(opr::reduce_sum(y, y.make_scalar(1)), x);
     HostTensorND host_gx;
@@ -430,8 +420,7 @@ TEST(TestOprMisc, TopKGrad) {
     auto x = opr::Host2DeviceCopy::make(*graph, host_x),
          k = opr::Host2DeviceCopy::make(*graph, host_k),
          ki = opr::TypeCvt::make(k, dtype::Int32{}),
-         val = opr::TopK::make(x, ki,
-                               opr::TopK::Param::Mode::VALUE_IDX_SORTED)[0],
+         val = opr::TopK::make(x, ki, opr::TopK::Param::Mode::VALUE_IDX_SORTED)[0],
          gk = cg::grad(opr::reduce_sum(val, val.make_scalar(1)), ki, true, false);
     EXPECT_TRUE(gk == nullptr);
 }

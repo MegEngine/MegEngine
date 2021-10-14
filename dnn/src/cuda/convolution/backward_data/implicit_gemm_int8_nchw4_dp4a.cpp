@@ -20,16 +20,15 @@
 using namespace megdnn;
 using namespace cuda;
 
-const void*
-ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_available_op(
-        const SizeArgs& args) const {
+const void* ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+        get_available_op(const SizeArgs& args) const {
     using namespace cutlass::library;
     auto&& fm = args.filter_meta;
     size_t sh = fm.stride[0], sw = fm.stride[1];
     cutlass::conv::SpecialOptimizeDesc special_optimization =
-            (sh == 2 && sw == 2) ? cutlass::conv::SpecialOptimizeDesc::
-                                           DECONV_DOUBLE_UPSAMPLING
-                                 : cutlass::conv::SpecialOptimizeDesc::NONE;
+            (sh == 2 && sw == 2)
+                    ? cutlass::conv::SpecialOptimizeDesc::DECONV_DOUBLE_UPSAMPLING
+                    : cutlass::conv::SpecialOptimizeDesc::NONE;
     ConvolutionKey key{
             cutlass::conv::Operator::kDgrad,
             NumericTypeID::kS8,
@@ -57,26 +56,25 @@ ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_available_op(
     return (void*)Singleton::get().operation_table.find_op(key);
 }
 
-bool ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::
-        is_available(const SizeArgs& args) const {
+bool ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
+        const SizeArgs& args) const {
     auto&& fm = args.filter_meta;
     if (fm.format != Param::Format::NCHW4)
         return false;
 
-    if (!args.grad_layout->is_contiguous() ||
-        !args.diff_layout->is_contiguous()) {
+    if (!args.grad_layout->is_contiguous() || !args.diff_layout->is_contiguous()) {
         return false;
     }
 
     bool available = true;
 
-    auto src_dtype = args.diff_layout->dtype,
-         filter_dtype = args.filter_layout->dtype,
+    auto src_dtype = args.diff_layout->dtype, filter_dtype = args.filter_layout->dtype,
          dst_dtype = args.grad_layout->dtype;
 
-    available &= (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  dst_dtype.enumv() == DTypeEnum::QuantizedS8);
+    available &=
+            (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             dst_dtype.enumv() == DTypeEnum::QuantizedS8);
     // TODO support group deconv int8
     available &= (fm.group == 1);
     // mode must be cross correlation
@@ -113,11 +111,9 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     auto&& fm = args.filter_meta;
     size_t n = args.diff_layout->operator[](0),
            co = args.diff_layout->operator[](1) * 4,
-           ho = args.diff_layout->operator[](2),
-           wo = args.diff_layout->operator[](3);
+           ho = args.diff_layout->operator[](2), wo = args.diff_layout->operator[](3);
     size_t ci = args.grad_layout->operator[](1) * 4,
-           hi = args.grad_layout->operator[](2),
-           wi = args.grad_layout->operator[](3);
+           hi = args.grad_layout->operator[](2), wi = args.grad_layout->operator[](3);
     size_t fh = fm.spatial[0], fw = fm.spatial[1];
     size_t sh = fm.stride[0], sw = fm.stride[1];
     size_t ph = fm.padding[0], pw = fm.padding[1];
@@ -131,22 +127,19 @@ void ConvolutionBackwardDataImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
         // reformat filter from nc4hw4 to n4hwc4
         megdnn::cuda::deconv::reorder_filter_nc4hw4_to_n4hwc4(
-                filter_ptr, args.filter_tensor->compatible_ptr<int8_t>(), co,
-                ci, fh, fw, stream);
+                filter_ptr, args.filter_tensor->compatible_ptr<int8_t>(), co, ci, fh,
+                fw, stream);
     }
 
-    float diff_scale =
-                  args.diff_layout->dtype.param<dtype::QuantizedS8>().scale,
-          filter_scale =
-                  args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
-          grad_scale =
-                  args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
+    float diff_scale = args.diff_layout->dtype.param<dtype::QuantizedS8>().scale,
+          filter_scale = args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
+          grad_scale = args.grad_layout->dtype.param<dtype::QuantizedS8>().scale;
 
     // \note these constants of cutlass epilogue will be passed to struct
     // `ConvolutionArguments` by pointer and interpreted as ElementCompute*,
     // a different dtype here results in undefined epilogue behaviors
-    float alpha = diff_scale * filter_scale / grad_scale, beta = 0.f,
-          gamma = 0.f, delta = 0.f;
+    float alpha = diff_scale * filter_scale / grad_scale, beta = 0.f, gamma = 0.f,
+          delta = 0.f;
 
     using namespace cutlass::library;
 

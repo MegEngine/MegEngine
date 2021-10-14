@@ -13,9 +13,9 @@
 #include "megbrain_build_config.h"
 #if MGB_JIT && MGB_JIT_MLIR
 
-#include "./mlir_gen.h"
 #include "./ir/each_mode.h"
 #include "./ir/types.h"
+#include "./mlir_gen.h"
 
 #include "megbrain/jit/mlir/ir/dialect.h"
 #include "megbrain/jit/mlir/ir/utils.h"
@@ -48,10 +48,8 @@ public:
     MLIRGenImpl(mlir::MLIRContext& context) : m_builder(&context) {}
 
     std::pair<llvm::StringRef, mlir::OwningModuleRef> gen(
-            const InternalGraph& internal_graph,
-            const JITExecutor::Args& args) {
-        mlir::ModuleOp module =
-                mlir::ModuleOp::create(m_builder.getUnknownLoc());
+            const InternalGraph& internal_graph, const JITExecutor::Args& args) {
+        mlir::ModuleOp module = mlir::ModuleOp::create(m_builder.getUnknownLoc());
 
         //! Create main routine function
         auto func_op = gen_func_op(internal_graph, args);
@@ -69,8 +67,8 @@ private:
     mlir::OpBuilder m_builder;
     llvm::ScopedHashTable<mlir::StringRef, mlir::Value> m_symbol_table;
 
-    mlir::FuncOp gen_func_op(const InternalGraph& internal_graph,
-                             const JITExecutor::Args& args) {
+    mlir::FuncOp gen_func_op(
+            const InternalGraph& internal_graph, const JITExecutor::Args& args) {
         llvm::ScopedHashTableScope<llvm::StringRef, mlir::Value> var_scope(
                 m_symbol_table);
         std::vector<mlir::Type> func_args;
@@ -87,27 +85,26 @@ private:
 
         auto func_type = m_builder.getFunctionType(func_args, llvm::None);
         //! function name maybe renamed in later pass
-        mlir::FuncOp func_op = mlir::FuncOp::create(m_builder.getUnknownLoc(),
-                                                    "func", func_type);
+        mlir::FuncOp func_op =
+                mlir::FuncOp::create(m_builder.getUnknownLoc(), "func", func_type);
         if (!func_op)
             return nullptr;
 
-        func_op.setAttr("llvm.emit_c_interface",
-                        mlir::UnitAttr::get(m_builder.getContext()));
+        func_op.setAttr(
+                "llvm.emit_c_interface", mlir::UnitAttr::get(m_builder.getContext()));
         auto& entry_block = *func_op.addEntryBlock();
         size_t idx = 0;
         for (auto&& input : args.inputs) {
-            if (mlir::failed(declare(internal_graph.placeholders()[input.idx]
-                                             ->output(0)
-                                             ->name(),
-                                     entry_block.getArgument(idx)))) {
+            if (mlir::failed(declare(
+                        internal_graph.placeholders()[input.idx]->output(0)->name(),
+                        entry_block.getArgument(idx)))) {
                 return nullptr;
             }
             idx++;
         }
         for (auto&& output : args.outputs) {
-            if (mlir::failed(declare(output.from->name(),
-                                     entry_block.getArgument(idx)))) {
+            if (mlir::failed(
+                        declare(output.from->name(), entry_block.getArgument(idx)))) {
                 return nullptr;
             }
             idx++;
@@ -125,15 +122,14 @@ private:
             m_builder.create<dialect::ReturnOp>(m_builder.getUnknownLoc());
         }
         std::string op_content = mlir_type_to_string(func_op);
-        func_op.setName(
-                ssprintf("jit_mlir_%" PRIx64,
-                         XXHash{}.update(op_content.data(), op_content.size())
-                                 .digest()));
+        func_op.setName(ssprintf(
+                "jit_mlir_%" PRIx64,
+                XXHash{}.update(op_content.data(), op_content.size()).digest()));
         return func_op;
     }
 
-    mlir::LogicalResult gen_func_body(const InternalGraph& internal_graph,
-                                      const JITExecutor::Args& args) {
+    mlir::LogicalResult gen_func_body(
+            const InternalGraph& internal_graph, const JITExecutor::Args& args) {
         llvm::ScopedHashTableScope<llvm::StringRef, mlir::Value> var_scope(
                 m_symbol_table);
         cg::DepOprIter{[&](cg::OperatorNodeBase* opr) {
@@ -147,36 +143,32 @@ private:
                     if (dtype == dtype::Float32()) {
                         scalar_value = imm->get<float>();
                     } else {
-                        mgb_throw(InternalError,
-                                  "mlir backend currently only support f32 "
-                                  "dtype, but got %s",
-                                  dtype.name());
+                        mgb_throw(
+                                InternalError,
+                                "mlir backend currently only support f32 "
+                                "dtype, but got %s",
+                                dtype.name());
                     }
                     auto&& out = m_builder.create<dialect::ConstantScalarOp>(
                             m_builder.getUnknownLoc(), m_builder.getF32Type(),
                             m_builder.getF32FloatAttr(scalar_value));
-                    mgb_assert(mlir::succeeded(
-                            declare(opr->output(0)->name(), out)));
+                    mgb_assert(mlir::succeeded(declare(opr->output(0)->name(), out)));
                 }
             } else if (opr->same_type<opr::Elemwise>()) {
                 auto&& out = gen_elemwise(opr->cast_final<opr::Elemwise>());
-                mgb_assert(
-                        mlir::succeeded(declare(opr->output(0)->name(), out)));
+                mgb_assert(mlir::succeeded(declare(opr->output(0)->name(), out)));
                 return;
             } else if (opr->same_type<opr::Dimshuffle>()) {
                 auto&& out = gen_dimshuffle(opr->cast_final<opr::Dimshuffle>());
-                mgb_assert(
-                        mlir::succeeded(declare(opr->output(0)->name(), out)));
+                mgb_assert(mlir::succeeded(declare(opr->output(0)->name(), out)));
             } else if (opr->same_type<opr::TypeCvt>()) {
                 auto&& out = gen_typecvt(opr->cast_final<opr::TypeCvt>());
-                mgb_assert(
-                        mlir::succeeded(declare(opr->output(0)->name(), out)));
+                mgb_assert(mlir::succeeded(declare(opr->output(0)->name(), out)));
             }
-        }}
-                .add(internal_graph.output());
-        m_builder.create<dialect::AssignOp>(m_builder.getUnknownLoc(),
-                                            get(internal_graph.output()),
-                                            get(args.outputs[0].from));
+        }}.add(internal_graph.output());
+        m_builder.create<dialect::AssignOp>(
+                m_builder.getUnknownLoc(), get(internal_graph.output()),
+                get(args.outputs[0].from));
 
         return mlir::success();
     }
@@ -193,25 +185,20 @@ private:
     }
 
     mlir::Value gen_typecvt(const opr::TypeCvt& opr) {
-        auto itype = get(opr.input(0))
-                             .getType()
-                             .dyn_cast_or_null<mlir::MemRefType>();
+        auto itype = get(opr.input(0)).getType().dyn_cast_or_null<mlir::MemRefType>();
         mgb_assert(itype, "currently only support MemRefType");
-        auto output_type = megdnn_dtype_to_mlir_type(opr.param(),
-                                                     m_builder.getContext());
-        auto res_type = mlir::MemRefType::get(
-                itype.getShape(), signless(output_type));
-        auto inp_type = megdnn_dtype_to_mlir_type(opr.input(0)->dtype(),
-                                                  m_builder.getContext());
+        auto output_type =
+                megdnn_dtype_to_mlir_type(opr.param(), m_builder.getContext());
+        auto res_type = mlir::MemRefType::get(itype.getShape(), signless(output_type));
+        auto inp_type = megdnn_dtype_to_mlir_type(
+                opr.input(0)->dtype(), m_builder.getContext());
         return m_builder.create<dialect::TypeCvt>(
                 m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
                 mlir::TypeAttr::get(inp_type), opr.param());
     }
 
     mlir::Value gen_dimshuffle(const opr::Dimshuffle& opr) {
-        auto itype = get(opr.input(0))
-                             .getType()
-                             .dyn_cast_or_null<mlir::MemRefType>();
+        auto itype = get(opr.input(0)).getType().dyn_cast_or_null<mlir::MemRefType>();
         mgb_assert(itype, "the input type of Dimshuffle must be MemRefType");
         auto ishape = itype.getShape();
         auto param = opr.param();
@@ -230,8 +217,7 @@ private:
         auto res_type = mlir::MemRefType::get(oshape, itype.getElementType());
 
         return m_builder.create<dialect::Dimshuffle>(
-                m_builder.getUnknownLoc(), res_type, get(opr.input(0)),
-                pattern);
+                m_builder.getUnknownLoc(), res_type, get(opr.input(0)), pattern);
     }
 
     mlir::Type get_type(const TensorLayout& layout) {
@@ -256,8 +242,7 @@ private:
 }  // namespace
 
 std::pair<llvm::StringRef, mlir::OwningModuleRef> mgb::jit::mlir_gen(
-        mlir::MLIRContext& context,
-        const mgb::jit::InternalGraph& internal_graph,
+        mlir::MLIRContext& context, const mgb::jit::InternalGraph& internal_graph,
         const mgb::jit::JITExecutor::Args& args) {
     return MLIRGenImpl(context).gen(internal_graph, args);
 }

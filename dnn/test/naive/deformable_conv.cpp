@@ -41,24 +41,27 @@ TEST_F(NAIVE, DEFORMABLE_CONV_FWD) {
     param.format = DeformableConv::Param::Format::NCHW;
     param.sparse = DeformableConv::Param::Sparse::GROUP;
 
-    checker.set_param(param).execs({{1, 2, 5, 5},
-                                    {2, 1, 1, 3, 3},
-                                    {1, 2 * 2 * 3 * 3, 5, 5},
-                                    {1, 2 * 3 * 3, 5, 5},
-                                    {}});
+    checker.set_param(param).execs(
+            {{1, 2, 5, 5},
+             {2, 1, 1, 3, 3},
+             {1, 2 * 2 * 3 * 3, 5, 5},
+             {1, 2 * 3 * 3, 5, 5},
+             {}});
 
-    checker.set_param(param).execs({{1, 2, 5, 5},
-                                    {2, 1, 1, 3, 3},
-                                    {1, 2 * 2 * 3 * 3, 5, 5},
-                                    {1, 2 * 3 * 3, 5, 5},
-                                    {}});
+    checker.set_param(param).execs(
+            {{1, 2, 5, 5},
+             {2, 1, 1, 3, 3},
+             {1, 2 * 2 * 3 * 3, 5, 5},
+             {1, 2 * 3 * 3, 5, 5},
+             {}});
 
     param.sparse = DeformableConv::Param::Sparse::DENSE;
-    checker.set_param(param).execs({{1, 2, 5, 5},
-                                    {2, 2, 3, 3},
-                                    {1, 2 * 2 * 3 * 3, 5, 5},
-                                    {1, 2 * 3 * 3, 5, 5},
-                                    {}});
+    checker.set_param(param).execs(
+            {{1, 2, 5, 5},
+             {2, 2, 3, 3},
+             {1, 2 * 2 * 3 * 3, 5, 5},
+             {1, 2 * 3 * 3, 5, 5},
+             {}});
 }
 
 TEST_F(NAIVE, DEFORMABLE_CONV_BWD_FILTER) {
@@ -83,11 +86,12 @@ TEST_F(NAIVE, DEFORMABLE_CONV_BWD_FILTER) {
     param.format = DeformableConv::Param::Format::NCHW;
     param.sparse = DeformableConv::Param::Sparse::GROUP;
 
-    checker.set_param(param).execs({{1, 2, 5, 5},
-                                    {1, 2 * 2 * 3 * 3, 5, 5},
-                                    {1, 2 * 3 * 3, 5, 5},
-                                    {1, 2, 5, 5},
-                                    {2, 1, 1, 3, 3}});
+    checker.set_param(param).execs(
+            {{1, 2, 5, 5},
+             {1, 2 * 2 * 3 * 3, 5, 5},
+             {1, 2 * 3 * 3, 5, 5},
+             {1, 2, 5, 5},
+             {2, 1, 1, 3, 3}});
 }
 
 TEST_F(NAIVE, DEFORMABLE_CONV_BWD_DATA) {
@@ -115,13 +119,14 @@ TEST_F(NAIVE, DEFORMABLE_CONV_BWD_DATA) {
     param.format = DeformableConv::Param::Format::NCHW;
     param.sparse = DeformableConv::Param::Sparse::GROUP;
 
-    checker.set_param(param).execs({{1, 2, 5, 5},
-                                    {2, 1, 1, 3, 3},
-                                    {1, 1 * 2 * 3 * 3, 5, 5},
-                                    {1, 1 * 3 * 3, 5, 5},
-                                    {1, 2, 5, 5},
-                                    {1, 2, 5, 5},
-                                    {1, 1 * 2 * 3 * 3, 5, 5},
-                                    {1, 1 * 3 * 3, 5, 5}});
+    checker.set_param(param).execs(
+            {{1, 2, 5, 5},
+             {2, 1, 1, 3, 3},
+             {1, 1 * 2 * 3 * 3, 5, 5},
+             {1, 1 * 3 * 3, 5, 5},
+             {1, 2, 5, 5},
+             {1, 2, 5, 5},
+             {1, 1 * 2 * 3 * 3, 5, 5},
+             {1, 1 * 3 * 3, 5, 5}});
 }
 // vim: syntax=cpp.doxygen

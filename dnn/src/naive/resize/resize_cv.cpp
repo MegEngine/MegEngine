@@ -59,16 +59,16 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "src/naive/resize/opr_impl.h"
 #include "src/naive/resize/resize_cv.h"
+#include "src/naive/resize/opr_impl.h"
 
 #include <cstring>
 #include "midout.h"
 #include "src/common/cv/common.h"
 #include "src/common/cv/helper.h"
+#include "src/common/resize.cuh"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
-#include "src/common/resize.cuh"
 
 MIDOUT_DECL(megdnn_naive_resizecv_imode)
 MIDOUT_DECL(megdnn_naive_resizecv_dtype)
@@ -188,10 +188,10 @@ void resize_nearest_32f(const Mat32f& src, Mat32f& dst) {
 }
 
 // linear 32f
-void build_tabs_linear_32f(const Mat32f& src, const Mat32f& dst,
-                           AlignedVector<int>& tabsx, AlignedVector<int>& tabsy,
-                           AlignedVector<float>& tabrx,
-                           AlignedVector<float>& tabry) {
+void build_tabs_linear_32f(
+        const Mat32f& src, const Mat32f& dst, AlignedVector<int>& tabsx,
+        AlignedVector<int>& tabsy, AlignedVector<float>& tabrx,
+        AlignedVector<float>& tabry) {
     megdnn_assert(src.rows() >= 2);
     megdnn_assert(src.cols() >= 2);
     megdnn_assert(dst.rows() >= 2);
@@ -262,10 +262,10 @@ void resize_linear_32f(const Mat32f& src, Mat32f& dst) {
 }
 
 // linear 8u
-void build_tabs_linear_8u(const Mat8u& src, const Mat8u& dst,
-                          AlignedVector<int>& tabsx, AlignedVector<int>& tabsy,
-                          AlignedVector<int>& tabrx,
-                          AlignedVector<int>& tabry) {
+void build_tabs_linear_8u(
+        const Mat8u& src, const Mat8u& dst, AlignedVector<int>& tabsx,
+        AlignedVector<int>& tabsy, AlignedVector<int>& tabrx,
+        AlignedVector<int>& tabry) {
     megdnn_assert(src.rows() >= 2);
     megdnn_assert(src.cols() >= 2);
     megdnn_assert(dst.rows() >= 2);
@@ -339,8 +339,9 @@ const int INTER_RESIZE_COEF_BITS = 11;
 const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
 const float MEGCV_PI = acos(-1);
 struct HResizeNoVec {
-    int operator()(const uchar**, uchar**, int, const int*, const uchar*, int,
-                   int, int, int, int) const {
+    int operator()(
+            const uchar**, uchar**, int, const int*, const uchar*, int, int, int, int,
+            int) const {
         return 0;
     }
 };
@@ -372,18 +373,17 @@ struct DecimateAlpha {
     float alpha;
 };
 template <typename T>
-using ResizeFunc = void (*)(const Mat<T>& src, Mat<T>& dst, const int* xofs,
-                            const void* alpha, const int* yofs,
-                            const void* beta, int xmin, int xmax, int ksize);
+using ResizeFunc = void (*)(
+        const Mat<T>& src, Mat<T>& dst, const int* xofs, const void* alpha,
+        const int* yofs, const void* beta, int xmin, int xmax, int ksize);
 template <typename T>
-using ResizeAreaFastFunc = void (*)(const Mat<T>& src, Mat<T>& dst,
-                                    const int* ofs, const int* xofs,
-                                    int scale_x, int scale_y);
+using ResizeAreaFastFunc = void (*)(
+        const Mat<T>& src, Mat<T>& dst, const int* ofs, const int* xofs, int scale_x,
+        int scale_y);
 template <typename T>
-using ResizeAreaFunc = void (*)(const Mat<T>& src, Mat<T>& dst,
-                                const DecimateAlpha* xtab, int xtab_size,
-                                const DecimateAlpha* ytab, int ytab_size,
-                                const int* yofs);
+using ResizeAreaFunc = void (*)(
+        const Mat<T>& src, Mat<T>& dst, const DecimateAlpha* xtab, int xtab_size,
+        const DecimateAlpha* ytab, int ytab_size, const int* yofs);
 
 static inline void interpolate_lanczos4(float x, float* coeffs) {
     static const double s45 = 0.70710678118654752440084436210485;
@@ -416,9 +416,9 @@ struct HResizeLanczos4 {
     typedef WT buf_type;
     typedef AT alpha_type;
 
-    void operator()(const T** src, WT** dst, int count, const int* xofs,
-                    const AT* alpha, int swidth, int dwidth, int cn, int xmin,
-                    int xmax) const {
+    void operator()(
+            const T** src, WT** dst, int count, const int* xofs, const AT* alpha,
+            int swidth, int dwidth, int cn, int xmin, int xmax) const {
         for (int k = 0; k < count; k++) {
             const T* S = src[k];
             WT* D = dst[k];
@@ -444,13 +444,10 @@ struct HResizeLanczos4 {
                         break;
                     for (; dx < xmax; dx++, alpha += 8) {
                         int sx = xofs[dx];
-                        D[dx] = S[sx - 1 * 3] * alpha[0] +
-                                S[sx - 1 * 2] * alpha[1] +
+                        D[dx] = S[sx - 1 * 3] * alpha[0] + S[sx - 1 * 2] * alpha[1] +
                                 S[sx - 1] * alpha[2] + S[sx] * alpha[3] +
-                                S[sx + 1] * alpha[4] +
-                                S[sx + 1 * 2] * alpha[5] +
-                                S[sx + 1 * 3] * alpha[6] +
-                                S[sx + 1 * 4] * alpha[7];
+                                S[sx + 1] * alpha[4] + S[sx + 1 * 2] * alpha[5] +
+                                S[sx + 1 * 3] * alpha[6] + S[sx + 1 * 4] * alpha[7];
                     }
                     limit = dwidth;
                 }
@@ -476,13 +473,10 @@ struct HResizeLanczos4 {
                         break;
                     for (; dx < xmax; dx++, alpha += 8) {
                         int sx = xofs[dx];
-                        D[dx] = S[sx - 3 * 3] * alpha[0] +
-                                S[sx - 3 * 2] * alpha[1] +
+                        D[dx] = S[sx - 3 * 3] * alpha[0] + S[sx - 3 * 2] * alpha[1] +
                                 S[sx - 3] * alpha[2] + S[sx] * alpha[3] +
-                                S[sx + 3] * alpha[4] +
-                                S[sx + 3 * 2] * alpha[5] +
-                                S[sx + 3 * 3] * alpha[6] +
-                                S[sx + 3 * 4] * alpha[7];
+                                S[sx + 3] * alpha[4] + S[sx + 3 * 2] * alpha[5] +
+                                S[sx + 3 * 3] * alpha[6] + S[sx + 3 * 4] * alpha[7];
                     }
                     limit = dwidth;
                 }
@@ -497,14 +491,15 @@ struct HResizeLinear {
     typedef WT buf_type;
     typedef AT alpha_type;
 
-    void operator()(const T** src, WT** dst, int count, const int* xofs,
-                    const AT* alpha, int swidth, int dwidth, int cn, int xmin,
-                    int xmax) const {
+    void operator()(
+            const T** src, WT** dst, int count, const int* xofs, const AT* alpha,
+            int swidth, int dwidth, int cn, int xmin, int xmax) const {
         int dx, k;
         VecOp vecOp;
 
-        int dx0 = vecOp((const uchar**)src, (uchar**)dst, count, xofs,
-                        (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax);
+        int dx0 =
+                vecOp((const uchar**)src, (uchar**)dst, count, xofs,
+                      (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax);
 
         for (k = 0; k <= count - 2; k++) {
             const T *S0 = src[k], *S1 = src[k + 1];
@@ -544,9 +539,9 @@ struct HResizeCubic {
     typedef WT buf_type;
     typedef AT alpha_type;
 
-    void operator()(const T** src, WT** dst, int count, const int* xofs,
-                    const AT* alpha, int swidth, int dwidth, int cn, int xmin,
-                    int xmax) const {
+    void operator()(
+            const T** src, WT** dst, int count, const int* xofs, const AT* alpha,
+            int swidth, int dwidth, int cn, int xmin, int xmax) const {
         for (int k = 0; k < count; k++) {
             const T* S = src[k];
             WT* D = dst[k];
@@ -619,14 +614,12 @@ struct VResizeLanczos4 {
     void operator()(const WT** src, T* dst, const AT* beta, int width) const {
         CastOp castOp;
         VecOp vecOp;
-        int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta,
-                         width);
+        int k, x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
 #if MEGCV_ENABLE_UNROLLED
         for (; x <= width - 4; x += 4) {
             WT b = beta[0];
             const WT* S = src[0];
-            WT s0 = S[x] * b, s1 = S[x + 1] * b, s2 = S[x + 2] * b,
-               s3 = S[x + 3] * b;
+            WT s0 = S[x] * b, s1 = S[x + 1] * b, s2 = S[x + 2] * b, s3 = S[x + 3] * b;
 
             for (k = 1; k < 8; k++) {
                 b = beta[k];
@@ -645,10 +638,10 @@ struct VResizeLanczos4 {
 #endif
 
         for (; x < width; x++) {
-            dst[x] = castOp(src[0][x] * beta[0] + src[1][x] * beta[1] +
-                            src[2][x] * beta[2] + src[3][x] * beta[3] +
-                            src[4][x] * beta[4] + src[5][x] * beta[5] +
-                            src[6][x] * beta[6] + src[7][x] * beta[7]);
+            dst[x] = castOp(
+                    src[0][x] * beta[0] + src[1][x] * beta[1] + src[2][x] * beta[2] +
+                    src[3][x] * beta[3] + src[4][x] * beta[4] + src[5][x] * beta[5] +
+                    src[6][x] * beta[6] + src[7][x] * beta[7]);
         }
     }
 };
@@ -663,8 +656,7 @@ struct VResizeLinear {
         const WT *S0 = src[0], *S1 = src[1];
         CastOp castOp;
         VecOp vecOp;
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta,
-                      width);
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
 #if MEGCV_ENABLE_UNROLLED
         for (; x <= width - 4; x += 4) {
             WT t0, t1;
@@ -694,56 +686,59 @@ struct VResizeCubic {
         CastOp castOp;
         VecOp vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta,
-                      width);
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
         for (; x < width; x++)
             dst[x] = castOp(S0[x] * b0 + S1[x] * b1 + S2[x] * b2 + S3[x] * b3);
     }
 };
 
 template <>
-struct VResizeLinear<uchar, int, short,
-                     FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2>,
-                     VResizeLinearVec_32s8u> {
+struct VResizeLinear<
+        uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2>,
+        VResizeLinearVec_32s8u> {
     typedef uchar value_type;
     typedef int buf_type;
     typedef short alpha_type;
 
-    void operator()(const buf_type** src, value_type* dst,
-                    const alpha_type* beta, int width) const {
+    void operator()(
+            const buf_type** src, value_type* dst, const alpha_type* beta,
+            int width) const {
         alpha_type b0 = beta[0], b1 = beta[1];
         const buf_type *S0 = src[0], *S1 = src[1];
         VResizeLinearVec_32s8u vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta,
-                      width);
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
 #if MEGCV_ENABLE_UNROLLED
         for (; x <= width - 4; x += 4) {
-            dst[x + 0] = uchar((((b0 * (S0[x + 0] >> 4)) >> 16) +
-                                ((b1 * (S1[x + 0] >> 4)) >> 16) + 2) >>
-                               2);
-            dst[x + 1] = uchar((((b0 * (S0[x + 1] >> 4)) >> 16) +
-                                ((b1 * (S1[x + 1] >> 4)) >> 16) + 2) >>
-                               2);
-            dst[x + 2] = uchar((((b0 * (S0[x + 2] >> 4)) >> 16) +
-                                ((b1 * (S1[x + 2] >> 4)) >> 16) + 2) >>
-                               2);
-            dst[x + 3] = uchar((((b0 * (S0[x + 3] >> 4)) >> 16) +
-                                ((b1 * (S1[x + 3] >> 4)) >> 16) + 2) >>
-                               2);
+            dst[x + 0] =
+                    uchar((((b0 * (S0[x + 0] >> 4)) >> 16) +
+                           ((b1 * (S1[x + 0] >> 4)) >> 16) + 2) >>
+                          2);
+            dst[x + 1] =
+                    uchar((((b0 * (S0[x + 1] >> 4)) >> 16) +
+                           ((b1 * (S1[x + 1] >> 4)) >> 16) + 2) >>
+                          2);
+            dst[x + 2] =
+                    uchar((((b0 * (S0[x + 2] >> 4)) >> 16) +
+                           ((b1 * (S1[x + 2] >> 4)) >> 16) + 2) >>
+                          2);
+            dst[x + 3] =
+                    uchar((((b0 * (S0[x + 3] >> 4)) >> 16) +
+                           ((b1 * (S1[x + 3] >> 4)) >> 16) + 2) >>
+                          2);
         }
 #endif
         for (; x < width; x++)
-            dst[x] = uchar((((b0 * (S0[x] >> 4)) >> 16) +
-                            ((b1 * (S1[x] >> 4)) >> 16) + 2) >>
-                           2);
+            dst[x] = uchar(
+                    (((b0 * (S0[x] >> 4)) >> 16) + ((b1 * (S1[x] >> 4)) >> 16) + 2) >>
+                    2);
     }
 };
 
 template <class HResize, class VResize, class MT>
-void resizeGeneric_(const Mat<MT>& src, Mat<MT>& dst, const int* xofs,
-                    const void* _alpha, const int* yofs, const void* _beta,
-                    int xmin, int xmax, int ksize) {
+void resizeGeneric_(
+        const Mat<MT>& src, Mat<MT>& dst, const int* xofs, const void* _alpha,
+        const int* yofs, const void* _beta, int xmin, int xmax, int ksize) {
     typedef typename HResize::value_type T;
     typedef typename HResize::buf_type WT;
     typedef typename HResize::alpha_type AT;
@@ -795,36 +790,39 @@ void resizeGeneric_(const Mat<MT>& src, Mat<MT>& dst, const int* xofs,
             prev_sy[k] = sy;
         }
         if (k0 < ksize)
-            hresize(srows + k0, rows + k0, ksize - k0, xofs, alpha, swidth,
-                    dwidth, cn, xmin, xmax);
+            hresize(srows + k0, rows + k0, ksize - k0, xofs, alpha, swidth, dwidth, cn,
+                    xmin, xmax);
         vresize((const WT**)(rows), dst.ptr(dy), beta, dwidth);
     }
 }
 
 template <typename T>
-void setup_resize_env(InterpolationMode /* ip */, int& /* ksize */,
-                      bool& /* fixedpt */, ResizeFunc<T>& /* func */) {
+void setup_resize_env(
+        InterpolationMode /* ip */, int& /* ksize */, bool& /* fixedpt */,
+        ResizeFunc<T>& /* func */) {
     megdnn_throw(("unimplemented"));
 }
 template <>
-void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
-                      ResizeFunc<float>& func) {
+void setup_resize_env(
+        InterpolationMode ip, int& ksize, bool& fixedpt, ResizeFunc<float>& func) {
     fixedpt = false;
     switch (ip) {
         case IMode::INTER_CUBIC:
             ksize = 4;
             func = resizeGeneric_<
                     HResizeCubic<float, float, float>,
-                    VResizeCubic<float, float, float, Cast<float, float>,
-                                 VResizeCubicVec_32f>,
+                    VResizeCubic<
+                            float, float, float, Cast<float, float>,
+                            VResizeCubicVec_32f>,
                     float>;
             break;
         case IMode::INTER_LANCZOS4:
             ksize = 8;
             func = resizeGeneric_<
                     HResizeLanczos4<float, float, float>,
-                    VResizeLanczos4<float, float, float, Cast<float, float>,
-                                    VResizeLanczos4Vec_32f>,
+                    VResizeLanczos4<
+                            float, float, float, Cast<float, float>,
+                            VResizeLanczos4Vec_32f>,
                     float>;
             break;
         case IMode::INTER_LINEAR:
@@ -832,8 +830,9 @@ void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
             ksize = 2;
             func = resizeGeneric_<
                     HResizeLinear<float, float, float, 1, HResizeLinearVec_32f>,
-                    VResizeLinear<float, float, float, Cast<float, float>,
-                                  VResizeLinearVec_32f>,
+                    VResizeLinear<
+                            float, float, float, Cast<float, float>,
+                            VResizeLinearVec_32f>,
                     float>;
             break;
         default:
@@ -841,8 +840,8 @@ void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
     }
 }
 template <>
-void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
-                      ResizeFunc<uchar>& func) {
+void setup_resize_env(
+        InterpolationMode ip, int& ksize, bool& fixedpt, ResizeFunc<uchar>& func) {
     fixedpt = true;
     switch (ip) {
         case IMode::INTER_CUBIC:
@@ -869,8 +868,9 @@ void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
         case IMode::INTER_AREA:
             ksize = 2;
             func = resizeGeneric_<
-                    HResizeLinear<uchar, int, short, INTER_RESIZE_COEF_SCALE,
-                                  HResizeLinearVec_8u32s>,
+                    HResizeLinear<
+                            uchar, int, short, INTER_RESIZE_COEF_SCALE,
+                            HResizeLinearVec_8u32s>,
                     VResizeLinear<
                             uchar, int, short,
                             FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2>,
@@ -882,8 +882,8 @@ void setup_resize_env(InterpolationMode ip, int& ksize, bool& fixedpt,
     }
 }
 
-int compute_resize_area_tab(int ssize, int dsize, int cn, double scale,
-                            DecimateAlpha* tab) {
+int compute_resize_area_tab(
+        int ssize, int dsize, int cn, double scale, DecimateAlpha* tab) {
     int k = 0;
     for (int dx = 0; dx < dsize; dx++) {
         double fsx1 = dx * scale;
@@ -914,8 +914,7 @@ int compute_resize_area_tab(int ssize, int dsize, int cn, double scale,
             tab[k].di = dx * cn;
             tab[k].si = sx2 * cn;
             tab[k++].alpha =
-                    (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) /
-                            cellWidth);
+                    (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
         }
     }
     return k;
@@ -923,8 +922,9 @@ int compute_resize_area_tab(int ssize, int dsize, int cn, double scale,
 
 // resize Area Fast
 template <typename T, typename WT, typename VecOp>
-void resizeAreaFast_(const Mat<T>& src, Mat<T>& dst, const int* ofs,
-                     const int* xofs, int scale_x, int scale_y) {
+void resizeAreaFast_(
+        const Mat<T>& src, Mat<T>& dst, const int* ofs, const int* xofs, int scale_x,
+        int scale_y) {
     // Range range(0, dst.rows);
     int swidth = src.width();
     int sheight = src.height();
@@ -958,8 +958,7 @@ void resizeAreaFast_(const Mat<T>& src, Mat<T>& dst, const int* ofs,
             k = 0;
 #if MEGCV_ENABLE_UNROLLED
             for (; k <= area - 4; k += 4)
-                sum += S[ofs[k]] + S[ofs[k + 1]] + S[ofs[k + 2]] +
-                       S[ofs[k + 3]];
+                sum += S[ofs[k]] + S[ofs[k + 1]] + S[ofs[k + 2]] + S[ofs[k + 3]];
 #endif
             for (; k < area; k++)
                 sum += S[ofs[k]];
@@ -998,8 +997,7 @@ struct ResizeAreaFastVec {
               cn(_cn),
               step(_step),
               vecOp(_cn, _step) {
-        fast_mode =
-                scale_x == 2 && scale_y == 2 && (cn == 1 || cn == 3 || cn == 4);
+        fast_mode = scale_x == 2 && scale_y == 2 && (cn == 1 || cn == 3 || cn == 4);
     }
 
     int operator()(const T* S, T* D, int w) const {
@@ -1012,39 +1010,47 @@ struct ResizeAreaFastVec {
         if (cn == 1)
             for (; dx < w; ++dx) {
                 int index = dx * 2;
-                D[dx] = (T)((S[index] + S[index + 1] + nextS[index] +
-                             nextS[index + 1] + 2) >>
+                D[dx] =
+                        (T)((S[index] + S[index + 1] + nextS[index] + nextS[index + 1] +
+                             2) >>
                             2);
             }
         else if (cn == 3)
             for (; dx < w; dx += 3) {
                 int index = dx * 2;
-                D[dx] = (T)((S[index] + S[index + 3] + nextS[index] +
-                             nextS[index + 3] + 2) >>
+                D[dx] =
+                        (T)((S[index] + S[index + 3] + nextS[index] + nextS[index + 3] +
+                             2) >>
                             2);
-                D[dx + 1] = (T)((S[index + 1] + S[index + 4] +
-                                 nextS[index + 1] + nextS[index + 4] + 2) >>
-                                2);
-                D[dx + 2] = (T)((S[index + 2] + S[index + 5] +
-                                 nextS[index + 2] + nextS[index + 5] + 2) >>
-                                2);
+                D[dx + 1] =
+                        (T)((S[index + 1] + S[index + 4] + nextS[index + 1] +
+                             nextS[index + 4] + 2) >>
+                            2);
+                D[dx + 2] =
+                        (T)((S[index + 2] + S[index + 5] + nextS[index + 2] +
+                             nextS[index + 5] + 2) >>
+                            2);
             }
         else {
             megdnn_assert(cn == 4);
             for (; dx < w; dx += 4) {
                 int index = dx * 2;
-                D[dx] = (T)((S[index] + S[index + 4] + nextS[index] +
-                             nextS[index + 4] + 2) >>
+                D[dx] =
+                        (T)((S[index] + S[index + 4] + nextS[index] + nextS[index + 4] +
+                             2) >>
                             2);
-                D[dx + 1] = (T)((S[index + 1] + S[index + 5] +
-                                 nextS[index + 1] + nextS[index + 5] + 2) >>
-                                2);
-                D[dx + 2] = (T)((S[index + 2] + S[index + 6] +
-                                 nextS[index + 2] + nextS[index + 6] + 2) >>
-                                2);
-                D[dx + 3] = (T)((S[index + 3] + S[index + 7] +
-                                 nextS[index + 3] + nextS[index + 7] + 2) >>
-                                2);
+                D[dx + 1] =
+                        (T)((S[index + 1] + S[index + 5] + nextS[index + 1] +
+                             nextS[index + 5] + 2) >>
+                            2);
+                D[dx + 2] =
+                        (T)((S[index + 2] + S[index + 6] + nextS[index + 2] +
+                             nextS[index + 6] + 2) >>
+                            2);
+                D[dx + 3] =
+                        (T)((S[index + 3] + S[index + 7] + nextS[index + 3] +
+                             nextS[index + 7] + 2) >>
+                            2);
             }
         }
 
@@ -1071,16 +1077,15 @@ ResizeAreaFastFunc<float> get_resize_area_fast_func<float>() {
 
 template <>
 ResizeAreaFastFunc<uchar> get_resize_area_fast_func<uchar>() {
-    return resizeAreaFast_<uchar, int,
-                           ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u>>;
+    return resizeAreaFast_<
+            uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u>>;
 }
 
 // Resize Area
 template <typename T, typename WT>
-static void resizeArea_(const Mat<T>& src, Mat<T>& dst,
-                        const DecimateAlpha* xtab, int xtab_size,
-                        const DecimateAlpha* ytab, int ytab_size,
-                        const int* tabofs) {
+static void resizeArea_(
+        const Mat<T>& src, Mat<T>& dst, const DecimateAlpha* xtab, int xtab_size,
+        const DecimateAlpha* ytab, int ytab_size, const int* tabofs) {
     // parallel_for_(Range(0, dst.rows),
     // ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size,
     // tabofs),
@@ -1213,10 +1218,8 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
             ResizeAreaFunc<T> func = get_resize_area_func<T>();
             AlignedVector<DecimateAlpha> _xytab((swidth + sheight) * 2);
             DecimateAlpha *xtab = _xytab.data(), *ytab = xtab + swidth * 2;
-            int xtab_size =
-                    compute_resize_area_tab(swidth, dwidth, cn, scale_x, xtab);
-            int ytab_size =
-                    compute_resize_area_tab(sheight, dheight, 1, scale_y, ytab);
+            int xtab_size = compute_resize_area_tab(swidth, dwidth, cn, scale_x, xtab);
+            int ytab_size = compute_resize_area_tab(sheight, dheight, 1, scale_y, ytab);
             AlignedVector<int> _tabofs(dheight + 1);
             int* tabofs = _tabofs.data();
             for (k = 0, dy = 0; k < ytab_size; ++k) {
@@ -1236,8 +1239,8 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
     bool fixedpt;
     setup_resize_env<T>(ip, ksize, fixedpt, func);
     ksize2 = ksize / 2;
-    AlignedVector<uchar> _buffer((width + dst.height()) *
-                                 (sizeof(int) + sizeof(float) * ksize));
+    AlignedVector<uchar> _buffer(
+            (width + dst.height()) * (sizeof(int) + sizeof(float) * ksize));
     uchar* buffer = _buffer.data();
     int* xofs = static_cast<int*>(static_cast<void*>(buffer));
     int* yofs = xofs + width;
@@ -1260,8 +1263,7 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
 
         if (sx < ksize2 - 1) {
             xmin = dx + 1;
-            if (sx < 0 &&
-                (ip != IMode::INTER_CUBIC && ip != IMode::INTER_LANCZOS4)) {
+            if (sx < 0 && (ip != IMode::INTER_CUBIC && ip != IMode::INTER_LANCZOS4)) {
                 fx = 0;
                 sx = 0;
             }
@@ -1291,8 +1293,7 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
                         saturate_cast<short>(cbuf[k] * INTER_RESIZE_COEF_SCALE);
             }
             for (; k < cn * ksize; ++k) {
-                ialpha[dx * cn * ksize + k] =
-                        ialpha[dx * cn * ksize + k - ksize];
+                ialpha[dx * cn * ksize + k] = ialpha[dx * cn * ksize + k - ksize];
             }
         } else {
             for (k = 0; k < ksize; ++k) {
@@ -1335,17 +1336,16 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
     }
     func(src, dst, xofs,
          fixedpt ? static_cast<void*>(ialpha) : static_cast<void*>(alpha), yofs,
-         fixedpt ? static_cast<void*>(ibeta) : static_cast<void*>(beta), xmin,
-         xmax, ksize);
+         fixedpt ? static_cast<void*>(ibeta) : static_cast<void*>(beta), xmin, xmax,
+         ksize);
 }
 
 }  // anonymous namespace
 
-void megdnn::naive::resize_cv_exec(_megdnn_tensor_in src,
-                                   _megdnn_tensor_out dst,
-                                   param::Resize::InterpolationMode imode) {
-    megdnn_assert(src.layout[3] == 1 || src.layout[3] == 3,
-                  "unsupported src channel");
+void megdnn::naive::resize_cv_exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst,
+        param::Resize::InterpolationMode imode) {
+    megdnn_assert(src.layout[3] == 1 || src.layout[3] == 3, "unsupported src channel");
     for (size_t i = 0; i < src.layout.shape[0]; ++i) {
         if (dst.layout.dtype == dtype::Float32()) {
             MIDOUT_BEGIN(megdnn_naive_resizecv_dtype, midout_iv(0)) {
@@ -1353,15 +1353,13 @@ void megdnn::naive::resize_cv_exec(_megdnn_tensor_in src,
                 Mat<float> dst_mat = TensorND2Mat<float>(dst, i);
                 switch (imode) {
                     case IMode::INTER_NEAREST:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(0)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(0)) {
                             resize_nearest_32f(src_mat, dst_mat);
                         }
                         MIDOUT_END();
                         break;
                     case IMode::INTER_LINEAR:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(1)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(1)) {
                             resize_linear_32f(src_mat, dst_mat);
                         }
                         MIDOUT_END();
@@ -1369,8 +1367,7 @@ void megdnn::naive::resize_cv_exec(_megdnn_tensor_in src,
                     case IMode::INTER_CUBIC:
                     case IMode::INTER_LANCZOS4:
                     case IMode::INTER_AREA:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(2)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(2)) {
                             resize_opencv<float>(src_mat, dst_mat, imode);
                         }
                         MIDOUT_END();
@@ -1387,15 +1384,13 @@ void megdnn::naive::resize_cv_exec(_megdnn_tensor_in src,
                 Mat<uchar> dst_mat = TensorND2Mat<uchar>(dst, i);
                 switch (imode) {
                     case IMode::INTER_NEAREST:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(0)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(0)) {
                             resize_nearest_8u(src_mat, dst_mat);
                         }
                         MIDOUT_END();
                         break;
                     case IMode::INTER_LINEAR:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(1)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(1)) {
                             resize_linear_8u(src_mat, dst_mat);
                         }
                         MIDOUT_END();
@@ -1403,8 +1398,7 @@ void megdnn::naive::resize_cv_exec(_megdnn_tensor_in src,
                     case IMode::INTER_CUBIC:
                     case IMode::INTER_LANCZOS4:
                     case IMode::INTER_AREA:
-                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode,
-                                     midout_iv(2)) {
+                        MIDOUT_BEGIN(megdnn_naive_resizecv_imode, midout_iv(2)) {
                             resize_opencv<uchar>(src_mat, dst_mat, imode);
                         }
                         MIDOUT_END();

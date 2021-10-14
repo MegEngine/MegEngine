@@ -21,21 +21,21 @@ namespace test {
 namespace {
 
 static __inline int32_t clamp0(int32_t v) {
-  return ((-(v) >> 31) & (v));
+    return ((-(v) >> 31) & (v));
 }
 
 static __inline int32_t clamp255(int32_t v) {
-  return (((255 - (v)) >> 31) | (v)) & 255;
+    return (((255 - (v)) >> 31) | (v)) & 255;
 }
 
 static __inline uint32_t Clamp(int32_t val) {
-  int v = clamp0(val);
-  return (uint32_t)(clamp255(v));
+    int v = clamp0(val);
+    return (uint32_t)(clamp255(v));
 }
 
-void naive_row(const uint8_t* src_y, const uint8_t* src_vu, uint8_t* rgb_buf,
-               int width) {
-#define YG 18997  /* round(1.164 * 64 * 256 * 256 / 257) */
+void naive_row(
+        const uint8_t* src_y, const uint8_t* src_vu, uint8_t* rgb_buf, int width) {
+#define YG  18997 /* round(1.164 * 64 * 256 * 256 / 257) */
 #define YGB -1160 /* 1.164 * 64 * -16 + 64 / 2 */
 
 // U and V contributions to R,G,B.
@@ -82,14 +82,14 @@ void naive_row(const uint8_t* src_y, const uint8_t* src_vu, uint8_t* rgb_buf,
 #undef VG
 #undef VR
 #undef YG
-
 }
 
 //! refer to libyuv
 //! https://github.com/lemenkov/libyuv/blob/7e936044d154b9fe159a67f9562e10b1ef1cb590/source/convert_argb.cc#L1079
-void naive(const uint8_t* src_y, int src_stride_y, const uint8_t* src_uv,
-           int src_stride_uv, uint8_t* dst_argb, int dst_stride_argb, int width,
-           int height) {
+void naive(
+        const uint8_t* src_y, int src_stride_y, const uint8_t* src_uv,
+        int src_stride_uv, uint8_t* dst_argb, int dst_stride_argb, int width,
+        int height) {
     rep(y, height) {
         naive_row(src_y, src_uv, dst_argb, width);
         dst_argb += dst_stride_argb;
@@ -105,36 +105,33 @@ void run_check(Handle* handle, const size_t IH, const size_t IW) {
     const size_t OH = IH / 3 * 2;
     const size_t OW = IW;
     const size_t OC = 3;
-    SyncedTensor<uint8_t> src(handle, {1, IH, IW, 1}),
-        dst(handle, {1, OH, OW, OC}),
-        expect(handle, {1, OH, OW, OC});
+    SyncedTensor<uint8_t> src(handle, {1, IH, IW, 1}), dst(handle, {1, OH, OW, OC}),
+            expect(handle, {1, OH, OW, OC});
     auto opr = handle->create_operator<CvtColor>();
     opr->param().mode = param::CvtColor::Mode::BT601_YUV2BGR_NV21;
     opr->exec(src.tensornd_dev(), dst.tensornd_dev(), {});
-    naive(src.ptr_host(), IW, src.ptr_host() + OH * IW, IW,
-          expect.ptr_mutable_host(), OW * OC, OW, OH);
+    naive(src.ptr_host(), IW, src.ptr_host() + OH * IW, IW, expect.ptr_mutable_host(),
+          OW * OC, OW, OH);
 
     rep(i, OH) rep(j, OW) rep(c, OC) {
         uint8_t dst_value = dst.ptr_host()[i * OW * OC + j * OC + c];
         uint8_t expect_value = expect.ptr_host()[i * OW * OC + j * OC + c];
-        megdnn_assert(dst_value == expect_value,
-                      "Error: %d(actual) != %d(expect) at(%zu,%zu,%zu)",
-                      static_cast<int>(dst_value),
-                      static_cast<int>(expect_value), i, j, c);
+        megdnn_assert(
+                dst_value == expect_value,
+                "Error: %d(actual) != %d(expect) at(%zu,%zu,%zu)",
+                static_cast<int>(dst_value), static_cast<int>(expect_value), i, j, c);
     }
 #undef rep
-
 }
 
 }  // namespace
 
-TEST_F(NAIVE, CVTCOLOR_BT601_YUV)
-{
+TEST_F(NAIVE, CVTCOLOR_BT601_YUV) {
     run_check(handle(), 150, 100);
     run_check(handle(), 180, 100);
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

@@ -154,8 +154,7 @@ public:
 
     devfunc void next() {}
 
-    devfunc void get_shape_from_access(uint32_t access_idx,
-                                       int (&shape_idx)[ndim]) {
+    devfunc void get_shape_from_access(uint32_t access_idx, int (&shape_idx)[ndim]) {
 #pragma unroll
         for (int i = ndim - 1; i >= 1; --i) {
             Uint32Fastdiv& align_shp = m_align_shape_highdim[i - 1];
@@ -186,7 +185,7 @@ public:
         } else {
             int shape_idx[ndim];
             get_shape_from_access(access_idx, shape_idx);
-    #pragma unroll
+#pragma unroll
             for (int i = ndim - 1; i >= 0; --i) {
                 offset += shape_idx[i] * m_stride[i];
             }

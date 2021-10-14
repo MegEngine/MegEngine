@@ -16,10 +16,8 @@ using namespace cuda;
 using namespace convolution3d;
 
 namespace {
-std::pair<TensorLayoutArray, Convolution3DBackwardFilterImpl::Param>
-sub_opr_config(
+std::pair<TensorLayoutArray, Convolution3DBackwardFilterImpl::Param> sub_opr_config(
         const Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs& args) {
-
     TensorLayout grad_pg = *args.grad_layout;
     TensorLayout src_pg = *args.src_layout;
     TensorLayout diff_pg = *args.diff_layout;
@@ -40,12 +38,10 @@ sub_opr_config(
 }
 
 std::pair<TensorLayoutArray, std::unique_ptr<Convolution3DBackwardFilter>>
-prepare_sub_opr(
-        const Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+prepare_sub_opr(const Convolution3DBackwardFilterImpl::AlgoBase::SizeArgs& args) {
     auto conv3d_backfilter_opr =
             args.handle->create_operator<Convolution3DBackwardFilter>();
-    set_execution_policy<Convolution3DBackwardFilter,
-                         Convolution3DBackwardFilter*>(
+    set_execution_policy<Convolution3DBackwardFilter, Convolution3DBackwardFilter*>(
             args.opr, conv3d_backfilter_opr.get());
     auto&& config = sub_opr_config(args);
     conv3d_backfilter_opr->param() = config.second;
@@ -54,17 +50,18 @@ prepare_sub_opr(
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+std::vector<Algorithm::SearchItem> Convolution3DBackwardFilterImpl::
+        AlgoGroupConvGeneral::get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     AlgoBase::SizeArgs args{
-            static_cast<const Convolution3DBackwardFilterImpl*>(opr),
-            layouts[0], layouts[1], layouts[2]};
+            static_cast<const Convolution3DBackwardFilterImpl*>(opr), layouts[0],
+            layouts[1], layouts[2]};
     auto&& config = sub_opr_config(args);
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::CONVOLUTION3D_BACKWARD_FILTER, param_str,
+    return {
+            {Algorithm::OprType::CONVOLUTION3D_BACKWARD_FILTER, param_str,
              config.first}};
 }
 
@@ -83,17 +80,15 @@ bool Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::is_available(
             config.first[0], config.first[1], config.first[2]);
 }
 
-WorkspaceBundle
-Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_bundle(
-        void* ptr, const SizeArgs& args) const {
+WorkspaceBundle Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::
+        get_workspace_bundle(void* ptr, const SizeArgs& args) const {
     auto config = prepare_sub_opr(args);
     size_t sizes = config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]);
     return {ptr, {sizes}};
 }
 
-size_t
-Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
+size_t Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
         const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
@@ -111,12 +106,13 @@ void Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::exec(
         auto grp = args.grad_filter_meta.group;
 
         auto&& fm = args.grad_filter_meta;
-        auto strd_src = (tsrc.layout.stride[c_pos] * fm.icpg *
-                         tsrc.layout.dtype.size()),
-             strd_diff = (tdiff.layout.stride[c_pos] * fm.ocpg *
-                          tdiff.layout.dtype.size()),
-             strd_grad = (fm.icpg * fm.ocpg * fm.spatial[0] * fm.spatial[1] *
-                          fm.spatial[2] * tgrad.layout.dtype.size());
+        auto strd_src =
+                     (tsrc.layout.stride[c_pos] * fm.icpg * tsrc.layout.dtype.size()),
+             strd_diff =
+                     (tdiff.layout.stride[c_pos] * fm.ocpg * tdiff.layout.dtype.size()),
+             strd_grad =
+                     (fm.icpg * fm.ocpg * fm.spatial[0] * fm.spatial[1] *
+                      fm.spatial[2] * tgrad.layout.dtype.size());
 
         for (uint32_t g = 0; g < grp; ++g) {
             config.second->exec(tsrc, tdiff, tgrad, bundle.get_workspace(0));
@@ -128,4 +124,3 @@ void Convolution3DBackwardFilterImpl::AlgoGroupConvGeneral::exec(
 }
 
 // vim: syntax=cpp.doxygen
-

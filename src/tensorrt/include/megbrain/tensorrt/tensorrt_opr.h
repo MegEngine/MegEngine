@@ -52,9 +52,10 @@ class TensorRTManager {
     void* m_device_workspace_memory_ptr;
 
 public:
-    void exec(cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
-              nvinfer1::ICudaEngine* engine, size_t batch = 1,
-              bool use_trt_profiler = false);
+    void exec(
+            cg::SingleCNOperatorNodeBase* opr, CompNode comp_node_check,
+            nvinfer1::ICudaEngine* engine, size_t batch = 1,
+            bool use_trt_profiler = false);
 
     void clear_trt_context() { m_context.reset(); }
 
@@ -67,24 +68,23 @@ static inline size_t workspace_size(nvinfer1::ICudaEngine* engine) {
 }
 }  // namespace intl
 
-
 /*!
  * \brief an operator that evaluates a nvinfer::INetworkDefinition object
  *
  * This operator allows input shapes to be changed.
  */
-MGB_DEFINE_OPR_CLASS(TensorRTOpr,
-                           mgb::cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS(TensorRTOpr, mgb::cg::SingleCNOutshapePureByInshapeOprBase) // {
     void init_output_dtype() override;
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
-    
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
+
     void add_input_layout_constraint() override;
-    
+
     void scn_do_execute() override;
-    
-    void set_input_by_tensor_shape(nvinfer1::ITensor* const input,
-                               const TensorShape& tensor_shape) const;
+
+    void set_input_by_tensor_shape(
+            nvinfer1::ITensor* const input, const TensorShape& tensor_shape) const;
 
 public:
     template <typename T>
@@ -100,22 +100,19 @@ public:
 
     //! sharing a network across builders is not recommended.
     //! use shared_ptr instead of unique_ptr for builder
-    TensorRTOpr(std::shared_ptr<nvinfer1::IBuilder> builder,
-                std::shared_ptr<nvinfer1::INetworkDefinition> network,
-                TensorRTGraphFeatureBits feature_bits,
-                std::shared_ptr<GpuAllocator> gpu_allocator,
-                const VarNodeArray& inputs,
-                std::shared_ptr<nvinfer1::ICudaEngine> engine,
-                const OperatorNodeConfig& config);
+    TensorRTOpr(
+            std::shared_ptr<nvinfer1::IBuilder> builder,
+            std::shared_ptr<nvinfer1::INetworkDefinition> network,
+            TensorRTGraphFeatureBits feature_bits,
+            std::shared_ptr<GpuAllocator> gpu_allocator, const VarNodeArray& inputs,
+            std::shared_ptr<nvinfer1::ICudaEngine> engine,
+            const OperatorNodeConfig& config);
 
     //! get underlying TensorRT IBuilder object
-    const std::shared_ptr<nvinfer1::IBuilder>& trt_builder() const {
-        return m_builder;
-    }
+    const std::shared_ptr<nvinfer1::IBuilder>& trt_builder() const { return m_builder; }
 
     //! get underlying TensorRT INetworkDefinition object
-    const std::shared_ptr<nvinfer1::INetworkDefinition>& trt_network_def()
-            const {
+    const std::shared_ptr<nvinfer1::INetworkDefinition>& trt_network_def() const {
         return m_network;
     }
 
@@ -128,16 +125,13 @@ public:
         return m_gpu_allocator;
     }
 
-    TensorRTGraphFeatureBits trt_graph_feature_bits() const {
-        return m_feature_bits;
-    }
+    TensorRTGraphFeatureBits trt_graph_feature_bits() const { return m_feature_bits; }
 
     static SymbolVarArray make(
             std::shared_ptr<nvinfer1::IBuilder> builder,
             std::shared_ptr<nvinfer1::INetworkDefinition> network,
             TensorRTGraphFeatureBits feature_bits,
-            std::shared_ptr<GpuAllocator> gpu_allocator,
-            const SymbolVarArray& src,
+            std::shared_ptr<GpuAllocator> gpu_allocator, const SymbolVarArray& src,
             std::shared_ptr<nvinfer1::ICudaEngine> engine =
                     {nullptr, TensorRTDeleter<nvinfer1::ICudaEngine>()},
             const OperatorNodeConfig& config = {});
@@ -199,7 +193,6 @@ public:
 
     CompNode comp_node() const { return m_cn; }
 };
-
 
 }  // namespace opr
 }  // namespace mgb

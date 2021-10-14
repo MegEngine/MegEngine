@@ -10,10 +10,10 @@
  */
 
 #include "megbrain/imperative/opr_utility.h"
-#include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith.h"
-#include "megbrain/opr/utility.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
+#include "megbrain/opr/utility.h"
 #include "megbrain/test/helper.h"
 
 using namespace mgb;
@@ -25,8 +25,9 @@ TEST(TestOprUtility, InputCallback) {
     auto hv = gen({2, 3});
     dv.copy_from(*hv).sync();
     auto graph = ComputingGraph::make();
-    auto callback = [dv]() {return dv;};
-    auto outputs = opr::InputCallback::make(*graph, callback, dv.comp_node(), dv.dtype(), {2, 3});
+    auto callback = [dv]() { return dv; };
+    auto outputs = opr::InputCallback::make(
+            *graph, callback, dv.comp_node(), dv.dtype(), {2, 3});
 
     HostTensorND hout;
     ComputingGraph::OutputSpec outspec{make_callback_copy(outputs[0], hout)};
@@ -41,11 +42,11 @@ TEST(TestOprUtility, OutputCallback) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, hx);
     HostTensorND hy;
-    auto callback = [&hy](DeviceTensorND dv) {hy.copy_from(dv);};
+    auto callback = [&hy](DeviceTensorND dv) { hy.copy_from(dv); };
     auto dummy = opr::OutputCallback::make({callback}, x);
     auto y = opr::VirtualDep::make({x, dummy});
 
-    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&){}}};
+    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&) {}}};
     auto func = graph->compile(outspec);
     func->execute();
     MGB_ASSERT_TENSOR_EQ(hy, *hx);
@@ -58,13 +59,13 @@ TEST(TestOprUtility, OutputCallbackPreferHost) {
     auto x = opr::Host2DeviceCopy::make(*graph, hx);
     x = opr::GetVarShape::make(x);
     HostTensorND hy;
-    auto callback = [&hy](DeviceTensorND dv) {hy.copy_from(dv);};
+    auto callback = [&hy](DeviceTensorND dv) { hy.copy_from(dv); };
     opr::OutputCallback::Param param{callback};
     param.prefer_host_value = true;
     auto dummy = opr::OutputCallback::make(param, x);
     auto y = opr::VirtualDep::make({x, dummy});
 
-    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&){}}};
+    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&) {}}};
     auto func = graph->compile(outspec);
     func->execute();
     ASSERT_TRUE(hy.comp_node() == CompNode::default_cpu());
@@ -78,11 +79,11 @@ TEST(TestOprUtility, NopCallback) {
     auto graph = ComputingGraph::make();
     auto x = opr::Host2DeviceCopy::make(*graph, hx);
     bool fired = false;
-    auto callback = [&fired]() {fired = true;};
+    auto callback = [&fired]() { fired = true; };
     auto dummy = opr::NopCallback::make(*graph, callback, x.node()->comp_node(), {x});
     auto y = opr::VirtualDep::make({x, dummy});
 
-    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&){}}};
+    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&) {}}};
     auto func = graph->compile(outspec);
     func->execute();
     ASSERT_TRUE(fired);
@@ -91,15 +92,20 @@ TEST(TestOprUtility, NopCallback) {
 TEST(TestOprUtility, NopCallbackMixedInput) {
     REQUIRE_XPU(2);
     auto graph = ComputingGraph::make();
-    auto x0 = opr::Host2DeviceCopy::make(*graph, HostTensorGenerator<dtype::Int32>()({2, 3}), OperatorNodeConfig(CompNode::load("xpu0")));
-    auto x1 = opr::Host2DeviceCopy::make(*graph, HostTensorGenerator<dtype::Float32>()({2, 3}), OperatorNodeConfig(CompNode::load("xpu1")));
+    auto x0 = opr::Host2DeviceCopy::make(
+            *graph, HostTensorGenerator<dtype::Int32>()({2, 3}),
+            OperatorNodeConfig(CompNode::load("xpu0")));
+    auto x1 = opr::Host2DeviceCopy::make(
+            *graph, HostTensorGenerator<dtype::Float32>()({2, 3}),
+            OperatorNodeConfig(CompNode::load("xpu1")));
 
     bool fired = false;
-    auto callback = [&fired]() {fired = true;};
-    auto dummy = opr::NopCallback::make(*graph, callback, CompNode::load("xpux"), {x0, x1});
+    auto callback = [&fired]() { fired = true; };
+    auto dummy =
+            opr::NopCallback::make(*graph, callback, CompNode::load("xpux"), {x0, x1});
     auto y = opr::VirtualDep::make({x0, dummy});
 
-    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&){}}};
+    ComputingGraph::OutputSpec outspec{{y, [](DeviceTensorND&) {}}};
     auto func = graph->compile(outspec);
     func->execute();
     ASSERT_TRUE(fired);
@@ -122,7 +128,8 @@ TEST(TestOprUtility, CallbackChain) {
             dev_x.storage({});
             return ret;
         };
-        auto out = opr::InputCallback::make(*graph, callback, cn, dev_x.dtype(), {2, 3});
+        auto out =
+                opr::InputCallback::make(*graph, callback, cn, dev_x.dtype(), {2, 3});
         x = out[0];
         dummy = out[1];
     }
@@ -149,7 +156,7 @@ TEST(TestOprUtility, CallbackChain) {
 
     {
         auto out = opr::VirtualDep::make({x.make_scalar(0), dummy});
-        ComputingGraph::OutputSpec outspec{{out, [](DeviceTensorND&){}}};
+        ComputingGraph::OutputSpec outspec{{out, [](DeviceTensorND&) {}}};
         auto func = graph->compile(outspec);
         func->execute();
     }

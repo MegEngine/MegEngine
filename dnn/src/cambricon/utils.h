@@ -37,4 +37,3 @@ cnrtDeviceInfo_t current_device_info();
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

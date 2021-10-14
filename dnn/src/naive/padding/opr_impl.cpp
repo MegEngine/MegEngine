@@ -26,9 +26,9 @@ struct ShapeParams {
 };
 
 template <typename T>
-void exec_const_internal(const size_t ndim, const size_t total_out_nr,
-                         const T* const src, T* const dst, ShapeParams params,
-                         const T padding_val) MEGDNN_NOEXCEPT {
+void exec_const_internal(
+        const size_t ndim, const size_t total_out_nr, const T* const src, T* const dst,
+        ShapeParams params, const T padding_val) MEGDNN_NOEXCEPT {
     rep(out_index, total_out_nr) {
         bool in_src_valid_area = true;
         size_t in_index = 0;
@@ -36,11 +36,10 @@ void exec_const_internal(const size_t ndim, const size_t total_out_nr,
         for (size_t dim = 0; dim <= ndim - 1; ++dim) {
             size_t dim_index = out_index_tmp / params.dst_stride[dim];
             out_index_tmp -= dim_index * params.dst_stride[dim];
-            in_src_valid_area &= (dim_index >= params.offsets[dim * 2] &&
-                                  dim_index < params.offsets[dim * 2] +
-                                                      params.src_shape[dim]);
-            in_index += (dim_index - params.offsets[dim * 2]) *
-                        params.src_stride[dim];
+            in_src_valid_area &=
+                    (dim_index >= params.offsets[dim * 2] &&
+                     dim_index < params.offsets[dim * 2] + params.src_shape[dim]);
+            in_index += (dim_index - params.offsets[dim * 2]) * params.src_stride[dim];
         }
 
         if (in_src_valid_area) {
@@ -52,9 +51,9 @@ void exec_const_internal(const size_t ndim, const size_t total_out_nr,
 }
 
 template <typename T>
-void exec_replicate_internal(const size_t ndim, const size_t total_out_nr,
-                             const T* const src, T* const dst,
-                             ShapeParams params) MEGDNN_NOEXCEPT {
+void exec_replicate_internal(
+        const size_t ndim, const size_t total_out_nr, const T* const src, T* const dst,
+        ShapeParams params) MEGDNN_NOEXCEPT {
     rep(out_index, total_out_nr) {
         size_t in_index = 0;
         size_t out_index_tmp = out_index;
@@ -63,9 +62,9 @@ void exec_replicate_internal(const size_t ndim, const size_t total_out_nr,
             out_index_tmp -= dim_index * params.dst_stride[dim];
             dim_index = (size_t)std::min(
                     (long long)params.src_shape[dim] - 1,
-                    std::max((long long)dim_index -
-                                     (long long)params.offsets[dim * 2],
-                             (long long)0));
+                    std::max(
+                            (long long)dim_index - (long long)params.offsets[dim * 2],
+                            (long long)0));
             in_index += dim_index * params.src_stride[dim];
         }
         dst[out_index] = src[in_index];
@@ -73,9 +72,9 @@ void exec_replicate_internal(const size_t ndim, const size_t total_out_nr,
 }
 
 template <typename T>
-void exec_reflect_internal(const size_t ndim, const size_t total_out_nr,
-                           const T* const src, T* const dst,
-                           ShapeParams params) MEGDNN_NOEXCEPT {
+void exec_reflect_internal(
+        const size_t ndim, const size_t total_out_nr, const T* const src, T* const dst,
+        ShapeParams params) MEGDNN_NOEXCEPT {
     rep(out_index, total_out_nr) {
         size_t in_index = 0;
         size_t out_index_tmp = out_index;
@@ -84,9 +83,8 @@ void exec_reflect_internal(const size_t ndim, const size_t total_out_nr,
             out_index_tmp -= dim_index * params.dst_stride[dim];
             dim_index -= (long long)params.offsets[dim * 2];
             dim_index = std::max(dim_index, -dim_index);
-            dim_index =
-                    std::min(dim_index, 2 * (long long)params.src_shape[dim] -
-                                                dim_index - 2);
+            dim_index = std::min(
+                    dim_index, 2 * (long long)params.src_shape[dim] - dim_index - 2);
             in_index += size_t(dim_index) * (size_t)params.src_stride[dim];
         }
         dst[out_index] = src[in_index];
@@ -94,9 +92,9 @@ void exec_reflect_internal(const size_t ndim, const size_t total_out_nr,
 }
 
 template <typename T>
-void backward_exec_const_internal(const size_t ndim, const size_t total_in_nr,
-                                  const T* const src, T* const dst,
-                                  ShapeParams params) MEGDNN_NOEXCEPT {
+void backward_exec_const_internal(
+        const size_t ndim, const size_t total_in_nr, const T* const src, T* const dst,
+        ShapeParams params) MEGDNN_NOEXCEPT {
     rep(in_index, total_in_nr) {
         bool in_dst_valid_area = true;
         size_t out_index = 0;
@@ -104,11 +102,10 @@ void backward_exec_const_internal(const size_t ndim, const size_t total_in_nr,
         for (size_t dim = 0; dim <= ndim - 1; ++dim) {
             size_t dim_index = in_index_tmp / params.src_stride[dim];
             in_index_tmp -= dim_index * params.src_stride[dim];
-            in_dst_valid_area &= (dim_index >= params.offsets[dim * 2] &&
-                                  dim_index < params.offsets[dim * 2] +
-                                                      params.dst_shape[dim]);
-            out_index += (dim_index - params.offsets[dim * 2]) *
-                         params.dst_stride[dim];
+            in_dst_valid_area &=
+                    (dim_index >= params.offsets[dim * 2] &&
+                     dim_index < params.offsets[dim * 2] + params.dst_shape[dim]);
+            out_index += (dim_index - params.offsets[dim * 2]) * params.dst_stride[dim];
         }
         if (in_dst_valid_area) {
             dst[out_index] = src[in_index];
@@ -117,10 +114,9 @@ void backward_exec_const_internal(const size_t ndim, const size_t total_in_nr,
 }
 
 template <typename T>
-void backward_exec_replicate_internal(const size_t ndim,
-                                      const size_t total_in_nr,
-                                      const T* const src, T* const dst,
-                                      ShapeParams params) MEGDNN_NOEXCEPT {
+void backward_exec_replicate_internal(
+        const size_t ndim, const size_t total_in_nr, const T* const src, T* const dst,
+        ShapeParams params) MEGDNN_NOEXCEPT {
     rep(in_index, total_in_nr) {
         size_t out_index = 0;
         size_t in_index_tmp = in_index;
@@ -129,9 +125,9 @@ void backward_exec_replicate_internal(const size_t ndim,
             in_index_tmp -= dim_index * params.src_stride[dim];
             dim_index = (size_t)std::min(
                     (long long)params.dst_shape[dim] - 1,
-                    std::max((long long)dim_index -
-                                     (long long)params.offsets[dim * 2],
-                             (long long)0));
+                    std::max(
+                            (long long)dim_index - (long long)params.offsets[dim * 2],
+                            (long long)0));
             out_index += dim_index * params.dst_stride[dim];
         }
         dst[out_index] += src[in_index];
@@ -139,9 +135,9 @@ void backward_exec_replicate_internal(const size_t ndim,
 }
 
 template <typename T>
-void backward_exec_reflect_internal(const size_t ndim, const size_t total_in_nr,
-                                    const T* const src, T* const dst,
-                                    ShapeParams params) MEGDNN_NOEXCEPT {
+void backward_exec_reflect_internal(
+        const size_t ndim, const size_t total_in_nr, const T* const src, T* const dst,
+        ShapeParams params) MEGDNN_NOEXCEPT {
     rep(in_index, total_in_nr) {
         size_t out_index = 0;
         size_t in_index_tmp = in_index;
@@ -150,9 +146,8 @@ void backward_exec_reflect_internal(const size_t ndim, const size_t total_in_nr,
             in_index_tmp -= dim_index * params.src_stride[dim];
             dim_index -= (long long)params.offsets[dim * 2];
             dim_index = std::max(dim_index, -dim_index);
-            dim_index =
-                    std::min(dim_index, 2 * (long long)params.dst_shape[dim] -
-                                                dim_index - 2);
+            dim_index = std::min(
+                    dim_index, 2 * (long long)params.dst_shape[dim] - dim_index - 2);
             out_index += size_t(dim_index) * (size_t)params.dst_stride[dim];
         }
         dst[out_index] += src[in_index];

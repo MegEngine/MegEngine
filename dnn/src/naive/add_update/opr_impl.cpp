@@ -37,8 +37,7 @@ void forward(const ElemwiseOpParamN<2> src, const AddUpdate::Param& param) {
 namespace megdnn {
 namespace naive {
 
-void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest,
-                                _megdnn_tensor_in delta) {
+void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
     check_exec(dest.layout, delta.layout);
     ElemwiseOpParamN<2> src = make_param(dest, delta);
 #define cb(DType)                                                   \

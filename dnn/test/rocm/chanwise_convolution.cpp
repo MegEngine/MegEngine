@@ -46,16 +46,15 @@ class BenchmarkEnv {
     Handle *handle, *handle_cpu;
     std::unique_ptr<GaussianRNG> rng;
     TensorLayout lsrc, lflt0, lflt1, ldst;
-    std::unique_ptr<Tensor<>> src0, src1, flt0, flt0_cpu, flt1, flt1_cpu, dst0,
-            dst1;
+    std::unique_ptr<Tensor<>> src0, src1, flt0, flt0_cpu, flt1, flt1_cpu, dst0, dst1;
     hipEvent_t hip_ev[3];
     hipStream_t hip_stream;
     size_t pad_h, pad_w;
 
     template <typename T>
     static std::tuple<T, T, T> shuffle(std::tuple<T, T, T> data) {
-        return std::make_tuple(std::get<P0>(data), std::get<P1>(data),
-                               std::get<P2>(data));
+        return std::make_tuple(
+                std::get<P0>(data), std::get<P1>(data), std::get<P2>(data));
     }
 
 public:
@@ -76,8 +75,9 @@ public:
             hipEventDestroy(hip_ev[i]);
     }
 
-    void alloc(size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL,
-               size_t FH, size_t FW, size_t PH, size_t PW) {
+    void alloc(
+            size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL, size_t FH,
+            size_t FW, size_t PH, size_t PW) {
         pad_h = PH;
         pad_w = PW;
         auto mkly = [](const TensorShape& s) {
@@ -86,8 +86,7 @@ public:
         lsrc = mkly({N, IC, IH, IW});
         lflt0 = mkly({CHL_MUL * IC, IC, FH, FW});
         lflt1 = mkly({IC, CHL_MUL, 1, FH, FW});
-        ldst = mkly(
-                {N, IC * CHL_MUL, IH - FH + 1 + PH * 2, IW - FW + 1 + PW * 2});
+        ldst = mkly({N, IC * CHL_MUL, IH - FH + 1 + PH * 2, IW - FW + 1 + PW * 2});
         src0.reset(new Tensor<>(handle, lsrc));
         src1.reset(new Tensor<>(handle, lsrc));
         flt0.reset(new Tensor<>(handle, lflt0));
@@ -100,17 +99,15 @@ public:
 
     void fill_src() {
         rng->exec(src0->tensornd(), {});
-        megdnn_memcpy_D2D(handle, src1->ptr(), src0->ptr(),
-                          lsrc.span().dist_byte());
+        megdnn_memcpy_D2D(handle, src1->ptr(), src0->ptr(), lsrc.span().dist_byte());
     }
 
     void fill_flt() {
         rng->exec(flt1->tensornd(), {});
-        megdnn_memcpy_D2H(handle, flt1_cpu->ptr(), flt1->ptr(),
-                          lflt1.span().dist_byte());
+        megdnn_memcpy_D2H(
+                handle, flt1_cpu->ptr(), flt1->ptr(), lflt1.span().dist_byte());
 
-        const size_t IC = lflt1[0], CHL_MUL = lflt1[1],
-                     FSIZE = lflt1[3] * lflt1[4];
+        const size_t IC = lflt1[0], CHL_MUL = lflt1[1], FSIZE = lflt1[3] * lflt1[4];
 
         // fill flt0 from flt1
         float* src = flt1_cpu->ptr();
@@ -128,8 +125,7 @@ public:
 
     void fill_dst() {
         rng->exec(dst0->tensornd(), {});
-        megdnn_memcpy_D2D(handle, dst1->ptr(), dst0->ptr(),
-                          ldst.span().dist_byte());
+        megdnn_memcpy_D2D(handle, dst1->ptr(), dst0->ptr(), ldst.span().dist_byte());
     }
 
     template <class Opr>
@@ -140,15 +136,15 @@ public:
         opr1->param().sparse = param::Convolution::Sparse::GROUP;
 
         TensorND a0, b0, c0, a1, b1, c1;
-        std::tie(a0, b0, c0) = shuffle(std::make_tuple(
-                src0->tensornd(), flt0->tensornd(), dst0->tensornd()));
-        std::tie(a1, b1, c1) = shuffle(std::make_tuple(
-                src1->tensornd(), flt1->tensornd(), dst1->tensornd()));
-        WorkspaceWrapper wk(handle,
-                            std::max(opr0->get_workspace_in_bytes(
-                                             a0.layout, b0.layout, c0.layout),
-                                     opr1->get_workspace_in_bytes(
-                                             a1.layout, b1.layout, c1.layout)));
+        std::tie(a0, b0, c0) = shuffle(
+                std::make_tuple(src0->tensornd(), flt0->tensornd(), dst0->tensornd()));
+        std::tie(a1, b1, c1) = shuffle(
+                std::make_tuple(src1->tensornd(), flt1->tensornd(), dst1->tensornd()));
+        WorkspaceWrapper wk(
+                handle,
+                std::max(
+                        opr0->get_workspace_in_bytes(a0.layout, b0.layout, c0.layout),
+                        opr1->get_workspace_in_bytes(a1.layout, b1.layout, c1.layout)));
         hipProfilerStart();
         hipEventRecord(hip_ev[0], hip_stream);
         opr0->exec(a0, b0, c0, wk.workspace());
@@ -172,19 +168,15 @@ public:
 
     void cmp_dst() {
         Tensor<> dst0_cpu(handle_cpu, ldst), dst1_cpu(handle_cpu, ldst);
-        megdnn_memcpy_D2H(handle, dst0_cpu.ptr(), dst0->ptr(),
-                          ldst.span().dist_byte());
-        megdnn_memcpy_D2H(handle, dst1_cpu.ptr(), dst1->ptr(),
-                          ldst.span().dist_byte());
+        megdnn_memcpy_D2H(handle, dst0_cpu.ptr(), dst0->ptr(), ldst.span().dist_byte());
+        megdnn_memcpy_D2H(handle, dst1_cpu.ptr(), dst1->ptr(), ldst.span().dist_byte());
         dst0_cpu.check_with(dst1_cpu);
     }
 
     void cmp_src() {
         Tensor<> src0_cpu(handle_cpu, lsrc), src1_cpu(handle_cpu, lsrc);
-        megdnn_memcpy_D2H(handle, src0_cpu.ptr(), src0->ptr(),
-                          lsrc.span().dist_byte());
-        megdnn_memcpy_D2H(handle, src1_cpu.ptr(), src1->ptr(),
-                          lsrc.span().dist_byte());
+        megdnn_memcpy_D2H(handle, src0_cpu.ptr(), src0->ptr(), lsrc.span().dist_byte());
+        megdnn_memcpy_D2H(handle, src1_cpu.ptr(), src1->ptr(), lsrc.span().dist_byte());
         src0_cpu.check_with(src1_cpu);
     }
 
@@ -206,9 +198,8 @@ public:
                     auto err = std::abs(diff(t0[k], t1[k]));
                     tot_err += err;
                     tot_err_num += 1;
-                    ASSERT_LT(err, 1e-2)
-                            << "failed at " << i << " " << j << " " << k
-                            << " vals=" << t0[k] << "," << t1[k];
+                    ASSERT_LT(err, 1e-2) << "failed at " << i << " " << j << " " << k
+                                         << " vals=" << t0[k] << "," << t1[k];
                 }
             }
         }
@@ -304,8 +295,8 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_FORWARD_BENCH_CHECK) {
     auto conv1 = handle->create_operator<ConvolutionForward>();
     BenchmarkEnv<0, 1, 2> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL,
-                   size_t FH, size_t FW, size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL, size_t FH,
+                   size_t FW, size_t PH, size_t PW) {
         benv.alloc(N, IC, IH, IW, CHL_MUL, FH, FW, PH, PW);
         benv.fill_src();
         benv.fill_flt();
@@ -328,8 +319,8 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_BWD_DATA_BENCH_CHECK) {
     auto conv1 = handle->create_operator<ConvolutionBackwardData>();
     BenchmarkEnv<1, 2, 0> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL,
-                   size_t FH, size_t FW, size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL, size_t FH,
+                   size_t FW, size_t PH, size_t PW) {
         benv.alloc(N, IC, IH, IW, CHL_MUL, FH, FW, PH, PW);
         benv.fill_dst();
         benv.fill_flt();
@@ -352,8 +343,8 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_BWD_FILTER_BENCH_CHECK) {
     auto conv1 = handle->create_operator<ConvolutionBackwardFilter>();
     BenchmarkEnv<0, 2, 1> benv(handle, handle_cpu);
 
-    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL,
-                   size_t FH, size_t FW, size_t PH, size_t PW) {
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t CHL_MUL, size_t FH,
+                   size_t FW, size_t PH, size_t PW) {
         benv.alloc(N, IC, IH, IW, CHL_MUL, FH, FW, PH, PW);
         benv.fill_src();
         benv.fill_dst();
@@ -380,8 +371,7 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_FWD) {
     param.sparse = ConvolutionForward::Param::Sparse::GROUP;
     checker.set_param(param);
 
-    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
-                   size_t FW) {
+    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH, size_t FW) {
         checker.set_proxy(proxy);
         checker.execs({{N, C, IH, IW}, {C, 1, 1, FH, FW}, {}});
     };
@@ -402,12 +392,10 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_BWD_DATA) {
     param.sparse = ConvolutionForward::Param::Sparse::GROUP;
     checker.set_param(param);
 
-    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
-                   size_t FW) {
+    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH, size_t FW) {
         checker.set_proxy(proxy);
-        checker.execs({{C, 1, 1, FH, FW},
-                       {N, C, IH - FH + 1, IW - FW + 1},
-                       {N, C, IH, IW}});
+        checker.execs(
+                {{C, 1, 1, FH, FW}, {N, C, IH - FH + 1, IW - FW + 1}, {N, C, IH, IW}});
     };
 
     run(128, 64, 90, 80, 3, 3);
@@ -426,12 +414,10 @@ TEST_F(ROCM, CHANWISE_CONVOLUTION_BENCH_ALL_ALGO_BWD_FILTER) {
     param.sparse = ConvolutionForward::Param::Sparse::GROUP;
     checker.set_param(param);
 
-    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH,
-                   size_t FW) {
+    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t FH, size_t FW) {
         checker.set_proxy(proxy);
-        checker.execs({{N, C, IH, IW},
-                       {N, C, IH - FH + 1, IW - FW + 1},
-                       {C, 1, 1, FH, FW}});
+        checker.execs(
+                {{N, C, IH, IW}, {N, C, IH - FH + 1, IW - FW + 1}, {C, 1, 1, FH, FW}});
     };
 
     run(128, 64, 90, 80, 3, 3);

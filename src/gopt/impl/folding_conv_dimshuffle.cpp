@@ -29,9 +29,8 @@
 
 #if CUDA_VERSION >= 10020
 MIDOUT_DECL(megbrain_folding_conv_dimshuffle)
-#define MIDOUT_B(tag)                              \
-    MIDOUT_BEGIN(megbrain_folding_conv_dimshuffle, \
-                 midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_B(tag) \
+    MIDOUT_BEGIN(megbrain_folding_conv_dimshuffle, midout_iv(MGB_HASH_STR(tag))) {
 #define MIDOUT_E \
     }            \
     MIDOUT_END();
@@ -48,8 +47,7 @@ const char* FoldingConvBiasDimshufflePass::name() const {
 void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
     MIDOUT_B("FoldingConvBiasDimshufflePass::apply");
     using DepType = cg::OperatorNodeProp::DepType;
-    ThinHashMap<OperatorNodeBase*,
-                SmallVector<std::pair<OperatorNodeBase*, DepType>>>
+    ThinHashMap<OperatorNodeBase*, SmallVector<std::pair<OperatorNodeBase*, DepType>>>
             readers;
     static const ThinHashSet<Typeinfo*> opr_type_list = {
             opr::TypeCvt::typeinfo(), opr::Dimshuffle::typeinfo(),
@@ -63,8 +61,8 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
     });
 
     auto rewriter = opt.graph().make_rewriter();
-    auto try_conv_dimshuffle_reshape_typecvt = [&rewriter, &readers](
-                                                       OperatorNodeBase* opr) {
+    auto try_conv_dimshuffle_reshape_typecvt = [&rewriter,
+                                                &readers](OperatorNodeBase* opr) {
         ThinHashSet<OperatorNodeBase*> opr_set;
         ThinHashSet<OperatorNodeBase*> reader_set;
         // check typecvt
@@ -80,8 +78,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         opr_set.insert(opr);
 
         // check reshape
-        auto reshape =
-                try_cast_as_op<opr::Reshape>(typecvt->input(0)->owner_opr());
+        auto reshape = try_cast_as_op<opr::Reshape>(typecvt->input(0)->owner_opr());
         if (reshape == nullptr)
             return false;
         opr_set.insert(reshape);
@@ -92,8 +89,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         }
 
         // check shuffle
-        auto shuffle =
-                try_cast_as_op<opr::Dimshuffle>(reshape->input(0)->owner_opr());
+        auto shuffle = try_cast_as_op<opr::Dimshuffle>(reshape->input(0)->owner_opr());
         if (shuffle == nullptr)
             return false;
         auto&& param = shuffle->param();
@@ -113,14 +109,13 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         }
 
         // check conv bias
-        auto conv_bias =
-                try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
+        auto conv_bias = try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
         inp_dtype = conv_bias->input(0)->dtype();
-        bool is_s8nchw4 = inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                          conv_bias->param().format ==
-                                  megdnn::param::ConvBias::Format::NCHW4;
+        bool is_s8nchw4 =
+                inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NCHW4;
         if (!is_s8nchw4)
             return false;
         if (conv_bias->input().size() != 3)
@@ -139,23 +134,23 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto src = rewriter.get_var(conv_bias->input(0)),
              filter = rewriter.get_var(conv_bias->input(1)),
              bias = rewriter.get_var(conv_bias->input(2));
-        auto new_bias = ReformatManager::instance().get(ReformatKey{
-                TensorFormats::NCHWc4, TensorFormats::NCHW})({bias});
+        auto new_bias = ReformatManager::instance().get(
+                ReformatKey{TensorFormats::NCHWc4, TensorFormats::NCHW})({bias});
         new_bias = opr::TypeCvt::make(new_bias, dtype::Float32()).node();
         auto new_param = conv_bias->param();
         new_param.format = megdnn::param::ConvBias::Format::NCHW4_NCHW;
         auto conv_bias_shuffle = opr::ConvBias::make(
                 src, filter, new_bias, new_param, conv_bias->execution_policy(),
                 OperatorNodeConfig{dtype::Float32()});
-        rewriter.replace_var(opr->output(0), conv_bias_shuffle.node(),
-                             mgb_cstr_log("replace conv_bias + typecvt + "
-                                          "dimshuffle + "
-                                          "reshape to conv_bias(NCHW4_NCHW)"));
+        rewriter.replace_var(
+                opr->output(0), conv_bias_shuffle.node(),
+                mgb_cstr_log("replace conv_bias + typecvt + "
+                             "dimshuffle + "
+                             "reshape to conv_bias(NCHW4_NCHW)"));
         return true;
     };
 
-    auto try_conv_reformat_nchw42nchw32 = [&rewriter,
-                                           &readers](OperatorNodeBase* opr) {
+    auto try_conv_reformat_nchw42nchw32 = [&rewriter, &readers](OperatorNodeBase* opr) {
         ThinHashSet<OperatorNodeBase*> opr_set;
         ThinHashSet<OperatorNodeBase*> reader_set;
         // check reshape
@@ -164,8 +159,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             return false;
         opr_set.insert(opr);
         // check dimshuffle
-        auto shuffle = try_cast_as_op<opr::Dimshuffle>(
-                reshape1->input(0)->owner_opr());
+        auto shuffle = try_cast_as_op<opr::Dimshuffle>(reshape1->input(0)->owner_opr());
         if (shuffle == nullptr)
             return false;
         auto&& param = shuffle->param();
@@ -185,8 +179,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             }
         }
         // check reshape
-        auto reshape2 =
-                try_cast_as_op<opr::Reshape>(shuffle->input(0)->owner_opr());
+        auto reshape2 = try_cast_as_op<opr::Reshape>(shuffle->input(0)->owner_opr());
         if (reshape2 == nullptr)
             return false;
         opr_set.insert(reshape2);
@@ -196,14 +189,13 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             }
         }
         // check conv bias
-        auto conv_bias =
-                try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
+        auto conv_bias = try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
-        bool is_s8nchw4 = inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                          conv_bias->param().format ==
-                                  megdnn::param::ConvBias::Format::NCHW4;
+        bool is_s8nchw4 =
+                inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NCHW4;
         if (!is_s8nchw4)
             return false;
         if (conv_bias->input().size() != 3)
@@ -222,8 +214,8 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto src = rewriter.get_var(conv_bias->input(0)),
              filter = rewriter.get_var(conv_bias->input(1)),
              bias = rewriter.get_var(conv_bias->input(2));
-        auto new_bias = ReformatManager::instance().get(ReformatKey{
-                TensorFormats::NCHWc4, TensorFormats::NCHWc32})({bias});
+        auto new_bias = ReformatManager::instance().get(
+                ReformatKey{TensorFormats::NCHWc4, TensorFormats::NCHWc32})({bias});
         auto new_param = conv_bias->param();
         new_param.format = megdnn::param::ConvBias::Format::NCHW4_NCHW32;
         auto conv_bias_shuffle = opr::ConvBias::make(
@@ -236,8 +228,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         return true;
     };
 
-    auto try_conv_reformat_nchw42nhwc = [&rewriter,
-                                         &readers](OperatorNodeBase* opr) {
+    auto try_conv_reformat_nchw42nhwc = [&rewriter, &readers](OperatorNodeBase* opr) {
         ThinHashSet<OperatorNodeBase*> opr_set;
         ThinHashSet<OperatorNodeBase*> reader_set;
         // check typecvt
@@ -254,8 +245,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         opr_set.insert(typecvt);
 
         // check reshape
-        auto reshape =
-                try_cast_as_op<opr::Reshape>(typecvt->input(0)->owner_opr());
+        auto reshape = try_cast_as_op<opr::Reshape>(typecvt->input(0)->owner_opr());
         if (reshape == nullptr)
             return false;
         opr_set.insert(reshape);
@@ -266,8 +256,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         }
 
         // check dimshuffle
-        auto shuffle =
-                try_cast_as_op<opr::Dimshuffle>(reshape->input(0)->owner_opr());
+        auto shuffle = try_cast_as_op<opr::Dimshuffle>(reshape->input(0)->owner_opr());
         if (shuffle == nullptr)
             return false;
         auto&& param = shuffle->param();
@@ -287,14 +276,13 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         }
 
         // check conv bias
-        auto conv_bias =
-                try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
+        auto conv_bias = try_cast_as_op<opr::ConvBias>(shuffle->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
-        bool is_s8nchw4 = inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                          conv_bias->param().format ==
-                                  megdnn::param::ConvBias::Format::NCHW4;
+        bool is_s8nchw4 =
+                inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NCHW4;
         if (!is_s8nchw4)
             return false;
         if (conv_bias->input().size() != 3)
@@ -313,21 +301,21 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto src = rewriter.get_var(conv_bias->input(0)),
              filter = rewriter.get_var(conv_bias->input(1)),
              bias = rewriter.get_var(conv_bias->input(2));
-        auto new_bias = ReformatManager::instance().get(ReformatKey{
-                TensorFormats::NCHWc4, TensorFormats::NHWC})({bias});
+        auto new_bias = ReformatManager::instance().get(
+                ReformatKey{TensorFormats::NCHWc4, TensorFormats::NHWC})({bias});
         auto new_param = conv_bias->param();
         new_param.format = megdnn::param::ConvBias::Format::NCHW4_NHWC;
         auto conv_bias_shuffle = opr::ConvBias::make(
                 src, filter, new_bias, new_param, conv_bias->execution_policy(),
                 OperatorNodeConfig{out_dtype});
-        rewriter.replace_var(opr->output(0), conv_bias_shuffle.node(),
-                             mgb_cstr_log("replace conv_bias + "
-                                          "reformat to conv_bias(NCHW4_NHWC)"));
+        rewriter.replace_var(
+                opr->output(0), conv_bias_shuffle.node(),
+                mgb_cstr_log("replace conv_bias + "
+                             "reformat to conv_bias(NCHW4_NHWC)"));
         return true;
     };
 
-    auto try_conv_reformat_nchw322nchw4 = [&rewriter,
-                                           &readers](OperatorNodeBase* opr) {
+    auto try_conv_reformat_nchw322nchw4 = [&rewriter, &readers](OperatorNodeBase* opr) {
         ThinHashSet<OperatorNodeBase*> opr_set;
         ThinHashSet<OperatorNodeBase*> reader_set;
         // check reshape
@@ -336,8 +324,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             return false;
         opr_set.insert(opr);
         // check dimshuffle
-        auto shuffle = try_cast_as_op<opr::Dimshuffle>(
-                reshape1->input(0)->owner_opr());
+        auto shuffle = try_cast_as_op<opr::Dimshuffle>(reshape1->input(0)->owner_opr());
         if (shuffle == nullptr)
             return false;
         auto&& param = shuffle->param();
@@ -357,8 +344,7 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             }
         }
         // check reshape
-        auto reshape2 =
-                try_cast_as_op<opr::Reshape>(shuffle->input(0)->owner_opr());
+        auto reshape2 = try_cast_as_op<opr::Reshape>(shuffle->input(0)->owner_opr());
         if (reshape2 == nullptr)
             return false;
         opr_set.insert(reshape2);
@@ -368,14 +354,13 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
             }
         }
         // check conv bias
-        auto conv_bias =
-                try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
+        auto conv_bias = try_cast_as_op<opr::ConvBias>(reshape2->input(0)->owner_opr());
         if (conv_bias == nullptr)
             return false;
         auto inp_dtype = conv_bias->input(0)->dtype();
-        bool is_s8nchw32 = inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                           conv_bias->param().format ==
-                                   megdnn::param::ConvBias::Format::NCHW32;
+        bool is_s8nchw32 =
+                inp_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+                conv_bias->param().format == megdnn::param::ConvBias::Format::NCHW32;
         if (!is_s8nchw32)
             return false;
         if (conv_bias->input().size() != 3)
@@ -394,8 +379,8 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
         auto src = rewriter.get_var(conv_bias->input(0)),
              filter = rewriter.get_var(conv_bias->input(1)),
              bias = rewriter.get_var(conv_bias->input(2));
-        auto new_bias = ReformatManager::instance().get(ReformatKey{
-                TensorFormats::NCHWc32, TensorFormats::NCHWc4})({bias});
+        auto new_bias = ReformatManager::instance().get(
+                ReformatKey{TensorFormats::NCHWc32, TensorFormats::NCHWc4})({bias});
         auto new_param = conv_bias->param();
         new_param.format = megdnn::param::ConvBias::Format::NCHW32_NCHW4;
         auto conv_bias_shuffle = opr::ConvBias::make(
@@ -411,10 +396,8 @@ void FoldingConvBiasDimshufflePass::apply(OptState& opt) const {
     MGB_MARK_USED_VAR(try_conv_reformat_nchw42nchw32);
 
     auto on_opr = [&try_conv_dimshuffle_reshape_typecvt,
-                   &try_conv_reformat_nchw42nchw32,
-                   &try_conv_reformat_nchw42nhwc,
-                   &try_conv_reformat_nchw322nchw4,
-                   &rewriter](OperatorNodeBase* opr) {
+                   &try_conv_reformat_nchw42nchw32, &try_conv_reformat_nchw42nhwc,
+                   &try_conv_reformat_nchw322nchw4, &rewriter](OperatorNodeBase* opr) {
         if (!try_conv_dimshuffle_reshape_typecvt(opr) &&
             !try_conv_reformat_nchw42nchw32(opr) &&
             !try_conv_reformat_nchw42nhwc(opr) &&

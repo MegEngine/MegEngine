@@ -55,7 +55,7 @@ TEST_F(CUDA, TENSOR_REMAP_BACKWARD) {
     }
 }
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

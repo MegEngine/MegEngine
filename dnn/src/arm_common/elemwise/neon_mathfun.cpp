@@ -68,8 +68,7 @@ namespace arm_common {
 v4sf log_ps_f32(v4sf x) {
     v4sf one = vdupq_n_f32(1);
 
-    x = vmaxq_f32(x,
-                  vdupq_n_f32(0)); /* force flush to zero on denormal values */
+    x = vmaxq_f32(x, vdupq_n_f32(0)); /* force flush to zero on denormal values */
     v4su invalid_mask = vcleq_f32(x, vdupq_n_f32(0));
 
     v4si ux = vreinterpretq_s32_f32(x);
@@ -95,8 +94,8 @@ v4sf log_ps_f32(v4sf x) {
     v4su mask = vcltq_f32(x, vdupq_n_f32(c_cephes_SQRTHF));
     v4sf tmp = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(x), mask));
     x = vsubq_f32(x, one);
-    e = vsubq_f32(e, vreinterpretq_f32_u32(
-                             vandq_u32(vreinterpretq_u32_f32(one), mask)));
+    e = vsubq_f32(
+            e, vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(one), mask)));
     x = vaddq_f32(x, tmp);
 
     v4sf z = vmulq_f32(x, x);
@@ -131,9 +130,9 @@ v4sf log_ps_f32(v4sf x) {
     tmp = vmulq_f32(e, vdupq_n_f32(c_cephes_log_q2));
     x = vaddq_f32(x, y);
     x = vaddq_f32(x, tmp);
-    x = vreinterpretq_f32_u32(
-            vorrq_u32(vreinterpretq_u32_f32(x),
-                      invalid_mask));  // negative arg will be NAN
+    x = vreinterpretq_f32_u32(vorrq_u32(
+            vreinterpretq_u32_f32(x),
+            invalid_mask));  // negative arg will be NAN
     return x;
 }
 
@@ -227,13 +226,13 @@ float16x8_t exp_ps_f16(float16x8_t x) {
 #define c_minus_cephes_DP1 -0.78515625
 #define c_minus_cephes_DP2 -2.4187564849853515625e-4
 #define c_minus_cephes_DP3 -3.77489497744594108e-8
-#define c_sincof_p0 -1.9515295891E-4
-#define c_sincof_p1 8.3321608736E-3
-#define c_sincof_p2 -1.6666654611E-1
-#define c_coscof_p0 2.443315711809948E-005
-#define c_coscof_p1 -1.388731625493765E-003
-#define c_coscof_p2 4.166664568298827E-002
-#define c_cephes_FOPI 1.27323954473516  // 4 / M_PI
+#define c_sincof_p0        -1.9515295891E-4
+#define c_sincof_p1        8.3321608736E-3
+#define c_sincof_p2        -1.6666654611E-1
+#define c_coscof_p0        2.443315711809948E-005
+#define c_coscof_p1        -1.388731625493765E-003
+#define c_coscof_p2        4.166664568298827E-002
+#define c_cephes_FOPI      1.27323954473516  // 4 / M_PI
 
 /* evaluation of 4 sines & cosines at once.
 

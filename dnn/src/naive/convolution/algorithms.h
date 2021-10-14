@@ -57,8 +57,7 @@ class DefaultBatchConvBiasForwardAlgorithm final
     const char* name() const override { return "DEFAULT"; }
 };
 
-class DefaultPoolingForwardAlgorithm final
-        : public megdnn::PoolingForward::Algorithm {
+class DefaultPoolingForwardAlgorithm final : public megdnn::PoolingForward::Algorithm {
     AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
     }

@@ -37,8 +37,8 @@ Network::Network(const Config& config, const NetworkIO& network_io) {
     m_config = config;
     m_network_io = network_io;
     if (config.backend == LiteBackend::LITE_DEFAULT) {
-        m_impl = call_func<NetworkImplDft,
-                           std::unique_ptr<lite::Network::NetworkImplBase>>(
+        m_impl = call_func<
+                NetworkImplDft, std::unique_ptr<lite::Network::NetworkImplBase>>(
                 "create_network");
     }
     m_impl->set_config(config);
@@ -51,8 +51,8 @@ Network::Network(const NetworkIO& network_io, const Config& config) {
     m_config = config;
     m_network_io = network_io;
     if (config.backend == LiteBackend::LITE_DEFAULT) {
-        m_impl = call_func<NetworkImplDft,
-                           std::unique_ptr<lite::Network::NetworkImplBase>>(
+        m_impl = call_func<
+                NetworkImplDft, std::unique_ptr<lite::Network::NetworkImplBase>>(
                 "create_network");
     }
     m_impl->set_config(config);
@@ -73,8 +73,7 @@ void Network::load_model(std::string model_path) {
     LITE_ERROR_HANDLER_BEGIN
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     FILE* fin = fopen(model_path.c_str(), "rb");
-    LITE_ASSERT(fin, "failed to open %s: %s", model_path.c_str(),
-                strerror(errno));
+    LITE_ASSERT(fin, "failed to open %s: %s", model_path.c_str(), strerror(errno));
     fseek(fin, 0, SEEK_END);
     size_t size = ftell(fin);
     fseek(fin, 0, SEEK_SET);
@@ -91,12 +90,11 @@ void Network::prase_model(std::shared_ptr<void> model_data, size_t size) {
     std::unordered_map<std::string, LiteAny> separate_config_map;
     ModelParser model_parser(model_data, size);
     //! parse the model info
-    if (model_parser.parse_model_info(m_config, m_network_io,
-                                      separate_config_map, m_extra_info)) {
+    if (model_parser.parse_model_info(
+                m_config, m_network_io, separate_config_map, m_extra_info)) {
         if (m_config.backend == LiteBackend::LITE_DEFAULT &&
             m_impl->get_backend_type() != LiteBackend::LITE_DEFAULT) {
-            m_impl.reset(try_call_func<NetworkImplDft,
-                                       lite::Network::NetworkImplBase*>(
+            m_impl.reset(try_call_func<NetworkImplDft, lite::Network::NetworkImplBase*>(
                     "parse_model"));
         }
         m_impl->set_config(m_config);
@@ -119,16 +117,17 @@ void Network::update_from_implement() {
 
 void Network::compute_only_configured_output() {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(!m_loaded,
-                "compute_only_configured_output should be used before model "
-                "loaded.");
+    LITE_ASSERT(
+            !m_loaded,
+            "compute_only_configured_output should be used before model "
+            "loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     return m_impl->compute_only_configured_output();
     LITE_ERROR_HANDLER_END
 }
 
-std::shared_ptr<Tensor> Network::get_io_tensor(std::string name,
-                                               LiteTensorPhase phase) {
+std::shared_ptr<Tensor> Network::get_io_tensor(
+        std::string name, LiteTensorPhase phase) {
     LITE_ERROR_HANDLER_BEGIN
     LITE_ASSERT(m_loaded, "get_io_tensor should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
@@ -138,8 +137,7 @@ std::shared_ptr<Tensor> Network::get_io_tensor(std::string name,
 
 std::shared_ptr<Tensor> Network::get_input_tensor(size_t index) {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_loaded,
-                "get_input_tensor should be used after model loaded.");
+    LITE_ASSERT(m_loaded, "get_input_tensor should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     return m_impl->get_input_tensor(index);
     LITE_ERROR_HANDLER_END
@@ -147,8 +145,7 @@ std::shared_ptr<Tensor> Network::get_input_tensor(size_t index) {
 
 std::shared_ptr<Tensor> Network::get_output_tensor(size_t index) {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_loaded,
-                "get_output_tensor should be used after model loaded.");
+    LITE_ASSERT(m_loaded, "get_output_tensor should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     return m_impl->get_output_tensor(index);
     LITE_ERROR_HANDLER_END
@@ -230,8 +227,7 @@ std::string Network::get_output_name(size_t index) const {
 
 std::vector<std::string> Network::get_all_input_name() const {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_loaded,
-                "get_all_input_name should be used after model loaded.");
+    LITE_ASSERT(m_loaded, "get_all_input_name should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     auto all_input_name = m_impl->get_all_input_name();
     std::vector<std::string> all_names;
@@ -244,8 +240,7 @@ std::vector<std::string> Network::get_all_input_name() const {
 
 std::vector<std::string> Network::get_all_output_name() const {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_loaded,
-                "get_all_output_name should be used after model loaded.");
+    LITE_ASSERT(m_loaded, "get_all_output_name should be used after model loaded.");
     LITE_CHECK_NON_NULL_POINTER(m_impl);
     auto all_output_name = m_impl->get_all_output_name();
     std::vector<std::string> all_names;
@@ -290,16 +285,16 @@ LiteDeviceType Network::get_device_type() const {
 
 /*********************** MGE special network function ***************/
 
-void Runtime::set_cpu_threads_number(std::shared_ptr<Network> network,
-                                     size_t nr_threads) {
+void Runtime::set_cpu_threads_number(
+        std::shared_ptr<Network> network, size_t nr_threads) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
         LITE_ASSERT(
                 !NetworkHelper::loaded(network),
                 "set_cpu_threads_number should be used before model loaded.");
-        call_func<NetworkImplDft, void>("set_cpu_threads_number", network_impl,
-                                        nr_threads);
+        call_func<NetworkImplDft, void>(
+                "set_cpu_threads_number", network_impl, nr_threads);
         return;
     }
     LITE_THROW("set_cpu_threads_number is not aviliable in the backend.");
@@ -310,8 +305,9 @@ void Runtime::use_tensorrt(std::shared_ptr<Network> network) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(!NetworkHelper::loaded(network),
-                    "use_tensorrt should be used before model loaded.");
+        LITE_ASSERT(
+                !NetworkHelper::loaded(network),
+                "use_tensorrt should be used before model loaded.");
         call_func<NetworkImplDft, void>("use_tensorrt", network_impl);
         return;
     }
@@ -323,8 +319,8 @@ size_t Runtime::get_cpu_threads_number(const std::shared_ptr<Network> network) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        return call_func<NetworkImplDft, size_t>("get_cpu_threads_number",
-                                                 network_impl);
+        return call_func<NetworkImplDft, size_t>(
+                "get_cpu_threads_number", network_impl);
     }
     LITE_THROW("get_cpu_threads_number is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
@@ -336,11 +332,12 @@ void Runtime::set_runtime_thread_affinity(
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(NetworkHelper::loaded(network),
-                    "set_runtime_thread_affinity should be used after model "
-                    "loaded.");
-        call_func<NetworkImplDft, void>("set_runtime_thread_affinity",
-                                        network_impl, thread_affinity_callback);
+        LITE_ASSERT(
+                NetworkHelper::loaded(network),
+                "set_runtime_thread_affinity should be used after model "
+                "loaded.");
+        call_func<NetworkImplDft, void>(
+                "set_runtime_thread_affinity", network_impl, thread_affinity_callback);
 
         return;
     }
@@ -352,8 +349,9 @@ void Runtime::set_cpu_inplace_mode(std::shared_ptr<Network> network) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(!NetworkHelper::loaded(network),
-                    "set_cpu_inplace_mode should be used before model loaded.");
+        LITE_ASSERT(
+                !NetworkHelper::loaded(network),
+                "set_cpu_inplace_mode should be used before model loaded.");
         call_func<NetworkImplDft, void>("set_cpu_inplace_mode", network_impl);
         return;
     }
@@ -365,24 +363,22 @@ bool Runtime::is_cpu_inplace_mode(const std::shared_ptr<Network> network) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        return call_func<NetworkImplDft, bool>("is_cpu_inplace_mode",
-                                               network_impl);
+        return call_func<NetworkImplDft, bool>("is_cpu_inplace_mode", network_impl);
     }
     LITE_THROW("is_cpu_inplace_mode is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
 }
 
 //! set opr algorithm selection strategy in the network
-void Runtime::set_network_algo_policy(std::shared_ptr<Network> network,
-                                      LiteAlgoSelectStrategy strategy,
-                                      uint32_t shared_batch_size,
-                                      bool binary_equal_between_batch) {
+void Runtime::set_network_algo_policy(
+        std::shared_ptr<Network> network, LiteAlgoSelectStrategy strategy,
+        uint32_t shared_batch_size, bool binary_equal_between_batch) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        call_func<NetworkImplDft, void>("set_network_algo_policy", network_impl,
-                                        strategy, shared_batch_size,
-                                        binary_equal_between_batch);
+        call_func<NetworkImplDft, void>(
+                "set_network_algo_policy", network_impl, strategy, shared_batch_size,
+                binary_equal_between_batch);
         return;
     }
     LITE_THROW("set_network_algo_policy is not aviliable in the backend.");
@@ -390,16 +386,17 @@ void Runtime::set_network_algo_policy(std::shared_ptr<Network> network,
 }
 
 //! set opr algorithm selection strategy in the network
-void Runtime::set_network_algo_workspace_limit(std::shared_ptr<Network> network,
-                                               size_t workspace_limit) {
+void Runtime::set_network_algo_workspace_limit(
+        std::shared_ptr<Network> network, size_t workspace_limit) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(NetworkHelper::loaded(network),
-                    "set_network_algo_policy should be used after model "
-                    "loaded.");
-        call_func<NetworkImplDft, void>("set_network_algo_workspace_limit",
-                                        network_impl, workspace_limit);
+        LITE_ASSERT(
+                NetworkHelper::loaded(network),
+                "set_network_algo_policy should be used after model "
+                "loaded.");
+        call_func<NetworkImplDft, void>(
+                "set_network_algo_workspace_limit", network_impl, workspace_limit);
         return;
     }
     LITE_THROW(
@@ -409,58 +406,60 @@ void Runtime::set_network_algo_workspace_limit(std::shared_ptr<Network> network,
 }
 
 //! set the network memroy allocator, the allocator is defined by user
-void Runtime::set_memory_allocator(std::shared_ptr<Network> network,
-                                   std::shared_ptr<Allocator> user_allocator) {
+void Runtime::set_memory_allocator(
+        std::shared_ptr<Network> network, std::shared_ptr<Allocator> user_allocator) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(!NetworkHelper::loaded(network),
-                    "set_memory_allocator should be used before model loaded.");
-        call_func<NetworkImplDft, void>("set_memory_allocator", network_impl,
-                                        user_allocator);
+        LITE_ASSERT(
+                !NetworkHelper::loaded(network),
+                "set_memory_allocator should be used before model loaded.");
+        call_func<NetworkImplDft, void>(
+                "set_memory_allocator", network_impl, user_allocator);
         return;
     }
     LITE_THROW("set_memory_allocator is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
 }
 
-void Runtime::share_runtime_memory_with(std::shared_ptr<Network> dst_network,
-                                        std::shared_ptr<Network> src_network) {
+void Runtime::share_runtime_memory_with(
+        std::shared_ptr<Network> dst_network, std::shared_ptr<Network> src_network) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl_dst = NetworkHelper::implement(dst_network);
     if (network_impl_dst->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(!NetworkHelper::loaded(dst_network),
-                    "share_runtime_memory_with should be used before model "
-                    "loaded.");
-        call_func<NetworkImplDft, void>("share_runtime_memory_with",
-                                        network_impl_dst,
-                                        NetworkHelper::implement(src_network));
+        LITE_ASSERT(
+                !NetworkHelper::loaded(dst_network),
+                "share_runtime_memory_with should be used before model "
+                "loaded.");
+        call_func<NetworkImplDft, void>(
+                "share_runtime_memory_with", network_impl_dst,
+                NetworkHelper::implement(src_network));
         return;
     }
     LITE_THROW("share_runtime_memory_with is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
 }
 
-void Runtime::enable_io_txt_dump(std::shared_ptr<Network> network,
-                                 std::string io_txt_out_file) {
+void Runtime::enable_io_txt_dump(
+        std::shared_ptr<Network> network, std::string io_txt_out_file) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        call_func<NetworkImplDft, void>("enable_io_txt_dump", network_impl,
-                                        io_txt_out_file);
+        call_func<NetworkImplDft, void>(
+                "enable_io_txt_dump", network_impl, io_txt_out_file);
         return;
     }
     LITE_THROW("enable_io_txt_dump is not aviliable in the backend.");
     LITE_ERROR_HANDLER_END
 }
 
-void Runtime::enable_io_bin_dump(std::shared_ptr<Network> network,
-                                 std::string io_bin_out_dir) {
+void Runtime::enable_io_bin_dump(
+        std::shared_ptr<Network> network, std::string io_bin_out_dir) {
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl = NetworkHelper::implement(network);
     if (network_impl->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        call_func<NetworkImplDft, void>("enable_io_bin_dump", network_impl,
-                                        io_bin_out_dir);
+        call_func<NetworkImplDft, void>(
+                "enable_io_bin_dump", network_impl, io_bin_out_dir);
         return;
     }
     LITE_THROW("enable_io_bin_dump is not aviliable in the backend.");
@@ -473,13 +472,14 @@ void Runtime::shared_weight_with_network(
     LITE_ERROR_HANDLER_BEGIN
     auto network_impl_dst = NetworkHelper::implement(dst_network);
     if (network_impl_dst->get_backend_type() == LiteBackend::LITE_DEFAULT) {
-        LITE_ASSERT(NetworkHelper::loaded(src_network),
-                    "shared_weight_with_network should be used after the src "
-                    "network "
-                    "loaded.");
+        LITE_ASSERT(
+                NetworkHelper::loaded(src_network),
+                "shared_weight_with_network should be used after the src "
+                "network "
+                "loaded.");
         auto src_implment = NetworkHelper::implement(src_network);
-        call_func<NetworkImplDft, void>("shared_weight_with", network_impl_dst,
-                                        src_implment);
+        call_func<NetworkImplDft, void>(
+                "shared_weight_with", network_impl_dst, src_implment);
         NetworkHelper::loaded(dst_network, true);
         return;
     }

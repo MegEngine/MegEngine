@@ -10,8 +10,7 @@ namespace standalone {
  *
  * See the docs in the python operator
  */
-MGB_DEFINE_OPR_CLASS(NMSKeep,
-                     cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS(NMSKeep, cg::SingleCNOutshapePureByInshapeOprBase) // {
 public:
     struct Param {
         //! TAG is used by the serializer to check Param type; here we
@@ -22,15 +21,13 @@ public:
         float iou_thresh;     //!< IoU threshold for overlapping
         uint32_t max_output;  //!< max number of output boxes per batch
     };
-    
 
-    NMSKeep(VarNode * boxes, const Param& param,
-            const OperatorNodeConfig& config);
+    NMSKeep(VarNode* boxes, const Param& param, const OperatorNodeConfig& config);
     ~NMSKeep() noexcept;
 
     //! factory method to insert the operator into a graph
-    static SymbolVar make(SymbolVar boxes, const Param& param,
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar boxes, const Param& param, const OperatorNodeConfig& config = {});
 
     const Param& param() const { return m_param; }
 
@@ -45,8 +42,9 @@ private:
 
     //! override output shape infer func provided by
     //! SingleCNOutshapePureByInshapeOprBase
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
 
     //! this opr requires inputs to be contiguous
     void add_input_layout_constraint() override;

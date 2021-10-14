@@ -35,7 +35,7 @@ namespace jit {
 std::pair<llvm::StringRef, mlir::OwningModuleRef> mlir_gen(
         mlir::MLIRContext& context, const InternalGraph& internal_graph,
         const JITExecutor::Args& args);
-}
+}  // namespace jit
 }  // namespace mgb
 
 #endif  // MGB_JIT && MGB_JIT_MLIR

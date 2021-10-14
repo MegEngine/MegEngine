@@ -26,15 +26,16 @@ using namespace megdnn;
 using namespace arm_common;
 
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoQU8DirectStride1::usable(const NCBKernSizeParam& param,
-                                                AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoQU8DirectStride1::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     return direct_quint8_stride1::can_conv_direct_stride1_quint8(param);
 }
 
 size_t ConvBiasImpl::AlgoQU8DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         auto bundle = direct_quint8_stride1::get_bundle(param, large_group);
         return bundle.total_size_in_bytes();
@@ -43,11 +44,11 @@ size_t ConvBiasImpl::AlgoQU8DirectStride1::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoQU8DirectStride1::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoQU8DirectStride1::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_quint8_stride1::get_kimpls(param, large_group);
     }
@@ -57,15 +58,15 @@ ConvBiasImpl::AlgoQU8DirectStride1::dispatch_kerns(
 
 /* ===================== stride2 algo ===================== */
 bool ConvBiasImpl::AlgoQU8DirectStride2::usable(
-                                                const NCBKernSizeParam& param,
-                                                AlgoSelectionStrategy) const {
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     return direct_quint8_stride2::can_conv_direct_stride2_quint8(param);
 }
 
 size_t ConvBiasImpl::AlgoQU8DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         auto bundle = direct_quint8_stride2::get_bundle(param, large_group);
         return bundle.total_size_in_bytes();
@@ -74,11 +75,11 @@ size_t ConvBiasImpl::AlgoQU8DirectStride2::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoQU8DirectStride2::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoQU8DirectStride2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_quint8_stride2::get_kimpls(param, large_group);
     }
@@ -87,9 +88,9 @@ ConvBiasImpl::AlgoQU8DirectStride2::dispatch_kerns(
 }
 #if MGB_ENABLE_DOT
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoDotU8DirectStride1::usable(const NCBKernSizeParam& param,
-                                                  AlgoSelectionStrategy) const {
-    if (!cpuinfo_has_arm_neon_dot()){
+bool ConvBiasImpl::AlgoDotU8DirectStride1::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
         return false;
     }
     return direct_dotprod_quint8_stride1::can_conv_direct_stride1_quint8(param);
@@ -97,8 +98,9 @@ bool ConvBiasImpl::AlgoDotU8DirectStride1::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoDotU8DirectStride1::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         auto bundle = direct_dotprod_quint8_stride1::get_bundle(param, large_group);
         return bundle.total_size_in_bytes();
@@ -107,11 +109,11 @@ size_t ConvBiasImpl::AlgoDotU8DirectStride1::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoDotU8DirectStride1::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDotU8DirectStride1::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_dotprod_quint8_stride1::get_kimpls(param, large_group);
     }
@@ -120,9 +122,9 @@ ConvBiasImpl::AlgoDotU8DirectStride1::dispatch_kerns(
 }
 
 /* ===================== stride2 algo ===================== */
-bool ConvBiasImpl::AlgoDotU8DirectStride2::usable(const NCBKernSizeParam& param,
-                                                  AlgoSelectionStrategy) const {
-    if (!cpuinfo_has_arm_neon_dot()){
+bool ConvBiasImpl::AlgoDotU8DirectStride2::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
         return false;
     }
     return direct_dotprod_quint8_stride2::can_conv_direct_stride2_quint8(param);
@@ -130,8 +132,9 @@ bool ConvBiasImpl::AlgoDotU8DirectStride2::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoDotU8DirectStride2::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::get_workspace"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         auto bundle = direct_dotprod_quint8_stride2::get_bundle(param, large_group);
         return bundle.total_size_in_bytes();
@@ -140,11 +143,11 @@ size_t ConvBiasImpl::AlgoDotU8DirectStride2::get_workspace(
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoDotU8DirectStride2::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoDotU8DirectStride2::dispatch_kerns(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_quint8,
-                 midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_quint8,
+            midout_iv("AlgoQU8DirectStride1::dispatch_kerns"_hash)) {
         bool large_group = param.filter_meta.group >= param.nr_threads;
         return direct_dotprod_quint8_stride2::get_kimpls(param, large_group);
     }

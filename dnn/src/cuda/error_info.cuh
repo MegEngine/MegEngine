@@ -15,7 +15,6 @@
 #include "megcore_cdefs.h"
 #include "megdnn/arch.h"
 
-
 typedef megcore::AsyncErrorInfo AsyncErrorInfo;
 #if MEGDNN_CC_CUDA
 // we can not put this function into anonymous namespace, since it would cause
@@ -24,9 +23,9 @@ typedef megcore::AsyncErrorInfo AsyncErrorInfo;
 namespace {
 #endif
 
-__device__ void set_async_error_info(AsyncErrorInfo* info, void* tracker,
-                                     const char* msg, int arg0 = 0,
-                                     int arg1 = 0, int arg2 = 0, int arg3 = 0)
+__device__ void set_async_error_info(
+        AsyncErrorInfo* info, void* tracker, const char* msg, int arg0 = 0,
+        int arg1 = 0, int arg2 = 0, int arg3 = 0)
 #if MEGDNN_CC_CUDA
 {
     if (info && !atomicAdd(&info->nr_error, 1)) {
@@ -45,7 +44,7 @@ __device__ void set_async_error_info(AsyncErrorInfo* info, void* tracker,
     }
 }
 #else
-;
+        ;
 #endif
 
 #if MEGDNN_CC_CUDA

@@ -10,10 +10,10 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
+#include "./opr_impl.h"
 #include "src/common/utils.h"
 #include "src/rocm/handle.h"
 #include "src/rocm/utils.h"
-#include "./opr_impl.h"
 
 using namespace megdnn;
 using namespace rocm;
@@ -38,15 +38,15 @@ const char* status2str(rocrand_status status) {
     }
     return "unknown";
 }
-#define ROCRAND_CHECK(expr)                                                \
-    do {                                                                   \
-        rocrand_status status = (expr);                                    \
-        MEGDNN_MARK_USED_VAR(&status2str);                                 \
-        if (status != ROCRAND_STATUS_SUCCESS) {                            \
-            megdnn_throw(                                                  \
-                    ssprintf("rocrand call failed: status=%d(%s) call=%s", \
-                             status, status2str(status), #expr));          \
-        }                                                                  \
+#define ROCRAND_CHECK(expr)                                               \
+    do {                                                                  \
+        rocrand_status status = (expr);                                   \
+        MEGDNN_MARK_USED_VAR(&status2str);                                \
+        if (status != ROCRAND_STATUS_SUCCESS) {                           \
+            megdnn_throw(ssprintf(                                        \
+                    "rocrand call failed: status=%d(%s) call=%s", status, \
+                    status2str(status), #expr));                          \
+        }                                                                 \
     } while (0)
 
 }  // namespace
@@ -68,33 +68,24 @@ void RocRANDHandle::seed(uint64_t seed) {
     m_seed = seed;
 }
 
-UniformRNGImpl::UniformRNGImpl(Handle *handle):
-    UniformRNG(handle),
-    m_rocrand_handle(hip_stream(handle))
-{
-}
+UniformRNGImpl::UniformRNGImpl(Handle* handle)
+        : UniformRNG(handle), m_rocrand_handle(hip_stream(handle)) {}
 
-void UniformRNGImpl::exec(
-        _megdnn_tensor_inout dst, _megdnn_workspace workspace) {
+void UniformRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace workspace) {
     check_exec(dst.layout, workspace.size);
-    megdnn_assert(dst.layout.dtype == dtype::Float32(),
-            "only float32 supported");
+    megdnn_assert(dst.layout.dtype == dtype::Float32(), "only float32 supported");
     m_rocrand_handle.ensure_seed(m_param.seed);
-    ROCRAND_CHECK(rocrand_generate_uniform(m_rocrand_handle.gen(),
-                dst.ptr<dt_float32>(), dst.layout.total_nr_elems()));
+    ROCRAND_CHECK(rocrand_generate_uniform(
+            m_rocrand_handle.gen(), dst.ptr<dt_float32>(),
+            dst.layout.total_nr_elems()));
 }
 
-GaussianRNGImpl::GaussianRNGImpl(Handle *handle):
-    GaussianRNG(handle),
-    m_rocrand_handle(hip_stream(handle))
-{
-}
+GaussianRNGImpl::GaussianRNGImpl(Handle* handle)
+        : GaussianRNG(handle), m_rocrand_handle(hip_stream(handle)) {}
 
-void GaussianRNGImpl::exec(
-        _megdnn_tensor_inout dst, _megdnn_workspace workspace) {
+void GaussianRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace workspace) {
     check_exec(dst.layout, workspace.size);
-    megdnn_assert(dst.layout.dtype == dtype::Float32(),
-            "only float32 supported");
+    megdnn_assert(dst.layout.dtype == dtype::Float32(), "only float32 supported");
     auto ptr = dst.ptr<dt_float32>();
     auto size = dst.layout.total_nr_elems();
     megdnn_assert(size);
@@ -102,25 +93,23 @@ void GaussianRNGImpl::exec(
     auto gen = m_rocrand_handle.gen();
     if (size % 2) {
         auto wk = workspace.ptr<dt_float32>();
-        ROCRAND_CHECK(rocrand_generate_normal(gen, wk, 2, m_param.mean,
-                    m_param.std));
+        ROCRAND_CHECK(rocrand_generate_normal(gen, wk, 2, m_param.mean, m_param.std));
         hip_check(hipMemcpyAsync(
-                    ptr + size - 1, wk, sizeof(dt_float32), hipMemcpyDeviceToDevice,
-                    hip_stream(handle())));
-        -- size;
+                ptr + size - 1, wk, sizeof(dt_float32), hipMemcpyDeviceToDevice,
+                hip_stream(handle())));
+        --size;
     }
 
     if (size) {
-        ROCRAND_CHECK(rocrand_generate_normal(
-                    gen, ptr, size, m_param.mean, m_param.std));
+        ROCRAND_CHECK(
+                rocrand_generate_normal(gen, ptr, size, m_param.mean, m_param.std));
     }
 }
 
-size_t GaussianRNGImpl::get_workspace_in_bytes(const TensorLayout &layout) {
+size_t GaussianRNGImpl::get_workspace_in_bytes(const TensorLayout& layout) {
     if (layout.total_nr_elems() % 2)
         return 2 * layout.dtype.size();
     return 0;
 }
 
 // vim: syntax=cpp.doxygen
-

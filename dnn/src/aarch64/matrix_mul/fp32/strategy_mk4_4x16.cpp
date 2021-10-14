@@ -20,8 +20,8 @@ using namespace aarch64::matmul;
 
 namespace {
 
-void kern_4x1(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
-              float* output) {
+void kern_4x1(
+        const float* a_ptr, const float* b_ptr, size_t LDB, size_t K, float* output) {
     LDB *= sizeof(float);
     asm volatile(
             "subs %w[K], %w[K], #4\n"
@@ -64,8 +64,7 @@ void kern_4x1(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v4", "v5", "v6", "v7", "v16", "v17", "v18", "v19", "cc",
-              "memory");
+            : "v0", "v4", "v5", "v6", "v7", "v16", "v17", "v18", "v19", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -89,8 +88,8 @@ void kern_4x1(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
 //  +--------+ - - - - -+--------+
 //                      Accumulator
 
-void kern_4x4(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
-              float* output) {
+void kern_4x4(
+        const float* a_ptr, const float* b_ptr, size_t LDB, size_t K, float* output) {
     //! As each load 16 number from B, but the pos add 12 * 4, so we minus 12
     //! here.
     LDB = (LDB - 12) * sizeof(float);
@@ -165,8 +164,8 @@ void kern_4x4(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17",
-              "v18", "v19", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
+              "v19", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -195,8 +194,8 @@ void kern_4x4(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
 //  +--------+ - - - - -+--------+
 //                      Accumulator
 
-void kern_4x8(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
-              float* output) {
+void kern_4x8(
+        const float* a_ptr, const float* b_ptr, size_t LDB, size_t K, float* output) {
     //! As each load 32 number from B, but the pos add 24 * 4, so we minus 24
     //! here.
     LDB = (LDB - 24) * sizeof(float);
@@ -304,9 +303,9 @@ void kern_4x8(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17",
-              "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26",
-              "v27", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
+              "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "cc",
+              "memory");
 }
 
 // Overview of register layout:
@@ -342,8 +341,7 @@ void kern_4x8(const float* a_ptr, const float* b_ptr, size_t LDB, size_t K,
 //                      +--------+
 //                      Accumulator
 
-void kern_4x16(const float* a_ptr, const float* b_ptr, int LDB, int K,
-               float* output) {
+void kern_4x16(const float* a_ptr, const float* b_ptr, int LDB, int K, float* output) {
     //! As each load 64 number from B, but the pos add 56 * 4, so we minus 56
     //! here.
     LDB = (LDB - 56) * sizeof(float);
@@ -565,20 +563,18 @@ void kern_4x16(const float* a_ptr, const float* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
-              "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31", "cc",
-              "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25",
+              "v26", "v27", "v28", "v29", "v30", "v31", "cc", "memory");
 }
 
 }  // namespace
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL_NOPACK(sgemm_nopack_4x16);
 
-void sgemm_nopack_4x16::kern(const float* A, size_t LDA, const float* B,
-                             size_t LDB, float* C, size_t LDC, size_t M,
-                             size_t K, size_t N, const float*, void*, bool trA,
-                             bool trB) const {
+void sgemm_nopack_4x16::kern(
+        const float* A, size_t LDA, const float* B, size_t LDB, float* C, size_t LDC,
+        size_t M, size_t K, size_t N, const float*, void*, bool trA, bool trB) const {
     constexpr static size_t MB = 4;
     constexpr static size_t KB = 4;
     constexpr static size_t NB = 16;

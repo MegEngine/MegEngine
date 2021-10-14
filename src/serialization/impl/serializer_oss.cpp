@@ -29,8 +29,8 @@
 #include "megbrain/serialization/helper.h"
 #include "megbrain/serialization/internal/flatbuffers_helper.h"
 #include "megbrain/serialization/internal/schema_generated.h"
-#include "megbrain/serialization/opr_load_dump.h"
 #include "megbrain/serialization/metadata.h"
+#include "megbrain/serialization/opr_load_dump.h"
 #include "megbrain/serialization/serializer.h"
 #include "megbrain/version.h"
 
@@ -45,14 +45,12 @@ using namespace mgb::serialization;
 
 namespace {
 
-constexpr uint32_t MGB_VERSION =
-        (MGB_MAJOR * 1000 + MGB_MINOR) * 100 + MGB_PATCH;
+constexpr uint32_t MGB_VERSION = (MGB_MAJOR * 1000 + MGB_MINOR) * 100 + MGB_PATCH;
 
 constexpr uint32_t MGB_MAGIC = 0x5342474D;
 
 template <typename T>
-bool contains_any_in_set(const SmallVector<T>& list,
-                         const ThinHashSet<T>& set) {
+bool contains_any_in_set(const SmallVector<T>& list, const ThinHashSet<T>& set) {
     for (const auto& x : list) {
         if (set.count(x)) {
             return true;
@@ -61,22 +59,20 @@ bool contains_any_in_set(const SmallVector<T>& list,
     return false;
 }
 
-void check_tensor_value_valid(const std::string& name,
-                              const HostTensorND& tensor) {
+void check_tensor_value_valid(const std::string& name, const HostTensorND& tensor) {
     bool cond_normal = tensor.layout().format.is_default() &&
                        tensor.layout().is_physical_contiguous();
     bool cond_lowbit = tensor.layout().dtype.is_quantized_lowbit() &&
                        tensor.layout().format.is_lowbit_aligned() &&
                        tensor.layout().is_contiguous();
-    mgb_assert(cond_normal || cond_lowbit,
-               "non-contiguous tensor: name=%s layout=%s", name.c_str(),
-               tensor.layout().to_string().c_str());
+    mgb_assert(
+            cond_normal || cond_lowbit, "non-contiguous tensor: name=%s layout=%s",
+            name.c_str(), tensor.layout().to_string().c_str());
     if (tensor.dtype() == dtype::Float32()) {
         auto ptr = tensor.ptr<float>();
         for (size_t i = 0, it = tensor.shape().total_nr_elems(); i < it; ++i) {
             if (!std::isfinite(ptr[i])) {
-                mgb_log_warn("invalid tensor value in %s: %g", name.c_str(),
-                             ptr[i]);
+                mgb_log_warn("invalid tensor value in %s: %g", name.c_str(), ptr[i]);
                 break;
             }
         }
@@ -97,8 +93,7 @@ class GraphDumperOSS final : public GraphDumper, OprDumpContextFlatBuffers {
 
     size_t m_nr_shared_tensor;
 
-    std::vector<std::pair<cg::OperatorNodeBase*, const OprRegistry*>>
-            m_oprs_to_dump;
+    std::vector<std::pair<cg::OperatorNodeBase*, const OprRegistry*>> m_oprs_to_dump;
     ThinHashMap<VarNode*, size_t> m_var2id;
 
     //! set of output vars specified by user
@@ -124,28 +119,28 @@ class GraphDumperOSS final : public GraphDumper, OprDumpContextFlatBuffers {
 
 public:
     GraphDumperOSS(std::unique_ptr<OutputFile> file) : m_file{std::move(file)} {}
-    DumpResult dump(const SymbolVarArray& output_vars,
-                    const DumpConfig& config = {},
-                    const Metadata& metadata = {}) override;
+    DumpResult dump(
+            const SymbolVarArray& output_vars, const DumpConfig& config = {},
+            const Metadata& metadata = {}) override;
     const GraphDumpConfig& config() const override { return m_config; }
-    void dump_tensor(const std::string& name, const HostTensorND& tensor,
-                     TensorWriteMethod method) override;
+    void dump_tensor(
+            const std::string& name, const HostTensorND& tensor,
+            TensorWriteMethod method) override;
     flatbuffers::FlatBufferBuilder& builder() override { return m_builder; }
     void append_param(uint32_t type, uint32_t value) override {
-        static_assert(std::is_same<uint32_t, flatbuffers::uoffset_t>::value,
-                      "append_param depends on uoffset_t being uint32_t");
-        static_assert(std::is_standard_layout<flatbuffers::Offset<void>>::value,
-                      "append_param depends on flatbuffers::Offset having "
-                      "standard memory layout");
+        static_assert(
+                std::is_same<uint32_t, flatbuffers::uoffset_t>::value,
+                "append_param depends on uoffset_t being uint32_t");
+        static_assert(
+                std::is_standard_layout<flatbuffers::Offset<void>>::value,
+                "append_param depends on flatbuffers::Offset having "
+                "standard memory layout");
         mgb_assert(type != fbs::OperatorParam_NONE);
-        m_cur_opr_param_type.emplace_back(
-                static_cast<fbs::OperatorParam>(type));
+        m_cur_opr_param_type.emplace_back(static_cast<fbs::OperatorParam>(type));
         m_cur_opr_param.emplace_back(value);
     }
     void dump_buf_with_len(const void* data, uint32_t size) override;
-    GraphDumpFormat format() const override {
-        return GraphDumpFormat::FLATBUFFERS;
-    }
+    GraphDumpFormat format() const override { return GraphDumpFormat::FLATBUFFERS; }
 };
 
 flatbuffers::Offset<fbs::DType> GraphDumperOSS::build_dtype(DType dtype) {
@@ -168,11 +163,11 @@ void GraphDumperOSS::init_oprs_to_dump(const SymbolVarArray& endpoints) {
         } else {
             auto registry = OprRegistry::find_by_type(opr->dyn_typeinfo());
             if (!registry || !registry->dumper) {
-                mgb_throw(cg::OperatorNodeExcExtraInfo::ExcMaker{opr}
-                                  .make<MegBrainError>,
-                          "serialization as FlatBuffers is not supported for "
-                          "operator %s",
-                          opr->dyn_typeinfo()->name);
+                mgb_throw(
+                        cg::OperatorNodeExcExtraInfo::ExcMaker{opr}.make<MegBrainError>,
+                        "serialization as FlatBuffers is not supported for "
+                        "operator %s",
+                        opr->dyn_typeinfo()->name);
             }
             m_oprs_to_dump.emplace_back(opr, registry);
             for (auto i : opr->output()) {
@@ -189,7 +184,7 @@ void GraphDumperOSS::init_oprs_to_dump(const SymbolVarArray& endpoints) {
 }
 
 flatbuffers::Offset<fbs::Metadata> GraphDumperOSS::build_metadata(
-    const Metadata& metadata) {
+        const Metadata& metadata) {
     auto user_info = m_builder.CreateSharedString(metadata.user_info);
     fbs::MetadataBuilder builder(m_builder);
     builder.add_is_valid(metadata.is_valid);
@@ -211,8 +206,7 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
         std::vector<flatbuffers::Offset<fbs::CompNode>> cns;
         for (const auto& cn : config.comp_node()) {
             cns.emplace_back(fbs::CreateCompNode(
-                    m_builder,
-                    m_builder.CreateSharedString(cn.to_string_logical())));
+                    m_builder, m_builder.CreateSharedString(cn.to_string_logical())));
         }
         comp_node = m_builder.CreateVector(cns);
     }
@@ -267,8 +261,8 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
     if (param_cnt > 1) {
         additional_params_type = m_builder.CreateVectorScalarCast<uint8_t>(
                 m_cur_opr_param_type.data() + 1, param_cnt - 1);
-        additional_params = m_builder.CreateVector(m_cur_opr_param.data() + 1,
-                                                   param_cnt - 1);
+        additional_params =
+                m_builder.CreateVector(m_cur_opr_param.data() + 1, param_cnt - 1);
     }
 
     fbs::OperatorBuilder builder(m_builder);
@@ -296,10 +290,9 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
 }
 
 GraphDumper::DumpResult GraphDumperOSS::dump(
-        const SymbolVarArray& output_vars,
-        const DumpConfig& config, const Metadata& metadata) {
-    mgb_throw_if(output_vars.empty(), SerializationError,
-                 "Can't dump empty graph");
+        const SymbolVarArray& output_vars, const DumpConfig& config,
+        const Metadata& metadata) {
+    mgb_throw_if(output_vars.empty(), SerializationError, "Can't dump empty graph");
 
     auto begin_pos = m_file->tell();
     m_config = config;
@@ -315,13 +308,13 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     bool keep_output_var_name = m_config.keep_var_name >= 1;
     std::unordered_set<std::string> output_var_names;
     for (auto i : output_vars) {
-        mgb_assert(!i.node()->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
-                   "can not dump var with VOLATILE_CONTENT flag: %s",
-                   cg::dump_var_info({i.node()}).c_str());
+        mgb_assert(
+                !i.node()->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
+                "can not dump var with VOLATILE_CONTENT flag: %s",
+                cg::dump_var_info({i.node()}).c_str());
         if (m_output_vars.insert(i.node()).second && keep_output_var_name) {
             auto name_ins = output_var_names.insert(i.node()->name()).second;
-            mgb_assert(name_ins, "duplicated output var name: %s",
-                       i.node()->cname());
+            mgb_assert(name_ins, "duplicated output var name: %s", i.node()->cname());
         }
     }
 
@@ -358,8 +351,7 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     auto fb_output_vars = m_builder.CreateVectorOfStructs(output_vars_idx);
 
     XXHash content_hash;
-    content_hash.update(m_builder.GetCurrentBufferPointer(),
-                        m_builder.GetSize());
+    content_hash.update(m_builder.GetCurrentBufferPointer(), m_builder.GetSize());
     auto graph_hash = content_hash.digest();
 
     fbs::GraphBuilder graph(m_builder);
@@ -385,9 +377,9 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     // Finalize DumpResult
     auto&& ret = m_cur_rst;
     for (size_t i = 0; i < output_vars.size(); i++) {
-        ret.outputs.emplace_back(keep_output_var_name
-                                         ? output_vars[i].node()->cname()
-                                         : ssprintf("unnamed%zu", i));
+        ret.outputs.emplace_back(
+                keep_output_var_name ? output_vars[i].node()->cname()
+                                     : ssprintf("unnamed%zu", i));
     }
     ret.content_hash = graph_hash;
     std::sort(ret.inputs.begin(), ret.inputs.end());
@@ -396,13 +388,13 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     return ret;
 }
 
-void GraphDumperOSS::dump_tensor(const std::string& name,
-                                       const HostTensorND& tensor,
-                                       TensorWriteMethod method) {
+void GraphDumperOSS::dump_tensor(
+        const std::string& name, const HostTensorND& tensor, TensorWriteMethod method) {
     using namespace flatbuffers;
     using Meth = TensorWriteMethod;
-    mgb_assert((method == Meth::VALUE_ANONYMOUS) ^ (!name.empty()),
-               "name must be non-empty for non Meth::VALUE_ANONYMOUS tensors");
+    mgb_assert(
+            (method == Meth::VALUE_ANONYMOUS) ^ (!name.empty()),
+            "name must be non-empty for non Meth::VALUE_ANONYMOUS tensors");
 
     bool has_value = method != Meth::META_INPUT;
     bool should_keep_name = true;
@@ -414,17 +406,18 @@ void GraphDumperOSS::dump_tensor(const std::string& name,
             should_keep_name = m_config.keep_param_name;
             ++m_nr_shared_tensor;
             if (m_config.keep_param_name) {
-                mgb_assert(m_used_param_names.insert(name).second,
-                           "duplicated VALUE_SHARED tensor name: %s",
-                           name.c_str());
+                mgb_assert(
+                        m_used_param_names.insert(name).second,
+                        "duplicated VALUE_SHARED tensor name: %s", name.c_str());
                 m_cur_rst.params.emplace_back(name);
             }
             break;
         case Meth::META_INPUT:
         case Meth::VALUE_INPUT:
             mgb_assert(!name.empty(), "empty input tensor name");
-            mgb_assert(m_used_input_names.insert(name).second,
-                       "duplicated input tensor name: %s", name.c_str());
+            mgb_assert(
+                    m_used_input_names.insert(name).second,
+                    "duplicated input tensor name: %s", name.c_str());
             m_cur_rst.inputs.emplace_back(name);
             break;
     }
@@ -447,18 +440,17 @@ void GraphDumperOSS::dump_tensor(const std::string& name,
     auto shape = m_builder.CreateVectorScalarCast<uint32_t>(
             tensor.shape().shape, tensor.shape().ndim);
     auto comp_node = fbs::CreateCompNode(
-            m_builder, m_builder.CreateSharedString(
-                               tensor.comp_node().to_string_logical()));
+            m_builder,
+            m_builder.CreateSharedString(tensor.comp_node().to_string_logical()));
     auto dtype = build_dtype(tensor.dtype());
-    auto serialized_tensor = fbs::CreateTensor(m_builder, fbname, shape,
-                                               comp_node, dtype, value_size);
+    auto serialized_tensor =
+            fbs::CreateTensor(m_builder, fbname, shape, comp_node, dtype, value_size);
     m_cur_opr_tensor.emplace_back(serialized_tensor);
 }
 
 void GraphDumperOSS::dump_buf_with_len(const void* data, uint32_t size) {
     auto blob = fbs::CreateBlob(
-            m_builder,
-            m_builder.CreateVector(static_cast<const uint8_t*>(data), size));
+            m_builder, m_builder.CreateVector(static_cast<const uint8_t*>(data), size));
     m_blobs.emplace_back(blob);
 }
 
@@ -482,8 +474,7 @@ public:
     GraphLoaderOSS(std::unique_ptr<InputFile> input_file)
             : m_file{std::move(input_file)} {}
 
-    std::unique_ptr<InputFile> reset_file(
-            std::unique_ptr<InputFile> file) override {
+    std::unique_ptr<InputFile> reset_file(std::unique_ptr<InputFile> file) override {
         file.swap(m_file);
         return file;
     }
@@ -495,13 +486,10 @@ public:
         return m_shared_tensor_map;
     }
 
-    GraphDumpFormat format() const override {
-        return GraphDumpFormat::FLATBUFFERS;
-    }
+    GraphDumpFormat format() const override { return GraphDumpFormat::FLATBUFFERS; }
 };
 
-class GraphLoaderOSS::OprLoadContextImpl final
-        : public OprLoadContextFlatBuffers {
+class GraphLoaderOSS::OprLoadContextImpl final : public OprLoadContextFlatBuffers {
     GraphLoaderOSS* const m_loader;
     size_t m_cur_shared_tensor_idx = 0;
     std::shared_ptr<ComputingGraph> m_graph;
@@ -519,8 +507,8 @@ class GraphLoaderOSS::OprLoadContextImpl final
         return *m_loader->m_cur_load_config;
     }
 
-    void load_tensor_value(HostTensorND* dest, const TensorLayout& layout,
-                           const fbs::Tensor* tensor);
+    void load_tensor_value(
+            HostTensorND* dest, const TensorLayout& layout, const fbs::Tensor* tensor);
 
     std::shared_ptr<HostTensorND> load_tensor() override;
 
@@ -539,9 +527,8 @@ public:
             return std::shared_ptr<OprLoadContext>{
                     std::shared_ptr<OprLoadContext>{}, this};
         };
-        auto got = m_graph->options()
-                           .user_data.get_user_data_or_create<OprLoadContext>(
-                                   maker);
+        auto got = m_graph->options().user_data.get_user_data_or_create<OprLoadContext>(
+                maker);
         mgb_assert(got == this);
     }
 
@@ -562,9 +549,10 @@ public:
                 return m_current_opr->param();
             }
         } else {
-            mgb_assert(m_current_opr->additional_params() &&
-                       m_cur_opr_param_cnt - 1 <
-                               m_current_opr->additional_params()->size());
+            mgb_assert(
+                    m_current_opr->additional_params() &&
+                    m_cur_opr_param_cnt - 1 <
+                            m_current_opr->additional_params()->size());
             auto i = m_cur_opr_param_cnt++ - 1;
             if (m_current_opr->additional_params_type()->Get(i) == type) {
                 return m_current_opr->additional_params()->Get(i);
@@ -574,21 +562,23 @@ public:
     }
 
     std::string load_buf_with_len() override {
-        mgb_assert(m_current_opr->blobs() &&
-                   m_cur_opr_blob_cnt < m_current_opr->blobs()->size());
+        mgb_assert(
+                m_current_opr->blobs() &&
+                m_cur_opr_blob_cnt < m_current_opr->blobs()->size());
         auto blob = m_current_opr->blobs()->Get(m_cur_opr_blob_cnt++);
         mgb_assert(blob && blob->data());
         auto data = blob->data()->data();
         return {reinterpret_cast<const char*>(data), blob->data()->size()};
     }
     SharedBuffer load_shared_buf_with_len() override {
-        mgb_assert(m_current_opr->blobs() &&
-                   m_cur_opr_blob_cnt < m_current_opr->blobs()->size());
+        mgb_assert(
+                m_current_opr->blobs() &&
+                m_cur_opr_blob_cnt < m_current_opr->blobs()->size());
         auto blob = m_current_opr->blobs()->Get(m_cur_opr_blob_cnt++);
         mgb_assert(blob && blob->data());
         auto size = blob->data()->size();
-        std::shared_ptr<uint8_t> shptr{new uint8_t[size],
-                                       [](uint8_t* p) { delete[] p; }};
+        std::shared_ptr<uint8_t> shptr{
+                new uint8_t[size], [](uint8_t* p) { delete[] p; }};
         memcpy(shptr.get(), blob->data()->data(), size);
         return {std::move(shptr), size};
     }
@@ -608,8 +598,7 @@ TensorLayout load_tensor_layout(const fbs::Tensor* tensor) {
     TensorLayout layout;
     if (tensor->shape()) {
         layout.ndim = tensor->shape()->size();
-        std::copy(tensor->shape()->begin(), tensor->shape()->end(),
-                  layout.shape);
+        std::copy(tensor->shape()->begin(), tensor->shape()->end(), layout.shape);
     }
     if (tensor->dtype()) {
         // modify data type inplace for TensorLayout
@@ -620,8 +609,7 @@ TensorLayout load_tensor_layout(const fbs::Tensor* tensor) {
 }
 
 void GraphLoaderOSS::OprLoadContextImpl::load_tensor_value(
-        HostTensorND* dest, const TensorLayout& layout,
-        const fbs::Tensor* tensor) {
+        HostTensorND* dest, const TensorLayout& layout, const fbs::Tensor* tensor) {
     auto&& loader = m_loader->m_cur_load_config->tensor_value_loader;
     auto&& file = m_loader->m_file;
     auto begin_pos = file->tell();
@@ -641,15 +629,17 @@ void GraphLoaderOSS::OprLoadContextImpl::load_tensor_value(
             file->skip(layout.span().high_byte);
         }
     }
-    mgb_throw_if(file->tell() < begin_pos, SerializationError,
-                 "Custom tensor value loader accessed out of range data before "
-                 "start of data blob");
+    mgb_throw_if(
+            file->tell() < begin_pos, SerializationError,
+            "Custom tensor value loader accessed out of range data before "
+            "start of data blob");
     auto data_size = tensor->data_size();
     auto consumed_size = file->tell() - begin_pos;
-    mgb_throw_if(consumed_size > data_size, SerializationError,
-                 "Custom tensor value loader consumed more data than "
-                 "available: consumed %lu, has %u",
-                 consumed_size, data_size);
+    mgb_throw_if(
+            consumed_size > data_size, SerializationError,
+            "Custom tensor value loader consumed more data than "
+            "available: consumed %lu, has %u",
+            consumed_size, data_size);
     if (consumed_size < data_size) {
         mgb_log_warn(
                 "Tensor value loader consumed less data than available: "
@@ -659,10 +649,10 @@ void GraphLoaderOSS::OprLoadContextImpl::load_tensor_value(
     }
 }
 
-std::shared_ptr<HostTensorND>
-GraphLoaderOSS::OprLoadContextImpl::load_tensor() {
-    mgb_assert(m_current_opr->tensors() &&
-               m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
+std::shared_ptr<HostTensorND> GraphLoaderOSS::OprLoadContextImpl::load_tensor() {
+    mgb_assert(
+            m_current_opr->tensors() &&
+            m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
     auto tensor = m_current_opr->tensors()->Get(m_cur_opr_tensor_cnt++);
     auto comp_node = load_comp_node(tensor->comp_node());
     auto layout = load_tensor_layout(tensor);
@@ -674,16 +664,17 @@ GraphLoaderOSS::OprLoadContextImpl::load_tensor() {
         m_tensor_map[tensor->name()->str()] = ret;
     }
     if (auto&& mod = m_loader->m_cur_load_config->tensor_modifier) {
-        mod(tensor->name() ? tensor->name()->str() : "",
-            tensor->data_size() != 0, *ret);
+        mod(tensor->name() ? tensor->name()->str() : "", tensor->data_size() != 0,
+            *ret);
     }
     return ret;
 }
 
-std::shared_ptr<DeviceTensorND>
-GraphLoaderOSS::OprLoadContextImpl::load_tensor_shared() {
-    mgb_assert(m_current_opr->tensors() &&
-               m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
+std::shared_ptr<DeviceTensorND> GraphLoaderOSS::OprLoadContextImpl::
+        load_tensor_shared() {
+    mgb_assert(
+            m_current_opr->tensors() &&
+            m_cur_opr_tensor_cnt < m_current_opr->tensors()->size());
     auto tensor = m_current_opr->tensors()->Get(m_cur_opr_tensor_cnt++);
     auto comp_node = load_comp_node(tensor->comp_node());
     auto layout = load_tensor_layout(tensor);
@@ -738,8 +729,7 @@ Metadata GraphLoaderOSS::OprLoadContextImpl::load_metadata() {
     return ret;
 }
 
-void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
-        const fbs::Operator* fbopr) {
+void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(const fbs::Operator* fbopr) {
     m_cur_opr_tensor_cnt = 0;
     m_cur_opr_blob_cnt = 0;
     m_cur_opr_param_cnt = 0;
@@ -766,11 +756,12 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
     }
 
     auto registry = OprRegistry::find_by_unversioned_id(fbopr->type_id());
-    mgb_throw_if(!registry, SerializationError,
-                 "failed to find opr with type %s, use python env "
-                 "config.dump_registered_oprs() to get a dict that maps from "
-                 "opr id to opr name",
-                 std::to_string(fbopr->type_id()).c_str());
+    mgb_throw_if(
+            !registry, SerializationError,
+            "failed to find opr with type %s, use python env "
+            "config.dump_registered_oprs() to get a dict that maps from "
+            "opr id to opr name",
+            std::to_string(fbopr->type_id()).c_str());
 
     // load inputs
     VarNodeArray inputs;
@@ -782,7 +773,8 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
     }
 
     // call loader
-    auto opr = registry->loader(*this, inputs, config);
+    auto accessor = registry->loader(*this, inputs, config);
+    auto opr = accessor.opr();
 
     // check opr type; note that:
     // 1. registry->type may be empty for dynamic opr loaders or legacy oprs
@@ -790,11 +782,11 @@ void GraphLoaderOSS::OprLoadContextImpl::load_single_opr(
     mgb_assert(
             opr && (opr->dyn_typeinfo() == registry->type || !registry->type ||
                     opr->same_type<opr::ImmutableTensor>()),
-            "got_type=%s expected_type=%s",
-            opr ? opr->dyn_typeinfo()->name : nullptr, registry->type->name);
+            "got_type=%s expected_type=%s", opr ? opr->dyn_typeinfo()->name : nullptr,
+            registry->type->name);
     // record output vars; read output names
     size_t i = 0;
-    for (auto ovar : opr->output()) {
+    for (auto ovar : accessor.output()) {
         if (!ovar->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
             m_id2varnode.push_back(ovar);
             if (fbopr->output_name()) {
@@ -840,8 +832,7 @@ GraphLoader::LoadResult GraphLoaderOSS::OprLoadContextImpl::load_oprs() {
     return ret;
 }
 
-GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
-                                                   bool rewind) {
+GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config, bool rewind) {
     mgb_assert(m_file);
     m_cur_load_config = &config;
     if (rewind) {
@@ -849,10 +840,11 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     }
     uint32_t magic;
     m_file->read(&magic, sizeof(magic));
-    mgb_throw_if(magic != MGB_MAGIC, SerializationError,
-                 "wrong magic: wanted %#08x, actual %#08x (not a invalid fbs "
-                 "model?)",
-                 MGB_MAGIC, magic);
+    mgb_throw_if(
+            magic != MGB_MAGIC, SerializationError,
+            "wrong magic: wanted %#08x, actual %#08x (not a invalid fbs "
+            "model?)",
+            MGB_MAGIC, magic);
     m_file->skip(4);
 
     uint64_t offset_to_fbs;
@@ -870,15 +862,16 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     m_file->rewind();
     m_file->skip(tensor_begin);
 
-    mgb_throw_if(!fbs::GraphBufferHasIdentifier(m_graph_buf.data()),
-                 SerializationError, "invalid fbs model");
+    mgb_throw_if(
+            !fbs::GraphBufferHasIdentifier(m_graph_buf.data()), SerializationError,
+            "invalid fbs model");
 
     {
         flatbuffers::Verifier verifier(
-                static_cast<const uint8_t*>(m_graph_buf.data()),
-                m_graph_buf.size());
-        mgb_throw_if(!fbs::VerifyGraphBuffer(verifier), SerializationError,
-                     "model verification failed (invalid or corrupted model?)");
+                static_cast<const uint8_t*>(m_graph_buf.data()), m_graph_buf.size());
+        mgb_throw_if(
+                !fbs::VerifyGraphBuffer(verifier), SerializationError,
+                "model verification failed (invalid or corrupted model?)");
     }
 
     m_graph = fbs::GetGraph(m_graph_buf.data());
@@ -891,16 +884,18 @@ GraphLoader::LoadResult GraphLoaderOSS::load(const LoadConfig& config,
     }
     if (!m_graph_hash) {
         m_graph_hash = m_graph->hash();
-        mgb_assert(m_graph_hash,
-                   "invalid graph hash; maybe error "
-                   "occurred during graph dump");
+        mgb_assert(
+                m_graph_hash,
+                "invalid graph hash; maybe error "
+                "occurred during graph dump");
     } else {
-        mgb_assert(m_graph_hash == m_graph->hash(),
-                   "A GraphLoader instance can be used to load only one graph,"
-                   " since the tensor values are shared. Previous graph hash "
-                   "is 0x%llx, current graph hash is 0x%llx.",
-                   static_cast<unsigned long long>(m_graph_hash),
-                   static_cast<unsigned long long>(m_graph->hash()));
+        mgb_assert(
+                m_graph_hash == m_graph->hash(),
+                "A GraphLoader instance can be used to load only one graph,"
+                " since the tensor values are shared. Previous graph hash "
+                "is 0x%llx, current graph hash is 0x%llx.",
+                static_cast<unsigned long long>(m_graph_hash),
+                static_cast<unsigned long long>(m_graph->hash()));
     }
 
     if (m_shared_tensor_map.empty()) {

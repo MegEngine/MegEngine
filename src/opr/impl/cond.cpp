@@ -64,9 +64,9 @@ VarNode* proxy_var_from_mask(cg::ExecutionMask* mask) {
     mgb_assert(var);
     auto opr = var->owner_opr();
     auto type = opr->dyn_typeinfo();
-    mgb_assert(type->is<CondExecPred>() || type->is<CondExecPredLogical>(),
-               "mask not from CondExec opr: %s",
-               cg::dump_var_info({var}).c_str());
+    mgb_assert(
+            type->is<CondExecPred>() || type->is<CondExecPredLogical>(),
+            "mask not from CondExec opr: %s", cg::dump_var_info({var}).c_str());
     return var;
 }
 
@@ -111,25 +111,26 @@ private:
 
     void pre_check(const DeviceTensorND& val) {
         mgb_assert(val.comp_node() == default_cpu);
-        mgb_throw_if(!val.shape().is_scalar(), GraphError,
-                     "CondExec predicate or branch key is not scalar: %s",
-                     val.shape().to_string().c_str());
+        mgb_throw_if(
+                !val.shape().is_scalar(), GraphError,
+                "CondExec predicate or branch key is not scalar: %s",
+                val.shape().to_string().c_str());
     }
 };
 
-CondExecPred::PredEvaluator::PredEvaluator(const CondExecPred& opr,
-                                           const DeviceTensorND& pred) {
+CondExecPred::PredEvaluator::PredEvaluator(
+        const CondExecPred& opr, const DeviceTensorND& pred) {
     pre_check(pred);
     switch (pred.dtype().enumv()) {
-#define cbf(dt)                                                            \
-    case DTypeTrait<dt>::enumv: {                                          \
-        using ct = DTypeTrait<dt>::ctype;                                  \
-        m_compare = [ eps = opr.m_param.eps,                               \
-                      p = pred.ptr<ct>()[0] ](const DeviceTensorND& key) { \
-            ct k = key.ptr<ct>()[0];                                       \
-            return std::abs(p - k) < eps ? EQ : (p < k ? LT : GT);         \
-        };                                                                 \
-        break;                                                             \
+#define cbf(dt)                                                          \
+    case DTypeTrait<dt>::enumv: {                                        \
+        using ct = DTypeTrait<dt>::ctype;                                \
+        m_compare = [eps = opr.m_param.eps,                              \
+                     p = pred.ptr<ct>()[0]](const DeviceTensorND& key) { \
+            ct k = key.ptr<ct>()[0];                                     \
+            return std::abs(p - k) < eps ? EQ : (p < k ? LT : GT);       \
+        };                                                               \
+        break;                                                           \
     }
 #define cbi(dt)                                                          \
     case DTypeTrait<dt>::enumv: {                                        \
@@ -147,8 +148,7 @@ CondExecPred::PredEvaluator::PredEvaluator(const CondExecPred& opr,
 #undef cbi
 
         default:
-            mgb_throw(GraphError, "unsupported pred dtype: %s",
-                      pred.dtype().name());
+            mgb_throw(GraphError, "unsupported pred dtype: %s", pred.dtype().name());
     }
 }
 
@@ -162,16 +162,14 @@ class CondExecPred::GlobalRegistry final : public UserDataContainer::UserData {
 public:
     static GlobalRegistry* get(ComputingGraph& graph) {
         using namespace cg::event;
-        auto ptr = graph.options()
-                           .user_data.get_user_data_or_create<GlobalRegistry>();
+        auto ptr = graph.options().user_data.get_user_data_or_create<GlobalRegistry>();
         if (!ptr->m_opr_insert_handler) {
-            ptr->m_opr_insert_handler =
-                    graph.event().register_receiver<OprInserted>(
-                            [ptr](const OprInserted& ev) {
-                                if (!ev.is_dedup && !ev.exc) {
-                                    ptr->on_new_opr(ev.opr);
-                                }
-                            });
+            ptr->m_opr_insert_handler = graph.event().register_receiver<OprInserted>(
+                    [ptr](const OprInserted& ev) {
+                        if (!ev.is_dedup && !ev.exc) {
+                            ptr->on_new_opr(ev.opr);
+                        }
+                    });
         }
         return ptr;
     }
@@ -185,18 +183,19 @@ public:
     //! throw error if var is not controlled by ExecutionMask
     ExecutionMask* require_mask_from_var(VarNode* var) const {
         auto mask = get_mask_from_var(var);
-        mgb_throw_if(!mask, GraphError,
-                     "var is not controlled by ExecutionMask: %s",
-                     cg::dump_var_info({var}).c_str());
+        mgb_throw_if(
+                !mask, GraphError, "var is not controlled by ExecutionMask: %s",
+                cg::dump_var_info({var}).c_str());
         return mask;
     }
 
     //! assert that a var is a PPV
     ExecutionMask* check_ppv(VarNode* var) const {
         auto mask = require_mask_from_var(var);
-        mgb_throw_if(mask->owner() != var, GraphError,
-                     "a conditional var is not PPV: mask=%s var=%s",
-                     mask2str(mask).c_str(), cg::dump_var_info({var}).c_str());
+        mgb_throw_if(
+                mask->owner() != var, GraphError,
+                "a conditional var is not PPV: mask=%s var=%s", mask2str(mask).c_str(),
+                cg::dump_var_info({var}).c_str());
         return mask;
     }
 };
@@ -212,12 +211,10 @@ void CondExecPred::GlobalRegistry::on_new_opr(OperatorNodeBase* const opr) {
          opr_is_pred_logical = opr_type->is<CondExecPredLogical>();
 
     using MergeMode = CondExecMerge::Mode;
-    MergeMode merge_mode =
-            opr_is_merge ? opr->cast_final<CondExecMerge>().param().mode
-                         : static_cast<MergeMode>(-1);
+    MergeMode merge_mode = opr_is_merge ? opr->cast_final<CondExecMerge>().param().mode
+                                        : static_cast<MergeMode>(-1);
     bool opr_follow_pred =
-            opr_is_mark ||
-            (opr_is_merge && merge_mode == MergeMode::SUM_COND_OUT);
+            opr_is_mark || (opr_is_merge && merge_mode == MergeMode::SUM_COND_OUT);
 
     // find mask from inputs
     auto&& inputs = opr->input();
@@ -230,13 +227,14 @@ void CondExecPred::GlobalRegistry::on_new_opr(OperatorNodeBase* const opr) {
         if (i_owner->same_type<CondExecPred>() ||
             i_owner->same_type<CondExecPredLogical>()) {
             i_is_pred = true;
-            mgb_throw_if(!((opr_follow_pred && i_var == opr->input().back()) ||
-                           opr_is_pred_logical),
-                         GraphError,
-                         "predicate proxy var not received by CondExec "
-                         "mark/merge opr: var=%s recv_opr=%s{%s}",
-                         cg::dump_var_info({i_var}).c_str(), opr->cname(),
-                         opr->dyn_typeinfo()->name);
+            mgb_throw_if(
+                    !((opr_follow_pred && i_var == opr->input().back()) ||
+                      opr_is_pred_logical),
+                    GraphError,
+                    "predicate proxy var not received by CondExec "
+                    "mark/merge opr: var=%s recv_opr=%s{%s}",
+                    cg::dump_var_info({i_var}).c_str(), opr->cname(),
+                    opr->dyn_typeinfo()->name);
         }
 
         if (opr_follow_pred && i_var == opr->input().back()) {
@@ -248,12 +246,13 @@ void CondExecPred::GlobalRegistry::on_new_opr(OperatorNodeBase* const opr) {
                 // here we handle the nested case; note that pred is the last
                 // input, so other inputs have been processed and mask is
                 // derived from other inputs
-                mgb_throw_if(!can_prove_imply(i_mask, mask), GraphError,
-                             "can not prove opr mask implies inputs mask: "
-                             "opr=%s{%s}: opr_mask=%s "
-                             "inputs_mask=%s",
-                             opr->cname(), opr->dyn_typeinfo()->name,
-                             mask2str(i_mask).c_str(), mask2str(mask).c_str());
+                mgb_throw_if(
+                        !can_prove_imply(i_mask, mask), GraphError,
+                        "can not prove opr mask implies inputs mask: "
+                        "opr=%s{%s}: opr_mask=%s "
+                        "inputs_mask=%s",
+                        opr->cname(), opr->dyn_typeinfo()->name,
+                        mask2str(i_mask).c_str(), mask2str(mask).c_str());
             }
             mask = i_mask;
             break;
@@ -290,11 +289,12 @@ void CondExecPred::GlobalRegistry::on_new_opr(OperatorNodeBase* const opr) {
 
         if (i_mask) {
             auto lower = ExecutionMask::find_direct_lowest(mask, i_mask);
-            mgb_throw_if(!lower, GraphError,
-                         "different ExecutionMask trees on inputs of a single "
-                         "opr: opr=%s{%s} mask0=%s mask1=%s",
-                         opr->cname(), opr->dyn_typeinfo()->name,
-                         mask2str(mask).c_str(), mask2str(i_mask).c_str());
+            mgb_throw_if(
+                    !lower, GraphError,
+                    "different ExecutionMask trees on inputs of a single "
+                    "opr: opr=%s{%s} mask0=%s mask1=%s",
+                    opr->cname(), opr->dyn_typeinfo()->name, mask2str(mask).c_str(),
+                    mask2str(i_mask).c_str());
             mask = lower;
         }
     }
@@ -324,10 +324,10 @@ void CondExecPred::GlobalRegistry::on_new_opr(OperatorNodeBase* const opr) {
     }
 }
 
-CondExecPred::CondExecPred(VarNode* pred, const VarNodeArrayView& keys,
-                           const Param& param, const OperatorNodeConfig& config)
-        : Super(pred->owner_graph(), config, "cond_pred", {pred}),
-          m_param{param} {
+CondExecPred::CondExecPred(
+        VarNode* pred, const VarNodeArrayView& keys, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(pred->owner_graph(), config, "cond_pred", {pred}), m_param{param} {
     m_masks.reserve(keys.size() + 1);
     auto add_out = [this](const std::string& name) {
         auto var = add_output(name);
@@ -335,9 +335,10 @@ CondExecPred::CondExecPred(VarNode* pred, const VarNodeArrayView& keys,
         m_masks.emplace_back(std::make_shared<ExecutionMask>(var));
     };
     for (size_t i = 0; i < keys.size(); ++i) {
-        mgb_throw_if(keys[i]->dtype() != pred->dtype(), GraphError,
-                     "dtype mismatch: pred=%s input[%zu]=%s",
-                     pred->dtype().name(), i, keys[i]->dtype().name());
+        mgb_throw_if(
+                keys[i]->dtype() != pred->dtype(), GraphError,
+                "dtype mismatch: pred=%s input[%zu]=%s", pred->dtype().name(), i,
+                keys[i]->dtype().name());
         add_input({keys[i]});
         if (param.mode == Param::Mode::PIECEWISE) {
             if (!i) {
@@ -362,10 +363,9 @@ CondExecPred::CondExecPred(VarNode* pred, const VarNodeArrayView& keys,
     GlobalRegistry::get(*owner_graph());
 }
 
-cg::OperatorNodeBase* CondExecPred::make_opr(SymbolVar pred,
-                                             const VarNodeArrayView& keys,
-                                             const Param& param,
-                                             const OperatorNodeConfig& config) {
+cg::OperatorNodeBase* CondExecPred::make_opr(
+        SymbolVar pred, const VarNodeArrayView& keys, const Param& param,
+        const OperatorNodeConfig& config) {
     return pred.node()->owner_graph()->insert_opr(
             std::make_unique<CondExecPred>(pred.node(), keys, param, config));
 }
@@ -522,8 +522,7 @@ void CondExecPred::scn_do_execute() {
             } else {
                 er = eval(*val_cur);
             }
-            m_masks[i]->enable(el != PredEvaluator::LT &&
-                               er == PredEvaluator::LT);
+            m_masks[i]->enable(el != PredEvaluator::LT && er == PredEvaluator::LT);
         }
     }
 }
@@ -589,29 +588,28 @@ public:
     bool get() const { return m_cur_val ^ m_negate; }
 };
 
-CondExecPredLogical::CondExecPredLogical(const VarNodeArrayView& preds,
-                                         const Param& param,
-                                         const OperatorNodeConfig& config)
-        : Super(preds.at(0)->owner_graph(), config,
-                mgb_cstr_log(mode2str(param.mode)), preds),
+CondExecPredLogical::CondExecPredLogical(
+        const VarNodeArrayView& preds, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(preds.at(0)->owner_graph(), config, mgb_cstr_log(mode2str(param.mode)),
+                preds),
           m_param{param} {
     m_input_masks.resize(preds.size());
     auto gr = CondExecPred::GlobalRegistry::get(*owner_graph());
     for (size_t i = 0; i < preds.size(); ++i) {
         m_input_masks[i] = gr->require_mask_from_var(preds[i]);
-        add_input({preds[i]}, i == preds.size() - 1 ? AddInputSortType::ALL
-                                                    : AddInputSortType::NONE);
+        add_input(
+                {preds[i]},
+                i == preds.size() - 1 ? AddInputSortType::ALL : AddInputSortType::NONE);
     }
-    add_output(None)
-            ->dtype(dtype::Int32{})
-            .add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC);
+    add_output(None)->dtype(dtype::Int32{}).add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC);
     m_mask = std::make_shared<ExecutionMask>(output(0));
     add_equivalence_component<PODHash<Param>>(&m_param);
 }
 
-SymbolVar CondExecPredLogical::make(const VarNodeArrayView& preds,
-                                    const Param& param,
-                                    const OperatorNodeConfig& config) {
+SymbolVar CondExecPredLogical::make(
+        const VarNodeArrayView& preds, const Param& param,
+        const OperatorNodeConfig& config) {
     mgb_assert(!preds.empty());
     if (preds.size() == 1) {
         if (!config.has_comp_node_set() ||
@@ -631,8 +629,7 @@ void CondExecPredLogical::init_output_static_infer_desc() {
     auto&& mgr = owner_graph()->static_infer_manager();
     mgr.register_shape_infer(output(0), ShapeInferDesc::make_const({1}));
 
-    auto infer_val = [mode = m_param.mode](DeviceTensorND & dst,
-                                           const InpVal& inp) {
+    auto infer_val = [mode = m_param.mode](DeviceTensorND& dst, const InpVal& inp) {
         PredEvaluator eval{mode, inp.val[0].value().ptr<int>()[0]};
         for (size_t i = 1; i < inp.val.size(); ++i) {
             if (!eval.update(inp.val[i].value().ptr<int>()[0])) {
@@ -683,18 +680,19 @@ const char* CondExecPredLogical::mode2str(Mode mode) {
         CASE(NAND);
         CASE(XNOR);
         default:
-            mgb_throw(MegBrainError, "bad CondExecPredLogical mode: %d",
-                      static_cast<int>(mode));
+            mgb_throw(
+                    MegBrainError, "bad CondExecPredLogical mode: %d",
+                    static_cast<int>(mode));
     }
 }
 
 /* ============================= CondExecMark ============================= */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondExecMark);
 
-CondExecMark::CondExecMark(VarNode* ppv, const VarNodeArrayView& inputs,
-                           const Param& param, const OperatorNodeConfig& config)
-        : Super(ppv->owner_graph(), config, "cond_mark", {ppv}),
-          m_param{param} {
+CondExecMark::CondExecMark(
+        VarNode* ppv, const VarNodeArrayView& inputs, const Param& param,
+        const OperatorNodeConfig& config)
+        : Super(ppv->owner_graph(), config, "cond_mark", {ppv}), m_param{param} {
     CondExecPred::GlobalRegistry::get(*owner_graph())->check_ppv(ppv);
 
     for (size_t i = 0; i < inputs.size(); ++i) {
@@ -731,8 +729,7 @@ void CondExecMark::init_output_static_infer_desc() {
         mgr.register_shape_infer(t, ShapeInferDesc::make_identity(s));
         if (infer_mode != InferMode::SHAPE_ONLY) {
             auto desc = ValueInferDesc::make_identity(s);
-            mixin::ForwardInputToOutput::ensure_not_replaced_by_const_folding(
-                    desc);
+            mixin::ForwardInputToOutput::ensure_not_replaced_by_const_folding(desc);
             mgr.register_value_infer(t, desc);
         }
     }
@@ -745,11 +742,11 @@ void CondExecMark::scn_do_execute() {
             bool succ = output(i)->reset_dev_tensor_from_other_var(input(i));
             MGB_MARK_USED_VAR(succ);
         } else {
-            auto &&out = output(i)->dev_tensor(),
-                 &&inp = input(i)->dev_tensor();
+            auto &&out = output(i)->dev_tensor(), &&inp = input(i)->dev_tensor();
             if (m_mem_fwd_success[i]) {
-                mgb_assert(inp.raw_ptr() == out.raw_ptr() &&
-                           out.layout().eq_layout(inp.layout()));
+                mgb_assert(
+                        inp.raw_ptr() == out.raw_ptr() &&
+                        out.layout().eq_layout(inp.layout()));
             } else {
                 out.copy_from_fixlayout(inp);
             }
@@ -791,27 +788,24 @@ void CondExecMark::add_input_layout_constraint() {
 CondExecMark::NodeProp* CondExecMark::do_make_node_prop() const {
     auto ret = Super::do_make_node_prop();
     ret->dep_map().at(input().back()) = NodeProp::DepType::DEV_COMP_ORDER;
-    for (size_t i = 0; i < input().size() - 1; ++ i) {
-        ret->add_dep_type_existing_var(input(i),
-                NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    for (size_t i = 0; i < input().size() - 1; ++i) {
+        ret->add_dep_type_existing_var(input(i), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     }
     return ret;
 }
 
-cg::OperatorNodeBase* CondExecMark::make_opr(SymbolVar ppv,
-                                             const VarNodeArrayView& inputs,
-                                             const Param& param,
-                                             const OperatorNodeConfig& config) {
+cg::OperatorNodeBase* CondExecMark::make_opr(
+        SymbolVar ppv, const VarNodeArrayView& inputs, const Param& param,
+        const OperatorNodeConfig& config) {
     return ppv.node()->owner_graph()->insert_opr(
             std::make_unique<CondExecMark>(ppv.node(), inputs, param, config));
 }
 
-SymbolVar CondExecMark::mark_if_need(SymbolVar maybe_ppv, SymbolVar input,
-                                     const Param& param,
-                                     const OperatorNodeConfig& config) {
-    auto mask =
-            CondExecPred::GlobalRegistry::get(*maybe_ppv.node()->owner_graph())
-                    ->get_mask_from_var(maybe_ppv.node());
+SymbolVar CondExecMark::mark_if_need(
+        SymbolVar maybe_ppv, SymbolVar input, const Param& param,
+        const OperatorNodeConfig& config) {
+    auto mask = CondExecPred::GlobalRegistry::get(*maybe_ppv.node()->owner_graph())
+                        ->get_mask_from_var(maybe_ppv.node());
     if (mask) {
         return make_opr(mask->owner(), {input}, param, config)->output(0);
     }
@@ -838,8 +832,9 @@ MGB_IMPL_OPR_GRAD(CondExecMark) {
         default:
             mgb_throw(MegBrainError, "invalid grad_mode");
     }
-    return CondExecMerge::make_opr({out_grad[wrt_idx]}, grad_shapes,
-                                   {1, grad_mode}, OperatorNodeConfig{})
+    return CondExecMerge::make_opr(
+                   {out_grad[wrt_idx]}, grad_shapes, {1, grad_mode},
+                   OperatorNodeConfig{})
             ->output(0);
 }
 #endif
@@ -847,15 +842,14 @@ MGB_IMPL_OPR_GRAD(CondExecMark) {
 /* ============================= CondExecMerge ============================= */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CondExecMerge);
 
-CondExecMerge::CondExecMerge(const VarNodeArrayView& inputs,
-                             const VarNodeArrayView& out_shapes,
-                             const Param& param,
-                             const OperatorNodeConfig& config)
-        : Super(inputs[0]->owner_graph(), config, "cond_merge", {}),
-          m_param{param} {
-    mgb_throw_if(inputs.size() % param.nr_output, GraphError,
-                 "input size can not divide nr_output: %zu %u", inputs.size(),
-                 param.nr_output);
+CondExecMerge::CondExecMerge(
+        const VarNodeArrayView& inputs, const VarNodeArrayView& out_shapes,
+        const Param& param, const OperatorNodeConfig& config)
+        : Super(inputs[0]->owner_graph(), config, "cond_merge", {}), m_param{param} {
+    mgb_throw_if(
+            inputs.size() % param.nr_output, GraphError,
+            "input size can not divide nr_output: %zu %u", inputs.size(),
+            param.nr_output);
     auto global_registry = CondExecPred::GlobalRegistry::get(*owner_graph());
     auto nr_branch = inputs.size() / param.nr_output;
     mgb_assert(param.nr_output);
@@ -868,7 +862,7 @@ CondExecMerge::CondExecMerge(const VarNodeArrayView& inputs,
         //     VarNodeMemManager::DynamicAllocOprInfo::host_wait_input_ready),
         //     which would cause infinite waiting for unselected inputs.
         ovar->add_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
-            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+                .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     }
 
     MGB_MARK_USED_VAR(mask2str);
@@ -880,21 +874,20 @@ CondExecMerge::CondExecMerge(const VarNodeArrayView& inputs,
             auto mask = global_registry->require_mask_from_var(ivar);
             mgb_throw_if(
                     output(j)->dtype() != ivar->dtype(), GraphError,
-                    "CondExecMerge input dtypes mismatch: branch=%zu %s vs %s",
-                    i, output(j)->dtype().name(), ivar->dtype().name());
+                    "CondExecMerge input dtypes mismatch: branch=%zu %s vs %s", i,
+                    output(j)->dtype().name(), ivar->dtype().name());
             if (!j) {
                 br_mask = mask;
             } else {
-                mgb_throw_if(br_mask != mask, GraphError,
-                             "CondExecMerge branch %zu have different masks: "
-                             "%s vs %s",
-                             i, mask2str(br_mask).c_str(),
-                             mask2str(mask).c_str());
+                mgb_throw_if(
+                        br_mask != mask, GraphError,
+                        "CondExecMerge branch %zu have different masks: "
+                        "%s vs %s",
+                        i, mask2str(br_mask).c_str(), mask2str(mask).c_str());
             }
             // this flag is added by ExecutionMask; we require flag because
             // output var might forward input var storage
-            mgb_assert(
-                    ivar->contain_flag(VarNode::Flag::NO_SYS_STATIC_MEM_ALLOC));
+            mgb_assert(ivar->contain_flag(VarNode::Flag::NO_SYS_STATIC_MEM_ALLOC));
             add_input({ivar});
         }
         m_branch_masks[i] = br_mask;
@@ -908,8 +901,9 @@ CondExecMerge::CondExecMerge(const VarNodeArrayView& inputs,
             add_input({i});
         }
     } else {
-        mgb_assert(out_shapes.empty(),
-                   "out_shapes should not be given if mode is not SUM");
+        mgb_assert(
+                out_shapes.empty(),
+                "out_shapes should not be given if mode is not SUM");
     }
     if (param.mode == Mode::SUM_COND_OUT) {
         VarNodeArray preds;
@@ -918,8 +912,8 @@ CondExecMerge::CondExecMerge(const VarNodeArrayView& inputs,
             preds.emplace_back(proxy_var_from_mask(i));
         }
         auto cn = mixin_infer_output_comp_node(*this, true);
-        auto preds_or = CondExecPredLogical::make(
-                preds, CondExecPredLogical::Mode::OR, cn);
+        auto preds_or =
+                CondExecPredLogical::make(preds, CondExecPredLogical::Mode::OR, cn);
         add_input({preds_or.node()});
     }
 }
@@ -949,17 +943,17 @@ cg::OperatorNodeBase* CondExecMerge::make_opr(
                     break;
                 }
             }
-            mgb_throw_if(!found, GraphError,
-                         "out_shapes is omitted but no input shape is "
-                         "inferrable for output %zu",
-                         oidx);
+            mgb_throw_if(
+                    !found, GraphError,
+                    "out_shapes is omitted but no input shape is "
+                    "inferrable for output %zu",
+                    oidx);
         }
 
-        out_shapes_ptr =
-                &out_shapes_from_inp.emplace(out_shapes_from_inp_storage);
+        out_shapes_ptr = &out_shapes_from_inp.emplace(out_shapes_from_inp_storage);
     }
-    return inputs[0]->owner_graph()->insert_opr(std::make_unique<CondExecMerge>(
-            inputs, *out_shapes_ptr, param, config));
+    return inputs[0]->owner_graph()->insert_opr(
+            std::make_unique<CondExecMerge>(inputs, *out_shapes_ptr, param, config));
 }
 
 void CondExecMerge::init_output_static_infer_desc() {
@@ -971,8 +965,7 @@ void CondExecMerge::init_output_static_infer_desc() {
         return input(branch * nr_out + oidx);
     };
 
-    static auto select_one_branch = [](size_t nr_branch,
-                                       const InpVal& bval) -> size_t {
+    static auto select_one_branch = [](size_t nr_branch, const InpVal& bval) -> size_t {
         bool found = false;
         size_t ret;
         for (size_t i = 0; i < nr_branch; ++i) {
@@ -981,15 +974,15 @@ void CondExecMerge::init_output_static_infer_desc() {
                     found = true;
                     ret = i;
                 } else {
-                    mgb_throw(GraphError,
-                              "multiple branches are active in EXACT_ONE mode: "
-                              "%zu and %zu",
-                              ret, i);
+                    mgb_throw(
+                            GraphError,
+                            "multiple branches are active in EXACT_ONE mode: "
+                            "%zu and %zu",
+                            ret, i);
                 }
             }
         }
-        mgb_throw_if(!found, GraphError,
-                     "no branch is active in EXACT_ONE mode");
+        mgb_throw_if(!found, GraphError, "no branch is active in EXACT_ONE mode");
         return ret;
     };
 
@@ -997,8 +990,7 @@ void CondExecMerge::init_output_static_infer_desc() {
     auto nr_branch = m_branch_masks.size();
     branch_deps.reserve(nr_branch);
     for (size_t i = 0; i < nr_branch; ++i) {
-        branch_deps.push_back(
-                {proxy_var_from_mask(m_branch_masks[i]), DepType::VALUE});
+        branch_deps.push_back({proxy_var_from_mask(m_branch_masks[i]), DepType::VALUE});
     }
 
     // register shape and value infers for each output
@@ -1011,26 +1003,24 @@ void CondExecMerge::init_output_static_infer_desc() {
             for (size_t i = 0; i < nr_branch; ++i) {
                 if (cg::is_static_var_shape(inp(i, oidx))) {
                     mgr.register_shape_infer(
-                            output(oidx),
-                            ShapeInferDesc::make_identity(inp(i, oidx)));
+                            output(oidx), ShapeInferDesc::make_identity(inp(i, oidx)));
                     found = true;
                     break;
                 }
             }
             if (!found) {
                 mgr.register_shape_infer(
-                        output(oidx),
-                        ShapeInferDesc::make_identity(inp(0, oidx)));
+                        output(oidx), ShapeInferDesc::make_identity(inp(0, oidx)));
             }
         } else if (m_param.mode == Mode::SUM) {
             auto infer_fn = [](TensorShape& dst, const InpVal& inp) {
                 cg::copy_tensor_value_to_shape(dst, inp.val[0].value());
                 return true;
             };
-            mgr.register_shape_infer(output(oidx),
-                                     {SourceType::DEP,
-                                      {{inp(nr_branch, oidx), DepType::VALUE}},
-                                      infer_fn});
+            mgr.register_shape_infer(
+                    output(oidx), {SourceType::DEP,
+                                   {{inp(nr_branch, oidx), DepType::VALUE}},
+                                   infer_fn});
         } else {
             // general shape inference for EXACT_ONE mode
             auto infer_fn = [this](TensorShape& dest, const InpVal& inp) {
@@ -1060,8 +1050,7 @@ void CondExecMerge::init_output_static_infer_desc() {
                 return true;
             };
         } else {
-            mgb_assert(m_param.mode == Mode::SUM ||
-                       m_param.mode == Mode::SUM_COND_OUT);
+            mgb_assert(m_param.mode == Mode::SUM || m_param.mode == Mode::SUM_COND_OUT);
             desc.infer_func = [this](DeviceTensorND& dest, const InpVal& inp) {
                 auto nr_branch = m_branch_masks.size();
                 bool found = false, first = true;
@@ -1085,12 +1074,11 @@ void CondExecMerge::init_output_static_infer_desc() {
                         }
                         // comp node is cpu default, so it is safe to use a
                         // temporary megdnn opr here
-                        auto dnn_opr =
-                                intl::create_megdnn_opr<megdnn::Elemwise>(
-                                        dest.comp_node());
+                        auto dnn_opr = intl::create_megdnn_opr<megdnn::Elemwise>(
+                                dest.comp_node());
                         dnn_opr->param().mode = Elemwise::Mode::ADD;
-                        dnn_opr->exec({dest.as_megdnn(), cur.as_megdnn()},
-                                      dest.as_megdnn());
+                        dnn_opr->exec(
+                                {dest.as_megdnn(), cur.as_megdnn()}, dest.as_megdnn());
                     }
                 }
                 if (!found) {
@@ -1098,8 +1086,7 @@ void CondExecMerge::init_output_static_infer_desc() {
                         // likely to be assigned from some input in previous
                         // runs; we create a new tensor to avoid modifying input
                         // value
-                        DeviceTensorND tmp{dest.comp_node(), shape,
-                                           dest.dtype()};
+                        DeviceTensorND tmp{dest.comp_node(), shape, dest.dtype()};
                         dest = std::move(tmp);
                     } else {
                         dest.resize(shape);
@@ -1134,8 +1121,8 @@ void CondExecMerge::scn_do_execute() {
         if (first) {
             first = false;
             for (size_t oidx = 0; oidx < nr_out; ++oidx) {
-                bool succ = output(oidx)->reset_dev_tensor_from_other_var(
-                        inp(br, oidx));
+                bool succ =
+                        output(oidx)->reset_dev_tensor_from_other_var(inp(br, oidx));
                 if (inp(br, oidx)->shape().is_empty()) {
                     is_shape_empty[oidx] = true;
                     continue;
@@ -1148,8 +1135,9 @@ void CondExecMerge::scn_do_execute() {
                 }
             }
         } else {
-            mgb_throw_if(is_exact_one(), GraphError,
-                         "multiple branches are active in EXACT_ONE mode");
+            mgb_throw_if(
+                    is_exact_one(), GraphError,
+                    "multiple branches are active in EXACT_ONE mode");
             auto&& dnn_opr = m_exec_dnn_opr;
             if (!dnn_opr || dnn_opr.comp_node() != cn) {
                 dnn_opr = intl::create_megdnn_opr<megdnn::Elemwise>(cn);
@@ -1159,11 +1147,13 @@ void CondExecMerge::scn_do_execute() {
                 auto ovar = output(oidx);
                 auto&& src = inp(br, oidx)->dev_tensor().as_megdnn();
                 auto&& dest = ovar->dev_tensor().as_megdnn();
-                mgb_assert(src.layout.eq_shape(dest.layout),
+                mgb_assert(
+                        src.layout.eq_shape(dest.layout),
                         "shape mismatch: %s vs %s in CondExecMerge",
                         src.layout.to_string().c_str(),
                         dest.layout.to_string().c_str());
-                if (is_shape_empty[oidx]) continue;
+                if (is_shape_empty[oidx])
+                    continue;
                 if (forwarded[oidx]) {
                     ovar->shape_alloc(ovar->shape());
                     auto&& own_dest = ovar->dev_tensor().as_megdnn();
@@ -1178,8 +1168,8 @@ void CondExecMerge::scn_do_execute() {
     }
 
     if (first) {
-        mgb_throw_if(is_exact_one(), GraphError,
-                     "no branch is selected in EXACT_ONE mode");
+        mgb_throw_if(
+                is_exact_one(), GraphError, "no branch is selected in EXACT_ONE mode");
         mgb_assert(m_param.mode == Param::Mode::SUM);
         auto&& mgr = owner_graph()->static_infer_manager();
         for (auto var : output()) {
@@ -1191,10 +1181,10 @@ void CondExecMerge::scn_do_execute() {
         for (auto var : output()) {
             auto&& shp_infer = mgr.infer_shape(var);
             auto&& shp_got = var->shape();
-            mgb_throw_if(!shp_infer.eq_shape(shp_got), GraphError,
-                         "inferred shape is %s, actual shape is %s",
-                         shp_infer.to_string().c_str(),
-                         shp_got.to_string().c_str());
+            mgb_throw_if(
+                    !shp_infer.eq_shape(shp_got), GraphError,
+                    "inferred shape is %s, actual shape is %s",
+                    shp_infer.to_string().c_str(), shp_got.to_string().c_str());
         }
     }
 }
@@ -1220,9 +1210,8 @@ CondExecMerge::NodeProp* CondExecMerge::do_make_node_prop() const {
         // directly
         ret->dep_map().at(input().back()) = NodeProp::DepType::DEV_COMP_ORDER;
     }
-    for (size_t i = 0; i < m_param.nr_output * m_branch_masks.size(); ++ i) {
-        ret->add_dep_type_existing_var(input(i),
-                NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    for (size_t i = 0; i < m_param.nr_output * m_branch_masks.size(); ++i) {
+        ret->add_dep_type_existing_var(input(i), NodeProp::DepType::VALUE_ALLOW_EMPTY);
     }
     return ret;
 }
@@ -1230,8 +1219,7 @@ CondExecMerge::NodeProp* CondExecMerge::do_make_node_prop() const {
 #if MGB_ENABLE_GRAD
 MGB_IMPL_OPR_GRAD(CondExecMerge) {
     using Mode = CondExecMerge::Param::Mode;
-    if (opr.param().mode == Mode::SUM_COND_OUT &&
-        wrt_idx == opr.input().size() - 1) {
+    if (opr.param().mode == Mode::SUM_COND_OUT && wrt_idx == opr.input().size() - 1) {
         return nullptr;
     }
     if (opr.param().mode == Mode::SUM &&
@@ -1246,8 +1234,8 @@ MGB_IMPL_OPR_GRAD(CondExecMerge) {
     }
     auto ppv = proxy_var_from_mask(opr.branch_mask(wrt_branch));
     if (ppv->comp_node().mem_node() != og->comp_node().mem_node()) {
-        ppv = CondExecPredLogical::make({ppv}, CondExecPredLogical::Mode::AND,
-                                        og->comp_node())
+        ppv = CondExecPredLogical::make(
+                      {ppv}, CondExecPredLogical::Mode::AND, og->comp_node())
                       .node();
     }
     CondExecMark::Param gparam;
@@ -1258,8 +1246,8 @@ MGB_IMPL_OPR_GRAD(CondExecMerge) {
         // TODO: remove this if static infer considers execution mask
         gparam.static_infer = CondExecMark::Param::StaticInfer::NONE;
     }
-    return CondExecMark::make_opr(ppv, {og}, gparam,
-                                  OperatorNodeConfig{og->comp_node()})
+    return CondExecMark::make_opr(
+                   ppv, {og}, gparam, OperatorNodeConfig{og->comp_node()})
             ->output(0);
 }
 #endif
@@ -1302,20 +1290,22 @@ void CondExecMerge::modify_grad_sum_list(VarNode* wrt, VarNodeArray& grads) {
         auto opr = grads[i]->owner_opr();
         if (opr->same_type<CondExecMerge>()) {
             // merge sum of CondExecMerge by expanding their inputs
-            mgb_assert(opr->output().size() == 1,
-                       "CondExecMerge in grad list has multiple outputs: "
-                       "name=%s out=%zu",
-                       opr->cname(), opr->output().size());
+            mgb_assert(
+                    opr->output().size() == 1,
+                    "CondExecMerge in grad list has multiple outputs: "
+                    "name=%s out=%zu",
+                    opr->cname(), opr->output().size());
             auto cur_mode = opr->cast_final<CondExecMerge>().param().mode;
-            mgb_assert(cur_mode == Param::Mode::SUM ||
-                       cur_mode == Param::Mode::SUM_COND_OUT);
+            mgb_assert(
+                    cur_mode == Param::Mode::SUM ||
+                    cur_mode == Param::Mode::SUM_COND_OUT);
             if (merged_mode != Param::Mode::SUM_COND_OUT) {
                 // only allow promoting merge mode to be cond out (if any of the
                 // components are conditional)
                 merged_mode = cur_mode;
             }
-            merged_branches.insert(merged_branches.end(), opr->input().begin(),
-                                   opr->input().end());
+            merged_branches.insert(
+                    merged_branches.end(), opr->input().begin(), opr->input().end());
 
             if (cur_mode == Param::Mode::SUM_COND_OUT) {
                 // remove the predicate input
@@ -1327,8 +1317,7 @@ void CondExecMerge::modify_grad_sum_list(VarNode* wrt, VarNodeArray& grads) {
             } else if (cur_mode == Param::Mode::SUM) {
                 // remove shape input
                 mgb_assert(opr->input().size() >= opr->output().size() * 2);
-                merged_branches.resize(merged_branches.size() -
-                                       opr->output().size());
+                merged_branches.resize(merged_branches.size() - opr->output().size());
             }
             ++nr_merge_opr;
             ++nr_var_remove;
@@ -1350,9 +1339,9 @@ void CondExecMerge::modify_grad_sum_list(VarNode* wrt, VarNodeArray& grads) {
         if (merged_mode == Param::Mode::SUM) {
             grad_shapes.emplace_back(SymbolVar{wrt}.symshape());
         }
-        grads.push_back(CondExecMerge::make_opr(merged_branches, grad_shapes,
-                                                {1, merged_mode},
-                                                OperatorNodeConfig{})
+        grads.push_back(CondExecMerge::make_opr(
+                                merged_branches, grad_shapes, {1, merged_mode},
+                                OperatorNodeConfig{})
                                 ->output(0));
     }
 }

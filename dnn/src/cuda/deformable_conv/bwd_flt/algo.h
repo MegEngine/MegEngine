@@ -47,24 +47,27 @@ public:
 
         std::string to_string() const;
 
-        SizeArgs(DeformableConvBackwardFilterImpl* opr, const TensorLayout& im,
-                 const TensorLayout& offset, const TensorLayout& mask,
-                 const TensorLayout& out_grad, const TensorLayout& filter_grad);
+        SizeArgs(
+                DeformableConvBackwardFilterImpl* opr, const TensorLayout& im,
+                const TensorLayout& offset, const TensorLayout& mask,
+                const TensorLayout& out_grad, const TensorLayout& filter_grad);
 
-        SizeArgs(DeformableConvBackwardFilterImpl* opr, const TensorLayout& im,
-                 const TensorLayout& offset, const TensorLayout& mask,
-                 const TensorLayout& out_grad,
-                 const CanonizedFilterMeta& filter_grad_meta);
+        SizeArgs(
+                DeformableConvBackwardFilterImpl* opr, const TensorLayout& im,
+                const TensorLayout& offset, const TensorLayout& mask,
+                const TensorLayout& out_grad,
+                const CanonizedFilterMeta& filter_grad_meta);
     };
     struct ExecArgs : public SizeArgs {
         const TensorND im_tensor, offset_tensor, mask_tensor, out_grad_tensor;
         TensorND filter_grad_tensor;
         Workspace workspace;
 
-        ExecArgs(DeformableConvBackwardFilterImpl* opr, _megdnn_tensor_in im,
-                 _megdnn_tensor_in offset, _megdnn_tensor_in mask,
-                 _megdnn_tensor_in out_grad, _megdnn_tensor_out filter_grad,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                DeformableConvBackwardFilterImpl* opr, _megdnn_tensor_in im,
+                _megdnn_tensor_in offset, _megdnn_tensor_in mask,
+                _megdnn_tensor_in out_grad, _megdnn_tensor_out filter_grad,
+                _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -79,16 +82,15 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
-        megdnn_assert(req <= workspace.size,
-                      "deformable_conv bwd_flt algo %s: required workspace %zu "
-                      "bytes, got %zu",
-                      name(), req, workspace.size);
+        megdnn_assert(
+                req <= workspace.size,
+                "deformable_conv bwd_flt algo %s: required workspace %zu "
+                "bytes, got %zu",
+                name(), req, workspace.size);
         return *this;
     }
 };
@@ -102,13 +104,10 @@ public:
     size_t get_workspace_in_bytes(const SizeArgs& args) const override;
     void exec(const ExecArgs& args) const override;
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
 
     std::vector<SearchItem> get_subopr_list(
-            const TensorLayoutArray& layouts,
-            const OperatorBase* opr) const override;
+            const TensorLayoutArray& layouts, const OperatorBase* opr) const override;
 
     const char* name() const override { return "MATMUL"; }
     MEGDNN_DECL_ALGO_TYPE(CUDA_MATMUL)
@@ -116,6 +115,7 @@ public:
 
 class DeformableConvBackwardFilterImpl::AlgoPack : NonCopyableObj {
     AlgoBase::Mapper m_all_algos_map;
+
 public:
     AlgoPack();
 

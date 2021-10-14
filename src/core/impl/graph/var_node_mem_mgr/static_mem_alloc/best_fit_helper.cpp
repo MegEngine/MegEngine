@@ -16,21 +16,20 @@ using namespace mgb;
 using namespace cg;
 using IntervalPtrArray = StaticMemAllocImplHelper::IntervalPtrArray;
 
-void BestFitHelper::run(const IntervalPtrArray &intervals) {
-
+void BestFitHelper::run(const IntervalPtrArray& intervals) {
     // time => pair(alloc, free)
     using TimeEvent = std::pair<IntervalPtrArray, IntervalPtrArray>;
     std::map<size_t, TimeEvent> time2event;
-    for (auto i: intervals) {
+    for (auto i : intervals) {
         time2event[i->time_begin].first.push_back(i);
         time2event[i->time_end].second.push_back(i);
     }
 
     IntervalPtrArray to_overwrite;
 
-    for (auto &&tpair: time2event) {
+    for (auto&& tpair : time2event) {
         // free
-        for (auto i: tpair.second.second) {
+        for (auto i : tpair.second.second) {
             // if it is overwritten by others, the interval should already freed
             // in last alloc phase
 
@@ -40,7 +39,7 @@ void BestFitHelper::run(const IntervalPtrArray &intervals) {
 
         // alloc
         to_overwrite.clear();
-        for (auto i: tpair.second.first) {
+        for (auto i : tpair.second.first) {
             if (i->is_overwrite_root())
                 alloc(i);
             else
@@ -49,12 +48,11 @@ void BestFitHelper::run(const IntervalPtrArray &intervals) {
 
         // free original interval and alloc for overwrite after normal alloc, to
         // avoid double-alloc of same address
-        for (auto i: to_overwrite) {
-            Interval *dest = i->overwrite_dest();
+        for (auto i : to_overwrite) {
+            Interval* dest = i->overwrite_dest();
             alloc_overwrite(dest, i->offset_in_overwrite_dest(), i);
         }
     }
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

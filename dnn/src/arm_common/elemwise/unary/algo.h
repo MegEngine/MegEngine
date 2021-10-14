@@ -16,9 +16,7 @@ namespace arm_common {
 class ElemwiseImpl::AlgoUnary final : public ElemwiseImpl::AlgoBase {
     mutable std::string m_name;
 
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override {
         if (m_name.empty()) {
             m_name = ssprintf("Elemwise::AlgoUnary");

@@ -10,11 +10,11 @@
  * implied.
  */
 
-#include "test/cuda/benchmark.h"
 #include "test/common/padding.h"
 #include "megdnn/oprs.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
+#include "test/cuda/benchmark.h"
 #include "test/cuda/fixture.h"
 
 using namespace megdnn;
@@ -67,9 +67,9 @@ TEST_F(CUDA, PADDING_REFLECT) {
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
             Testcase{TensorValue({5}, dtype::Int8(), {1, 2, 3, 4, 5}), {}},
-            Testcase{{},
-                     TensorValue({10}, dtype::Int8(),
-                                 {3, 2, 1, 2, 3, 4, 5, 4, 3, 2})});
+            Testcase{
+                    {},
+                    TensorValue({10}, dtype::Int8(), {3, 2, 1, 2, 3, 4, 5, 4, 3, 2})});
 }
 
 TEST_F(CUDA, PADDING_REFLECT2) {
@@ -92,14 +92,13 @@ TEST_F(CUDA, PADDING_REFLECT2) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-            Testcase{TensorValue({3, 3}, dtype::Int8(),
-                                 {3, 5, 1, 3, 6, 1, 4, 7, 9}),
-                     {}},
-            Testcase{{},
-                     TensorValue({5, 7}, dtype::Int8(),
-                                 {1, 6, 3, 6, 1, 6, 3, 1, 5, 3, 5, 1,
-                                  5, 3, 1, 6, 3, 6, 1, 6, 3, 9, 7, 4,
-                                  7, 9, 7, 4, 1, 6, 3, 6, 1, 6, 3})});
+            Testcase{
+                    TensorValue({3, 3}, dtype::Int8(), {3, 5, 1, 3, 6, 1, 4, 7, 9}),
+                    {}},
+            Testcase{{}, TensorValue({5, 7}, dtype::Int8(), {1, 6, 3, 6, 1, 6, 3, 1, 5,
+                                                             3, 5, 1, 5, 3, 1, 6, 3, 6,
+                                                             1, 6, 3, 9, 7, 4, 7, 9, 7,
+                                                             4, 1, 6, 3, 6, 1, 6, 3})});
 }
 
 TEST_F(CUDA, PADDING_REPLICATE) {
@@ -122,12 +121,12 @@ TEST_F(CUDA, PADDING_REPLICATE) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-            Testcase{TensorValue({9}, dtype::Int8(),
-                                 {1, 2, 3, 4, 5, 6, 7, 8, 9}),
-                     {}},
-            Testcase{{},
-                     TensorValue({12}, dtype::Int8(),
-                                 {1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9})});
+            Testcase{TensorValue({9}, dtype::Int8(), {1, 2, 3, 4, 5, 6, 7, 8, 9}), {}},
+            Testcase{
+                    {},
+                    TensorValue(
+                            {12}, dtype::Int8(),
+                            {1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9})});
 }
 
 TEST_F(CUDA, PADDING_REPLICATE2) {
@@ -150,14 +149,13 @@ TEST_F(CUDA, PADDING_REPLICATE2) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-            Testcase{TensorValue({3, 3}, dtype::Int8(),
-                                 {1, 2, 3, 4, 5, 6, 7, 8, 9}),
-                     {}},
-            Testcase{{},
-                     TensorValue({5, 7}, dtype::Int8(),
-                                 {1, 1, 2, 3, 3, 3, 3, 1, 1, 2, 3, 3,
-                                  3, 3, 1, 1, 2, 3, 3, 3, 3, 4, 4, 5,
-                                  6, 6, 6, 6, 7, 7, 8, 9, 9, 9, 9})});
+            Testcase{
+                    TensorValue({3, 3}, dtype::Int8(), {1, 2, 3, 4, 5, 6, 7, 8, 9}),
+                    {}},
+            Testcase{{}, TensorValue({5, 7}, dtype::Int8(), {1, 1, 2, 3, 3, 3, 3, 1, 1,
+                                                             2, 3, 3, 3, 3, 1, 1, 2, 3,
+                                                             3, 3, 3, 4, 4, 5, 6, 6, 6,
+                                                             6, 7, 7, 8, 9, 9, 9, 9})});
 }
 
 // #if MEGDNN_WITH_BENCHMARK
@@ -168,18 +166,15 @@ TEST_F(CUDA, BENCHMARK_PADDING_CONSTANT) {
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         CUBenchmarker<PaddingForward> benchmarker(handle_cuda());
         benchmarker.set_param(param);
-        benchmarker.set_dtype(0, dtype::Int8())
-                .set_dtype(1, dtype::Int8());
+        benchmarker.set_dtype(0, dtype::Int8()).set_dtype(1, dtype::Int8());
 
         for (auto&& shape : shapes) {
             double memaccess =
-                    double(TensorLayout(shape, dtype::Int8())
-                                   .span()
-                                   .dist_byte()) *
+                    double(TensorLayout(shape, dtype::Int8()).span().dist_byte()) *
                     2e-6;
             auto time_ms = benchmarker.execs({shape, {}});
-            printf("execute %s, time %.4f ms, %.4f GB/s\n",
-                   shape.to_string().c_str(), time_ms, memaccess / time_ms);
+            printf("execute %s, time %.4f ms, %.4f GB/s\n", shape.to_string().c_str(),
+                   time_ms, memaccess / time_ms);
         }
     };
 
@@ -193,7 +188,7 @@ TEST_F(CUDA, BENCHMARK_PADDING_CONSTANT) {
         param.front_offset_dim1 = 1;
         run(shapes, param);
     }
-    
+
     printf("mode -> replicate; dtype -> int8\n");
     {
         TensorShapeArray shapes = {

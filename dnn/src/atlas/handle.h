@@ -15,10 +15,10 @@
 #include "megdnn/handle.h"
 #include "megdnn/oprs/general.h"
 
+#include "src/atlas/megcore/device_context.hpp"
 #include "src/common/handle_impl.h"
 #include "src/common/megcore/common/device_context.hpp"
 #include "src/common/utils.h"
-#include "src/atlas/megcore/device_context.hpp"
 
 #include <atomic>
 #include <mutex>
@@ -38,9 +38,7 @@ public:
     template <typename Opr>
     std::unique_ptr<Opr> create_operator();
 
-    const megcore::AtlasContext& megcore_context() const {
-        return m_megcore_context;
-    }
+    const megcore::AtlasContext& megcore_context() const { return m_megcore_context; }
 
     int device_id() const { return m_device_id; }
 

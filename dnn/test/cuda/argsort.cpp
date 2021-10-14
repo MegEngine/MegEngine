@@ -121,4 +121,3 @@ TEST_F(CUDA, ARGSORT_BACKWARD_I32) {
 }
 
 // vim: syntax=cpp.doxygen
-

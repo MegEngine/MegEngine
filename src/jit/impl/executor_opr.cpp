@@ -21,8 +21,8 @@
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/utils/hash.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
+#include "megbrain/utils/hash.h"
 
 #if MGB_JIT
 
@@ -33,16 +33,14 @@ using CPFlag = Compiler::Property::Flag;
 /* =================== Fusion ==================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(JITExecutor);
-JITExecutor::JITExecutor(const InternalGraphPtr& internal_graph,
-                         const VarNodeArray& inputs,
-                         const OperatorNodeConfig& config)
+JITExecutor::JITExecutor(
+        const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
+        const OperatorNodeConfig& config)
         : Super(internal_graph->output()->owner_graph(), config,
-                ssprintf("JIT-Fusion{%zu}",
-                         internal_graph->placeholders().size()),
+                ssprintf("JIT-Fusion{%zu}", internal_graph->placeholders().size()),
                 inputs),
           m_internal_graph{internal_graph},
-          m_compiler{Compiler::get(*inputs[0]->owner_graph(),
-                                   inputs[0]->comp_node())} {
+          m_compiler{Compiler::get(*inputs[0]->owner_graph(), inputs[0]->comp_node())} {
     for (auto inp : inputs) {
         add_input({inp});
     }
@@ -52,9 +50,7 @@ JITExecutor::JITExecutor(const InternalGraphPtr& internal_graph,
     for (size_t i = 0; i < inputs.size(); ++i) {
         mgb_assert(placeholders[i]->output(0) != internal_graph->output());
         if (placeholders[i]->is_host_value_shape_input() ||
-            input()[i]
-                    ->owner_opr()
-                    ->same_type<opr::MarkNoBroadcastElemwise>()) {
+            input()[i]->owner_opr()->same_type<opr::MarkNoBroadcastElemwise>()) {
             m_input_broadcastable[i] = false;
         } else {
             m_input_broadcastable[i] = true;
@@ -67,8 +63,7 @@ JITExecutor::JITExecutor(const InternalGraphPtr& internal_graph,
         for (size_t i = 0; i < input().size(); ++i) {
             if (placeholders[i]->is_host_value_shape_input())
                 continue;
-            if (!(cg::is_const_var_shape(input(i)) &&
-                  input(i)->shape().is_scalar())) {
+            if (!(cg::is_const_var_shape(input(i)) && input(i)->shape().is_scalar())) {
                 if (non_scalar.valid()) {
                     non_scalar.invalidate();
                     break;
@@ -83,8 +78,7 @@ JITExecutor::JITExecutor(const InternalGraphPtr& internal_graph,
     }
     add_output(None)->dtype(m_internal_graph->output()->dtype());
     add_equivalence_component<ScalarHash<void*>>(internal_graph->output());
-    for (size_t i = 0, it = m_compiler->get_nr_workspace_outputs(this); i < it;
-         ++i) {
+    for (size_t i = 0, it = m_compiler->get_nr_workspace_outputs(this); i < it; ++i) {
         cg::add_workspace_output(this);
     }
 
@@ -100,17 +94,17 @@ JITExecutor::JITExecutor(const InternalGraphPtr& internal_graph,
             m_feature_bits |= JITFeatureBits::DIMSHUFFLE;
         }
         if (auto ph = opr->try_cast_final<JITPlaceholder>()) {
-            mgb_assert(ph->input_id() < nr_placeholders,
-                "bad placeholders %s in JITExecutor %s",
-                ph->cname(), cname());
+            mgb_assert(
+                    ph->input_id() < nr_placeholders,
+                    "bad placeholders %s in JITExecutor %s", ph->cname(), cname());
             used[ph->input_id()] = true;
         }
     }}.add(internal_graph->output());
 
-    for (size_t i = 0; i < nr_placeholders; ++ i) {
-        mgb_assert(used[i],
-            "placeholder %s is not depended on the output of %s",
-            internal_graph_ptr()->placeholders()[i]->cname(), cname());
+    for (size_t i = 0; i < nr_placeholders; ++i) {
+        mgb_assert(
+                used[i], "placeholder %s is not depended on the output of %s",
+                internal_graph_ptr()->placeholders()[i]->cname(), cname());
     }
 
     if (has_dimshuffle()) {
@@ -137,18 +131,17 @@ void JITExecutor::init_output_mem_plan(bool dynamic) {
 
 void JITExecutor::mem_plan_fwd_in2out_writable() {
     //! currently mem fwd only support elemwise fusion
-    if (m_feature_bits != JITFeatureBits::NONE) return;
+    if (m_feature_bits != JITFeatureBits::NONE)
+        return;
     mixin_mem_plan_fwd_in2out_writable(*this);
 }
 
-
-SymbolVar JITExecutor::make(const InternalGraphPtr& internal_graph,
-                            const VarNodeArray& inputs,
-                            const OperatorNodeConfig& config) {
+SymbolVar JITExecutor::make(
+        const InternalGraphPtr& internal_graph, const VarNodeArray& inputs,
+        const OperatorNodeConfig& config) {
     return internal_graph->output()
             ->owner_graph()
-            ->insert_opr(std::make_unique<JITExecutor>(internal_graph, inputs,
-                                                       config))
+            ->insert_opr(std::make_unique<JITExecutor>(internal_graph, inputs, config))
             ->output(0);
 }
 
@@ -156,8 +149,7 @@ void JITExecutor::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
     mgr.register_shape_infer(
-            output(0),
-            ShapeInferDesc::make_identity(m_internal_graph->shape_infer()));
+            output(0), ShapeInferDesc::make_identity(m_internal_graph->shape_infer()));
     m_compiler->init_workspace_size_infer(this);
     if (m_internal_graph->value_infer()) {
         mgr.register_value_infer(
@@ -176,10 +168,8 @@ void JITExecutor::scn_do_execute() {
 //! change the inputs which depend on dimshuffle opr, make sure dimshuffles
 //! can be ignored
 void JITExecutor::do_dimshuffle() {
-
     static auto get_dimshuffled_layout = [](const TensorLayout& ily,
-            std::vector<int> pattern) {
-
+                                            std::vector<int> pattern) {
         TensorLayout oly{ily.dtype};
         oly.ndim = pattern.size();
 
@@ -197,10 +187,10 @@ void JITExecutor::do_dimshuffle() {
         }
 
         for (size_t i = 0; i < ily.ndim; ++i) {
-            mgb_assert(input_used[i] || ily.shape[i] == 1,
-                       "non-1 dim discarded in Dimshuffle: ishp=%s dim=%zd",
-                       static_cast<const TensorShape&>(ily).to_string().c_str(),
-                       i);
+            mgb_assert(
+                    input_used[i] || ily.shape[i] == 1,
+                    "non-1 dim discarded in Dimshuffle: ishp=%s dim=%zd",
+                    static_cast<const TensorShape&>(ily).to_string().c_str(), i);
         }
         return oly;
     };
@@ -208,15 +198,16 @@ void JITExecutor::do_dimshuffle() {
     for (auto&& i : m_internal_graph->placeholders()) {
         auto&& input = m_args.inputs[i->input_id()];
         auto&& iter = m_jitph2dimshuffle.find(i);
-        if (iter == m_jitph2dimshuffle.end()) continue;
+        if (iter == m_jitph2dimshuffle.end())
+            continue;
         auto&& param = iter->second;
-        mgb_assert(input.layout.ndim == param.second,
-                    "input ndim mismatch for Dimshuffle: "
-                    "expect=%u "
-                    "actual=%zu",
-                    param.second, input.layout.ndim);
-        auto dimshuffled_layout = get_dimshuffled_layout(
-                input.layout, param.first);
+        mgb_assert(
+                input.layout.ndim == param.second,
+                "input ndim mismatch for Dimshuffle: "
+                "expect=%u "
+                "actual=%zu",
+                param.second, input.layout.ndim);
+        auto dimshuffled_layout = get_dimshuffled_layout(input.layout, param.first);
         input.layout = dimshuffled_layout;
     }
 }
@@ -229,9 +220,7 @@ void JITExecutor::update_args() {
     m_args.inputs.resize(input().size());
 
     auto is_host_value_shape_input = [this](size_t idx) {
-        return m_internal_graph->placeholders()
-                .at(idx)
-                ->is_host_value_shape_input();
+        return m_internal_graph->placeholders().at(idx)->is_host_value_shape_input();
     };
 
     for (size_t i = 0; i < input().size(); i++) {
@@ -265,8 +254,8 @@ void JITExecutor::update_args() {
                 inp_layouts.push_back(&m_args.inputs[i].layout);
             }
         }
-        opr::Elemwise::broadcast_collective_collapse(inp_layouts,
-                                                     &m_args.outputs[0].layout);
+        opr::Elemwise::broadcast_collective_collapse(
+                inp_layouts, &m_args.outputs[0].layout);
     }
 
     // compute and update hash
@@ -275,8 +264,9 @@ void JITExecutor::update_args() {
     //  update layout info
     auto prop = m_compiler->property();
     if (prop.contain_flag(CPFlag::BIND_NDIM | CPFlag::BIND_SHAPE)) {
-        mgb_assert(prop.contain_flag(CPFlag::BIND_NDIM),
-                   "BIND_NDIM must be set if bind_shape is set");
+        mgb_assert(
+                prop.contain_flag(CPFlag::BIND_NDIM),
+                "BIND_NDIM must be set if bind_shape is set");
         std::vector<size_t> buf;
         buf.reserve(1024);
         buf.push_back(m_args.inputs.size());
@@ -313,14 +303,14 @@ void JITExecutor::prepare_dimshuffle() {
             param.first.insert(param.first.end(), p.pattern, p.pattern + p.pattern_len);
             param.second = p.ndim;
         } else {
-            // merge(p, src) -> param and it has performing dimshuffle(dimshuffle(x, p), src)
-            // is equivalent to dimshuffle(x, param)
+            // merge(p, src) -> param and it has performing dimshuffle(dimshuffle(x, p),
+            // src) is equivalent to dimshuffle(x, param)
             dimshuffle_stack.emplace_back();
             auto&& param = dimshuffle_stack.back();
             auto&& src = dimshuffle_stack[dimshuffle_stack.size() - 2];
             mgb_assert(p.pattern_len == src.second);
             param.first.resize(src.first.size());
-            for (size_t i = 0; i < src.first.size(); ++ i) {
+            for (size_t i = 0; i < src.first.size(); ++i) {
                 if (src.first[i] == -1) {
                     param.first[i] = -1;
                 } else {
@@ -356,21 +346,22 @@ void JITExecutor::prepare_dimshuffle() {
                 if (auto jitph = cur_opr->try_cast_final<jit::JITPlaceholder>()) {
                     if (!dimshuffle_stack.empty()) {
                         mgb_assert(
-                            m_jitph2dimshuffle.emplace(jitph, dimshuffle_stack.back()).second,
-                            "already visited JITPlaceholder %s",
-                            jitph->cname());
+                                m_jitph2dimshuffle
+                                        .emplace(jitph, dimshuffle_stack.back())
+                                        .second,
+                                "already visited JITPlaceholder %s", jitph->cname());
                     }
-                    ++ idx.back();
+                    ++idx.back();
                 } else {
                     push_back(cur_opr);
                 }
             } else {
-                ++ idx.back();
+                ++idx.back();
             }
         } else {
             pop_back();
             if (!stack.empty())
-                ++ idx.back();
+                ++idx.back();
         }
     }
 }
@@ -431,9 +422,8 @@ JITExecutor::NodeProp* JITExecutor::do_make_node_prop() const {
     SmallVector<DepType> dt(input().size());
     auto&& placeholders = internal_graph().placeholders();
     for (size_t i = 0; i < dt.size(); ++i) {
-        dt[i] = placeholders[i]->is_host_value_shape_input()
-                        ? DepType::HOST_VALUE
-                        : DepType::DEV_VALUE;
+        dt[i] = placeholders[i]->is_host_value_shape_input() ? DepType::HOST_VALUE
+                                                             : DepType::DEV_VALUE;
     }
     ret->reset_dep_type(input(), dt);
     return ret;
@@ -452,7 +442,6 @@ megdnn::TensorShape JITExecutor::broadcasted_input_shape() const {
     return brdcast_shp;
 }
 
-
 #if MGB_ENABLE_GRAD
 namespace {
 class InternalGraphRewriter {
@@ -466,17 +455,15 @@ class InternalGraphRewriter {
         }
         return var;
     }
+
 public:
-    InternalGraphRewriter(VarNode* dest_var)
-        :m_dest_var{dest_var}{}
+    InternalGraphRewriter(VarNode* dest_var) : m_dest_var{dest_var} {}
     void iter(thin_function<void(cg::OperatorNodeBase*)>&& cb) {
         m_var_map.clear();
         cg::DepOprIter{std::move(cb)}.add(m_dest_var->owner_opr());
         m_dest_var = get_var(m_dest_var);
     }
-    VarNode* dest_var() {
-        return m_dest_var;
-    }
+    VarNode* dest_var() { return m_dest_var; }
     void replace_var(VarNode* src, VarNode* dst) {
         // Note: do not perform var replacing recursively
         // when we extract used placeholders from internal graph, we don't
@@ -503,7 +490,7 @@ public:
         }
     }
 };
-} // anonymous namespace
+}  // anonymous namespace
 MGB_IMPL_OPR_GRAD(JITExecutor) {
     VarNodeArray grad_inputs;
     for (auto input : opr.input())
@@ -517,8 +504,8 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
     auto og_ph = JITPlaceholder::make(
             out_grad[0], fwd_igraph_ptr->placeholders().size() + 1);
     auto loss = opr::VirtualLoss::make({fwd_igraph_ptr->output()}, {og_ph});
-    auto gx = cg::grad(loss, fwd_igraph_ptr->placeholders()[wrt_idx]->output(0),
-                       false, false);
+    auto gx = cg::grad(
+            loss, fwd_igraph_ptr->placeholders()[wrt_idx]->output(0), false, false);
     if (!gx.node()) {
         return nullptr;
     }
@@ -547,8 +534,7 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
     // we could forward opr.output(computeed by forward JITExecutor) into
     // placeholder to avoid redundant computation
     InternalGraphRewriter rewriter{gx.node()};
-    rewriter.iter([&rewriter, &fwd_igraph_ptr,
-            &output_ph](cg::OperatorNodeBase* opr) {
+    rewriter.iter([&rewriter, &fwd_igraph_ptr, &output_ph](cg::OperatorNodeBase* opr) {
         if (opr == fwd_igraph_ptr->output()->owner_opr()) {
             rewriter.replace_var(opr->output(0), output_ph.node());
             return;
@@ -557,17 +543,18 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
     });
 
     auto expand_into_origin_graph = [&rewriter](
-        cg::OperatorNodeBase* opr, const VarNodeArray& grad_inputs) {
+                                            cg::OperatorNodeBase* opr,
+                                            const VarNodeArray& grad_inputs) {
         if (auto ph = gopt::try_cast_as_op<JITPlaceholder>(opr)) {
-            rewriter.replace_var(
-                opr->output(0), grad_inputs.at(ph->input_id()));
+            rewriter.replace_var(opr->output(0), grad_inputs.at(ph->input_id()));
             return;
         }
         if (auto imm = gopt::try_cast_as_op<opr::ImmutableTensor>(opr)) {
             HostTensorND hval{grad_inputs[0]->comp_node()};
             hval.copy_from(imm->value()).sync();
-            rewriter.replace_var(opr->output(0),
-                opr::ImmutableTensor::make(*opr->owner_graph(), hval).node());
+            rewriter.replace_var(
+                    opr->output(0),
+                    opr::ImmutableTensor::make(*opr->owner_graph(), hval).node());
             return;
         }
         rewriter.auto_replace_outputs(opr);
@@ -577,8 +564,7 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
         // expand the gradient graph into the original graph to handle bcast
         // oprs
         using namespace std::placeholders;
-        rewriter.iter(std::bind(expand_into_origin_graph, _1,
-                std::cref(grad_inputs)));
+        rewriter.iter(std::bind(expand_into_origin_graph, _1, std::cref(grad_inputs)));
         return rewriter.dest_var();
     } else {
         VarNodeArray new_grad_inputs;
@@ -586,13 +572,14 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
         bool all_inp_const = true;
         // gx was not depend on all JITPlaceholders so we need to extract used
         // placeholders and build a new internal graph
-        rewriter.iter([&rewriter, &grad_inputs, &new_grad_inputs,
-                &placeholders, &all_inp_const](cg::OperatorNodeBase* opr) {
+        rewriter.iter([&rewriter, &grad_inputs, &new_grad_inputs, &placeholders,
+                       &all_inp_const](cg::OperatorNodeBase* opr) {
             if (auto ph = gopt::try_cast_as_op<JITPlaceholder>(opr)) {
                 new_grad_inputs.push_back(grad_inputs[ph->input_id()]);
                 auto new_ph = JITPlaceholder::make(
-                        new_grad_inputs.back(), placeholders.size())
-                        .node()->owner_opr();
+                                      new_grad_inputs.back(), placeholders.size())
+                                      .node()
+                                      ->owner_opr();
                 placeholders.push_back(new_ph->try_cast_final<JITPlaceholder>());
                 mgb_assert(placeholders.back());
                 rewriter.replace_var(opr->output(0), new_ph->output(0));
@@ -608,8 +595,8 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
             // placeholders with const inputs, so it could benefit from static
             // infer and const folding mechanism
             using namespace std::placeholders;
-            rewriter.iter(std::bind(expand_into_origin_graph, _1,
-                    std::cref(new_grad_inputs)));
+            rewriter.iter(std::bind(
+                    expand_into_origin_graph, _1, std::cref(new_grad_inputs)));
             return rewriter.dest_var();
         }
         gx = rewriter.dest_var();
@@ -622,22 +609,23 @@ MGB_IMPL_OPR_GRAD(JITExecutor) {
                 auto&& pattern = iter->second.first;
                 auto&& ndim = iter->second.second;
                 std::vector<int> back(ndim, -1);
-                for (size_t i = 0; i < pattern.size(); i ++) {
+                for (size_t i = 0; i < pattern.size(); i++) {
                     // outdim[i] is indim[j]
                     auto j = pattern[i];
                     if (j >= 0) {
-                        mgb_assert(back[j] == -1,
+                        mgb_assert(
+                                back[j] == -1,
                                 "taking grad for Dimshuffle with duplicated "
                                 "input axis unsupported");
                         back[j] = i;
                     }
                 }
-                shape_infer = opr::Dimshuffle::make(shape_infer, back, pattern.size()).node();
+                shape_infer =
+                        opr::Dimshuffle::make(shape_infer, back, pattern.size()).node();
             }
         }
         auto grad_ig = std::make_shared<InternalGraph>(
-                gx.node(), shape_infer, nullptr,
-                std::move(placeholders));
+                gx.node(), shape_infer, nullptr, std::move(placeholders));
         auto grad_jit = JITExecutor::make(grad_ig, new_grad_inputs);
 
         if (opr.input_broadcastable()[wrt_idx]) {

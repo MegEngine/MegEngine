@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {

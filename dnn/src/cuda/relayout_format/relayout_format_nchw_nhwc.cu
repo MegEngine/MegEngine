@@ -35,8 +35,8 @@ struct rwtype_helper<8> {
 
 void relayout_format::relayout_format_cuda_nchw_nhwc(
         const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
-        const float src_scale, const float dst_scale,
-        const uint8_t src_zero_point, const uint8_t dst_zero_point) {
+        const float src_scale, const float dst_scale, const uint8_t src_zero_point,
+        const uint8_t dst_zero_point) {
     auto&& stype = src.layout.dtype;
     auto&& dtype = dst.layout.dtype;
     auto& src_layout = src.layout;
@@ -58,50 +58,46 @@ void relayout_format::relayout_format_cuda_nchw_nhwc(
 
     bool same_scale = src_scale == dst_scale;
     bool padding = w % 2 != 0;
-#define DISPATCH_RAW(_padding, _same_scale, _pack_w, _src_type, _dst_type,     \
-                     _src_c_type, _dst_c_type, _size_nbits)                    \
-    if (padding == _padding && same_scale == _same_scale &&                    \
-        hw % _pack_w == 0 && stype.enumv().ev == DTypeEnum::Ev::_src_type &&   \
-        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                        \
-        using InnerDtype_ = typename rwtype_helper<_pack_w>::InnerDtype;       \
-        using SrcIterator_ =                                                   \
-                TensorIteratorOverChannel<InnerDtype_, 1, chan_blk, _pack_w,   \
-                                          _size_nbits>;                        \
-        using DstIterator_ = typename TensorIteratorPolicy<                    \
-                _padding, _dst_c_type, pack_oc, chan_blk, _pack_w,             \
-                _size_nbits, LayoutType::NHWC>::TensorIterator;                \
-        using CudaPostProcess_ =                                               \
-                CudaPostProcess<dtype::_src_type, dtype::_dst_type,            \
-                                _same_scale>;                                  \
-        using Transpose_ =                                                     \
-                Translayout<_pack_w, chan_blk, InnerDtype_, dtype::_src_type,  \
-                            dtype::_dst_type, _same_scale>;                    \
-        using RelayoutProblem_ =                                               \
-                RelayoutProblem<SrcIterator_, DstIterator_, Transpose_,        \
-                                CudaPostProcess_>;                             \
-        n_stride_src = n_stride_src * _size_nbits / (8 * sizeof(InnerDtype_)); \
-        ic_stride = ic_stride * _size_nbits / (8 * sizeof(InnerDtype_));       \
-        n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(_dst_c_type)); \
-        hw_stride = hw_stride * _size_nbits / (8 * sizeof(_dst_c_type));       \
-        typename RelayoutProblem_::Param param{                                \
-                SrcIterator_{(InnerDtype_*)src.raw_ptr, ic_stride, ic, w,      \
-                             w_pad},                                           \
-                DstIterator_{(_dst_c_type*)dst.raw_ptr, hw_stride, oc, w,      \
-                             w_pad},                                           \
-                CudaPostProcess_{src_scale, src_zero_point, dst_scale,         \
-                                 dst_zero_point},                              \
-                n_stride_src,                                                  \
-                n_stride_dst,                                                  \
-                n,                                                             \
-                ic,                                                            \
-                hw,                                                            \
-                src_zero_point};                                               \
-        auto kernel = relayout_kern<RelayoutProblem_>;                         \
-        int nr_threads = query_blocksize_for_kernel(kernel);                   \
-        nr_threads = std::min(nr_threads, DIVUP(problem_size, _pack_w));       \
-        const dim3 block_dim(DIVUP(problem_size, nr_threads* _pack_w));        \
-        const dim3 thread_dim(nr_threads);                                     \
-        return kernel<<<block_dim, thread_dim, 0, stream>>>(param);            \
+#define DISPATCH_RAW(                                                               \
+        _padding, _same_scale, _pack_w, _src_type, _dst_type, _src_c_type,          \
+        _dst_c_type, _size_nbits)                                                   \
+    if (padding == _padding && same_scale == _same_scale && hw % _pack_w == 0 &&    \
+        stype.enumv().ev == DTypeEnum::Ev::_src_type &&                             \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                             \
+        using InnerDtype_ = typename rwtype_helper<_pack_w>::InnerDtype;            \
+        using SrcIterator_ = TensorIteratorOverChannel<                             \
+                InnerDtype_, 1, chan_blk, _pack_w, _size_nbits>;                    \
+        using DstIterator_ = typename TensorIteratorPolicy<                         \
+                _padding, _dst_c_type, pack_oc, chan_blk, _pack_w, _size_nbits,     \
+                LayoutType::NHWC>::TensorIterator;                                  \
+        using CudaPostProcess_ =                                                    \
+                CudaPostProcess<dtype::_src_type, dtype::_dst_type, _same_scale>;   \
+        using Transpose_ = Translayout<                                             \
+                _pack_w, chan_blk, InnerDtype_, dtype::_src_type, dtype::_dst_type, \
+                _same_scale>;                                                       \
+        using RelayoutProblem_ = RelayoutProblem<                                   \
+                SrcIterator_, DstIterator_, Transpose_, CudaPostProcess_>;          \
+        n_stride_src = n_stride_src * _size_nbits / (8 * sizeof(InnerDtype_));      \
+        ic_stride = ic_stride * _size_nbits / (8 * sizeof(InnerDtype_));            \
+        n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(_dst_c_type));      \
+        hw_stride = hw_stride * _size_nbits / (8 * sizeof(_dst_c_type));            \
+        typename RelayoutProblem_::Param param{                                     \
+                SrcIterator_{(InnerDtype_*)src.raw_ptr, ic_stride, ic, w, w_pad},   \
+                DstIterator_{(_dst_c_type*)dst.raw_ptr, hw_stride, oc, w, w_pad},   \
+                CudaPostProcess_{                                                   \
+                        src_scale, src_zero_point, dst_scale, dst_zero_point},      \
+                n_stride_src,                                                       \
+                n_stride_dst,                                                       \
+                n,                                                                  \
+                ic,                                                                 \
+                hw,                                                                 \
+                src_zero_point};                                                    \
+        auto kernel = relayout_kern<RelayoutProblem_>;                              \
+        int nr_threads = query_blocksize_for_kernel(kernel);                        \
+        nr_threads = std::min(nr_threads, DIVUP(problem_size, _pack_w));            \
+        const dim3 block_dim(DIVUP(problem_size, nr_threads* _pack_w));             \
+        const dim3 thread_dim(nr_threads);                                          \
+        return kernel<<<block_dim, thread_dim, 0, stream>>>(param);                 \
     }
 #define DISPATCH_4BITS(_src_type, _dst_type)                            \
     DISPATCH_RAW(true, true, 8, _src_type, _dst_type, char, char, 4);   \
@@ -116,15 +112,15 @@ void relayout_format::relayout_format_cuda_nchw_nhwc(
     DISPATCH_4BITS(Quantized4Asymm, Quantized4Asymm);
 #undef DISPATCH_4BITS
 #undef DISPATCH_RAW
-    megdnn_assert(false,
-                  "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
-                  stype.name(), dtype.name(), h, w);
+    megdnn_assert(
+            false, "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
+            stype.name(), dtype.name(), h, w);
 }
 
 void relayout_format::relayout_format_cuda_nhwc_nchw(
         const TensorND& src, const TensorND& dst, const cudaStream_t& stream,
-        const float src_scale, const float dst_scale,
-        const uint8_t src_zero_point, const uint8_t dst_zero_point) {
+        const float src_scale, const float dst_scale, const uint8_t src_zero_point,
+        const uint8_t dst_zero_point) {
     auto&& stype = src.layout.dtype;
     auto&& dtype = dst.layout.dtype;
     auto& src_layout = src.layout;
@@ -147,50 +143,46 @@ void relayout_format::relayout_format_cuda_nhwc_nchw(
 
     bool same_scale = src_scale == dst_scale;
     bool padding = w % 2 != 0;
-#define DISPATCH_RAW(_padding, _same_scale, _pack_w, _src_type, _dst_type,     \
-                     _src_c_type, _dst_c_type, _size_nbits)                    \
-    if (padding == _padding && same_scale == _same_scale &&                    \
-        hw % _pack_w == 0 && stype.enumv().ev == DTypeEnum::Ev::_src_type &&   \
-        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                        \
-        using SrcIterator_ = typename TensorIteratorPolicy<                    \
-                _padding, _src_c_type, pack_oc, chan_blk, _pack_w,             \
-                _size_nbits, LayoutType::NHWC>::TensorIterator;                \
-        using InnerDtype_ = typename rwtype_helper<_pack_w>::InnerDtype;       \
-        using DstIterator_ =                                                   \
-                TensorIteratorOverChannel<InnerDtype_, 1, chan_blk, _pack_w,   \
-                                          _size_nbits>;                        \
-        using CudaPostProcess_ =                                               \
-                CudaPostProcess<dtype::_src_type, dtype::_dst_type,            \
-                                _same_scale>;                                  \
-        using Transpose_ =                                                     \
-                Translayout<chan_blk, _pack_w, _src_c_type, dtype::_src_type,  \
-                            dtype::_dst_type, _same_scale>;                    \
-        using RelayoutProblem_ =                                               \
-                RelayoutProblem<SrcIterator_, DstIterator_, Transpose_,        \
-                                CudaPostProcess_>;                             \
-        n_stride_src = n_stride_src * _size_nbits / (8 * sizeof(_src_c_type)); \
-        hw_stride = hw_stride * _size_nbits / (8 * sizeof(_src_c_type));       \
-        n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(InnerDtype_)); \
-        oc_stride = oc_stride * _size_nbits / (8 * sizeof(InnerDtype_));       \
-        typename RelayoutProblem_::Param param{                                \
-                SrcIterator_{(_src_c_type*)src.raw_ptr, hw_stride, ic, w,      \
-                             w_pad},                                           \
-                DstIterator_{(InnerDtype_*)dst.raw_ptr, oc_stride, oc, w,      \
-                             w_pad},                                           \
-                CudaPostProcess_{src_scale, src_zero_point, dst_scale,         \
-                                 dst_zero_point},                              \
-                n_stride_src,                                                  \
-                n_stride_dst,                                                  \
-                n,                                                             \
-                ic,                                                            \
-                hw,                                                            \
-                src_zero_point};                                               \
-        auto kernel = relayout_kern<RelayoutProblem_>;                         \
-        int nr_threads = query_blocksize_for_kernel(kernel);                   \
-        nr_threads = std::min(nr_threads, DIVUP(problem_size, _pack_w));       \
-        const dim3 block_dim(DIVUP(problem_size, nr_threads* _pack_w));        \
-        const dim3 thread_dim(nr_threads);                                     \
-        return kernel<<<block_dim, thread_dim, 0, stream>>>(param);            \
+#define DISPATCH_RAW(                                                               \
+        _padding, _same_scale, _pack_w, _src_type, _dst_type, _src_c_type,          \
+        _dst_c_type, _size_nbits)                                                   \
+    if (padding == _padding && same_scale == _same_scale && hw % _pack_w == 0 &&    \
+        stype.enumv().ev == DTypeEnum::Ev::_src_type &&                             \
+        dtype.enumv().ev == DTypeEnum::Ev::_dst_type) {                             \
+        using SrcIterator_ = typename TensorIteratorPolicy<                         \
+                _padding, _src_c_type, pack_oc, chan_blk, _pack_w, _size_nbits,     \
+                LayoutType::NHWC>::TensorIterator;                                  \
+        using InnerDtype_ = typename rwtype_helper<_pack_w>::InnerDtype;            \
+        using DstIterator_ = TensorIteratorOverChannel<                             \
+                InnerDtype_, 1, chan_blk, _pack_w, _size_nbits>;                    \
+        using CudaPostProcess_ =                                                    \
+                CudaPostProcess<dtype::_src_type, dtype::_dst_type, _same_scale>;   \
+        using Transpose_ = Translayout<                                             \
+                chan_blk, _pack_w, _src_c_type, dtype::_src_type, dtype::_dst_type, \
+                _same_scale>;                                                       \
+        using RelayoutProblem_ = RelayoutProblem<                                   \
+                SrcIterator_, DstIterator_, Transpose_, CudaPostProcess_>;          \
+        n_stride_src = n_stride_src * _size_nbits / (8 * sizeof(_src_c_type));      \
+        hw_stride = hw_stride * _size_nbits / (8 * sizeof(_src_c_type));            \
+        n_stride_dst = n_stride_dst * _size_nbits / (8 * sizeof(InnerDtype_));      \
+        oc_stride = oc_stride * _size_nbits / (8 * sizeof(InnerDtype_));            \
+        typename RelayoutProblem_::Param param{                                     \
+                SrcIterator_{(_src_c_type*)src.raw_ptr, hw_stride, ic, w, w_pad},   \
+                DstIterator_{(InnerDtype_*)dst.raw_ptr, oc_stride, oc, w, w_pad},   \
+                CudaPostProcess_{                                                   \
+                        src_scale, src_zero_point, dst_scale, dst_zero_point},      \
+                n_stride_src,                                                       \
+                n_stride_dst,                                                       \
+                n,                                                                  \
+                ic,                                                                 \
+                hw,                                                                 \
+                src_zero_point};                                                    \
+        auto kernel = relayout_kern<RelayoutProblem_>;                              \
+        int nr_threads = query_blocksize_for_kernel(kernel);                        \
+        nr_threads = std::min(nr_threads, DIVUP(problem_size, _pack_w));            \
+        const dim3 block_dim(DIVUP(problem_size, nr_threads* _pack_w));             \
+        const dim3 thread_dim(nr_threads);                                          \
+        return kernel<<<block_dim, thread_dim, 0, stream>>>(param);                 \
     }
 #define DISPATCH_4BITS(_src_type, _dst_type)                            \
     DISPATCH_RAW(true, true, 8, _src_type, _dst_type, char, char, 4);   \
@@ -205,7 +197,7 @@ void relayout_format::relayout_format_cuda_nhwc_nchw(
     DISPATCH_4BITS(Quantized4Asymm, Quantized4Asymm);
 #undef DISPATCH_4BITS
 #undef DISPATCH_RAW
-    megdnn_assert(false,
-                  "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
-                  stype.name(), dtype.name(), h, w);
+    megdnn_assert(
+            false, "Unsupported data type(src:%s, dst:%s) or image size(%dx%d).",
+            stype.name(), dtype.name(), h, w);
 }

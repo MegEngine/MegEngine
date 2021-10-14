@@ -28,8 +28,7 @@ class AlgoChooserHelper : cg::OperatorNodeMixinBase {
 public:
     using ExecutionPolicy = megdnn::param::ExecutionPolicy;
     using AlgorithmPolicy = megdnn::ExecutionPolicy;
-    using AlgoChooserHook =
-            std::function<AlgorithmPolicy(const cg::OperatorNodeBase*)>;
+    using AlgoChooserHook = std::function<AlgorithmPolicy(const cg::OperatorNodeBase*)>;
 
     const ExecutionPolicy& execution_policy() const {
         if (!m_policy_accessed) {
@@ -44,9 +43,7 @@ public:
      * This is primarily used for getting current policy before calling
      * set_execution_policy().
      */
-    const ExecutionPolicy& execution_policy_transient() const {
-        return m_policy;
-    }
+    const ExecutionPolicy& execution_policy_transient() const { return m_policy; }
 
     /*!
      * \brief modify execution policy
@@ -69,7 +66,6 @@ protected:
     ExecutionPolicy m_policy;
 
     AlgoChooserHook m_algo_chooser;
-
 };
 }  // namespace mixin
 }  // namespace opr

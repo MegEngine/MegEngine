@@ -16,19 +16,20 @@
 namespace megdnn {
 namespace arm_common {
 namespace direct_dotprod_nchw44 {
-template <typename dst_type, BiasMode bias_mode, typename Op, int ow_remain,
-          int filter_size, int oc_interval, int ow_interval>
-struct KernNeonSdotNCHW44<dst_type, 2, bias_mode, Op, ow_remain, filter_size,
-                          oc_interval, ow_interval> {
+template <
+        typename dst_type, BiasMode bias_mode, typename Op, int ow_remain,
+        int filter_size, int oc_interval, int ow_interval>
+struct KernNeonSdotNCHW44<
+        dst_type, 2, bias_mode, Op, ow_remain, filter_size, oc_interval, ow_interval> {
     MEGDNN_ATTRIBUTE_TARGET("dotprod")
-    static void impl(dst_type* dst, const int dst_step, const int8_t* src,
-                     const int ih, const int iw, const int8_t* filter,
-                     const int32_t* bias, const int ic, const Op& op) {
+    static void impl(
+            dst_type* dst, const int dst_step, const int8_t* src, const int ih,
+            const int iw, const int8_t* filter, const int32_t* bias, const int ic,
+            const Op& op) {
         constexpr int FH = filter_size;
         constexpr int FW = filter_size;
         constexpr int filter_next_row =
-                FW * OC_PACK_SIZE *
-                IC_PACK_SIZE;  //! [OC/4, IC/4, FH, FW, 4OC, 4IC]
+                FW * OC_PACK_SIZE * IC_PACK_SIZE;  //! [OC/4, IC/4, FH, FW, 4OC, 4IC]
 
         const int filter_next_4oc =
                 FH * FW * ic * OC_PACK_SIZE;  //! [OC/4, IC/4, FH, FW, 4OC, 4IC]
@@ -52,34 +53,34 @@ struct KernNeonSdotNCHW44<dst_type, 2, bias_mode, Op, ow_remain, filter_size,
                 load_helper<NSRC, 0, SIMD_LEN, 2, Vld1q_s8>(src, i_src, offset);
 
 //! do not use switch order 3,2,1 because it will slow the speed.
-#define CALC_PART(step)                                             \
-    switch (LOOP) {                                                 \
-        case 1:                                                     \
-            weight[0] = vld1q_s8(i_filter + filter_next_4oc * 0 +   \
-                                 filter_next_col * step);           \
-            cal_helper<0, step % 2, step / 2, 0>(res, src, weight); \
-            break;                                                  \
-        case 2:                                                     \
-            weight[0] = vld1q_s8(i_filter + filter_next_4oc * 0 +   \
-                                 filter_next_col * step);           \
-            cal_helper<0, step % 2, step / 2, 0>(res, src, weight); \
-            weight[1] = vld1q_s8(i_filter + filter_next_4oc * 1 +   \
-                                 filter_next_col * step);           \
-            cal_helper<1, step % 2, step / 2, 1>(res, src, weight); \
-            break;                                                  \
-        case 3:                                                     \
-            weight[0] = vld1q_s8(i_filter + filter_next_4oc * 0 +   \
-                                 filter_next_col * step);           \
-            cal_helper<0, step % 2, step / 2, 0>(res, src, weight); \
-            weight[1] = vld1q_s8(i_filter + filter_next_4oc * 1 +   \
-                                 filter_next_col * step);           \
-            cal_helper<1, step % 2, step / 2, 1>(res, src, weight); \
-            weight[2] = vld1q_s8(i_filter + filter_next_4oc * 2 +   \
-                                 filter_next_col * step);           \
-            cal_helper<2, step % 2, step / 2, 2>(res, src, weight); \
-            break;                                                  \
-        default:                                                    \
-            break;                                                  \
+#define CALC_PART(step)                                                                \
+    switch (LOOP) {                                                                    \
+        case 1:                                                                        \
+            weight[0] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 0 + filter_next_col * step); \
+            cal_helper<0, step % 2, step / 2, 0>(res, src, weight);                    \
+            break;                                                                     \
+        case 2:                                                                        \
+            weight[0] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 0 + filter_next_col * step); \
+            cal_helper<0, step % 2, step / 2, 0>(res, src, weight);                    \
+            weight[1] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 1 + filter_next_col * step); \
+            cal_helper<1, step % 2, step / 2, 1>(res, src, weight);                    \
+            break;                                                                     \
+        case 3:                                                                        \
+            weight[0] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 0 + filter_next_col * step); \
+            cal_helper<0, step % 2, step / 2, 0>(res, src, weight);                    \
+            weight[1] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 1 + filter_next_col * step); \
+            cal_helper<1, step % 2, step / 2, 1>(res, src, weight);                    \
+            weight[2] =                                                                \
+                    vld1q_s8(i_filter + filter_next_4oc * 2 + filter_next_col * step); \
+            cal_helper<2, step % 2, step / 2, 2>(res, src, weight);                    \
+            break;                                                                     \
+        default:                                                                       \
+            break;                                                                     \
     }
 
                 switch (filter_size) {
@@ -104,19 +105,17 @@ struct KernNeonSdotNCHW44<dst_type, 2, bias_mode, Op, ow_remain, filter_size,
                 i_src += src_next_row;
             }
         }
-        store_ocx_owx_remain_static<LOOP, ow_remain, Op>(res, op, dst,
-                                                         dst_step);
+        store_ocx_owx_remain_static<LOOP, ow_remain, Op>(res, op, dst, dst_step);
     }
 };
 
-template <typename dst_type, int stride, BiasMode bias_mode, typename Op,
-          int filter_size>
+template <
+        typename dst_type, int stride, BiasMode bias_mode, typename Op, int filter_size>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
-                                  const int8_t* src, const int ih, const int iw,
-                                  const int8_t* filter, const int32_t* bias,
-                                  const int oh_size, const int oc, const int ic,
-                                  const Op& op) {
+void conv_direct_sdot_int8_nchw44(
+        dst_type* dst, const int oh, const int ow, const int8_t* src, const int ih,
+        const int iw, const int8_t* filter, const int32_t* bias, const int oh_size,
+        const int oc, const int ic, const Op& op) {
     constexpr int FH = filter_size;
     constexpr int FW = filter_size;
     constexpr int IC_PACK_SIZE = 4;
@@ -138,36 +137,31 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
     const int dst_numbers_per_channel = oh * ow;
     const int ow_remain = ow % OW_INTERVAL;
     const int ow_end_idx = ow - ow_remain;
-    const int oc_remain =
-            oc % OC_BIG_INTERVAL;  //! NCHW44 means oc_remain = 4 or 8
+    const int oc_remain = oc % OC_BIG_INTERVAL;  //! NCHW44 means oc_remain = 4 or 8
     const int oc_end_idx = oc - oc_remain;
-    const int dst_numbers_4channel_packed =
-            dst_numbers_per_channel * OC_PACK_SIZE;
+    const int dst_numbers_4channel_packed = dst_numbers_per_channel * OC_PACK_SIZE;
 
     using remain_fun = std::function<void(
             dst_type * dst, const int dst_step, const int8_t* src, const int ih,
-            const int iw, const int8_t* filter, const int32_t* bias,
-            const int ic, const Op& op)>;
+            const int iw, const int8_t* filter, const int32_t* bias, const int ic,
+            const Op& op)>;
 
     remain_fun kern_big_oc_remain = nullptr;
     remain_fun kern_mid_oc_remain = nullptr;
     remain_fun kern_sma_oc_remain = nullptr;
 
     switch (ow_remain) {
-#define cb(step)                                                          \
-    case step:                                                            \
-        kern_big_oc_remain =                                              \
-                KernNeonSdotNCHW44<dst_type, stride, bias_mode, Op, step, \
-                                   filter_size, OC_BIG_INTERVAL,          \
-                                   OW_INTERVAL>::impl;                    \
-        kern_mid_oc_remain =                                              \
-                KernNeonSdotNCHW44<dst_type, stride, bias_mode, Op, step, \
-                                   filter_size, OC_MID_INTERVAL,          \
-                                   OW_INTERVAL>::impl;                    \
-        kern_sma_oc_remain =                                              \
-                KernNeonSdotNCHW44<dst_type, stride, bias_mode, Op, step, \
-                                   filter_size, OC_SMA_INTERVAL,          \
-                                   OW_INTERVAL>::impl;                    \
+#define cb(step)                                                                     \
+    case step:                                                                       \
+        kern_big_oc_remain = KernNeonSdotNCHW44<                                     \
+                dst_type, stride, bias_mode, Op, step, filter_size, OC_BIG_INTERVAL, \
+                OW_INTERVAL>::impl;                                                  \
+        kern_mid_oc_remain = KernNeonSdotNCHW44<                                     \
+                dst_type, stride, bias_mode, Op, step, filter_size, OC_MID_INTERVAL, \
+                OW_INTERVAL>::impl;                                                  \
+        kern_sma_oc_remain = KernNeonSdotNCHW44<                                     \
+                dst_type, stride, bias_mode, Op, step, filter_size, OC_SMA_INTERVAL, \
+                OW_INTERVAL>::impl;                                                  \
         break;
         UNROLL_CALL_RAW(8, cb);
 #undef cb
@@ -185,14 +179,13 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
             for (int ow_idx = 0; ow_idx < ow_end_idx; ow_idx += OW_INTERVAL) {
                 const int src_offset_in_element =
                         (oh_idx * SH * iw + ow_idx) * IC_PACK_SIZE;
-                const int dst_offset_in_element =
-                        oc_idx * dst_numbers_per_channel +
-                        (oh_idx * ow + ow_idx) * OC_PACK_SIZE;
+                const int dst_offset_in_element = oc_idx * dst_numbers_per_channel +
+                                                  (oh_idx * ow + ow_idx) * OC_PACK_SIZE;
                 const int bias_offset_in_element = oc_idx;
-                KernNeonSdotNCHW44<dst_type, stride, bias_mode, Op, OW_INTERVAL,
-                                   filter_size, OC_BIG_INTERVAL, OW_INTERVAL>::
-                        impl(dst + dst_offset_in_element,
-                             dst_numbers_4channel_packed,
+                KernNeonSdotNCHW44<
+                        dst_type, stride, bias_mode, Op, OW_INTERVAL, filter_size,
+                        OC_BIG_INTERVAL, OW_INTERVAL>::
+                        impl(dst + dst_offset_in_element, dst_numbers_4channel_packed,
                              src + src_offset_in_element, ih, iw,
                              filter + filter_offset_in_element,
                              bias + bias_offset_in_element, ic, op);
@@ -204,11 +197,11 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
                         oc_idx * dst_numbers_per_channel +
                         (oh_idx * ow + ow_end_idx) * OC_PACK_SIZE;
                 const int bias_offset_in_element = oc_idx;
-                kern_big_oc_remain(dst + dst_offset_in_element,
-                                   dst_numbers_4channel_packed,
-                                   src + src_offset_in_element, ih, iw,
-                                   filter + filter_offset_in_element,
-                                   bias + bias_offset_in_element, ic, op);
+                kern_big_oc_remain(
+                        dst + dst_offset_in_element, dst_numbers_4channel_packed,
+                        src + src_offset_in_element, ih, iw,
+                        filter + filter_offset_in_element,
+                        bias + bias_offset_in_element, ic, op);
             }
         }
     }
@@ -222,34 +215,27 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
             for (int ow_idx = 0; ow_idx < ow_end_idx; ow_idx += OW_INTERVAL) {
                 const int src_offset_in_element =
                         (oh_idx * SH * iw + ow_idx) * IC_PACK_SIZE;
-                const int dst_offset_in_element =
-                        oc_idx * dst_numbers_per_channel +
-                        (oh_idx * ow + ow_idx) * OC_PACK_SIZE;
+                const int dst_offset_in_element = oc_idx * dst_numbers_per_channel +
+                                                  (oh_idx * ow + ow_idx) * OC_PACK_SIZE;
                 const int bias_offset_in_element = oc_idx;
                 if (oc_remain == 8) {
                     KernNeonSdotNCHW44<
-                            dst_type, stride, bias_mode, Op, OW_INTERVAL,
-                            filter_size, OC_MID_INTERVAL,
-                            OW_INTERVAL>::impl(dst + dst_offset_in_element,
-                                               dst_numbers_4channel_packed,
-                                               src + src_offset_in_element, ih,
-                                               iw,
-                                               filter +
-                                                       filter_offset_in_element,
-                                               bias + bias_offset_in_element,
-                                               ic, op);
+                            dst_type, stride, bias_mode, Op, OW_INTERVAL, filter_size,
+                            OC_MID_INTERVAL, OW_INTERVAL>::
+                            impl(dst + dst_offset_in_element,
+                                 dst_numbers_4channel_packed,
+                                 src + src_offset_in_element, ih, iw,
+                                 filter + filter_offset_in_element,
+                                 bias + bias_offset_in_element, ic, op);
                 } else {
                     KernNeonSdotNCHW44<
-                            dst_type, stride, bias_mode, Op, OW_INTERVAL,
-                            filter_size, OC_SMA_INTERVAL,
-                            OW_INTERVAL>::impl(dst + dst_offset_in_element,
-                                               dst_numbers_4channel_packed,
-                                               src + src_offset_in_element, ih,
-                                               iw,
-                                               filter +
-                                                       filter_offset_in_element,
-                                               bias + bias_offset_in_element,
-                                               ic, op);
+                            dst_type, stride, bias_mode, Op, OW_INTERVAL, filter_size,
+                            OC_SMA_INTERVAL, OW_INTERVAL>::
+                            impl(dst + dst_offset_in_element,
+                                 dst_numbers_4channel_packed,
+                                 src + src_offset_in_element, ih, iw,
+                                 filter + filter_offset_in_element,
+                                 bias + bias_offset_in_element, ic, op);
                 }
             }
             if (ow_remain) {
@@ -260,17 +246,17 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
                         (oh_idx * ow + ow_end_idx) * OC_PACK_SIZE;
                 const int bias_offset_in_element = oc_idx;
                 if (oc_remain == 8) {
-                    kern_mid_oc_remain(dst + dst_offset_in_element,
-                                       dst_numbers_4channel_packed,
-                                       src + src_offset_in_element, ih, iw,
-                                       filter + filter_offset_in_element,
-                                       bias + bias_offset_in_element, ic, op);
+                    kern_mid_oc_remain(
+                            dst + dst_offset_in_element, dst_numbers_4channel_packed,
+                            src + src_offset_in_element, ih, iw,
+                            filter + filter_offset_in_element,
+                            bias + bias_offset_in_element, ic, op);
                 } else {
-                    kern_sma_oc_remain(dst + dst_offset_in_element,
-                                       dst_numbers_4channel_packed,
-                                       src + src_offset_in_element, ih, iw,
-                                       filter + filter_offset_in_element,
-                                       bias + bias_offset_in_element, ic, op);
+                    kern_sma_oc_remain(
+                            dst + dst_offset_in_element, dst_numbers_4channel_packed,
+                            src + src_offset_in_element, ih, iw,
+                            filter + filter_offset_in_element,
+                            bias + bias_offset_in_element, ic, op);
                 }
             }
         }
@@ -278,23 +264,22 @@ void conv_direct_sdot_int8_nchw44(dst_type* dst, const int oh, const int ow,
 #endif
 }
 
-#define INSTANTIATION(dst_type, stride, filter_size, bias_mode, Op)         \
-    template void conv_direct_sdot_int8_nchw44<dst_type, stride, bias_mode, \
-                                               Op, filter_size>(            \
-            dst_type * dst, const int oh, const int ow, const int8_t* src,  \
-            const int ih, const int iw, const int8_t* weight,               \
-            const int32_t* bias, const int oh_size, const int oc,           \
-            const int ic, const Op& op);
+#define INSTANTIATION(dst_type, stride, filter_size, bias_mode, Op)                \
+    template void                                                                  \
+    conv_direct_sdot_int8_nchw44<dst_type, stride, bias_mode, Op, filter_size>(    \
+            dst_type * dst, const int oh, const int ow, const int8_t* src,         \
+            const int ih, const int iw, const int8_t* weight, const int32_t* bias, \
+            const int oh_size, const int oc, const int ic, const Op& op);
 
-#define FOR_OP(stride, i, bias_mode)                          \
-    INSTANTIATION(dt_int8, stride, i, bias_mode,              \
-                  TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
-    INSTANTIATION(dt_int32, stride, i, bias_mode,             \
-                  NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-    INSTANTIATION(dt_int8, stride, i, bias_mode,              \
-                  ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-    INSTANTIATION(dt_int8, stride, i, bias_mode,              \
-                  HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)
+#define FOR_OP(stride, i, bias_mode)                                                   \
+    INSTANTIATION(                                                                     \
+            dt_int8, stride, i, bias_mode, TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
+    INSTANTIATION(                                                                     \
+            dt_int32, stride, i, bias_mode, NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>)   \
+    INSTANTIATION(                                                                     \
+            dt_int8, stride, i, bias_mode, ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+    INSTANTIATION(                                                                     \
+            dt_int8, stride, i, bias_mode, HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)
 
 #define FOR_BIAS(stride, i)              \
     FOR_OP(stride, i, BiasMode::NO_BIAS) \

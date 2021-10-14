@@ -12,17 +12,17 @@
 #include "src/aarch64/matrix_mul/quint8_dot/gemv.h"
 #if MGB_ENABLE_DOT
 #include "src/arm_common/simd_macro/marm_neon.h"
-#include "src/common/utils.h"
 #include "src/common/unroll_macro.h"
+#include "src/common/utils.h"
 
 namespace {
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-void gemv_naive_n(const uint8_t* __restrict A, const uint8_t* __restrict B,
-                  int32_t* __restrict C, size_t M, size_t N, size_t K,
-                  size_t Astride, size_t Bstride, size_t Cstride,
-                  uint8_t zero_point_A, uint8_t zero_point_B) {
-    int32_t zAB = static_cast<int32_t>(zero_point_A) *
-                  static_cast<int32_t>(zero_point_B) * K;
+void gemv_naive_n(
+        const uint8_t* __restrict A, const uint8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride,
+        uint8_t zero_point_A, uint8_t zero_point_B) {
+    int32_t zAB =
+            static_cast<int32_t>(zero_point_A) * static_cast<int32_t>(zero_point_B) * K;
     uint8x16_t zAq = vdupq_n_u8(zero_point_A);
     uint8x16_t zBq = vdupq_n_u8(zero_point_B);
     uint8x8_t zA = vdup_n_u8(zero_point_A);
@@ -92,8 +92,7 @@ void gemv_naive_n(const uint8_t* __restrict A, const uint8_t* __restrict B,
             acc[3] += static_cast<int32_t>(A[(m + 1) * Astride + k]) * B[k];
             acc_zA += static_cast<int32_t>(B[k]) * zero_point_A;
             acc_zB += static_cast<int32_t>(A[m * Astride + k]) * zero_point_B;
-            acc_zB2 += static_cast<int32_t>(A[(m + 1) * Astride + k]) *
-                       zero_point_B;
+            acc_zB2 += static_cast<int32_t>(A[(m + 1) * Astride + k]) * zero_point_B;
         }
         C[m * Cstride] = acc[0] + acc[1] + zAB - acc_zA - acc_zB;
         C[(m + 1) * Cstride] = acc[2] + acc[3] + zAB - acc_zA - acc_zB2;
@@ -140,8 +139,7 @@ void gemv_naive_n(const uint8_t* __restrict A, const uint8_t* __restrict B,
             acc_zA += static_cast<int32_t>(B[k]) * zero_point_A;
             acc_zB += static_cast<int32_t>(A[m * Astride + k]) * zero_point_B;
         }
-        C[m * Cstride] =
-                acc[0] + acc[1] + acc[2] + acc[3] + zAB - acc_zA - acc_zB;
+        C[m * Cstride] = acc[0] + acc[1] + acc[2] + acc[3] + zAB - acc_zA - acc_zB;
     }
 }
 }  // namespace
@@ -160,13 +158,12 @@ bool megdnn::aarch64::matmul::is_gemv_like_preferred_quint8(
 }
 
 void megdnn::aarch64::matmul::gemv_like_quint8(
-        const uint8_t* __restrict A, const uint8_t* __restrict B,
-        int32_t* __restrict C, size_t M, size_t N, size_t K, size_t Astride,
-        size_t Bstride, size_t Cstride, uint8_t zero_point_A,
-        uint8_t zero_point_B) {
+        const uint8_t* __restrict A, const uint8_t* __restrict B, int32_t* __restrict C,
+        size_t M, size_t N, size_t K, size_t Astride, size_t Bstride, size_t Cstride,
+        uint8_t zero_point_A, uint8_t zero_point_B) {
     megdnn_assert(N == 1);
-    return gemv_naive_n(A, B, C, M, N, K, Astride, Bstride, Cstride,
-                        zero_point_A, zero_point_B);
+    return gemv_naive_n(
+            A, B, C, M, N, K, Astride, Bstride, Cstride, zero_point_A, zero_point_B);
 }
 #endif
 // vim: syntax=cpp.doxygen

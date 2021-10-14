@@ -54,108 +54,102 @@ namespace x86 {
     __m256i val1_2 = _mm256_cvtep##_type##_epi32(tmp1_1);                     \
     __m256i val1_3 = _mm256_cvtep##_type##_epi32(_mm_bsrli_si128(tmp1_1, 8));
 
-template <SIMDType simd_type, typename src_ctype,
-          typename dst_ctype = src_ctype>
+template <SIMDType simd_type, typename src_ctype, typename dst_ctype = src_ctype>
 struct BinaryOpBase : OpBase<src_ctype, dst_ctype> {
     using OpBase<src_ctype, dst_ctype>::OpBase;
     BinaryOpBase() = default;
-    BinaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/,
-                 DType /*dst_dtype*/) {}
+    BinaryOpBase(DType /*src0_dtype*/, DType /*src1_dtype*/, DType /*dst_dtype*/) {}
 };
 
 //! scale_src0 = src0.scale; scale_src1 = src1.scale; scale_dst = 1.f /
 //! dst.scale scale0 = src0.scale / dst.scale; scale1 = src1.scale / dst.scale
 
-#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)     \
-    template <>                                                              \
-    struct BinaryOpBase<_simd_type, dt_qint8, dt_qint8>                      \
-            : OpBase<dt_qint8, dt_qint8> {                                   \
-        using OpBase::OpBase;                                                \
-        using src_ctype = dt_qint8;                                          \
-        using dst_ctype = dt_qint8;                                          \
-        float m_scale_src0, m_scale_src1, m_scale_dst;                       \
-        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_dst;          \
-        float m_scale0, m_scale1;                                            \
-        _simd_data_type m_vscale0, m_vscale1;                                \
-        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                \
-        void init(float src0_scale, float src1_scale, float dst_scale) {     \
-            m_scale_src0 = src0_scale;                                       \
-            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);         \
-            m_scale_src1 = src1_scale;                                       \
-            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);         \
-            m_scale_dst = 1.f / dst_scale;                                   \
-            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);           \
-            m_scale0 = src0_scale / dst_scale;                               \
-            m_vscale0 = _##_func_prefix##_set1_ps(m_scale0);                 \
-            m_scale1 = src1_scale / dst_scale;                               \
-            m_vscale1 = _##_func_prefix##_set1_ps(m_scale1);                 \
-        }                                                                    \
-        BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {  \
-            float src0_scale = src0_dtype.param<dtype::QuantizedS8>().scale; \
-            float src1_scale = src1_dtype.param<dtype::QuantizedS8>().scale; \
-            float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;   \
-            init(src0_scale, src1_scale, dst_scale);                         \
-        }                                                                    \
-        BinaryOpBase(float src0_scale, float src1_scale, float dst_scale) {  \
-            init(src0_scale, src1_scale, dst_scale);                         \
-        }                                                                    \
+#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)               \
+    template <>                                                                        \
+    struct BinaryOpBase<_simd_type, dt_qint8, dt_qint8> : OpBase<dt_qint8, dt_qint8> { \
+        using OpBase::OpBase;                                                          \
+        using src_ctype = dt_qint8;                                                    \
+        using dst_ctype = dt_qint8;                                                    \
+        float m_scale_src0, m_scale_src1, m_scale_dst;                                 \
+        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_dst;                    \
+        float m_scale0, m_scale1;                                                      \
+        _simd_data_type m_vscale0, m_vscale1;                                          \
+        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                          \
+        void init(float src0_scale, float src1_scale, float dst_scale) {               \
+            m_scale_src0 = src0_scale;                                                 \
+            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);                   \
+            m_scale_src1 = src1_scale;                                                 \
+            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);                   \
+            m_scale_dst = 1.f / dst_scale;                                             \
+            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);                     \
+            m_scale0 = src0_scale / dst_scale;                                         \
+            m_vscale0 = _##_func_prefix##_set1_ps(m_scale0);                           \
+            m_scale1 = src1_scale / dst_scale;                                         \
+            m_vscale1 = _##_func_prefix##_set1_ps(m_scale1);                           \
+        }                                                                              \
+        BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {            \
+            float src0_scale = src0_dtype.param<dtype::QuantizedS8>().scale;           \
+            float src1_scale = src1_dtype.param<dtype::QuantizedS8>().scale;           \
+            float dst_scale = dst_dtype.param<dtype::QuantizedS8>().scale;             \
+            init(src0_scale, src1_scale, dst_scale);                                   \
+        }                                                                              \
+        BinaryOpBase(float src0_scale, float src1_scale, float dst_scale) {            \
+            init(src0_scale, src1_scale, dst_scale);                                   \
+        }                                                                              \
     };
 
 OP_BASE(SIMDType::SSE4_2, "sse4.2", __m128, mm)
 OP_BASE(SIMDType::AVX2, "avx2", __m256, mm256)
 #undef OP_BASE
 
-#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)       \
-    template <>                                                                \
-    struct BinaryOpBase<_simd_type, dt_quint8, dt_quint8>                      \
-            : OpBase<dt_quint8, dt_quint8> {                                   \
-        using OpBase::OpBase;                                                  \
-        using src_ctype = dt_quint8;                                           \
-        using dst_ctype = dt_quint8;                                           \
-        float m_scale_src0, m_scale_src1, m_scale_dst;                         \
-        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_dst;            \
-        float m_scale0, m_scale1;                                              \
-        _simd_data_type m_vscale0, m_vscale1;                                  \
-        uint8_t m_zp_src0, m_zp_src1, m_zp_dst;                                \
-        _simd_data_type##i m_vzp_src0, m_vzp_src1, m_vzp_dst;                  \
-        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                  \
-        void init(float src0_scale, float src1_scale, float dst_scale,         \
-                  uint8_t src0_zp, uint8_t src1_zp, uint8_t dst_zp) {          \
-            m_scale_src0 = src0_scale;                                         \
-            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);           \
-            m_scale_src1 = src1_scale;                                         \
-            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);           \
-            m_scale_dst = 1.f / dst_scale;                                     \
-            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);             \
-            m_scale0 = src0_scale / dst_scale;                                 \
-            m_vscale0 = _##_func_prefix##_set1_ps(m_scale0);                   \
-            m_scale1 = src1_scale / dst_scale;                                 \
-            m_vscale1 = _##_func_prefix##_set1_ps(m_scale1);                   \
-            m_zp_src0 = src0_zp;                                               \
-            m_zp_src1 = src1_zp;                                               \
-            m_zp_dst = dst_zp;                                                 \
-            m_vzp_src0 = _##_func_prefix##_set1_epi32(m_zp_src0);              \
-            m_vzp_src1 = _##_func_prefix##_set1_epi32(m_zp_src1);              \
-            m_vzp_dst = _##_func_prefix##_set1_epi32(m_zp_dst);                \
-        }                                                                      \
-        BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {    \
-            float src0_scale =                                                 \
-                    src0_dtype.param<dtype::Quantized8Asymm>().scale;          \
-            float src1_scale =                                                 \
-                    src1_dtype.param<dtype::Quantized8Asymm>().scale;          \
-            float dst_scale = dst_dtype.param<dtype::Quantized8Asymm>().scale; \
-            uint8_t src0_zp =                                                  \
-                    src0_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
-            uint8_t src1_zp =                                                  \
-                    src1_dtype.param<dtype::Quantized8Asymm>().zero_point;     \
-            uint8_t dst_zp =                                                   \
-                    dst_dtype.param<dtype::Quantized8Asymm>().zero_point;      \
-            init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp); \
-        }                                                                      \
-        BinaryOpBase(float src0_scale, float src1_scale, float dst_scale,      \
-                     uint8_t src0_zp, uint8_t src1_zp, uint8_t dst_zp) {       \
-            init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp); \
-        }                                                                      \
+#define OP_BASE(_simd_type, _simd_target, _simd_data_type, _func_prefix)              \
+    template <>                                                                       \
+    struct BinaryOpBase<_simd_type, dt_quint8, dt_quint8>                             \
+            : OpBase<dt_quint8, dt_quint8> {                                          \
+        using OpBase::OpBase;                                                         \
+        using src_ctype = dt_quint8;                                                  \
+        using dst_ctype = dt_quint8;                                                  \
+        float m_scale_src0, m_scale_src1, m_scale_dst;                                \
+        _simd_data_type m_vscale_src0, m_vscale_src1, m_vscale_dst;                   \
+        float m_scale0, m_scale1;                                                     \
+        _simd_data_type m_vscale0, m_vscale1;                                         \
+        uint8_t m_zp_src0, m_zp_src1, m_zp_dst;                                       \
+        _simd_data_type##i m_vzp_src0, m_vzp_src1, m_vzp_dst;                         \
+        MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                         \
+        void init(                                                                    \
+                float src0_scale, float src1_scale, float dst_scale, uint8_t src0_zp, \
+                uint8_t src1_zp, uint8_t dst_zp) {                                    \
+            m_scale_src0 = src0_scale;                                                \
+            m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);                  \
+            m_scale_src1 = src1_scale;                                                \
+            m_vscale_src1 = _##_func_prefix##_set1_ps(m_scale_src1);                  \
+            m_scale_dst = 1.f / dst_scale;                                            \
+            m_vscale_dst = _##_func_prefix##_set1_ps(m_scale_dst);                    \
+            m_scale0 = src0_scale / dst_scale;                                        \
+            m_vscale0 = _##_func_prefix##_set1_ps(m_scale0);                          \
+            m_scale1 = src1_scale / dst_scale;                                        \
+            m_vscale1 = _##_func_prefix##_set1_ps(m_scale1);                          \
+            m_zp_src0 = src0_zp;                                                      \
+            m_zp_src1 = src1_zp;                                                      \
+            m_zp_dst = dst_zp;                                                        \
+            m_vzp_src0 = _##_func_prefix##_set1_epi32(m_zp_src0);                     \
+            m_vzp_src1 = _##_func_prefix##_set1_epi32(m_zp_src1);                     \
+            m_vzp_dst = _##_func_prefix##_set1_epi32(m_zp_dst);                       \
+        }                                                                             \
+        BinaryOpBase(DType src0_dtype, DType src1_dtype, DType dst_dtype) {           \
+            float src0_scale = src0_dtype.param<dtype::Quantized8Asymm>().scale;      \
+            float src1_scale = src1_dtype.param<dtype::Quantized8Asymm>().scale;      \
+            float dst_scale = dst_dtype.param<dtype::Quantized8Asymm>().scale;        \
+            uint8_t src0_zp = src0_dtype.param<dtype::Quantized8Asymm>().zero_point;  \
+            uint8_t src1_zp = src1_dtype.param<dtype::Quantized8Asymm>().zero_point;  \
+            uint8_t dst_zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;    \
+            init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp);        \
+        }                                                                             \
+        BinaryOpBase(                                                                 \
+                float src0_scale, float src1_scale, float dst_scale, uint8_t src0_zp, \
+                uint8_t src1_zp, uint8_t dst_zp) {                                    \
+            init(src0_scale, src1_scale, dst_scale, src0_zp, src1_zp, dst_zp);        \
+        }                                                                             \
     };
 
 OP_BASE(SIMDType::SSE4_2, "sse4.2", __m128, mm)
@@ -202,8 +196,7 @@ OP_BASE(SIMDType::AVX2, "avx2", __m256, mm256)
 #undef OP_BASE
 
 template <>
-struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8>
-        : OpBase<dt_qint32, dt_qint8> {
+struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8> : OpBase<dt_qint32, dt_qint8> {
     using OpBase::OpBase;
     using src_ctype = dt_qint32;
     using dst_ctype = dt_qint8;
@@ -241,8 +234,9 @@ struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8>
         uint8_t m_zp_dst;                                                      \
         _simd_data_type##i m_vzp_dst;                                          \
         MEGDNN_ATTRIBUTE_TARGET(_simd_target)                                  \
-        void init(float src0_scale, float src1_scale, float dst_scale,         \
-                  uint8_t zero_point) {                                        \
+        void init(                                                             \
+                float src0_scale, float src1_scale, float dst_scale,           \
+                uint8_t zero_point) {                                          \
             m_scale_src0 = src0_scale;                                         \
             m_vscale_src0 = _##_func_prefix##_set1_ps(m_scale_src0);           \
             m_scale_src1 = src1_scale;                                         \
@@ -263,8 +257,9 @@ struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8>
             uint8_t zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point; \
             init(src0_scale, src1_scale, dst_scale, zp);                       \
         }                                                                      \
-        BinaryOpBase(float src0_scale, float src1_scale, float dst_scale,      \
-                     uint8_t zero_point) {                                     \
+        BinaryOpBase(                                                          \
+                float src0_scale, float src1_scale, float dst_scale,           \
+                uint8_t zero_point) {                                          \
             init(src0_scale, src1_scale, dst_scale, zero_point);               \
         }                                                                      \
     };
@@ -282,8 +277,7 @@ struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>
     float m_scale_src0, m_scale_src1, m_scale_dst;
     float m_scale0, m_scale1;
     uint8_t m_zp_dst;
-    void init(float src0_scale, float src1_scale, float dst_scale,
-              uint8_t zero_point) {
+    void init(float src0_scale, float src1_scale, float dst_scale, uint8_t zero_point) {
         m_scale_src0 = src0_scale;
         m_scale_src1 = src1_scale;
         m_scale_dst = 1.f / dst_scale;
@@ -298,8 +292,8 @@ struct BinaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>
         uint8_t zp = dst_dtype.param<dtype::Quantized8Asymm>().zero_point;
         init(src0_scale, src1_scale, dst_scale, zp);
     }
-    BinaryOpBase(float src0_scale, float src1_scale, float dst_scale,
-                 uint8_t zero_point) {
+    BinaryOpBase(
+            float src0_scale, float src1_scale, float dst_scale, uint8_t zero_point) {
         init(src0_scale, src1_scale, dst_scale, zero_point);
     }
 };
@@ -312,10 +306,10 @@ struct BinaryQuantizationOp;
 //! error! just like this: internal compiler error: in convert_move, at
 //! expr.c:315
 
-#define SUB_MUL_TO_F32(_func_prefix, val, zp, scale)                        \
-    _##_func_prefix##_mul_ps(_##_func_prefix##_cvtepi32_ps(                 \
-                                     _##_func_prefix##_sub_epi32(val, zp)), \
-                             scale);
+#define SUB_MUL_TO_F32(_func_prefix, val, zp, scale)                             \
+    _##_func_prefix##_mul_ps(                                                    \
+            _##_func_prefix##_cvtepi32_ps(_##_func_prefix##_sub_epi32(val, zp)), \
+            scale);
 
 #define OPERATE(_func_prefix, scale_dst)                  \
     auto vitem0 = op(vitem0_0, vitem1_0);                 \
@@ -377,8 +371,7 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint8, dt_qint8, Op>
     using BinaryOpBase<SIMDType::SSE4_2, dt_qint8, dt_qint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint8& src0, const dt_qint8& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_qint8 operator()(const dt_qint8& src0, const dt_qint8& src1) const {
@@ -389,23 +382,23 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint8, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fsrc);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    dt_qint8* dst) const {
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, dt_qint8* dst) const {
         _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0]));
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + SIMD_WIDTH),
-                         operator()(vsrc0.val[1], vsrc1.val[1]));
+                reinterpret_cast<__m128i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0]));
+        _mm_storeu_si128(
+                reinterpret_cast<__m128i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
     __m128i operator()(const __m128i& vsrc0, const __m128i& vsrc1) const {
         CONVERT_8_INT32_SSE(i8)
         CONVERT_INT32_F32(mm)
         OPERATOR_BINARY_QINT8_SSE()
-        auto result0 =
-                QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
+        auto result0 = QConverter::convert<int64_t, __m128x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<int64_t, __m128x2>({{vitem2, vitem3}});
         return _mm_set_epi64x(result1, result0);
     }
 };
@@ -417,8 +410,7 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint8, dt_qint8, Op>
     constexpr static size_t SIMD_WIDTH = 32;
     Op op;
 
-    void operator()(const dt_qint8& src0, const dt_qint8& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint8& src0, const dt_qint8& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
 
@@ -431,23 +423,23 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint8, dt_qint8, Op>
     }
 
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    dt_qint8* dst) const {
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, dt_qint8* dst) const {
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0]));
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst + SIMD_WIDTH),
-                            operator()(vsrc0.val[1], vsrc1.val[1]));
+                reinterpret_cast<__m256i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0]));
+        _mm256_storeu_si256(
+                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
     __m256i operator()(const __m256i& vsrc0, const __m256i& vsrc1) const {
         CONVERT_8_INT32_AVX(i8)
         CONVERT_INT32_F32(mm256)
         OPERATOR_BINARY_QINT8_AVX()
-        auto result0 =
-                QConverter::convert<__m128i, __m256x2>({{vitem0, vitem1}});
-        auto result1 =
-                QConverter::convert<__m128i, __m256x2>({{vitem2, vitem3}});
+        auto result0 = QConverter::convert<__m128i, __m256x2>({{vitem0, vitem1}});
+        auto result1 = QConverter::convert<__m128i, __m256x2>({{vitem2, vitem3}});
         return _mm256_set_m128i(result1, result0);
     }
 };
@@ -458,8 +450,8 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_quint8, dt_quint8, Op>
     constexpr static size_t SIMD_WIDTH = 16;
     Op op;
 
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_quint8 operator()(const dt_quint8& src0, const dt_quint8& src1) const {
@@ -470,13 +462,15 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, dt_quint8* dst) const {
         _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0]));
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + SIMD_WIDTH),
-                         operator()(vsrc0.val[1], vsrc1.val[1]));
+                reinterpret_cast<__m128i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0]));
+        _mm_storeu_si128(
+                reinterpret_cast<__m128i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
     __m128i operator()(const __m128i& vsrc0, const __m128i& vsrc1) const {
@@ -497,8 +491,8 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_quint8, dt_quint8, Op>
     constexpr static size_t SIMD_WIDTH = 32;
     Op op;
 
-    void operator()(const dt_quint8& src0, const dt_quint8& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_quint8& src0, const dt_quint8& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_quint8 operator()(const dt_quint8& src0, const dt_quint8& src1) const {
@@ -509,13 +503,15 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_quint8, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, dt_quint8* dst) const {
         _mm256_storeu_si256(
-                reinterpret_cast<__m256i*>(dst), operator()(vsrc0.val[0],
-                                                            vsrc1.val[0]));
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst + SIMD_WIDTH),
-                            operator()(vsrc0.val[1], vsrc1.val[1]));
+                reinterpret_cast<__m256i*>(dst), operator()(
+                                                         vsrc0.val[0], vsrc1.val[0]));
+        _mm256_storeu_si256(
+                reinterpret_cast<__m256i*>(dst + SIMD_WIDTH), operator()(
+                                                                      vsrc0.val[1],
+                                                                      vsrc1.val[1]));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
     __m256i operator()(const __m256i& vsrc0, const __m256i& vsrc1) const {
@@ -536,8 +532,7 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint32, dt_qint8, Op>
     using BinaryOpBase<SIMDType::SSE4_2, dt_qint32, dt_qint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 4;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint32& src0, const dt_qint32& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_qint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {
@@ -548,21 +543,18 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint32, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fsrc);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    dt_qint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc0, vsrc1)));
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, dt_qint8* dst) const {
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst),
+                _mm_set1_epi64x(operator()(vsrc0, vsrc1)));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
     int64_t operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1) const {
-        auto vitem0_0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[0]), m_vscale_src0);
-        auto vitem0_1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[1]), m_vscale_src0);
-        auto vitem1_0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[0]), m_vscale_src1);
-        auto vitem1_1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[1]), m_vscale_src1);
+        auto vitem0_0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[0]), m_vscale_src0);
+        auto vitem0_1 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[1]), m_vscale_src0);
+        auto vitem1_0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[0]), m_vscale_src1);
+        auto vitem1_1 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[1]), m_vscale_src1);
         auto vitem0 = op(vitem0_0, vitem1_0);
         auto vitem1 = op(vitem0_1, vitem1_1);
         vitem0 = _mm_mul_ps(vitem0, m_vscale_dst);
@@ -576,8 +568,7 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint32, dt_qint8, Op>
     using BinaryOpBase<SIMDType::AVX2, dt_qint32, dt_qint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 8;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint32& src0, const dt_qint32& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_qint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {
@@ -588,24 +579,19 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint32, dt_qint8, Op>
         return QConverter::convert<dt_qint8, float>(fsrc);
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    dt_qint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0, vsrc1));
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, dt_qint8* dst) const {
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc0, vsrc1));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
     __m128i operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1) const {
         auto vscale_src0 = _mm256_set1_ps(m_scale_src0);
         auto vscale_src1 = _mm256_set1_ps(m_scale_src1);
         auto vscale_dst = _mm256_set1_ps(m_scale_dst);
-        auto vitem0_0 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[0]), vscale_src0);
-        auto vitem0_1 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[1]), vscale_src0);
-        auto vitem1_0 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[0]), vscale_src1);
-        auto vitem1_1 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[1]), vscale_src1);
+        auto vitem0_0 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[0]), vscale_src0);
+        auto vitem0_1 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[1]), vscale_src0);
+        auto vitem1_0 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[0]), vscale_src1);
+        auto vitem1_1 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[1]), vscale_src1);
         auto vitem0 = op(vitem0_0, vitem1_0);
         auto vitem1 = op(vitem0_1, vitem1_1);
         vitem0 = _mm256_mul_ps(vitem0, vscale_dst);
@@ -620,8 +606,7 @@ struct BinaryQuantizationOp<SIMDType::NONE, dt_qint32, dt_qint8, Op>
     using BinaryOpBase<SIMDType::NONE, dt_qint32, dt_qint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 4;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_qint8* dst) const {
+    void operator()(const dt_qint32& src0, const dt_qint32& src1, dt_qint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_qint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {
@@ -638,8 +623,8 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint32, dt_quint8, Op>
     using BinaryOpBase<SIMDType::SSE4_2, dt_qint32, dt_quint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 4;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_qint32& src0, const dt_qint32& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_quint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {
@@ -650,21 +635,18 @@ struct BinaryQuantizationOp<SIMDType::SSE4_2, dt_qint32, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
-    void operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1,
-                    dt_quint8* dst) const {
-        _mm_storel_epi64(reinterpret_cast<__m128i*>(dst),
-                         _mm_set1_epi64x(operator()(vsrc0, vsrc1)));
+    void operator()(
+            const __m128ix2& vsrc0, const __m128ix2& vsrc1, dt_quint8* dst) const {
+        _mm_storel_epi64(
+                reinterpret_cast<__m128i*>(dst),
+                _mm_set1_epi64x(operator()(vsrc0, vsrc1)));
     }
     MEGDNN_ATTRIBUTE_TARGET("sse4.2")
     int64_t operator()(const __m128ix2& vsrc0, const __m128ix2& vsrc1) const {
-        auto vitem0_0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[0]), m_vscale_src0);
-        auto vitem0_1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[1]), m_vscale_src0);
-        auto vitem1_0 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[0]), m_vscale_src1);
-        auto vitem1_1 =
-                _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[1]), m_vscale_src1);
+        auto vitem0_0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[0]), m_vscale_src0);
+        auto vitem0_1 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc0.val[1]), m_vscale_src0);
+        auto vitem1_0 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[0]), m_vscale_src1);
+        auto vitem1_1 = _mm_mul_ps(_mm_cvtepi32_ps(vsrc1.val[1]), m_vscale_src1);
         auto vitem0 = op(vitem0_0, vitem1_0);
         auto vitem1 = op(vitem0_1, vitem1_1);
         vitem0 = _mm_mul_ps(vitem0, m_vscale_dst);
@@ -679,8 +661,8 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint32, dt_quint8, Op>
     using BinaryOpBase<SIMDType::AVX2, dt_qint32, dt_quint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 8;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_qint32& src0, const dt_qint32& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_quint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {
@@ -691,10 +673,9 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint32, dt_quint8, Op>
         return QConverter::convert<dt_quint8, float, uint8_t>(fsrc, m_zp_dst);
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
-    void operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1,
-                    dt_quint8* dst) const {
-        _mm_storeu_si128(
-                reinterpret_cast<__m128i*>(dst), operator()(vsrc0, vsrc1));
+    void operator()(
+            const __m256ix2& vsrc0, const __m256ix2& vsrc1, dt_quint8* dst) const {
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), operator()(vsrc0, vsrc1));
     }
     MEGDNN_ATTRIBUTE_TARGET("avx2")
     __m128i operator()(const __m256ix2& vsrc0, const __m256ix2& vsrc1) const {
@@ -702,14 +683,10 @@ struct BinaryQuantizationOp<SIMDType::AVX2, dt_qint32, dt_quint8, Op>
         auto vscale_src1 = _mm256_set1_ps(m_scale_src1);
         auto vscale_dst = _mm256_set1_ps(m_scale_dst);
         auto vzp_dst = _mm256_set1_epi32(m_zp_dst);
-        auto vitem0_0 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[0]), vscale_src0);
-        auto vitem0_1 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[1]), vscale_src0);
-        auto vitem1_0 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[0]), vscale_src1);
-        auto vitem1_1 =
-                _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[1]), vscale_src1);
+        auto vitem0_0 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[0]), vscale_src0);
+        auto vitem0_1 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc0.val[1]), vscale_src0);
+        auto vitem1_0 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[0]), vscale_src1);
+        auto vitem1_1 = _mm256_mul_ps(_mm256_cvtepi32_ps(vsrc1.val[1]), vscale_src1);
         auto vitem0 = op(vitem0_0, vitem1_0);
         auto vitem1 = op(vitem0_1, vitem1_1);
         vitem0 = _mm256_mul_ps(vitem0, vscale_dst);
@@ -725,8 +702,8 @@ struct BinaryQuantizationOp<SIMDType::NONE, dt_qint32, dt_quint8, Op>
     using BinaryOpBase<SIMDType::NONE, dt_qint32, dt_quint8>::BinaryOpBase;
     constexpr static size_t SIMD_WIDTH = 4;
     Op op;
-    void operator()(const dt_qint32& src0, const dt_qint32& src1,
-                    dt_quint8* dst) const {
+    void operator()(
+            const dt_qint32& src0, const dt_qint32& src1, dt_quint8* dst) const {
         *dst = operator()(src0, src1);
     }
     dt_quint8 operator()(const dt_qint32& src0, const dt_qint32& src1) const {

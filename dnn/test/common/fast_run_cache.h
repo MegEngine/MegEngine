@@ -26,8 +26,7 @@ class FastRunCache {
         SearchItemStorage(const Algorithm::SearchItem& item);
 
         SearchItemStorage& init_hash() {
-            hash = XXHash64CT::hash(data_hold.data(), data_hold.size(),
-                                    20201225);
+            hash = XXHash64CT::hash(data_hold.data(), data_hold.size(), 20201225);
             return *this;
         }
 
@@ -36,20 +35,17 @@ class FastRunCache {
         }
 
         struct Hash {
-            size_t operator()(const SearchItemStorage& s) const {
-                return s.hash;
-            }
+            size_t operator()(const SearchItemStorage& s) const { return s.hash; }
         };
     };
 
-    std::unordered_map<SearchItemStorage, Algorithm::Info::Desc,
-                       SearchItemStorage::Hash>
+    std::unordered_map<
+            SearchItemStorage, Algorithm::Info::Desc, SearchItemStorage::Hash>
             m_cache;
 
 public:
     Algorithm::Info::Desc get(const Algorithm::SearchItem& key);
-    void put(const Algorithm::SearchItem& key,
-             const Algorithm::Info::Desc& val);
+    void put(const Algorithm::SearchItem& key, const Algorithm::Info::Desc& val);
 };
 
 }  // namespace test

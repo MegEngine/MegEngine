@@ -10,17 +10,17 @@
  */
 
 #include "megbrain/comp_node_env.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/plugin/profiler.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
 #include "megbrain/test/megdnn_helper.h"
 #include "megbrain/utils/debug.h"
-#include "megbrain/opr/basic_arith.h"
 
 #if MGB_ENABLE_TENSOR_RT
 
-#include "megbrain/tensorrt/tensorrt_opr.h"
 #include "make_trt_net.h"
+#include "megbrain/tensorrt/tensorrt_opr.h"
 
 #include <random>
 
@@ -33,16 +33,15 @@ TEST(TestOprTensorRT, Basic) {
     intl::SimpleTensorRTNetwork net;
 
     auto p = net.create_trt_network(true);
-    auto trt_net =
-            TensorRTOpr::to_shared_ptr_network(p.second);
+    auto trt_net = TensorRTOpr::to_shared_ptr_network(p.second);
     auto y2 = TensorRTOpr::make(
             TensorRTOpr::to_shared_ptr_builder(p.first), trt_net,
             intl::TensorRTGraphFeatureBits::NCHW_FLOAT, {}, {net.x})[0];
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 2e-4);
 
@@ -66,23 +65,23 @@ TEST(TestOprTensorRT, Basic) {
     builder->setMaxBatchSize(10);
 
 #if NV_TENSOR_RT_VERSION >= 6001
-    TensorRTUniquePtr<IBuilderConfig> build_config{
-            builder->createBuilderConfig()};
+    TensorRTUniquePtr<IBuilderConfig> build_config{builder->createBuilderConfig()};
     TensorRTUniquePtr<ICudaEngine> cuda_engine{
             builder->buildEngineWithConfig(*trt_net, *build_config)};
 #else
-    TensorRTUniquePtr<ICudaEngine> cuda_engine{
-            builder->buildCudaEngine(*trt_net)};
+    TensorRTUniquePtr<ICudaEngine> cuda_engine{builder->buildCudaEngine(*trt_net)};
 #endif
     TensorRTUniquePtr<IHostMemory> mem{cuda_engine->serialize(), {}};
     FILE* fout = fopen(output_file("trt_cuda_engine_test").c_str(), "wb");
     auto wr = fwrite(mem->data(), 1, mem->size(), fout);
     mgb_assert(wr == mem->size());
     fclose(fout);
-    debug::write_to_file(output_file("trt_cuda_engine_test.input").c_str(),
-                         debug::dump_tensor(*host_x, "x"));
-    debug::write_to_file(output_file("trt_cuda_engine_test.output").c_str(),
-                         debug::dump_tensor(host_z1, "x"));
+    debug::write_to_file(
+            output_file("trt_cuda_engine_test.input").c_str(),
+            debug::dump_tensor(*host_x, "x"));
+    debug::write_to_file(
+            output_file("trt_cuda_engine_test.output").c_str(),
+            debug::dump_tensor(host_z1, "x"));
 }
 
 TEST(TestOprTensorRT, QuantizedBasic) {
@@ -100,8 +99,7 @@ TEST(TestOprTensorRT, QuantizedBasic) {
     }
 
     auto p = net.create_trt_network(true);
-    auto trt_net =
-            TensorRTOpr::to_shared_ptr_network(p.second);
+    auto trt_net = TensorRTOpr::to_shared_ptr_network(p.second);
 
     auto y2 = TensorRTOpr::make(
             TensorRTOpr::to_shared_ptr_builder(p.first), trt_net,
@@ -127,21 +125,20 @@ TEST(TestOprTensorRT, QuantizedBasic) {
     MGB_ASSERT_TENSOR_NEAR(host_z_mgb_qint8, host_z_trt, 1e-5);
 }
 
-
 TEST(TestOprTensorRT, ConcatBasic) {
     REQUIRE_GPU(1);
     intl::ConcatConvTensorRTNetwork net;
 
     auto p = net.create_trt_network(true);
-    auto y2 = TensorRTOpr::make(TensorRTOpr::to_shared_ptr_builder(p.first),
-                                TensorRTOpr::to_shared_ptr_network(p.second),
-                                intl::TensorRTGraphFeatureBits::NCHW_FLOAT, {},
-                                {net.x0, net.x1})[0];
+    auto y2 = TensorRTOpr::make(
+            TensorRTOpr::to_shared_ptr_builder(p.first),
+            TensorRTOpr::to_shared_ptr_network(p.second),
+            intl::TensorRTGraphFeatureBits::NCHW_FLOAT, {}, {net.x0, net.x1})[0];
 
     HostTensorND host_z1;
     HostTensorND host_z2;
-    auto func = net.graph->compile({make_callback_copy(net.y, host_z1),
-                                    make_callback_copy(y2, host_z2)});
+    auto func = net.graph->compile(
+            {make_callback_copy(net.y, host_z1), make_callback_copy(y2, host_z2)});
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
 
@@ -154,8 +151,6 @@ TEST(TestOprTensorRT, ConcatBasic) {
     func->execute();
     MGB_ASSERT_TENSOR_NEAR(host_z1, host_z2, 1e-4);
 }
-
-
 
 #endif  // MGB_ENABLE_TENSOR_RT
 

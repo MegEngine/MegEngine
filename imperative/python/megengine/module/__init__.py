@@ -30,6 +30,7 @@ from .elemwise import Elemwise
 from .embedding import Embedding
 from .identity import Identity
 from .linear import Linear
+from .lrn import LocalResponseNorm
 from .module import Module
 from .normalization import GroupNorm, InstanceNorm, LayerNorm
 from .padding import Pad

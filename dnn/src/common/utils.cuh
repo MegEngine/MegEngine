@@ -13,7 +13,7 @@
 #include "megdnn/arch.h"
 
 //! a comma to be used in macro for template params
-#define MEGDNN_COMMA ,
+#define MEGDNN_COMMA            ,
 #define MEGDNN_MARK_USED_VAR(v) static_cast<void>(v)
 
 #if MEGDNN_ENABLE_LOGGING
@@ -34,21 +34,21 @@
 //! megdnn_assert
 #if MEGDNN_ENABLE_LOGGING
 #if MEGDNN_ENABLE_MANGLING
-#define megdnn_assert(expr, ...)                                              \
-    do {                                                                      \
-        if (megdnn_unlikely(!(expr))) {                                       \
-            ::megdnn::__assert_fail__(                                        \
-                    "about location info, please build with debug", __LINE__, \
-                    NULL, #expr, ##__VA_ARGS__);                              \
-        }                                                                     \
+#define megdnn_assert(expr, ...)                                                    \
+    do {                                                                            \
+        if (megdnn_unlikely(!(expr))) {                                             \
+            ::megdnn::__assert_fail__(                                              \
+                    "about location info, please build with debug", __LINE__, NULL, \
+                    #expr, ##__VA_ARGS__);                                          \
+        }                                                                           \
     } while (0)
 #else
-#define megdnn_assert(expr, ...)                                               \
-    do {                                                                       \
-        if (megdnn_unlikely(!(expr))) {                                        \
-            ::megdnn::__assert_fail__(__FILE__, __LINE__, __PRETTY_FUNCTION__, \
-                                      #expr, ##__VA_ARGS__);                   \
-        }                                                                      \
+#define megdnn_assert(expr, ...)                                                    \
+    do {                                                                            \
+        if (megdnn_unlikely(!(expr))) {                                             \
+            ::megdnn::__assert_fail__(                                              \
+                    __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, ##__VA_ARGS__); \
+        }                                                                           \
     } while (0)
 #endif  // MEGDNN_ENABLE_MANGLING
 #else
@@ -69,18 +69,19 @@
 
 namespace megdnn {
 
-void __assert_fail__(const char *file, int line, const char *func,
-        const char *expr, const char *msg_fmt = nullptr, ...)
+void __assert_fail__(
+        const char* file, int line, const char* func, const char* expr,
+        const char* msg_fmt = nullptr, ...)
 #if defined(__GNUC__) || defined(__clang__)
-    __attribute__((format(printf, 5, 6), noreturn))
+        __attribute__((format(printf, 5, 6), noreturn))
 #endif
-	;
+        ;
 
-void __dummy_printf__(const char *msg_fmt, ...)
+void __dummy_printf__(const char* msg_fmt, ...)
 #ifdef __GNUC__
-    __attribute__((format(printf, 1, 2)))
+        __attribute__((format(printf, 1, 2)))
 #endif
-;
+        ;
 
 //! typetrait, just the same as std::is_same in c++11
 template <typename T, typename U>
@@ -93,6 +94,6 @@ struct is_same<T, T> {
     static const bool value = true;
 };
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen

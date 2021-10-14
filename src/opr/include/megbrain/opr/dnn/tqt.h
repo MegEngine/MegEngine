@@ -16,26 +16,28 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(TQTForward,
-                     intl::MegDNNOprWrapperFwd<megdnn::TQTForward>)  // {
+MGB_DEFINE_OPR_CLASS(TQTForward, intl::MegDNNOprWrapperFwd<megdnn::TQTForward>) // {
 public:
-    TQTForward(VarNode* src, VarNode* scale, const Param& param,
-           const OperatorNodeConfig& config);
+    TQTForward(
+            VarNode* src, VarNode* scale, const Param& param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(SymbolVar src, SymbolVar scale, const Param& param = {},
-                      const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar src, SymbolVar scale, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 };
 using TQT = TQTForward;
 
-MGB_DEFINE_OPR_CLASS(TQTBackward,
-                     intl::MegDNNOprWrapperBwd<megdnn::TQTBackward>)  // {
+MGB_DEFINE_OPR_CLASS(
+        TQTBackward, intl::MegDNNOprWrapperBwd<megdnn::TQTBackward>) // {
 public:
-    TQTBackward(VarNode* y_grad, VarNode* x, VarNode* scale, const Param& param,
+    TQTBackward(
+            VarNode* y_grad, VarNode* x, VarNode* scale, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(SymbolVar y_grad, SymbolVar x, SymbolVar scale,
-                           const Param& param = {},
-                           const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            SymbolVar y_grad, SymbolVar x, SymbolVar scale, const Param& param = {},
+            const OperatorNodeConfig& config = {});
 
 private:
     void init_output_static_infer_desc() override;

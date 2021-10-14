@@ -54,8 +54,7 @@ class JITFusionPass::Impl final {
     size_t max_nr_input(CompNode cn);
 
     //! check whether all oprs which depend on the var are in i_graph
-    bool test_all_readers_in_the_graph(VarNode* var,
-                                       InternalGraphGenerator* i_graph);
+    bool test_all_readers_in_the_graph(VarNode* var, InternalGraphGenerator* i_graph);
 
     //! check shape to determine whether the opr should be added to the internal
     //! graph
@@ -107,8 +106,7 @@ void JITFusionPass::Impl::detect_fusion() {
 
 void JITFusionPass::Impl::update_graph() {
     auto process = [this](OperatorNodeBase* opr) {
-        if (!Compiler::is_supported_device(
-                    opr->output(0)->comp_node().device_type()))
+        if (!Compiler::is_supported_device(opr->output(0)->comp_node().device_type()))
             return;
 
         auto fuse_varnode = [this](VarNode* var) {
@@ -117,8 +115,7 @@ void JITFusionPass::Impl::update_graph() {
                 return;
             }
             auto ig_gen = ig_gen_iter->second;
-            if (m_endpoint_set.count(var) != 0 &&
-                ig_gen->opr_set().size() >= 2) {
+            if (m_endpoint_set.count(var) != 0 && ig_gen->opr_set().size() >= 2) {
                 auto igraph = ig_gen->generate();
                 auto&& inputs = ig_gen->orig_inps();
                 if (m_after_grad || nr_non_const_vars(inputs) == 1) {
@@ -129,12 +126,11 @@ void JITFusionPass::Impl::update_graph() {
                         auto new_input = m_rewriter.get_var(input);
                         rewritten_inputs.push_back(new_input);
                     }
-                    auto fusion_op =
-                            JITExecutor::make(igraph, rewritten_inputs);
+                    auto fusion_op = JITExecutor::make(igraph, rewritten_inputs);
                     m_rewriter.replace_var(
                             var, fusion_op.node(),
-                            mgb_ssprintf_log("fuse endpoint: %s",
-                                             var->owner_opr()->cname())
+                            mgb_ssprintf_log(
+                                    "fuse endpoint: %s", var->owner_opr()->cname())
                                     .c_str());
                 }
             }
@@ -144,8 +140,7 @@ void JITFusionPass::Impl::update_graph() {
             if (!m_rewriter.has_manual_replace(i)) {
                 // if input i is a endpoint, and number of oprs in this subgraph
                 // is greater than 2
-                m_opt_state.call_with_opr(i->owner_opr(),
-                                          [&] { fuse_varnode(i); });
+                m_opt_state.call_with_opr(i->owner_opr(), [&] { fuse_varnode(i); });
             }
         }
         m_rewriter.auto_replace_outputs(opr);
@@ -170,8 +165,8 @@ bool JITFusionPass::Impl::test_all_readers_in_the_graph(
     return true;
 }
 
-bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
-                                      InternalGraphGenerator* ig_gen) {
+bool JITFusionPass::Impl::check_shape(
+        cg::OperatorNodeBase* opr, InternalGraphGenerator* ig_gen) {
     if (!cg::is_static_var_shape(opr->output(0))) {
         // currently we do not handle dynamic shape in JIT
         return false;
@@ -180,14 +175,10 @@ bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
         // By requiring opr output shape to be the same as final output shape,
         // we permit only one broadcast. If multiple broadcasts are fused,
         // together, execution would be actually slower.
-        if ((m_feature_bits & JITFeatureBits::DIMSHUFFLE) &&
-            ig_gen->has_dimshuffle() &&
+        if ((m_feature_bits & JITFeatureBits::DIMSHUFFLE) && ig_gen->has_dimshuffle() &&
             ig_gen->oprs_depended_by_dimshuffe().count(opr)) {
             return opr->output(0)->shape().eq_shape(
-                    ig_gen->oprs_depended_by_dimshuffe()
-                            .at(opr)
-                            ->input(0)
-                            ->shape());
+                    ig_gen->oprs_depended_by_dimshuffe().at(opr)->input(0)->shape());
         } else {
             return opr->output(0)->shape().eq_shape(ig_gen->output()->shape());
         }
@@ -214,8 +205,7 @@ bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
                 if (ig_gen->has_reduce()) {
                     ret &= jit_inp_shp.eq_shape(ig_gen->before_reduce_shape());
                 }
-                ret &= jit->output(0)->shape().eq_shape(
-                        ig_gen->output()->shape());
+                ret &= jit->output(0)->shape().eq_shape(ig_gen->output()->shape());
                 return ret;
             }
         }
@@ -230,18 +220,15 @@ bool JITFusionPass::Impl::check_shape(cg::OperatorNodeBase* opr,
         // mgb cg
         auto reduce = &opr->cast_final<opr::Reduce>();
         if (before_reduce) {
-            return reduce->input(0)->shape().eq_shape(
-                           ig_gen->before_reduce_shape()) &&
-                   reduce->output(0)->shape().eq_shape(
-                           ig_gen->before_reduce_shape());
+            return reduce->input(0)->shape().eq_shape(ig_gen->before_reduce_shape()) &&
+                   reduce->output(0)->shape().eq_shape(ig_gen->before_reduce_shape());
         } else {
             bool ret = true;
             if (ig_gen->has_reduce()) {
                 ret &= reduce->input(0)->shape().eq_shape(
                         ig_gen->before_reduce_shape());
             }
-            ret &= reduce->output(0)->shape().eq_shape(
-                    ig_gen->output()->shape());
+            ret &= reduce->output(0)->shape().eq_shape(ig_gen->output()->shape());
             return ret;
         }
     }
@@ -286,16 +273,13 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
         // in the subgraph and the opr's comp_node is same with the subgraph's,
         // then this opr can be fused to this graph as an internal node rather
         // than a leaf.
-        bool cond_readers =
-                     test_all_readers_in_the_graph(opr->output(0), ig_gen),
-             cond_cn = opr->output(0)->comp_node() ==
-                       ig_gen->output()->comp_node(),
+        bool cond_readers = test_all_readers_in_the_graph(opr->output(0), ig_gen),
+             cond_cn = opr->output(0)->comp_node() == ig_gen->output()->comp_node(),
              cond_shp = check_shape(opr, ig_gen),
              cond_nr_inp = ig_gen->get_cnt_input_if_add(opr) <= max_nr_input,
              cond_mlir_specific = true;
 
-        if (cond_readers && cond_cn && cond_shp && cond_nr_inp &&
-            cond_mlir_specific) {
+        if (cond_readers && cond_cn && cond_shp && cond_nr_inp && cond_mlir_specific) {
             ig_gen->add_opr(opr);
         } else {
             if (opr->same_type<opr::Dimshuffle>()) {
@@ -305,8 +289,8 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
             mgb_log_debug(
                     "JIT graph stopped at opr %s{%s}: cond: readers=%d cn=%d "
                     "shp=%d nr_inp=%d",
-                    opr->cname(), opr->dyn_typeinfo()->name, cond_readers,
-                    cond_cn, cond_shp, cond_nr_inp);
+                    opr->cname(), opr->dyn_typeinfo()->name, cond_readers, cond_cn,
+                    cond_shp, cond_nr_inp);
             ig_gen = create_new_igraph_gen(opr);
         }
     }
@@ -314,13 +298,12 @@ void JITFusionPass::Impl::process_opr(OperatorNodeBase* opr) {
     // handle const inputs
     for (auto&& i : opr->node_prop().dep_map()) {
         if (i.second & cg::OperatorNodeBase::NodeProp::DepType::DEV_VALUE) {
-            if (SymbolVar{i.first}
-                        .as_immutable_scalar_require_shape()
-                        .valid()) {
+            if (SymbolVar{i.first}.as_immutable_scalar_require_shape().valid()) {
                 auto opr = i.first->owner_opr();
-                mgb_assert(opr->same_type<opr::ImmutableTensor>(),
-                           "got imm scalar from non ImmutableTensor: %s{%s}",
-                           opr->cname(), opr->dyn_typeinfo()->name);
+                mgb_assert(
+                        opr->same_type<opr::ImmutableTensor>(),
+                        "got imm scalar from non ImmutableTensor: %s{%s}", opr->cname(),
+                        opr->dyn_typeinfo()->name);
                 ig_gen->add_opr(opr);
                 continue;
             }
@@ -341,8 +324,7 @@ size_t JITFusionPass::Impl::max_nr_input(CompNode cn) {
 }
 
 bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
-    if (!Compiler::is_supported_device(
-                opr->output(0)->comp_node().device_type())) {
+    if (!Compiler::is_supported_device(opr->output(0)->comp_node().device_type())) {
         return false;
     }
 
@@ -428,8 +410,8 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
     return false;
 }
 
-JITFusionPass::JITFusionPass(bool after_grad, int jit_opt_level,
-                             const JITConfig& jit_config)
+JITFusionPass::JITFusionPass(
+        bool after_grad, int jit_opt_level, const JITConfig& jit_config)
         : m_after_grad{after_grad}, m_feature_bits{JITFeatureBits::NONE} {
     // get default config from jit_opt_level
     JITConfig config;

@@ -13,9 +13,9 @@
 
 namespace {
 template <typename T>
-__global__ void kernel(const T* __restrict__ A, T* __restrict__ B,
-                       uint32_t batch, uint32_t m, uint32_t n, uint32_t LDA,
-                       uint32_t LDB, uint32_t stride_A, uint32_t stride_B) {
+__global__ void kernel(
+        const T* __restrict__ A, T* __restrict__ B, uint32_t batch, uint32_t m,
+        uint32_t n, uint32_t LDA, uint32_t LDB, uint32_t stride_A, uint32_t stride_B) {
     const uint32_t batch_idx = blockIdx.z;
     A += batch_idx * stride_A;
     B += batch_idx * stride_B;
@@ -42,20 +42,20 @@ __global__ void kernel(const T* __restrict__ A, T* __restrict__ B,
 namespace megdnn {
 namespace cuda {
 template <typename T>
-void copy_by_transpose(const T* A, T* B, size_t batch, size_t m, size_t n,
-                       size_t lda, size_t ldb, size_t stride_A, size_t stride_B,
-                       cudaStream_t stream) {
+void copy_by_transpose(
+        const T* A, T* B, size_t batch, size_t m, size_t n, size_t lda, size_t ldb,
+        size_t stride_A, size_t stride_B, cudaStream_t stream) {
     dim3 threads(16, 16);
     dim3 blocks(DIVUP(n, 16), DIVUP(m, 16), batch);
-    kernel<T><<<blocks, threads, 0, stream>>>(A, B, batch, m, n, lda, ldb,
-                                              stride_A, stride_B);
+    kernel<T><<<blocks, threads, 0, stream>>>(
+            A, B, batch, m, n, lda, ldb, stride_A, stride_B);
     after_kernel_launch();
 }
 
-#define INST(T)                                                              \
-    template void copy_by_transpose<T>(const T*, T*, size_t, size_t, size_t, \
-                                       size_t, size_t, size_t,               \
-                                       size_t, cudaStream_t);
+#define INST(T)                                                                   \
+    template void copy_by_transpose<T>(                                           \
+            const T*, T*, size_t, size_t, size_t, size_t, size_t, size_t, size_t, \
+            cudaStream_t);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
@@ -66,6 +66,4 @@ MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 }  // namespace cuda
 }  // namespace megdnn
 
-
 // vim: ft=cpp syntax=cuda.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

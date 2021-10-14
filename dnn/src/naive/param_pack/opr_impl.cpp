@@ -17,10 +17,9 @@ using namespace megdnn;
 using namespace naive;
 
 template <typename T>
-void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs,
-                                        int32_t* offsets,
-                                        _megdnn_tensor_out dst,
-                                        _megdnn_workspace) {
+void ParamPackConcatImpl::exec_internal(
+        _megdnn_tensor_in srcs, int32_t* offsets, _megdnn_tensor_out dst,
+        _megdnn_workspace) {
     auto srcs_ptr = static_cast<const T**>(srcs.raw_ptr);
     auto dst_ptr = dst.ptr<T>();
 
@@ -38,10 +37,9 @@ void ParamPackConcatImpl::exec_internal(_megdnn_tensor_in srcs,
     }
 }
 
-void ParamPackConcatImpl::exec(_megdnn_tensor_in srcs,
-                               _megdnn_tensor_in offsets,
-                               _megdnn_tensor_out dst,
-                               _megdnn_workspace workspace) {
+void ParamPackConcatImpl::exec(
+        _megdnn_tensor_in srcs, _megdnn_tensor_in offsets, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(dst.layout, offsets.layout, srcs.layout);
     auto offsets_ptr = offsets.ptr<int32_t>();
 

@@ -65,8 +65,7 @@ inline int8x8_t QConverter::convert(const float32x4_t& src) {
 }
 
 template <>
-inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc,
-                                     const int32x4_t& vzp) {
+inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc, const int32x4_t& vzp) {
     int32x4_t vres0 = vcvtaq_s32_f32(vsrc.val[0]);
     int32x4_t vres1 = vcvtaq_s32_f32(vsrc.val[1]);
     vres0 = vqaddq_s32(vres0, vzp);
@@ -74,8 +73,8 @@ inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc,
     vres0 = vmaxq_s32(vres0, QConverterBase::vzero());
     vres1 = vmaxq_s32(vres1, QConverterBase::vzero());
 
-    return vqmovn_u16(vreinterpretq_u16_s16(
-            vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1))));
+    return vqmovn_u16(
+            vreinterpretq_u16_s16(vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1))));
 }
 
 template <>
@@ -86,12 +85,12 @@ inline int32x4_t QConverter::convert(const float32x4_t& vsrc) {
 #else
 template <>
 inline int8x8_t QConverter::convert(const float32x4x2_t& vsrc) {
-    float32x4_t vinc0 =
-            vbslq_f32(vcgeq_f32(vsrc.val[0], QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
-    float32x4_t vinc1 =
-            vbslq_f32(vcgeq_f32(vsrc.val[1], QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
+    float32x4_t vinc0 = vbslq_f32(
+            vcgeq_f32(vsrc.val[0], QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
+    float32x4_t vinc1 = vbslq_f32(
+            vcgeq_f32(vsrc.val[1], QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
 
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(vsrc.val[0], vinc0));
     int32x4_t vres1 = vcvtq_s32_f32(vaddq_f32(vsrc.val[1], vinc1));
@@ -101,9 +100,9 @@ inline int8x8_t QConverter::convert(const float32x4x2_t& vsrc) {
 
 template <>
 inline int8x8_t QConverter::convert(const float32x4_t& src) {
-    float32x4_t vinc0 =
-            vbslq_f32(vcgeq_f32(src, QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
+    float32x4_t vinc0 = vbslq_f32(
+            vcgeq_f32(src, QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
 
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(src, vinc0));
     int16x4_t vres0_int16 = vqmovn_s32(vres0);
@@ -111,14 +110,13 @@ inline int8x8_t QConverter::convert(const float32x4_t& src) {
 }
 
 template <>
-inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc,
-                                     const int32x4_t& vzp) {
-    float32x4_t vinc0 =
-            vbslq_f32(vcgeq_f32(vsrc.val[0], QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
-    float32x4_t vinc1 =
-            vbslq_f32(vcgeq_f32(vsrc.val[1], QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
+inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc, const int32x4_t& vzp) {
+    float32x4_t vinc0 = vbslq_f32(
+            vcgeq_f32(vsrc.val[0], QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
+    float32x4_t vinc1 = vbslq_f32(
+            vcgeq_f32(vsrc.val[1], QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
 
     int32x4_t vres0 = vcvtq_s32_f32(vaddq_f32(vsrc.val[0], vinc0));
     int32x4_t vres1 = vcvtq_s32_f32(vaddq_f32(vsrc.val[1], vinc1));
@@ -127,15 +125,15 @@ inline uint8x8_t QConverter::convert(const float32x4x2_t& vsrc,
     vres0 = vmaxq_s32(vres0, QConverterBase::vzero());
     vres1 = vmaxq_s32(vres1, QConverterBase::vzero());
 
-    return vqmovn_u16(vreinterpretq_u16_s16(
-            vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1))));
+    return vqmovn_u16(
+            vreinterpretq_u16_s16(vcombine_s16(vqmovn_s32(vres0), vqmovn_s32(vres1))));
 }
 
 template <>
 inline int32x4_t QConverter::convert(const float32x4_t& vsrc) {
-    float32x4_t vinc =
-            vbslq_f32(vcgeq_f32(vsrc, QConverterBase::vfzero()),
-                      QConverterBase::vfhalf(), QConverterBase::vfneg_half());
+    float32x4_t vinc = vbslq_f32(
+            vcgeq_f32(vsrc, QConverterBase::vfzero()), QConverterBase::vfhalf(),
+            QConverterBase::vfneg_half());
     return vcvtq_s32_f32(vaddq_f32(vsrc, vinc));
 }
 

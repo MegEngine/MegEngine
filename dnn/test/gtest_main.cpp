@@ -42,8 +42,9 @@ void set_log_level() {
     min_log_level = level;
 }
 
-void log_handler(megdnn::LogLevel level, const char* file, const char* func,
-                 int line, const char* fmt, va_list ap) {
+void log_handler(
+        megdnn::LogLevel level, const char* file, const char* func, int line,
+        const char* fmt, va_list ap) {
     if (level < min_log_level) {
         return;
     }

@@ -15,8 +15,7 @@
 
 namespace megdnn {
 
-void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
-                                    TensorLayout& dst) {
+void PoolingBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
     auto errmsg =
             megdnn_layout_msg(src) + ", " + megdnn_layout_msg(dst) + ", " +
             "pad_h=" + std::to_string(param().pad_h) + ", " +
@@ -26,9 +25,8 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
             "window_h=" + std::to_string(param().window_h) + ", " +
             "window_w=" + std::to_string(param().window_w) + ", " +
             "is_max=" + std::to_string(param().mode == Mode::MAX) + ", " +
-            "is_nhwc=" + std::to_string(param().format == Param::Format::NHWC) +
-            ", " + "is_nhwcd4=" +
-            std::to_string(param().format == Param::Format::NHWCD4);
+            "is_nhwc=" + std::to_string(param().format == Param::Format::NHWC) + ", " +
+            "is_nhwcd4=" + std::to_string(param().format == Param::Format::NHWCD4);
     auto errmsg_c = errmsg.c_str();
 
     MEGDNN_MARK_USED_VAR(errmsg_c);
@@ -44,11 +42,12 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
 
         spatial_pos = 1;
         c_pos = 3;
-    } else if (param().format == Param::Format::NCHW4 ||
-               param().format == Param::Format::NCHW44 ||
-               param().format == Param::Format::NCHW88 ||
-               param().format == Param::Format::NCHW32 ||
-               param().format == Param::Format::NCHW64) {
+    } else if (
+            param().format == Param::Format::NCHW4 ||
+            param().format == Param::Format::NCHW44 ||
+            param().format == Param::Format::NCHW88 ||
+            param().format == Param::Format::NCHW32 ||
+            param().format == Param::Format::NCHW64) {
         megdnn_assert(src.ndim == 5_z, "%s", errmsg_c);
 
         spatial_pos = 2;
@@ -59,8 +58,8 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
         batch_pos = 3;
     } else {
         megdnn_assert(
-                param().format == Param::Format::NHWCD4 && src.ndim == 5_z,
-                "%s", errmsg_c);
+                param().format == Param::Format::NHWCD4 && src.ndim == 5_z, "%s",
+                errmsg_c);
         spatial_pos = 1;
         c_pos = 2;
     }
@@ -103,11 +102,11 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
     if (param().format == Param::Format::NCHW) {
         dst = TensorLayout(TensorShape({n, c, oh, ow}), src.dtype);
     } else if (param().format == Param::Format::NHWC) {
-        megdnn_assert(param().format == Param::Format::NHWC,
-                      "invalid pooling format");
+        megdnn_assert(param().format == Param::Format::NHWC, "invalid pooling format");
         dst = TensorLayout({n, oh, ow, c}, src.dtype, src.format);
-    } else if (param().format == Param::Format::NCHW4 ||
-               param().format == Param::Format::NCHW44) {
+    } else if (
+            param().format == Param::Format::NCHW4 ||
+            param().format == Param::Format::NCHW44) {
         dst = TensorLayout{{n, c / 4, oh, ow, 4}, src.dtype, src.format};
     } else if (param().format == Param::Format::NCHW88) {
         dst = TensorLayout{{n, c / 8, oh, ow, 8}, src.dtype, src.format};
@@ -118,46 +117,42 @@ void PoolingBase::deduce_layout_fwd(const TensorLayout& src,
     } else if (param().format == Param::Format::CHWN4) {
         dst = TensorLayout{{c / 4, oh, ow, n, 4}, src.dtype, src.format};
     } else {
-        megdnn_assert(param().format == Param::Format::NHWCD4,
-                      "invalid pooling format");
+        megdnn_assert(
+                param().format == Param::Format::NHWCD4, "invalid pooling format");
         dst = TensorLayout{{n, oh, c / 4, ow, 4}, src.dtype, src.format};
     }
 }
 
-void PoolingBase::check_layout_fwd(const TensorLayout& src,
-                                   const TensorLayout& dst) {
+void PoolingBase::check_layout_fwd(const TensorLayout& src, const TensorLayout& dst) {
     TensorLayout dst_expected;
     megdnn_assert_eq_dtype(src, dst);
     deduce_layout_fwd(src, dst_expected);
     megdnn_assert_eq_layout(dst_expected, dst);
     megdnn_assert(src.dtype == dst.dtype);
-    megdnn_assert(src.dtype.category() == DTypeCategory::FLOAT ||
-                  src.dtype == dtype::Int8() ||
-                  src.dtype.category() == DTypeCategory::QUANTIZED);
+    megdnn_assert(
+            src.dtype.category() == DTypeCategory::FLOAT ||
+            src.dtype == dtype::Int8() ||
+            src.dtype.category() == DTypeCategory::QUANTIZED);
 }
 
 void PoolingForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     deduce_layout_fwd(src, dst);
 }
 
-void PoolingForward::check_exec(const TensorLayout& src,
-                                const TensorLayout& dst,
-                                size_t workspace_in_bytes) {
+void PoolingForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     check_layout_fwd(src, dst);
     auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-void PoolingBackward::check_exec(const TensorLayout& src,
-                                 const TensorLayout& dst,
-                                 const TensorLayout& diff,
-                                 const TensorLayout& grad,
-                                 size_t workspace_in_bytes) {
+void PoolingBackward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+        const TensorLayout& grad, size_t workspace_in_bytes) {
     check_layout_fwd(src, dst);
     megdnn_assert_eq_layout(src, grad);
     megdnn_assert_eq_layout(dst, diff);
-    auto required_workspace_in_bytes =
-            get_workspace_in_bytes(src, dst, diff, grad);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst, diff, grad);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 

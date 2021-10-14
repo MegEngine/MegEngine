@@ -9,11 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "test/common/checker.h"
 #include "test/common/convolution3d.h"
 #include <chrono>
-#include <unordered_set>
 #include <sstream>
+#include <unordered_set>
+#include "test/common/checker.h"
 
 using namespace megdnn;
 using namespace test;
@@ -22,7 +22,7 @@ using namespace convolution3d;
 std::vector<TestArg> convolution3d::get_1x1x1_args() {
     std::vector<TestArg> args;
     param::Convolution3D param;
-    param.mode = param::Convolution3D::Mode::CROSS_CORRELATION; 
+    param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
     // clang-format off
     for (size_t batch_size: {4, 8})
     for (size_t ic: {1, 4, 8})
@@ -36,11 +36,11 @@ std::vector<TestArg> convolution3d::get_1x1x1_args() {
     // clang-format on
     return args;
 }
-#if MEGDNN_WITH_BENCHMARK 
+#if MEGDNN_WITH_BENCHMARK
 std::vector<TestArg> convolution3d::get_speed_test_args() {
     std::vector<TestArg> args;
     std::vector<std::pair<size_t, size_t>> range;
-    range.push_back(std::pair<size_t, size_t> (10, 16));
+    range.push_back(std::pair<size_t, size_t>(10, 16));
     // clang-format off
     for (size_t n:  {64})
     for (size_t id: {18, 32, 64})
@@ -75,7 +75,7 @@ std::vector<TestArg> convolution3d::get_speed_test_args() {
 std::vector<TestArg> convolution3d::get_args() {
     std::vector<TestArg> args;
     std::vector<std::pair<size_t, size_t>> range;
-    range.push_back(std::pair<size_t, size_t> (11, 13));
+    range.push_back(std::pair<size_t, size_t>(11, 13));
     // clang-format off
 #if 1
     for (size_t n:  {4})
@@ -143,52 +143,47 @@ std::vector<TestArg> convolution3d::get_args() {
     for (size_t i = range[0].first; i < range[0].second; ++i) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{4, 10, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{4, 10, i, i + 1, i + 2},
                 TensorShape{10, 10, 1, 1, 1});
 
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{4, 10, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{4, 10, i, i + 1, i + 2},
                 TensorShape{4, 10, 1, 1, 1});
     }
 
     for (size_t i = 2; i < 6; ++i) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{1, 1, i, i+1, i+2},
-                TensorShape{1, 1, 1, 2, 3});
+        args.emplace_back(
+                param, TensorShape{1, 1, i, i + 1, i + 2}, TensorShape{1, 1, 1, 2, 3});
     }
     for (size_t i = 2; i < 6; ++i) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{1, 1, i, i+1, i+2},
-                TensorShape{1, 1, 1, 2, 3});
+        args.emplace_back(
+                param, TensorShape{1, 1, i, i + 1, i + 2}, TensorShape{1, 1, 1, 2, 3});
     }
     for (size_t i = 2; i < 5; ++i) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{1, 1, i, i+1, i+2},
-                TensorShape{1, 1, 2, 2, 2});
+        args.emplace_back(
+                param, TensorShape{1, 1, i, i + 1, i + 2}, TensorShape{1, 1, 2, 2, 2});
     }
 
     for (size_t i = range[0].first; i < range[0].second; ++i) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1, i+2},
-                TensorShape{3, 2, 3, 4, 5});
+        args.emplace_back(
+                param, TensorShape{5, 2, i, i + 1, i + 2}, TensorShape{3, 2, 3, 4, 5});
 
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1, i+2},
-                TensorShape{3, 2, 3, 4, 5});
+        args.emplace_back(
+                param, TensorShape{5, 2, i, i + 1, i + 2}, TensorShape{3, 2, 3, 4, 5});
     }
 
-    //padding case
+    // padding case
     for (size_t i = range[0].first; i < range[0].second; ++i) {
         param::Convolution3D param;
         param.pad_d = 1;
@@ -196,25 +191,23 @@ std::vector<TestArg> convolution3d::get_args() {
         param.pad_w = 3;
 
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1, i+2},
-                TensorShape{3, 2, 3, 4, 5});
+        args.emplace_back(
+                param, TensorShape{5, 2, i, i + 1, i + 2}, TensorShape{3, 2, 3, 4, 5});
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{5, 2, i, i+1, i+2},
-                TensorShape{3, 2, 3, 4, 5});
+        args.emplace_back(
+                param, TensorShape{5, 2, i, i + 1, i + 2}, TensorShape{3, 2, 3, 4, 5});
     }
     // large channel
     for (size_t i = range[0].first; i < range[0].second; ++i) {
         param::Convolution3D param;
 
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 3, 4, 5});
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 3, 4, 5});
     }
 
@@ -225,12 +218,12 @@ std::vector<TestArg> convolution3d::get_args() {
         param.pad_w = 3;
 
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 3, 4, 5});
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 3, 4, 5});
     }
 
@@ -239,12 +232,12 @@ std::vector<TestArg> convolution3d::get_args() {
         param::Convolution3D param;
 
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 1, 1, 1});
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 20, i, i+1, i+2},
+        args.emplace_back(
+                param, TensorShape{2, 20, i, i + 1, i + 2},
                 TensorShape{30, 20, 1, 1, 1});
     }
 
@@ -253,13 +246,11 @@ std::vector<TestArg> convolution3d::get_args() {
         param::Convolution3D param;
 
         param.mode = param::Convolution3D::Mode::CONVOLUTION;
-        args.emplace_back(param,
-                TensorShape{2, 2, i, i+1, i+2},
-                TensorShape{3, 2, 7, 8, 9});
+        args.emplace_back(
+                param, TensorShape{2, 2, i, i + 1, i + 2}, TensorShape{3, 2, 7, 8, 9});
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{2, 2, i, i+1, i+2},
-                TensorShape{3, 2, 7, 8, 9});
+        args.emplace_back(
+                param, TensorShape{2, 2, i, i + 1, i + 2}, TensorShape{3, 2, 7, 8, 9});
     }
 
     // exhaustive search
@@ -291,8 +282,8 @@ std::vector<TestArg> convolution3d::get_args() {
     for (size_t oh = 1; oh < 10; ++oh) {
         param::Convolution3D param;
         param.mode = param::Convolution3D::Mode::CROSS_CORRELATION;
-        args.emplace_back(param,
-                TensorShape{4, 3, oh+3, oh+4, oh+5},
+        args.emplace_back(
+                param, TensorShape{4, 3, oh + 3, oh + 4, oh + 5},
                 TensorShape{2, 3, 4, 4, 4});
     }
     // large channels
@@ -318,7 +309,7 @@ std::vector<TestArg> convolution3d::get_args() {
         args.emplace_back(param, TensorShape{n, ic, id, ih, iw},
                           TensorShape{oc, ic, fd, fh, fw});
     }
-    // clang-format on
+                                                // clang-format on
 #if 0
     // x86 direct case 2
     for (size_t stride: {1, 2})
@@ -436,12 +427,9 @@ std::vector<TestArg> convolution3d::get_dilated_args() {
     {
         param.pad_d = param.pad_h = param.pad_w = 2;
         param.dilate_d = param.dilate_h = param.dilate_w = 3;
-        size_t n = 1, ic = 5, id = 24, ih = 24, iw = 24,
-               fd = 3, fh = 3, fw = 3,
-               oc = 6;
-        args.emplace_back(param,
-                TensorShape{n, ic, id, ih, iw},
-                TensorShape{oc, ic, fd, fh, fw});
+        size_t n = 1, ic = 5, id = 24, ih = 24, iw = 24, fd = 3, fh = 3, fw = 3, oc = 6;
+        args.emplace_back(
+                param, TensorShape{n, ic, id, ih, iw}, TensorShape{oc, ic, fd, fh, fw});
     }
     // exhaustive search
     // clang-format off
@@ -468,4 +456,3 @@ std::vector<TestArg> convolution3d::get_dilated_args() {
     return args;
 }
 // vim: syntax=cpp.doxygen
-

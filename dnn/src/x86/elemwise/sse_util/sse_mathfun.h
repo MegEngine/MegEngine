@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include <xmmintrin.h>
 #include "megdnn/arch.h"
 #include "megdnn/basic_types.h"
-#include <xmmintrin.h>
 
 #include <cstddef>
 
@@ -27,9 +27,8 @@ __m128 sin_ps(__m128 x) MEGDNN_ATTRIBUTE_TARGET("sse2");
 
 __m128 cos_ps(__m128 x) MEGDNN_ATTRIBUTE_TARGET("sse2");
 
-void sincos_ps(__m128 x, __m128 *s, __m128 *c) MEGDNN_ATTRIBUTE_TARGET("sse2");
+void sincos_ps(__m128 x, __m128* s, __m128* c) MEGDNN_ATTRIBUTE_TARGET("sse2");
 
-
-} // namespace detail
-} // namespace x86
-} // namespace megdnn
+}  // namespace detail
+}  // namespace x86
+}  // namespace megdnn

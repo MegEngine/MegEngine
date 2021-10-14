@@ -58,12 +58,13 @@ AST_NODE_DECL(InputDevValueOp, Halide::Buffer<> m_buffer);
 AST_NODE_DECL(ElemwiseOp);
 AST_NODE_DECL(TypeCvtOp);
 AST_NODE_DECL(ReduceOp, Halide::Func m_comp);
-AST_NODE_DECL(ScalarImmOp,
-              union Val {
-                  int32_t iv;
-                  float fv;
-              };
-              Val m_val);
+AST_NODE_DECL(
+        ScalarImmOp,
+        union Val {
+            int32_t iv;
+            float fv;
+        };
+        Val m_val);
 AST_NODE_DECL(BroadcastOp);
 
 template <class Op>

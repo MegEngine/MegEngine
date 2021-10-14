@@ -41,8 +41,7 @@ int64_t get_grid_size(int64_t nr_elements, int64_t block_size) {
 }
 
 template <int out_dim, typename ctype>
-void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
-                      int block_size) {
+void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func, int block_size) {
     auto&& args = fusion_opr->args();
     size_t num_memrefs = args.inputs.size() + args.outputs.size();
     std::vector<StridedMemRefType<ctype, out_dim>> param_holders(num_memrefs);
@@ -76,24 +75,24 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
         if (nr_elements == 0) {
             nr_elements = arg.from->layout().total_nr_elems();
         } else {
-            mgb_assert(static_cast<size_t>(nr_elements) ==
-                               arg.layout.total_nr_elems(),
-                       "The number of elements of outputs mismatch, expected: "
-                       "%zu got: %zu(%s)",
-                       static_cast<size_t>(nr_elements),
-                       arg.from->layout().total_nr_elems(),
-                       arg.from->layout().to_string().c_str());
+            mgb_assert(
+                    static_cast<size_t>(nr_elements) == arg.layout.total_nr_elems(),
+                    "The number of elements of outputs mismatch, expected: "
+                    "%zu got: %zu(%s)",
+                    static_cast<size_t>(nr_elements),
+                    arg.from->layout().total_nr_elems(),
+                    arg.from->layout().to_string().c_str());
         }
 
         set_params(idx++, arg.from->dev_tensor().raw_ptr(), arg.from->layout());
     }
 
-    mgb_assert(param_holders.size() == num_memrefs,
-               "calling push_back method of param_holders is unsafe as it "
-               "might cause reallocation of std::vector");
+    mgb_assert(
+            param_holders.size() == num_memrefs,
+            "calling push_back method of param_holders is unsafe as it "
+            "might cause reallocation of std::vector");
 
-    const CompNodeEnv& env =
-            CompNodeEnv::from_comp_node(fusion_opr->comp_node());
+    const CompNodeEnv& env = CompNodeEnv::from_comp_node(fusion_opr->comp_node());
 
     int64_t grid_size;
     if (nr_elements <= block_size) {
@@ -106,14 +105,15 @@ void setup_and_launch(const JITExecutor* fusion_opr, CUfunction func,
     params.push_back(&nr_elements);
     params.push_back(&nr_threads);
 
-    MGB_CUDA_CU_CHECK(cuLaunchKernel(func, grid_size, 1, 1, block_size, 1, 1, 0,
-                                     env.cuda_env().stream, params.data(), 0));
+    MGB_CUDA_CU_CHECK(cuLaunchKernel(
+            func, grid_size, 1, 1, block_size, 1, 1, 0, env.cuda_env().stream,
+            params.data(), 0));
 }
 
 template <int out_dim>
-void setup_and_launch_dim(const megdnn::DType dtype,
-                          const JITExecutor* fusion_opr, CUfunction func,
-                          int block_size) {
+void setup_and_launch_dim(
+        const megdnn::DType dtype, const JITExecutor* fusion_opr, CUfunction func,
+        int block_size) {
     switch (dtype.enumv()) {
 #define cb(_dtype, _type)                                               \
     case megdnn::DTypeEnum::_dtype:                                     \
@@ -130,17 +130,17 @@ void setup_and_launch_dim(const megdnn::DType dtype,
 }  // namespace
 
 const std::string MLIRCUDAExecutable::sm_blob_annotation = "nvvm.cubin";
-MLIRCUDAExecutable::MLIRCUDAExecutable(mlir::OwningModuleRef& module,
-                                       const std::string& kernel_name) {
+MLIRCUDAExecutable::MLIRCUDAExecutable(
+        mlir::OwningModuleRef& module, const std::string& kernel_name) {
     m_kernel_name = kernel_name + "_kernel";
-    auto kernel_module =
-            module->lookupSymbol<mlir::gpu::GPUModuleOp>(m_kernel_name);
+    auto kernel_module = module->lookupSymbol<mlir::gpu::GPUModuleOp>(m_kernel_name);
     mgb_assert(kernel_module, "Expected gpu kernel module");
 
     auto binary_attr = kernel_module.getAttrOfType<mlir::StringAttr>(
             llvm::StringRef(sm_blob_annotation));
-    mgb_assert(binary_attr, "Missing %s attribute in gpu kernel module",
-               sm_blob_annotation.c_str());
+    mgb_assert(
+            binary_attr, "Missing %s attribute in gpu kernel module",
+            sm_blob_annotation.c_str());
     m_kernel_data = binary_attr.getValue().str();
 }
 
@@ -155,37 +155,34 @@ void MLIRCUDAExecutable::execute(JITExecutor* fusion_opr) {
 
 MLIRCUDAExecutable::~MLIRCUDAExecutable() {}
 
-void MLIRCUDAExecutable::FuncCache::exec(const JITExecutor* fusion_opr,
-                                         const MLIRCUDAExecutable* cuda_exe) {
+void MLIRCUDAExecutable::FuncCache::exec(
+        const JITExecutor* fusion_opr, const MLIRCUDAExecutable* cuda_exe) {
     Func* func;
     {
         MGB_LOCK_GUARD(mtx);
         auto ins = cn2func.insert({fusion_opr->comp_node(), {}});
         func = &ins.first->second;
         if (ins.second) {
-            MGB_CUDA_CU_CHECK(
-                    cuModuleLoadData(&func->module, kernel_data.data()));
-            MGB_CUDA_CU_CHECK(
-                    cuModuleGetFunction(&func->func, func->module,
-                                        cuda_exe->m_kernel_name.c_str()));
+            MGB_CUDA_CU_CHECK(cuModuleLoadData(&func->module, kernel_data.data()));
+            MGB_CUDA_CU_CHECK(cuModuleGetFunction(
+                    &func->func, func->module, cuda_exe->m_kernel_name.c_str()));
             int min_grid_size = 0;
             MGB_CUDA_CU_CHECK(cuOccupancyMaxPotentialBlockSize(
-                    &min_grid_size, &func->block_size, func->func, nullptr, 0,
-                    0));
+                    &min_grid_size, &func->block_size, func->func, nullptr, 0, 0));
         }
     }
 
-    mgb_assert(fusion_opr->args().outputs.size() == 1,
-               "Currently only support 1 outputs, got %zu",
-               fusion_opr->args().outputs.size());
+    mgb_assert(
+            fusion_opr->args().outputs.size() == 1,
+            "Currently only support 1 outputs, got %zu",
+            fusion_opr->args().outputs.size());
     int out_dim = fusion_opr->args().outputs[0].from->layout().ndim;
     DType dtype = fusion_opr->args().outputs[0].from->layout().dtype;
 
     switch (out_dim) {
-#define cb(_ndim)                                                  \
-    case _ndim:                                                    \
-        setup_and_launch_dim<_ndim>(dtype, fusion_opr, func->func, \
-                                    func->block_size);             \
+#define cb(_ndim)                                                                     \
+    case _ndim:                                                                       \
+        setup_and_launch_dim<_ndim>(dtype, fusion_opr, func->func, func->block_size); \
         break;
         cb(1);
         cb(2);

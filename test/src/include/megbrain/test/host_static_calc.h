@@ -15,20 +15,20 @@
 
 namespace mgb {
 
-    void elemwise_static_calc(opr::Elemwise::Mode mode,
-            HostTensorND &dest, const std::vector<HostTensorND>& inputs);
+void elemwise_static_calc(
+        opr::Elemwise::Mode mode, HostTensorND& dest,
+        const std::vector<HostTensorND>& inputs);
 
-#define EL2(_name, _mode) \
-    static inline void host_##_name (HostTensorND &dest, \
-            const HostTensorND &a, const HostTensorND &b) { \
-        elemwise_static_calc(opr::Elemwise::Mode::_mode, dest, {a, b}); \
+#define EL2(_name, _mode)                                                       \
+    static inline void host_##_name(                                            \
+            HostTensorND& dest, const HostTensorND& a, const HostTensorND& b) { \
+        elemwise_static_calc(opr::Elemwise::Mode::_mode, dest, {a, b});         \
     }
 
-    EL2(add, ADD)
-    EL2(pow, POW);
+EL2(add, ADD)
+EL2(pow, POW);
 
 #undef EL2
-}
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

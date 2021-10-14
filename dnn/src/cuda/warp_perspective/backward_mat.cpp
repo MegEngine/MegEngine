@@ -39,21 +39,20 @@ WorkspaceBundle WarpPerspectiveBackwardMatImpl::get_workspace_bundle(
     return {ptr, std::move(sizes)};
 }
 
-void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in ssrc,
-                                          _megdnn_tensor_in smat,
-                                          _megdnn_tensor_in smat_idx,
-                                          _megdnn_tensor_in sdiff,
-                                          _megdnn_tensor_out sgrad,
-                                          _megdnn_workspace sworkspace) {
-    check_exec(ssrc.layout, smat.layout, smat_idx.layout, sdiff.layout,
-               sgrad.layout, sworkspace.size);
+void WarpPerspectiveBackwardMatImpl::exec(
+        _megdnn_tensor_in ssrc, _megdnn_tensor_in smat, _megdnn_tensor_in smat_idx,
+        _megdnn_tensor_in sdiff, _megdnn_tensor_out sgrad,
+        _megdnn_workspace sworkspace) {
+    check_exec(
+            ssrc.layout, smat.layout, smat_idx.layout, sdiff.layout, sgrad.layout,
+            sworkspace.size);
     TensorND src = ssrc;
     TensorND mat = smat;
     TensorND diff = sdiff;
     TensorND grad = sgrad;
     TensorND mat_idx = smat_idx;
-    auto bundle = get_workspace_bundle(sworkspace.raw_ptr, ssrc.layout,
-                                       smat.layout, sdiff.layout, sgrad.layout);
+    auto bundle = get_workspace_bundle(
+            sworkspace.raw_ptr, ssrc.layout, smat.layout, sdiff.layout, sgrad.layout);
     auto ctypecvt = CompTypeCvter<dtype::BFloat16, dtype::Float32>(
             concrete_handle(this->handle()), &bundle);
     if (ssrc.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
@@ -64,9 +63,9 @@ void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in ssrc,
     }
     {
         auto stream = cuda_stream(this->handle());
-        auto N = src.layout.shape[0], C = src.layout.shape[1],
-             IH = src.layout.shape[2], IW = src.layout.shape[3],
-             OH = diff.layout.shape[2], OW = diff.layout.shape[3];
+        auto N = src.layout.shape[0], C = src.layout.shape[1], IH = src.layout.shape[2],
+             IW = src.layout.shape[3], OH = diff.layout.shape[2],
+             OW = diff.layout.shape[3];
         int* midx_ptr = nullptr;
         if (mat_idx.raw_ptr) {
             megdnn_assert(mat_idx.layout.ndim == 1);
@@ -84,8 +83,8 @@ void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in ssrc,
         if (batch_x_channel_size <= max_batch_x_channel) {
             warp_perspective::backward_mat_proxy(
                     src.ptr<dt_float32>(), mat.ptr<dt_float32>(), midx_ptr,
-                    diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N, C, IH,
-                    IW, OH, OW, bval, bmode, stream);
+                    diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N, C, IH, IW, OH,
+                    OW, bval, bmode, stream);
         } else {
             dt_float32* src_ptr = src.ptr<dt_float32>();
             dt_float32* mat_ptr = mat.ptr<dt_float32>();
@@ -93,12 +92,10 @@ void WarpPerspectiveBackwardMatImpl::exec(_megdnn_tensor_in ssrc,
             dt_float32* grad_ptr = grad.ptr<dt_float32>();
             size_t max_batch_size = max_batch_x_channel / C;
             while (N > 0) {
-                size_t curr_batch_size =
-                        N > max_batch_size ? max_batch_size : N;
+                size_t curr_batch_size = N > max_batch_size ? max_batch_size : N;
                 warp_perspective::backward_mat_proxy(
-                        src_ptr, mat_ptr, midx_ptr, diff_ptr, grad_ptr,
-                        curr_batch_size, C, IH, IW, OH, OW, bval, bmode,
-                        stream);
+                        src_ptr, mat_ptr, midx_ptr, diff_ptr, grad_ptr, curr_batch_size,
+                        C, IH, IW, OH, OW, bval, bmode, stream);
 
                 if (N <= max_batch_size) {
                     break;

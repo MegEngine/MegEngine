@@ -42,22 +42,18 @@ std::vector<TestArg> get_int8_nchw4_args(size_t kernel_size = 1) {
                 for (size_t oc : {4, 44, 84, 132}) {
                     for (size_t h : {8, 16}) {
                         for (size_t w : {4, 8}) {
-                            for (int p :
-                                 {0, static_cast<int>(kernel_size / 2)}) {
+                            for (int p : {0, static_cast<int>(kernel_size / 2)}) {
                                 for (size_t s : {1, 2}) {
                                     size_t f = kernel_size;
                                     param::BatchConvBias param;
                                     param.nonlineMode = nlmode;
-                                    param.format =
-                                            param::BatchConvBias::Format::NCHW4;
-                                    param.sparse =
-                                            param::BatchConvBias::Sparse::DENSE;
+                                    param.format = param::BatchConvBias::Format::NCHW4;
+                                    param.sparse = param::BatchConvBias::Sparse::DENSE;
                                     param.pad_h = param.pad_w = p;
                                     param.stride_h = param.stride_w = s;
 
                                     args.emplace_back(
-                                            param,
-                                            TensorShape{b, ic / 4, h, w, 4},
+                                            param, TensorShape{b, ic / 4, h, w, 4},
                                             TensorShape{b, oc, ic / 4, f, f, 4},
                                             TensorShape{1, oc / 4, 1, 1, 4});
                                 }
@@ -137,14 +133,13 @@ std::vector<TestArg> get_int8_nchw4_args_gemm_check_bounds() {
     return args;
 }
 
-void check_batch_conv_bias(DType src_dtype, DType filter_dtype,
-                           DType bias_dtype, DType dst_dtype, Handle* handle,
-                           const char* algo, const std::vector<TestArg>& args) {
+void check_batch_conv_bias(
+        DType src_dtype, DType filter_dtype, DType bias_dtype, DType dst_dtype,
+        Handle* handle, const char* algo, const std::vector<TestArg>& args) {
     megdnn_assert(src_dtype.enumv() == filter_dtype.enumv());
     Checker<BatchConvBiasForward> checker(handle);
     if (algo) {
-        checker.set_before_exec_callback(
-                AlgoChecker<BatchConvBiasForward>(algo));
+        checker.set_before_exec_callback(AlgoChecker<BatchConvBiasForward>(algo));
     }
     std::unique_ptr<RNG> rng;
     std::unique_ptr<RNG> bias_rng;
@@ -155,9 +150,8 @@ void check_batch_conv_bias(DType src_dtype, DType filter_dtype,
         const_rng = std::make_unique<UniformIntRNG>(1, 1);
         megdnn_assert(bias_dtype.enumv() == DTypeEnum::QuantizedS32);
         bias_rng = std::make_unique<UniformIntRNG>(-50, 50);
-        checker.set_epsilon(1 + 1e-3)
-                .set_max_avg_error(1e-1)
-                .set_max_avg_biased_error(1e-1);
+        checker.set_epsilon(1 + 1e-3).set_max_avg_error(1e-1).set_max_avg_biased_error(
+                1e-1);
     } else if (src_dtype.enumv() == DTypeEnum::Float16) {
         rng = std::make_unique<NormalRNG>(2.f);
         megdnn_assert(bias_dtype.enumv() == DTypeEnum::Float16);
@@ -209,12 +203,11 @@ std::vector<BenchArgs> get_facerec_bench_args(size_t batch = 64) {
     return args;
 }
 
-void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
-                           DType src_dtype, DType filter_dtype,
-                           DType bias_dtype, DType dst_dtype,
-                           const char* algo = nullptr,
-                           param::BatchConvBias::Format format =
-                                   param::BatchConvBias::Format::NCHW4) {
+void benchmark_target_algo(
+        Handle* handle, const std::vector<BenchArgs>& args, DType src_dtype,
+        DType filter_dtype, DType bias_dtype, DType dst_dtype,
+        const char* algo = nullptr,
+        param::BatchConvBias::Format format = param::BatchConvBias::Format::NCHW4) {
     megdnn_assert(src_dtype.enumv() == filter_dtype.enumv());
     megdnn_assert(format == param::BatchConvBias::Format::NCHW4);
     CUBenchmarker<BatchConvBiasForward> benchmarker(handle);
@@ -229,14 +222,13 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
             new OprProxy<BatchConvBiasForward>{true}};
 
     if (algo) {
-        benchmarker.set_before_exec_callback(
-                AlgoChecker<BatchConvBiasForward>(algo));
+        benchmarker.set_before_exec_callback(AlgoChecker<BatchConvBiasForward>(algo));
     } else {
         benchmarker.set_proxy(proxy);
     }
 
 #define V1(x) #x
-#define V(x) V1(x)
+#define V(x)  V1(x)
 #define CUDNN_VERSION_STRING \
     "v" V(CUDNN_MAJOR) "." V(CUDNN_MINOR) "." V(CUDNN_PATCHLEVEL)
     benchmarker_cudnn.set_before_exec_callback(
@@ -285,35 +277,32 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
             if (!algo) {
                 benchmarker.proxy()->target_execution_policy.algo.reset();
             }
-            auto time_in_ms =
-                    benchmarker.execs(
-                            {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
-                             {arg.n, arg.co, arg.ci / 4, arg.f, arg.f, 4},
-                             {1, arg.co / 4, 1, 1, 4},
-                             {},
-                             {}}) /
-                    RUNS;
+            auto time_in_ms = benchmarker.execs(
+                                      {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
+                                       {arg.n, arg.co, arg.ci / 4, arg.f, arg.f, 4},
+                                       {1, arg.co / 4, 1, 1, 4},
+                                       {},
+                                       {}}) /
+                              RUNS;
             benchmarker_cudnn.set_param(param);
-            auto time_in_ms_cudnn =
-                    benchmarker_cudnn.execs(
-                            {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
-                             {arg.co, arg.ci / 4, arg.f, arg.f, 4},
-                             {1, arg.co / 4, 1, 1, 4},
-                             {},
-                             {}}) /
-                    RUNS;
-            auto time_in_ms_matmul =
-                    benchmarker_matmul.execs(
-                            {{arg.n, arg.co, arg.ci * arg.f * arg.f},
-                             {arg.n, arg.ci * arg.f * arg.f, ho * wo},
-                             {}}) /
-                    RUNS;
+            auto time_in_ms_cudnn = benchmarker_cudnn.execs(
+                                            {{arg.n, arg.ci / 4, arg.hi, arg.wi, 4},
+                                             {arg.co, arg.ci / 4, arg.f, arg.f, 4},
+                                             {1, arg.co / 4, 1, 1, 4},
+                                             {},
+                                             {}}) /
+                                    RUNS;
+            auto time_in_ms_matmul = benchmarker_matmul.execs(
+                                             {{arg.n, arg.co, arg.ci * arg.f * arg.f},
+                                              {arg.n, arg.ci * arg.f * arg.f, ho * wo},
+                                              {}}) /
+                                     RUNS;
 
-            float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f *
-                        arg.f / (1e12);
+            float flo =
+                    2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f / (1e12);
             TensorShape src{arg.n, arg.ci, arg.hi, arg.wi},
                     filter{arg.co, arg.ci, arg.f, arg.f};
-            if (!algo){
+            if (!algo) {
                 algo = "no_name";
             }
             printf("src=%s, filter=%s, time(algo=%s)=%.2f %.2fTops, "
@@ -325,8 +314,7 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
                    time_in_ms, (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
                    (flo / (time_in_ms_cudnn * 1e-3)), time_in_ms_matmul,
                    (flo / (time_in_ms_matmul * 1e-3)), algo,
-                   time_in_ms_cudnn / time_in_ms, algo,
-                   time_in_ms_matmul / time_in_ms);
+                   time_in_ms_cudnn / time_in_ms, algo, time_in_ms_matmul / time_in_ms);
         }
     }
 }
@@ -358,37 +346,32 @@ TEST_F(CUDA, BATCH_CONV_BIAS_QS8) {
     param.pad_h = 2, param.pad_w = 1;
     param.stride_h = 1, param.stride_w = 2;
     param.format = param::BatchConvBias::Format::NCHW4;
-    checker.set_param(param).execs({{32, 4, 24, 24, 4},
-                                    {32, 32, 4, 1, 1, 4},
-                                    {1, 8, 1, 1, 4},
-                                    {},
-                                    {}});
+    checker.set_param(param).execs(
+            {{32, 4, 24, 24, 4}, {32, 32, 4, 1, 1, 4}, {1, 8, 1, 1, 4}, {}, {}});
 }
 
 TEST_F(CUDA, BATCH_CONV_BIAS_QS8_GEMM) {
     require_compute_capability(6, 1);
-    check_batch_conv_bias(dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
-                          dtype::QuantizedS32{1.2f * 1.3f},
-                          dtype::QuantizedS8{1.1f}, handle_cuda(),
-                          "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD",
-                          get_int8_nchw4_args_gemm());
+    check_batch_conv_bias(
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.1f}, handle_cuda(),
+            "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD", get_int8_nchw4_args_gemm());
 }
 
 TEST_F(CUDA, BATCH_CONV_BIAS_QS8_GEMM_CHECK_BOUNDS) {
     require_compute_capability(6, 1);
-    check_batch_conv_bias(dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
-                          dtype::QuantizedS32{1.2f * 1.3f},
-                          dtype::QuantizedS8{1.1f}, handle_cuda(),
-                          "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD",
-                          get_int8_nchw4_args_gemm_check_bounds());
+    check_batch_conv_bias(
+            dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.1f}, handle_cuda(),
+            "BATCH_CONV_BIAS_INT8_NCHW4_GEMM_DOTPROD",
+            get_int8_nchw4_args_gemm_check_bounds());
 }
 
 TEST_F(CUDA, BATCH_CONV_BIAS_QS8_IMPLICIT_GEMM) {
     require_compute_capability(6, 1);
     check_batch_conv_bias(
             dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
-            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.1f},
-            handle_cuda(),
+            dtype::QuantizedS32{1.2f * 1.3f}, dtype::QuantizedS8{1.1f}, handle_cuda(),
             "BATCH_CONV_BIAS_INT8_NCHW4_IMPLICIT_GEMM_PRECOMP_DOTPROD",
             get_int8_nchw4_args(1));
 }
@@ -396,11 +379,10 @@ TEST_F(CUDA, BATCH_CONV_BIAS_QS8_IMPLICIT_GEMM) {
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, BENCHMARK_BATCH_CONV_BIAS_QS8) {
     require_compute_capability(6, 1);
-    benchmark_target_algo(handle_cuda(), get_facerec_bench_args(128),
-                          dtype::QuantizedS8{1.2f}, dtype::QuantizedS8{1.3f},
-                          dtype::QuantizedS32{1.2f * 1.3f},
-                          dtype::QuantizedS8{1.0f}, nullptr,
-                          param::ConvBias::Format::NCHW4);
+    benchmark_target_algo(
+            handle_cuda(), get_facerec_bench_args(128), dtype::QuantizedS8{1.2f},
+            dtype::QuantizedS8{1.3f}, dtype::QuantizedS32{1.2f * 1.3f},
+            dtype::QuantizedS8{1.0f}, nullptr, param::ConvBias::Format::NCHW4);
 }
 #endif
 

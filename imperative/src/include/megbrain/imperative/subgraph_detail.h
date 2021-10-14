@@ -17,35 +17,28 @@ namespace mgb {
 namespace imperative {
 namespace subgraph_detail {
 
-SmallVector<TensorPtr>
-apply_on_physical_tensor(const OpDef& def,
-        SmallVector<TensorPtr> inputs);
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, SmallVector<TensorPtr> inputs);
 
-std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs);
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs);
 
-EncodedSubraph
-make_backward_graph(const OpDef& def,
-        const SmallVector<LogicalTensorDesc>& inputs,
+EncodedSubgraph make_backward_graph(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
-cg::VarNodeArray
-apply_on_var_node(
-        const OpDef& def,
-        const VarNodeArray& inputs);
+cg::VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs);
 
-EncodedSubraph make_backward_graph(
-        const OpDef& def, 
-        const SmallVector<LogicalTensorDesc>& inputs,
+EncodedSubgraph make_backward_graph(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs,
         const SmallVector<bool>& input_requires_grad,
         const SmallVector<bool>& output_has_grad);
 
 std::tuple<SmallVector<MemoryDesc>, SmallVector<MemoryDesc>> infer_output_mem_desc(
-        const OpDef& def,
-        const SmallVector<TensorPtr>& inputs_tensors,
+        const OpDef& def, const SmallVector<TensorPtr>& inputs_tensors,
         const SmallVector<MemoryDesc>& inputs_mems);
 
-}
-}
-}
+}  // namespace subgraph_detail
+}  // namespace imperative
+}  // namespace mgb

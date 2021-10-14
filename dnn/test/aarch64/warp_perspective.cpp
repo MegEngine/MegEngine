@@ -77,8 +77,9 @@ TEST_F(AARCH64, WARP_PERSPECTIVE_CV) {
     param.format = param::WarpPerspective::Format::NHWC;
     // add for nearest test
     param.imode = param::WarpPerspective::InterpolationMode::NEAREST;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -97,14 +98,14 @@ TEST_F(AARCH64, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     // add linear test
     param.imode = param::WarpPerspective::InterpolationMode::INTER_LINEAR;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);
@@ -122,8 +123,7 @@ TEST_F(AARCH64, WARP_PERSPECTIVE_CV) {
         UniformIntRNG rng(0, 999);
         checker.set_rng(2, &rng);
         checker.set_dtype(2, dtype::Int32());
-        checker.exec(
-                {{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
+        checker.exec({{1000, 2, 10, 3}, {2000, 3, 3}, {2000}, {2000, 2, 12, 3}});
     }
 
     auto args = warp_perspective::get_cv_args();
@@ -164,16 +164,14 @@ TEST_F(AARCH64, BENCHMARK_WARP_PERSPECTIVE_FORWARD) {
     param.border_val = 0.3f;
     param.format = param::WarpPerspective::Format::NHWC;
 
-    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t OH,
-                   size_t OW, size_t scale) {
-        printf("src={%zu, %zu, %zu, %zu}, dst={%zu, %zu, %zu, %zu}\n", N, IH,
-               IW, C, N, OH, OW, C);
+    auto run = [&](size_t N, size_t C, size_t IH, size_t IW, size_t OH, size_t OW,
+                   size_t scale) {
+        printf("src={%zu, %zu, %zu, %zu}, dst={%zu, %zu, %zu, %zu}\n", N, IH, IW, C, N,
+               OH, OW, C);
         auto time_ms =
-                benchmarker.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
-                NR_RUN;
+                benchmarker.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) / NR_RUN;
         auto time_naive_ms =
-                benchmarker_naive.exec(
-                        {{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
+                benchmarker_naive.exec({{N, IH, IW, C}, {N, 3, 3}, {N, OH, OW, C}}) /
                 NR_RUN;
         auto bandwidth = N * C * (scale * OH * OW) * dtype::Float32().size();
         printf("aarch64: %.3f, perf: %.3f GBPS naive: %.3f, perf %.3f GBPS "
@@ -189,27 +187,27 @@ TEST_F(AARCH64, BENCHMARK_WARP_PERSPECTIVE_FORWARD) {
     size_t scales[2] = {2, 5};
 
     for (auto imode : {IMode::NEAREST, IMode::INTER_LINEAR}) {
-        for (auto bmode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                           BMode::WRAP, BMode::CONSTANT}) {
+        for (auto bmode :
+             {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+              BMode::CONSTANT}) {
             param.imode = imode;
             param.bmode = bmode;
             benchmarker.set_param(param).set_display(false).set_times(NR_RUN);
-            benchmarker_naive.set_param(param).set_display(false).set_times(
-                    NR_RUN);
+            benchmarker_naive.set_param(param).set_display(false).set_times(NR_RUN);
             size_t scale = scales[(int)imode];
             printf("\n\n\n warpperspective InterpolationMode::%s "
                    "BorderMode::%s start\n",
                    imodestringmap[(int)imode].c_str(),
                    bmodestringmap[(int)bmode].c_str());
-            for (auto&& shape :
-                 std::vector<std::pair<size_t, size_t>>{{700, 490},
-                                                        {500, 334},
-                                                        {472, 342},
-                                                        {448, 306},
-                                                        {626, 412},
-                                                        {140, 144},
-                                                        {120, 128},
-                                                        {180, 176}}) {
+            for (auto&& shape : std::vector<std::pair<size_t, size_t>>{
+                         {700, 490},
+                         {500, 334},
+                         {472, 342},
+                         {448, 306},
+                         {626, 412},
+                         {140, 144},
+                         {120, 128},
+                         {180, 176}}) {
                 for (size_t ch : {1, 2, 3}) {
                     run(1, ch, shape.first, shape.second, 256, 256, scale);
                 }

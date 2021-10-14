@@ -34,9 +34,8 @@ TEST(TestOprIORemote, Identity) {
 
     auto x = opr::Host2DeviceCopy::make(*graph, host_x, cn0);
     auto xr = opr::RemoteSend::make("x", x, client, false, "nccl");
-    auto y = opr::RemoteRecv::make("x", *graph.get(),
-                                   client, {cn1}, host_x->shape(),
-                                   host_x->dtype(), "nccl");
+    auto y = opr::RemoteRecv::make(
+            "x", *graph.get(), client, {cn1}, host_x->shape(), host_x->dtype(), "nccl");
 
     auto func = graph->compile({{xr, {}}, make_callback_copy(y, host_y)});
 
@@ -65,9 +64,9 @@ TEST(TestOprIORemote, IdentityMultiThread) {
     auto receiver = [&]() {
         sys::set_thread_name("receiver");
         auto graph = ComputingGraph::make();
-        auto x = opr::RemoteRecv::make("x", *graph.get(),
-                                       client, {cns[0]}, host_x->shape(),
-                                       host_x->dtype(), "nccl");
+        auto x = opr::RemoteRecv::make(
+                "x", *graph.get(), client, {cns[0]}, host_x->shape(), host_x->dtype(),
+                "nccl");
         auto func = graph->compile({make_callback_copy(x, host_x_get)});
         func->execute();
     };
@@ -99,11 +98,10 @@ TEST(TestOprIORemote, IdentityWithGopt) {
     auto receiver = [&]() {
         sys::set_thread_name("receiver");
         auto graph = ComputingGraph::make();
-        auto x = opr::RemoteRecv::make("x", *graph.get(),
-                                       client, {cns[0]}, host_x->shape(),
-                                       host_x->dtype(), "nccl");
-        auto func =
-                graph->compile({make_callback_copy((x - 1) / 2, host_x_get)});
+        auto x = opr::RemoteRecv::make(
+                "x", *graph.get(), client, {cns[0]}, host_x->shape(), host_x->dtype(),
+                "nccl");
+        auto func = graph->compile({make_callback_copy((x - 1) / 2, host_x_get)});
         func->execute();
     };
 
@@ -124,32 +122,27 @@ TEST(TestOprIORemote, APlusB) {
 
     auto sender = [&]() {
         auto graph = ComputingGraph::make();
-        auto z = opr::RemoteRecv::make("z", *graph.get(),
-                                       client, {cns[0]}, host_x->shape(),
-                                       host_x->dtype(), "nccl");
+        auto z = opr::RemoteRecv::make(
+                "z", *graph.get(), client, {cns[0]}, host_x->shape(), host_x->dtype(),
+                "nccl");
         auto x = opr::Host2DeviceCopy::make(*graph, host_x).rename("x"),
              y = opr::Host2DeviceCopy::make(*graph, host_y).rename("y"),
-             xr = opr::RemoteSend::make("x", x, client, false, "nccl")
-                          .rename("xr"),
-             yr = opr::RemoteSend::make("y", y, client, false, "nccl")
-                          .rename("yr");
-        auto func = graph->compile(
-                {{xr, {}}, {yr, {}}, make_callback_copy(z, host_z)});
-        func->to_json()->writeto_fpath(
-                output_file("TestOprIORemote.APlusB.json"));
+             xr = opr::RemoteSend::make("x", x, client, false, "nccl").rename("xr"),
+             yr = opr::RemoteSend::make("y", y, client, false, "nccl").rename("yr");
+        auto func = graph->compile({{xr, {}}, {yr, {}}, make_callback_copy(z, host_z)});
+        func->to_json()->writeto_fpath(output_file("TestOprIORemote.APlusB.json"));
         func->execute();
     };
 
     auto receiver = [&]() {
         auto graph = ComputingGraph::make();
-        auto x = opr::RemoteRecv::make("x", *graph.get(),
-                                       client, {cns[1]}, host_x->shape(),
-                                       host_x->dtype(), "nccl"),
-             y = opr::RemoteRecv::make("y", *graph.get(),
-                                       client, {cns[1]}, host_y->shape(),
-                                       host_y->dtype(), "nccl"),
-             z = x + y,
-             zr = opr::RemoteSend::make("z", z, client, false, "nccl");
+        auto x = opr::RemoteRecv::make(
+                     "x", *graph.get(), client, {cns[1]}, host_x->shape(),
+                     host_x->dtype(), "nccl"),
+             y = opr::RemoteRecv::make(
+                     "y", *graph.get(), client, {cns[1]}, host_y->shape(),
+                     host_y->dtype(), "nccl"),
+             z = x + y, zr = opr::RemoteSend::make("z", z, client, false, "nccl");
         auto func = graph->compile({{zr, {}}});
         func->execute();
     };
@@ -159,8 +152,7 @@ TEST(TestOprIORemote, APlusB) {
     th_recv.join();
 
     ASSERT_EQ(host_x->shape(), host_z.shape());
-    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(),
-         pz = host_z.ptr<float>();
+    auto px = host_x->ptr<float>(), py = host_y->ptr<float>(), pz = host_z.ptr<float>();
     for (size_t i = 0; i < host_x->shape().total_nr_elems(); ++i) {
         ASSERT_FLOAT_EQ(px[i] + py[i / host_x->shape(1)], pz[i]);
     }
@@ -179,14 +171,15 @@ TEST(TestOprIORemote, SendGrad) {
         auto graph = ComputingGraph::make();
         auto x = opr::Host2DeviceCopy::make(*graph, host_x),
              loss = opr::RemoteSend::make("loss", x, client, false, "nccl");
-        ASSERT_TRUE(!loss.shape().ndim &&
-                    loss.node()->contain_flag(VarNode::Flag::VOLATILE_CONTENT));
+        ASSERT_TRUE(
+                !loss.shape().ndim &&
+                loss.node()->contain_flag(VarNode::Flag::VOLATILE_CONTENT));
         loss = opr::RemoteSend::make("loss", x, client, true, "nccl");
         auto gx = cg::grad(loss, x);
         set_priority(loss, 0);
         set_priority(gx, 1);
-        auto func = graph->compile({make_callback_copy(gx, host_gx),
-                                    make_callback_copy(loss, host_loss)});
+        auto func = graph->compile(
+                {make_callback_copy(gx, host_gx), make_callback_copy(loss, host_loss)});
         auto on_opr = [&](cg::OperatorNodeBase* opr) {
             mgb_log_warn("%s", opr->name().c_str());
             return true;
@@ -198,9 +191,9 @@ TEST(TestOprIORemote, SendGrad) {
     auto receiver = [&]() {
         sys::set_thread_name("receiver");
         auto graph = ComputingGraph::make();
-        auto x = opr::RemoteRecv::make("loss", *graph.get(),
-                                       client, {cns[1]}, host_x->shape(),
-                                       host_x->dtype(), "nccl");
+        auto x = opr::RemoteRecv::make(
+                "loss", *graph.get(), client, {cns[1]}, host_x->shape(),
+                host_x->dtype(), "nccl");
         auto y = opr::RemoteSend::make("loss:grad", x + 1, client, false, "nccl");
         auto func = graph->compile({{y, {}}});
         func->execute();

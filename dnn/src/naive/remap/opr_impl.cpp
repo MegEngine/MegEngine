@@ -25,30 +25,30 @@ template <param::Remap::Format format>
 inline int get_offset(int, int, int, int, int, int);
 
 template <>
-inline int get_offset<param::Remap::Format::NCHW>(int height, int width,
-                                                  int channel, int h, int w,
-                                                  int) {
+inline int get_offset<param::Remap::Format::NCHW>(
+        int height, int width, int channel, int h, int w, int) {
     return channel * h * w + height * w + width;
 }
 
 template <>
-inline int get_offset<param::Remap::Format::NHWC>(int height, int width,
-                                                  int channel, int, int w,
-                                                  int c) {
+inline int get_offset<param::Remap::Format::NHWC>(
+        int height, int width, int channel, int, int w, int c) {
     return height * w * c + width * c + channel;
 }
 
-template <typename ctype, param::Remap::Format format,
-          param::Remap::BorderMode bordertype>
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
 struct GetSrcData {
-    static inline ctype get(const ctype* src, int height, int width,
-                            int channel, int h, int w, int c, float) {
+    static inline ctype get(
+            const ctype* src, int height, int width, int channel, int h, int w, int c,
+            float) {
         height = megcv::border_interpolate<bordertype>(height, h);
         width = megcv::border_interpolate<bordertype>(width, w);
         return src[get_offset<format>(height, width, channel, h, w, c)];
     }
-    static inline int get_index(int height, int width, int channel, int h,
-                                int w, int c) {
+    static inline int get_index(
+            int height, int width, int channel, int h, int w, int c) {
         height = megcv::border_interpolate<bordertype>(height, h);
         width = megcv::border_interpolate<bordertype>(width, w);
         return get_offset<format>(height, width, channel, h, w, c);
@@ -57,26 +57,28 @@ struct GetSrcData {
 
 template <typename ctype, param::Remap::Format format>
 struct GetSrcData<ctype, format, param::Remap::BorderMode::CONSTANT> {
-    static inline ctype get(const ctype* src, int height, int width,
-                            int channel, int h, int w, int c, float scalar) {
+    static inline ctype get(
+            const ctype* src, int height, int width, int channel, int h, int w, int c,
+            float scalar) {
         RoundingConverter<ctype> round;
         return (height >= 0 && height < h && width >= 0 && width < w)
-                       ? src[get_offset<format>(height, width, channel, h, w,
-                                                c)]
-                       : round(scalar);
+                     ? src[get_offset<format>(height, width, channel, h, w, c)]
+                     : round(scalar);
     }
-    static inline int get_index(int height, int width, int channel, int h,
-                                int w, int c) {
+    static inline int get_index(
+            int height, int width, int channel, int h, int w, int c) {
         return (height >= 0 && height < h && width >= 0 && width < w)
-                       ? get_offset<format>(height, width, channel, h, w, c)
-                       : -1;
+                     ? get_offset<format>(height, width, channel, h, w, c)
+                     : -1;
     }
 };
 
-template <typename ctype, param::Remap::Format format,
-          param::Remap::BorderMode bordertype>
-void remap_LINEAR(const ctype* src, const float* map_xy, ctype* dst, int N,
-                  int C, int IH, int IW, int OH, int OW, float scalar) {
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
+void remap_LINEAR(
+        const ctype* src, const float* map_xy, ctype* dst, int N, int C, int IH, int IW,
+        int OH, int OW, float scalar) {
     RoundingConverter<ctype> round_converter;
     for (int n = 0; n < N;
          ++n, src += C * IH * IW, dst += C * OH * OW, map_xy += OH * OW * 2) {
@@ -99,21 +101,21 @@ void remap_LINEAR(const ctype* src, const float* map_xy, ctype* dst, int N,
                     ctype a11 = GetSrcData<ctype, format, bordertype>::get(
                             src, row + 1, col + 1, c, IH, IW, C, scalar);
 
-                    dst[get_offset<format>(h, w, c, OH, OW, C)] =
-                            round_converter(a00 * (one - v) * (one - u) +
-                                            a01 * (one - u) * v +
-                                            a10 * (one - v) * u + a11 * u * v);
+                    dst[get_offset<format>(h, w, c, OH, OW, C)] = round_converter(
+                            a00 * (one - v) * (one - u) + a01 * (one - u) * v +
+                            a10 * (one - v) * u + a11 * u * v);
                 }
             }
         }
     }
 }
 
-template <typename ctype, param::Remap::Format format,
-          param::Remap::BorderMode bordertype>
-void remap_LINEAR_backwarddata(ctype* grad, const float* map_xy,
-                               const ctype* diff, int N, int C, int IH, int IW,
-                               int OH, int OW) {
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
+void remap_LINEAR_backwarddata(
+        ctype* grad, const float* map_xy, const ctype* diff, int N, int C, int IH,
+        int IW, int OH, int OW) {
     RoundingConverter<ctype> round_converter;
     std::memset(grad, 0, sizeof(ctype) * N * C * IH * IW);
     for (int n = 0; n < N;
@@ -133,8 +135,7 @@ void remap_LINEAR_backwarddata(ctype* grad, const float* map_xy,
                     int a00 = GetSrcData<ctype, format, bordertype>::get_index(
                             row + 0, col + 0, c, IH, IW, C);
                     if (a00 != -1) {
-                        grad[a00] +=
-                                round_converter((one - v) * (one - u) * hidden);
+                        grad[a00] += round_converter((one - v) * (one - u) * hidden);
                     }
 
                     int a01 = GetSrcData<ctype, format, bordertype>::get_index(
@@ -160,11 +161,12 @@ void remap_LINEAR_backwarddata(ctype* grad, const float* map_xy,
     }
 }
 
-template <typename ctype, param::Remap::Format format,
-          param::Remap::BorderMode bordertype>
-void remap_LINEAR_backwardmat(const ctype* src, const float* map_xy,
-                              const ctype* diff, float* grad, int N, int C,
-                              int IH, int IW, int OH, int OW, float scalar) {
+template <
+        typename ctype, param::Remap::Format format,
+        param::Remap::BorderMode bordertype>
+void remap_LINEAR_backwardmat(
+        const ctype* src, const float* map_xy, const ctype* diff, float* grad, int N,
+        int C, int IH, int IW, int OH, int OW, float scalar) {
     RoundingConverter<ctype> round_converter;
     std::memset(grad, 0, sizeof(float) * N * 2 * OH * OW);
     for (int n = 0; n < N; ++n, src += C * IH * IW, diff += C * OH * OW,
@@ -196,16 +198,14 @@ void remap_LINEAR_backwardmat(const ctype* src, const float* map_xy,
                     dv += ((a01 != -1) ? src[a01] : scalar) * (one - u);
                     dv -= ((a10 != -1) ? src[a10] : scalar) * u;
                     dv += ((a11 != -1) ? src[a11] : scalar) * u;
-                    
+
                     du -= ((a00 != -1) ? src[a00] : scalar) * (one - v);
                     du -= ((a01 != -1) ? src[a01] : scalar) * v;
                     du += ((a10 != -1) ? src[a10] : scalar) * (one - v);
                     du += ((a11 != -1) ? src[a11] : scalar) * v;
 
-                    grad[h * OW * 2 + w * 2 + 0] +=
-                            round_converter(hidden * dv);
-                    grad[h * OW * 2 + w * 2 + 1] +=
-                            round_converter(hidden * du);
+                    grad[h * OW * 2 + w * 2 + 0] += round_converter(hidden * dv);
+                    grad[h * OW * 2 + w * 2 + 1] += round_converter(hidden * du);
                 }
             }
         }
@@ -214,8 +214,9 @@ void remap_LINEAR_backwardmat(const ctype* src, const float* map_xy,
 
 }  // namespace
 
-void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
-                     _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+void RemapImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in map_xy, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, map_xy.layout, dst.layout, workspace.size);
     int N, C, IH, IW, OH, OW;
     if (param().format == param::Remap::Format::NCHW) {
@@ -234,19 +235,17 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
     switch (src.layout.dtype.enumv()) {
-#define cb(dt, fmt, border, interpolation)                                 \
-    if (param().format == param::Remap::Format::fmt &&                     \
-        param().border_type == param::Remap::BorderMode::border &&         \
-        param().imode == param::Remap::InterpolationMode::interpolation) { \
-        using ctype = DTypeTrait<dt>::ctype;                               \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                                      \
-                (remap_##interpolation<ctype, param::Remap::Format::fmt,   \
-                                       param::Remap::BorderMode::border>(  \
-                        src.compatible_ptr<ctype>(),                       \
-                        map_xy.compatible_ptr<dt_float32>(),               \
-                        dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, \
-                        param().scalar)));                                 \
-        break;                                                             \
+#define cb(dt, fmt, border, interpolation)                                            \
+    if (param().format == param::Remap::Format::fmt &&                                \
+        param().border_type == param::Remap::BorderMode::border &&                    \
+        param().imode == param::Remap::InterpolationMode::interpolation) {            \
+        using ctype = DTypeTrait<dt>::ctype;                                          \
+        MEGDNN_DISPATCH_CPU_KERN_OPR((remap_##interpolation<                          \
+                                      ctype, param::Remap::Format::fmt,               \
+                                      param::Remap::BorderMode::border>(              \
+                src.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(),     \
+                dst.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW, param().scalar))); \
+        break;                                                                        \
     }
 
 #define support_dtype(dt)                                                   \
@@ -279,13 +278,13 @@ void RemapImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
     }
 }
 
-void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
-                                 _megdnn_tensor_in diff,
-                                 _megdnn_tensor_out grad,
-                                 _megdnn_workspace workspace) {
+void RemapBackwardDataImpl::exec(
+        _megdnn_tensor_in map_xy, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
     check_exec(map_xy.layout, diff.layout, grad.layout, workspace.size);
-    megdnn_assert(param().format == param::Remap::Format::NCHW,
-                  "only support NCHW format for remap backward");
+    megdnn_assert(
+            param().format == param::Remap::Format::NCHW,
+            "only support NCHW format for remap backward");
     int N, C, IH, IW, OH, OW;
     N = grad.layout.shape[0];
     C = grad.layout.shape[1];
@@ -294,18 +293,17 @@ void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
     switch (diff.layout.dtype.enumv()) {
-#define cb(dt, fmt, border, interpolation)                                  \
-    if (param().format == param::Remap::Format::fmt &&                      \
-        param().border_type == param::Remap::BorderMode::border &&          \
-        param().imode == param::Remap::InterpolationMode::interpolation) {  \
-        using ctype = DTypeTrait<dt>::ctype;                                \
-        MEGDNN_DISPATCH_CPU_KERN_OPR((remap_##interpolation##_backwarddata< \
-                                      ctype, param::Remap::Format::fmt,     \
-                                      param::Remap::BorderMode::border>(    \
-                grad.compatible_ptr<ctype>(),                               \
-                map_xy.compatible_ptr<dt_float32>(),                        \
-                diff.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW)));      \
-        break;                                                              \
+#define cb(dt, fmt, border, interpolation)                                         \
+    if (param().format == param::Remap::Format::fmt &&                             \
+        param().border_type == param::Remap::BorderMode::border &&                 \
+        param().imode == param::Remap::InterpolationMode::interpolation) {         \
+        using ctype = DTypeTrait<dt>::ctype;                                       \
+        MEGDNN_DISPATCH_CPU_KERN_OPR((remap_##interpolation##_backwarddata<        \
+                                      ctype, param::Remap::Format::fmt,            \
+                                      param::Remap::BorderMode::border>(           \
+                grad.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(), \
+                diff.compatible_ptr<ctype>(), N, C, IH, IW, OH, OW)));             \
+        break;                                                                     \
     }
 
 #define support_dtype(dt)                                                   \
@@ -330,13 +328,13 @@ void RemapBackwardDataImpl::exec(_megdnn_tensor_in map_xy,
     }
 }
 
-void RemapBackwardMatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
-                                _megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                                _megdnn_workspace workspace) {
-    check_exec(src.layout, map_xy.layout, diff.layout, grad.layout,
-               workspace.size);
-    megdnn_assert(param().format == param::Remap::Format::NCHW,
-                  "only support NCHW format for remap backward");
+void RemapBackwardMatImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in map_xy, _megdnn_tensor_in diff,
+        _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+    check_exec(src.layout, map_xy.layout, diff.layout, grad.layout, workspace.size);
+    megdnn_assert(
+            param().format == param::Remap::Format::NCHW,
+            "only support NCHW format for remap backward");
     int N, C, IH, IW, OH, OW;
     N = src.layout.shape[0];
     C = src.layout.shape[1];
@@ -345,20 +343,18 @@ void RemapBackwardMatImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in map_xy,
     OH = map_xy.layout.shape[1];
     OW = map_xy.layout.shape[2];
     switch (src.layout.dtype.enumv()) {
-#define cb(dt, fmt, border, interpolation)                                 \
-    if (param().format == param::Remap::Format::fmt &&                     \
-        param().border_type == param::Remap::BorderMode::border &&         \
-        param().imode == param::Remap::InterpolationMode::interpolation) { \
-        using ctype = DTypeTrait<dt>::ctype;                               \
-        MEGDNN_DISPATCH_CPU_KERN_OPR((remap_##interpolation##_backwardmat< \
-                                      ctype, param::Remap::Format::fmt,    \
-                                      param::Remap::BorderMode::border>(   \
-                src.compatible_ptr<ctype>(),                               \
-                map_xy.compatible_ptr<dt_float32>(),                       \
-                diff.compatible_ptr<ctype>(),                              \
-                grad.compatible_ptr<dt_float32>(), N, C, IH, IW, OH, OW,   \
-                param().scalar)));                                         \
-        break;                                                             \
+#define cb(dt, fmt, border, interpolation)                                             \
+    if (param().format == param::Remap::Format::fmt &&                                 \
+        param().border_type == param::Remap::BorderMode::border &&                     \
+        param().imode == param::Remap::InterpolationMode::interpolation) {             \
+        using ctype = DTypeTrait<dt>::ctype;                                           \
+        MEGDNN_DISPATCH_CPU_KERN_OPR((remap_##interpolation##_backwardmat<             \
+                                      ctype, param::Remap::Format::fmt,                \
+                                      param::Remap::BorderMode::border>(               \
+                src.compatible_ptr<ctype>(), map_xy.compatible_ptr<dt_float32>(),      \
+                diff.compatible_ptr<ctype>(), grad.compatible_ptr<dt_float32>(), N, C, \
+                IH, IW, OH, OW, param().scalar)));                                     \
+        break;                                                                         \
     }
 
 #define support_dtype(dt)                                                   \

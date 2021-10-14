@@ -21,10 +21,10 @@ namespace {
 bool is_bad_opr(OperatorNodeBase* opr) {
     using F = OperatorNodeBase::NodeProp::Flag;
     return opr->node_prop().contain(
-        F::IMPURE_FUNC | F::NO_AUTOMATIC_DUP | F::FORCE_UPDATE_INPUT_VAR);
+            F::IMPURE_FUNC | F::NO_AUTOMATIC_DUP | F::FORCE_UPDATE_INPUT_VAR);
 }
-    
-} // namespace
+
+}  // namespace
 
 class SeqModifierForDTR::ModifyActionPlanner : public ModifyActionPlannerBase {
 public:
@@ -32,31 +32,31 @@ public:
 
     void prepare(const OprNodeArray& opr_seq);
 
-    SeqModifyAction perform_dtr(CompNode comp_node, const OprNodeArray& seq, Config* config);
+    SeqModifyAction perform_dtr(
+            CompNode comp_node, const OprNodeArray& seq, Config* config);
 };
 
-
 SeqModifierForDTR::SeqModifierForDTR(ComputingGraphImpl* owner, Config* config_g)
-    : SeqModifierBase(owner), m_config(config_g) {}
+        : SeqModifierBase(owner), m_config(config_g) {}
 
 void SeqModifierForDTR::modify_endpoint_vars(VarNodeArray& endpoints) {
     var_map().clear();
     auto comp_seq = MemoryOptimizerHelper::CompSeq(owner_graph(), endpoints);
     auto config =
-        MemoryOptimizerHelper::SubGraphConfig()
-                /*.add_bad_opr_flag(
-                        OperatorNodeBase::NodeProp::Flag::IMPURE_FUNC)
-                .add_bad_opr_flag(
-                        OperatorNodeBase::NodeProp::Flag::NO_AUTOMATIC_DUP)
-                .add_bad_opr_flag(OperatorNodeBase::NodeProp::Flag::
-                                            FORCE_UPDATE_INPUT_VAR)*/
-                // NOTE: it should not actually involve any opr with the above
-                // flags, but for better results, some ops(e.g. CudnnBatchNorm)
-                // should be involved and they are guaranteed to NEVER recompute.
-                .add_bad_var_flag(VarNode::Flag::VOLATILE_CONTENT)
-                .add_bad_var_flag(VarNode::Flag::NO_SYS_STATIC_MEM_ALLOC)
-                .add_bad_var_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
-                .add_bad_var_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE);
+            MemoryOptimizerHelper::SubGraphConfig()
+                    /*.add_bad_opr_flag(
+                            OperatorNodeBase::NodeProp::Flag::IMPURE_FUNC)
+                    .add_bad_opr_flag(
+                            OperatorNodeBase::NodeProp::Flag::NO_AUTOMATIC_DUP)
+                    .add_bad_opr_flag(OperatorNodeBase::NodeProp::Flag::
+                                                FORCE_UPDATE_INPUT_VAR)*/
+                    // NOTE: it should not actually involve any opr with the above
+                    // flags, but for better results, some ops(e.g. CudnnBatchNorm)
+                    // should be involved and they are guaranteed to NEVER recompute.
+                    .add_bad_var_flag(VarNode::Flag::VOLATILE_CONTENT)
+                    .add_bad_var_flag(VarNode::Flag::NO_SYS_STATIC_MEM_ALLOC)
+                    .add_bad_var_flag(VarNode::Flag::NO_SYS_MEM_ALLOC)
+                    .add_bad_var_flag(VarNode::Flag::PERSISTENT_DEVICE_VALUE);
     auto cn2oprseq = mem_opt().split_into_cn2oprseq(*comp_seq.m_seq, config);
 
     if (cn2oprseq->empty()) {
@@ -64,7 +64,7 @@ void SeqModifierForDTR::modify_endpoint_vars(VarNodeArray& endpoints) {
     }
     SeqModifyAction action;
     ModifyActionPlanner* planner = new ModifyActionPlanner(this);
-    for (auto && i : *cn2oprseq) {
+    for (auto&& i : *cn2oprseq) {
         auto&& cur = planner->perform_dtr(i.first, i.second, m_config);
         action.insert(cur.begin(), cur.end());
     }
@@ -167,7 +167,7 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
                 return dfs_front[var];
             }
             double sum_time = 1;
-            for (size_t j = 1; j < var->access_rec.size();j ++) {
+            for (size_t j = 1; j < var->access_rec.size(); j++) {
                 auto dep_opr = var->access_rec[j].opr;
                 for (auto o : dep_opr->output) {
                     o = get_latest(o);
@@ -233,16 +233,14 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         dfs_front.clear();
         dfs_mem.clear();
         for (auto var : alive_vars) {
-            if (var->size < config->evictee_minimum_size 
-                    || pin[var->orig_var] > 0
-                    || is_bad_opr(var->owner_opr()->orig_opr)) {
+            if (var->size < config->evictee_minimum_size || pin[var->orig_var] > 0 ||
+                is_bad_opr(var->owner_opr()->orig_opr)) {
                 continue;
             }
             double regen_t = regen_time(var);
             double regen_m = regen_mem(var);
-            double eval_value = pow(regen_t, tim_factor) * pow(regen_m, mem_factor)
-                                / static_cast<double>(var->size)
-                                / next_used(var);
+            double eval_value = pow(regen_t, tim_factor) * pow(regen_m, mem_factor) /
+                                static_cast<double>(var->size) / next_used(var);
             if (eval_value < min_eval_value) {
                 min_eval_value = eval_value;
                 best = var;
@@ -251,16 +249,14 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         return best;
     };
 
-    auto do_evict = [&](Var* var) {
-        remove_alive(var);
-    };
+    auto do_evict = [&](Var* var) { remove_alive(var); };
 
     thin_function<void(Var*)> recursive_free;
     auto auto_evict = [&](size_t needed) {
-        // proactively remove end-of-life vars 
+        // proactively remove end-of-life vars
         std::vector<Var*> to_free(0);
         for (auto i : alive_vars) {
-            if (next_used(get_latest(i)) == DUPOPR_TIME && pin[i->orig_var]==0) {
+            if (next_used(get_latest(i)) == DUPOPR_TIME && pin[i->orig_var] == 0) {
                 to_free.push_back(get_latest(i));
             }
         }
@@ -277,7 +273,8 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
     };
 
     recursive_free = [&](Var* var) {
-        if (pin[var->orig_var] > 0) return;
+        if (pin[var->orig_var] > 0)
+            return;
         auto opr = var->owner_opr();
         bool need = false;
         for (auto i : var->access_rec) {
@@ -303,7 +300,8 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
             return var;
         }
 
-        auto new_opr_storage = opr_mempool().alloc_unique(opr->orig_opr, static_cast<size_t>(DUPOPR_TIME));
+        auto new_opr_storage = opr_mempool().alloc_unique(
+                opr->orig_opr, static_cast<size_t>(DUPOPR_TIME));
         auto new_opr = new_opr_storage.get();
 
         new_opr->input.reserve(opr->input.size());
@@ -311,7 +309,7 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         new_opr->estimate_compute_time = opr->estimate_compute_time;
 
         for (auto i : opr->input) {
-            pin[i->orig_var] ++;
+            pin[i->orig_var]++;
         }
         for (auto i : opr->input) {
             auto ivar = get_latest(i);
@@ -332,14 +330,13 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
         Var* new_var = nullptr;
         for (auto o : opr->output) {
             auto lo = get_latest(o);
-            auto&& ovar = var_mempool().alloc_unique(lo->orig_var, lo->size,
-                                                     new_opr);
+            auto&& ovar = var_mempool().alloc_unique(lo->orig_var, lo->size, new_opr);
             ovar->recomp_id = lo->recomp_id + 1;
             new_opr->output.push_back(ovar.get());
-            if (need_regen(lo)) { // latest output is not in memory
+            if (need_regen(lo)) {  // latest output is not in memory
                 if (o == var) {
                     new_var = ovar.get();
-                    for (size_t i = 1; i < lo->access_rec.size(); i ++) {
+                    for (size_t i = 1; i < lo->access_rec.size(); i++) {
                         new_var->access_rec.push_back(lo->access_rec[i]);
                     }
                     add_alive(new_var);
@@ -349,19 +346,20 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
             var_storage().emplace_back(std::move(ovar));
         }
         for (auto i : opr->input) {
-            pin[i->orig_var] --;
+            pin[i->orig_var]--;
         }
         return new_var;
     };
 
     for (size_t j = 0; j < seq().size(); ++j) {
-        ++ cur_op_cnt;
+        ++cur_op_cnt;
         auto opr = seq()[j].get();
         for (auto i : opr->input) {
-            pin[i->orig_var] ++;
+            pin[i->orig_var]++;
         }
         for (auto i : opr->inputs_size) {
-            if (i > 0) cur_usage += i;
+            if (i > 0)
+                cur_usage += i;
         }
         for (auto i : opr->input) {
             i = get_latest(i);
@@ -379,7 +377,7 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
             add_alive(o);
         }
         for (auto i : opr->input) {
-            pin[i->orig_var] --;
+            pin[i->orig_var]--;
         }
         for (auto i : opr->input) {
             if (opr == i->last_access_opr()) {
@@ -392,7 +390,8 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
             }
         }
         for (auto i : opr->inputs_size) {
-            if (i < 0) cur_usage += i;
+            if (i < 0)
+                cur_usage += i;
         }
     }
     for (size_t j = 0; j < seq().size(); ++j) {
@@ -410,10 +409,10 @@ SeqModifierForDTR::SeqModifyAction SeqModifierForDTR::ModifyActionPlanner::perfo
     return action;
 }
 
-void SeqModifierForDTR::apply_action(SeqModifyAction& action,
-                                     const OprNodeArray& oprseq) {
-    auto cur_priority = std::numeric_limits<decltype(
-            OperatorNodeBase::NodeProp::Attribute::priority)>::min();
+void SeqModifierForDTR::apply_action(
+        SeqModifyAction& action, const OprNodeArray& oprseq) {
+    auto cur_priority = std::numeric_limits<
+            decltype(OperatorNodeBase::NodeProp::Attribute::priority)>::min();
 
     ThinHashSet<OperatorNodeBase*> modified_opr;
     ThinHashMap<OperatorNodeBase*, size_t> recomp_id;
@@ -424,20 +423,20 @@ void SeqModifierForDTR::apply_action(SeqModifyAction& action,
 
     auto on_opr_visited = [&](OperatorNodeBase* opr) {
         if (replace_vars(opr->input())) {
-            recomp_id[opr] ++;
+            recomp_id[opr]++;
             opr = copy_opr_from_new_inputs(opr, true, recomp_id[opr] - 1);
         }
         set_priority(opr);
     };
 
     DepOprIter dep_iter{on_opr_visited};
-    
+
     for (auto opr : oprseq) {
         auto iter = action.find(opr);
         if (iter != action.end()) {
             for (auto i : iter->second) {
                 replace_vars(i->input());
-                recomp_id[i] ++;
+                recomp_id[i]++;
                 auto opr_new = copy_opr_from_new_inputs(i, false, recomp_id[i] - 1);
                 set_priority(opr_new);
             }

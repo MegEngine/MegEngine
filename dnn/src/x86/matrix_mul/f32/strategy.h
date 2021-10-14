@@ -16,8 +16,8 @@ namespace megdnn {
 namespace x86 {
 namespace matmul {
 
-MEGDNN_REG_GEMM_STRATEGY_NOPACK(float, float, float, 8, 8, 8, false, true,
-                                sgemm_nopack_8x8_avx2);
+MEGDNN_REG_GEMM_STRATEGY_NOPACK(
+        float, float, float, 8, 8, 8, false, true, sgemm_nopack_8x8_avx2);
 
 }  // namespace matmul
 }  // namespace x86

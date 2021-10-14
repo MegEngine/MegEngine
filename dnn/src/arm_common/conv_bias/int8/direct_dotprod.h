@@ -35,7 +35,7 @@ KERN(stride2, 7)
 
 #undef KERN
 
-}  // namesapce conv_bias
+}  // namespace conv_bias
 }  // namespace arm_common
 }  // namespace megdnn
 #endif

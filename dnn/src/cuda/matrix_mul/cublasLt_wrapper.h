@@ -26,9 +26,9 @@ struct CUBLASLTMatmulDesc {
         bool transposeA, transposeB;
         TensorLayout layout_a, layout_b, layout_c;
         std::string to_string() const;
-        SizeArgs(HandleImpl* handle, bool transposeA, bool transposeB,
-                 const TensorLayout& A, const TensorLayout& B,
-                 const TensorLayout& C)
+        SizeArgs(
+                HandleImpl* handle, bool transposeA, bool transposeB,
+                const TensorLayout& A, const TensorLayout& B, const TensorLayout& C)
                 : handle(handle),
                   transposeA(transposeA),
                   transposeB(transposeB),
@@ -73,10 +73,10 @@ struct CUBLASLTMatmulDesc {
     ~CUBLASLTMatmulDesc();
     void set(const SizeArgs& args, bool batched = false);
     void reset();
-    bool get_algorithm_heuristic(const SizeArgs& args, size_t ws_limit,
-                                 cublasLtMatmulAlgo_t& algo);
-    WorkspaceBundle get_workspace_bundle(const SizeArgs& args,
-                                         const cublasLtMatmulAlgo_t& algo);
+    bool get_algorithm_heuristic(
+            const SizeArgs& args, size_t ws_limit, cublasLtMatmulAlgo_t& algo);
+    WorkspaceBundle get_workspace_bundle(
+            const SizeArgs& args, const cublasLtMatmulAlgo_t& algo);
     bool is_available(const SizeArgs& args, size_t ws_limit);
 };
 }  // namespace cuda

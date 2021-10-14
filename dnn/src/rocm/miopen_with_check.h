@@ -19,4 +19,3 @@
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #include <miopen/miopen.h>
 #pragma GCC diagnostic pop
-

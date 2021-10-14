@@ -11,8 +11,8 @@
 
 #include "src/common/utils.h"
 
-#include "./computing_context.hpp"
 #include "../cpu/default_computing_context.hpp"
+#include "./computing_context.hpp"
 #if MEGDNN_WITH_CUDA
 #include "src/cuda/megcore/cuda_computing_context.hpp"
 #endif
@@ -33,8 +33,7 @@ using namespace megcore;
 using namespace megdnn;
 
 std::unique_ptr<ComputingContext> ComputingContext::make(
-        megcoreDeviceHandle_t dev_handle, unsigned int flags)
-{
+        megcoreDeviceHandle_t dev_handle, unsigned int flags) {
     megcorePlatform_t platform;
     megcoreGetPlatform(dev_handle, &platform);
     switch (platform) {
@@ -50,8 +49,7 @@ std::unique_ptr<ComputingContext> ComputingContext::make(
 #endif
 #if MEGDNN_WITH_CAMBRICON
         case megcorePlatformCambricon:
-            return make_unique<cambricon::CambriconComputingContext>(dev_handle,
-                                                                     flags);
+            return make_unique<cambricon::CambriconComputingContext>(dev_handle, flags);
 #endif
 #if MEGDNN_WITH_ATLAS
         case megcorePlatformAtlas:

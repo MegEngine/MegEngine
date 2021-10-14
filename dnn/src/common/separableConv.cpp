@@ -14,17 +14,14 @@
 
 namespace megdnn {
 
-void SeparableConvBase::deduce_layout_fwd(const TensorLayout &src,
-        const TensorLayout &filter_x, 
-        const TensorLayout &filter_y,
-        TensorLayout &dst)
-{
+void SeparableConvBase::deduce_layout_fwd(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, TensorLayout& dst) {
     auto errmsg = [&]() {
-        return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter_x) +
-               ", " + megdnn_layout_msg(dst) + ", " +
-               "is_xcorr=" + "borderMode=" +
-               std::to_string((param().mode == Mode::CROSS_CORRELATION)) +
-               ", " + std::to_string((int)(param().borderMode)) + ", " +
+        return megdnn_layout_msg(src) + ", " + megdnn_layout_msg(filter_x) + ", " +
+               megdnn_layout_msg(dst) + ", " + "is_xcorr=" + "borderMode=" +
+               std::to_string((param().mode == Mode::CROSS_CORRELATION)) + ", " +
+               std::to_string((int)(param().borderMode)) + ", " +
                "pad_h=" + std::to_string(param().pad_h) + ", " +
                "pad_w=" + std::to_string(param().pad_w) + ", " +
                "stride_h=" + std::to_string(param().stride_h) + ", " +
@@ -53,11 +50,9 @@ void SeparableConvBase::deduce_layout_fwd(const TensorLayout &src,
     dst = TensorLayout(TensorShape({n, oc, oh, ow}), src.dtype);
 }
 
-void SeparableConvBase::check_layout_fwd(const TensorLayout &src,
-        const TensorLayout &filter_x, 
-        const TensorLayout &filter_y,
-        const TensorLayout &dst)
-{
+void SeparableConvBase::check_layout_fwd(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, const TensorLayout& dst) {
     TensorLayout dst_expected;
     megdnn_assert_eq_dtype(src, filter_x);
     megdnn_assert_eq_dtype(src, filter_y);
@@ -67,25 +62,22 @@ void SeparableConvBase::check_layout_fwd(const TensorLayout &src,
     megdnn_assert_eq_layout(dst_expected, dst);
 }
 
-void SeparableConvForward::deduce_layout(const TensorLayout &src,
-        const TensorLayout &filter_x,
-        const TensorLayout &filter_y,
-        TensorLayout &dst)
-{
+void SeparableConvForward::deduce_layout(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, TensorLayout& dst) {
     deduce_layout_fwd(src, filter_x, filter_y, dst);
 }
 
-void SeparableConvForward::check_exec(const TensorLayout &src,
-        const TensorLayout &filter_x,
-        const TensorLayout &filter_y,
-        const TensorLayout &dst,
-        size_t workspace_in_bytes)
-{
+void SeparableConvForward::check_exec(
+        const TensorLayout& src, const TensorLayout& filter_x,
+        const TensorLayout& filter_y, const TensorLayout& dst,
+        size_t workspace_in_bytes) {
     check_layout_fwd(src, filter_x, filter_y, dst);
-    auto required_workspace_in_bytes = get_workspace_in_bytes(src, filter_x, filter_y, dst);
+    auto required_workspace_in_bytes =
+            get_workspace_in_bytes(src, filter_x, filter_y, dst);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

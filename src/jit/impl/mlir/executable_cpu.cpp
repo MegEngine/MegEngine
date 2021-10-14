@@ -27,8 +27,7 @@ using namespace jit;
 namespace {
 
 template <typename T, int N>
-StridedMemRefType<T, N>* get_strided_memref_type(
-        const megdnn::TensorND& tensor) {
+StridedMemRefType<T, N>* get_strided_memref_type(const megdnn::TensorND& tensor) {
     using DescType = StridedMemRefType<T, N>;
     DescType* desc = static_cast<DescType*>(malloc(sizeof(DescType)));
     desc->basePtr = tensor.ptr<T>();
@@ -50,8 +49,8 @@ void* tensor2memref_dim(const megdnn::TensorND& tensor) {
         FOR_EACH_DNN_DTYPE(cb)
 #undef cb
         default:
-            mgb_throw(InternalError, "Unsupported dtype: %s",
-                      tensor.layout.dtype.name());
+            mgb_throw(
+                    InternalError, "Unsupported dtype: %s", tensor.layout.dtype.name());
     }
     return nullptr;
 }
@@ -68,22 +67,20 @@ void* tensor2memref(const megdnn::TensorND& tensor) {
         cb(4);
         cb(5);
         default:
-            mgb_throw(InternalError, "Unsupported ndim, got %zu",
-                      tensor.layout.ndim);
+            mgb_throw(InternalError, "Unsupported ndim, got %zu", tensor.layout.ndim);
 #undef cb
     }
 }
 
 }  // namespace
-MLIRCPUExecutable::MLIRCPUExecutable(mlir::OwningModuleRef& module,
-                                     const std::string& kernel_name)
+MLIRCPUExecutable::MLIRCPUExecutable(
+        mlir::OwningModuleRef& module, const std::string& kernel_name)
         : m_kernel_name{kernel_name} {
     auto opt_pipeline = mlir::makeOptimizingTransformer(3, 3, 0);
     std::vector<std::string> libs;
     auto&& engine = mlir::ExecutionEngine::create(
             *module, nullptr, opt_pipeline, llvm::None,
-            std::vector<llvm::StringRef>(libs.begin(), libs.end()), true,
-            false);
+            std::vector<llvm::StringRef>(libs.begin(), libs.end()), true, false);
     mgb_assert(engine);
     m_engine = std::move(*engine);
 }
@@ -91,13 +88,11 @@ MLIRCPUExecutable::MLIRCPUExecutable(mlir::OwningModuleRef& module,
 void MLIRCPUExecutable::execute(JITExecutor* fusion_opr) {
     auto&& args = fusion_opr->args();
     std::vector<void*> args_array(args.inputs.size() + args.outputs.size());
-    std::vector<void*> args_array_pointer(args.inputs.size() +
-                                          args.outputs.size());
+    std::vector<void*> args_array_pointer(args.inputs.size() + args.outputs.size());
     size_t idx = 0;
     for (size_t i = 0; i < args.inputs.size(); i++) {
-        args_array[idx] =
-                tensor2memref({args.inputs[i].from->dev_tensor().raw_ptr(),
-                               args.inputs[i].layout});
+        args_array[idx] = tensor2memref(
+                {args.inputs[i].from->dev_tensor().raw_ptr(), args.inputs[i].layout});
         args_array_pointer[idx] = &args_array[idx];
         idx++;
     }
@@ -106,17 +101,17 @@ void MLIRCPUExecutable::execute(JITExecutor* fusion_opr) {
         if (nr_elements == 0) {
             nr_elements = args.outputs[i].layout.total_nr_elems();
         } else {
-            mgb_assert(static_cast<size_t>(nr_elements) ==
-                               args.outputs[i].layout.total_nr_elems(),
-                       "The number of elements of outputs mismatch, expected: "
-                       "%zu got: %zu(%s)",
-                       static_cast<size_t>(nr_elements),
-                       args.outputs[i].layout.total_nr_elems(),
-                       args.outputs[i].layout.to_string().c_str());
+            mgb_assert(
+                    static_cast<size_t>(nr_elements) ==
+                            args.outputs[i].layout.total_nr_elems(),
+                    "The number of elements of outputs mismatch, expected: "
+                    "%zu got: %zu(%s)",
+                    static_cast<size_t>(nr_elements),
+                    args.outputs[i].layout.total_nr_elems(),
+                    args.outputs[i].layout.to_string().c_str());
         }
-        args_array[idx] =
-                tensor2memref({args.outputs[i].from->dev_tensor().raw_ptr(),
-                               args.outputs[i].layout});
+        args_array[idx] = tensor2memref(
+                {args.outputs[i].from->dev_tensor().raw_ptr(), args.outputs[i].layout});
         args_array_pointer[idx] = &args_array[idx];
         idx++;
     }
@@ -126,8 +121,8 @@ void MLIRCPUExecutable::execute(JITExecutor* fusion_opr) {
     auto err = m_engine->invoke(
             adapter_name, llvm::MutableArrayRef<void*>(args_array_pointer));
     if (err) {
-        mgb_throw(InternalError, "failed to run MLIR kernel %s\n",
-                  m_kernel_name.c_str());
+        mgb_throw(
+                InternalError, "failed to run MLIR kernel %s\n", m_kernel_name.c_str());
     }
 
     for (size_t i = 0; i < args_array.size(); i++) {

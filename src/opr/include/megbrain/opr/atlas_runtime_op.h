@@ -23,16 +23,16 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(AtlasRuntimeOpr,
-                     cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS(AtlasRuntimeOpr, cg::SingleCNOutshapePureByInshapeOprBase) // {
 public:
     using SharedBuffer = mgb::serialization::SharedBuffer;
 
-    enum AippInputFormat {NO_AIPP, YUV420SP_U8, RGB888_U8};
+    enum AippInputFormat { NO_AIPP, YUV420SP_U8, RGB888_U8 };
 
     void scn_do_execute() override;
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
 
@@ -42,10 +42,9 @@ public:
      *
      * \brief Neither buf is set or model_id&model_desc is set
      */
-    AtlasRuntimeOpr(SharedBuffer buf,
-                    const std::pair<uint32_t, aclmdlDesc*>& model,
-                    const VarNodeArray& inputs,
-                    const OperatorNodeConfig& config);
+    AtlasRuntimeOpr(
+            SharedBuffer buf, const std::pair<uint32_t, aclmdlDesc*>& model,
+            const VarNodeArray& inputs, const OperatorNodeConfig& config);
     ~AtlasRuntimeOpr();
 
     const SharedBuffer& buffer() const { return m_buffer; }
@@ -54,17 +53,17 @@ public:
         return {m_model_id, m_model_desc};
     }
 
-    static SymbolVarArray make(SharedBuffer buf, const SymbolVarArray& src,
-                               const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            SharedBuffer buf, const SymbolVarArray& src,
+            const OperatorNodeConfig& config = {});
 
-    static SymbolVarArray make(SharedBuffer buf,
-                               const std::pair<uint32_t, aclmdlDesc*>& model,
-                               const SymbolVarArray& src,
-                               const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            SharedBuffer buf, const std::pair<uint32_t, aclmdlDesc*>& model,
+            const SymbolVarArray& src, const OperatorNodeConfig& config = {});
 
-    static SymbolVarArray make(const void* buf, size_t size,
-                               const SymbolVarArray& src,
-                               const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            const void* buf, size_t size, const SymbolVarArray& src,
+            const OperatorNodeConfig& config = {});
 
 private:
     SharedBuffer m_buffer;

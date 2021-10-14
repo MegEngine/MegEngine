@@ -24,19 +24,19 @@ using namespace megdnn;
 using namespace test;
 
 TEST_F(ARM_COMMON, MATRIX_MUL_INT8x8x32) {
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle());
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int32{}, handle());
 }
 
 TEST_F(ARM_COMMON, MATRIX_MUL_INT8x8x16) {
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle());
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int16{}, handle());
 }
 
 TEST_F(ARM_COMMON, MATRIX_MUL_QUINT8) {
-    matrix_mul::check_matrix_mul(dtype::Quantized8Asymm(1.2f, (uint8_t)127),
-                                 dtype::Quantized8Asymm(1.3f, (uint8_t)129), {},
-                                 handle());
+    matrix_mul::check_matrix_mul(
+            dtype::Quantized8Asymm(1.2f, (uint8_t)127),
+            dtype::Quantized8Asymm(1.3f, (uint8_t)129), {}, handle());
 }
 
 TEST_F(ARM_COMMON, MATRIX_MUL_FP32) {
@@ -57,8 +57,7 @@ TEST_F(ARM_COMMON, MATRIX_MUL_FP32) {
                 .execs({A, B, {}});
     };
 
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
     // M < 8
     for (size_t M : {1, 2, 3, 4, 5, 6, 7})
         for (size_t K : {7, 1024, 2048})
@@ -121,8 +120,7 @@ TEST_F(ARM_COMMON, MATRIX_MUL_FP16_TEST) {
                 .set_dtype(2, dtype::Float16())
                 .execs({A, B, {}});
     };
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_F16_GEMV"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F16_GEMV"));
 
     // M = 1, 2, 3, 4
     for (size_t M : {1, 2, 3, 4})
@@ -202,7 +200,6 @@ TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4) {
 
 #if MGB_ENABLE_DOT
 TEST_F(ARM_COMMON, QINT8x8x32_GEMV_MK4_DOT) {
-
     Checker<MatrixMul> checker(handle());
     using Param = MatrixMul::Param;
 
@@ -292,8 +289,7 @@ TEST_F(ARM_COMMON, FP32_GEMV_MK4) {
     Checker<MatrixMul> checker(handle());
     using Param = MatrixMul::Param;
 
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV_MK4"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV_MK4"));
 
     checker.set_epsilon(1e-2);
     auto run = [&](size_t M, size_t K) {
@@ -322,8 +318,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV) {
 
     auto run = [&](size_t M, size_t K, size_t N) {
         printf("SGEMV: (%zu, %zu, %zu)\n", M, K, N);
-        benchmarker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32());
+        benchmarker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
         auto time = benchmarker.exec({{M, K}, {K, N}, {}}) / exec_times;
         auto computations = 2.f * M * K * N * 1e-6;
         auto perf = computations / time;
@@ -354,8 +349,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP32) {
     int exec_times = 50;
     Benchmarker<MatrixMul> benchmarker(handle());
     benchmarker.set_times(exec_times);
-    benchmarker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
+    benchmarker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F32_GEMV"));
 
     auto run = [&](size_t M, size_t K, size_t N) {
         printf("SGEMV: (%zu, %zu, %zu)\n", M, K, N);
@@ -433,8 +427,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMV_FP16) {
     int exec_times = 50;
     Benchmarker<MatrixMul> benchmarker(handle());
     benchmarker.set_times(exec_times);
-    benchmarker.set_before_exec_callback(
-            AlgoChecker<MatrixMul>("ARM_COMMON_F16_GEMV"));
+    benchmarker.set_before_exec_callback(AlgoChecker<MatrixMul>("ARM_COMMON_F16_GEMV"));
 
     auto run = [&](size_t M, size_t K, size_t N) {
         printf("SGEMV_FP16: (%zu, %zu, %zu)\n", M, K, N);
@@ -473,8 +466,7 @@ TEST_F(ARM_COMMON, BENCHMARK_SGEMM) {
     auto run = [&](size_t M, size_t K, size_t N) {
         float time = 1.f, perf = 1.f;
         printf("SGEMM: (%zu, %zu, %zu)\n", M, K, N);
-        benchmarker.set_dtype(0, dtype::Float32())
-                .set_dtype(1, dtype::Float32());
+        benchmarker.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
         time = benchmarker.exec({{M, K}, {K, N}, {}});
         perf = 2.f * M * K * N / time * mod;
         printf("gemm, Performance is %f Gflops\n", perf);

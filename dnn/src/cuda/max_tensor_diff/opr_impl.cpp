@@ -15,8 +15,7 @@
 using namespace megdnn;
 using namespace cuda;
 
-float MaxTensorDiffImpl::exec(_megdnn_tensor_in, _megdnn_tensor_in,
-                          _megdnn_workspace) {
+float MaxTensorDiffImpl::exec(_megdnn_tensor_in, _megdnn_tensor_in, _megdnn_workspace) {
     megdnn_throw("MaxTensorDiff not support in cuda");
 }
 

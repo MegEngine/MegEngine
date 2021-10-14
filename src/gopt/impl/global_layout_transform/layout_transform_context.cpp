@@ -10,8 +10,8 @@
  * implied.
  */
 
-#include "./utils.h"
 #include "megbrain/gopt/layout_transform_context.h"
+#include "./utils.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/nn_int.h"
@@ -34,8 +34,9 @@ const char* target_to_string(Target target) {
         cb(ARM);
         cb(UNSPEC);
         default:
-            mgb_assert(false, "unsupported target (got:%u)",
-                       static_cast<uint32_t>(target));
+            mgb_assert(
+                    false, "unsupported target (got:%u)",
+                    static_cast<uint32_t>(target));
     }
 #undef cb
 }
@@ -54,21 +55,24 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
     };
 
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW,    TensorFormats::NHWC,
-            TensorFormats::NCHWc4,  TensorFormats::NCHWc32,
-            TensorFormats::NCHWc64, TensorFormats::CHWNc4};
-    Attribute attribute = {base_opr_format, base_tensor_format, Target::CUDA};
+            TensorFormats::NCHW,    TensorFormats::NHWC,    TensorFormats::NCHWc4,
+            TensorFormats::NCHWc32, TensorFormats::NCHWc64, TensorFormats::CHWNc4};
+
+    Attribute attribute = {
+            base_opr_format, base_tensor_format, Target::CUDA,
+            LayoutTransformContext::ReformatAttribute::AUTO_PADDING_NHWC};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4,
-                OprFormat::NCHW32, OprFormat::NCHW64, OprFormat::CHWN4})
-            .add_opr_config(opr::ConvolutionForward::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW4})
-            .add_opr_config(opr::ConvolutionBackwardData::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW4})
+               {OprFormat::NCHW, OprFormat::NHWC, OprFormat::NCHW4, OprFormat::NCHW32,
+                OprFormat::NCHW64, OprFormat::CHWN4})
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW4})
+            .add_opr_config(
+                    opr::ConvolutionBackwardData::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW4, OprFormat::NHWC})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormat::NCHW4, OprFormat::NCHW32, OprFormat::NHWC,
@@ -102,14 +106,12 @@ LayoutTransformContext& LayoutTransformContext::add_opr_config(
 }
 
 std::unique_ptr<LayoutTransformContext> LayoutTransformContext::make(
-        Target target, OprFormat base_opr_format,
-        TensorFormats base_tensor_format) {
+        Target target, OprFormat base_opr_format, TensorFormats base_tensor_format) {
     switch (target) {
         case Target::CUDA:
             return make_cuda_ctx(base_opr_format, base_tensor_format);
         default:
-            mgb_assert(false, "unsupported target %s\n",
-                       target_to_string(target));
+            mgb_assert(false, "unsupported target %s\n", target_to_string(target));
     }
 }
 

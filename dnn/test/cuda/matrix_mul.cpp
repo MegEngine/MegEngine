@@ -44,8 +44,7 @@ TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32_EXCEPTION) {
     checker.set_dtype(0, dtype::Quantized4Asymm(1.3f, (uint8_t)3));
     checker.set_dtype(1, dtype::Quantized4Asymm(1.3f, (uint8_t)3));
     checker.set_dtype(2, dtype::QuantizedS32(1.3f * 1.3f));
-    ASSERT_THROW(checker.exec({{256, 256}, {256, 256}, {256, 256}}),
-                 MegDNNError);
+    ASSERT_THROW(checker.exec({{256, 256}, {256, 256}, {256, 256}}), MegDNNError);
 }
 
 TEST_F(CUDA, MATRIX_MUL_QUANTIZED4x4x32) {
@@ -96,8 +95,8 @@ TEST_F(CUDA, BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
                 bencher.set_times(400);
                 auto time_in_ms = bencher.exec({{m, k}, {n, k}, {m, n}}) / 400;
                 auto gflps = 2.0 * m * k * n / (time_in_ms * 1e-3) * 1e-12;
-                printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n", m,
-                       k, n, time_in_ms, gflps);
+                printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n", m, k, n,
+                       time_in_ms, gflps);
             }
         }
     }
@@ -124,8 +123,8 @@ TEST_F(CUDA, PEAK_BENCHMARK_MATRIX_MUL_QUANTIZED4x4x32) {
     size_t m = 4096, n = 4096, k = 81920;
     auto time_in_ms = bencher.exec({{m, k}, {n, k}, {m, n}}) / 400;
     auto tflps = 2.0 * m * k * n / (time_in_ms * 1e-3) * 1e-12;
-    printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n", m, k, n,
-           time_in_ms, tflps);
+    printf("m=%zu, k=%zu, n=%zu, time: %fms, perf: %f TFlops\n", m, k, n, time_in_ms,
+           tflps);
 }
 #endif
 #endif
@@ -259,18 +258,17 @@ TEST_F(CUDA, MATRIX_MUL) {
                 B = TensorShape{k, n};
             if (dtype == dtype::BFloat16()) {
                 param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
-                checker.set_before_exec_callback(
-                        AlgoChecker<MatrixMulForward>(ExecutionPolicyAlgoName{
-                                "MATMUL_BFLOAT16", {{"CUBLAS", {}}}}));
+                checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>(
+                        ExecutionPolicyAlgoName{"MATMUL_BFLOAT16", {{"CUBLAS", {}}}}));
             }
             checker.set_param(param)
                     .set_dtype(0, stype)
                     .set_dtype(1, stype)
                     .set_dtype(2, dtype)
-                    .set_epsilon(dtype == dtype::Float16() ||
-                                                 dtype == dtype::BFloat16()
-                                         ? 5e-2
-                                         : 5e-3)
+                    .set_epsilon(
+                            dtype == dtype::Float16() || dtype == dtype::BFloat16()
+                                    ? 5e-2
+                                    : 5e-3)
                     .execs({A, B, {}});
             if (dtype == dtype::BFloat16()) {
                 checker.reset_before_exec_callback();
@@ -301,20 +299,17 @@ TEST_F(CUDA, MATRIX_MUL) {
         if (arg.A_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             AL = TensorLayout(AS, dtype::Float32());
         } else {
-            AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1},
-                              dtype::Float32());
+            AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1}, dtype::Float32());
         }
         if (arg.B_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             BL = TensorLayout(BS, dtype::Float32());
         } else {
-            BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1},
-                              dtype::Float32());
+            BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1}, dtype::Float32());
         }
         if (arg.C_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             CL = TensorLayout(CS, dtype::Float32());
         } else {
-            CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1},
-                              dtype::Float32());
+            CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1}, dtype::Float32());
         }
         checker.set_param(param).execl({AL, BL, CL});
     }
@@ -326,8 +321,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT) {
     Checker<MatrixMul> checker(handle_cuda());
     checker.set_rng(0, &normal_rng)
             .set_rng(1, &normal_rng)
-            .set_before_exec_callback(
-                    AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+            .set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
     using Param = MatrixMul::Param;
     size_t m = 32, n = 32, k = 32;
     // test Int8 matmul
@@ -348,8 +342,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT) {
                 .execs({A, B, {}});
     }
     // test float-point matmul
-    for (DType dtype :
-         std::array<DType, 2>{{dtype::Float32(), dtype::Float16()}}) {
+    for (DType dtype : std::array<DType, 2>{{dtype::Float32(), dtype::Float16()}}) {
         for (unsigned mask = 0; mask < 4; ++mask) {
             Param param;
             param.transposeA = mask & 1;
@@ -394,20 +387,17 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT) {
         if (arg.A_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             AL = TensorLayout(AS, dtype::Float32());
         } else {
-            AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1},
-                              dtype::Float32());
+            AL = TensorLayout(AS, {ptrdiff_t(arg.A_stride), 1}, dtype::Float32());
         }
         if (arg.B_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             BL = TensorLayout(BS, dtype::Float32());
         } else {
-            BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1},
-                              dtype::Float32());
+            BL = TensorLayout(BS, {ptrdiff_t(arg.B_stride), 1}, dtype::Float32());
         }
         if (arg.C_stride == matrix_mul::TestArg::UNSET_STRIDE_VAL) {
             CL = TensorLayout(CS, dtype::Float32());
         } else {
-            CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1},
-                              dtype::Float32());
+            CL = TensorLayout(CS, {ptrdiff_t(arg.C_stride), 1}, dtype::Float32());
         }
         checker.set_param(param).execl({AL, BL, CL});
     }
@@ -416,8 +406,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_SPECIAL_CASE) {
     require_compute_capability(7, 5);
     size_t m = 12, n = 16, k = 20;
     Checker<MatrixMul> checker(handle_cuda());
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
 
     using Param = MatrixMul::Param;
 
@@ -447,8 +436,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_INT8) {
     Checker<MatrixMul> checker(handle_cuda());
     checker.set_rng(0, &normal_rng)
             .set_rng(1, &normal_rng)
-            .set_before_exec_callback(
-                    AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+            .set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
     using Param = MatrixMul::Param;
 
     // size_t m = 32, n = 32, k = 32;
@@ -476,8 +464,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_F32) {
     require_compute_capability(7, 5);
     size_t m = 128, n = 1024, k = 18432;
     Checker<MatrixMul> checker(handle_cuda());
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>("CUBLAS_LT"));
 
     using Param = MatrixMul::Param;
 
@@ -503,8 +490,7 @@ TEST_F(CUDA, MATRIX_MUL_CUBLASLT_F32) {
 
 TEST_F(CUDA, MATRIX_MUL_CUDNN_F32_uncont) {
     Checker<MatrixMul> checker(handle_cuda());
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
     using Param = MatrixMul::Param;
     size_t m = 100, n = 100, k = 100;
     Param param;
@@ -523,8 +509,7 @@ TEST_F(CUDA, MATRIX_MUL_CUDNN_F32_uncont) {
 
 TEST_F(CUDA, MATRIX_MUL_CUDNN_F32) {
     Checker<MatrixMul> checker(handle_cuda());
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
     using Param = MatrixMul::Param;
     for (size_t m = 8; m <= 64; m += 4) {
         for (size_t n = 8; n <= 64; n += 4) {
@@ -556,8 +541,7 @@ TEST_F(CUDA, MATRIX_MUL_CUDNN_F32) {
 }
 TEST_F(CUDA, MATRIX_MUL_CUDNN_F16) {
     Checker<MatrixMul> checker(handle_cuda());
-    checker.set_before_exec_callback(
-            AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
+    checker.set_before_exec_callback(AlgoChecker<MatrixMulForward>("MATMUL_CONV1X1"));
     using Param = MatrixMul::Param;
     for (size_t m = 8; m <= 64; m += 4) {
         for (size_t n = 8; n <= 64; n += 4) {

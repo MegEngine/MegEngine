@@ -24,13 +24,12 @@ class ConvBiasImpl::AlgoQU8MatrixMul final : public AlgoBase {
     static void kimpl(const NCBKernParam& param, const NCBKernIndex&);
 
 public:
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     const char* name() const override { return "QU8MATMUL"; }
 
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override {
         return get_bundle(param).total_size_in_bytes();
     }

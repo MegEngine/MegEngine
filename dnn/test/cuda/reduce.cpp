@@ -72,36 +72,45 @@ TEST_F(CUDA, REDUCE) {
                     .execs({{2, 3, 100, 5}, dst_shape});
         }
     };
-    for (auto mode : {Mode::SUM, Mode::MEAN, Mode::SUM_SQR, Mode::PRODUCT,
-                      Mode::MIN, Mode::MAX}) {
-        for (auto dtype : std::vector<DType>{dtype::Float16(), dtype::Float32(),
-                                             dtype::Int32()}) {
+    for (auto mode :
+         {Mode::SUM, Mode::MEAN, Mode::SUM_SQR, Mode::PRODUCT, Mode::MIN, Mode::MAX}) {
+        for (auto dtype :
+             std::vector<DType>{dtype::Float16(), dtype::Float32(), dtype::Int32()}) {
             check(mode, dtype, dtype, Reduce::DataType::DEFAULT);
         }
         check(mode, dtype::Float16(), dtype::Float32(),
               Reduce::DataType::FLOAT_O32xC32);
-        check(mode, dtype::Int32(), dtype::Float32(),
-              Reduce::DataType::FLOAT_O32xC32);
+        check(mode, dtype::Int32(), dtype::Float32(), Reduce::DataType::FLOAT_O32xC32);
         check(mode, dtype::Float16(), dtype::Float16(),
               Reduce::DataType::FLOAT_O16xC32);
         check(mode, dtype::Float32(), dtype::Float16(),
               Reduce::DataType::FLOAT_O16xC32);
-        ASSERT_THROW(check(mode, dtype::Int32(), dtype::Float16(),
-                           Reduce::DataType::FLOAT_O16xC32),
-                     MegDNNError);
-        ASSERT_THROW(check(mode, dtype::Float16(), dtype::Float16(),
-                           Reduce::DataType::FLOAT_IO16xC32),
-                     MegDNNError);
+        ASSERT_THROW(
+                check(mode, dtype::Int32(), dtype::Float16(),
+                      Reduce::DataType::FLOAT_O16xC32),
+                MegDNNError);
+        ASSERT_THROW(
+                check(mode, dtype::Float16(), dtype::Float16(),
+                      Reduce::DataType::FLOAT_IO16xC32),
+                MegDNNError);
     }
 
     {
         // very large reduce for I16CO32
-        Reduce::Param param{Mode::SUM_SQR, 1,
-                            Reduce::Param::DataType::FLOAT_O32xC32};
+        Reduce::Param param{Mode::SUM_SQR, 1, Reduce::Param::DataType::FLOAT_O32xC32};
         checker.set_dtype(0, dtype::Float16())
                 .set_dtype(1, dtype::Float32())
                 .set_param(param)
                 .execs({{1, 4194304, 1}, {1, 1, 1}});
+    }
+
+    {
+        // large reduce_mean for O16C32
+        Reduce::Param param{Mode::MEAN, 1, Reduce::Param::DataType::FLOAT_O16xC32};
+        checker.set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_param(param)
+                .execs({{1, 65536, 5}, {1, 1, 5}});
     }
 }
 

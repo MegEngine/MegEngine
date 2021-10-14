@@ -14,10 +14,10 @@
 namespace {
 
 template <bool is_xcorr, typename dtype>
-void img2col_stride(const dtype* __restrict src,
-                    dtype* __restrict dst, const int OC, const int OH,
-                    const int OW, const int IC, const int IH, const int IW,
-                    const int FH, const int FW, const int SH, const int SW) {
+void img2col_stride(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int SH, const int SW) {
     (void)OC;
     size_t i = 0;
     rep(ic, IC) {
@@ -33,8 +33,9 @@ void img2col_stride(const dtype* __restrict src,
                             fh2 = FH - fh - 1;
                             fw2 = FW - fw - 1;
                         }
-                        dst[i++] = src[ic * IH * IW + (oh * SH + fh2) * IW +
-                                       (ow * SW + fw2)];
+                        dst[i++] =
+                                src[ic * IH * IW + (oh * SH + fh2) * IW +
+                                    (ow * SW + fw2)];
                     }
                 }
             }
@@ -43,8 +44,9 @@ void img2col_stride(const dtype* __restrict src,
 }
 
 template <bool is_xcorr, typename dtype>
-void img2col(const dtype* src, dtype* dst, size_t /* OC */, size_t OH,
-             size_t OW, size_t IC, size_t IH, size_t IW, size_t FH, size_t FW) {
+void img2col(
+        const dtype* src, dtype* dst, size_t /* OC */, size_t OH, size_t OW, size_t IC,
+        size_t IH, size_t IW, size_t FH, size_t FW) {
     size_t offset = (4 - OW % 4) % 4;
     size_t i = 0;
     rep(ic, IC) {
@@ -61,14 +63,10 @@ void img2col(const dtype* src, dtype* dst, size_t /* OC */, size_t OH,
                             fh2 = FH - fh - 1;
                             fw2 = FW - fw - 1;
                         }
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 0];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 1];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 2];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 3];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 0];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 1];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 2];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 3];
                     }
                     i -= offset;
                 }

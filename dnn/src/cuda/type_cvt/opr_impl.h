@@ -14,18 +14,15 @@
 namespace megdnn {
 namespace cuda {
 
-class TypeCvtImpl final: public TypeCvt {
-    public:
-        using TypeCvt::TypeCvt;
-        void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) override;
-        
-        bool is_thread_safe() const override {
-            return true;
-        }
+class TypeCvtImpl final : public TypeCvt {
+public:
+    using TypeCvt::TypeCvt;
+    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) override;
+
+    bool is_thread_safe() const override { return true; }
 };
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

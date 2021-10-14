@@ -15,19 +15,17 @@
 
 namespace mgb::imperative {
 
-namespace { namespace warp_affine {
-    auto apply_on_var_node(
-            const OpDef& def,
-            const VarNodeArray& inputs) {
-        mgb_assert(inputs.size() == 3);
-        auto&& op = static_cast<const WarpAffine&>(def);
-        OperatorNodeConfig config{op.make_name()};
-        return opr::WarpAffine::make(inputs[0], inputs[1], inputs[2], op.param(), config);
-    }
+namespace {
+namespace warp_affine {
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    mgb_assert(inputs.size() == 3);
+    auto&& op = static_cast<const WarpAffine&>(def);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::WarpAffine::make(inputs[0], inputs[1], inputs[2], op.param(), config);
+}
 
-OP_TRAIT_REG(WarpAffine, WarpAffine)
-    .apply_on_var_node(apply_on_var_node)
-    .fallback();
-}} // warp_affine
+OP_TRAIT_REG(WarpAffine, WarpAffine).apply_on_var_node(apply_on_var_node).fallback();
+}  // namespace warp_affine
+}  // namespace
 
-} // namespace mgb::imperative
+}  // namespace mgb::imperative

@@ -18,15 +18,17 @@
 using namespace megdnn;
 using namespace x86;
 
-void WarpAffineImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in mat,
-                          _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+void WarpAffineImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, mat.layout, dst.layout, workspace.size);
 
-    if (warp::is_cv_available(src.layout, mat.layout, dst.layout, param().imode,
-                              param().format) &&
+    if (warp::is_cv_available(
+                src.layout, mat.layout, dst.layout, param().imode, param().format) &&
         is_supported(SIMDType::SSE3)) {
-        warp_affine_cv_exec(src, mat, dst, param().border_val,
-                            param().border_mode, param().imode, handle());
+        warp_affine_cv_exec(
+                src, mat, dst, param().border_val, param().border_mode, param().imode,
+                handle());
     } else {
         //! Use fallback implementation
         naive::WarpAffineImpl::exec(src, mat, dst, workspace);

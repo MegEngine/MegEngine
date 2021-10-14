@@ -73,9 +73,9 @@ void backward_impl(const ElemwiseOpParamN<5> src, float qmin, float qmax) {
 namespace megdnn {
 namespace naive {
 
-void TQTForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                          _megdnn_tensor_out output,
-                          _megdnn_workspace workspace) {
+void TQTForwardImpl::exec(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_out output,
+        _megdnn_workspace workspace) {
     check_exec(input.layout, scale.layout, output.layout, workspace.size);
     ElemwiseOpParamN<3> src;
     src[0] = input;
@@ -93,12 +93,13 @@ void TQTForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
 #undef cb
 }
 
-void TQTBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                           _megdnn_tensor_in scale, _megdnn_tensor_out grad_x,
-                           _megdnn_tensor_out grad_s,
-                           _megdnn_workspace workspace) {
-    check_exec(diff.layout, input.layout, scale.layout, grad_x.layout,
-               grad_s.layout, workspace.size);
+void TQTBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+        _megdnn_workspace workspace) {
+    check_exec(
+            diff.layout, input.layout, scale.layout, grad_x.layout, grad_s.layout,
+            workspace.size);
     ElemwiseOpParamN<5> src;
     src[0] = diff;
     src[1] = input;

@@ -107,8 +107,9 @@ def test_training_converge(test_traced_module):
         optim.clip_grad_value(net.parameters(), lower=-0.1, upper=0.1)
         opt.step()
         losses.append(loss.numpy())
-    print(np.mean(losses[-100:]))
-    assert np.mean(losses[-100:]) < 0.1, "Final training Loss must be low enough"
+    assert (
+        np.mean(losses[-100:]) < 0.1
+    ), "Final training Loss must be low enough, get {}".format(np.mean(losses[-100:]))
 
     ngrid = 10
     x = np.linspace(-1.0, 1.0, ngrid)
@@ -118,7 +119,6 @@ def test_training_converge(test_traced_module):
     data = mge.tensor(np.concatenate((xx, yy), axis=1).astype(np.float32))
     pred = infer(data)
     precision = calculate_precision(data.numpy(), pred.numpy())
-    print("precision=", precision)
     assert precision == 1.0, "Test precision must be high enough, get {}".format(
         precision
     )

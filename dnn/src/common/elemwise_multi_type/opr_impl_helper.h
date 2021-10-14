@@ -18,16 +18,15 @@ namespace megdnn {
 
 class ElemwiseMultiTypeImplHelper : public ElemwiseMultiType,
                                     protected ElemwiseLayoutHelper {
-    static void call_check_layout_and_broadcast(void* opr,
-                                                const TensorLayoutPtrArray& src,
-                                                const TensorLayout& dst) {
+    static void call_check_layout_and_broadcast(
+            void* opr, const TensorLayoutPtrArray& src, const TensorLayout& dst) {
         return static_cast<ElemwiseMultiTypeImplHelper*>(opr)
                 ->check_layout_and_broadcast(src, dst);
     }
 
     template <int arity>
-    ElemwiseOpParamN<arity> make_elemwise_op_param(const TensorNDArray& src,
-                                                   const TensorND& dst) {
+    ElemwiseOpParamN<arity> make_elemwise_op_param(
+            const TensorNDArray& src, const TensorND& dst) {
         return ElemwiseLayoutHelper::make_elemwise_op_param<arity>(
                 this, call_check_layout_and_broadcast, src, dst);
     }
@@ -51,22 +50,22 @@ protected:
     virtual void on_round_shr_saturate_iXxi8xi16(
             const ElemwiseOpParamN<2>& param, dt_int16* dst) = 0;
 
-    virtual void on_quantized_mode(const ElemwiseOpParamN<1>& param,
-                                   const TensorND& dst,
-                                   Elemwise::Mode mode) {
+    virtual void on_quantized_mode(
+            const ElemwiseOpParamN<1>& param, const TensorND& dst,
+            Elemwise::Mode mode) {
         MEGDNN_MARK_USED_VAR(param);
         MEGDNN_MARK_USED_VAR(dst);
         MEGDNN_MARK_USED_VAR(mode);
         megdnn_throw("Unrealized except arm_common");
     }
 
-    virtual void on_quantized_mode(const ElemwiseOpParamN<2>& param,
-                                   const TensorND& dst,
-                                   Elemwise::Mode mode) = 0;
+    virtual void on_quantized_mode(
+            const ElemwiseOpParamN<2>& param, const TensorND& dst,
+            Elemwise::Mode mode) = 0;
 
-    virtual void on_quantized_mode(const ElemwiseOpParamN<3>& param,
-                                   const TensorND& dst,
-                                   Elemwise::Mode mode) {
+    virtual void on_quantized_mode(
+            const ElemwiseOpParamN<3>& param, const TensorND& dst,
+            Elemwise::Mode mode) {
         MEGDNN_MARK_USED_VAR(param);
         MEGDNN_MARK_USED_VAR(dst);
         MEGDNN_MARK_USED_VAR(mode);
@@ -76,8 +75,8 @@ protected:
 public:
     using ElemwiseMultiType::ElemwiseMultiType;
 
-    void exec(_megdnn_in const TensorNDArray& src,
-              _megdnn_tensor_out dst) override final;
+    void exec(
+            _megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) override final;
 };
 
 }  // namespace megdnn

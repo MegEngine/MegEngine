@@ -10,9 +10,9 @@
  */
 #include "test/cpu/fixture.h"
 
-#include "test/common/convolution.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/convolution.h"
 
 using namespace megdnn;
 using namespace test;
@@ -24,7 +24,7 @@ Convolution::Param gconv_param(Convolution::Param p) {
     return p;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 #define CONVOLUTION_ARG_DIV_SIZE 100
 TEST_F(CPU, CONVOLUTION_0) {
@@ -34,8 +34,7 @@ TEST_F(CPU, CONVOLUTION_0) {
     ASSERT_GT(loop_size, CONVOLUTION_ARG_DIV_SIZE);
     Checker<Convolution> checker(handle());
     for (unsigned int i = 0; i < CONVOLUTION_ARG_DIV_SIZE; i++) {
-        checker.set_param(args[i].param)
-                .execs({args[i].src, args[i].filter, {}});
+        checker.set_param(args[i].param).execs({args[i].src, args[i].filter, {}});
     }
 }
 
@@ -48,10 +47,9 @@ TEST_F(CPU, CONVOLUTION_1) {
     ASSERT_GT(loop_size, CONVOLUTION_ARG_DIV_SIZE);
     ASSERT_GT(loop_size, CONVOLUTION1_ARG_LOOP_END_TIME);
     Checker<Convolution> checker(handle());
-    for (unsigned int i = CONVOLUTION_ARG_DIV_SIZE;
-         i < CONVOLUTION1_ARG_LOOP_END_TIME; i++) {
-        checker.set_param(args[i].param)
-                .execs({args[i].src, args[i].filter, {}});
+    for (unsigned int i = CONVOLUTION_ARG_DIV_SIZE; i < CONVOLUTION1_ARG_LOOP_END_TIME;
+         i++) {
+        checker.set_param(args[i].param).execs({args[i].src, args[i].filter, {}});
     }
 }
 
@@ -64,8 +62,7 @@ TEST_F(CPU, CONVOLUTION_2) {
     Checker<Convolution> checker(handle());
     for (unsigned int i = CONVOLUTION1_ARG_LOOP_END_TIME;
          i < CONVOLUTION2_ARG_LOOP_END_TIME; i++) {
-        checker.set_param(args[i].param)
-                .execs({args[i].src, args[i].filter, {}});
+        checker.set_param(args[i].param).execs({args[i].src, args[i].filter, {}});
     }
 }
 
@@ -76,8 +73,7 @@ TEST_F(CPU, CONVOLUTION_3) {
     ASSERT_GT(loop_size, CONVOLUTION2_ARG_LOOP_END_TIME);
     Checker<Convolution> checker(handle());
     for (unsigned int i = CONVOLUTION2_ARG_LOOP_END_TIME; i < loop_size; i++) {
-        checker.set_param(args[i].param)
-                .execs({args[i].src, args[i].filter, {}});
+        checker.set_param(args[i].param).execs({args[i].src, args[i].filter, {}});
     }
 }
 
@@ -85,10 +81,10 @@ TEST_F(CPU, CONVOLUTION_3) {
 #undef CONVOLUTION1_ARG_LOOP_END_TIME
 #undef CONVOLUTION2_ARG_LOOP_END_TIME
 
-#define CB_CONV_CONFIG_COMBINATIONS(KSIZE)                                \
-    TEST_F(CPU, CONV_CONFIG_COMBINATIONS_KSIZE_1_KSIZE_##KSIZE) {         \
-        convolution::test_conv_config_combinations(KSIZE, handle(), true, \
-                                                   false, false);         \
+#define CB_CONV_CONFIG_COMBINATIONS(KSIZE)                        \
+    TEST_F(CPU, CONV_CONFIG_COMBINATIONS_KSIZE_1_KSIZE_##KSIZE) { \
+        convolution::test_conv_config_combinations(               \
+                KSIZE, handle(), true, false, false);             \
     }
 
 // FIXME: only test ksize=1, will crash on IOS, so we tmp test ksize_1##other_ksize
@@ -98,8 +94,7 @@ CB_CONV_CONFIG_COMBINATIONS(5);
 #undef CB_CONV_CONFIG_COMBINATIONS
 
 #if MEGDNN_WITH_BENCHMARK
-TEST_F(CPU, BENCHMARK_CONVOLUTION)
-{
+TEST_F(CPU, BENCHMARK_CONVOLUTION) {
     using TestArg = convolution::TestArg;
     using Param = param::Convolution;
     std::vector<TestArg> args;
@@ -131,35 +126,33 @@ TEST_F(CPU, BENCHMARK_CONVOLUTION)
     // clang-format on
     Checker<Convolution> checker(handle());
     checker.set_perf_check(true).set_perf_check_threshold(2.0);
-    for (auto &&arg: args) {
+    for (auto&& arg : args) {
         checker.set_param(arg.param).execs({arg.src, arg.filter, {}});
     }
 }
 
 #endif
 
-TEST_F(CPU, CHANWISE_CONVOLUTION)
-{
+TEST_F(CPU, CHANWISE_CONVOLUTION) {
     constexpr auto M = Convolution::Mode::CROSS_CORRELATION;
     Checker<Convolution> checker(handle());
-    checker.set_param(gconv_param({M, 0, 0, 1, 1})).
-        execs({{1, 1, 2, 2}, {1, 1, 1, 2, 2}, {}}).
-        execs({{1, 1, 5, 5}, {1, 1, 1, 2, 2}, {}}).
-        execs({{2, 2, 5, 5}, {2, 3, 1, 2, 2}, {2, 6, 4, 4}});
+    checker.set_param(gconv_param({M, 0, 0, 1, 1}))
+            .execs({{1, 1, 2, 2}, {1, 1, 1, 2, 2}, {}})
+            .execs({{1, 1, 5, 5}, {1, 1, 1, 2, 2}, {}})
+            .execs({{2, 2, 5, 5}, {2, 3, 1, 2, 2}, {2, 6, 4, 4}});
 
-    checker.set_param(gconv_param({M, 1, 1, 1, 1})).
-        execs({{2, 2, 5, 5}, {2, 1, 1, 2, 2}, {}});
+    checker.set_param(gconv_param({M, 1, 1, 1, 1}))
+            .execs({{2, 2, 5, 5}, {2, 1, 1, 2, 2}, {}});
 
-    checker.set_param(gconv_param({M, 2, 3, 2, 1})).
-        execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
+    checker.set_param(gconv_param({M, 2, 3, 2, 1}))
+            .execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
 
     // padding larger than kern
-    checker.set_param(gconv_param({M, 20, 30, 4, 5})).
-        execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
+    checker.set_param(gconv_param({M, 20, 30, 4, 5}))
+            .execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
 }
 
-TEST_F(CPU, CHANWISE_CONVOLUTION_INT8_INT8_INT16)
-{
+TEST_F(CPU, CHANWISE_CONVOLUTION_INT8_INT8_INT16) {
     constexpr auto M = Convolution::Mode::CROSS_CORRELATION;
     Checker<Convolution> checker(handle());
 
@@ -167,20 +160,20 @@ TEST_F(CPU, CHANWISE_CONVOLUTION_INT8_INT8_INT16)
     checker.set_dtype(1, dtype::Int8());
     checker.set_dtype(2, dtype::Int16());
 
-    checker.set_param(gconv_param({M, 0, 0, 1, 1, 1, 1})).
-        execs({{1, 1, 2, 2}, {1, 1, 1, 2, 2}, {}}).
-        execs({{1, 1, 5, 5}, {1, 1, 1, 2, 2}, {}}).
-        execs({{2, 2, 5, 5}, {2, 3, 1, 2, 2}, {2, 6, 4, 4}});
+    checker.set_param(gconv_param({M, 0, 0, 1, 1, 1, 1}))
+            .execs({{1, 1, 2, 2}, {1, 1, 1, 2, 2}, {}})
+            .execs({{1, 1, 5, 5}, {1, 1, 1, 2, 2}, {}})
+            .execs({{2, 2, 5, 5}, {2, 3, 1, 2, 2}, {2, 6, 4, 4}});
 
-    checker.set_param(gconv_param({M, 1, 1, 1, 1, 1, 1})).
-        execs({{2, 2, 5, 5}, {2, 1, 1, 2, 2}, {}});
+    checker.set_param(gconv_param({M, 1, 1, 1, 1, 1, 1}))
+            .execs({{2, 2, 5, 5}, {2, 1, 1, 2, 2}, {}});
 
-    checker.set_param(gconv_param({M, 2, 3, 2, 1, 1, 1})).
-        execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
+    checker.set_param(gconv_param({M, 2, 3, 2, 1, 1, 1}))
+            .execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
 
     // padding larger than kern
-    checker.set_param(gconv_param({M, 20, 30, 4, 5, 1, 1})).
-        execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
+    checker.set_param(gconv_param({M, 20, 30, 4, 5, 1, 1}))
+            .execs({{32, 12, 20, 10}, {12, 2, 1, 4, 5}, {}});
 
     // clang-format off
     for (uint32_t s : {1, 2})
@@ -197,15 +190,10 @@ TEST_F(CPU, CHANWISE_CONVOLUTION_INT8_INT8_INT16)
     // clang-format on
 }
 
-TEST_F(CPU, GROUP_CONV)
-{
-    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW,
-            size_t FH, size_t FW,
-            size_t OC, size_t /* OH */, size_t /* OW */,
-            size_t PH, size_t PW,
-            size_t SH, size_t SW,
-            size_t group)
-    {
+TEST_F(CPU, GROUP_CONV) {
+    auto run = [&](size_t N, size_t IC, size_t IH, size_t IW, size_t FH, size_t FW,
+                   size_t OC, size_t /* OH */, size_t /* OW */, size_t PH, size_t PW,
+                   size_t SH, size_t SW, size_t group) {
         Checker<Convolution> checker(handle());
         Convolution::Param param;
         param.pad_h = PH;
@@ -214,35 +202,19 @@ TEST_F(CPU, GROUP_CONV)
         param.stride_w = SW;
         auto ICg = IC / group;
         auto OCg = OC / group;
-        checker.set_param(gconv_param(param)).exec({{N, IC, IH, IW},
-                {group, OCg, ICg, FH, FW}, {}});
+        checker.set_param(gconv_param(param))
+                .exec({{N, IC, IH, IW}, {group, OCg, ICg, FH, FW}, {}});
     };
     // normal case
-    run(2, 64, 7, 7,
-            3, 3,
-            32, 5, 5,
-            0, 0,
-            1, 1,
-            1);
+    run(2, 64, 7, 7, 3, 3, 32, 5, 5, 0, 0, 1, 1, 1);
     // padded case
-    run(2, 32, 7, 7,
-            3, 3,
-            64, 7, 7,
-            1, 1,
-            1, 1,
-            4);
+    run(2, 32, 7, 7, 3, 3, 64, 7, 7, 1, 1, 1, 1, 4);
     // strided case
-    run(2, 32, 7, 7,
-            3, 3,
-            64, 3, 3,
-            0, 0,
-            2, 2,
-            8);
+    run(2, 32, 7, 7, 3, 3, 64, 3, 3, 0, 0, 2, 2, 8);
 }
 
 #if MEGDNN_WITH_BENCHMARK
-TEST_F(CPU, BENCHMARK_7X7_CONVOLUTION)
-{
+TEST_F(CPU, BENCHMARK_7X7_CONVOLUTION) {
     using Param = param::Convolution;
     auto run = [&](const TensorShapeArray& shapes, Param param) {
         auto handle_naive = create_cpu_handle(2);
@@ -276,9 +248,9 @@ TEST_F(CPU, BENCHMARK_7X7_CONVOLUTION)
     } } } }
     // clang-format on
     // Used in FaceModel
-    //run({{2, 3, 512, 512}, {8, 3, 7, 7}, {2, 8, 256, 256}}, param);
-    //run({{2, 3, 128, 128}, {16, 3, 7, 7}, {2, 16, 64, 64}}, param);
-    //run({{2, 3, 224, 224}, {32, 3, 7, 7}, {2, 32, 112, 112}}, param);
+    // run({{2, 3, 512, 512}, {8, 3, 7, 7}, {2, 8, 256, 256}}, param);
+    // run({{2, 3, 128, 128}, {16, 3, 7, 7}, {2, 16, 64, 64}}, param);
+    // run({{2, 3, 224, 224}, {32, 3, 7, 7}, {2, 32, 112, 112}}, param);
 }
 #endif
 

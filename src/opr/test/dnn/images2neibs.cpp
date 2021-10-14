@@ -9,10 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/test/helper.h"
-#include "megbrain/test/autocheck.h"
-#include "megbrain/test/megdnn_helper.h"
 #include "megbrain/opr/dnn/images2neibs.h"
+#include "megbrain/test/autocheck.h"
+#include "megbrain/test/helper.h"
+#include "megbrain/test/megdnn_helper.h"
 
 #include "megdnn/oprs.h"
 
@@ -27,31 +27,31 @@ TEST(TestOprDNN, Images2Neibs) {
     param.stride_w = 2;
     param.window_h = 4;
 
-    auto make_graph = [&](const Checker::SymInpArray &inputs) ->
-        Checker::SymOutArray {
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
         return {opr::Images2Neibs::make(inputs[0], param)};
     };
 
-    auto fwd = [&](Checker::NumOutArray &dest, Checker::NumInpArray inp) {
-        auto opr = megdnn_naive_handle()->
-            create_operator<megdnn::Images2Neibs>();
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::Images2Neibs>();
         opr->param() = param;
         TensorLayout dest_layout;
         opr->deduce_layout(inp[0]->layout(), dest_layout);
         std::vector<dt_byte> workspace(
                 opr->get_workspace_in_bytes(inp[0]->layout(), dest_layout));
-        dest[0].dtype(dtype::Float32()).
-            comp_node(inp[0]->comp_node()).resize(dest_layout);
-        opr->exec(inp[0]->as_megdnn(), dest[0].as_megdnn(),
+        dest[0].dtype(dtype::Float32())
+                .comp_node(inp[0]->comp_node())
+                .resize(dest_layout);
+        opr->exec(
+                inp[0]->as_megdnn(), dest[0].as_megdnn(),
                 {workspace.data(), workspace.size()});
     };
     Checker::RunOptions opt;
     opt.numdiff_eps = 1;
 
-    Checker(make_graph, fwd).
-        run({TensorShape{2, 3, 8, 7}}, opt).
-        run({TensorShape{4, 5, 6, 3}}, opt).
-        run({TensorShape{3, 2, 7, 5}}, opt);
+    Checker(make_graph, fwd)
+            .run({TensorShape{2, 3, 8, 7}}, opt)
+            .run({TensorShape{4, 5, 6, 3}}, opt)
+            .run({TensorShape{3, 2, 7, 5}}, opt);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

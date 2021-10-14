@@ -12,8 +12,8 @@
 #include "./opr_impl.h"
 #include "./kern.cuh"
 
-#include "src/cuda/utils.h"
 #include "src/cuda/utils.cuh"
+#include "src/cuda/utils.h"
 
 using namespace megdnn;
 using namespace cuda;
@@ -21,11 +21,9 @@ using namespace cuda;
 namespace {
 template <typename T>
 void exec_src_quantized(
-        const TensorND& dst, const TensorND& src,
-        const CudaDTypeParam<T>& src_param,
+        const TensorND& dst, const TensorND& src, const CudaDTypeParam<T>& src_param,
         cudaStream_t stream) {
-    bool is_dst_quantized =
-            dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
+    bool is_dst_quantized = dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
     bool is_dst_lowbit = dst.layout.dtype.is_low_bit();
     using ctype_src = typename DTypeTrait<T>::ctype;
     if (!is_dst_quantized && !is_dst_lowbit) {
@@ -43,13 +41,13 @@ void exec_src_quantized(
         }
     } else if (!is_dst_lowbit) {
         switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                      \
-    case DTypeTrait<_dt>::enumv: {                                   \
-        auto dst_param = dst.layout.dtype.param<_dt>();              \
-        using ctype_dest = typename DTypeTrait<_dt>::ctype;          \
-        typecvt_kern_q2q<ctype_src, ctype_dest>(dst, src, src_param, \
-                                                dst_param, stream);  \
-        return;                                                      \
+#define cb(_dt)                                             \
+    case DTypeTrait<_dt>::enumv: {                          \
+        auto dst_param = dst.layout.dtype.param<_dt>();     \
+        using ctype_dest = typename DTypeTrait<_dt>::ctype; \
+        typecvt_kern_q2q<ctype_src, ctype_dest>(            \
+                dst, src, src_param, dst_param, stream);    \
+        return;                                             \
     }
             MEGDNN_FOREACH_QUANTIZED_DTYPE(cb);
             default:
@@ -58,13 +56,13 @@ void exec_src_quantized(
         }
     } else {
         switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                        \
-    case DTypeTrait<_dt>::enumv: {                                     \
-        auto dst_param = dst.layout.dtype.param<_dt>();                \
-        using ctype_dest = typename DTypeTrait<_dt>::ctype;            \
-        typecvt_kern_q2q4<ctype_src, ctype_dest>(dst, src, src_param, \
-                                                  dst_param, stream);  \
-        return;                                                        \
+#define cb(_dt)                                             \
+    case DTypeTrait<_dt>::enumv: {                          \
+        auto dst_param = dst.layout.dtype.param<_dt>();     \
+        using ctype_dest = typename DTypeTrait<_dt>::ctype; \
+        typecvt_kern_q2q4<ctype_src, ctype_dest>(           \
+                dst, src, src_param, dst_param, stream);    \
+        return;                                             \
     }
             MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb);
             default:
@@ -75,10 +73,8 @@ void exec_src_quantized(
 }
 
 template <typename T>
-void exec_src_normal(const TensorND& dst, const TensorND& src,
-                     cudaStream_t stream) {
-    bool is_dst_quantized =
-            dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
+void exec_src_normal(const TensorND& dst, const TensorND& src, cudaStream_t stream) {
+    bool is_dst_quantized = dst.layout.dtype.category() == DTypeCategory::QUANTIZED;
     bool is_dst_lowbit = dst.layout.dtype.is_low_bit();
     using ctype_src = typename DTypeTrait<T>::ctype;
     if (!is_dst_quantized && !is_dst_lowbit) {
@@ -129,8 +125,7 @@ void exec_src_normal(const TensorND& dst, const TensorND& src,
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     check_exec(src.layout, dst.layout);
-    bool is_src_quantized =
-            src.layout.dtype.category() == DTypeCategory::QUANTIZED;
+    bool is_src_quantized = src.layout.dtype.category() == DTypeCategory::QUANTIZED;
     auto stream = cuda_stream(handle());
 
     if (!is_src_quantized)
@@ -143,8 +138,7 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
             MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
             cb(::megdnn::dtype::Bool)
 #undef cb
-            default:
-                megdnn_assert_internal(0);
+                    default : megdnn_assert_internal(0);
         }
     else {
         switch (src.layout.dtype.enumv()) {

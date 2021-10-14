@@ -15,6 +15,7 @@ from ..core._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from ..core.ops import builtin
 from ..core.ops.builtin import (
     BatchNorm,
+    Dimshuffle,
     Elemwise,
     GetVarShape,
     Identity,
@@ -69,6 +70,7 @@ __all__ = [
     "leaky_relu",
     "linear",
     "local_conv2d",
+    "local_response_norm",
     "logsigmoid",
     "logsumexp",
     "logsoftmax",
@@ -87,6 +89,7 @@ __all__ = [
     "sync_batch_norm",
     "warp_affine",
     "warp_perspective",
+    "pixel_shuffle",
 ]
 
 
@@ -1154,6 +1157,9 @@ def layer_norm(
         eps_mode
     )
 
+    if amp._enabled:
+        inp, weight, bias = cast_tensors(inp, weight, bias, promote=True)
+
     _device = inp.device
     _dtype = inp.dtype
     _dim = len(inp.shape) - len(normalized_shape)
@@ -1186,7 +1192,8 @@ def batch_norm(
     momentum: float = 0.9,
     eps: float = 1e-5,
     inplace: bool = True,
-    compute_mode="default"
+    compute_mode="default",
+    param_dim="dim_1c11"
 ):
     r"""Applies batch normalization to the input.
 
@@ -1211,16 +1218,23 @@ def batch_norm(
     if inp.ndim != 4:
         raise NotImplementedError("batch_norm for ndim != 4")
 
-    C = inp.shape[1]
+    if param_dim == "dim_1c11":
+        C = inp.shape[1]
+        pshape = (1, C, 1, 1)
+    elif param_dim == "dim_111c":
+        C = inp.shape[3]
+        pshape = (1, 1, 1, C)
+    else:
+        raise ValueError("Invalid param_dim {}".format(param_dim))
 
     def make_full_if_none(x, value):
         if x is None:
             (x,) = Const(value, dtype=inp.dtype, device=inp.device)()
-            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
+            shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Broadcast(), x, shape)
             return result
         elif x.ndim == 1:
-            shape = astensor1d((1, C, 1, 1), inp, dtype="int32", device=inp.device)
+            shape = astensor1d(pshape, inp, dtype="int32", device=inp.device)
             (result,) = apply(builtin.Reshape(), x, shape)
             return result
         return x
@@ -1247,19 +1261,19 @@ def batch_norm(
 
     if not training:
         op = builtin.BatchNorm(
-            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim="dim_1c11"
+            fwd_mode=BatchNorm.FwdMode.INFERENCE, epsilon=eps, param_dim=param_dim
         )
         ret = apply(op, inp, weight, bias, running_mean, running_var)[-1]
         return ret
 
     else:
         op = builtin.BatchNorm(
-            avg_factor=1 - momentum, epsilon=eps, param_dim="dim_1c11"
+            avg_factor=1 - momentum, epsilon=eps, param_dim=param_dim
         )
         if has_mean or has_var:
             running_mean = make_full_if_none(running_mean, 0)
             running_var = make_full_if_none(running_var, 1)
-            new_mean, new_var, _, _, inp = apply(
+            new_mean, new_var, *_, inp = apply(
                 op, inp, weight, bias, running_mean, running_var
             )
             if not has_mean:
@@ -1277,7 +1291,7 @@ def batch_norm(
             else:
                 return inp, new_mean, new_var
         else:
-            (_, _, inp,) = apply(op, inp, weight, bias)
+            inp = apply(op, inp, weight, bias)[-1]
             return inp
 
 
@@ -1797,6 +1811,116 @@ def pad(
     )
     (output,) = apply(op, src)
     return output
+
+
+def local_response_norm(
+    inp: Tensor,
+    kernel_size: int = 5,
+    k: float = 2.0,
+    alpha: float = 1e-4,
+    beta: float = 0.75,
+) -> Tensor:
+    r"""
+    Apply local response normalization to the input tensor.
+
+    Args:
+        kernel_size: the size of the kernel to apply LRN on.
+        k: hyperparameter k. The default vaule is 2.0.
+        alpha: hyperparameter alpha. The default value is 1e-4.
+        beta: hyperparameter beta. The default value is 0.75.
+
+    Example:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as f
+        import numpy as np
+
+        inp = tensor(np.arange(25, dtype=np.float32).reshape(1,1,5,5))
+        GT = np.array([[[[ 0.,         0.999925,   1.9994003,  2.9979765,  3.9952066],
+           [ 4.9906454,  5.983851,   6.974385,   7.961814,   8.945709 ],
+           [ 9.925651,  10.90122,   11.872011,  12.837625,  13.7976675],
+           [14.751757,  15.699524,  16.640602,  17.574642,  18.501305 ],
+           [19.420258,  20.331186,  21.233786,  22.127764,  23.012836 ]]]])
+
+        out = f.local_response_norm(inp, kernel_size=3, k=1.0, alpha=1e-4, beta=0.75)
+        np.testing.assert_allclose(GT, out.numpy(), rtol=1e-6, atol=1e-6)
+        print('pass')
+
+    Outputs:
+
+    .. testoutput::
+
+        pass
+
+    """
+    op = builtin.LRN(n=kernel_size, k=k, alpha=alpha, beta=beta,)
+    (output,) = apply(op, inp)
+    return output
+
+
+@lru_cache(maxsize=None)
+def _get_layerPixelShuffle(device, dtype, dim_order):
+    @subgraph("LayerPixelShuffle", dtype, device, 3)
+    def layerPixelShuffle(inputs, f, c):
+        inp, shape_0, shape_1 = inputs
+        inp = f(Reshape(), inp, shape_0)
+        inp = f(Dimshuffle(dim_order), inp)
+        oup = f(Reshape(), inp, shape_1)
+        return (oup,), (True,)
+
+    return layerPixelShuffle
+
+
+def pixel_shuffle(inp: Tensor, upscale_factor: int) -> Tensor:
+    """
+    Rearranges elements in a tensor of shape (*, C x r^2, H, W) to a tensor of
+    shape (*, C, H x r, W x r), where r is an upscale factor, where * is zero
+    or more batch dimensions.
+
+    :param inp: input tensor.
+    :param upscale_factor: upscale factor of pixel_shuffle.
+    :return: output tensor.
+    """
+    assert upscale_factor > 0, "upscale_factor should larger than 0"
+    assert inp.ndim >= 3, "the input dimension of pixel_shuffle should be larger than 3"
+    assert (
+        inp.shape[-3] % (upscale_factor ** 2) == 0
+    ), "the -3 dimension should be divided by (upscale_factor ** 2)"
+
+    _device = inp.device
+    _dtype = inp.dtype
+    shape_ori = inp.shape
+    high_dim = shape_ori[:-3]
+    square = upscale_factor ** 2
+    n = 1
+    for item in high_dim:
+        n *= item
+    shape_0 = (
+        n,
+        int(shape_ori[-3] / square),
+        upscale_factor,
+        upscale_factor,
+        shape_ori[-2],
+        shape_ori[-1],
+    )
+    shape_1 = (
+        *high_dim,
+        shape_ori[-3] / square,
+        shape_ori[-2] * upscale_factor,
+        shape_ori[-1] * upscale_factor,
+    )
+
+    dim_order = (0, 1, 4, 2, 5, 3)
+
+    layerPixelShuffle = _get_layerPixelShuffle(_device, _dtype, dim_order)
+
+    shape_0 = convert_single_value(shape_0, dtype=inp.dtype, device=inp.device)
+    shape_1 = convert_single_value(shape_1, dtype=inp.dtype, device=inp.device)
+    outvar, *_ = apply(layerPixelShuffle(), inp, shape_0, shape_1)
+
+    return outvar
 
 
 from .quantized import conv_bias_activation  # isort:skip

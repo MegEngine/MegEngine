@@ -31,8 +31,8 @@ using namespace mgb;
 #include <cuda_runtime.h>
 
 #ifdef __unix__
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 using CudaCompNodeImpl = CudaCompNode::CompNodeImpl;
@@ -86,8 +86,8 @@ public:
         cudaError_t cuda_error = cudaFree(ptr);
         if (cuda_error == cudaSuccess)
             return;
-        auto msg = ssprintf("cudaFree failed for %p: %s", ptr,
-                            cudaGetErrorString(cuda_error));
+        auto msg = ssprintf(
+                "cudaFree failed for %p: %s", ptr, cudaGetErrorString(cuda_error));
         msg.append(CudaError::get_cuda_extra_info());
         mgb_throw_raw(MemAllocError{msg});
     }
@@ -96,8 +96,7 @@ public:
         cudaError_t cuda_error = cudaMemGetInfo(&free, &tot);
         if (cuda_error == cudaSuccess)
             return;
-        auto msg = ssprintf("cudaMemGetInfo failed %s",
-                            cudaGetErrorString(cuda_error));
+        auto msg = ssprintf("cudaMemGetInfo failed %s", cudaGetErrorString(cuda_error));
         msg.append(CudaError::get_cuda_extra_info());
         mgb_throw_raw(MegBrainError{msg});
     }
@@ -107,8 +106,7 @@ class CudaHostAllocator : public RawAllocator {
 public:
     void* alloc(size_t size) override {
         void* addr;
-        cudaError_t cuda_error =
-                cudaHostAlloc(&addr, size, cudaHostAllocDefault);
+        cudaError_t cuda_error = cudaHostAlloc(&addr, size, cudaHostAllocDefault);
         if (cuda_error == cudaSuccess) {
             mgb_assert(addr);
             return addr;
@@ -132,8 +130,8 @@ public:
         cudaError_t cuda_error = cudaFreeHost(ptr);
         if (cuda_error == cudaSuccess)
             return;
-        auto msg = ssprintf("cudaFreeHost failed for %p: %s", ptr,
-                            cudaGetErrorString(cuda_error));
+        auto msg = ssprintf(
+                "cudaFreeHost failed for %p: %s", ptr, cudaGetErrorString(cuda_error));
         msg.append(CudaError::get_cuda_extra_info());
         mgb_throw_raw(MemAllocError{msg});
     }
@@ -146,12 +144,8 @@ public:
 
 class CudaDeviceRuntimePolicy : public DeviceRuntimePolicy {
 public:
-    CompNode::DeviceType device_type() override {
-        return CompNode::DeviceType::CUDA;
-    }
-    void set_device(int device) override {
-        MGB_CUDA_CHECK(cudaSetDevice(device));
-    }
+    CompNode::DeviceType device_type() override { return CompNode::DeviceType::CUDA; }
+    void set_device(int device) override { MGB_CUDA_CHECK(cudaSetDevice(device)); }
     void device_synchronize(int device) override {
         MGB_CUDA_CHECK(cudaSetDevice(device));
         MGB_CUDA_CHECK(cudaDeviceSynchronize());
@@ -160,8 +154,7 @@ public:
 
 /* ===================== DevMemAlloc  ===================== */
 std::unique_ptr<DevMemAlloc> DevMemAlloc::make_cuda_alloc() {
-    return std::make_unique<FwdDevMemAlloc>(
-            std::make_shared<CudaRawAllocator>());
+    return std::make_unique<FwdDevMemAlloc>(std::make_shared<CudaRawAllocator>());
 }
 }  // namespace mem_alloc
 }  // namespace mgb
@@ -236,28 +229,24 @@ public:
 
     void free_host(void* ptr);
 
-    void copy_to_host(void* host_ptr, const void* device_ptr,
-                      size_t size) override {
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         activate();
-        MGB_CUDA_CHECK(cudaMemcpyAsync(host_ptr, device_ptr, size,
-                                       cudaMemcpyDeviceToHost,
-                                       m_env.cuda_env().stream));
+        MGB_CUDA_CHECK(cudaMemcpyAsync(
+                host_ptr, device_ptr, size, cudaMemcpyDeviceToHost,
+                m_env.cuda_env().stream));
     }
 
-    void copy_to_device(void* device_ptr, const void* host_ptr,
-                        size_t size) override {
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
         activate();
-        MGB_CUDA_CHECK(cudaMemcpyAsync(device_ptr, host_ptr, size,
-                                       cudaMemcpyHostToDevice,
-                                       m_env.cuda_env().stream));
+        MGB_CUDA_CHECK(cudaMemcpyAsync(
+                device_ptr, host_ptr, size, cudaMemcpyHostToDevice,
+                m_env.cuda_env().stream));
     }
 
-    void peer_copy_to(Impl* dest_impl, void* dest, const void* src,
-                      size_t size) override;
+    void peer_copy_to(
+            Impl* dest_impl, void* dest, const void* src, size_t size) override;
 
-    size_t get_mem_addr_alignment() override {
-        return m_env.property().mem_alignment;
-    }
+    size_t get_mem_addr_alignment() override { return m_env.property().mem_alignment; }
 
     std::unique_ptr<Event> create_event(size_t flags) override;
 
@@ -275,11 +264,12 @@ public:
     }
 
 #if !MGB_BUILD_SLIM_SERVING
-    std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr, size_t end_ptr) override {
+    std::pair<size_t, size_t> get_free_left_and_right(
+            size_t begin_ptr, size_t end_ptr) override {
         return m_mem_alloc->get_free_left_and_right(begin_ptr, end_ptr);
     }
 
-    size_t get_max_block_size_available() {
+    size_t get_max_block_size_available() override {
         activate();
         return m_mem_alloc->get_max_block_size_available();
     }
@@ -294,9 +284,9 @@ public:
         activate();
         CudaHostFunc* func_ptr = new CudaHostFunc(std::move(cb));
         MGB_TRY {
-            MGB_CUDA_CHECK(cudaLaunchHostFunc(m_env.cuda_env().stream,
-                                              cuda_host_func_caller,
-                                              static_cast<void*>(func_ptr)));
+            MGB_CUDA_CHECK(cudaLaunchHostFunc(
+                    m_env.cuda_env().stream, cuda_host_func_caller,
+                    static_cast<void*>(func_ptr)));
         }
         MGB_CATCH(..., {
             delete func_ptr;
@@ -305,8 +295,9 @@ public:
 #else
         MGB_MARK_USED_VAR(cb);
         MGB_MARK_USED_VAR(cuda_host_func_caller);
-        mgb_throw(MegBrainError,
-                  "add_callback only support in cuda10.0 and later version");
+        mgb_throw(
+                MegBrainError,
+                "add_callback only support in cuda10.0 and later version");
 #endif
     }
 
@@ -381,8 +372,7 @@ struct CudaCompNodeImpl::StaticData {
 CudaCompNodeImpl::StaticData* CudaCompNodeImpl::sd = nullptr;
 Spinlock CudaCompNodeImpl::sd_mtx;
 
-void CudaCompNodeImpl::init(const Locator& locator,
-                            const Locator& locator_logical) {
+void CudaCompNodeImpl::init(const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
@@ -418,8 +408,7 @@ void CudaCompNodeImpl::init(const Locator& locator,
             ++sd->nr_dev_used;
         }
         m_device_info = dev_info;
-        m_mem_alloc =
-                dev_info->mem_alloc->add_stream(static_cast<void*>(stream));
+        m_mem_alloc = dev_info->mem_alloc->add_stream(static_cast<void*>(stream));
     };
 
     auto on_error = [this](std::exception&) {
@@ -427,8 +416,8 @@ void CudaCompNodeImpl::init(const Locator& locator,
         m_initialized = false;
     };
 
-    m_env.init_cuda_async(locator.device, make_comp_node_from_impl(this),
-                          {on_succ, on_error});
+    m_env.init_cuda_async(
+            locator.device, make_comp_node_from_impl(this), {on_succ, on_error});
 }
 
 void CudaCompNodeImpl::fini() {
@@ -450,8 +439,7 @@ void CudaCompNodeImpl::free_device(void* ptr) {
 #if !MGB_BUILD_SLIM_SERVING
     {
         MGB_LOCK_GUARD(m_update_mem);
-        mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!",
-                   ptr);
+        mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!", ptr);
         m_used_mem -= ptr2size.at(ptr);
         ptr2size.erase(ptr);
     }
@@ -471,11 +459,10 @@ void CudaCompNodeImpl::free_host(void* ptr) {
     sd->host_alloc->free(ptr);
 }
 
-void CudaCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
-                                    const void* src, size_t size) {
+void CudaCompNodeImpl::peer_copy_to(
+        Impl* dest_impl, void* dest, const void* src, size_t size) {
     if (dest_impl->same_type<CudaCompNodeImpl>()) {
-        auto&& dst_env =
-                static_cast<CudaCompNodeImpl*>(dest_impl)->m_env.cuda_env();
+        auto&& dst_env = static_cast<CudaCompNodeImpl*>(dest_impl)->m_env.cuda_env();
         auto&& src_env = m_env.cuda_env();
         activate();
         if (dst_env.device == src_env.device) {
@@ -484,19 +471,19 @@ void CudaCompNodeImpl::peer_copy_to(Impl* dest_impl, void* dest,
         } else {
             enable_peer_access(src_env.device, dst_env.device);
             enable_peer_access(dst_env.device, src_env.device);
-            MGB_CUDA_CHECK(cudaMemcpyPeerAsync(dest, dst_env.device, src,
-                                               src_env.device, size,
-                                               dst_env.stream));
+            MGB_CUDA_CHECK(cudaMemcpyPeerAsync(
+                    dest, dst_env.device, src, src_env.device, size, dst_env.stream));
         }
         return;
     }
-    mgb_assert(dest_impl->env().property().type == DeviceType::CPU,
-               "cuda peer_copy_to only implemented for CPU");
+    mgb_assert(
+            dest_impl->env().property().type == DeviceType::CPU,
+            "cuda peer_copy_to only implemented for CPU");
     auto copy = [this, dest, src, size]() {
         auto stream = m_env.cuda_env().stream;
         m_env.cuda_env().activate();
-        MGB_CUDA_CHECK(cudaMemcpyAsync(dest, src, size, cudaMemcpyDeviceToHost,
-                                       stream));
+        MGB_CUDA_CHECK(
+                cudaMemcpyAsync(dest, src, size, cudaMemcpyDeviceToHost, stream));
         MGB_CUDA_CHECK(cudaStreamSynchronize(stream));
     };
     dest_impl->env().cpu_env().dispatch(copy);
@@ -529,8 +516,7 @@ void CudaCompNodeImpl::sync() {
 }
 
 void CudaCompNodeImpl::enable_peer_access(int dev0, int dev1) {
-    static bool already_enabled[StaticData::MAX_NR_DEVICE]
-                               [StaticData::MAX_NR_DEVICE];
+    static bool already_enabled[StaticData::MAX_NR_DEVICE][StaticData::MAX_NR_DEVICE];
     if (already_enabled[dev0][dev1])
         return;
 
@@ -546,9 +532,9 @@ void CudaCompNodeImpl::enable_peer_access(int dev0, int dev1) {
         MGB_CUDA_CHECK(cudaSetDevice(dev0));
         auto err = cudaDeviceEnablePeerAccess(dev1, 0);
         if (err != cudaSuccess) {
-            mgb_log_error("failed to enable peer access from %d to %d: %s(%d)",
-                          dev0, dev1, cudaGetErrorString(err),
-                          static_cast<int>(err));
+            mgb_log_error(
+                    "failed to enable peer access from %d to %d: %s(%d)", dev0, dev1,
+                    cudaGetErrorString(err), static_cast<int>(err));
             cudaGetLastError();
         }
     }
@@ -567,10 +553,11 @@ void CudaCompNodeImpl::enable_peer_access(int dev0, int dev1) {
     int get = 0;
     MGB_CUDA_CHECK(cudaMemcpy(&get, dp1, sizeof(int), cudaMemcpyDeviceToHost));
 
-    mgb_throw_if(get != 1, CudaError,
-                 "P2P copy (%d => %d) check failed; consider disabling "
-                 "Access Control Services(ACS) for the PCI device",
-                 dev0, dev1);
+    mgb_throw_if(
+            get != 1, CudaError,
+            "P2P copy (%d => %d) check failed; consider disabling "
+            "Access Control Services(ACS) for the PCI device",
+            dev0, dev1);
 
     already_enabled[dev0][dev1] = true;
 }
@@ -588,16 +575,14 @@ void CudaCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     dev_num = cuenv.device;
     auto reserve_size = StaticData::get_mem_reserve_size();
     mem_alloc = mem_alloc::DevMemAlloc::make(
-            dev_num, reserve_size,
-            std::make_shared<mem_alloc::CudaRawAllocator>(),
+            dev_num, reserve_size, std::make_shared<mem_alloc::CudaRawAllocator>(),
             std::make_shared<mem_alloc::CudaDeviceRuntimePolicy>());
     mem_alloc->prealloc_config(sd->prealloc_config);
     auto align = env.property().mem_alignment;
     mem_alloc->alignment(align);
     mgb_log_debug(
-            "cuda: gpu%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx",
-            dev_num, cuenv.device_prop.name, reserve_size / 1024.0 / 1024,
-            align);
+            "cuda: gpu%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx", dev_num,
+            cuenv.device_prop.name, reserve_size / 1024.0 / 1024, align);
 #endif
 }
 
@@ -644,13 +629,12 @@ class CudaCompNode::EventImpl final : public EventImplHelper {
             return true;
         if (err == cudaErrorNotReady)
             return false;
-        mgb_throw(CudaError, "failed to query event: %d: %s", int(err),
-                  cudaGetErrorString(err));
+        mgb_throw(
+                CudaError, "failed to query event: %d: %s", int(err),
+                cudaGetErrorString(err));
     }
 
-    void host_wait_cv() override {
-        MGB_CUDA_CHECK(cudaEventSynchronize(m_cuda_event));
-    }
+    void host_wait_cv() override { MGB_CUDA_CHECK(cudaEventSynchronize(m_cuda_event)); }
 
     double do_elapsed_time_until(EventImplHelper& end) override {
         m_comp_node_impl->activate();
@@ -697,9 +681,7 @@ void CudaCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
         return;
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
-        auto waiter = [this]() {
-            MGB_CUDA_CHECK(cudaEventSynchronize(m_cuda_event));
-        };
+        auto waiter = [this]() { MGB_CUDA_CHECK(cudaEventSynchronize(m_cuda_event)); };
         cn_impl->add_callback(std::move(waiter));
         return;
     }
@@ -711,7 +693,7 @@ void CudaCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
 namespace {
 
 #ifndef __unix__
-template<typename Func, typename... Args>
+template <typename Func, typename... Args>
 CUresult call_cuda_forksafe(Func func, Args... args) {
     cuInit(0);
     return func(args...);
@@ -721,7 +703,7 @@ struct RAIICloseFD : NonCopyableObj {
     int m_fd = -1;
 
     RAIICloseFD(int fd) : m_fd(fd) {}
-    ~RAIICloseFD() {close();}
+    ~RAIICloseFD() { close(); }
     void close() {
         if (m_fd != -1) {
             ::close(m_fd);
@@ -730,10 +712,11 @@ struct RAIICloseFD : NonCopyableObj {
     }
 };
 // an implementation that does not call cuInit
-template<typename Func, typename Val, typename... Args>
+template <typename Func, typename Val, typename... Args>
 CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
     auto err = func(val, args...);
-    if (err != CUDA_ERROR_NOT_INITIALIZED) return err;
+    if (err != CUDA_ERROR_NOT_INITIALIZED)
+        return err;
     // cuInit not called, call it in child process
     int fd[2];
     mgb_assert(pipe(fd) == 0, "pipe() failed");
@@ -746,7 +729,8 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
         fdr_guard.close();
         do {
             err = cuInit(0);
-            if (err != CUDA_SUCCESS) break;
+            if (err != CUDA_SUCCESS)
+                break;
             err = func(val, args...);
         } while (0);
         auto sz = write(fdw, &err, sizeof(err));
@@ -766,8 +750,10 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
     }
     // try again, maybe another thread called cuInit while we fork
     auto err2 = func(val, args...);
-    if (err2 == CUDA_SUCCESS) return err2;
-    if (err2 == CUDA_ERROR_NOT_INITIALIZED) return err;
+    if (err2 == CUDA_SUCCESS)
+        return err2;
+    if (err2 == CUDA_ERROR_NOT_INITIALIZED)
+        return err;
     return err2;
 }
 #endif
@@ -775,11 +761,12 @@ CUresult call_cuda_forksafe(Func func, Val* val, Args... args) {
 const char* cu_get_error_string(CUresult err) {
     const char* ret = nullptr;
     cuGetErrorString(err, &ret);
-    if (!ret) ret = "unknown cuda error";
+    if (!ret)
+        ret = "unknown cuda error";
     return ret;
 }
 
-} // namespace
+}  // namespace
 
 bool CudaCompNode::available() {
     static int result = -1;
@@ -790,8 +777,9 @@ bool CudaCompNode::available() {
         auto err = call_cuda_forksafe(cuDeviceGetCount, &ndev);
         result = err == CUDA_SUCCESS && ndev > 0;
         if (!result) {
-            mgb_log_warn("cuda unavailable: %s(%d) ndev=%d",
-                         cu_get_error_string(err), static_cast<int>(err), ndev);
+            mgb_log_warn(
+                    "cuda unavailable: %s(%d) ndev=%d", cu_get_error_string(err),
+                    static_cast<int>(err), ndev);
         }
         if (err == CUDA_ERROR_NOT_INITIALIZED) {
             mgb_throw(std::runtime_error, "cuda initialization error.");
@@ -817,8 +805,8 @@ void CudaCompNode::finalize() {
 //! upgrade cuda runtime
 bool CudaCompNode::is_into_atexit = false;
 #endif
-CompNode::Impl* CudaCompNode::load_cuda(const Locator& locator,
-                                        const Locator& locator_logical) {
+CompNode::Impl* CudaCompNode::load_cuda(
+        const Locator& locator, const Locator& locator_logical) {
     int nr_gpu = get_device_count();
 #if MGB_CUDA && defined(WIN32)
     //! FIXME: windows cuda driver shutdown before call atexit function even
@@ -830,9 +818,9 @@ CompNode::Impl* CudaCompNode::load_cuda(const Locator& locator,
         mgb_assert(!err, "failed to register atexit function");
     }
 #endif
-    mgb_assert(locator.device >= 0 && locator.device < nr_gpu,
-               "request gpu%d out of valid range [0, %d)", locator.device,
-               nr_gpu);
+    mgb_assert(
+            locator.device >= 0 && locator.device < nr_gpu,
+            "request gpu%d out of valid range [0, %d)", locator.device, nr_gpu);
 
     auto&& sdptr = CudaCompNodeImpl::sd;
     {
@@ -852,8 +840,7 @@ CompNode::Impl* CudaCompNode::load_cuda(const Locator& locator,
     for (int i = 0; i < sd.nr_node; ++i) {
         auto&& cur = sd.node[i];
         if (cur.m_initialized) {
-            if (cur.m_locator == locator &&
-                cur.m_locator_logical == locator_logical) {
+            if (cur.m_locator == locator && cur.m_locator_logical == locator_logical) {
                 return &cur;
             }
         } else {
@@ -862,8 +849,7 @@ CompNode::Impl* CudaCompNode::load_cuda(const Locator& locator,
     }
 
     if (!available_node) {
-        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE,
-                   "too many CompNode allocated");
+        mgb_assert(sd.nr_node < sd.MAX_NR_COMP_NODE, "too many CompNode allocated");
         available_node = &sd.node[sd.nr_node++];
     }
     mgb_assert(locator.device < sd.MAX_NR_DEVICE, "device number too large");
@@ -882,12 +868,10 @@ void CudaCompNode::try_coalesce_all_free_memory() {
 
     size_t size = 0;
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        size += sd->dev_info[i]
-                        .mem_alloc->gather_stream_free_blk_and_release_full();
+        size += sd->dev_info[i].mem_alloc->gather_stream_free_blk_and_release_full();
     }
     if (size) {
-        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()",
-                      size);
+        mgb_log_debug("%zu bytes freed by try_coalesce_all_free_memory()", size);
     }
 }
 
@@ -941,8 +925,9 @@ size_t CudaCompNode::get_device_count(bool warn) {
         auto err = call_cuda_forksafe(cuDeviceGetCount, &cnt);
         if (err != CUDA_SUCCESS) {
             if (warn)
-                mgb_log_error("cudaGetDeviceCount failed: %s (err %d)",
-                              cu_get_error_string(err), int(err));
+                mgb_log_error(
+                        "cudaGetDeviceCount failed: %s (err %d)",
+                        cu_get_error_string(err), int(err));
             cnt = 0;
         }
         mgb_assert(cnt >= 0);
@@ -950,9 +935,8 @@ size_t CudaCompNode::get_device_count(bool warn) {
     return cnt;
 }
 
-void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req,
-                                       size_t max_overhead,
-                                       double growth_factor) {
+void CudaCompNode::set_prealloc_config(
+        size_t alignment, size_t min_req, size_t max_overhead, double growth_factor) {
     auto&& sdptr = CudaCompNodeImpl::sd;
     {
         MGB_LOCK_GUARD(CudaCompNodeImpl::sd_mtx);
@@ -984,11 +968,15 @@ size_t CudaCompNode::get_compute_capability(int dev) {
     MGB_LOCK_GUARD(mtx_com);
     int pmajor;
     int pminor;
-    auto err = call_cuda_forksafe(cuDeviceGetAttribute, &pmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev);
+    auto err = call_cuda_forksafe(
+            cuDeviceGetAttribute, &pmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+            dev);
     if (err != CUDA_SUCCESS) {
         return 0;
     }
-    auto err2 = call_cuda_forksafe(cuDeviceGetAttribute, &pminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, dev);
+    auto err2 = call_cuda_forksafe(
+            cuDeviceGetAttribute, &pminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+            dev);
     if (err2 != CUDA_SUCCESS) {
         return 0;
     }
@@ -1011,9 +999,8 @@ CudaCompNode::Impl* CudaCompNode::load_cuda(const Locator&, const Locator&) {
 }
 void CudaCompNode::sync_all() {}
 
-void CudaCompNode::set_prealloc_config(size_t alignment, size_t min_req,
-                                       size_t max_overhead,
-                                       double growth_factor) {}
+void CudaCompNode::set_prealloc_config(
+        size_t alignment, size_t min_req, size_t max_overhead, double growth_factor) {}
 
 size_t CudaCompNode::get_compute_capability(int dev) {
     return 0;

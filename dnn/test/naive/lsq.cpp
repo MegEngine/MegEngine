@@ -25,9 +25,9 @@ TEST_F(NAIVE, LSQ_FORWARD) {
     param.qmin = -127;
     param.qmax = 127;
 
-    TensorND input =
-            TensorValue({2, 2, 2, 2}, dtype::Float32(),
-                        {0, 1, 3, 4, 1, 2, 4, 5, 3, 4, 6, 7, 4, 5, 7, 8});
+    TensorND input = TensorValue(
+            {2, 2, 2, 2}, dtype::Float32(),
+            {0, 1, 3, 4, 1, 2, 4, 5, 3, 4, 6, 7, 4, 5, 7, 8});
 
     TensorND scale_shape = TensorValue({1}, dtype::Float32(), {2});
 
@@ -35,9 +35,9 @@ TEST_F(NAIVE, LSQ_FORWARD) {
 
     TensorND grad_scale = TensorValue({1}, dtype::Float32(), {0.5});
 
-    TensorND output =
-            TensorValue({2, 2, 2, 2}, dtype::Float32(),
-                        {0, 2, 4, 4, 2, 2, 4, 6, 4, 4, 6, 8, 4, 6, 8, 8});
+    TensorND output = TensorValue(
+            {2, 2, 2, 2}, dtype::Float32(),
+            {0, 2, 4, 4, 2, 2, 4, 6, 4, 4, 6, 8, 4, 6, 8, 8});
 
     checker.set_param(param).exect(
             Testcase{input, scale_shape, zero_point, grad_scale, {}},

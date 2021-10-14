@@ -21,30 +21,28 @@
 
 namespace megdnn {
 
-#define MEGDNN_DECL_ALGO_TYPE(_type)                              \
-    uint32_t type() const override {                              \
-        return static_cast<std::underlying_type<AlgoType>::type>( \
-                AlgoType::_type);                                 \
+#define MEGDNN_DECL_ALGO_TYPE(_type)                                               \
+    uint32_t type() const override {                                               \
+        return static_cast<std::underlying_type<AlgoType>::type>(AlgoType::_type); \
     }
 
-#define MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(_opr)          \
-    static fallback::_opr::AlgoBase* get_algo_from_desc( \
-            const AlgorithmDesc& desc)
+#define MEGDNN_FB_DECL_GET_ALGO_FROM_DESC(_opr) \
+    static fallback::_opr::AlgoBase* get_algo_from_desc(const AlgorithmDesc& desc)
 
-#define MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(_opr)                  \
-    fallback::_opr::AlgoBase* _opr::get_algo_from_desc(         \
-            const AlgorithmDesc& desc) {                        \
-        megdnn_assert(algo_pack().all_algos_map().find(desc) != \
-                      algo_pack().all_algos_map().end());       \
-        return algo_pack().all_algos_map().at(desc);            \
+#define MEGDNN_FB_DEF_GET_ALGO_FROM_DESC(_opr)                                      \
+    fallback::_opr::AlgoBase* _opr::get_algo_from_desc(const AlgorithmDesc& desc) { \
+        megdnn_assert(                                                              \
+                algo_pack().all_algos_map().find(desc) !=                           \
+                algo_pack().all_algos_map().end());                                 \
+        return algo_pack().all_algos_map().at(desc);                                \
     }
 
-#define MEGDNN_DEF_GET_ALGO_FROM_DESC(_opr)                     \
-    _opr::Algorithm* _opr::get_algorithm_from_desc(             \
-            const AlgorithmDesc& desc) {                        \
-        megdnn_assert(algo_pack().all_algos_map().find(desc) != \
-                      algo_pack().all_algos_map().end());       \
-        return algo_pack().all_algos_map().at(desc);            \
+#define MEGDNN_DEF_GET_ALGO_FROM_DESC(_opr)                                     \
+    _opr::Algorithm* _opr::get_algorithm_from_desc(const AlgorithmDesc& desc) { \
+        megdnn_assert(                                                          \
+                algo_pack().all_algos_map().find(desc) !=                       \
+                algo_pack().all_algos_map().end());                             \
+        return algo_pack().all_algos_map().at(desc);                            \
     }
 
 #define MEGDNN_FOREACH_ALGO_ATTRIBUTE_INHERITABLE(cb) \
@@ -61,8 +59,7 @@ protected:
 
 public:
     //! construct the algo which described by desc, and return the instance
-    AlgoBase* construct_and_get_algo(
-            const detail::Algorithm::Info::Desc& desc) {
+    AlgoBase* construct_and_get_algo(const detail::Algorithm::Info::Desc& desc) {
         auto iter = m_all_algos_map.find(desc);
         if (iter != m_all_algos_map.end()) {
             return m_all_algos_map.at(desc);
@@ -80,14 +77,12 @@ public:
         m_refhold.clear();
     }
 
-    const typename AlgoBase::Mapper& all_algos_map() const {
-        return m_all_algos_map;
-    }
+    const typename AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }
 };
 
 template <std::size_t I = 0, typename Opr, typename... Tp>
-inline typename std::enable_if<I == sizeof...(Tp), void>::type
-set_sub_execution_policy(const Opr*, std::tuple<Tp...>&) {}
+inline typename std::enable_if<I == sizeof...(Tp), void>::type set_sub_execution_policy(
+        const Opr*, std::tuple<Tp...>&) {}
 
 template <std::size_t I = 0, typename Opr, typename... Tp>
         inline typename std::enable_if <
@@ -101,8 +96,7 @@ template <typename Opr, typename... SubOpr>
 void set_execution_policy(const Opr* opr, SubOpr... sub_oprs) {
     if (opr->execution_policy().algo.valid() &&
         !opr->execution_policy().sub_policy.empty()) {
-        megdnn_assert(opr->execution_policy().sub_policy.size() ==
-                      sizeof...(sub_oprs));
+        megdnn_assert(opr->execution_policy().sub_policy.size() == sizeof...(sub_oprs));
         auto&& sub = std::make_tuple(sub_oprs...);
         set_sub_execution_policy<0, Opr, SubOpr...>(opr, sub);
     }
@@ -113,8 +107,7 @@ void set_execution_policy(const Opr* opr, SubOpr... sub_oprs) {
 namespace std {
 template <>
 struct hash<megdnn::detail::Algorithm::Info::Desc> {
-    std::size_t operator()(
-            const megdnn::detail::Algorithm::Info::Desc& desc) const {
+    std::size_t operator()(const megdnn::detail::Algorithm::Info::Desc& desc) const {
         return megdnn::hash_combine<size_t>(
                 megdnn::hash_combine<size_t>(
                         std::hash<std::string>()(desc.name),

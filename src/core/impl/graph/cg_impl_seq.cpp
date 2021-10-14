@@ -105,8 +105,9 @@ class ComputingGraphImpl::ComputingSequence::ExecContext {
     }
 
     void after_fake_exec() {
-        mgb_assert(!m_have_parent_graph,
-                   "m_fake_next_exec should only be set on root graph");
+        mgb_assert(
+                !m_have_parent_graph,
+                "m_fake_next_exec should only be set on root graph");
         m_owner_graph->options().fake_next_exec = false;
         m_owner_graph->var_node_mem_manager()
                 .static_device_memory_manager()
@@ -164,8 +165,7 @@ ComputingGraphImpl::ComputingSequence::ExecContext::ExecContext(
         mgb_assert(
                 !has_var_sanity_check() &&
                         (m_first_exec ||
-                         m_owner_graph->options().comp_node_seq_record_level >=
-                                 2),
+                         m_owner_graph->options().comp_node_seq_record_level >= 2),
                 "if m_fake_next_exec and m_enable_comp_node_seq_recorder are "
                 "both set, they can only be set at the first run and var "
                 "sanity check should be disabled");
@@ -184,8 +184,7 @@ ComputingGraphImpl::ComputingSequence::ExecContext::ExecContext(
     }
 }
 
-void ComputingGraphImpl::ComputingSequence::ExecContext::perform(
-        NormalExecEnv* env) {
+void ComputingGraphImpl::ComputingSequence::ExecContext::perform(NormalExecEnv* env) {
     if (!m_need_perform) {
         // no need for performing
         return;
@@ -228,8 +227,8 @@ ComputingGraphImpl::ComputingSequence::ExecContext::~ExecContext() noexcept {
 
 /* ========================== ComputingSequence ========================== */
 
-std::unique_ptr<CompNodeSeqRecorder>
-ComputingGraphImpl::ComputingSequence::check_enable_comp_node_seq_recorder() {
+std::unique_ptr<CompNodeSeqRecorder> ComputingGraphImpl::ComputingSequence::
+        check_enable_comp_node_seq_recorder() {
     if (!m_owner_graph->options().comp_node_seq_record_level)
         return {};
     if (m_used_comp_node.size() != 1) {
@@ -291,8 +290,7 @@ ComputingGraphImpl::ComputingSequence::check_enable_comp_node_seq_recorder() {
     return rec;
 }
 
-void ComputingGraphImpl::ComputingSequence::do_execute(
-        MegDNNDtorCheck* dtor_check) {
+void ComputingGraphImpl::ComputingSequence::do_execute(MegDNNDtorCheck* dtor_check) {
     ExecContext exec_ctx{this};
 
     if (dtor_check) {
@@ -333,8 +331,7 @@ void ComputingGraphImpl::ComputingSequence::preprocess(ExecContext* ctx) {
     ctx->m_enable_comp_node_seq_recorder = m_enable_comp_node_seq_recorder;
 }
 
-std::shared_ptr<void>
-ComputingGraphImpl::ComputingSequence::on_comp_node_finalize() {
+std::shared_ptr<void> ComputingGraphImpl::ComputingSequence::on_comp_node_finalize() {
     cleanup();
     m_exec_env.clear();
     m_comp_node_seq_recorder.reset();
@@ -343,16 +340,16 @@ ComputingGraphImpl::ComputingSequence::on_comp_node_finalize() {
 }
 
 void ComputingGraphImpl::ComputingSequence::assert_latest_comp_seq() const {
-    mgb_throw_if(m_owner_graph->m_current_comp_seq != this, GraphError,
-                 "only the latest compiled function could be used");
+    mgb_throw_if(
+            m_owner_graph->m_current_comp_seq != this, GraphError,
+            "only the latest compiled function could be used");
 }
 
 void ComputingGraphImpl::ComputingSequence::attach_to_graph() {
     auto gimpl = m_owner_graph;
     if (gimpl->m_current_comp_seq) {
         // remove previous handlers
-        auto prev_seq =
-                static_cast<ComputingSequence*>(gimpl->m_current_comp_seq);
+        auto prev_seq = static_cast<ComputingSequence*>(gimpl->m_current_comp_seq);
         prev_seq->cleanup();
     }
 #if !__DEPLOY_ON_XP_SP2__
@@ -541,8 +538,7 @@ void ComputingGraphImpl::ComputingSequence::do_regist() const {
                     auto& mc = mp.chunk();
                     if (mp.valid() && mc.mem_alloc_status.is_from_owner_var()) {
                         auto size = mgb::get_aligned_power2(
-                                mc.size(),
-                                j->comp_node().get_mem_addr_alignment());
+                                mc.size(), j->comp_node().get_mem_addr_alignment());
 
                         recorder.regist_memory_chunk(
                                 {chunk_id++, size, 0, this->m_opr_seq->size(),
@@ -574,8 +570,9 @@ double ComputingGraphImpl::ComputingSequence::get_prev_exec_time() const {
     if (!m_have_parent_graph) {
         double max_time = 0;
         for (auto cn : m_used_comp_node) {
-            update_max(max_time, m_event_start.at(cn)->elapsed_time_until(
-                                         *m_event_end.at(cn)));
+            update_max(
+                    max_time,
+                    m_event_start.at(cn)->elapsed_time_until(*m_event_end.at(cn)));
         }
         m_prev_exec_time = max_time;
         return max_time;
@@ -599,8 +596,8 @@ void ComputingGraphImpl::ComputingSequence::clear_device_memory() {
     }
 }
 
-const CompNode::UnorderedMap<size_t>&
-ComputingGraphImpl::ComputingSequence::update_static_alloc_plan_and_get_size() {
+const CompNode::UnorderedMap<size_t>& ComputingGraphImpl::ComputingSequence::
+        update_static_alloc_plan_and_get_size() {
     assert_latest_comp_seq();
     // waiting for previous execution or some tensor storage may be freed after
     // calling update_static_alloc_plan, which would cause use-after-free.
@@ -611,8 +608,7 @@ ComputingGraphImpl::ComputingSequence::update_static_alloc_plan_and_get_size() {
 }
 
 #if MGB_ENABLE_JSON
-std::shared_ptr<json::Value> ComputingGraphImpl::ComputingSequence::to_json()
-        const {
+std::shared_ptr<json::Value> ComputingGraphImpl::ComputingSequence::to_json() const {
     ThinHashSet<MemAllocPlan::Chunk*> all_mem_chunk;
     VarNodeSet all_var_node;
     ThinHashSet<OperatorNodeBase*> all_opr_node;
@@ -644,7 +640,7 @@ std::shared_ptr<json::Value> ComputingGraphImpl::ComputingSequence::to_json()
             for (auto i : opr->input()) {
                 update(i);
             }
-            for (auto &&out : opr->output()) {
+            for (auto&& out : opr->output()) {
                 using DepType = static_infer::DepType;
                 for (auto&& i : mgr.get_deps({out, DepType::SHAPE})) {
                     update(i.dest);
@@ -675,10 +671,11 @@ std::shared_ptr<json::Value> ComputingGraphImpl::ComputingSequence::to_json()
         return objptr;
     };
 
-    return json::Object::make({{"operator", dump_node_coll(all_opr_node)},
-                               {"var", dump_node_coll(all_var_node)},
-                               {"mem_chunk", dump_node_coll(all_mem_chunk)},
-                               {"comp_seq", comp_seq}});
+    return json::Object::make(
+            {{"operator", dump_node_coll(all_opr_node)},
+             {"var", dump_node_coll(all_var_node)},
+             {"mem_chunk", dump_node_coll(all_mem_chunk)},
+             {"comp_seq", comp_seq}});
 }
 #endif
 
@@ -715,12 +712,13 @@ ComputingGraphImpl::MegDNNDtorCheck::~MegDNNDtorCheck() {
 
 /* ======================= RecordedComputingSequence ======================= */
 
-std::unique_ptr<ComputingGraphImpl::RecordedComputingSequence>
-ComputingGraphImpl::ComputingSequence::as_recorded_seq() {
+std::unique_ptr<ComputingGraphImpl::RecordedComputingSequence> ComputingGraphImpl::
+        ComputingSequence::as_recorded_seq() {
     on_first_exec();
-    mgb_assert(m_enable_comp_node_seq_recorder,
-               "can not enable comp_node_seq_record_level=2; more details are "
-               "included in previous log messages");
+    mgb_assert(
+            m_enable_comp_node_seq_recorder,
+            "can not enable comp_node_seq_record_level=2; more details are "
+            "included in previous log messages");
 
     mgb_assert(m_used_comp_node.size() == 1);
     auto comp_node = *m_used_comp_node.begin();
@@ -763,9 +761,9 @@ ComputingGraphImpl::ComputingSequence::as_recorded_seq() {
     ret->m_graph_user_data.swap(m_owner_graph->options().user_data);
 
     // move other dependencies
-    unpack_vector(m_owner_graph->var_node_mem_manager()
-                          .static_device_memory_refholder(),
-                  ret->m_static_mem);
+    unpack_vector(
+            m_owner_graph->var_node_mem_manager().static_device_memory_refholder(),
+            ret->m_static_mem);
     mgb_assert(m_event_start.size() == 1 && m_event_end.size() == 1);
     ret->m_event_start = std::move(m_event_start.begin()->second);
     ret->m_event_end = std::move(m_event_end.begin()->second);
@@ -778,9 +776,10 @@ ComputingGraphImpl::ComputingSequence::as_recorded_seq() {
 AsyncExecutable& ComputingGraphImpl::RecordedComputingSequence::execute() {
     check_not_finalized();
 
-    mgb_assert(!m_owner_graph,
-               "owner graph should be destroyed before using AsyncExecutable "
-               "compiled with comp_node_seq_record_level=2");
+    mgb_assert(
+            !m_owner_graph,
+            "owner graph should be destroyed before using AsyncExecutable "
+            "compiled with comp_node_seq_record_level=2");
     mgb_assert(m_recorder, "graph memory already cleared");
     m_prev_exec_time = None;
     if (!m_wait_finished) {
@@ -804,8 +803,7 @@ AsyncExecutable& ComputingGraphImpl::RecordedComputingSequence::wait() {
     return *this;
 }
 
-double ComputingGraphImpl::RecordedComputingSequence::get_prev_exec_time()
-        const {
+double ComputingGraphImpl::RecordedComputingSequence::get_prev_exec_time() const {
     mgb_assert(m_wait_finished);
     if (!m_prev_exec_time.valid()) {
         m_prev_exec_time = m_event_start->elapsed_time_until(*m_event_end);

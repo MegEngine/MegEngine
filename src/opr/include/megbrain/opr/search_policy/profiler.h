@@ -12,12 +12,12 @@
 
 #pragma once
 
+#include "megbrain/comp_node.h"
+#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
+#include "megbrain/system.h"
+#include "megbrain/tensor.h"
 #include "megbrain/utils/hash_ct.h"
 #include "megbrain/utils/timer.h"
-#include "megbrain/system.h"
-#include "megbrain/comp_node.h"
-#include "megbrain/tensor.h"
-#include "megbrain/opr/internal/megdnn_opr_wrapper.h"
 
 #include "megdnn/basic_types.h"
 #include "megdnn/oprs.h"
@@ -75,13 +75,12 @@ using PreprocessFilter =
 template <typename Opr>
 struct AlgoChooserFuncId {};
 
-#define DEF_FUNC_ID(func)                                                     \
-    template <>                                                               \
-    struct AlgoChooserFuncId<megdnn::func> {                                  \
-        __attribute__(                                                        \
-                (unused)) static constexpr sys::TimedFuncInvoker::FuncId ID = \
-                static_cast<sys::TimedFuncInvoker::FuncId>(                   \
-                        MGB_HASH_STR("megdnn::" #func));                      \
+#define DEF_FUNC_ID(func)                                                           \
+    template <>                                                                     \
+    struct AlgoChooserFuncId<megdnn::func> {                                        \
+        __attribute__((unused)) static constexpr sys::TimedFuncInvoker::FuncId ID = \
+                static_cast<sys::TimedFuncInvoker::FuncId>(                         \
+                        MGB_HASH_STR("megdnn::" #func));                            \
     };
 
 MGB_FOREACH_FASTRUN_OPR(DEF_FUNC_ID)
@@ -115,8 +114,7 @@ public:
             char data[MAX_SIZE_IN_BYTES];
             uint32_t size;
 
-            static ExecutionPolicyBlob serialize(
-                    const megdnn::ExecutionPolicy& policy);
+            static ExecutionPolicyBlob serialize(const megdnn::ExecutionPolicy& policy);
             megdnn::ExecutionPolicy deserialize() const;
         };
         ExecutionPolicyBlob execution_policy;
@@ -144,13 +142,13 @@ private:
     static const double timeout_setting;
 
     static double init_timeout_setting();
-    static void preprocess(const megdnn::TensorLayoutArray& preprocessed_layout,
-                           const SmallVector<DeviceTensorND>& flt_val,
-                           intl::UniqPtrWithCN<Opr>& megdnn_opr,
-                           megdnn::Workspace& mdn_workspace,
-                           std::array<TensorLayout, arity>& layouts,
-                           std::array<DeviceTensorND, arity_in>& inp_val,
-                           PreprocessFilter<Opr>& prep_flt);
+    static void preprocess(
+            const megdnn::TensorLayoutArray& preprocessed_layout,
+            const SmallVector<DeviceTensorND>& flt_val,
+            intl::UniqPtrWithCN<Opr>& megdnn_opr, megdnn::Workspace& mdn_workspace,
+            std::array<TensorLayout, arity>& layouts,
+            std::array<DeviceTensorND, arity_in>& inp_val,
+            PreprocessFilter<Opr>& prep_flt);
     static TResult prof_impl(const TParam& raw_param);
     static void prof_init_device(const TParam& raw_param);
 };

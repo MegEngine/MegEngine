@@ -75,8 +75,7 @@ private:
     OperationVector operations_;
 
 public:
-    Manifest(Provider provider = library::Provider::kCUTLASS)
-            : provider_(provider) {}
+    Manifest(Provider provider = library::Provider::kCUTLASS) : provider_(provider) {}
 
     /// Top-level initialization
     Status initialize();

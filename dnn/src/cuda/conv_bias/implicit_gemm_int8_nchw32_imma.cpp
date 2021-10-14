@@ -23,8 +23,7 @@ using namespace convolution;
 #if CUDA_VERSION >= 10020
 bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
         const SizeArgs& args) const {
-    if (!args.src_layout->is_contiguous() ||
-        !args.dst_layout->is_contiguous()) {
+    if (!args.src_layout->is_contiguous() || !args.dst_layout->is_contiguous()) {
         return false;
     }
     if (args.bias_layout->ndim <= 0)
@@ -41,12 +40,9 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
         return false;
     if (param.format != Format::NCHW32 && param.format != Format::NCHW32_NCHW4)
         return false;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 32,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
-    size_t ho = args.dst_layout->operator[](2),
-           wo = args.dst_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 32,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
+    size_t ho = args.dst_layout->operator[](2), wo = args.dst_layout->operator[](3);
     size_t co;
     if (param.format == Format::NCHW32) {
         co = args.dst_layout->operator[](1) * 32;
@@ -61,14 +57,13 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
     // mode must be cross correlation
     available &= param.mode == Mode::CROSS_CORRELATION;
     // check data type
-    auto src_dtype = args.src_layout->dtype,
-         filter_dtype = args.filter_layout->dtype,
-         bias_dtype = args.bias_layout->dtype,
-         dst_dtype = args.dst_layout->dtype;
-    available &= (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  bias_dtype.enumv() == DTypeEnum::QuantizedS32 &&
-                  dst_dtype.enumv() == DTypeEnum::QuantizedS8);
+    auto src_dtype = args.src_layout->dtype, filter_dtype = args.filter_layout->dtype,
+         bias_dtype = args.bias_layout->dtype, dst_dtype = args.dst_layout->dtype;
+    available &=
+            (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             filter_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             bias_dtype.enumv() == DTypeEnum::QuantizedS32 &&
+             dst_dtype.enumv() == DTypeEnum::QuantizedS8);
     // TODO: support dialtion
     available &= dh == 1 && dw == 1;
     // only support sm_75 or later, platform should have tensorcore int8
@@ -88,9 +83,8 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::is_available(
     return available;
 }
 
-WorkspaceBundle
-ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::get_workspace_bundle(
-        dt_byte* raw_ptr, const SizeArgs& args) const {
+WorkspaceBundle ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::
+        get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const {
     if (args.preprocessed_filter) {
         return WorkspaceBundle{raw_ptr, {}};
     } else {
@@ -99,8 +93,7 @@ ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::get_workspace_bundle(
     }
 }
 
-size_t
-ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::get_workspace_in_bytes(
+size_t ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::get_workspace_in_bytes(
         const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
@@ -110,12 +103,9 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 32,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
-    size_t ho = args.dst_layout->operator[](2),
-           wo = args.dst_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 32,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
+    size_t ho = args.dst_layout->operator[](2), wo = args.dst_layout->operator[](3);
     size_t co;
     bool trans_oc;
     if (param.format == Format::NCHW32) {
@@ -135,26 +125,22 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
         filter_ptr = reinterpret_cast<int8_t*>(args.workspace.raw_ptr);
         // filter: KCRS32 => CRSK32 and reorder oc
         cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
-                filter_ptr,
-                reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci,
-                fh, fw, trans_oc, stream);
+                filter_ptr, reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co,
+                ci, fh, fw, trans_oc, stream);
     } else {
-        filter_ptr = reinterpret_cast<int8_t*>(
-                args.preprocessed_filter->tensors[0].raw_ptr);
+        filter_ptr =
+                reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr);
     }
 
     float src_scale = args.src_layout->dtype.param<dtype::QuantizedS8>().scale,
-          filter_scale =
-                  args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
-          bias_scale =
-                  args.bias_layout->dtype.param<dtype::QuantizedS32>().scale,
+          filter_scale = args.filter_layout->dtype.param<dtype::QuantizedS8>().scale,
+          bias_scale = args.bias_layout->dtype.param<dtype::QuantizedS32>().scale,
           dst_scale = args.dst_layout->dtype.param<dtype::QuantizedS8>().scale;
 
     // \note these constants of cutlass epilogue will be passed to method
     // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
     // a different dtype here results in undefined epilogue behaviors
-    float alpha = src_scale * filter_scale / dst_scale,
-          beta = bias_scale / dst_scale;
+    float alpha = src_scale * filter_scale / dst_scale, beta = bias_scale / dst_scale;
     int8_t* z_dev_ptr = nullptr;
     float gamma = 0.0;
     if (args.z_layout->ndim > 0) {
@@ -166,25 +152,25 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec(
     bool use_conv_filter_unity_opt = (fh == 1 && fw == 1);
     bool without_shared_load = (param.format == Format::NCHW32);
 
-    const auto* op = get_cutlass_conv_op(args, ConvOperator::kFprop,
-                                         ConvType::kConvolution,
-                                         use_conv_filter_unity_opt, without_shared_load);
+    const auto* op = get_cutlass_conv_op(
+            args, ConvOperator::kFprop, ConvType::kConvolution,
+            use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
             op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr,
-            z_dev_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh,
-            fw, ho, wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta,
-            &theta, &threshold, &dst_scale, stream);
+            z_dev_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho,
+            wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta,
+            &threshold, &dst_scale, stream);
 
     after_kernel_launch();
 }
 
 std::string ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::to_string(
         AlgoParam algo_param) {
-    return ssprintf("%uX%uX%u_%uX%uX%u_%u", algo_param.threadblock_m,
-                    algo_param.threadblock_n, algo_param.threadblock_k,
-                    algo_param.warp_m, algo_param.warp_n, algo_param.warp_k,
-                    algo_param.stage);
+    return ssprintf(
+            "%uX%uX%u_%uX%uX%u_%u", algo_param.threadblock_m, algo_param.threadblock_n,
+            algo_param.threadblock_k, algo_param.warp_m, algo_param.warp_n,
+            algo_param.warp_k, algo_param.stage);
 }
 
 size_t ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::
@@ -218,10 +204,9 @@ void ConvBiasForwardImpl::AlgoInt8NCHW32IMMAImplicitGemm::exec_preprocess(
     cudaStream_t stream = cuda_stream(args.opr->handle());
     // filter: KCRS32 => CRSK32 and reorder oc
     cutlass_wrapper::reorder_ncxhwx_imma_filter<8, 32>(
-            reinterpret_cast<int8_t*>(
-                    args.preprocessed_filter->tensors[0].raw_ptr),
-            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh,
-            fw, trans_oc, stream);
+            reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr),
+            reinterpret_cast<int8_t*>(args.filter_tensor->raw_ptr), co, ci, fh, fw,
+            trans_oc, stream);
 }
 #endif
 

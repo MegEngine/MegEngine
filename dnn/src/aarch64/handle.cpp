@@ -11,11 +11,11 @@
 
 #include "src/common/handle_impl.h"
 
+#include "src/aarch64/conv_bias/opr_impl.h"
 #include "src/aarch64/handle.h"
 #include "src/aarch64/matrix_mul/opr_impl.h"
-#include "src/aarch64/rotate/opr_impl.h"
 #include "src/aarch64/relayout/opr_impl.h"
-#include "src/aarch64/conv_bias/opr_impl.h"
+#include "src/aarch64/rotate/opr_impl.h"
 #include "src/aarch64/warp_perspective/opr_impl.h"
 
 namespace megdnn {
@@ -38,7 +38,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(WarpPerspective)
 MEGDNN_FOREACH_OPR_CLASS(MEGDNN_INST_CREATE_OPERATOR)
 #pragma GCC diagnostic pop
 
-} // namespace aarch64
-} // namespace megdnn
+}  // namespace aarch64
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

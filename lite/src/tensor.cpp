@@ -63,64 +63,64 @@ Tensor::~Tensor() = default;
 
 Tensor::Tensor() {
     LITE_ERROR_HANDLER_BEGIN
-    m_tensor_impl = call_func<TensorImplDft,
-                              std::shared_ptr<lite::Tensor::TensorImplBase>>(
-            "create_tensor");
+    m_tensor_impl =
+            call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                    "create_tensor");
     LITE_ERROR_HANDLER_END
 }
 
 Tensor::Tensor(LiteDeviceType device_type, bool is_pinned_host)
         : m_is_pinned_host(is_pinned_host), m_device_type(device_type) {
     LITE_ERROR_HANDLER_BEGIN
-    m_tensor_impl = call_func<TensorImplDft,
-                              std::shared_ptr<lite::Tensor::TensorImplBase>>(
-            "create_tensor", device_type, is_pinned_host);
+    m_tensor_impl =
+            call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                    "create_tensor", device_type, is_pinned_host);
     LITE_ERROR_HANDLER_END
 }
 
-Tensor::Tensor(LiteDeviceType device_type, const Layout& layout,
-               bool is_pinned_host)
+Tensor::Tensor(LiteDeviceType device_type, const Layout& layout, bool is_pinned_host)
         : m_is_pinned_host(is_pinned_host),
           m_layout(layout),
           m_device_type(device_type) {
     LITE_ERROR_HANDLER_BEGIN
-    m_tensor_impl = call_func<TensorImplDft,
-                              std::shared_ptr<lite::Tensor::TensorImplBase>>(
-            "create_tensor", device_type, layout, is_pinned_host);
+    m_tensor_impl =
+            call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                    "create_tensor", device_type, layout, is_pinned_host);
     LITE_ERROR_HANDLER_END
 }
 
-Tensor::Tensor(int device_id, LiteDeviceType device_type, const Layout& layout,
-               bool is_pinned_host)
+Tensor::Tensor(
+        int device_id, LiteDeviceType device_type, const Layout& layout,
+        bool is_pinned_host)
         : m_is_pinned_host(is_pinned_host),
           m_device_id(device_id),
           m_layout(layout),
           m_device_type(device_type) {
     LITE_ERROR_HANDLER_BEGIN
-    m_tensor_impl = call_func<TensorImplDft,
-                              std::shared_ptr<lite::Tensor::TensorImplBase>>(
-            "create_tensor", device_id, device_type, layout, is_pinned_host);
+    m_tensor_impl =
+            call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                    "create_tensor", device_id, device_type, layout, is_pinned_host);
     LITE_ERROR_HANDLER_END
 }
 
-Tensor::Tensor(int device_id, int stream_id, LiteDeviceType device_type,
-               bool is_pinned_host)
+Tensor::Tensor(
+        int device_id, int stream_id, LiteDeviceType device_type, bool is_pinned_host)
         : m_is_pinned_host(is_pinned_host),
           m_device_id(device_id),
           m_device_type(device_type) {
     LITE_ERROR_HANDLER_BEGIN
-    m_tensor_impl = call_func<TensorImplDft,
-                              std::shared_ptr<lite::Tensor::TensorImplBase>>(
-            "create_tensor", device_id, stream_id, device_type, is_pinned_host);
+    m_tensor_impl =
+            call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                    "create_tensor", device_id, stream_id, device_type, is_pinned_host);
     LITE_ERROR_HANDLER_END
 }
 
-Tensor::Tensor(LiteBackend backend, LiteDeviceType device_type, int device_id,
-               const Layout& layout, bool is_pinned_host) {
+Tensor::Tensor(
+        LiteBackend backend, LiteDeviceType device_type, int device_id,
+        const Layout& layout, bool is_pinned_host) {
     if (backend == LiteBackend::LITE_DEFAULT) {
         m_tensor_impl =
-                call_func<TensorImplDft,
-                          std::shared_ptr<lite::Tensor::TensorImplBase>>(
+                call_func<TensorImplDft, std::shared_ptr<lite::Tensor::TensorImplBase>>(
                         "create_tensor", device_id, device_type, layout,
                         is_pinned_host);
     } else {
@@ -135,12 +135,10 @@ Tensor::Tensor(LiteBackend backend, LiteDeviceType device_type, int device_id,
 void Tensor::reshape(const std::vector<int>& shape) {
     LITE_ASSERT(m_layout.ndim > 0, "The tensor to be reshape is empty.");
     uint32_t length = shape.size();
-    LITE_ASSERT(length < Layout::MAXDIM,
-                "The ndim of reshape input is too large.");
+    LITE_ASSERT(length < Layout::MAXDIM, "The ndim of reshape input is too large.");
     Layout new_layout = m_layout;
     new_layout.ndim = length;
-    size_t total_length =
-            get_tensor_total_size_in_byte() / m_layout.get_elem_size();
+    size_t total_length = get_tensor_total_size_in_byte() / m_layout.get_elem_size();
     uint32_t unfixed_number = 0;
     uint32_t unfixed_index = 0;
     for (uint32_t i = 0; i < length; i++) {
@@ -159,8 +157,9 @@ void Tensor::reshape(const std::vector<int>& shape) {
             if (i == unfixed_index) {
                 continue;
             } else {
-                LITE_ASSERT(left > 0 && (left % new_layout.shapes[i] == 0),
-                            "The reshape inputs invalid.");
+                LITE_ASSERT(
+                        left > 0 && (left % new_layout.shapes[i] == 0),
+                        "The reshape inputs invalid.");
                 left = left / new_layout.shapes[i];
             }
         }
@@ -189,8 +188,7 @@ size_t Tensor::get_tensor_total_size_in_byte() const {
 
 void* Tensor::get_memory_ptr() const {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_layout.ndim != 0,
-                "Tensor layout is not valid when get memory ptr.");
+    LITE_ASSERT(m_layout.ndim != 0, "Tensor layout is not valid when get memory ptr.");
     return m_tensor_impl->get_memory_ptr();
     LITE_ERROR_HANDLER_END
 }
@@ -201,9 +199,9 @@ void* Tensor::get_memory_ptr(const std::vector<size_t>& idx) const {
     LITE_ERROR_HANDLER_END
 }
 
-std::shared_ptr<Tensor> Tensor::slice(const std::vector<size_t>& start,
-                                      const std::vector<size_t>& end,
-                                      const std::vector<size_t>& step) {
+std::shared_ptr<Tensor> Tensor::slice(
+        const std::vector<size_t>& start, const std::vector<size_t>& end,
+        const std::vector<size_t>& step) {
     LITE_ERROR_HANDLER_BEGIN
     auto ret = m_tensor_impl->slice(start, end, step);
     ret->update_from_implement();
@@ -213,16 +211,15 @@ std::shared_ptr<Tensor> Tensor::slice(const std::vector<size_t>& start,
 
 void Tensor::fill_zero() {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_layout.ndim > 0,
-                "fill_zero can't apply on a tensor with empty layout.");
+    LITE_ASSERT(
+            m_layout.ndim > 0, "fill_zero can't apply on a tensor with empty layout.");
     m_tensor_impl->fill_zero();
     LITE_ERROR_HANDLER_END
 }
 
 void Tensor::share_memory_with(const Tensor& src_tensor) {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(src_tensor.m_layout.ndim > 0,
-                "To be shared tensor with empty layout.");
+    LITE_ASSERT(src_tensor.m_layout.ndim > 0, "To be shared tensor with empty layout.");
     m_tensor_impl->share_memory_with(src_tensor.m_tensor_impl.get());
     update_from_implement();
     LITE_ERROR_HANDLER_END
@@ -237,10 +234,10 @@ void Tensor::set_layout(const Layout& layout) {
 
 void Tensor::reset(void* prepared_data, size_t data_length_in_byte) {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(m_layout.ndim,
-                "Tensor layout is empty, please reset with layout");
-    LITE_ASSERT(data_length_in_byte >= get_tensor_total_size_in_byte(),
-                "the memory reset to the tensor is too small.");
+    LITE_ASSERT(m_layout.ndim, "Tensor layout is empty, please reset with layout");
+    LITE_ASSERT(
+            data_length_in_byte >= get_tensor_total_size_in_byte(),
+            "the memory reset to the tensor is too small.");
     m_tensor_impl->reset(prepared_data);
     LITE_ERROR_HANDLER_END
 }
@@ -260,8 +257,9 @@ bool Tensor::is_continue_memory() const {
 
 void Tensor::copy_from(const Tensor& src) {
     LITE_ERROR_HANDLER_BEGIN
-    LITE_ASSERT(src.get_layout().ndim != 0,
-                "when tensor copy, the src tensor layout is empty.");
+    LITE_ASSERT(
+            src.get_layout().ndim != 0,
+            "when tensor copy, the src tensor layout is empty.");
     m_tensor_impl->copy_from(src.m_tensor_impl.get());
     update_from_implement();
     LITE_ERROR_HANDLER_END
@@ -283,9 +281,9 @@ void LiteAny::type_missmatch(size_t expect, size_t get) const {
             expect, get));
 }
 
-std::shared_ptr<Tensor> TensorUtils::concat(const std::vector<Tensor>& tensors,
-                                            int dim, LiteDeviceType dst_device,
-                                            int dst_device_id) {
+std::shared_ptr<Tensor> TensorUtils::concat(
+        const std::vector<Tensor>& tensors, int dim, LiteDeviceType dst_device,
+        int dst_device_id) {
     if (tensors.size() <= 0) {
         return std::make_shared<Tensor>();
     }
@@ -297,27 +295,29 @@ std::shared_ptr<Tensor> TensorUtils::concat(const std::vector<Tensor>& tensors,
     }
     bool is_pinned_host = tensors.front().is_pinned_host();
     auto layout = tensors.front().get_layout();
-    LITE_ASSERT(static_cast<int>(layout.ndim) > dim,
-                "the dim in concat is error.");
+    LITE_ASSERT(static_cast<int>(layout.ndim) > dim, "the dim in concat is error.");
     size_t sum_in_dim = layout.shapes[dim];
     for (size_t i = 1; i < tensors.size(); ++i) {
         auto other_layout = tensors[i].get_layout();
-        LITE_ASSERT(other_layout.ndim == layout.ndim,
-                    "the dim size of tensors is not same!");
-        LITE_ASSERT(other_layout.data_type == layout.data_type,
-                    "the dtype of tensors is not same!");
+        LITE_ASSERT(
+                other_layout.ndim == layout.ndim,
+                "the dim size of tensors is not same!");
+        LITE_ASSERT(
+                other_layout.data_type == layout.data_type,
+                "the dtype of tensors is not same!");
         for (size_t j = 0; j < other_layout.ndim; ++j) {
             if (dim == static_cast<int>(j)) {
                 sum_in_dim += other_layout.shapes[j];
                 continue;
             }
-            LITE_ASSERT(other_layout.shapes[j] == layout.shapes[j],
-                        "the shape of tensors is not same!");
+            LITE_ASSERT(
+                    other_layout.shapes[j] == layout.shapes[j],
+                    "the shape of tensors is not same!");
         }
     }
     layout.shapes[dim] = sum_in_dim;
-    auto result = std::make_shared<Tensor>(dst_device_id, dst_device, layout,
-                                           is_pinned_host);
+    auto result =
+            std::make_shared<Tensor>(dst_device_id, dst_device, layout, is_pinned_host);
     size_t index = 0;
     std::vector<size_t> start(dim + 1, 0);
     std::vector<size_t> end(dim + 1, 0);

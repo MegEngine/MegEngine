@@ -22,8 +22,8 @@ using namespace channel_wise_nchw44_8x8x16;
 
 namespace {
 void get_rectified_size(
-        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param,
-        size_t& IH2, size_t& IW2) {
+        const megdnn::fallback::ConvBiasImpl::NCBKernSizeParam& param, size_t& IH2,
+        size_t& IW2) {
     auto&& fm = param.filter_meta;
     auto SW = fm.stride[1];
     auto OH = param.osz[0];
@@ -40,9 +40,7 @@ void get_rectified_size(
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride1)
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride2)
 
-
-WorkspaceBundle stride1::get_bundle(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+WorkspaceBundle stride1::get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     size_t nr_threads = param.nr_threads;
     size_t IH2, IW2;
     get_rectified_size(param, IH2, IW2);
@@ -55,9 +53,9 @@ WorkspaceBundle stride1::get_bundle(
 
 //! compute one output channel
 template <size_t filter, BiasMode bias_mode>
-void stride1::do_conv_kern(const WorkspaceBundle& bundle,
-                           const NCBKernParam& kern_param,
-                           const NCBKernIndex& ncb_index) {
+void stride1::do_conv_kern(
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+        const NCBKernIndex& ncb_index) {
     size_t PH = kern_param.filter_meta.padding[0];
     size_t PW = kern_param.filter_meta.padding[1];
     size_t OH = kern_param.osz[0];
@@ -82,9 +80,9 @@ void stride1::do_conv_kern(const WorkspaceBundle& bundle,
     //! copy in case of illegal read src when padding is zero
     std::memset(padding_src, 0, sizeof(int8_t) * IH2 * IW2 * pack_ic_size);
     rep(ih, IH) {
-        std::memcpy(padding_src + ((ih + PH) * IW2 + PW) * pack_ic_size,
-                    sptr + ih * IW * pack_ic_size,
-                    sizeof(int8_t) * IW * pack_ic_size);
+        std::memcpy(
+                padding_src + ((ih + PH) * IW2 + PW) * pack_ic_size,
+                sptr + ih * IW * pack_ic_size, sizeof(int8_t) * IW * pack_ic_size);
     }
     sptr = padding_src;
 
@@ -95,21 +93,21 @@ void stride1::do_conv_kern(const WorkspaceBundle& bundle,
 #undef KERN
 }
 
-SmallVector<ConvBiasImpl::NCBKern> stride1::get_kimpls(
-        const NCBKernSizeParam& param) {
+SmallVector<ConvBiasImpl::NCBKern> stride1::get_kimpls(const NCBKernSizeParam& param) {
     auto fm = param.filter_meta;
     size_t N = param.n;
     size_t group = fm.group / 4;
-    megdnn_assert(fm.group % 4 == 0,
-                  "nchw44 channel wise conv with group is not times of 4");
+    megdnn_assert(
+            fm.group % 4 == 0, "nchw44 channel wise conv with group is not times of 4");
     WorkspaceBundle wbundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
 
-#define DO_CONV_KERN_FUN(filter, bias_mode)                            \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride1, \
-                 midout_iv(#filter #bias_mode##_hash)) {               \
-        do_conv_fun = do_conv_kern<filter, bias_mode>;                 \
-    }                                                                  \
+#define DO_CONV_KERN_FUN(filter, bias_mode)                       \
+    MIDOUT_BEGIN(                                                 \
+            megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride1, \
+            midout_iv(#filter #bias_mode##_hash)) {               \
+        do_conv_fun = do_conv_kern<filter, bias_mode>;            \
+    }                                                             \
     MIDOUT_END();
 
 #define GET_OP_PARAM(i, bias_mode)                                  \
@@ -122,19 +120,20 @@ SmallVector<ConvBiasImpl::NCBKern> stride1::get_kimpls(
             break;                                                  \
     }
 
-#define GET_BIAS_MODE_PARAM(i)                                  \
-    switch (param.bias_mode) {                                  \
-        case BiasMode::NO_BIAS:                                 \
-            GET_OP_PARAM(i, BiasMode::NO_BIAS)                  \
-            break;                                              \
-        case BiasMode::BROADCAST_CHANNEL_BIAS:                  \
-            GET_OP_PARAM(i, BiasMode::BROADCAST_CHANNEL_BIAS)   \
-            break;                                              \
-        default:                                                \
-            megdnn_assert(0,                                    \
-                          "only support BiasMode::NO_BIAS and " \
-                          "BiasMode::BROADCAST_CHANNEL_BIAS");  \
-            break;                                              \
+#define GET_BIAS_MODE_PARAM(i)                                \
+    switch (param.bias_mode) {                                \
+        case BiasMode::NO_BIAS:                               \
+            GET_OP_PARAM(i, BiasMode::NO_BIAS)                \
+            break;                                            \
+        case BiasMode::BROADCAST_CHANNEL_BIAS:                \
+            GET_OP_PARAM(i, BiasMode::BROADCAST_CHANNEL_BIAS) \
+            break;                                            \
+        default:                                              \
+            megdnn_assert(                                    \
+                    0,                                        \
+                    "only support BiasMode::NO_BIAS and "     \
+                    "BiasMode::BROADCAST_CHANNEL_BIAS");      \
+            break;                                            \
     }
 
 #define DISPATCH_CONV_KERN()                                         \
@@ -168,8 +167,7 @@ SmallVector<ConvBiasImpl::NCBKern> stride1::get_kimpls(
 #undef DO_CONV_KERN_FUN
 }
 
-WorkspaceBundle stride2::get_bundle(
-        const ConvBiasImpl::NCBKernSizeParam& param) {
+WorkspaceBundle stride2::get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     size_t nr_threads = param.nr_threads;
     size_t IH2, IW2;
     get_rectified_size(param, IH2, IW2);
@@ -182,9 +180,9 @@ WorkspaceBundle stride2::get_bundle(
 
 //! compute one output channel
 template <size_t filter, BiasMode bias_mode>
-void stride2::do_conv_kern(const WorkspaceBundle& bundle,
-                           const NCBKernParam& kern_param,
-                           const NCBKernIndex& ncb_index) {
+void stride2::do_conv_kern(
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+        const NCBKernIndex& ncb_index) {
     size_t PH = kern_param.filter_meta.padding[0];
     size_t PW = kern_param.filter_meta.padding[1];
     size_t OH = kern_param.osz[0];
@@ -209,9 +207,9 @@ void stride2::do_conv_kern(const WorkspaceBundle& bundle,
     //! copy in case of illegal read src when padding is zero
     std::memset(padding_src, 0, sizeof(int8_t) * IH2 * IW2 * pack_ic_size);
     rep(ih, IH) {
-        std::memcpy(padding_src + ((ih + PH) * IW2 + PW) * pack_ic_size,
-                    sptr + ih * IW * pack_ic_size,
-                    sizeof(int8_t) * IW * pack_ic_size);
+        std::memcpy(
+                padding_src + ((ih + PH) * IW2 + PW) * pack_ic_size,
+                sptr + ih * IW * pack_ic_size, sizeof(int8_t) * IW * pack_ic_size);
     }
     sptr = padding_src;
 
@@ -222,21 +220,21 @@ void stride2::do_conv_kern(const WorkspaceBundle& bundle,
 #undef KERN
 }
 
-SmallVector<ConvBiasImpl::NCBKern> stride2::get_kimpls(
-        const NCBKernSizeParam& param) {
+SmallVector<ConvBiasImpl::NCBKern> stride2::get_kimpls(const NCBKernSizeParam& param) {
     auto fm = param.filter_meta;
     size_t N = param.n;
     size_t group = fm.group / 4;
-    megdnn_assert(fm.group % 4 == 0,
-                  "nchw44 channel wise conv with group is not times of 4");
+    megdnn_assert(
+            fm.group % 4 == 0, "nchw44 channel wise conv with group is not times of 4");
     WorkspaceBundle wbundle = get_bundle(param);
     conv_fun do_conv_fun = nullptr;
 
-#define DO_CONV_KERN_FUN(filter, bias_mode)                            \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride2, \
-                 midout_iv(#filter #bias_mode##_hash)) {               \
-        do_conv_fun = do_conv_kern<filter, bias_mode>;                 \
-    }                                                                  \
+#define DO_CONV_KERN_FUN(filter, bias_mode)                       \
+    MIDOUT_BEGIN(                                                 \
+            megdnn_arm_common_conv_bias_int8x8x16_nchw44_stride2, \
+            midout_iv(#filter #bias_mode##_hash)) {               \
+        do_conv_fun = do_conv_kern<filter, bias_mode>;            \
+    }                                                             \
     MIDOUT_END();
 
     DISPATCH_CONV_KERN();

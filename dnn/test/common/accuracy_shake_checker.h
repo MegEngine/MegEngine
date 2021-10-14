@@ -37,7 +37,7 @@ struct BatchTrait {
 template <class Opr>
 std::vector<size_t> BatchTrait<Opr>::indices_contain_batch = {};
 template <class Opr>
-std::vector<size_t> BatchTrait<Opr>::indices_contain_batch_broadcast  = {};
+std::vector<size_t> BatchTrait<Opr>::indices_contain_batch_broadcast = {};
 
 #define DEFAULT_INDEX_OF_BATCH(opr) \
     static size_t index_of_batch(const opr::Param&) { return 0; }
@@ -58,56 +58,63 @@ std::vector<size_t> BatchTrait<Opr>::indices_contain_batch_broadcast  = {};
         static std::vector<size_t> indices_contain_batch_broadcast;         \
     };                                                                      \
     std::vector<size_t> BatchTrait<opr>::indices_contain_batch = idxs;      \
-    std::vector<size_t> BatchTrait<opr>::indices_contain_batch_broadcast =  \
-            idxs_brdcst;
+    std::vector<size_t> BatchTrait<opr>::indices_contain_batch_broadcast = idxs_brdcst;
 
-OPR_WITHOUT_INPUT_BROADCAST(DEFAULT_INDEX_OF_BATCH,
-                            megdnn::Convolution3DForward,
-                            (std::initializer_list<size_t>{0, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(DEFAULT_INDEX_OF_BATCH,
-                            megdnn::Convolution3DBackwardData,
-                            (std::initializer_list<size_t>{1, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(DEFAULT_INDEX_OF_BATCH,
-                            megdnn::Convolution3DBackwardFilter,
-                            (std::initializer_list<size_t>{0, 1}), {})
-OPR_WITHOUT_INPUT_BROADCAST(DEFAULT_INDEX_OF_BATCH, megdnn::BatchedMatrixMul,
-                            (std::initializer_list<size_t>{0, 1, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        DEFAULT_INDEX_OF_BATCH, megdnn::Convolution3DForward,
+        (std::initializer_list<size_t>{0, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        DEFAULT_INDEX_OF_BATCH, megdnn::Convolution3DBackwardData,
+        (std::initializer_list<size_t>{1, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        DEFAULT_INDEX_OF_BATCH, megdnn::Convolution3DBackwardFilter,
+        (std::initializer_list<size_t>{0, 1}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        DEFAULT_INDEX_OF_BATCH, megdnn::BatchedMatrixMul,
+        (std::initializer_list<size_t>{0, 1, 2}), {})
 
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::ConvolutionForward,
-                            (std::initializer_list<size_t>{0, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH,
-                            megdnn::ConvolutionBackwardData,
-                            (std::initializer_list<size_t>{1, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH,
-                            megdnn::ConvolutionBackwardFilter,
-                            (std::initializer_list<size_t>{0, 1}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::LocalShareForward,
-                            (std::initializer_list<size_t>{0, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::LocalShareBackwardData,
-                            (std::initializer_list<size_t>{1, 2}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH,
-                            megdnn::LocalShareBackwardFilter,
-                            (std::initializer_list<size_t>{0, 1}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::DeformableConvForward,
-                            (std::initializer_list<size_t>{0, 2, 3, 4}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::ConvolutionForward,
+        (std::initializer_list<size_t>{0, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::ConvolutionBackwardData,
+        (std::initializer_list<size_t>{1, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::ConvolutionBackwardFilter,
+        (std::initializer_list<size_t>{0, 1}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::LocalShareForward,
+        (std::initializer_list<size_t>{0, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::LocalShareBackwardData,
+        (std::initializer_list<size_t>{1, 2}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::LocalShareBackwardFilter,
+        (std::initializer_list<size_t>{0, 1}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::DeformableConvForward,
+        (std::initializer_list<size_t>{0, 2, 3, 4}), {})
 OPR_WITHOUT_INPUT_BROADCAST(
         CONV_INDEX_OF_BATCH, megdnn::DeformableConvBackwardData,
         (std::initializer_list<size_t>{0, 2, 3, 4, 5, 6, 7}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH,
-                            megdnn::DeformableConvBackwardFilter,
-                            (std::initializer_list<size_t>{0, 1, 2, 3}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::BatchConvBiasForward,
-                            (std::initializer_list<size_t>{0, 1, 2, 3, 4}), {})
-OPR_WITHOUT_INPUT_BROADCAST(CONV_INDEX_OF_BATCH, megdnn::ConvBiasForward,
-                            (std::initializer_list<size_t>{0, 3, 4}), {2})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::DeformableConvBackwardFilter,
+        (std::initializer_list<size_t>{0, 1, 2, 3}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::BatchConvBiasForward,
+        (std::initializer_list<size_t>{0, 1, 2, 3, 4}), {})
+OPR_WITHOUT_INPUT_BROADCAST(
+        CONV_INDEX_OF_BATCH, megdnn::ConvBiasForward,
+        (std::initializer_list<size_t>{0, 3, 4}), {2})
 #undef OPR_WITHOUT_INPUT_BROADCAST
 #undef DEFAULT_INDEX_OF_BATCH
 #undef CONV_INDEX_OF_BATCH
 
 template <class Opr>
 struct LayoutsModifier {
-    static void on(TensorLayoutArray& layouts, const typename Opr::Param& p,
-                   size_t new_batch_size) {
+    static void on(
+            TensorLayoutArray& layouts, const typename Opr::Param& p,
+            size_t new_batch_size) {
         size_t batch_index = BatchTrait<Opr>::index_of_batch(p);
         for (size_t index : BatchTrait<Opr>::indices_contain_batch) {
             layouts.at(index)[batch_index] = new_batch_size;
@@ -121,16 +128,17 @@ struct LayoutsModifier {
     }
 };
 
-#define OPR_NO_BIAS(opr)                                                      \
-    template <>                                                               \
-    struct LayoutsModifier<opr> {                                             \
-        static void on(TensorLayoutArray& layouts,                            \
-                       const typename opr::Param& p, size_t new_batch_size) { \
-            size_t batch_index = BatchTrait<opr>::index_of_batch(p);          \
-            for (size_t index : BatchTrait<opr>::indices_contain_batch) {     \
-                layouts.at(index)[batch_index] = new_batch_size;              \
-            }                                                                 \
-        }                                                                     \
+#define OPR_NO_BIAS(opr)                                                  \
+    template <>                                                           \
+    struct LayoutsModifier<opr> {                                         \
+        static void on(                                                   \
+                TensorLayoutArray& layouts, const typename opr::Param& p, \
+                size_t new_batch_size) {                                  \
+            size_t batch_index = BatchTrait<opr>::index_of_batch(p);      \
+            for (size_t index : BatchTrait<opr>::indices_contain_batch) { \
+                layouts.at(index)[batch_index] = new_batch_size;          \
+            }                                                             \
+        }                                                                 \
     };
 
 OPR_NO_BIAS(megdnn::Convolution3D)
@@ -140,9 +148,9 @@ OPR_NO_BIAS(megdnn::BatchedMatrixMul)
 template <>
 struct LayoutsModifier<megdnn::MatrixMul> {
 public:
-    static void on(TensorLayoutArray& layouts,
-                   const megdnn::MatrixMul::Param& p,
-                   size_t new_batch_size) {
+    static void on(
+            TensorLayoutArray& layouts, const megdnn::MatrixMul::Param& p,
+            size_t new_batch_size) {
         assert(!p.transposeA && !p.transposeB);
         MEGDNN_MARK_USED_VAR(p);
         layouts.at(0)[0] = new_batch_size;
@@ -153,8 +161,7 @@ public:
 template <class Opr, typename OprAlgoProxy = OprAlgoProxy<Opr>>
 class AlgoGenerator {
 public:
-    AlgoGenerator(ExecutionPolicyAlgoName name)
-            : m_policy_name{name} {}
+    AlgoGenerator(ExecutionPolicyAlgoName name) : m_policy_name{name} {}
 
     std::vector<Algorithm::Info::Desc> operator()(
             Opr* opr, const CheckerHelper::TensorValueArray& arr) {
@@ -165,10 +172,9 @@ public:
         std::vector<Algorithm::Info::Desc> ret;
         megdnn_assert(layouts.size() == OprTrait<Opr>::arity);
         auto vec = AlgoProxy<Opr, OprTrait<Opr>::arity>::get_all_algorithms_info_safe(
-                     opr, layouts);
+                opr, layouts);
         for (auto algo_info : vec) {
-            if (!(algo_info.attribute &
-                  AlgoAttribute::ACCURACY_DEPEND_ON_BATCH) &&
+            if (!(algo_info.attribute & AlgoAttribute::ACCURACY_DEPEND_ON_BATCH) &&
                 (algo_info.attribute & AlgoAttribute::REPRODUCIBLE) &&
                 std::regex_match(
                         algo_info.desc.name,
@@ -188,9 +194,8 @@ private:
 }  // namespace
 
 ::testing::AssertionResult __assert_tensor_binary_eq(
-        const char* expr0, const char* expr1, const char* expr2,
-        const TensorND& v0, const TensorND& v1,
-        const Algorithm::Info::Desc& algo);
+        const char* expr0, const char* expr1, const char* expr2, const TensorND& v0,
+        const TensorND& v1, const Algorithm::Info::Desc& algo);
 
 template <typename Opr, typename Proxy = OprProxy<Opr>>
 class AccuracyShakeChecker : public CheckerHelper {
@@ -207,8 +212,8 @@ public:
     TensorLayoutArray make_layouts(const TensorShapeArray& shapes) {
         TensorLayoutArray layouts(shapes.size());
         for (size_t i = 0; i < shapes.size(); ++i) {
-            DType dt = (m_dtype.find(i) != m_dtype.end() ? m_dtype[i]
-                                                         : dtype::Float32());
+            DType dt =
+                    (m_dtype.find(i) != m_dtype.end() ? m_dtype[i] : dtype::Float32());
             TensorFormat fmt =
                     (m_fmt.find(i) != m_fmt.end() ? m_fmt[i] : TensorFormat{});
             layouts[i] = TensorLayout(shapes[i], dt, fmt);
@@ -246,8 +251,7 @@ public:
     }
 
     //! set a callback to be invoked before executing the operator
-    AccuracyShakeChecker& set_before_exec_callback(
-            const BeforeExecCallback& cb) {
+    AccuracyShakeChecker& set_before_exec_callback(const BeforeExecCallback& cb) {
         m_before_exec_callback = cb;
         return *this;
     }
@@ -270,8 +274,7 @@ private:
     Param m_param;
     Proxy m_proxy;
     std::unique_ptr<Opr> m_opr_cur;
-    std::shared_ptr<TensorValueArray> m_tensors_cur_host,
-            m_tensors_single_batch_host;
+    std::shared_ptr<TensorValueArray> m_tensors_cur_host, m_tensors_single_batch_host;
 
     void init_host_values();
 
@@ -288,14 +291,13 @@ void AccuracyShakeChecker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
     m_proxy.deduce_layout(opr_cur, layouts);
 
     TensorLayoutArray layouts_single_batch = layouts;
-    for (size_t i=0; i<layouts_single_batch.size(); ++i) {
+    for (size_t i = 0; i < layouts_single_batch.size(); ++i) {
         ASSERT_TRUE(layouts[i].is_physical_contiguous())
-                << "layouts should be physical contiguous "
-                << layouts[i].to_string();
+                << "layouts should be physical contiguous " << layouts[i].to_string();
     }
 
     ASSERT_TRUE(0 == BatchTrait<Opr>::index_of_batch(opr_cur->param()))
-                << "index of batch should be 0 ";
+            << "index of batch should be 0 ";
 
     LayoutsModifier<Opr>::on(layouts_single_batch, opr_cur->param(), 1);
 
@@ -305,20 +307,18 @@ void AccuracyShakeChecker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
     m_tensors_single_batch_host =
             alloc_tensors(m_handle_naive.get(), layouts_single_batch, 0);
     auto tensors_cur_storage = alloc_tensors(m_handle_cur, layouts, 0);
-    m_tensors_cur_host =
-            alloc_tensors(m_handle_naive.get(), layouts, 0);
-    auto &&tensors_single_batch = *tensors_single_batch_storage;
-    auto &&tensors_single_batch_host = *m_tensors_single_batch_host;
-    auto &&tensors_cur = *tensors_cur_storage;
-    auto &&tensors_cur_host = *m_tensors_cur_host;
+    m_tensors_cur_host = alloc_tensors(m_handle_naive.get(), layouts, 0);
+    auto&& tensors_single_batch = *tensors_single_batch_storage;
+    auto&& tensors_single_batch_host = *m_tensors_single_batch_host;
+    auto&& tensors_cur = *tensors_cur_storage;
+    auto&& tensors_cur_host = *m_tensors_cur_host;
 
     // allocate output
     auto tensors_single_batch_storage_out =
             alloc_tensors(m_handle_naive.get(), layouts_single_batch, 0);
-    auto tensors_cur_storage_out =
-            alloc_tensors(m_handle_naive.get(), layouts, 0);
-    auto &&tensors_single_batch_out = *tensors_single_batch_storage_out;
-    auto &&tensors_cur_out = *tensors_cur_storage_out;
+    auto tensors_cur_storage_out = alloc_tensors(m_handle_naive.get(), layouts, 0);
+    auto&& tensors_single_batch_out = *tensors_single_batch_storage_out;
+    auto&& tensors_cur_out = *tensors_cur_storage_out;
 
     init_host_values();
 
@@ -337,22 +337,21 @@ void AccuracyShakeChecker<Opr, Proxy>::exec(TensorLayoutArray layouts) {
         m_proxy.exec(opr_cur, tensors_single_batch);
 
         copy_tensors_from_device(tensors_cur_out, tensors_cur);
-        copy_tensors_from_device(tensors_single_batch_out,
-                                 tensors_single_batch);
+        copy_tensors_from_device(tensors_single_batch_out, tensors_single_batch);
 
-        check_tensors_ignore_batch(tensors_single_batch_out, tensors_cur_out,
-                                   algo_desc[i]);
+        check_tensors_ignore_batch(
+                tensors_single_batch_out, tensors_cur_out, algo_desc[i]);
     }
 }
 
 template <typename Opr, typename Proxy>
 void AccuracyShakeChecker<Opr, Proxy>::init_host_values() {
     size_t index_of_batch = 0;
-    auto &&tensors_single_batch = *m_tensors_single_batch_host;
-    auto &&tensors_cur = *m_tensors_cur_host;
+    auto&& tensors_single_batch = *m_tensors_single_batch_host;
+    auto&& tensors_cur = *m_tensors_cur_host;
     for (size_t i = 0; i < arity_in; ++i) {
-        auto &&tensor_single_batch = tensors_single_batch[i];
-        auto &&tensor_cur = tensors_cur[i];
+        auto&& tensor_single_batch = tensors_single_batch[i];
+        auto&& tensor_cur = tensors_cur[i];
         auto rng = m_rng[i];
         if (!rng)
             rng = m_default_rng.get();
@@ -368,9 +367,8 @@ void AccuracyShakeChecker<Opr, Proxy>::init_host_values() {
             memcpy(raw_storage_cur, raw_storage_single_batch, step);
         } else {
             ASSERT_TRUE(1 == tensor_single_batch.layout[index_of_batch])
-                << "bad batch size "
-                << tensor_single_batch.layout[index_of_batch];
-            for (size_t b=0; b<tensor_cur.layout[index_of_batch]; ++b) {
+                    << "bad batch size " << tensor_single_batch.layout[index_of_batch];
+            for (size_t b = 0; b < tensor_cur.layout[index_of_batch]; ++b) {
                 memcpy(raw_storage_cur, raw_storage_single_batch, step);
                 raw_storage_cur += step;
             }
@@ -380,14 +378,15 @@ void AccuracyShakeChecker<Opr, Proxy>::init_host_values() {
 
 template <typename Opr, typename Proxy>
 void AccuracyShakeChecker<Opr, Proxy>::check_tensors_ignore_batch(
-        const TensorValueArray& tensors_single_batch,
-        const TensorValueArray& tensors, const Algorithm::Info::Desc& algo) {
+        const TensorValueArray& tensors_single_batch, const TensorValueArray& tensors,
+        const Algorithm::Info::Desc& algo) {
     for (size_t i = 0; i < tensors_single_batch.size(); ++i) {
         if (tensors_single_batch[i].layout.ndim == 0 ||
             tensors_single_batch[i].layout.eq_shape(tensors[i].layout))
             continue;
-        ASSERT_PRED_FORMAT3(::megdnn::test::__assert_tensor_binary_eq,
-                            tensors_single_batch[i], tensors[i], algo);
+        ASSERT_PRED_FORMAT3(
+                ::megdnn::test::__assert_tensor_binary_eq, tensors_single_batch[i],
+                tensors[i], algo);
     }
 }
 

@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/armv7/matrix_mul/int16x16x32/strategy.h"
-#include "src/armv7/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/armv7/matrix_mul/asm/common.h"
+#include "src/armv7/matrix_mul/int16x16x32/strategy.h"
 #include "src/common/utils.h"
 
 using namespace megdnn;
@@ -20,8 +20,9 @@ using namespace armv7::matmul;
 
 namespace {
 
-void kern_8x1(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
-              dt_int32* output) {
+void kern_8x1(
+        const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
+        dt_int32* output) {
     //! As each load 16 number from B, but the pos add 16 * 2, so we minus 16
     //! here.
     LDB = (LDB - 4) * sizeof(dt_int16);
@@ -100,9 +101,9 @@ void kern_8x1(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15",
-              "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24",
-              "d25", "d26", "d27", "d28", "d29", "d30", "d31", "cc", "memory");
+            : "d0", "d1", "d8", "d9", "d10", "d11", "d12", "d13", "d14", "d15", "d16",
+              "d17", "d18", "d19", "d20", "d21", "d22", "d23", "d24", "d25", "d26",
+              "d27", "d28", "d29", "d30", "d31", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -125,8 +126,9 @@ void kern_8x1(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
 //  | q3[0-7]|          |q14[0-3]|v15[0-3]|
 //  +--------+          +--------+--------+
 //                      Accumulator
-void kern_8x4(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
-              dt_int32* output) {
+void kern_8x4(
+        const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
+        dt_int32* output) {
     //! As each load 16 number from B, but the pos add 16 * 2, so we minus 16
     //! here.
     LDB = (LDB - 16) * sizeof(dt_int16);
@@ -315,20 +317,20 @@ void kern_8x4(const dt_int16* a_ptr, const dt_int16* b_ptr, int LDB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
               [output] "+r"(output), [LDB] "+r"(LDB)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "cc", "memory");
 }
 
 }  // anonymous namespace
 
 MEGDNN_REG_GEMM_STRATEGY_IMPL_NOPACK(gemm_nopack_s16_4x8);
 
-void gemm_nopack_s16_4x8::kern(const dt_int16* A, size_t LDA, const dt_int16* B,
-                               size_t LDB, dt_int32* C, size_t LDC, size_t M,
-                               size_t K, size_t N, const dt_int32*, void*,
-                               bool trA, bool trB) const {
+void gemm_nopack_s16_4x8::kern(
+        const dt_int16* A, size_t LDA, const dt_int16* B, size_t LDB, dt_int32* C,
+        size_t LDC, size_t M, size_t K, size_t N, const dt_int32*, void*, bool trA,
+        bool trB) const {
     constexpr static size_t MB = 8;
     constexpr static size_t KB = 8;
     constexpr static size_t NB = 4;

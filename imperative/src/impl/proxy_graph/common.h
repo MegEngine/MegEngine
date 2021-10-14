@@ -18,4 +18,4 @@ struct ProxyGraph {
     class MiniGraph;
 };
 
-} // namespace mgb::imperative::proxy_graph
+}  // namespace mgb::imperative::proxy_graph

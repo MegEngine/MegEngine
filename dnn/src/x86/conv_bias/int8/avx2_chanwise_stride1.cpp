@@ -19,28 +19,26 @@ namespace x86 {
 namespace avx2_chanwise_stride1 {
 
 template <size_t filter, BiasMode bias_mode, bool is_quantized, typename Op>
-void conv_kimpl(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
-                const NCBKernIndex& ncb_index) {
+void conv_kimpl(
+        const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
+        const NCBKernIndex& ncb_index) {
     size_t OH = kern_param.osz[0];
     size_t OW = kern_param.osz[1];
     size_t IH2, IW2, OH2, OW2;
     get_rectified_size(kern_param, IH2, IW2, OH2, OW2);
     bool need_src_copy_var = need_src_copy(kern_param);
     bool need_dst_copy_var = need_dst_copy(kern_param);
-    bool need_post_process =
-            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    bool need_post_process = kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
 
     Op op = Op(1.0f, 4.0f);
     if (need_post_process) {
-        float scale_bias =
-                kern_param.bias_type.param<dtype::QuantizedS32>().scale;
+        float scale_bias = kern_param.bias_type.param<dtype::QuantizedS32>().scale;
         float scale_dst = kern_param.dst_type.param<dtype::QuantizedS8>().scale;
         op = Op(scale_bias, scale_dst);
     }
     size_t padding_group_size = IH2 * IW2;
     size_t workspace_group_id = ncb_index.thread_id;
-    size_t group_id = ncb_index.ndrange_id[0],
-           batch_id = ncb_index.ndrange_id[1];
+    size_t group_id = ncb_index.ndrange_id[0], batch_id = ncb_index.ndrange_id[1];
 
     const int8_t* sptr = kern_param.src<dt_int8>(batch_id, group_id);
     const int8_t* fptr = kern_param.filter<dt_int8>(group_id);
@@ -60,17 +58,15 @@ void conv_kimpl(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
         dptr = dst;
     }
 
-#define KERN_NEED_POST_PROCESS(filter)                                         \
-    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, true,   \
-                                                            Op>(               \
-            sptr, fptr, bptr, tptr, static_cast<int8_t*>(dptr), IH2, IW2, OH2, \
-            OW2, op)
+#define KERN_NEED_POST_PROCESS(filter)                                              \
+    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, true, Op>(   \
+            sptr, fptr, bptr, tptr, static_cast<int8_t*>(dptr), IH2, IW2, OH2, OW2, \
+            op)
 
-#define KERN_NO_POST_PROCESS(filter)                                          \
-    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, false, \
-                                                            Op>(              \
-            sptr, fptr, bptr, static_cast<int32_t*>(dptr), nullptr, IH2, IW2, \
-            OH2, OW2, op)
+#define KERN_NO_POST_PROCESS(filter)                                               \
+    avx2_chanwise_direct_stride1_##filter##x##filter##_int8<bias_mode, false, Op>( \
+            sptr, fptr, bptr, static_cast<int32_t*>(dptr), nullptr, IH2, IW2, OH2, \
+            OW2, op)
 
     if (need_post_process) {
         tptr = static_cast<int32_t*>(bundle.get(2)) +
@@ -84,18 +80,19 @@ void conv_kimpl(const WorkspaceBundle& bundle, const NCBKernParam& kern_param,
 #undef KERN_NO_POST_PROCESS
     if (need_dst_copy_var) {
         rep(oh, OH) {
-            std::memcpy(reinterpret_cast<void*>(
-                                reinterpret_cast<ptrdiff_t>(dst) +
-                                oh * OW * kern_param.dst_type.size()),
-                        reinterpret_cast<void*>(
-                                reinterpret_cast<ptrdiff_t>(dptr) +
-                                oh * OW2 * kern_param.dst_type.size()),
-                        kern_param.dst_type.size() * OW);
+            std::memcpy(
+                    reinterpret_cast<void*>(
+                            reinterpret_cast<ptrdiff_t>(dst) +
+                            oh * OW * kern_param.dst_type.size()),
+                    reinterpret_cast<void*>(
+                            reinterpret_cast<ptrdiff_t>(dptr) +
+                            oh * OW2 * kern_param.dst_type.size()),
+                    kern_param.dst_type.size() * OW);
         }
     }
 };
-SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
-                                const WorkspaceBundle& bundle) {
+SmallVector<NCBKern> get_kimpls(
+        const NCBKernSizeParam& kern_param, const WorkspaceBundle& bundle) {
     MEGDNN_MARK_USED_VAR(kern_param);
     auto fm = kern_param.filter_meta;
     size_t group = fm.group;
@@ -107,26 +104,29 @@ SmallVector<NCBKern> get_kimpls(const NCBKernSizeParam& kern_param,
 #define DO_CONV_KERN_FUN(filter, bias_mode, is_quantized, op) \
     do_conv_fun = conv_kimpl<filter, bias_mode, is_quantized, op>;
 
-#define GET_OP_PARAM(i, bias_mode, is_quantized)                             \
-    switch (kern_param.nonlineMode) {                                        \
-        case param::ConvBias::NonlineMode::IDENTITY:                         \
-            DO_CONV_KERN_FUN(i, bias_mode, is_quantized,                     \
-                             TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 \
-                                               MEGDNN_COMMA dt_qint8>)       \
-            break;                                                           \
-        case param::ConvBias::NonlineMode::RELU:                             \
-            DO_CONV_KERN_FUN(i, bias_mode, is_quantized,                     \
-                             ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32    \
-                                            MEGDNN_COMMA dt_qint8>)          \
-            break;                                                           \
-        case param::ConvBias::NonlineMode::H_SWISH:                          \
-            DO_CONV_KERN_FUN(i, bias_mode, is_quantized,                     \
-                             HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32  \
-                                              MEGDNN_COMMA dt_qint8>)        \
-            break;                                                           \
-        default:                                                             \
-            megdnn_assert(0);                                                \
-            break;                                                           \
+#define GET_OP_PARAM(i, bias_mode, is_quantized)                                 \
+    switch (kern_param.nonlineMode) {                                            \
+        case param::ConvBias::NonlineMode::IDENTITY:                             \
+            DO_CONV_KERN_FUN(                                                    \
+                    i, bias_mode, is_quantized,                                  \
+                    TypeCvtOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA \
+                                      dt_qint8>)                                 \
+            break;                                                               \
+        case param::ConvBias::NonlineMode::RELU:                                 \
+            DO_CONV_KERN_FUN(                                                    \
+                    i, bias_mode, is_quantized,                                  \
+                    ReluOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA    \
+                                   dt_qint8>)                                    \
+            break;                                                               \
+        case param::ConvBias::NonlineMode::H_SWISH:                              \
+            DO_CONV_KERN_FUN(                                                    \
+                    i, bias_mode, is_quantized,                                  \
+                    HSwishOp<SIMDType::AVX2 MEGDNN_COMMA dt_qint32 MEGDNN_COMMA  \
+                                     dt_qint8>)                                  \
+            break;                                                               \
+        default:                                                                 \
+            megdnn_assert(0);                                                    \
+            break;                                                               \
     }
 
 #define GET_BIAS_MODE_PARAM(i, is_quantized)                                \

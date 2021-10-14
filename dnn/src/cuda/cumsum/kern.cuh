@@ -53,8 +53,9 @@ struct SumOp {
  * The buffer in *op* and *dst* should not have identical memory addresses.
  */
 template <typename T, typename Op, bool exclusive, bool reverse>
-void run_kern(T* dst, void* workspace, uint32_t workspace_size, uint32_t A,
-              uint32_t B, uint32_t C, const Op& op, cudaStream_t stream);
+void run_kern(
+        T* dst, void* workspace, uint32_t workspace_size, uint32_t A, uint32_t B,
+        uint32_t C, const Op& op, cudaStream_t stream);
 
 /*!
  * \brief get required workspace size for cumsum, in bytes
@@ -63,8 +64,7 @@ void run_kern(T* dst, void* workspace, uint32_t workspace_size, uint32_t A,
  * Note: cuda device must be set to the computing device before calling this
  * function.
  */
-uint32_t get_workspace_in_bytes(uint32_t A, uint32_t B, uint32_t C,
-                                uint32_t item_size);
+uint32_t get_workspace_in_bytes(uint32_t A, uint32_t B, uint32_t C, uint32_t item_size);
 
 }  // namespace cumsum
 }  // namespace cuda

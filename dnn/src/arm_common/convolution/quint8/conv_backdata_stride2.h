@@ -26,7 +26,7 @@ void stride2_quint8_dot(const NCBKernParam& param);
 
 size_t get_workspace_in_bytes_stride2_quint8_dot(const NCBKernSizeParam& param);
 
-}  // namespace convolution
+}  // namespace deconv
 }  // namespace arm_common
 }  // namespace megdnn
 #endif

@@ -15,17 +15,17 @@
 #if MGB_ATLAS
 
 #include "megbrain/comp_node_env.h"
-#include "megbrain/opr/io.h"
 #include "megbrain/opr/basic_arith.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/test/helper.h"
 
 #include "megbrain/opr/atlas_runtime_op.h"
-#include "megbrain/serialization/serializer.h"
 #include "megbrain/plugin/profiler.h"
+#include "megbrain/serialization/serializer.h"
 
+#include <stdio.h>
 #include <random>
 #include <vector>
-#include <stdio.h>
 
 #include "./atlas_models.h"
 
@@ -42,8 +42,7 @@ TEST(TestOprAtlas, Basic) {
     const auto& om_buffer = ATLAS_MODEL.at("model_om");
     auto cn = CompNode::load("atlas0");
     auto x = Host2DeviceCopy::make(*graph, host_x, cn);
-    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                        {x})[0];
+    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {x})[0];
     HostTensorND host_om;
     auto om_func = graph->compile({make_callback_copy(y, host_om, true)});
     om_func->execute().wait();
@@ -56,8 +55,8 @@ TEST(TestOprAtlas, Basic) {
     auto input = rst.tensor_map.at("d");
     input->copy_from(*host_x).sync();
     HostTensorND host_mdl;
-    auto mgb_func = rst.graph_compile(
-            {make_callback_copy(rst.output_var_list[0], host_mdl)});
+    auto mgb_func =
+            rst.graph_compile({make_callback_copy(rst.output_var_list[0], host_mdl)});
     mgb_func->execute().wait();
 
     //! In atlas, the inner compute is fp16
@@ -74,8 +73,7 @@ TEST(TestOprAtlas, DynamicBatch) {
         const auto& om_buffer = ATLAS_MODEL.at("model_dyn_om");
         auto cn = CompNode::load("atlas0");
         auto x = Host2DeviceCopy::make(*graph, host_x, cn);
-        auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                            {x})[0];
+        auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {x})[0];
         HostTensorND host_om;
         auto om_func = graph->compile({make_callback_copy(y, host_om, true)});
         om_func->execute().wait();
@@ -100,7 +98,7 @@ TEST(TestOprAtlas, DynamicBatch) {
 TEST(TestOprAtlas, Rgb888) {
     HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen;
     const auto& graph = ComputingGraph::make();
-    const auto &host_x = gen({1, 3, 16, 16});
+    const auto& host_x = gen({1, 3, 16, 16});
 
     //! run om model
     const auto& om_buffer = ATLAS_MODEL.at("model_rgb_om");
@@ -108,8 +106,8 @@ TEST(TestOprAtlas, Rgb888) {
     x = opr::Dimshuffle::make(x, {0, 2, 3, 1});
     auto cn = CompNode::load("atlas0");
     auto atlas_x = Copy::make(x, {cn});
-    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                        {atlas_x})[0];
+    auto y =
+            opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {atlas_x})[0];
     HostTensorND host_om;
     auto om_func = graph->compile({make_callback_copy(y, host_om, true)});
     om_func->execute().wait();
@@ -122,13 +120,12 @@ TEST(TestOprAtlas, Rgb888) {
     auto input = rst.tensor_map.at("d");
     input->copy_from(*host_x).sync();
     HostTensorND host_mdl;
-    auto mgb_func = rst.graph_compile(
-            {make_callback_copy(rst.output_var_list[0], host_mdl)});
+    auto mgb_func =
+            rst.graph_compile({make_callback_copy(rst.output_var_list[0], host_mdl)});
     mgb_func->execute().wait();
 
     //! In atlas, the inner compute is fp16
-    MGB_ASSERT_TENSOR_NEAR(host_mdl,
-                           host_om, 1e-3);
+    MGB_ASSERT_TENSOR_NEAR(host_mdl, host_om, 1e-3);
 }
 
 TEST(TestOprAtlas, Yuv) {
@@ -136,14 +133,13 @@ TEST(TestOprAtlas, Yuv) {
     //! check if the shape satisfy.
     HostTensorGenerator<dtype::Uint8, RandomDistribution::UNIFORM> gen;
     const auto& graph = ComputingGraph::make();
-    const auto &host_x = gen({1, 24, 16, 1});
+    const auto& host_x = gen({1, 24, 16, 1});
 
     //! run om model
     const auto& om_buffer = ATLAS_MODEL.at("model_yuv_om");
     auto cn = CompNode::load("atlas0");
     auto x = Host2DeviceCopy::make(*graph, host_x, cn);
-    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                        {x})[0];
+    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {x})[0];
     HostTensorND host_om;
     auto om_func = graph->compile({make_callback_copy(y, host_om, true)});
     om_func->execute().wait();
@@ -159,8 +155,7 @@ TEST(TestOprAtlas, Serialization) {
     const auto& om_buffer = ATLAS_MODEL.at("model_om");
     auto cn = CompNode::load("atlas0");
     auto x = Host2DeviceCopy::make(*graph, host_x, cn);
-    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                        {x})[0];
+    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {x})[0];
 
     auto fname = output_file("AtlasRuntimeOprTest");
     auto dump = [&]() {
@@ -187,8 +182,7 @@ TEST(TestOprAtlas, Profiling) {
     const auto& om_buffer = ATLAS_MODEL.at("model_dyn_om");
     auto cn = CompNode::load("atlas0");
     auto x = Host2DeviceCopy::make(*graph, host_x, cn);
-    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second,
-                                        {x})[0];
+    auto y = opr::AtlasRuntimeOpr::make(om_buffer.first, om_buffer.second, {x})[0];
     HostTensorND host_om;
     auto om_func = graph->compile({make_callback_copy(y, host_om, true)});
     om_func->execute().wait();

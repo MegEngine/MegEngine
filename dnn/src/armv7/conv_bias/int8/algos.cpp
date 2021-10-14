@@ -63,18 +63,19 @@ WorkspaceBundle ConvBiasImpl::AlgoS8MatrixMul::get_bundle(
         size_t K = IC * FH * FW;
         size_t N = OH * OW;
 
-#define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,              \
-                               _bias_midout_enum, _nonline,                  \
-                               _nonline_midout_enum)                         \
-    MIDOUT_BEGIN(megdnn_armv7_conv_bias_int8, 0, _gemm_midout_enum,          \
-                 _bias_midout_enum, _nonline_midout_enum) {                  \
-        matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                \
-                M, N, K, param.filter_type, param.src_type, param.dst_type); \
-        part2 = megdnn::matmul::GemmInterleaved<                             \
-                        matmul::gemm_##_gemm##_##_bias##_##_nonline>(        \
-                        M, N, K, false, false, strategy)                     \
-                        .get_workspace_size();                               \
-    }                                                                        \
+#define DISPATCH_GEMM_STRATEGY(                                                   \
+        _gemm, _gemm_midout_enum, _bias, _bias_midout_enum, _nonline,             \
+        _nonline_midout_enum)                                                     \
+    MIDOUT_BEGIN(                                                                 \
+            megdnn_armv7_conv_bias_int8, 0, _gemm_midout_enum, _bias_midout_enum, \
+            _nonline_midout_enum) {                                               \
+        matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                     \
+                M, N, K, param.filter_type, param.src_type, param.dst_type);      \
+        part2 = megdnn::matmul::GemmInterleaved<                                  \
+                        matmul::gemm_##_gemm##_##_bias##_##_nonline>(             \
+                        M, N, K, false, false, strategy)                          \
+                        .get_workspace_size();                                    \
+    }                                                                             \
     MIDOUT_END()
 
         DISPATCH_GEMM_BIAS(s8_4x2, 0)
@@ -84,8 +85,8 @@ WorkspaceBundle ConvBiasImpl::AlgoS8MatrixMul::get_bundle(
     return {nullptr, {part0, part1, part2}};
 }
 
-void ConvBiasImpl::AlgoS8MatrixMul::kimpl(const NCBKernParam& param,
-                                          const NCBKernIndex& ncb_index) {
+void ConvBiasImpl::AlgoS8MatrixMul::kimpl(
+        const NCBKernParam& param, const NCBKernIndex& ncb_index) {
     auto is_xcorr = !param.filter_meta.should_flip;
     UNPACK_CONV_NCB_KERN_SIZES(param);
     auto bundle = get_bundle(param);
@@ -137,33 +138,32 @@ void ConvBiasImpl::AlgoS8MatrixMul::kimpl(const NCBKernParam& param,
                     img2col<false>(src2, B, OC, OH, OW, IC, IH2, IW2, FH, FW);
             } else {
                 if (is_xcorr)
-                    img2col_stride<true>(src2, B, OC, OH, OW, IC, IH2, IW2, FH,
-                                         FW, SH, SW);
+                    img2col_stride<true>(
+                            src2, B, OC, OH, OW, IC, IH2, IW2, FH, FW, SH, SW);
                 else
-                    img2col_stride<false>(src2, B, OC, OH, OW, IC, IH2, IW2, FH,
-                                          FW, SH, SW);
+                    img2col_stride<false>(
+                            src2, B, OC, OH, OW, IC, IH2, IW2, FH, FW, SH, SW);
             }
         }
         {
-            Workspace workspace(static_cast<dt_byte*>(bundle.get(2)),
-                                bundle.get_size(2));
+            Workspace workspace(
+                    static_cast<dt_byte*>(bundle.get(2)), bundle.get_size(2));
             size_t M = OC;
             size_t K = IC * FH * FW;
             size_t N = OH * OW;
 
-#define DISPATCH_GEMM_STRATEGY(_gemm, _gemm_midout_enum, _bias,              \
-                               _bias_midout_enum, _nonline,                  \
-                               _nonline_midout_enum)                         \
-    MIDOUT_BEGIN(megdnn_armv7_conv_bias_int8, 1, _gemm_midout_enum,          \
-                 _bias_midout_enum, _nonline_midout_enum) {                  \
-        matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                \
-                M, N, K, param.filter_type, param.src_type, param.dst_type); \
-        megdnn::matmul::GemmInterleaved<                                     \
-                matmul::gemm_##_gemm##_##_bias##_##_nonline>                 \
-                gemm_interleaved(M, N, K, false, false, strategy);           \
-        gemm_interleaved.execute(filter, K, B, N, dst, N, workspace.raw_ptr, \
-                                 bias);                                      \
-    }                                                                        \
+#define DISPATCH_GEMM_STRATEGY(                                                      \
+        _gemm, _gemm_midout_enum, _bias, _bias_midout_enum, _nonline,                \
+        _nonline_midout_enum)                                                        \
+    MIDOUT_BEGIN(                                                                    \
+            megdnn_armv7_conv_bias_int8, 1, _gemm_midout_enum, _bias_midout_enum,    \
+            _nonline_midout_enum) {                                                  \
+        matmul::gemm_##_gemm##_##_bias##_##_nonline strategy(                        \
+                M, N, K, param.filter_type, param.src_type, param.dst_type);         \
+        megdnn::matmul::GemmInterleaved<matmul::gemm_##_gemm##_##_bias##_##_nonline> \
+                gemm_interleaved(M, N, K, false, false, strategy);                   \
+        gemm_interleaved.execute(filter, K, B, N, dst, N, workspace.raw_ptr, bias);  \
+    }                                                                                \
     MIDOUT_END()
 
             DISPATCH_GEMM_BIAS(s8_4x2, 0)

@@ -23,8 +23,7 @@ class RelayoutForwardImpl final : public RelayoutForward {
         RelayoutForwardImpl* const m_opr;
 
     public:
-        Param(const TensorND& src, const TensorND& dst,
-              RelayoutForwardImpl* opr);
+        Param(const TensorND& src, const TensorND& dst, RelayoutForwardImpl* opr);
 
         size_t dtype_size() const { return m_src.layout.dtype.size(); }
 
@@ -50,13 +49,11 @@ public:
 
     bool is_thread_safe() const override { return true; }
 
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              Handle* src_handle) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, Handle* src_handle) override;
 };
 
 }  // namespace rocm
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-
-

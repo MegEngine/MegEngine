@@ -11,8 +11,8 @@
 #include "test/arm_common/fixture.h"
 
 #include "megdnn/oprs.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
 
 using namespace megdnn;
 using namespace test;
@@ -33,8 +33,7 @@ TEST_F(ARM_COMMON, REDUCE) {
     std::vector<Config> configs;
     for (auto mode : {Mode::MEAN, Mode::MAX, Mode::MIN})
         for (auto dtype : std::vector<DType>{
-                     dtype::Float32(), dtype::Float16(),
-                     dtype::QuantizedS8(1.3f),
+                     dtype::Float32(), dtype::Float16(), dtype::QuantizedS8(1.3f),
                      dtype::Quantized8Asymm(1.3f, static_cast<uint8_t>(3))})
             for (int32_t axis : {0, 1, 2}) {
                 for (size_t A : {1, 3, 5}) {
@@ -57,8 +56,7 @@ TEST_F(ARM_COMMON, REDUCE) {
     }
     configs.clear();
     for (auto mode : {Mode::SUM, Mode::PRODUCT, Mode::SUM_SQR})
-        for (auto dtype :
-             std::vector<DType>{dtype::Float32(), dtype::Float16()})
+        for (auto dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()})
             for (int32_t axis : {0, 1, 2}) {
                 for (size_t A : {1, 3, 5}) {
                     for (size_t B : {4, 6, 9, 16, 33, 45}) {
@@ -79,7 +77,7 @@ TEST_F(ARM_COMMON, REDUCE) {
         auto&& dtype = config.dtype;
         auto&& param = config.param;
         auto&& shape = config.shape;
-        if(dtype == dtype::Float16())
+        if (dtype == dtype::Float16())
             checker.set_epsilon(1e-1);
         else
             checker.set_epsilon(1e-3);
@@ -91,7 +89,7 @@ TEST_F(ARM_COMMON, REDUCE) {
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(ARM_COMMON, BENCHMARK_REDUCE) {
     auto run = [&](size_t A, size_t B, size_t C, size_t axis,
-            megdnn::param::Reduce::Mode mode, megdnn::DType& dtype) {
+                   megdnn::param::Reduce::Mode mode, megdnn::DType& dtype) {
         auto handle_fallback = create_cpu_handle(1);
         Benchmarker<Reduce> benchmarker(handle());
         Benchmarker<Reduce> benchmarker_fallback(handle_fallback.get());
@@ -112,16 +110,13 @@ TEST_F(ARM_COMMON, BENCHMARK_REDUCE) {
         opr->deduce_layout(src, dst);
 
         auto bench = [&](const char* msg) {
-                auto cur = benchmarker.execs({src, dst}) / RUNS;
-                auto fallback =
-                        benchmarker_fallback.execs({src, dst}) / RUNS;
-                float computation =
-                        src.total_nr_elems() / 1024.0 / 1024.0 / 1024.0 * 1e3;
-                printf("run %s->%s %s: fallback: %fms %fGflops "
-                       "cur: %fms %fGflops speedup=%f\n",
-                       src.to_string().c_str(), dst.to_string().c_str(), msg,
-                       fallback, computation / fallback, cur, computation / cur,
-                       fallback / cur);
+            auto cur = benchmarker.execs({src, dst}) / RUNS;
+            auto fallback = benchmarker_fallback.execs({src, dst}) / RUNS;
+            float computation = src.total_nr_elems() / 1024.0 / 1024.0 / 1024.0 * 1e3;
+            printf("run %s->%s %s: fallback: %fms %fGflops "
+                   "cur: %fms %fGflops speedup=%f\n",
+                   src.to_string().c_str(), dst.to_string().c_str(), msg, fallback,
+                   computation / fallback, cur, computation / cur, fallback / cur);
         };
 
         benchmarker_fallback.set_dtype(0, dtype);
@@ -129,8 +124,9 @@ TEST_F(ARM_COMMON, BENCHMARK_REDUCE) {
         bench(dtype.name());
     };
 
-    for (auto mode : {param::Reduce::Mode::MEAN, param::Reduce::Mode::MAX,
-            param::Reduce::Mode::MIN})
+    for (auto mode :
+         {param::Reduce::Mode::MEAN, param::Reduce::Mode::MAX,
+          param::Reduce::Mode::MIN})
         for (int32_t axis : {1, 2}) {
             if (mode == param::Reduce::Mode::MEAN)
                 printf("testcase mean %s\n", axis == 2 ? "c == 1" : "c > 1");
@@ -138,28 +134,27 @@ TEST_F(ARM_COMMON, BENCHMARK_REDUCE) {
                 printf("testcase max %s\n", axis == 2 ? "c == 1" : "c > 1");
             else if (mode == param::Reduce::Mode::MIN)
                 printf("testcase min %s\n", axis == 2 ? "c == 1" : "c > 1");
-            for (auto dtype :
-                 std::vector<megdnn::DType>{dtype::Float16(), dtype::Float32(),
-                                            dtype::QuantizedS8(4.2f),
-                                            dtype::Quantized8Asymm(3.2f, static_cast<uint8_t>(10))}) {
+            for (auto dtype : std::vector<megdnn::DType>{
+                         dtype::Float16(), dtype::Float32(), dtype::QuantizedS8(4.2f),
+                         dtype::Quantized8Asymm(3.2f, static_cast<uint8_t>(10))}) {
                 run(1, 1024, 49, axis, mode, dtype);
                 run(2, 10, 10000, axis, mode, dtype);
                 run(2, 100, 10000, axis, mode, dtype);
                 run(2, 10, 100000, axis, mode, dtype);
             }
         }
-    for (auto mode : {param::Reduce::Mode::SUM, param::Reduce::Mode::PRODUCT,
-                      param::Reduce::Mode::SUM_SQR})
+    for (auto mode :
+         {param::Reduce::Mode::SUM, param::Reduce::Mode::PRODUCT,
+          param::Reduce::Mode::SUM_SQR})
         for (int32_t axis : {1, 2}) {
             if (mode == param::Reduce::Mode::SUM)
                 printf("testcase sum %s\n", axis == 2 ? "c == 1" : "c > 1");
             else if (mode == param::Reduce::Mode::PRODUCT)
                 printf("testcase product %s\n", axis == 2 ? "c == 1" : "c > 1");
             else if (mode == param::Reduce::Mode::SUM_SQR)
-                printf("testcase sum SumSqr %s\n",
-                       axis == 2 ? "c == 1" : "c > 1");
-            for (auto dtype : std::vector<megdnn::DType>{dtype::Float16(),
-                                                         dtype::Float32()}) {
+                printf("testcase sum SumSqr %s\n", axis == 2 ? "c == 1" : "c > 1");
+            for (auto dtype :
+                 std::vector<megdnn::DType>{dtype::Float16(), dtype::Float32()}) {
                 run(1, 1024, 49, axis, mode, dtype);
                 run(2, 10, 10000, axis, mode, dtype);
                 run(2, 100, 10000, axis, mode, dtype);

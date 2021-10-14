@@ -13,25 +13,24 @@ namespace {
 
 std::unique_ptr<ConvBiasForward> prepare_conv_opr(
         const MatrixMulForwardImpl::AlgoBase::SizeArgs& args) {
-    auto conv_bias_opr_ptr =
-            args.opr->handle()->create_operator<ConvBiasForward>();
+    auto conv_bias_opr_ptr = args.opr->handle()->create_operator<ConvBiasForward>();
 
     auto conv_param_computemode =
-            (args.opr->param().compute_mode ==
-             param::MatrixMul::ComputeMode::DEFAULT)
+            (args.opr->param().compute_mode == param::MatrixMul::ComputeMode::DEFAULT)
                     ? param::Convolution::ComputeMode::DEFAULT
                     : param::Convolution::ComputeMode::FLOAT32;
-    conv_bias_opr_ptr->param() = {param::ConvBias::NonlineMode::IDENTITY,
-                                  param::Convolution::Mode::CROSS_CORRELATION,
-                                  param::Convolution::Sparse::DENSE,
-                                  param::Convolution::Format::NCHW,
-                                  0,  // pad_h
-                                  0,  // pad_w
-                                  1,  // stride_h
-                                  1,  // stride_w
-                                  1,  // dilate_h
-                                  1,  // dilate_w
-                                  conv_param_computemode};
+    conv_bias_opr_ptr->param() = {
+            param::ConvBias::NonlineMode::IDENTITY,
+            param::Convolution::Mode::CROSS_CORRELATION,
+            param::Convolution::Sparse::DENSE,
+            param::Convolution::Format::NCHW,
+            0,  // pad_h
+            0,  // pad_w
+            1,  // stride_h
+            1,  // stride_w
+            1,  // dilate_h
+            1,  // dilate_w
+            conv_param_computemode};
 
     return conv_bias_opr_ptr;
 }
@@ -52,13 +51,12 @@ std::tuple<size_t, size_t, size_t> gen_matrixmul_shape(
         megdnn_assert(k == args.layout_b.shape[1]);
         n = args.layout_b.shape[0];
     }
-    return std::tuple<size_t, size_t, size_t> {m, k, n};
+    return std::tuple<size_t, size_t, size_t>{m, k, n};
 }
 
 }  // namespace
 
-bool MatrixMulForwardImpl::AlgoConv1X1CUDNN::is_available(
-        const SizeArgs& args) const {
+bool MatrixMulForwardImpl::AlgoConv1X1CUDNN::is_available(const SizeArgs& args) const {
     if (!(args.layout_a.ndim == 2 && args.layout_b.ndim == 2 &&
           args.layout_c.ndim == 2))
         return false;
@@ -133,8 +131,7 @@ void MatrixMulForwardImpl::AlgoConv1X1CUDNN::exec(const ExecArgs& args) const {
     if (args.opr->param().transposeA || args.opr->param().transposeB) {
         auto trans = args.opr->handle()->create_operator<RelayoutForward>();
 
-        auto trans_tensor = [&](size_t workspace_pos,
-                                const TensorND& ori_tensor,
+        auto trans_tensor = [&](size_t workspace_pos, const TensorND& ori_tensor,
                                 TensorND& dst_tensor) {
             TensorLayout dst_layout(
                     {ori_tensor.layout.shape[1], ori_tensor.layout.shape[0]},
@@ -151,8 +148,7 @@ void MatrixMulForwardImpl::AlgoConv1X1CUDNN::exec(const ExecArgs& args) const {
             trans_tensor(1, args.tensor_a, A_dst_tensor);
         }
         if (args.opr->param().transposeB) {
-            trans_tensor(bundle.nr_workspace() - 1, args.tensor_b,
-                         B_dst_tensor);
+            trans_tensor(bundle.nr_workspace() - 1, args.tensor_b, B_dst_tensor);
         }
     }
 
@@ -167,7 +163,7 @@ void MatrixMulForwardImpl::AlgoConv1X1CUDNN::exec(const ExecArgs& args) const {
     TensorND dst(args.tensor_c.raw_ptr, dst_layout);
 
     ConvBiasForwardImpl::AlgoBase::ExecArgs conv_exec_args(
-            static_cast<ConvBiasForwardImpl*>(conv_opr_ptr.get()), src, filter,
-            bias, z, dst, bundle.get_workspace(0));
+            static_cast<ConvBiasForwardImpl*>(conv_opr_ptr.get()), src, filter, bias, z,
+            dst, bundle.get_workspace(0));
     m_impl->exec(conv_exec_args);
 }

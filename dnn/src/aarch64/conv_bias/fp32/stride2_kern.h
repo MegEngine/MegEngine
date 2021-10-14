@@ -16,16 +16,15 @@
 
 namespace megdnn {
 namespace aarch64 {
-namespace fp32{
+namespace fp32 {
 namespace conv_stride2 {
-
 
 //! For the detail tune process, refer to `expr/conv_aarch64_stride2/main.cpp`
 
 // refer to function do_conv_2x2_stride2_asm_unroll4
-static void do_conv_2x2_stride2(const float* src, const float* filter,
-                                float* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_2x2_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 2;
     size_t mod4_left = width & 3;
@@ -165,10 +164,9 @@ static void do_conv_2x2_stride2(const float* src, const float* filter,
                     "5: \n"
                     : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1)
                     : "r"(mod4_left), "w"(_k0123)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18", "v19", "v28", "v29", "v30",
-                      "v31");
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18", "v19", "v28", "v29", "v30", "v31");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -179,9 +177,9 @@ static void do_conv_2x2_stride2(const float* src, const float* filter,
 }
 
 // refer to function do_conv_3x3_stride2_asm_unroll3
-static void do_conv_3x3_stride2(const float* src, const float* filter,
-                                float* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_3x3_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 2;
     size_t mod3_left = width % 3;
@@ -269,7 +267,7 @@ static void do_conv_3x3_stride2(const float* src, const float* filter,
                     "ld2 {v1.4s, v2.4s}, [%2], #32 \n"  // 0, 2, 4, 6
 
                     "ld2 {v5.4s, v6.4s}, [%3], #32 \n"
-                    "ld1 {v3.4s}, [%2] \n"        // load src 8 12 ...
+                    "ld1 {v3.4s}, [%2] \n"               // load src 8 12 ...
                     "fmla v0.4s, v1.4s, v21.4s \n"       // src[i] * k[i]
                     "ext v7.16b, v1.16b, v3.16b, #4 \n"  // 2, 4, 6, 8
                     "fmla v0.4s, v2.4s, v22.4s \n"
@@ -356,10 +354,10 @@ static void do_conv_3x3_stride2(const float* src, const float* filter,
                     "3: \n"
                     : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2)
                     : "r"(mod3_left), "w"(_k0123), "w"(_k3456), "w"(_k5678)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18", "v21", "v22", "v23", "v24",
-                      "v25", "v26", "v27", "v28", "v29");
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
+                      "v28", "v29");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -371,9 +369,9 @@ static void do_conv_3x3_stride2(const float* src, const float* filter,
 }
 
 // refer to function do_conv_5x5_stride2_asm_unroll2
-static void do_conv_5x5_stride2(const float* src, const float* filter,
-                                float* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_5x5_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 2;
     size_t mod2_left = width & 1;
@@ -591,15 +589,13 @@ static void do_conv_5x5_stride2(const float* src, const float* filter,
                     "bne 2b \n"
                     "3: \n"
 
-                    : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2),
-                      "+r"(r3), "+r"(r4)
+                    : "+r"(width), "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
+                      "+r"(r4)
                     : "w"(_k0123), "w"(_k4567), "w"(_k891011), "w"(_k12131415),
-                      "w"(_k16171819), "w"(_k20212223), "w"(_k24242424),
-                      "r"(mod2_left)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
-                      "v23", "v24");
+                      "w"(_k16171819), "w"(_k20212223), "w"(_k24242424), "r"(mod2_left)
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24");
 
             r0 += tail_step;
             r1 += tail_step;
@@ -613,9 +609,9 @@ static void do_conv_5x5_stride2(const float* src, const float* filter,
 }
 
 // refer to function do_conv_7x7_stride2_asm_unroll2
-static void do_conv_7x7_stride2(const float* src, const float* filter,
-                                float* dst, size_t IH, size_t IW, size_t OH,
-                                size_t OW, size_t IC) {
+static void do_conv_7x7_stride2(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - 2 * OW + IW;
     size_t width = OW >> 2;
 
@@ -993,16 +989,15 @@ static void do_conv_7x7_stride2(const float* src, const float* filter,
                     "bne 2b \n"
                     "3: \n"
 
-                    : "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3),
-                      "+r"(r4), "+r"(r5), "+r"(r6)
+                    : "+r"(outptr), "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3), "+r"(r4),
+                      "+r"(r5), "+r"(r6)
                     : "r"(width), "w"(_k0123), "w"(_k4567), "w"(_k891011),
                       "w"(_k12131415), "w"(_k16171819), "w"(_k20212223),
                       "w"(_k24252627), "w"(_k28293031), "w"(_k32333435),
-                      "w"(_k36373839), "w"(_k40414243), "w"(_k44454647),
-                      "w"(_k48484848)
-                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5",
-                      "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
-                      "v15", "v16", "v17", "v18");
+                      "w"(_k36373839), "w"(_k40414243), "w"(_k44454647), "w"(_k48484848)
+                    : "cc", "memory", "x1", "v0", "v1", "v2", "v3", "v4", "v5", "v6",
+                      "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+                      "v17", "v18");
 
             r0 += tail_step;
             r1 += tail_step;

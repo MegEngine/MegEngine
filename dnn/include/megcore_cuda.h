@@ -33,8 +33,7 @@ megcoreStatus_t createComputingHandleWithCUDAContext(
         megcoreComputingHandle_t* compHandle, megcoreDeviceHandle_t devHandle,
         unsigned int flags, const CudaContext& ctx);
 
-megcoreStatus_t getCUDAContext(megcoreComputingHandle_t handle,
-                               CudaContext* ctx);
+megcoreStatus_t getCUDAContext(megcoreComputingHandle_t handle, CudaContext* ctx);
 
 }  // namespace megcore
 
@@ -43,8 +42,8 @@ static inline megcoreStatus_t megcoreCreateComputingHandleWithCUDAStream(
         unsigned int flags, cudaStream_t stream) {
     megcore::CudaContext ctx;
     ctx.stream = stream;
-    return megcore::createComputingHandleWithCUDAContext(compHandle, devHandle,
-                                                         flags, ctx);
+    return megcore::createComputingHandleWithCUDAContext(
+            compHandle, devHandle, flags, ctx);
 }
 
 static inline megcoreStatus_t megcoreGetCUDAStream(

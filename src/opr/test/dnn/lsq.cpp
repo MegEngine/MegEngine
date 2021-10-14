@@ -22,27 +22,25 @@ namespace {
 void run() {
     using Checker = AutoOprChecker<4, 1>;
 
-    auto make_graph =
-            [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
-        auto o0 = opr::LSQForward::make(inputs[0], inputs[1], inputs[2],
-                                        inputs[3]);
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        auto o0 = opr::LSQForward::make(inputs[0], inputs[1], inputs[2], inputs[3]);
         return {o0};
     };
 
     auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
-        auto opr = MegDNNHandle::get(
-                           CompNodeEnv::from_comp_node(CompNode::default_cpu()))
-                           ->create_operator<megdnn::LSQForward>();
+        auto opr =
+                MegDNNHandle::get(CompNodeEnv::from_comp_node(CompNode::default_cpu()))
+                        ->create_operator<megdnn::LSQForward>();
         dest[0].dtype(dtype::Float32())
                 .comp_node(inp[0]->comp_node())
                 .resize(inp[0]->shape());
-        opr->exec(inp[0]->as_megdnn(), inp[1]->as_megdnn(), inp[2]->as_megdnn(),
-                  inp[3]->as_megdnn(), dest[0].as_megdnn(), {});
+        opr->exec(
+                inp[0]->as_megdnn(), inp[1]->as_megdnn(), inp[2]->as_megdnn(),
+                inp[3]->as_megdnn(), dest[0].as_megdnn(), {});
     };
 
     auto gen = [&](HostTensorND& src) {
-        HostTensorGenerator<dtype::Float32, RandomDistribution::GAUSSIAN>
-                src_gen(10.f);
+        HostTensorGenerator<dtype::Float32, RandomDistribution::GAUSSIAN> src_gen(10.f);
         src = *src_gen(src.shape(), src.comp_node());
     };
 

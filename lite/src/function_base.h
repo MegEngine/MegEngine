@@ -46,8 +46,7 @@ template <typename tensor_type, typename ret_type, typename... Args>
 ret_type call_func(std::string func_name, Args... args) {
     mark_used_variable(args...);
     auto backend_name = class_type_name<tensor_type>()();
-    auto msg_info =
-            func_name + "  is not aviliable in " + backend_name + " backend.";
+    auto msg_info = func_name + "  is not aviliable in " + backend_name + " backend.";
     LITE_THROW(msg_info.c_str());
 }
 }  // namespace lite

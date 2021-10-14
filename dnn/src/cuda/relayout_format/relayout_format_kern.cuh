@@ -25,12 +25,14 @@ struct LayoutType {
     static constexpr uint32_t NHWC = 1;
 };
 
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_ = LayoutType::NCHWx>
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_ = LayoutType::NCHWx>
 class TensorIteratorOverChannel;
 
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_>
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_>
 class TensorIteratorOverChannel {
 public:
     using Type = Type_;
@@ -52,9 +54,8 @@ public:
 
     MEGDNN_HOST TensorIteratorOverChannel()
             : pointer{nullptr}, chan_stride_in_elements{0}, channel{0} {}
-    MEGDNN_HOST TensorIteratorOverChannel(Type* pointer_,
-                                          int chan_stride_in_elements_,
-                                          int channel_, int, int)
+    MEGDNN_HOST TensorIteratorOverChannel(
+            Type* pointer_, int chan_stride_in_elements_, int channel_, int, int)
             : pointer{pointer_},
               chan_stride_in_elements{chan_stride_in_elements_},
               channel{channel_} {}
@@ -65,8 +66,7 @@ public:
         channel -= c_idx;
     }
 
-    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(
-            size_t offset_in_type) {
+    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(size_t offset_in_type) {
         pointer += offset_in_type;
     }
 
@@ -77,14 +77,12 @@ public:
         for (int i = 0; i < chan_blk; i += pack_size) {
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
-                int frag_idx = i / pack_size *
-                                       (lane_size_in_type / pack_size_in_type) +
-                               j;
+                int frag_idx =
+                        i / pack_size * (lane_size_in_type / pack_size_in_type) + j;
                 bool guard = i < channel;
                 global_load<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
-                        reinterpret_cast<void*>(pointer_ +
-                                                j * pack_size_in_type),
+                        reinterpret_cast<void*>(pointer_ + j * pack_size_in_type),
                         guard, zero_point);
             }
             pointer_ += chan_stride_in_elements;
@@ -98,14 +96,12 @@ public:
         for (int i = 0; i < chan_blk; i += pack_size) {
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
-                int frag_idx = i / pack_size *
-                                       (lane_size_in_type / pack_size_in_type) +
-                               j;
+                int frag_idx =
+                        i / pack_size * (lane_size_in_type / pack_size_in_type) + j;
                 bool guard = i < channel;
                 global_store<AccessType, pack_size_in_byte>(
                         frag_ptr[frag_idx],
-                        reinterpret_cast<void*>(pointer_ +
-                                                j * pack_size_in_type),
+                        reinterpret_cast<void*>(pointer_ + j * pack_size_in_type),
                         guard);
             }
             pointer_ += chan_stride_in_elements;
@@ -123,10 +119,9 @@ private:
     int channel;
 };
 
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_>
-class TensorIteratorOverChannel<Type_, pack_size_, chan_blk_, width_,
-                                size_nbits_, LayoutType::NHWC> {
+template <typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_>
+class TensorIteratorOverChannel<
+        Type_, pack_size_, chan_blk_, width_, size_nbits_, LayoutType::NHWC> {
 public:
     using Type = Type_;
     static constexpr int pack_size = pack_size_;
@@ -143,9 +138,8 @@ public:
 
     MEGDNN_HOST TensorIteratorOverChannel()
             : pointer{nullptr}, hw_stride_in_elements{0}, channel{0} {}
-    MEGDNN_HOST TensorIteratorOverChannel(Type* pointer_,
-                                          int hw_stride_in_elements_,
-                                          int channel_, int, int)
+    MEGDNN_HOST TensorIteratorOverChannel(
+            Type* pointer_, int hw_stride_in_elements_, int channel_, int, int)
             : pointer{pointer_},
               hw_stride_in_elements{hw_stride_in_elements_},
               channel{channel_} {}
@@ -156,8 +150,7 @@ public:
         channel -= c_idx;
     }
 
-    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(
-            size_t offset_in_type) {
+    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(size_t offset_in_type) {
         pointer += offset_in_type;
     }
 
@@ -210,13 +203,14 @@ private:
     int channel;
 };
 
-
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_ = LayoutType::NCHWx>
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_ = LayoutType::NCHWx>
 class MaskedTensorIteratorOverChannel;
 
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_>
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_>
 class MaskedTensorIteratorOverChannel {
 public:
     using Type = Type_;
@@ -240,10 +234,9 @@ public:
 
     MEGDNN_HOST MaskedTensorIteratorOverChannel()
             : pointer{nullptr}, chan_stride_in_elements{0}, channel{0} {}
-    MEGDNN_HOST MaskedTensorIteratorOverChannel(Type* pointer_,
-                                                int chan_stride_in_elements_,
-                                                int channel_, int bound_,
-                                                int div_)
+    MEGDNN_HOST MaskedTensorIteratorOverChannel(
+            Type* pointer_, int chan_stride_in_elements_, int channel_, int bound_,
+            int div_)
             : pointer{pointer_},
               chan_stride_in_elements{chan_stride_in_elements_},
               channel{channel_},
@@ -263,17 +256,16 @@ public:
             int offset = hw_idx + j;
             int h = (int)((uint32_t)(offset) / div);
             w[j] = (int)((uint32_t)(offset) % div);
-            stride[j] = (h * bound + w[j]) * pack_size * size_nbits /
-                        (8 * sizeof(Type));
+            stride[j] =
+                    (h * bound + w[j]) * pack_size * size_nbits / (8 * sizeof(Type));
         }
 #pragma unroll
         for (int i = 0; i < chan_blk; i += pack_size) {
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
                 bool guard = (i < channel) && (w[j] < bound);
-                int index = (i / pack_size) *
-                                    (lane_size_in_type / pack_size_in_type) +
-                            j;
+                int index =
+                        (i / pack_size) * (lane_size_in_type / pack_size_in_type) + j;
                 int mask_index = (index >> 5);
                 int mask_shift = (index & 0x1f);
                 mask[mask_index] |= (guard << mask_shift);
@@ -281,8 +273,7 @@ public:
         }
     }
 
-    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(
-            size_t offset_in_type) {
+    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(size_t offset_in_type) {
         pointer += offset_in_type;
     }
 
@@ -293,9 +284,8 @@ public:
         for (int i = 0; i < chan_blk; i += pack_size) {
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
-                int frag_idx = i / pack_size *
-                                       (lane_size_in_type / pack_size_in_type) +
-                               j;
+                int frag_idx =
+                        i / pack_size * (lane_size_in_type / pack_size_in_type) + j;
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
                 bool guard = (mask[mask_index] & (1 << mask_shift));
@@ -315,9 +305,8 @@ public:
         for (int i = 0; i < chan_blk; i += pack_size) {
 #pragma unroll
             for (int j = 0; j < lane_size_in_type / pack_size_in_type; j++) {
-                int frag_idx = i / pack_size *
-                                       (lane_size_in_type / pack_size_in_type) +
-                               j;
+                int frag_idx =
+                        i / pack_size * (lane_size_in_type / pack_size_in_type) + j;
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
                 bool guard = (mask[mask_index] & (1 << mask_shift));
@@ -344,10 +333,9 @@ private:
     size_t stride[lane_size_in_type / pack_size_in_type];
 };
 
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_>
-class MaskedTensorIteratorOverChannel<Type_, pack_size_, chan_blk_, width_,
-                                      size_nbits_, LayoutType::NHWC> {
+template <typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_>
+class MaskedTensorIteratorOverChannel<
+        Type_, pack_size_, chan_blk_, width_, size_nbits_, LayoutType::NHWC> {
 public:
     using Type = Type_;
     static constexpr int pack_size = pack_size_;
@@ -368,10 +356,9 @@ public:
 
     MEGDNN_HOST MaskedTensorIteratorOverChannel()
             : pointer{nullptr}, hw_stride_in_elements{0}, channel{0} {}
-    MEGDNN_HOST MaskedTensorIteratorOverChannel(Type* pointer_,
-                                                int hw_stride_in_elements_,
-                                                int channel_, int bound_,
-                                                int div_)
+    MEGDNN_HOST MaskedTensorIteratorOverChannel(
+            Type* pointer_, int hw_stride_in_elements_, int channel_, int bound_,
+            int div_)
             : pointer{pointer_},
               hw_stride_in_elements{hw_stride_in_elements_},
               channel{channel_},
@@ -402,8 +389,7 @@ public:
         }
     }
 
-    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(
-            size_t offset_in_type) {
+    MEGDNN_DEVICE __forceinline__ void add_pointer_offset(size_t offset_in_type) {
         pointer += offset_in_type;
     }
 
@@ -413,7 +399,7 @@ public:
         for (int i = 0; i < width; ++i) {
             Type* pointer_ = pointer + stride[i];
 #pragma unroll
-            for (int j = 0; j < chan_blk; j+= pack_size) {
+            for (int j = 0; j < chan_blk; j += pack_size) {
                 int frag_idx = i * (chan_blk / pack_size) + (j / pack_size);
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
@@ -433,7 +419,7 @@ public:
         for (int i = 0; i < width; ++i) {
             Type* pointer_ = pointer + stride[i];
 #pragma unroll
-            for (int j = 0; j < chan_blk; j+= pack_size) {
+            for (int j = 0; j < chan_blk; j += pack_size) {
                 int frag_idx = i * (chan_blk / pack_size) + (j / pack_size);
                 int mask_index = (frag_idx >> 5);
                 int mask_shift = (frag_idx & 0x1f);
@@ -462,40 +448,42 @@ private:
     size_t stride[width];
 };
 
-template <bool padding_, typename Type_, int pack_size_, int chan_blk_,
-          int width_, int size_nbits_,
-          uint32_t layout_type_ = LayoutType::NCHWx>
+template <
+        bool padding_, typename Type_, int pack_size_, int chan_blk_, int width_,
+        int size_nbits_, uint32_t layout_type_ = LayoutType::NCHWx>
 struct TensorIteratorPolicy;
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_>
-struct TensorIteratorPolicy<true, Type_, pack_size_, chan_blk_, width_,
-                            size_nbits_, layout_type_> {
-    using TensorIterator =
-            MaskedTensorIteratorOverChannel<Type_, pack_size_, chan_blk_,
-                                            width_, size_nbits_, layout_type_>;
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_>
+struct TensorIteratorPolicy<
+        true, Type_, pack_size_, chan_blk_, width_, size_nbits_, layout_type_> {
+    using TensorIterator = MaskedTensorIteratorOverChannel<
+            Type_, pack_size_, chan_blk_, width_, size_nbits_, layout_type_>;
 };
-template <typename Type_, int pack_size_, int chan_blk_, int width_,
-          int size_nbits_, uint32_t layout_type_>
-struct TensorIteratorPolicy<false, Type_, pack_size_, chan_blk_, width_,
-                            size_nbits_, layout_type_> {
-    using TensorIterator =
-            TensorIteratorOverChannel<Type_, pack_size_, chan_blk_, width_,
-                                      size_nbits_, layout_type_>;
+template <
+        typename Type_, int pack_size_, int chan_blk_, int width_, int size_nbits_,
+        uint32_t layout_type_>
+struct TensorIteratorPolicy<
+        false, Type_, pack_size_, chan_blk_, width_, size_nbits_, layout_type_> {
+    using TensorIterator = TensorIteratorOverChannel<
+            Type_, pack_size_, chan_blk_, width_, size_nbits_, layout_type_>;
 };
 
-template <typename SrcIterator_, typename DstIterator_, typename Transpose_,
-          typename CudaPostProcess_>
+template <
+        typename SrcIterator_, typename DstIterator_, typename Transpose_,
+        typename CudaPostProcess_>
 struct RelayoutProblem {
     using SrcIterator = SrcIterator_;
     using DstIterator = DstIterator_;
     using Transpose = Transpose_;
     using CudaPostProcess = CudaPostProcess_;
-    MEGDNN_STATIC_ASSERT(SrcIterator::chan_blk == DstIterator::chan_blk,
-                         "channel block mismatch");
-    MEGDNN_STATIC_ASSERT(SrcIterator::width == DstIterator::width,
-                         "width block mismatch");
-    MEGDNN_STATIC_ASSERT(SrcIterator::size_nbits == DstIterator::size_nbits,
-                         "size in bits of elements mismatch");
+    MEGDNN_STATIC_ASSERT(
+            SrcIterator::chan_blk == DstIterator::chan_blk, "channel block mismatch");
+    MEGDNN_STATIC_ASSERT(
+            SrcIterator::width == DstIterator::width, "width block mismatch");
+    MEGDNN_STATIC_ASSERT(
+            SrcIterator::size_nbits == DstIterator::size_nbits,
+            "size in bits of elements mismatch");
     static constexpr int pack_chan = SrcIterator::chan_blk;
     static constexpr int pack_width = SrcIterator::width;
     using DnnSrcType = typename CudaPostProcess::SrcType;
@@ -510,12 +498,10 @@ struct RelayoutProblem {
         int channels;
         int hw;
         int zero_point;
-        MEGDNN_HOST MEGDNN_DEVICE Param(SrcIterator src_iterator_,
-                                        DstIterator dst_iterator_,
-                                        CudaPostProcess post_process_,
-                                        int n_stride_src_, int n_stride_dst_,
-                                        int batch_size_, int channels_, int hw_,
-                                        int zero_point_)
+        MEGDNN_HOST MEGDNN_DEVICE
+        Param(SrcIterator src_iterator_, DstIterator dst_iterator_,
+              CudaPostProcess post_process_, int n_stride_src_, int n_stride_dst_,
+              int batch_size_, int channels_, int hw_, int zero_point_)
                 : src_iterator{src_iterator_},
                   dst_iterator{dst_iterator_},
                   post_process{post_process_},
@@ -554,8 +540,8 @@ __global__ void relayout_kern(typename RelayoutProblem_::Param param) {
         int zp = make_zero<SrcIterator::size_nbits>(param.zero_point);
         param.src_iterator.load(src_frag, zp);
         RelayoutProblem_::Transpose::trans(
-                reinterpret_cast<typename SrcIterator::Fragment&>(dst_frag),
-                src_frag, param.post_process);
+                reinterpret_cast<typename SrcIterator::Fragment&>(dst_frag), src_frag,
+                param.post_process);
         param.dst_iterator.store(dst_frag);
     }
 }

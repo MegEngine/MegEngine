@@ -41,9 +41,9 @@ using DecryptionFunc = std::function<std::vector<uint8_t>(
  *
  * \param[in] key the decryption key of the method
  */
-LITE_API bool register_decryption_and_key(std::string decrypt_name,
-                                          const DecryptionFunc& func,
-                                          const std::vector<uint8_t>& key);
+LITE_API bool register_decryption_and_key(
+        std::string decrypt_name, const DecryptionFunc& func,
+        const std::vector<uint8_t>& key);
 
 /**
  * \brief update decryption function or key of a custom decryption method.
@@ -58,9 +58,9 @@ LITE_API bool register_decryption_and_key(std::string decrypt_name,
  * \param[in] key the decryption key of the method, if the size of key is zero,
  * it will not be updated
  */
-LITE_API bool update_decryption_or_key(std::string decrypt_name,
-                                       const DecryptionFunc& func,
-                                       const std::vector<uint8_t>& key);
+LITE_API bool update_decryption_or_key(
+        std::string decrypt_name, const DecryptionFunc& func,
+        const std::vector<uint8_t>& key);
 
 /**
  * \brief Model information parse function
@@ -97,8 +97,8 @@ using ParseInfoFunc = std::function<bool(
  * information and modify the Network Config and IO.
  *
  */
-LITE_API bool register_parse_info_func(std::string info_type,
-                                       const ParseInfoFunc& parse_func);
+LITE_API bool register_parse_info_func(
+        std::string info_type, const ParseInfoFunc& parse_func);
 
 /*! \brief Get version
  */
@@ -135,8 +135,8 @@ LITE_API void set_loader_lib_path(const std::string& loader_path);
  * \param cache_path is the file path which store the cache
  * \param always_sync sync the cache when model run
  */
-LITE_API void set_persistent_cache(const std::string& cache_path,
-                                   bool always_sync = false);
+LITE_API void set_persistent_cache(
+        const std::string& cache_path, bool always_sync = false);
 
 /*!
  * \brief dump the PersistentCache policy cache to file, if the network is set

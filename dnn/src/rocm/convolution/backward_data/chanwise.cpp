@@ -10,8 +10,8 @@
  */
 
 #include "./algo.h"
-#include "src/rocm/utils.h"
 #include "src/rocm/convolution/chanwise/kern.h.hip"
+#include "src/rocm/utils.h"
 
 using namespace megdnn;
 using namespace rocm;
@@ -32,18 +32,16 @@ size_t ConvolutionBackwardDataImpl::AlgoChanwise::get_workspace_in_bytes(
     return 0;
 }
 
-void ConvolutionBackwardDataImpl::AlgoChanwise::exec(
-        const ExecArgs& args) const {
+void ConvolutionBackwardDataImpl::AlgoChanwise::exec(const ExecArgs& args) const {
     auto kparam = chanwise::Param::from_fwd_args(args.as_fwd_args());
     auto stream = hip_stream(args.handle);
     switch (args.diff_layout->dtype.enumv()) {
-#define cb(_dt)                                                         \
-    case DTypeTrait<_dt>::enumv: {                                      \
-        using ctype = DTypeTrait<_dt>::ctype;                           \
-        return chanwise::run_bwd_data(args.grad_tensor->ptr<ctype>(),   \
-                                      args.diff_tensor->ptr<ctype>(),   \
-                                      args.filter_tensor->ptr<ctype>(), \
-                                      kparam, stream);                  \
+#define cb(_dt)                                                                 \
+    case DTypeTrait<_dt>::enumv: {                                              \
+        using ctype = DTypeTrait<_dt>::ctype;                                   \
+        return chanwise::run_bwd_data(                                          \
+                args.grad_tensor->ptr<ctype>(), args.diff_tensor->ptr<ctype>(), \
+                args.filter_tensor->ptr<ctype>(), kparam, stream);              \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb

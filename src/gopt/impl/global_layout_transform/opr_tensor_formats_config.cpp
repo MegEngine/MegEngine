@@ -17,8 +17,7 @@
 
 #include "midout.h"
 MIDOUT_DECL(megbrain_opr_tensor_formats_config)
-#define MIDOUT_B(...) \
-    MIDOUT_BEGIN(megbrain_opr_tensor_formats_config, __VA_ARGS__) {
+#define MIDOUT_B(...) MIDOUT_BEGIN(megbrain_opr_tensor_formats_config, __VA_ARGS__) {
 #define MIDOUT_E \
     }            \
     MIDOUT_END();
@@ -66,8 +65,7 @@ struct OprSingleInOutTensorFormatsDispatcherImpl;
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NCHW;
@@ -82,8 +80,7 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW> {
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW4> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NCHW4;
@@ -103,8 +100,7 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW4> {
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::CHWN4> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::CHWN4;
@@ -124,8 +120,7 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::CHWN4> {
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW32> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NCHW32;
@@ -145,19 +140,16 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW32> {
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NHWC> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NHWC;
         bool available = true;
-        available &=
-                opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
-                opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
+        available &= opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                     opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
         config.input_dtypes = {opr->input(0)->dtype().enumv()};
         config.input_tensor_types = {TensorType::FEATURE};
-        available &= opr->output(0)->dtype().enumv() ==
-                     opr->input(0)->dtype().enumv();
+        available &= opr->output(0)->dtype().enumv() == opr->input(0)->dtype().enumv();
         config.output_dtypes = {opr->output(0)->dtype().enumv()};
         config.input_tensor_formats = {TensorFormats::NHWC};
         config.output_tensor_formats = {TensorFormats::NHWC};
@@ -169,19 +161,16 @@ struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NHWC> {
 
 template <>
 struct OprSingleInOutTensorFormatsDispatcherImpl<OprFormat::NCHW64> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NCHW64;
         bool available = true;
-        available &=
-                opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
-                opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
+        available &= opr->input(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                     opr->input(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
         config.input_dtypes = {opr->input(0)->dtype().enumv()};
         config.input_tensor_types = {TensorType::FEATURE};
-        available &= opr->output(0)->dtype().enumv() ==
-                     opr->input(0)->dtype().enumv();
+        available &= opr->output(0)->dtype().enumv() == opr->input(0)->dtype().enumv();
         config.output_dtypes = {opr->output(0)->dtype().enumv()};
         config.input_tensor_formats = {TensorFormats::NCHWc64};
         config.output_tensor_formats = {TensorFormats::NCHWc64};
@@ -196,8 +185,7 @@ struct ConvTensorFormatsDispatcherImpl;
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -205,26 +193,25 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW> {
         // setup dtypes
         for (size_t i = 0; i < opr->input().size(); ++i) {
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         // setup tensor formats
         if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
             config.input_tensor_formats = {
-                    TensorFormats::NCHW, TensorFormats::NCHW,
-                    TensorFormats::NCHW, TensorFormats::NCHW};
+                    TensorFormats::NCHW, TensorFormats::NCHW, TensorFormats::NCHW,
+                    TensorFormats::NCHW};
         } else {
             mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
             if (is_channel_wise_conv<Opr>(opr)) {
                 config.input_tensor_formats = {
-                        TensorFormats::NCHW, TensorFormats::C11RS,
-                        TensorFormats::NCHW, TensorFormats::NCHW};
+                        TensorFormats::NCHW, TensorFormats::C11RS, TensorFormats::NCHW,
+                        TensorFormats::NCHW};
             } else {
                 config.input_tensor_formats = {
-                        TensorFormats::NCHW, TensorFormats::GKCRS,
-                        TensorFormats::NCHW, TensorFormats::NCHW};
+                        TensorFormats::NCHW, TensorFormats::GKCRS, TensorFormats::NCHW,
+                        TensorFormats::NCHW};
             }
         }
         config.output_tensor_formats = {TensorFormats::NCHW};
@@ -234,8 +221,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW> {
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NHWC> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -243,33 +229,29 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NHWC> {
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
             if (i == 2)
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS32;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
             else {
-                bool i4_config = opr->input(i)->dtype().enumv() ==
-                                         DTypeEnum::Quantized4Asymm ||
-                                 opr->input(i)->dtype().enumv() ==
-                                         DTypeEnum::QuantizedS4;
-                bool i8_config = opr->input(i)->dtype().enumv() ==
-                                 DTypeEnum::QuantizedS8;
+                bool i4_config =
+                        opr->input(i)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                        opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS4;
+                bool i8_config =
+                        opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
                 available &= (i4_config || i8_config);
             }
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         bool i4_config =
                 opr->output(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
                 opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
-        bool i8_config =
-                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
+        bool i8_config = opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
         available &= (i4_config || i8_config);
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
-        config.input_tensor_formats = {TensorFormats::NHWC, TensorFormats::NHWC,
-                                       TensorFormats::NHWC,
-                                       TensorFormats::NHWC};
+        config.input_tensor_formats = {
+                TensorFormats::NHWC, TensorFormats::NHWC, TensorFormats::NHWC,
+                TensorFormats::NHWC};
         config.output_tensor_formats = {TensorFormats::NHWC};
         if (available)
             return config;
@@ -279,8 +261,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NHWC> {
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW4> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -289,14 +270,11 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW4> {
         // setup dtypes
         for (size_t i = 0; i < opr->input().size(); ++i) {
             if (i == 2)
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS32;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
             else
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS8;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
@@ -304,8 +282,8 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW4> {
         // setup tensor formats
         if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
             config.input_tensor_formats = {
-                    TensorFormats::NCHWc4, TensorFormats::NCHWc4,
-                    TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+                    TensorFormats::NCHWc4, TensorFormats::NCHWc4, TensorFormats::NCHWc4,
+                    TensorFormats::NCHWc4};
         } else {
             mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
             if (is_channel_wise_conv<Opr>(opr)) {
@@ -327,8 +305,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW4> {
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW32> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -336,22 +313,19 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW32> {
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
             if (i == 2)
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS32;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
             else
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS8;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         config.input_tensor_formats = {
-                TensorFormats::NCHWc32, TensorFormats::NCHWc32,
-                TensorFormats::NCHWc32, TensorFormats::NCHWc32};
+                TensorFormats::NCHWc32, TensorFormats::NCHWc32, TensorFormats::NCHWc32,
+                TensorFormats::NCHWc32};
         config.output_tensor_formats = {TensorFormats::NCHWc32};
         if (available)
             return config;
@@ -361,8 +335,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW32> {
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW64> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -370,26 +343,22 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW64> {
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
             if (i == 2)
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS32;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
             else
-                available &= opr->input(i)->dtype().enumv() ==
-                                     DTypeEnum::Quantized4Asymm ||
-                             opr->input(i)->dtype().enumv() ==
-                                     DTypeEnum::QuantizedS4;
+                available &=
+                        opr->input(i)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                        opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS4;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
-        available &=
-                opr->output(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
-                opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
+        available &= opr->output(0)->dtype().enumv() == DTypeEnum::Quantized4Asymm ||
+                     opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS4;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         config.input_tensor_formats = {
-                TensorFormats::NCHWc64, TensorFormats::NCHWc64,
-                TensorFormats::NCHWc64, TensorFormats::NCHWc64};
+                TensorFormats::NCHWc64, TensorFormats::NCHWc64, TensorFormats::NCHWc64,
+                TensorFormats::NCHWc64};
         config.output_tensor_formats = {TensorFormats::NCHWc64};
         if (available)
             return config;
@@ -399,8 +368,7 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::NCHW64> {
 
 template <typename Opr>
 struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::CHWN4> {
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -408,22 +376,19 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::CHWN4> {
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
             if (i == 2)
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS32;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS32;
             else
-                available &= opr->input(i)->dtype().enumv() ==
-                             DTypeEnum::QuantizedS8;
+                available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         config.input_tensor_formats = {
-                TensorFormats::CHWNc4, TensorFormats::CHWNc4,
-                TensorFormats::CHWNc4, TensorFormats::CHWNc4};
+                TensorFormats::CHWNc4, TensorFormats::CHWNc4, TensorFormats::CHWNc4,
+                TensorFormats::CHWNc4};
         config.output_tensor_formats = {TensorFormats::CHWNc4};
         if (available)
             return config;
@@ -432,11 +397,9 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormat::CHWN4> {
 };
 
 template <>
-struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
-                                       OprFormat::NCHW> {
+struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData, OprFormat::NCHW> {
     using Opr = opr::ConvolutionBackwardData;
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
@@ -444,26 +407,25 @@ struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
         // setup dtypes
         for (size_t i = 0; i < opr->input().size(); ++i) {
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         // setup tensor formats
         if (conv.param().sparse == Opr::Param::Sparse::DENSE) {
             config.input_tensor_formats = {
-                    TensorFormats::NCHW, TensorFormats::NCHW,
-                    TensorFormats::NCHW, TensorFormats::NCHW};
+                    TensorFormats::NCHW, TensorFormats::NCHW, TensorFormats::NCHW,
+                    TensorFormats::NCHW};
         } else {
             mgb_assert(conv.param().sparse == Opr::Param::Sparse::GROUP);
             if (is_channel_wise_conv<Opr>(opr)) {
                 config.input_tensor_formats = {
-                        TensorFormats::C11RS, TensorFormats::NCHW,
-                        TensorFormats::NCHW, TensorFormats::NCHW};
+                        TensorFormats::C11RS, TensorFormats::NCHW, TensorFormats::NCHW,
+                        TensorFormats::NCHW};
             } else {
                 config.input_tensor_formats = {
-                        TensorFormats::GKCRS, TensorFormats::NCHW,
-                        TensorFormats::NCHW, TensorFormats::NCHW};
+                        TensorFormats::GKCRS, TensorFormats::NCHW, TensorFormats::NCHW,
+                        TensorFormats::NCHW};
             }
         }
         config.output_tensor_formats = {TensorFormats::NCHW};
@@ -472,30 +434,26 @@ struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
 };
 
 template <>
-struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
-                                       OprFormat::NCHW4> {
+struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData, OprFormat::NCHW4> {
     using Opr = opr::ConvolutionBackwardData;
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
         config.opr_format = OprFormat::NCHW4;
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
-            available &=
-                    opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
+            available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == opr::ConvBias::Param::Sparse::DENSE;
         config.input_tensor_formats = {
-                TensorFormats::NCHWc4, TensorFormats::NCHWc4,
-                TensorFormats::NCHWc4, TensorFormats::NCHWc4};
+                TensorFormats::NCHWc4, TensorFormats::NCHWc4, TensorFormats::NCHWc4,
+                TensorFormats::NCHWc4};
         config.output_tensor_formats = {TensorFormats::NCHWc4};
         if (available)
             return config;
@@ -504,30 +462,26 @@ struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
 };
 
 template <>
-struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData,
-                                       OprFormat::NHWC> {
+struct ConvTensorFormatsDispatcherImpl<opr::ConvolutionBackwardData, OprFormat::NHWC> {
     using Opr = opr::ConvolutionBackwardData;
-    static Maybe<OprTensorFormatsConfiguration> dispatch(
-            const OperatorNodeBase* opr) {
+    static Maybe<OprTensorFormatsConfiguration> dispatch(const OperatorNodeBase* opr) {
         const auto& conv = opr->cast_final_safe<Opr>();
         OprTensorFormatsConfiguration config;
         config.typeinfo = opr->dyn_typeinfo();
-        config.opr_format = OprFormat::NCHW4;
+        config.opr_format = OprFormat::NHWC;
         bool available = true;
         for (size_t i = 0; i < opr->input().size(); ++i) {
-            available &=
-                    opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
+            available &= opr->input(i)->dtype().enumv() == DTypeEnum::QuantizedS8;
             config.input_dtypes.emplace_back(opr->input(i)->dtype().enumv());
-            TensorType tensor_type =
-                    i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
+            TensorType tensor_type = i == 0 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
         available &= opr->output(0)->dtype().enumv() == DTypeEnum::QuantizedS8;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == opr::ConvBias::Param::Sparse::DENSE;
-        config.input_tensor_formats = {TensorFormats::NHWC, TensorFormats::NHWC,
-                                       TensorFormats::NHWC,
-                                       TensorFormats::NHWC};
+        config.input_tensor_formats = {
+                TensorFormats::NHWC, TensorFormats::NHWC, TensorFormats::NHWC,
+                TensorFormats::NHWC};
         config.output_tensor_formats = {TensorFormats::NHWC};
         if (available)
             return config;
@@ -539,15 +493,14 @@ struct StaticData {
     struct KeyHash {
         size_t operator()(const std::pair<Typeinfo*, OprFormat>& val) const {
             size_t h1 = mgb::hash<Typeinfo*>(val.first);
-            size_t h2 =
-                    std::hash<uint32_t>()(static_cast<uint32_t>(val.second));
+            size_t h2 = std::hash<uint32_t>()(static_cast<uint32_t>(val.second));
             return mgb::hash_pair_combine(h1, h2);
         }
     };
     using OprTensorFormatsDispatcher =
             OprTensorFormatsConfiguration::OprTensorFormatsDispatcher;
-    std::unordered_map<std::pair<Typeinfo*, OprFormat>,
-                       OprTensorFormatsDispatcher, KeyHash>
+    std::unordered_map<
+            std::pair<Typeinfo*, OprFormat>, OprTensorFormatsDispatcher, KeyHash>
             typefmt2dispatcher;
     StaticData();
 };
@@ -612,10 +565,11 @@ OprTensorFormatsConfiguration::find_dispatcher_by_type_format(
         Typeinfo* type, OprFormat opr_format) {
     auto&& typefmt2dispatcher = static_data().typefmt2dispatcher;
     auto iter = typefmt2dispatcher.find(std::make_pair(type, opr_format));
-    mgb_assert(iter != typefmt2dispatcher.end(),
-               "cannot find OprTensorFormatsDispatcher for opr type(%s) and "
-               "opr format(%s)",
-               type->name, opr_format_to_string(opr_format));
+    mgb_assert(
+            iter != typefmt2dispatcher.end(),
+            "cannot find OprTensorFormatsDispatcher for opr type(%s) and "
+            "opr format(%s)",
+            type->name, opr_format_to_string(opr_format));
     return &iter->second;
 }
 

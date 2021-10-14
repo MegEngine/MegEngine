@@ -21,12 +21,11 @@ static __global__ void kern(uint64_t cycles) {
     }
 }
 
-}
+}  // namespace
 
 void megdnn::cuda::sleep(cudaStream_t stream, uint64_t cycles) {
-    kern<<< 1, 1, 0, stream >>>(cycles);
+    kern<<<1, 1, 0, stream>>>(cycles);
     after_kernel_launch();
 }
 
 // vim: syntax=cpp.doxygen
-

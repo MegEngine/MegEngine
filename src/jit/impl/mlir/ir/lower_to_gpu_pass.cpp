@@ -48,8 +48,8 @@ struct GpuLoweringHelper {
         builder.setInsertionPoint(&(m_for_op->getLoopBody().front().back()));
     }
 
-    std::vector<Value> map_indices(OpBuilder& builder, Location loc,
-                                   Value value) const {
+    std::vector<Value> map_indices(
+            OpBuilder& builder, Location loc, Value value) const {
         auto type = value.getType().dyn_cast_or_null<MemRefType>();
         if (!type) {
             return {m_index};
@@ -85,13 +85,13 @@ private:
 /* ===================== conversion patterns ===================== */
 
 struct AssignOpLowering : public ConversionPattern, public GpuLoweringHelper {
-    AssignOpLowering(MLIRContext* ctx, scf::ForOp* for_op, mlir::Value index,
-                     const Layout& dest)
+    AssignOpLowering(
+            MLIRContext* ctx, scf::ForOp* for_op, mlir::Value index, const Layout& dest)
             : ConversionPattern(dialect::AssignOp::getOperationName(), 2, ctx),
               GpuLoweringHelper(for_op, index, dest) {}
 
-    LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
-                                  Rewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands, Rewriter& rewriter) const final {
         auto loc = op->getLoc();
         set_insertion_point(rewriter);
 
@@ -104,16 +104,15 @@ struct AssignOpLowering : public ConversionPattern, public GpuLoweringHelper {
     }
 };
 
-struct ConstantScalarOpLowering
-        : public OpRewritePattern<dialect::ConstantScalarOp>,
-          public GpuLoweringHelper {
-    ConstantScalarOpLowering(MLIRContext* ctx, scf::ForOp* for_op, Value index,
-                             const Layout& dest)
+struct ConstantScalarOpLowering : public OpRewritePattern<dialect::ConstantScalarOp>,
+                                  public GpuLoweringHelper {
+    ConstantScalarOpLowering(
+            MLIRContext* ctx, scf::ForOp* for_op, Value index, const Layout& dest)
             : OpRewritePattern<dialect::ConstantScalarOp>(ctx),
               GpuLoweringHelper(for_op, index, dest) {}
 
-    LogicalResult matchAndRewrite(dialect::ConstantScalarOp op,
-                                  PatternRewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            dialect::ConstantScalarOp op, PatternRewriter& rewriter) const final {
         set_insertion_point(rewriter);
         rewriter.replaceOpWithNewOp<mlir::ConstantOp>(op, op.value());
         return success();
@@ -121,10 +120,9 @@ struct ConstantScalarOpLowering
 };
 
 struct DimshuffleLowering : public ConversionPattern, public GpuLoweringHelper {
-    DimshuffleLowering(MLIRContext* ctx, scf::ForOp* for_op, Value index,
-                       const Layout& dest)
-            : ConversionPattern(dialect::Dimshuffle::getOperationName(), 1,
-                                ctx),
+    DimshuffleLowering(
+            MLIRContext* ctx, scf::ForOp* for_op, Value index, const Layout& dest)
+            : ConversionPattern(dialect::Dimshuffle::getOperationName(), 1, ctx),
               GpuLoweringHelper(for_op, index, dest) {}
 
     static std::vector<mlir::Value> get_index_from_pattern(
@@ -141,8 +139,8 @@ struct DimshuffleLowering : public ConversionPattern, public GpuLoweringHelper {
         return res;
     }
 
-    LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
-                                  Rewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands, Rewriter& rewriter) const final {
         auto loc = op->getLoc();
         set_insertion_point(rewriter);
 
@@ -150,43 +148,41 @@ struct DimshuffleLowering : public ConversionPattern, public GpuLoweringHelper {
         auto index = map_indices(rewriter, loc, operands[0]);
         auto shuffled_index = get_index_from_pattern(pattern, index);
 
-        rewriter.replaceOp(op, get_operand<LoadOp>(rewriter, loc, operands[0],
-                                                   shuffled_index));
+        rewriter.replaceOp(
+                op, get_operand<LoadOp>(rewriter, loc, operands[0], shuffled_index));
         return success();
     }
 };
 
 struct ElemwiseLowering : public ConversionPattern, public GpuLoweringHelper {
-    ElemwiseLowering(MLIRContext* ctx, scf::ForOp* for_op, Value index,
-                     const Layout& dest)
+    ElemwiseLowering(
+            MLIRContext* ctx, scf::ForOp* for_op, Value index, const Layout& dest)
             : ConversionPattern(dialect::Elemwise::getOperationName(), 1, ctx),
               GpuLoweringHelper(for_op, index, dest) {}
 
-    LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
-                                  Rewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands, Rewriter& rewriter) const final {
         auto loc = op->getLoc();
         set_insertion_point(rewriter);
 
         // currently Elemwise handles at most three operands
-        auto inputs = llvm::to_vector<4>(
-                llvm::map_range(operands, [&](mlir::Value val) {
+        auto inputs =
+                llvm::to_vector<4>(llvm::map_range(operands, [&](mlir::Value val) {
                     auto index = map_indices(rewriter, loc, val);
                     return get_operand<LoadOp>(rewriter, loc, val, index);
                 }));
 
-        rewriter.replaceOp(op,
-                           lower_elemwise_to_std(op, rewriter, loc, inputs));
+        rewriter.replaceOp(op, lower_elemwise_to_std(op, rewriter, loc, inputs));
         return success();
     }
 };
 
 struct ReturnOpLowering : public ConversionPattern {
     ReturnOpLowering(MLIRContext* ctx, scf::ForOp*, Value, const Layout&)
-            : ConversionPattern(dialect::ReturnOp::getOperationName(), 1, ctx) {
-    }
+            : ConversionPattern(dialect::ReturnOp::getOperationName(), 1, ctx) {}
 
-    LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value>,
-                                  Rewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value>, Rewriter& rewriter) const final {
         rewriter.setInsertionPointToEnd(op->getBlock());
         rewriter.replaceOpWithNewOp<gpu::ReturnOp>(op);
         return success();
@@ -194,13 +190,13 @@ struct ReturnOpLowering : public ConversionPattern {
 };
 
 struct TypeCvtLowering : public ConversionPattern, public GpuLoweringHelper {
-    TypeCvtLowering(MLIRContext* ctx, scf::ForOp* for_op, Value index,
-                    const Layout& dest)
+    TypeCvtLowering(
+            MLIRContext* ctx, scf::ForOp* for_op, Value index, const Layout& dest)
             : ConversionPattern(dialect::TypeCvt::getOperationName(), 1, ctx),
               GpuLoweringHelper(for_op, index, dest) {}
 
-    LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
-                                  Rewriter& rewriter) const final {
+    LogicalResult matchAndRewrite(
+            Operation* op, ArrayRef<Value> operands, Rewriter& rewriter) const final {
         auto loc = op->getLoc();
         set_insertion_point(rewriter);
 
@@ -225,8 +221,7 @@ private:
     Layout get_dest_layout(FuncOp func_op);
 };
 
-void MgbToGpuLoweringPass::getDependentDialects(
-        DialectRegistry& registry) const {
+void MgbToGpuLoweringPass::getDependentDialects(DialectRegistry& registry) const {
     registry.insert<gpu::GPUDialect, scf::SCFDialect, StandardOpsDialect>();
 }
 
@@ -255,13 +250,13 @@ void MgbToGpuLoweringPass::runOnOperation() {
     Value for_idx = for_op.getInductionVar();
 
     OwningRewritePatternList patterns;
-    patterns.insert<AssignOpLowering, ConstantScalarOpLowering,
-                    DimshuffleLowering, ElemwiseLowering, ReturnOpLowering,
-                    TypeCvtLowering>(&getContext(), &for_op, for_idx, dest);
+    patterns
+            .insert<AssignOpLowering, ConstantScalarOpLowering, DimshuffleLowering,
+                    ElemwiseLowering, ReturnOpLowering, TypeCvtLowering>(
+                    &getContext(), &for_op, for_idx, dest);
 
     ConversionTarget target(getContext());
-    target.addLegalDialect<gpu::GPUDialect, scf::SCFDialect,
-                           StandardOpsDialect>();
+    target.addLegalDialect<gpu::GPUDialect, scf::SCFDialect, StandardOpsDialect>();
     target.addIllegalDialect<MgbDialect>();
 
     if (failed(applyPartialConversion(func_op, target, std::move(patterns)))) {
@@ -271,15 +266,14 @@ void MgbToGpuLoweringPass::runOnOperation() {
     // create GPUModuleOp
     std::string kernel_name = func_op.getName().str() + "_kernel";
     builder.setInsertionPoint(func_op);
-    gpu::GPUModuleOp gpu_module_op =
-            builder.create<gpu::GPUModuleOp>(loc, kernel_name);
+    gpu::GPUModuleOp gpu_module_op = builder.create<gpu::GPUModuleOp>(loc, kernel_name);
 
     // create GPUFuncOp
     builder.setInsertionPointToStart(&gpu_module_op.body().front());
     gpu::GPUFuncOp gpu_func_op =
             builder.create<gpu::GPUFuncOp>(loc, kernel_name, func_op.getType());
-    gpu_func_op.setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                        builder.getUnitAttr());
+    gpu_func_op.setAttr(
+            gpu::GPUDialect::getKernelFuncAttrName(), builder.getUnitAttr());
 
     // move func body
     gpu_func_op.body().takeBody(func_op.getBody());

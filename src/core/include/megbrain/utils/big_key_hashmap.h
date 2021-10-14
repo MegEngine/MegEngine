@@ -148,8 +148,7 @@ public:
     KeyTuple() = default;
     KeyTuple(KeyTuple&& rhs) { swap(rhs); }
 
-    KeyTuple(const Key& key)
-            : m_key{key}, m_hash{HashEq::hash(m_key.visit())} {}
+    KeyTuple(const Key& key) : m_key{key}, m_hash{HashEq::hash(m_key.visit())} {}
 
     ~KeyTuple() {
         if (m_own) {
@@ -174,8 +173,7 @@ public:
     }
 
     bool operator==(const KeyTuple& rhs) const {
-        return m_hash == rhs.m_hash &&
-               HashEq::eq(m_key.visit(), rhs.m_key.visit());
+        return m_hash == rhs.m_hash && HashEq::eq(m_key.visit(), rhs.m_key.visit());
     }
 
     size_t hash() const { return m_hash; }
@@ -194,10 +192,8 @@ public:
     KeyTuple() = default;
     KeyTuple(KeyTuple&& rhs) { swap(rhs); }
 
-    KeyTuple(const Key& key, const Others&... others)
-            : Super(others...), m_key{key} {
-        this->m_hash =
-                hash_pair_combine(this->m_hash, HashEq::hash(m_key.visit()));
+    KeyTuple(const Key& key, const Others&... others) : Super(others...), m_key{key} {
+        this->m_hash = hash_pair_combine(this->m_hash, HashEq::hash(m_key.visit()));
     }
 
     ~KeyTuple() {
@@ -224,8 +220,7 @@ public:
     }
 
     bool operator==(const KeyTuple& rhs) const {
-        return Super::operator==(rhs) &&
-               HashEq::eq(m_key.visit(), rhs.m_key.visit());
+        return Super::operator==(rhs) && HashEq::eq(m_key.visit(), rhs.m_key.visit());
     }
 
     using Super::hash;
@@ -251,4 +246,3 @@ std::pair<bool, Value*> BigKeyHashMap<Value, HashEq, Keys...>::get(
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

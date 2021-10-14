@@ -21,8 +21,7 @@ TEST_F(ATLAS, CHECKSUM_FORWARD) {
     auto atlas_opr = handle_atlas()->create_operator<megdnn::Checksum>(),
          naive_opr = handle_naive()->create_operator<megdnn::Checksum>();
     std::mt19937 rng(std::random_device{}());
-    for (size_t size :
-         {3, 8, 4 * 4 * 1024, 12345, 1024 * 1024, 1024 * 1024 * 10}) {
+    for (size_t size : {3, 8, 4 * 4 * 1024, 12345, 1024 * 1024, 1024 * 1024 * 10}) {
         auto aligned_size = size + ((512 - size % 512) % 512);
         auto run = [&](megdnn::Checksum* opr, void* ptr, bool log_size) {
             TensorND tensor;
@@ -53,14 +52,12 @@ TEST_F(ATLAS, CHECKSUM_FORWARD) {
                 megdnn_memcpy_H2D(handle_atlas(), dev_buf, buf.data(), size);
                 res_cambricon[change_last] =
                         run(atlas_opr.get(), dev_buf, !change_last);
-                res_naive[change_last] =
-                        run(naive_opr.get(), buf.data(), false);
+                res_naive[change_last] = run(naive_opr.get(), buf.data(), false);
             }
 
             megdnn_free(handle_atlas(), dev_ptr);
 
-            ASSERT_EQ(res_naive[0], res_cambricon[0])
-                    << "failed for size " << size;
+            ASSERT_EQ(res_naive[0], res_cambricon[0]) << "failed for size " << size;
             ASSERT_EQ(res_naive[1], res_cambricon[1]);
             ASSERT_NE(res_cambricon[0], res_cambricon[1]);
         };

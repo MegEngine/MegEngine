@@ -72,24 +72,20 @@ void GraphPartition::InputPlaceholder::init_output_static_infer_desc() {
     auto&& mgr = owner_graph()->static_infer_manager();
     if (m_infer_shp.ndim == 0) {
         auto infer_shape = [](TensorShape&, const InpVal&) { return false; };
-        mgr.register_shape_infer(output(0),
-                                 {SourceType::MUTABLE, {}, infer_shape});
+        mgr.register_shape_infer(output(0), {SourceType::MUTABLE, {}, infer_shape});
     } else {
-        mgr.register_shape_infer(output(0),
-                                 ShapeInferDesc::make_const(m_infer_shp));
+        mgr.register_shape_infer(output(0), ShapeInferDesc::make_const(m_infer_shp));
     }
 
     if (m_infer_val == nullptr) {
         auto infer_value = [](DeviceTensorND&, const InpVal&) { return false; };
-        mgr.register_value_infer(output(0),
-                                 {SourceType::MUTABLE, {}, infer_value});
+        mgr.register_value_infer(output(0), {SourceType::MUTABLE, {}, infer_value});
     } else {
         auto infer_value = [this](DeviceTensorND& dest, const InpVal&) {
             dest.copy_from(*m_infer_val).sync();
             return true;
         };
-        mgr.register_value_infer(output(0),
-                                 {SourceType::CONSTANT, {}, infer_value});
+        mgr.register_value_infer(output(0), {SourceType::CONSTANT, {}, infer_value});
     }
 }
 
@@ -135,14 +131,15 @@ std::shared_ptr<json::Value> GraphPartition::to_json() const {
         return objptr;
     };
 
-    return json::Object::make({{"operator", dump_node_coll(all_opr_node)},
-                               {"var", dump_node_coll(all_var_node)},
-                               {"comp_seq", comp_seq}});
+    return json::Object::make(
+            {{"operator", dump_node_coll(all_opr_node)},
+             {"var", dump_node_coll(all_var_node)},
+             {"comp_seq", comp_seq}});
 }
 #endif
 
-std::pair<VarNodeArray, VarNodeArray>
-GraphPartition::replace_graph_by_placeholder() const {
+std::pair<VarNodeArray, VarNodeArray> GraphPartition::replace_graph_by_placeholder()
+        const {
     ThinHashMap<VarNode*, VarNode*> old2new;
     auto graph_partition_copy_opr_shallow = [](OperatorNodeBase* opr,
                                                const VarNodeArray& inps) {
@@ -179,12 +176,11 @@ GraphPartition::replace_graph_by_placeholder() const {
                     dval_ptr = mgr.infer_value_fallible(o);
                 }
                 if (dval_ptr) {
-                    hval.reset(new HostTensorND(CompNode::default_cpu(),
-                                                dval_ptr->dtype()));
+                    hval.reset(new HostTensorND(
+                            CompNode::default_cpu(), dval_ptr->dtype()));
                     hval->resize(dval_ptr->shape()).copy_from(*dval_ptr).sync();
                 }
-                new_o = InputPlaceholder::make(o, infer_shp, std::move(hval))
-                                .node();
+                new_o = InputPlaceholder::make(o, infer_shp, std::move(hval)).node();
                 placeholders.push_back(new_o);
             } else {
                 new_i.clear();
@@ -227,8 +223,8 @@ std::vector<GraphPartition> SubGraphExtractor::extract(
             return p;
         }
     };
-    auto union_merge = [&parent, &union_find](OperatorNodeBase* x,
-                                              OperatorNodeBase* y) {
+    auto union_merge = [&parent, &union_find](
+                               OperatorNodeBase* x, OperatorNodeBase* y) {
         auto root_x = union_find(x), root_y = union_find(y);
         if (root_x != root_y) {
             OperatorNodeBase *large, *small;
@@ -286,8 +282,7 @@ std::vector<GraphPartition> SubGraphExtractor::extract(
             GraphPartition* partition = nullptr;
             if (find == roots.end()) {
                 partitions.emplace_back(GraphPartition{});
-                auto insert =
-                        roots.insert(std::make_pair(root, &partitions.back()));
+                auto insert = roots.insert(std::make_pair(root, &partitions.back()));
                 partition = insert.first->second;
                 for (auto&& o : opr->output()) {
                     if (!o->contain_flag(cg::VarNode::Flag::VOLATILE_CONTENT))

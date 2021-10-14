@@ -33,8 +33,8 @@ struct global_load;
 // initialize data to zero before ld.global
 template <typename AccessType>
 struct global_load<AccessType, 32> {
-    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
-                                              bool pred_guard, int val = 0) {
+    MEGDNN_DEVICE __forceinline__
+    global_load(AccessType& D, void const* ptr, bool pred_guard, int val = 0) {
         uint4* data = reinterpret_cast<uint4*>(&D);
 
         asm volatile(
@@ -52,19 +52,17 @@ struct global_load<AccessType, 32> {
                 "  @p ld.global.v4.u32 {%0, %1, %2, %3}, [%8];\n"
                 "  @p ld.global.v4.u32 {%4, %5, %6, %7}, [%11];\n"
                 "}\n"
-                : "=r"(data[0].x), "=r"(data[0].y), "=r"(data[0].z),
-                  "=r"(data[0].w), "=r"(data[1].x), "=r"(data[1].y),
-                  "=r"(data[1].z), "=r"(data[1].w)
-                : "l"(ptr), "r"((int)pred_guard),
-                  "r"(reinterpret_cast<unsigned&>(val)),
+                : "=r"(data[0].x), "=r"(data[0].y), "=r"(data[0].z), "=r"(data[0].w),
+                  "=r"(data[1].x), "=r"(data[1].y), "=r"(data[1].z), "=r"(data[1].w)
+                : "l"(ptr), "r"((int)pred_guard), "r"(reinterpret_cast<unsigned&>(val)),
                   "l"(((uint8_t*)ptr) + 16));
     }
 };
 
 template <typename AccessType>
 struct global_load<AccessType, 16> {
-    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
-                                              bool pred_guard, int val) {
+    MEGDNN_DEVICE __forceinline__
+    global_load(AccessType& D, void const* ptr, bool pred_guard, int val) {
         uint4& data = reinterpret_cast<uint4&>(D);
 
         asm volatile(
@@ -85,8 +83,8 @@ struct global_load<AccessType, 16> {
 
 template <typename AccessType>
 struct global_load<AccessType, 8> {
-    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
-                                              bool pred_guard, int val) {
+    MEGDNN_DEVICE __forceinline__
+    global_load(AccessType& D, void const* ptr, bool pred_guard, int val) {
         uint2& data = reinterpret_cast<uint2&>(D);
 
         asm volatile(
@@ -105,8 +103,8 @@ struct global_load<AccessType, 8> {
 
 template <typename AccessType>
 struct global_load<AccessType, 4> {
-    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
-                                              bool pred_guard, int val) {
+    MEGDNN_DEVICE __forceinline__
+    global_load(AccessType& D, void const* ptr, bool pred_guard, int val) {
         unsigned& data = reinterpret_cast<unsigned&>(D);
 
         asm volatile(
@@ -124,8 +122,8 @@ struct global_load<AccessType, 4> {
 
 template <typename AccessType>
 struct global_load<AccessType, 1> {
-    MEGDNN_DEVICE __forceinline__ global_load(AccessType& D, void const* ptr,
-                                              bool pred_guard, int val) {
+    MEGDNN_DEVICE __forceinline__
+    global_load(AccessType& D, void const* ptr, bool pred_guard, int val) {
         if (pred_guard)
             D = *(reinterpret_cast<AccessType const*>(ptr));
         else {
@@ -152,8 +150,8 @@ struct global_store;
 
 template <typename AccessType>
 struct global_store<AccessType, 32> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         uint4 const* data = reinterpret_cast<uint4 const*>(&D);
 
         asm volatile(
@@ -165,16 +163,15 @@ struct global_store<AccessType, 32> {
                 "}\n"
                 :
                 : "l"(ptr), "r"(data[0].x), "r"(data[0].y), "r"(data[0].z),
-                  "r"(data[0].w), "r"((int)pred_guard),
-                  "l"(((uint8_t*)ptr) + 16), "r"(data[1].x), "r"(data[1].y),
-                  "r"(data[1].z), "r"(data[1].w));
+                  "r"(data[0].w), "r"((int)pred_guard), "l"(((uint8_t*)ptr) + 16),
+                  "r"(data[1].x), "r"(data[1].y), "r"(data[1].z), "r"(data[1].w));
     }
 };
 
 template <typename AccessType>
 struct global_store<AccessType, 16> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         uint4 const& data = reinterpret_cast<uint4 const&>(D);
         asm volatile(
                 "{\n"
@@ -190,8 +187,8 @@ struct global_store<AccessType, 16> {
 
 template <typename AccessType>
 struct global_store<AccessType, 8> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         uint2 const& data = reinterpret_cast<uint2 const&>(D);
         asm volatile(
                 "{\n"
@@ -206,8 +203,8 @@ struct global_store<AccessType, 8> {
 
 template <typename AccessType>
 struct global_store<AccessType, 4> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         uint32_t const& data = reinterpret_cast<uint32_t const&>(D);
         asm volatile(
                 "{\n"
@@ -222,8 +219,8 @@ struct global_store<AccessType, 4> {
 
 template <typename AccessType>
 struct global_store<AccessType, 2> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         uint16_t const& data = reinterpret_cast<uint16_t const&>(D);
         asm volatile(
                 "{\n"
@@ -238,8 +235,8 @@ struct global_store<AccessType, 2> {
 
 template <typename AccessType>
 struct global_store<AccessType, 1> {
-    MEGDNN_DEVICE __forceinline__ global_store(AccessType const& D, void* ptr,
-                                               bool pred_guard) {
+    MEGDNN_DEVICE __forceinline__
+    global_store(AccessType const& D, void* ptr, bool pred_guard) {
         if (pred_guard)
             *(reinterpret_cast<AccessType*>(ptr)) = D;
     }

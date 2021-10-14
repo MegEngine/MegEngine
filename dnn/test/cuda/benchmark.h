@@ -10,10 +10,10 @@
  */
 #pragma once
 
-#include "test/common/rng.h"
-#include "test/common/benchmarker.h"
-#include "test/cuda/timer.h"
 #include "megcore_cuda.h"
+#include "test/common/benchmarker.h"
+#include "test/common/rng.h"
+#include "test/cuda/timer.h"
 
 namespace megdnn {
 namespace test {
@@ -22,8 +22,7 @@ template <typename Opr>
 class Benchmarker<Opr, CUTimer> : public BenchmarkerBase<Opr, CUTimer> {
 public:
     Benchmarker(Handle* handle)
-            : BenchmarkerBase<Opr, CUTimer>{handle,
-                                            CUTimer{m_stream, m_evt0, m_evt1}} {
+            : BenchmarkerBase<Opr, CUTimer>{handle, CUTimer{m_stream, m_evt0, m_evt1}} {
         cudaEventCreate(&m_evt0);
         cudaEventCreate(&m_evt1);
         megcoreGetCUDAStream(handle->megcore_computing_handle(), &m_stream);

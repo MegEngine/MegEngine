@@ -9,14 +9,14 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
+#include <immintrin.h>
 #include "megdnn/arch.h"
 #include "megdnn/basic_types.h"
-#include <immintrin.h>
 #ifdef WIN32
-#include <avxintrin.h>
-#include <smmintrin.h>
 #include <avx2intrin.h>
+#include <avxintrin.h>
 #include <fmaintrin.h>
+#include <smmintrin.h>
 #endif
 
 #include <cstddef>
@@ -33,8 +33,7 @@ __m256 sin256_ps(__m256 x) MEGDNN_ATTRIBUTE_TARGET("avx2");
 
 __m256 cos256_ps(__m256 x) MEGDNN_ATTRIBUTE_TARGET("avx2");
 
-void sincos256_ps(__m256 x, __m256* s, __m256* c)
-        MEGDNN_ATTRIBUTE_TARGET("avx2");
+void sincos256_ps(__m256 x, __m256* s, __m256* c) MEGDNN_ATTRIBUTE_TARGET("avx2");
 
 }  // namespace detail
 }  // namespace x86

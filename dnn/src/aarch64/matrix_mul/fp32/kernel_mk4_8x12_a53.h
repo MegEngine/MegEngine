@@ -44,8 +44,9 @@ struct matmul_mk4_8x12_a53 {
     //  +--+   ---  -  +--------+--------+--------+
     //
     //                        Accumulator
-    static void kern_8x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k) {
+    static void kern_8x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         float* output0 = output;
@@ -553,11 +554,11 @@ struct matmul_mk4_8x12_a53 {
                   [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
                   [output0] "+r"(output0), [output1] "+r"(output1)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27",
-                  "v28", "v29", "v30", "v31", "x1", "x2", "x8", "x9", "x10",
-                  "x11", "x12", "x13", "cc", "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20",
+                  "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30",
+                  "v31", "x1", "x2", "x8", "x9", "x10", "x11", "x12", "x13", "cc",
+                  "memory");
     }
 
     // Overview of register layout:
@@ -587,9 +588,9 @@ struct matmul_mk4_8x12_a53 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_8x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k,
-                         int n_remain) {
+    static void kern_8x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int n_remain) {
         const float* a_ptr = packA;
         const float* b_ptr = packB;
         float* output0 = output;
@@ -831,8 +832,8 @@ struct matmul_mk4_8x12_a53 {
                   [output0] "+r"(output0), [output1] "+r"(output1),
                   [n_remain] "+r"(n_remain)
                 :
-                : "v0", "v1", "v2", "v3", "v8", "v9", "v10", "v11", "v12",
-                  "v13", "v14", "v15", "x8", "x9", "x10", "cc", "memory");
+                : "v0", "v1", "v2", "v3", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
+                  "v15", "x8", "x9", "x10", "cc", "memory");
 
 #undef LOAD_C
 #undef STORE_C
@@ -862,8 +863,9 @@ struct matmul_mk4_8x12_a53 {
     //
     //                        Accumulator
 
-    static void kern_4x12(const float* packA, const float* packB, int K,
-                          float* output, int LDC, bool is_first_k) {
+    static void kern_4x12(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k) {
         MEGDNN_MARK_USED_VAR(LDC);
         const float* a_ptr = packA;
         const float* b_ptr = packB;
@@ -1098,9 +1100,9 @@ struct matmul_mk4_8x12_a53 {
                   [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
                   [output0] "+r"(output0)
                 :
-                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9",
-                  "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
-                  "v19", "x1", "x8", "x9", "x10", "x11", "x12", "cc", "memory");
+                : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
+                  "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "x1",
+                  "x8", "x9", "x10", "x11", "x12", "cc", "memory");
     }
 
     // Overview of register layout:
@@ -1126,9 +1128,9 @@ struct matmul_mk4_8x12_a53 {
     //  +--+   ---  -  +--------+
     //
     //                        Accumulator
-    static void kern_4x4(const float* packA, const float* packB, int K,
-                         float* output, int LDC, bool is_first_k,
-                         int n_remain) {
+    static void kern_4x4(
+            const float* packA, const float* packB, int K, float* output, int LDC,
+            bool is_first_k, int n_remain) {
         MEGDNN_MARK_USED_VAR(LDC);
         const float* a_ptr = packA;
         const float* b_ptr = packB;
@@ -1246,8 +1248,7 @@ struct matmul_mk4_8x12_a53 {
                   [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk),
                   [output0] "+r"(output0), [n_remain] "+r"(n_remain)
                 :
-                : "v0", "v1", "v2", "v3", "v8", "v9", "v10", "v11", "cc",
-                  "memory");
+                : "v0", "v1", "v2", "v3", "v8", "v9", "v10", "v11", "cc", "memory");
 
 #undef LOAD_C
 #undef STORE_C

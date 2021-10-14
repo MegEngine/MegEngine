@@ -19,19 +19,16 @@ using namespace cg;
 
 void StaticMemAllocBestFit::do_solve() {
     BestFitHelper helper;
-    helper.alloc = [this](Interval *p) {
+    helper.alloc = [this](Interval* p) {
         p->addr_begin = this->alloc_aligned_addr(p->size);
     };
-    helper.alloc_overwrite = [this](Interval *dest,
-            size_t offset, Interval *p) {
+    helper.alloc_overwrite = [this](Interval* dest, size_t offset, Interval* p) {
         this->free(dest->addr_begin);
         auto addr = dest->addr_begin + offset;
         this->alloc_placement(addr, p->size);
         p->addr_begin = addr;
     };
-    helper.free = [this](Interval *p) {
-        this->free(p->addr_begin);
-    };
+    helper.free = [this](Interval* p) { this->free(p->addr_begin); };
     helper.run(m_interval);
 }
 
@@ -47,10 +44,8 @@ size_t StaticMemAllocBestFit::alloc_aligned_addr(size_t size) {
         return rst;
     }
     auto aiter = iter->aiter();
-    auto alloc_addr = iter->addr_aligned,
-         chk_addr = aiter->first,
-         chk_size = aiter->second.size,
-         offset = alloc_addr - chk_addr;
+    auto alloc_addr = iter->addr_aligned, chk_addr = aiter->first,
+         chk_size = aiter->second.size, offset = alloc_addr - chk_addr;
     remove_free_by_aiter(aiter);
     mgb_assert(align(chk_addr) == alloc_addr && size + offset <= chk_size);
     insert_free({chk_addr, offset});
@@ -61,7 +56,7 @@ size_t StaticMemAllocBestFit::alloc_aligned_addr(size_t size) {
 
 void StaticMemAllocBestFit::alloc_placement(size_t addr, size_t size) {
     auto iter = m_free_by_addr.upper_bound(addr);
-    -- iter;
+    --iter;
     auto chk_addr = iter->first, chk_size = iter->second.size;
     mgb_assert(chk_addr <= addr && chk_addr + chk_size >= addr + size);
     remove_free_by_aiter(iter);
@@ -83,7 +78,7 @@ void StaticMemAllocBestFit::merge_free_and_insert(Chunk chk) {
     // merge with prev
     if (iter != m_free_by_addr.begin()) {
         auto iprev = iter;
-        -- iprev;
+        --iprev;
         if (iprev->second.size + iprev->first == chk.addr) {
             chk.addr = iprev->first;
             chk.size += iprev->second.size;
@@ -109,14 +104,14 @@ void StaticMemAllocBestFit::remove_free_by_aiter(FreeByAddrIter aiter) {
     m_free_by_addr.erase(aiter);
 }
 
-void StaticMemAllocBestFit::insert_free(const Chunk &chk) {
+void StaticMemAllocBestFit::insert_free(const Chunk& chk) {
     if (!chk.size)
         return;
 
     auto addr_align = align(chk.addr), offset = addr_align - chk.addr;
     size_t size_align = 0;
     if (offset < chk.size)
-         size_align = chk.size - offset;
+        size_align = chk.size - offset;
 
     auto ins0 = m_free_by_addr.insert({chk.addr, FreeBlockByAddr{chk}});
     mgb_assert(ins0.second);
@@ -124,14 +119,12 @@ void StaticMemAllocBestFit::insert_free(const Chunk &chk) {
         auto ins1 = m_free_by_size_addr_align.insert({addr_align, size_align});
         mgb_assert(ins1.second);
         ins0.first->second.siter = ins1.first;
-        const_cast<FreeBlockBySizeAddrAligned&>(*ins1.first).aiter() =
-            ins0.first;
+        const_cast<FreeBlockBySizeAddrAligned&>(*ins1.first).aiter() = ins0.first;
     } else {
         ins0.first->second.siter = m_free_by_size_addr_align.end();
     }
 }
 
-#endif // !MGB_BUILD_SLIM_SERVING
+#endif  // !MGB_BUILD_SLIM_SERVING
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

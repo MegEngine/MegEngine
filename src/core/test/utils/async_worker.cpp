@@ -26,15 +26,13 @@ TEST(TestAsyncWorker, AsyncWorkerSet) {
     milliseconds sleep_time(40);
     AsyncWorkerSet worker_set;
     int val0 = 0, val1 = 0;
-    worker_set.add_worker("worker0",
-        [&](){
-            val0 ++;
-            std::this_thread::sleep_for(sleep_time);
+    worker_set.add_worker("worker0", [&]() {
+        val0++;
+        std::this_thread::sleep_for(sleep_time);
     });
-    worker_set.add_worker("worker1",
-        [&](){
-            val1 ++;
-            std::this_thread::sleep_for(sleep_time);
+    worker_set.add_worker("worker1", [&]() {
+        val1++;
+        std::this_thread::sleep_for(sleep_time);
     });
 
     mgb_assert(val0 == 0 && val1 == 0);
@@ -54,19 +52,17 @@ TEST(TestAsyncWorker, AsyncWorkerSet) {
 }
 
 TEST(TestAsyncWorker, FutureThreadPool) {
-    auto worker = [](int n) {
-        return n * n;
-    };
+    auto worker = [](int n) { return n * n; };
     FutureThreadPool<int> pool;
     pool.start(3);
     std::vector<std::future<int>> futures;
-    for (int i = 0; i < 1000; ++ i)
+    for (int i = 0; i < 1000; ++i)
         futures.emplace_back(pool.launch(worker, i));
 
-    for (auto &&i: futures)
+    for (auto&& i : futures)
         i.wait();
 
-    for (int i = 0; i < 1000; ++ i)
+    for (int i = 0; i < 1000; ++i)
         ASSERT_EQ(i * i, futures[i].get());
 
     auto sleep = []() {
@@ -76,9 +72,9 @@ TEST(TestAsyncWorker, FutureThreadPool) {
     };
     futures.clear();
     RealTimer timer;
-    for (int i = 0; i < 6; ++ i)
+    for (int i = 0; i < 6; ++i)
         futures.push_back(pool.launch(sleep));
-    for (auto &&i: futures)
+    for (auto&& i : futures)
         i.get();
     auto time = timer.get_secs();
     ASSERT_GT(time, 0.19);
@@ -87,22 +83,20 @@ TEST(TestAsyncWorker, FutureThreadPool) {
 
 #if MGB_ENABLE_EXCEPTION
 TEST(TestAsyncWorker, AsyncWorkerSetException) {
-
     RealTimer timer;
     {
         AsyncWorkerSet worker_set;
         std::atomic_bool worker1_started{false};
-        worker_set.add_worker("worker0",
-                [&](){
-                while(!worker1_started.load());
-                throw std::runtime_error("exception test");
-                });
-        worker_set.add_worker("worker1",
-                [&](){
-                worker1_started.store(true);
-                using namespace std::literals;
-                std::this_thread::sleep_for(100ms);
-                });
+        worker_set.add_worker("worker0", [&]() {
+            while (!worker1_started.load())
+                ;
+            throw std::runtime_error("exception test");
+        });
+        worker_set.add_worker("worker1", [&]() {
+            worker1_started.store(true);
+            using namespace std::literals;
+            std::this_thread::sleep_for(100ms);
+        });
 
         timer.reset();
         worker_set.start();
@@ -121,14 +115,14 @@ TEST(TestAsyncWorker, FutureThreadPoolException) {
     FutureThreadPool<int> pool;
     pool.start(3);
     std::vector<std::future<int>> futures;
-    for (int i = 0; i < 100; ++ i)
+    for (int i = 0; i < 100; ++i)
         futures.emplace_back(pool.launch(worker, i));
 
-    for (auto &&i: futures)
+    for (auto&& i : futures)
         i.wait();
 
     ASSERT_THROW(futures[0].get(), std::runtime_error);
-    for (int i = 1; i < 100; ++ i)
+    for (int i = 1; i < 100; ++i)
         ASSERT_EQ(i * i, futures[i].get());
 
     auto sleep = []() {
@@ -138,9 +132,9 @@ TEST(TestAsyncWorker, FutureThreadPoolException) {
     };
     futures.clear();
     RealTimer timer;
-    for (int i = 0; i < 6; ++ i)
+    for (int i = 0; i < 6; ++i)
         futures.push_back(pool.launch(sleep));
-    for (auto &&i: futures)
+    for (auto&& i : futures)
         i.get();
     auto time = timer.get_secs();
     ASSERT_GT(time, 0.19);

@@ -10,9 +10,9 @@
  */
 
 #include "./graph_opt.h"
+#include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
-#include "megbrain/opr/basic_arith.h"
 #include "megbrain/serialization/serializer.h"
 
 using namespace mgb;
@@ -20,17 +20,17 @@ using namespace cg;
 
 constexpr size_t MAX_CONST_FOLDING_SIZE = 1024;
 
-OperatorNodeBase* GraphOptimizer::insert_pre(OperatorNodeBase *opr) {
+OperatorNodeBase* GraphOptimizer::insert_pre(OperatorNodeBase* opr) {
     auto hash = opr->hash();
     auto iter = m_opr_hash_list.find(hash);
     if (iter != m_opr_hash_list.end()) {
-        for (auto i: iter->second) {
+        for (auto i : iter->second) {
             if (i->is_same(*opr)) {
                 if (opr->owner_graph()->options().log_level >= 2) {
-                    mgb_log_debug("opr %s{%s} already exists as %s, "
+                    mgb_log_debug(
+                            "opr %s{%s} already exists as %s, "
                             "do not insert again",
-                            opr->cname(), opr->dyn_typeinfo()->name,
-                            i->cname());
+                            opr->cname(), opr->dyn_typeinfo()->name, i->cname());
                 }
                 mgb_assert(i->output().size() == opr->output().size());
                 if (opr->usable_output().size() == 1) {
@@ -45,12 +45,12 @@ OperatorNodeBase* GraphOptimizer::insert_pre(OperatorNodeBase *opr) {
     return nullptr;
 }
 
-OperatorNodeBase* GraphOptimizer::insert_post(OperatorNodeBase *opr) {
+OperatorNodeBase* GraphOptimizer::insert_post(OperatorNodeBase* opr) {
     bool already_inserted = false;
     auto hash = opr->hash();
     auto iter = m_opr_hash_list.find(hash);
     if (iter != m_opr_hash_list.end()) {
-        for (auto i: iter->second) {
+        for (auto i : iter->second) {
             if (i->is_same(*opr)) {
                 already_inserted = true;
                 // If the hash of the operator to be saved is already saved in
@@ -69,15 +69,17 @@ OperatorNodeBase* GraphOptimizer::insert_post(OperatorNodeBase *opr) {
 
 #if !MGB_BUILD_SLIM_SERVING
     // For eager mode, return the original opr without the opt pass
-    if (opr->owner_graph()->options().eager_evaluation) return opr;
+    if (opr->owner_graph()->options().eager_evaluation)
+        return opr;
 #endif
 
     OperatorNodeBase* ret = nullptr;
-    static const std::array<OperatorNodeBase* (GraphOptimizer::*) (VarNode*), 3> passes = {
-            &GraphOptimizer::merge_bcast,
-            &GraphOptimizer::swap_typecvt_and_bcast,
-            &GraphOptimizer::replace_const_var,
-    };
+    static const std::array<OperatorNodeBase* (GraphOptimizer::*)(VarNode*), 3> passes =
+            {
+                    &GraphOptimizer::merge_bcast,
+                    &GraphOptimizer::swap_typecvt_and_bcast,
+                    &GraphOptimizer::replace_const_var,
+            };
 
     for (auto pass : passes) {
         if (opr->usable_output().size() > 1)
@@ -128,17 +130,16 @@ OperatorNodeBase* GraphOptimizer::swap_typecvt_and_bcast(VarNode* var) {
     if (!is_const_var_value(var))
         return nullptr;
 
-    auto oprs = match_oprs_in_chain(var, opr::TypeCvt::typeinfo(),
-                                    opr::Broadcast::typeinfo());
+    auto oprs = match_oprs_in_chain(
+            var, opr::TypeCvt::typeinfo(), opr::Broadcast::typeinfo());
     if (!oprs.valid())
         return nullptr;
 
     auto opr = oprs->first;
     auto prev_opr = oprs->second;
-    auto new_cvt =
-            opr::TypeCvt::make(prev_opr->input(0), var->dtype(), opr->config());
-    auto new_bcast = opr::Broadcast::make(new_cvt, prev_opr->output(0)->shape(),
-                                          prev_opr->config());
+    auto new_cvt = opr::TypeCvt::make(prev_opr->input(0), var->dtype(), opr->config());
+    auto new_bcast = opr::Broadcast::make(
+            new_cvt, prev_opr->output(0)->shape(), prev_opr->config());
     return new_bcast.node()->owner_opr();
 }
 

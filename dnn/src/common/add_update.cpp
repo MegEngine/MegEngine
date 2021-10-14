@@ -16,13 +16,13 @@
 
 namespace megdnn {
 
-void AddUpdateForward::check_exec(const TensorLayout& dst,
-                                  const TensorLayout& delta) {
+void AddUpdateForward::check_exec(const TensorLayout& dst, const TensorLayout& delta) {
     // delta can not be broadcasted to dst if dst.total_nr_elems() <
     // delta.total_nr_elems()
-    megdnn_assert(dst.dtype == delta.dtype &&
-                  dst.total_nr_elems() >= delta.total_nr_elems() &&
-                  dst.is_non_overlapping_strong());
+    megdnn_assert(
+            dst.dtype == delta.dtype &&
+            dst.total_nr_elems() >= delta.total_nr_elems() &&
+            dst.is_non_overlapping_strong());
     if (dst.dtype.category() == DTypeCategory::INT) {
         auto check_fv = [](float fv) {
             int iv = fv;

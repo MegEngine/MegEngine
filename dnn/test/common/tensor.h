@@ -11,9 +11,9 @@
 
 #pragma once
 
+#include <gtest/gtest.h>
 #include "megdnn/basic_types.h"
 #include "megdnn/handle.h"
-#include <gtest/gtest.h>
 
 #include <memory>
 #include "test/common/comparator.h"
@@ -94,18 +94,17 @@ private:
 };
 
 //! make a device tensor on handle by value on host tensor
-std::shared_ptr<TensorND> make_tensor_h2d(Handle* handle,
-                                          const TensorND& htensor);
+std::shared_ptr<TensorND> make_tensor_h2d(Handle* handle, const TensorND& htensor);
 
 //! make a host tensor from device tensor on handle
-std::shared_ptr<TensorND> make_tensor_d2h(Handle* handle,
-                                          const TensorND& dtensor);
+std::shared_ptr<TensorND> make_tensor_d2h(Handle* handle, const TensorND& dtensor);
 
 //! load tensors onto host from file (can be dumpped by megbrain tests)
 std::vector<std::shared_ptr<TensorND>> load_tensors(const char* fpath);
 
-void init_gaussian(SyncedTensor<dt_float32>& tensor, dt_float32 mean = 0.0f,
-                   dt_float32 stddev = 1.0f);
+void init_gaussian(
+        SyncedTensor<dt_float32>& tensor, dt_float32 mean = 0.0f,
+        dt_float32 stddev = 1.0f);
 
 }  // namespace test
 }  // namespace megdnn

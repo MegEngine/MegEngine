@@ -10,64 +10,56 @@
  */
 #include "test/cpu/fixture.h"
 
-#include "test/common/pooling.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/pooling.h"
 
 namespace megdnn {
 namespace test {
 
-TEST_F(CPU, POOLING)
-{
+TEST_F(CPU, POOLING) {
     auto args = pooling::get_args();
     using Format = param::Pooling::Format;
-    for (auto dtype: std::vector<DType>{dtype::Int8(), dtype::Float32()})
-    for (Format format: {Format::NCHW, Format::NHWC})
-    for (auto &&arg: args) {
-        auto param = arg.param;
-        auto src = arg.ishape;
-        Checker<Pooling> checker(handle());
-        param.format = format;
-        if (param.format == Format::NHWC) {
-            src = cvt_src_or_dst_nchw2nhwc(src);
-        }
-        checker.set_param(param)
-            .set_dtype(0, dtype)
-            .set_dtype(1, dtype)
-            .exec(TensorShapeArray{
-                src, {}});
-    }
+    for (auto dtype : std::vector<DType>{dtype::Int8(), dtype::Float32()})
+        for (Format format : {Format::NCHW, Format::NHWC})
+            for (auto&& arg : args) {
+                auto param = arg.param;
+                auto src = arg.ishape;
+                Checker<Pooling> checker(handle());
+                param.format = format;
+                if (param.format == Format::NHWC) {
+                    src = cvt_src_or_dst_nchw2nhwc(src);
+                }
+                checker.set_param(param).set_dtype(0, dtype).set_dtype(1, dtype).exec(
+                        TensorShapeArray{src, {}});
+            }
 }
 
-TEST_F(CPU, POOLING_INT)
-{
+TEST_F(CPU, POOLING_INT) {
     UniformIntRNG rng(0, 255);
     for (int modeflag = 0; modeflag < 2; ++modeflag) {
         param::Pooling param;
-        param.mode = modeflag ? param::Pooling::Mode::AVERAGE :
-            param::Pooling::Mode::MAX;
+        param.mode =
+                modeflag ? param::Pooling::Mode::AVERAGE : param::Pooling::Mode::MAX;
         param.window_h = param.window_w = 2;
         param.stride_h = param.stride_w = 2;
         param.pad_h = param.pad_w = 0;
         std::vector<size_t> sizes = {10, 12, 13, 15, 20, 63};
-        for (size_t ih: sizes)
-        for (size_t iw: sizes)
-        {
-            Checker<Pooling> checker(handle());
-            checker.set_rng(0, &rng);
-            checker.set_rng(1, &rng);
-            checker.set_rng(2, &rng);
-            checker.set_dtype(0, dtype::Int8());
-            checker.set_dtype(1, dtype::Int8());
-            checker.set_param(param).exec(TensorShapeArray{
-                    {2, 3, ih, iw}, {}});
-        }
+        for (size_t ih : sizes)
+            for (size_t iw : sizes) {
+                Checker<Pooling> checker(handle());
+                checker.set_rng(0, &rng);
+                checker.set_rng(1, &rng);
+                checker.set_rng(2, &rng);
+                checker.set_dtype(0, dtype::Int8());
+                checker.set_dtype(1, dtype::Int8());
+                checker.set_param(param).exec(TensorShapeArray{{2, 3, ih, iw}, {}});
+            }
     }
 }
 
 #if MEGDNN_WITH_BENCHMARK
-TEST_F(CPU, BENCHMARK_POOLING_INT)
-{
+TEST_F(CPU, BENCHMARK_POOLING_INT) {
     UniformIntRNG rng(0, 255);
     for (int modeflag = 0; modeflag < 2; ++modeflag) {
         param::Pooling param;
@@ -101,9 +93,7 @@ TEST_F(CPU, BENCHMARK_POOLING_INT)
 }
 #endif
 
-} // namespace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-
-

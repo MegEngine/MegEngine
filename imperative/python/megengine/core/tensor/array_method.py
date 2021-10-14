@@ -61,6 +61,7 @@ def _elwise(*args, mode):
         _ElwMod.H_SWISH,
         _ElwMod.SIGMOID,
         _ElwMod.SIN,
+        _ElwMod.LOG_SUM_EXP,
     ) and (
         amp._enabled or np.all([np.issubdtype(arg.dtype, np.integer) for arg in args])
     ):

@@ -1,8 +1,8 @@
 #include "megbrain_build_config.h"
 
-#include "megbrain/opr/zmq_rpc.h"
 #include "megbrain/common.h"
 #include "megbrain/exception.h"
+#include "megbrain/opr/zmq_rpc.h"
 
 #include <unistd.h>
 #include <cassert>
@@ -89,13 +89,11 @@ void ZmqRpcWorker::work(string uid) {
 
 void ZmqRpcWorker::add_worker() {
     int size = m_worker_threads.size();
-    m_worker_threads.emplace_back(
-            [this, size] { this->work(to_string(size)); });
+    m_worker_threads.emplace_back([this, size] { this->work(to_string(size)); });
     ++m_runable;
 }
 
-ZmqRpcServer::ZmqRpcServer(string address, int port,
-                           unique_ptr<ZmqRpcServerImpl> impl)
+ZmqRpcServer::ZmqRpcServer(string address, int port, unique_ptr<ZmqRpcServerImpl> impl)
         : m_ctx(1),
           m_impl(std::move(impl)),
           m_address(address),
@@ -112,23 +110,26 @@ ZmqRpcServer::ZmqRpcServer(string address, int port,
         m_port = 0;
         int pow = 1, len = strlen(full_addr);
         for (int i = len - 1; i >= 0; i--) {
-            if (full_addr[i] == ':') break;
+            if (full_addr[i] == ':')
+                break;
             m_port += (full_addr[i] - '0') * pow;
             pow *= 10;
         }
-    } catch(...) {
+    } catch (...) {
         m_port = -1;
     }
     m_backend.bind("inproc://workers");
 }
 
 void ZmqRpcServer::run() {
-    if(m_port == -1) return;
+    if (m_port == -1)
+        return;
     m_main_thread = make_unique<thread>([this] { this->work(); });
 }
 
 void ZmqRpcServer::close() {
-    if(m_port == -1) return;
+    if (m_port == -1)
+        return;
     m_stop = true;
     if (m_main_thread->joinable())
         m_main_thread->join();
@@ -139,8 +140,8 @@ void ZmqRpcServer::work() {
     m_workers.run();
     queue<string> worker_queue;
     while (!m_stop) {
-        zmq_pollitem_t items[] = {{m_backend, 0, ZMQ_POLLIN, 0},
-                                  {m_frontend, 0, ZMQ_POLLIN, 0}};
+        zmq_pollitem_t items[] = {
+                {m_backend, 0, ZMQ_POLLIN, 0}, {m_frontend, 0, ZMQ_POLLIN, 0}};
         int ret_code = zmq_poll(items, !worker_queue.empty() ? 2 : 1, 10);
         if (ret_code == -1)
             continue;
@@ -154,7 +155,7 @@ void ZmqRpcServer::work() {
             DISCARD_RETVAL(m_backend.recv(empty));
             assert(empty.size() == 0);
 
-	    // the third frame is READY or a client address
+            // the third frame is READY or a client address
             message_t client_address;
             DISCARD_RETVAL(m_backend.recv(client_address));
             string tmp((char*)client_address.data(), client_address.size());

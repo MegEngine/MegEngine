@@ -39,9 +39,9 @@ namespace matmul_4x8x8 {
  *
  *                            Accumulator
  */
-static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, size_t m_remain,
-                     uint8_t za, uint8_t zb) {
+static void kern_4x8(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain, uint8_t za, uint8_t zb) {
     K /= 8;
     const uint8_t* a_ptr = packA;
     const uint8_t* b_ptr = packB;
@@ -207,15 +207,14 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
             "bne 2b\n"
 
             "3:\n" STORE_C
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
-              [x0] "+r"(x0), [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k),
-              [m_remain] "+r"(m_remain), [za] "+r"(za), [zb] "+r"(zb),
-              [outptr] "+r"(outptr)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K), [x0] "+r"(x0),
+              [LDC] "+r"(LDC), [is_first_k] "+r"(is_first_k), [m_remain] "+r"(m_remain),
+              [za] "+r"(za), [zb] "+r"(zb), [outptr] "+r"(outptr)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "r2", "r3", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "r2", "r3", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -247,9 +246,9 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
  *
  *                            Accumulator
  */
-static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, size_t m_remain,
-                     size_t n_remain, uint8_t za, uint8_t zb) {
+static void kern_4x4(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, size_t m_remain, size_t n_remain, uint8_t za, uint8_t zb) {
     K /= 8;
     const uint8_t* a_ptr = packA;
     const uint8_t* b_ptr = packB;
@@ -416,13 +415,13 @@ static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
             "3:\n" STORE_C
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [outptr] "+r"(outptr),
               [K] "+r"(K), [is_first_k] "+r"(is_first_k), [LDC] "+r"(LDC),
-              [x0] "+r"(x0), [m_remain] "+r"(m_remain),
-              [n_remain] "+r"(n_remain), [za] "+r"(za), [zb] "+r"(zb)
+              [x0] "+r"(x0), [m_remain] "+r"(m_remain), [n_remain] "+r"(n_remain),
+              [za] "+r"(za), [zb] "+r"(zb)
             :
-            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10",
-              "d11", "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19",
-              "d20", "d21", "d22", "d23", "d24", "d25", "d26", "d27", "d28",
-              "d29", "d30", "d31", "r1", "cc", "memory");
+            : "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "d10", "d11",
+              "d12", "d13", "d14", "d15", "d16", "d17", "d18", "d19", "d20", "d21",
+              "d22", "d23", "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31",
+              "r1", "cc", "memory");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -430,9 +429,9 @@ static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_u8_4x8_pack_A_n(dt_uint8* outptr, const dt_uint8* inptr,
-                                 int ldin, int y0, int ymax, int k0, int kmax,
-                                 uint8_t zero_point) {
+static void gemm_u8_4x8_pack_A_n(
+        dt_uint8* outptr, const dt_uint8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax, uint8_t zero_point) {
     uint8_t zerobuff[16];
     std::fill(zerobuff, zerobuff + 16, zero_point);
 
@@ -485,15 +484,14 @@ static void gemm_u8_4x8_pack_A_n(dt_uint8* outptr, const dt_uint8* inptr,
                         megdnn_assert(0);
                 }
             }
-            interleave_4(inptr0, inptr1, inptr2, inptr3, outptr, 8, K,
-                         zero_point);
+            interleave_4(inptr0, inptr1, inptr2, inptr3, outptr, 8, K, zero_point);
         }
     }
 }
 
-static void gemm_u8_4x8_transpose_pack_A_n(dt_uint8* out, const dt_uint8* in,
-                                           int ldin, int x0, int xmax, int k0,
-                                           int kmax, uint8_t zero_point) {
+static void gemm_u8_4x8_transpose_pack_A_n(
+        dt_uint8* out, const dt_uint8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        uint8_t zero_point) {
     uint8_t zerobuff[16];
     std::fill(zerobuff, zerobuff + 16, zero_point);
     const int ksize = kmax - k0;
@@ -552,8 +550,9 @@ static void gemm_u8_4x8_transpose_pack_A_n(dt_uint8* out, const dt_uint8* in,
                 }
             }
 
-            transpose_4x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                              inptr6, inptr7, outptr);
+            transpose_4x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
             outptr += ksize4;
         }
 
@@ -586,17 +585,18 @@ static void gemm_u8_4x8_transpose_pack_A_n(dt_uint8* out, const dt_uint8* in,
                 }
             }
 
-            transpose_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                        inptr7, outptr, 4, xmax - x, zero_point);
+            transpose_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 4, xmax - x, zero_point);
         }
 
         outptr_base += 4 * 8;
     }
 }
 
-static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
-                                 int x0, int xmax, int k0, int kmax,
-                                 uint8_t zero_point) {
+static void gemm_u8_4x8_pack_B_n(
+        dt_uint8* out, const dt_uint8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        uint8_t zero_point) {
     uint8_t zerobuff[16];
     std::fill(zerobuff, zerobuff + 16, zero_point);
     const int ksize = kmax - k0;
@@ -658,8 +658,9 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
                 }
             }
             outptr_interleave = outptr;
-            interleave_8x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr += ksize8;
         }
 
@@ -694,8 +695,9 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
             }
 
             outptr_interleave = outptr;
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr_interleave, 4, 4, zero_point);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave, 4, 4, zero_point);
             outptr += ksize4;
         }
 
@@ -729,8 +731,9 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
             }
 
             outptr_interleave = outptr;
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr_interleave, 4, xmax - x, zero_point);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave, 4, xmax - x, zero_point);
         }
 
         outptr_base += 8 * 8;
@@ -738,10 +741,9 @@ static void gemm_u8_4x8_pack_B_n(dt_uint8* out, const dt_uint8* in, int ldin,
     }
 }
 
-static void gemm_u8_4x8_transpose_pack_B_n(dt_uint8* outptr,
-                                           const dt_uint8* inptr, int ldin,
-                                           int y0, int ymax, int k0, int kmax,
-                                           uint8_t zero_point) {
+static void gemm_u8_4x8_transpose_pack_B_n(
+        dt_uint8* outptr, const dt_uint8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax, uint8_t zero_point) {
     uint8_t zerobuff[16];
     std::fill(zerobuff, zerobuff + 16, zero_point);
     constexpr int interleave4 = 32;
@@ -769,14 +771,16 @@ static void gemm_u8_4x8_transpose_pack_B_n(dt_uint8* outptr,
 
         int K = kmax - k0;
         for (; K > 7; K -= 8) {
-            transpose_8x8_1_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                              inptr6, inptr7, outptr);
+            transpose_8x8_1_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
             outptr += interleave8;
         }
 
         if (K > 0) {
-            transpose_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                        inptr7, outptr, 8, K, zero_point);
+            transpose_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 8, K, zero_point);
             outptr += interleave8;
         }
     }
@@ -830,8 +834,7 @@ static void gemm_u8_4x8_transpose_pack_B_n(dt_uint8* outptr,
                         megdnn_assert(0);
                 }
             }
-            transpose_4(inptr0, inptr1, inptr2, inptr3, outptr, 8, K,
-                        zero_point);
+            transpose_4(inptr0, inptr1, inptr2, inptr3, outptr, 8, K, zero_point);
             outptr += interleave4;
         }
     }

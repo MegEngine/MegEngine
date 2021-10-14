@@ -64,13 +64,12 @@ static inline T get_aligned_power2(T val, T align) {
  * \brief check float equal within given ULP(unit in the last place)
  */
 template <class T>
-static inline
-        typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
-        almost_equal(T x, T y, int unit_last_place = 1) {
+static inline typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+almost_equal(T x, T y, int unit_last_place = 1) {
     return
 
-            std::abs(x - y) < (std::numeric_limits<T>::epsilon() *
-                               std::abs(x + y) * unit_last_place) ||
+            std::abs(x - y) < (std::numeric_limits<T>::epsilon() * std::abs(x + y) *
+                               unit_last_place) ||
             std::abs(x - y) < std::numeric_limits<T>::min();
 }
 

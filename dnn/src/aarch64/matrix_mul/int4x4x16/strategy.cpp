@@ -10,9 +10,9 @@
  * implied.
  */
 
+#include "src/aarch64/matrix_mul/int4x4x16/strategy.h"
 #include "src/aarch64/matrix_mul/asm/common.h"
 #include "src/aarch64/matrix_mul/int4x4x16/kernel_int4_8x8x8.h"
-#include "src/aarch64/matrix_mul/int4x4x16/strategy.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/common/utils.h"
 #include "src/fallback/matrix_mul/gemm_common.h"
@@ -23,39 +23,38 @@ using namespace aarch64::matmul;
 
 // ===========================gemm_s4x4x16_s4_8x8x8==================================
 MEGDNN_REG_GEMM_STRATEGY_IMPL(gemm_s4x4x16_s4_8x8x8);
-void gemm_s4x4x16_s4_8x8x8::pack_A(dt_int8* out, const dt_int8* in, int ldin, int y0,
-                              int ymax, int k0, int kmax,
-                              bool transpose) const {
+void gemm_s4x4x16_s4_8x8x8::pack_A(
+        dt_int8* out, const dt_int8* in, int ldin, int y0, int ymax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
-        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_interleave_pack(out, in, ldin, y0, ymax, k0,
-                                                 kmax);
+        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_interleave_pack(
+                out, in, ldin, y0, ymax, k0, kmax);
     } else {
-        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_transpose_pack(out, in, ldin, y0, ymax, k0,
-                                                 kmax);
+        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_transpose_pack(
+                out, in, ldin, y0, ymax, k0, kmax);
     }
 }
 
-void gemm_s4x4x16_s4_8x8x8::pack_B(dt_int8* out, const dt_int8* in, int ldin, int x0,
-                              int xmax, int k0, int kmax,
-                              bool transpose) const {
+void gemm_s4x4x16_s4_8x8x8::pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose) const {
     if (transpose) {
-        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_transpose_pack(out, in, ldin, x0, xmax, k0,
-                                                 kmax);
+        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_transpose_pack(
+                out, in, ldin, x0, xmax, k0, kmax);
     } else {
-        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_interleave_pack(out, in, ldin, x0, xmax, k0,
-                                                 kmax);
+        matmul_s4_4x4x16::gemm_s4x4x16_8x8x8_interleave_pack(
+                out, in, ldin, x0, xmax, k0, kmax);
     }
 }
 
-void gemm_s4x4x16_s4_8x8x8::kern(const dt_int8* packA, const dt_int8* packB,
-                            size_t M, size_t N, size_t K, dt_int16* C,
-                            size_t LDC, bool is_first_k, const dt_int16*,
-                            dt_int16*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                          (A_dtype.enumv() == DTypeEnum::QuantizedS4 &&
-                           C_dtype.enumv() == DTypeEnum::QuantizedS16),
-                  "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(),
-                  C_dtype.name());
+void gemm_s4x4x16_s4_8x8x8::kern(
+        const dt_int8* packA, const dt_int8* packB, size_t M, size_t N, size_t K,
+        dt_int16* C, size_t LDC, bool is_first_k, const dt_int16*, dt_int16*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() &&
+                    (A_dtype.enumv() == DTypeEnum::QuantizedS4 &&
+                     C_dtype.enumv() == DTypeEnum::QuantizedS16),
+            "A: %s B: %s C: %s", A_dtype.name(), B_dtype.name(), C_dtype.name());
     MEGDNN_MARK_USED_VAR(A_dtype);
     MEGDNN_MARK_USED_VAR(B_dtype);
     MEGDNN_MARK_USED_VAR(C_dtype);
@@ -72,16 +71,17 @@ void gemm_s4x4x16_s4_8x8x8::kern(const dt_int8* packA, const dt_int8* packB,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n + B_INTERLEAVE - 1 < N; n += B_INTERLEAVE) {
-            matmul_s4_4x4x16::s4_kern_8x8(packA, cur_packB, K, output, LDC,
-                                    is_first_k, A_INTERLEAVE, B_INTERLEAVE);
+            matmul_s4_4x4x16::s4_kern_8x8(
+                    packA, cur_packB, K, output, LDC, is_first_k, A_INTERLEAVE,
+                    B_INTERLEAVE);
             output += B_INTERLEAVE;
             cur_packB += K8;
         }
 
         for (; n < N; n += B_INTERLEAVE) {
-            matmul_s4_4x4x16::s4_kern_8x8_remain(packA, cur_packB, K, output, LDC,
-                                    is_first_k, A_INTERLEAVE,
-                                    std::min<size_t>(N - n, B_INTERLEAVE));
+            matmul_s4_4x4x16::s4_kern_8x8_remain(
+                    packA, cur_packB, K, output, LDC, is_first_k, A_INTERLEAVE,
+                    std::min<size_t>(N - n, B_INTERLEAVE));
             output += B_INTERLEAVE;
             cur_packB += K8;
         }
@@ -94,16 +94,15 @@ void gemm_s4x4x16_s4_8x8x8::kern(const dt_int8* packA, const dt_int8* packB,
         size_t n = 0;
         const dt_int8* cur_packB = packB;
         for (; n < N; n += B_INTERLEAVE) {
-            matmul_s4_4x4x16::s4_kern_8x8_remain(packA, cur_packB, K, output, LDC,
-                                    is_first_k,
-                                    std::min<size_t>(M - m, A_INTERLEAVE),
-                                    std::min<size_t>(N - n, B_INTERLEAVE));
+            matmul_s4_4x4x16::s4_kern_8x8_remain(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(M - m, A_INTERLEAVE),
+                    std::min<size_t>(N - n, B_INTERLEAVE));
             output += B_INTERLEAVE;
             cur_packB += K8;
         }
         packA += K8;
     }
 }
-
 
 // vim: syntax=cpp.doxygen

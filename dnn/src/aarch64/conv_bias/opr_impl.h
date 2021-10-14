@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "src/common/utils.h"
 #include "src/arm_common/conv_bias/opr_impl.h"
+#include "src/common/utils.h"
 
 namespace megdnn {
 namespace aarch64 {

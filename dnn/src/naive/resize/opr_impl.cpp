@@ -77,8 +77,7 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
         ret.ow = dst.layout.shape[3];
     }
     if (src.layout.dtype.enumv() == DTypeEnum::Float32 ||
-        DNN_FLOAT16_SELECT(src.layout.dtype.enumv() == DTypeEnum::Float16,
-                           false) ||
+        DNN_FLOAT16_SELECT(src.layout.dtype.enumv() == DTypeEnum::Float16, false) ||
         src.layout.dtype.enumv() == DTypeEnum::Int8 ||
         src.layout.dtype.enumv() == DTypeEnum::Uint8 ||
         src.layout.dtype.enumv() == DTypeEnum::QuantizedS8 ||
@@ -86,8 +85,9 @@ ResizeImpl::KernParam<ctype> ResizeImpl::KernParam<ctype>::from_tensors(
         ret.sptr = src.compatible_ptr<ctype>();
         ret.dptr = dst.compatible_ptr<ctype>();
     } else {
-        megdnn_assert(0, "current do not support dtype %s in resize",
-                      src.layout.dtype.name());
+        megdnn_assert(
+                0, "current do not support dtype %s in resize",
+                src.layout.dtype.name());
     }
     ret.workspace = workspace;
     return ret;
@@ -107,8 +107,8 @@ INST(dt_quint8);
 #undef INST
 
 template <typename ctype>
-void ResizeImpl::kern_nchw(const KernParam<ctype>& kern_param,
-                           InterpolationMode imode) {
+void ResizeImpl::kern_nchw(
+        const KernParam<ctype>& kern_param, InterpolationMode imode) {
     megdnn_assert(kern_param.format == Format::NCHW);
     UNPACK_RESIZE_FWD_KERN_PARAM_WITH_STRIDE(kern_param);
     float scale_h = static_cast<float>(OH) / IH;
@@ -132,21 +132,17 @@ void ResizeImpl::kern_nchw(const KernParam<ctype>& kern_param,
                     int ih0, ih1, iw0, iw1;
                     float ah0, ah1, aw0, aw1;
 
-                    std::tie(ah0, ih0, ah1, ih1) = get_nearest_linear_coord(
-                            kern_param.imode, scale_h, IH, oh);
-                    std::tie(aw0, iw0, aw1, iw1) = get_nearest_linear_coord(
-                            kern_param.imode, scale_w, IW, ow);
+                    std::tie(ah0, ih0, ah1, ih1) =
+                            get_nearest_linear_coord(kern_param.imode, scale_h, IH, oh);
+                    std::tie(aw0, iw0, aw1, iw1) =
+                            get_nearest_linear_coord(kern_param.imode, scale_w, IW, ow);
 
                     rep(c, static_cast<int>(C)) {
                         dptr[c * OH * OW + oh * OW + ow] = output_converter(
-                                sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] * ah0 *
-                                        aw0 +
-                                sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] * ah0 *
-                                        aw1 +
-                                sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] * ah1 *
-                                        aw0 +
-                                sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] * ah1 *
-                                        aw1);
+                                sptr[c * S_IC + ih0 * S_IH + iw0 * S_IW] * ah0 * aw0 +
+                                sptr[c * S_IC + ih0 * S_IH + iw1 * S_IW] * ah0 * aw1 +
+                                sptr[c * S_IC + ih1 * S_IH + iw0 * S_IW] * ah1 * aw0 +
+                                sptr[c * S_IC + ih1 * S_IH + iw1 * S_IW] * ah1 * aw1);
                     }
                     break;
                 }
@@ -174,8 +170,7 @@ void ResizeImpl::kern_nchw(const KernParam<ctype>& kern_param,
                                        h_coeff[kh] * w_coeff[kw];
                             }
                         }
-                        dptr[c * OH * OW + oh * OW + ow] =
-                                output_converter(ret);
+                        dptr[c * OH * OW + oh * OW + ow] = output_converter(ret);
                     }
                     break;
                 }
@@ -322,14 +317,10 @@ void ResizeImpl::kern_naive_nchwx(const KernParam<ctype>& kern_param) {
 
             rep(c, C) {
                 dptr[get_tensor_addr(oh, ow, c, OH, OW, C)] = output_converter(
-                        sptr[get_tensor_addr(ih0, iw0, c, IH, IW, C)] * ah0 *
-                                aw0 +
-                        sptr[get_tensor_addr(ih0, iw1, c, IH, IW, C)] * ah0 *
-                                aw1 +
-                        sptr[get_tensor_addr(ih1, iw0, c, IH, IW, C)] * ah1 *
-                                aw0 +
-                        sptr[get_tensor_addr(ih1, iw1, c, IH, IW, C)] * ah1 *
-                                aw1);
+                        sptr[get_tensor_addr(ih0, iw0, c, IH, IW, C)] * ah0 * aw0 +
+                        sptr[get_tensor_addr(ih0, iw1, c, IH, IW, C)] * ah0 * aw1 +
+                        sptr[get_tensor_addr(ih1, iw0, c, IH, IW, C)] * ah1 * aw0 +
+                        sptr[get_tensor_addr(ih1, iw1, c, IH, IW, C)] * ah1 * aw1);
             }
         }
         sptr += IH * IW * C;
@@ -337,8 +328,8 @@ void ResizeImpl::kern_naive_nchwx(const KernParam<ctype>& kern_param) {
     }
 }
 
-void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                      _megdnn_workspace workspace) {
+void ResizeImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     if (param().format == param::Resize::Format::NCHW) {
 #define cb(dt, ct, _midout_iv)                                              \
@@ -360,9 +351,10 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
             cb(dtype::Uint8, uint8_t, 4);
             cb(dtype::Quantized8Asymm, uint8_t, 5);
             default:
-                megdnn_throw(ssprintf("Unsupported input DType in Resize "
-                                      "NEAREST mode: %s",
-                                      src.layout.dtype.name())
+                megdnn_throw(ssprintf(
+                                     "Unsupported input DType in Resize "
+                                     "NEAREST mode: %s",
+                                     src.layout.dtype.name())
                                      .c_str());
                 return;
         }
@@ -392,25 +384,26 @@ void ResizeImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
             cb(dtype::Uint8, uint8_t, 4);
             cb(dtype::Quantized8Asymm, uint8_t, 5);
             default:
-                megdnn_throw(ssprintf("Unsupported input DType in Resize: %s",
-                                      src.layout.dtype.name())
+                megdnn_throw(ssprintf(
+                                     "Unsupported input DType in Resize: %s",
+                                     src.layout.dtype.name())
                                      .c_str());
                 return;
         }
 
 #undef cb
     } else {
-        megdnn_assert(param().format == param::Resize::Format::NHWC,
-                      "invalid resize format");
+        megdnn_assert(
+                param().format == param::Resize::Format::NHWC, "invalid resize format");
         MEGDNN_DISPATCH_CPU_KERN_OPR(resize_cv_exec(src, dst, param().imode));
     }
 }
 
-void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
-                              _megdnn_workspace workspace) {
+void ResizeBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
     check_exec(diff.layout, grad.layout, workspace.size);
-    megdnn_assert(param().format == param::Resize::Format::NCHW,
-                  "invalid resize format");
+    megdnn_assert(
+            param().format == param::Resize::Format::NCHW, "invalid resize format");
     const int N = grad.layout.shape[0], C = grad.layout.shape[1],
               IH = grad.layout.shape[2], IW = grad.layout.shape[3];
     const int OH = diff.layout.shape[2], OW = diff.layout.shape[3];
@@ -436,14 +429,10 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
 
                         rep(c, C) {
                             float hidden = hptr[c * OH * OW + oh * OW + ow];
-                            sptr[c * IH * IW + ih0 * IW + iw0] +=
-                                    ah0 * aw0 * hidden;
-                            sptr[c * IH * IW + ih1 * IW + iw0] +=
-                                    ah1 * aw0 * hidden;
-                            sptr[c * IH * IW + ih0 * IW + iw1] +=
-                                    ah0 * aw1 * hidden;
-                            sptr[c * IH * IW + ih1 * IW + iw1] +=
-                                    ah1 * aw1 * hidden;
+                            sptr[c * IH * IW + ih0 * IW + iw0] += ah0 * aw0 * hidden;
+                            sptr[c * IH * IW + ih1 * IW + iw0] += ah1 * aw0 * hidden;
+                            sptr[c * IH * IW + ih0 * IW + iw1] += ah0 * aw1 * hidden;
+                            sptr[c * IH * IW + ih1 * IW + iw1] += ah1 * aw1 * hidden;
                         }
                         break;
                     }
@@ -474,8 +463,7 @@ void ResizeBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_out grad,
                             rep(kh, ksize) {
                                 int h = saturate<int, int>(ih0 + kh, 0, IH - 1);
                                 rep(kw, ksize) {
-                                    int w = saturate<int, int>(iw0 + kw, 0,
-                                                               IW - 1);
+                                    int w = saturate<int, int>(iw0 + kw, 0, IW - 1);
                                     sptr[c * IH * IW + h * IW + w] +=
                                             hptr[c * OH * OW + oh * OW + ow] *
                                             h_coeff[kh] * w_coeff[kw];

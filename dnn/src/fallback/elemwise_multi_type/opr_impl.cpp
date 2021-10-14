@@ -22,8 +22,7 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
     BroadcastChannelInfo binfo0, binfo1;
     if (is_vector(param[0].layout) &&
         is_broadcasted_channel_like(param[1].layout, binfo0) &&
-        is_broadcasted_channel_like(param[2].layout, binfo1) &&
-        binfo0 == binfo1) {
+        is_broadcasted_channel_like(param[2].layout, binfo1) && binfo0 == binfo1) {
         auto pa = param[0].ptr<dt_int16>();
         auto pb = param[1].ptr<dt_int32>();
         auto pc = param[2].ptr<dt_int32>();
@@ -59,8 +58,7 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8_bcast_1x(
-        const ElemwiseOpParamN<3>& param, const Broadcast1xInfo& binfo,
-        dt_int8* dst) {
+        const ElemwiseOpParamN<3>& param, const Broadcast1xInfo& binfo, dt_int8* dst) {
     auto pa = param[0].ptr<ctype>();
     auto pb = param[1].ptr<dt_float32>();
     auto pc = param[2].ptr<dt_float32>();
@@ -94,8 +92,7 @@ void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8_bcast_1x(
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
         const ElemwiseOpParamN<3>& param, dt_int8* dst) {
     Broadcast1xInfo binfo0, binfo1;
-    if (is_vector(param[0].layout) &&
-        is_broadcasted_1x(param[1].layout, binfo0) &&
+    if (is_vector(param[0].layout) && is_broadcasted_1x(param[1].layout, binfo0) &&
         is_broadcasted_1x(param[2].layout, binfo1) && binfo0 == binfo1) {
         switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                                                              \
@@ -132,8 +129,7 @@ void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX_bcast_scalar(
         const ctype* __restrict__ xp = x_ptr;
         dst_ctype* __restrict__ dp = dst;
         for (size_t i = 0; i < size; i++) {
-            dp[i] = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(
-                    xp[i], k);
+            dp[i] = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(xp[i], k);
         }
     };
 
@@ -182,10 +178,9 @@ void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
 }
 
 template <typename ctype>
-void ElemwiseMultiTypeImpl::
-        dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11(
-                const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst,
-                const BroadcastChannelInfo& broadcast_info) {
+void ElemwiseMultiTypeImpl::dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11(
+        const ElemwiseOpParamN<6>& param, megdnn::dt_int8* dst,
+        const BroadcastChannelInfo& broadcast_info) {
     auto work = [param, dst, broadcast_info]() {
         auto x_ptr = param[0].ptr<ctype>();
         auto b_ptr = param[1].ptr<ctype>();
@@ -202,8 +197,7 @@ void ElemwiseMultiTypeImpl::
             for (size_t chan = 0; chan < broadcast_info.y; chan++) {
                 const ctype bias = b_ptr[chan * param[1].layout.stride[1]];
                 for (size_t i = 0; i < broadcast_info.z; i++) {
-                    auto res = elemwise_multi_type::round_shr_saturate<ctype,
-                                                                       dt_int8>(
+                    auto res = elemwise_multi_type::round_shr_saturate<ctype, dt_int8>(
                             round_mulh_saturate<ctype>(xp[i] + bias, M), k);
                     res = std::min(res, maxv);
                     res = std::max(res, minv);
@@ -231,8 +225,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(
         return naive::ElemwiseMultiTypeImpl::
                 on_fuse_add_rmulh_round_shr_saturate_int16x16x16x8(param, dst);
     }
-    dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int16>(param, dst,
-                                                                    info);
+    dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int16>(param, dst, info);
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
@@ -246,8 +239,7 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
         return naive::ElemwiseMultiTypeImpl::
                 on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(param, dst);
     }
-    dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int32>(param, dst,
-                                                                    info);
+    dispatch_fuse_add_rmulh_round_shr_saturate_bcast_1c11<dt_int32>(param, dst, info);
 }
 
 // vim: syntax=cpp.doxygen

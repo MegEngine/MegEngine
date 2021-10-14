@@ -9,9 +9,9 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/armv7/matrix_mul/fp32/strategy.h"
-#include "src/armv7/matrix_mul/asm/common.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
+#include "src/armv7/matrix_mul/asm/common.h"
+#include "src/armv7/matrix_mul/fp32/strategy.h"
 #include "src/common/utils.h"
 
 using namespace megdnn;
@@ -42,8 +42,9 @@ namespace {
 //  +--+ - - - -  +--------+--------+--------+
 //
 //                        Accumulator
-void kern_4x12(const float* packA, const float* packB, int K, float* output,
-               int LDC, bool is_first_k) {
+void kern_4x12(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k) {
     MEGDNN_MARK_USED_VAR(LDC);
     const float* a_ptr = packA;
     const float* b_ptr = packB;
@@ -193,16 +194,12 @@ void kern_4x12(const float* packA, const float* packB, int K, float* output,
             "vst1.32 {d28-d31}, [%[output0]]!\n"
 
             "6:\n"
-            : [ a_ptr ] "+r"(a_ptr), [ b_ptr ] "+r"(b_ptr), [ K ] "+r"(K),
-              [ is_first_k ] "+r"(is_first_k), [ oddk ] "+r"(oddk),
-              [ output0 ] "+r"(output0)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk), [output0] "+r"(output0)
             :
-            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-              "q11", "q12", "q13", "q14", "q15", "r1", "cc", "memory");
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+              "q12", "q13", "q14", "q15", "r1", "cc", "memory");
 }
-
-
-
 
 // Overview of register layout:
 //
@@ -227,8 +224,9 @@ void kern_4x12(const float* packA, const float* packB, int K, float* output,
 //  +--+   ---  -  +--------+
 //
 //                        Accumulator
-void kern_4x4(const float* packA, const float* packB, int K, float* output,
-              int LDC, bool is_first_k, int n_remain) {
+void kern_4x4(
+        const float* packA, const float* packB, int K, float* output, int LDC,
+        bool is_first_k, int n_remain) {
     MEGDNN_MARK_USED_VAR(LDC);
     const float* a_ptr = packA;
     const float* b_ptr = packB;
@@ -278,7 +276,7 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
     "23:\n"                             \
     "vst1.32 {d8-d9}, [%[output]]!\n"   \
     "24:\n"
-//clang-format on
+    //clang-format on
 
     asm volatile(
             "cmp %[is_first_k], #1\n"
@@ -344,12 +342,11 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
             "vmla.f32 q7, q0, d5[1]\n"
 
             "6:\n" STORE_C
-            : [ a_ptr ] "+r"(a_ptr), [ b_ptr ] "+r"(b_ptr), [ K ] "+r"(K),
-              [ is_first_k ] "+r"(is_first_k), [ oddk ] "+r"(oddk),
-              [ output ] "+r"(output), [ n_remain ] "+r"(n_remain)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [K] "+r"(K),
+              [is_first_k] "+r"(is_first_k), [oddk] "+r"(oddk), [output] "+r"(output),
+              [n_remain] "+r"(n_remain)
             :
-            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "r1", "cc",
-              "memory");
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "r1", "cc", "memory");
 #undef LOAD_C
 #undef STORE_C
 }
@@ -359,8 +356,9 @@ void kern_4x4(const float* packA, const float* packB, int K, float* output,
 MEGDNN_REG_GEMM_STRATEGY_IMPL(sgemm_mk4_pack_4x12);
 //! Now no matmul mode of only packB support in conv1x1 and im2col, so just copy
 //! the weight
-void sgemm_mk4_pack_4x12::pack_A(float* out, const float* in, int ldin, int y0,
-                                 int ymax, int k0, int kmax, bool) const {
+void sgemm_mk4_pack_4x12::pack_A(
+        float* out, const float* in, int ldin, int y0, int ymax, int k0, int kmax,
+        bool) const {
     megdnn_assert(y0 % 4 == 0 && ymax % 4 == 0, "M must be time of 4");
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     constexpr int PACK_C_SIZE = 4;
@@ -372,9 +370,9 @@ void sgemm_mk4_pack_4x12::pack_A(float* out, const float* in, int ldin, int y0,
     }
 }
 
-void sgemm_mk4_pack_4x12::pack_B(float* out, const float* in, int ldin, int x0,
-                                 int xmax, int k0, int kmax,
-                                 bool transpose_B) const {
+void sgemm_mk4_pack_4x12::pack_B(
+        float* out, const float* in, int ldin, int x0, int xmax, int k0, int kmax,
+        bool transpose_B) const {
     megdnn_assert(!transpose_B);
     megdnn_assert(k0 % 4 == 0 && kmax % 4 == 0, "K must be time of 4");
     float tmpbuff[16] = {0.0f};
@@ -416,12 +414,12 @@ void sgemm_mk4_pack_4x12::pack_B(float* out, const float* in, int ldin, int x0,
     }
 }
 
-void sgemm_mk4_pack_4x12::kern(const float* packA, const float* packB, size_t M,
-                               size_t N, size_t K, float* C, size_t LDC,
-                               bool is_first_k, const float*, float*) const {
-    megdnn_assert(A_dtype.enumv() == B_dtype.enumv() &&
-                  A_dtype.enumv() == C_dtype.enumv() &&
-                  A_dtype.enumv() == DTypeEnum::Float32);
+void sgemm_mk4_pack_4x12::kern(
+        const float* packA, const float* packB, size_t M, size_t N, size_t K, float* C,
+        size_t LDC, bool is_first_k, const float*, float*) const {
+    megdnn_assert(
+            A_dtype.enumv() == B_dtype.enumv() && A_dtype.enumv() == C_dtype.enumv() &&
+            A_dtype.enumv() == DTypeEnum::Float32);
     constexpr int PACK_C_SIZE = 4;
     constexpr size_t A_INTERLEAVE = 4;
     constexpr size_t B_INTERLEAVE = 12;
@@ -439,8 +437,9 @@ void sgemm_mk4_pack_4x12::kern(const float* packA, const float* packB, size_t M,
             cur_packB += K12;
         }
         for (; n < N; n += 4) {
-            kern_4x4(packA, cur_packB, K, output, LDC, is_first_k,
-                     std::min<size_t>(N - n, 4));
+            kern_4x4(
+                    packA, cur_packB, K, output, LDC, is_first_k,
+                    std::min<size_t>(N - n, 4));
             output += PACK_C_SIZE * 4;
             cur_packB += K4;
         }

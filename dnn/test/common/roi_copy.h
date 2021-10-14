@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -20,8 +20,7 @@ namespace roi_copy {
 struct TestArg {
     param::ROICopy param;
     TensorShape src;
-    TestArg(param::ROICopy param_, TensorShape src_)
-            : param(param_), src(src_) {}
+    TestArg(param::ROICopy param_, TensorShape src_) : param(param_), src(src_) {}
 };
 
 static inline std::vector<TestArg> get_args() {

@@ -14,11 +14,10 @@
 namespace {
 
 template <bool is_xcorr, typename dtype>
-void col2img_stride_padding(const dtype* __restrict src, dtype* __restrict dst,
-                            const int OH, const int OW, const int IC,
-                            const int IH, const int IW, const int FH,
-                            const int FW, const int SH, const int SW, int PH,
-                            int PW) {
+void col2img_stride_padding(
+        const dtype* __restrict src, dtype* __restrict dst, const int OH, const int OW,
+        const int IC, const int IH, const int IW, const int FH, const int FW,
+        const int SH, const int SW, int PH, int PW) {
     size_t i = 0;
     rep(ic, IC) {
         rep(fh, FH) {
@@ -47,9 +46,9 @@ void col2img_stride_padding(const dtype* __restrict src, dtype* __restrict dst,
 }
 
 template <bool is_xcorr, typename dtype>
-void col2img(const dtype* __restrict src, dtype* __restrict dst, const int OH,
-             const int OW, const int IC, const int IH, const int IW,
-             const int FH, const int FW) {
+void col2img(
+        const dtype* __restrict src, dtype* __restrict dst, const int OH, const int OW,
+        const int IC, const int IH, const int IW, const int FH, const int FW) {
     size_t i = 0;
     rep(ic, IC) {
         rep(fh, FH) {
@@ -64,8 +63,7 @@ void col2img(const dtype* __restrict src, dtype* __restrict dst, const int OH,
                 }
                 rep(ih, IH) {
                     rep(iw, IW) {
-                        dst[ic * OH * OW + (ih + fh2) * OW + iw + fw2] +=
-                                src[i++];
+                        dst[ic * OH * OW + (ih + fh2) * OW + iw + fw2] += src[i++];
                     }
                 }
             }

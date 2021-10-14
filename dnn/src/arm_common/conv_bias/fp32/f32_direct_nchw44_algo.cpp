@@ -22,15 +22,14 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids,
+        const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_fp32_nchw44_stride1)
 namespace {
 
-static inline size_t get_perthread_cache_bytes(const int ic, const int ih2,
-                                               const int iw2) {
+static inline size_t get_perthread_cache_bytes(
+        const int ic, const int ih2, const int iw2) {
     // border_size is used to avoid read illegal memory
     int border_size = 64 * 2;
     return ic * ih2 * iw2 * sizeof(float) + border_size;
@@ -50,11 +49,10 @@ static void get_rectified_size(
     oh2 = oh;
     ow2 = ow;
 
-    int block_oh = l2_block_helper(param.nr_threads, oh,
-                                   ic * iw * sizeof(float) * stride_h);
+    int block_oh =
+            l2_block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * stride_h);
     ih2 = block_oh * stride_h + filter_h - stride_h;
-    iw2 = round_up(iw + 2 * static_cast<int>(fm.padding[1]),
-                   nr_elements_in_cacheline);
+    iw2 = round_up(iw + 2 * static_cast<int>(fm.padding[1]), nr_elements_in_cacheline);
 }
 
 static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
@@ -68,10 +66,10 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
 };
 
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
-static void do_conv_kern(const WorkspaceBundle& bundle,
-                         const ConvBiasImpl::NCBKernParam& kern_param,
-                         const ConvBiasImpl::NCBKernIndex& ncb_index,
-                         const CpuNDRange&, const CpuNDRange&) {
+static void do_conv_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange&,
+        const CpuNDRange&) {
     const int oh = kern_param.osz[0];
     const int ow = kern_param.osz[1];
     const int fh = kern_param.filter_meta.spatial[0];
@@ -94,37 +92,33 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     const int group_id = ncb_index.ndrange_id[1];
     constexpr int oc_idx = 0;
     int oc_block = oc;
-    int oh_block = l2_block_helper(kern_param.nr_threads, oh2,
-                                   ic * iw * sizeof(float) * stride_h);
+    int oh_block = l2_block_helper(
+            kern_param.nr_threads, oh2, ic * iw * sizeof(float) * stride_h);
     const int oh_idx = ncb_index.ndrange_id[2];
     const int oh_block_real = std::min(oh - oh_idx * oh_block, oh_block);
     const int ih_real = oh_block_real * stride_h + fh - stride_h;
     const int src_top_pad = std::max(ph - oh_idx * oh_block * stride_h, 0);
     const int src_bottom_pad = std::max(
-            (oh_idx * oh_block + oh_block_real - 1) * stride_h + fh - ih - ph,
-            0);
+            (oh_idx * oh_block + oh_block_real - 1) * stride_h + fh - ih - ph, 0);
     const int remain_right_pad = std::max(iw2 - iw - pw, 0);
-    const int src_offset =
-            std::max(oh_idx * oh_block * stride_h - ph, 0) * iw * pack_c;
+    const int src_offset = std::max(oh_idx * oh_block * stride_h - ph, 0) * iw * pack_c;
     const float* origin_sptr = static_cast<const float*>(kern_param.src<float>(
                                        batch_id, group_id, 0, 1, 1)) +
                                src_offset;
     const size_t src_size = get_perthread_cache_bytes(ic, ih2, iw2);
-    float* sptr = reinterpret_cast<float*>((int8_t*)bundle.get(0) +
-                                           ncb_index.thread_id * src_size);
+    float* sptr = reinterpret_cast<float*>(
+            (int8_t*)bundle.get(0) + ncb_index.thread_id * src_size);
 
     conv_bias::pack_src_fp32_nchw44<stride>(
             sptr, origin_sptr, ph, pw, remain_right_pad,
             ih_real - src_top_pad - src_bottom_pad, iw, iw2, src_top_pad,
             src_bottom_pad, ic, ih * iw);
 
-    const float* fptr =
-            kern_param.filter<dt_float32>(group_id) + oc_idx * fh * fw * ic;
+    const float* fptr = kern_param.filter<dt_float32>(group_id) + oc_idx * fh * fw * ic;
     float_t* dst = kern_param.dst<float_t>(batch_id, group_id) +
                    oh_idx * oh_block * ow * pack_c;
-    const int bias_offset = bias_mode == BiasMode::BIAS
-                                    ? oh_idx * oh_block * ow * pack_c
-                                    : oc_idx;
+    const int bias_offset =
+            bias_mode == BiasMode::BIAS ? oh_idx * oh_block * ow * pack_c : oc_idx;
     const float* bptr =
             kern_param.bias<dt_float32>(batch_id, group_id, oc_idx, 1, pack_c) +
             bias_offset;
@@ -138,8 +132,8 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
 }  // namespace
 
 /* ===================== stride1 algo ===================== */
-bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(const NCBKernSizeParam& param,
-                                               AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     auto&& fm = param.filter_meta;
     auto fh = fm.spatial[0];
     int oc = fm.ocpg;
@@ -161,16 +155,16 @@ bool ConvBiasImpl::AlgoF32DirectNCHW44::usable(const NCBKernSizeParam& param,
 
 size_t ConvBiasImpl::AlgoF32DirectNCHW44::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp32_nchw44_stride1,
-                 midout_iv("AlgoF32DirectNCHW44::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_fp32_nchw44_stride1,
+            midout_iv("AlgoF32DirectNCHW44::get_workspace"_hash)) {
         return get_bundle(param).total_size_in_bytes();
     }
     MIDOUT_END();
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     const int batch = param.n;
@@ -179,11 +173,12 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     conv_fun do_conv_fun = nullptr;
     // NOTE: remain_w is not used to gen hash of midout for compatible with
 // shape runtime
-#define DO_CONV_KERN_FUN(filter, bias_mode, op, stride)              \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_fp32_nchw44_stride1,    \
-                 midout_iv(#filter #bias_mode #stride #op##_hash)) { \
-        do_conv_fun = do_conv_kern<filter, bias_mode, op, stride>;   \
-    }                                                                \
+#define DO_CONV_KERN_FUN(filter, bias_mode, op, stride)            \
+    MIDOUT_BEGIN(                                                  \
+            megdnn_arm_common_conv_bias_fp32_nchw44_stride1,       \
+            midout_iv(#filter #bias_mode #stride #op##_hash)) {    \
+        do_conv_fun = do_conv_kern<filter, bias_mode, op, stride>; \
+    }                                                              \
     MIDOUT_END();
 
 #define GET_STRIDE_PARAM(filter, bias_mode, op)         \
@@ -268,17 +263,16 @@ ConvBiasImpl::AlgoF32DirectNCHW44::dispatch_kerns(
     int ic = param.filter_meta.icpg;
     int iw = param.isz[1];
     int stride_h = param.filter_meta.stride[0];
-    int oh_block = l2_block_helper(param.nr_threads, oh,
-                                   ic * iw * sizeof(float) * stride_h);
-    CpuNDRange ncb_range = {static_cast<size_t>(batch),
-                            static_cast<size_t>(group),
-                            static_cast<size_t>(div_ceil(oh, oh_block))};
+    int oh_block =
+            l2_block_helper(param.nr_threads, oh, ic * iw * sizeof(float) * stride_h);
+    CpuNDRange ncb_range = {
+            static_cast<size_t>(batch), static_cast<size_t>(group),
+            static_cast<size_t>(div_ceil(oh, oh_block))};
     auto do_conv = [wbundle, do_conv_fun, ncb_range](
                            const NCBKernParam& kern_param,
                            const NCBKernIndex& ncb_index) mutable {
         wbundle.set(kern_param.workspace_ptr);
-        do_conv_fun(wbundle, kern_param, ncb_index, ncb_index.ndrange_id,
-                    ncb_range);
+        do_conv_fun(wbundle, kern_param, ncb_index, ncb_index.ndrange_id, ncb_range);
     };
     ret_kerns.push_back({do_conv, ncb_range});
     return ret_kerns;

@@ -13,9 +13,9 @@
 
 #include "megdnn.h"
 #include "megdnn/oprs.h"
-#include "test/common/tensor.h"
-#include "test/common/flip.h"
 #include "test/common/checker.h"
+#include "test/common/flip.h"
+#include "test/common/tensor.h"
 #include "test/fallback/fixture.h"
 
 namespace megdnn {
@@ -28,10 +28,9 @@ TEST_F(FALLBACK, FLIP) {
     checker.set_dtype(0, dtype::Int32());
     checker.set_dtype(1, dtype::Int32());
 
-    for (auto &&arg : args) {
+    for (auto&& arg : args) {
         checker.execs({arg.src, {}});
     }
-
 }
 
 }  // namespace test

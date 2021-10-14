@@ -37,8 +37,8 @@ std::pair<TensorLayoutArray, Convolution::Param> sub_opr_config(
     return ret;
 }
 
-std::pair<TensorLayoutArray, std::unique_ptr<ConvolutionBackwardFilter>>
-prepare_sub_opr(const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+std::pair<TensorLayoutArray, std::unique_ptr<ConvolutionBackwardFilter>> prepare_sub_opr(
+        const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
     auto conv_bwd_filter_opr =
             args.handle->create_operator<ConvolutionBackwardFilter>();
     set_execution_policy<ConvolutionBackwardFilter, ConvolutionBackwardFilter*>(
@@ -50,9 +50,9 @@ prepare_sub_opr(const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+std::vector<Algorithm::SearchItem> ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::
+        get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     AlgoBase::SizeArgs args{
             static_cast<const ConvolutionBackwardFilterImpl*>(opr), layouts[0],
             layouts[1], layouts[2]};
@@ -60,20 +60,18 @@ ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::get_subopr_list(
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER, param_str,
-             config.first}};
+    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER, param_str, config.first}};
 }
 
 bool ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::is_available(
-        const SizeArgs &args) const {
+        const SizeArgs& args) const {
     if (args.src_layout->dtype == args.src_layout->dtype &&
         args.diff_layout->dtype == dtype::BFloat16()) {
         return false;
     }
     if (args.grad_filter_meta.group <= 1)
         return false;
-    if (args.grad_filter_meta.format !=
-        megdnn::param::Convolution::Format::NCHW) {
+    if (args.grad_filter_meta.format != megdnn::param::Convolution::Format::NCHW) {
         return false;
     }
 
@@ -84,17 +82,15 @@ bool ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::is_available(
             config.first[0], config.first[1], config.first[2]);
 }
 
-WorkspaceBundle
-ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_bundle(
-        void* ptr, const SizeArgs& args) const {
+WorkspaceBundle ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::
+        get_workspace_bundle(void* ptr, const SizeArgs& args) const {
     auto config = prepare_sub_opr(args);
     size_t sizes = config.second->get_workspace_in_bytes(
             config.first[0], config.first[1], config.first[2]);
     return {ptr, {sizes}};
 }
 
-size_t
-ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
+size_t ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::get_workspace_in_bytes(
         const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
@@ -113,10 +109,9 @@ void ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::exec(
 
         auto&& fm = args.grad_filter_meta;
 
-        auto strd_src = tsrc.layout.stride[c_pos] * fm.icpg *
-                        tsrc.layout.dtype.size(),
-             strd_diff = tdiff.layout.stride[c_pos] * fm.ocpg *
-                         tdiff.layout.dtype.size(),
+        auto strd_src = tsrc.layout.stride[c_pos] * fm.icpg * tsrc.layout.dtype.size(),
+             strd_diff =
+                     tdiff.layout.stride[c_pos] * fm.ocpg * tdiff.layout.dtype.size(),
              strd_grad = fm.icpg * fm.ocpg * fm.spatial[0] * fm.spatial[1] *
                          tgrad.layout.dtype.size();
 
@@ -131,4 +126,3 @@ void ConvolutionBackwardFilterImpl::AlgoGroupConvGeneral::exec(
 }
 
 // vim: syntax=cpp.doxygen
-

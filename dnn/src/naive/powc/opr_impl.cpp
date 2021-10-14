@@ -17,10 +17,11 @@ using namespace megdnn;
 using namespace naive;
 
 template <typename T>
-void PowCImpl::do_exec_ct(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                          const float* exp_f, const int* exp_i) {
+void PowCImpl::do_exec_ct(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, const float* exp_f,
+        const int* exp_i) {
     if (exp_i) {
-        auto kern = [ src, dst, iv = *exp_i ]() {
+        auto kern = [src, dst, iv = *exp_i]() {
             auto src_iter = tensor_iter_valonly<T>(src).begin();
             auto dst_iter = tensor_iter_valonly<T>(dst).begin();
             T ivt = static_cast<T>(iv);
@@ -37,7 +38,7 @@ void PowCImpl::do_exec_ct(_megdnn_tensor_in src, _megdnn_tensor_out dst,
         };
         static_cast<HandleImpl*>(this->handle())->dispatch_kern(kern);
     } else {
-        auto kern = [ src, dst, fv = *exp_f ]() {
+        auto kern = [src, dst, fv = *exp_f]() {
             auto src_iter = tensor_iter_valonly<T>(src).begin();
             auto dst_iter = tensor_iter_valonly<T>(dst).begin();
             T fvt = static_cast<T>(fv);
@@ -51,8 +52,9 @@ void PowCImpl::do_exec_ct(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     }
 }
 
-void PowCImpl::do_exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                       const float* exp_f, const int* exp_i) {
+void PowCImpl::do_exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, const float* exp_f,
+        const int* exp_i) {
     switch (src.layout.dtype.enumv()) {
 #define cb(dt)                  \
     case DTypeTrait<dt>::enumv: \

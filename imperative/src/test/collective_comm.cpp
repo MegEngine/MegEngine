@@ -22,21 +22,18 @@ TEST(TestImperative, AllReduceBasic) {
     uint32_t port = 3456;
     mgb_assert(create_zmqrpc_server(server_addr, port) > 0);
     HostTensorGenerator<> gen;
-    CompNode cn0 = CompNode::load("gpu0"),
-             cn1 = CompNode::load("gpu1");
+    CompNode cn0 = CompNode::load("gpu0"), cn1 = CompNode::load("gpu1");
 
     auto host_x = gen({233}, cn0), host_y = gen({233}, cn1);
     auto expect = gen({233});
-    for (size_t i = 0; i < 233; ++ i) {
+    for (size_t i = 0; i < 233; ++i) {
         expect->ptr<float>()[i] = host_x->ptr<float>()[i] + host_y->ptr<float>()[i];
     }
 
     auto run = [&](std::shared_ptr<HostTensorND> hnd, uint32_t idx) {
-        auto def =
-            imperative::CollectiveComm::make(
-                megdnn::param::CollectiveComm::Mode::ALL_REDUCE_SUM,
-                "all_reduce", 2, idx, idx==0, false, server_addr, port,
-                dtype::Float32(), "nccl", "");
+        auto def = imperative::CollectiveComm::make(
+                megdnn::param::CollectiveComm::Mode::ALL_REDUCE_SUM, "all_reduce", 2,
+                idx, idx == 0, false, server_addr, port, dtype::Float32(), "nccl", "");
         auto inp = Tensor::make(*hnd);
         auto oup = OpDef::apply_on_physical_tensor(*def, {inp});
         HostTensorND host_v;

@@ -10,9 +10,9 @@
  */
 
 #pragma once
-#include "megdnn/dtype.h"
 #include <cuda_runtime.h>
 #include <stdint.h>
+#include "megdnn/dtype.h"
 
 namespace megdnn {
 namespace cuda {
@@ -52,8 +52,7 @@ struct RadixConverter<int32_t> {
         su.sv = val;
         return su.uv ^ (1u << 31u);
     }
-    static __forceinline__ __device__ __host__ int32_t
-    from_radix(uint32_t val) {
+    static __forceinline__ __device__ __host__ int32_t from_radix(uint32_t val) {
         SUUnion su;
         su.uv = val;
         return su.sv ^ (1u << 31u);
@@ -97,14 +96,14 @@ struct RadixConverter<dt_float16> {
  * \param output top-k values of each batch, shape [batch]
  */
 template <typename ctype>
-cudaError_t find_kth_radix(const ctype* input, ctype* output, void* workspace,
-                           uint32_t batch, uint32_t length, int32_t lda,
-                           int32_t k, uint32_t grid_dim_y_limit,
-                           cudaStream_t stream);
+cudaError_t find_kth_radix(
+        const ctype* input, ctype* output, void* workspace, uint32_t batch,
+        uint32_t length, int32_t lda, int32_t k, uint32_t grid_dim_y_limit,
+        cudaStream_t stream);
 
 //! get workspace in bytes
-uint32_t find_kth_radix_workspace(uint32_t batch, uint32_t length,
-                                  uint32_t grid_dim_y_limit);
+uint32_t find_kth_radix_workspace(
+        uint32_t batch, uint32_t length, uint32_t grid_dim_y_limit);
 
 /*!
  * \brief select values from rows of input that compare to thresh as specified
@@ -112,11 +111,10 @@ uint32_t find_kth_radix_workspace(uint32_t batch, uint32_t length,
  *      thresh. Its absolute value specifies output width.
  */
 template <typename ctype>
-cudaError_t topk_select(const ctype* input, const ctype* thresh,
-                        ctype* output_value, int32_t* output_idx,
-                        void* workspace, uint32_t batch, uint32_t length,
-                        int32_t lda, int32_t k, uint32_t batch_upper_limit,
-                        cudaStream_t stream);
+cudaError_t topk_select(
+        const ctype* input, const ctype* thresh, ctype* output_value,
+        int32_t* output_idx, void* workspace, uint32_t batch, uint32_t length,
+        int32_t lda, int32_t k, uint32_t batch_upper_limit, cudaStream_t stream);
 
 uint32_t topk_select_workspace(uint32_t batch, uint32_t length);
 
@@ -125,4 +123,3 @@ uint32_t topk_select_workspace(uint32_t batch, uint32_t length);
 }  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen
-

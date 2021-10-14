@@ -6,7 +6,8 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
  */
 
 #pragma once
@@ -39,8 +40,7 @@ private:
 };
 #endif
 
-std::string ssprintf(const char* fmt = 0, ...)
-        __attribute__((format(printf, 1, 2)));
+std::string ssprintf(const char* fmt = 0, ...) __attribute__((format(printf, 1, 2)));
 
 /*!
  * \brief Print a message.
@@ -61,18 +61,19 @@ void print_log(LiteLogLevel level, const char* format = 0, ...)
 #define LITE_LOG_(level, msg...) (void)0
 #endif
 
-#define LITE_LOG(fmt...) LITE_LOG_(DEBUG, fmt);
+#define LITE_LOG(fmt...)   LITE_LOG_(DEBUG, fmt);
 #define LITE_DEBUG(fmt...) LITE_LOG_(DEBUG, fmt);
-#define LITE_WARN(fmt...) LITE_LOG_(WARN, fmt);
+#define LITE_WARN(fmt...)  LITE_LOG_(WARN, fmt);
 #define LITE_ERROR(fmt...) LITE_LOG_(ERROR, fmt);
 
 #if LITE_ENABLE_EXCEPTION
 #define LITE_THROW(msg) throw lite::Error(msg)
 #else
-#define LITE_THROW(msg)   \
-    do {                  \
-        LITE_ERROR(msg);  \
-        __builtin_trap(); \
+#define LITE_THROW(msg)              \
+    do {                             \
+        std::string msg_str(msg);    \
+        LITE_ERROR(msg_str.c_str()); \
+        __builtin_trap();            \
     } while (0)
 #endif
 
@@ -106,30 +107,29 @@ void print_log(LiteLogLevel level, const char* format = 0, ...)
 
 #if LITE_ENABLE_LOGGING
 #if LITE_ASSERT_LOC
-#define LITE_ASSERT(expr, msg...)                                           \
-    do {                                                                    \
-        if (lite_unlikely(!(expr))) {                                       \
-            auto info = lite::ssprintf(msg);                                \
-            LITE_THROW(                                                     \
-                    lite::ssprintf("Assert \' %s \' failed at file : %s \n" \
-                                   "line %d : %s,\nextra "                  \
-                                   "message: %s",                           \
-                                   #expr, __FILE__, __LINE__,               \
-                                   __PRETTY_FUNCTION__, info.c_str()));     \
-        }                                                                   \
+#define LITE_ASSERT(expr, msg...)                                                   \
+    do {                                                                            \
+        if (lite_unlikely(!(expr))) {                                               \
+            auto info = lite::ssprintf(msg);                                        \
+            LITE_THROW(lite::ssprintf(                                              \
+                    "Assert \' %s \' failed at file : %s \n"                        \
+                    "line %d : %s,\nextra "                                         \
+                    "message: %s",                                                  \
+                    #expr, __FILE__, __LINE__, __PRETTY_FUNCTION__, info.c_str())); \
+        }                                                                           \
     } while (0)
 #else
-#define LITE_ASSERT(expr, msg...)                                          \
-    do {                                                                   \
-        if (lite_unlikely(!(expr))) {                                      \
-            auto info = lite::ssprintf(msg);                               \
-            LITE_THROW(lite::ssprintf(                                     \
-                    "Assert \' %s \' failed at file : %s \n"               \
-                    "line %d : %s,\nextra "                                \
-                    "message: %s",                                         \
-                    #expr, "about location info, please build with debug", \
-                    __LINE__, __PRETTY_FUNCTION__, info.c_str()));         \
-        }                                                                  \
+#define LITE_ASSERT(expr, msg...)                                                    \
+    do {                                                                             \
+        if (lite_unlikely(!(expr))) {                                                \
+            auto info = lite::ssprintf(msg);                                         \
+            LITE_THROW(lite::ssprintf(                                               \
+                    "Assert \' %s \' failed at file : %s \n"                         \
+                    "line %d : %s,\nextra "                                          \
+                    "message: %s",                                                   \
+                    #expr, "about location info, please build with debug", __LINE__, \
+                    __PRETTY_FUNCTION__, info.c_str()));                             \
+        }                                                                            \
     } while (0)
 #endif
 #else
@@ -155,8 +155,9 @@ public:
         m_stop = Clock::now();
         std::chrono::duration<double> elapsed = m_stop - m_start;
         Nsec u = std::chrono::duration_cast<Nsec>(elapsed);
-        auto msg = ssprintf("%s used time %fms.", m_name.c_str(),
-                            static_cast<double>(u.count()) / 1000000.f);
+        auto msg = ssprintf(
+                "%s used time %fms.", m_name.c_str(),
+                static_cast<double>(u.count()) / 1000000.f);
         LITE_LOG("%s", msg.c_str());
     }
 
@@ -203,7 +204,7 @@ inline void mark_used_variable(T firstArg, Arg... args) {
 #include <io.h>
 #include <windows.h>
 #undef CONST
-#define F_OK 0
+#define F_OK      0
 #define RTLD_LAZY 0
 // On the windows platform we use a lib_filename without a full path so
 // the win-api "LoadLibrary" would uses a standard search strategy to
@@ -235,16 +236,15 @@ static inline void* dlsym(void* handle, const char* name) {
 //! implement some base apis for c++ std function, for example,
 //! std::mutex/std::thread/std::condition_variable as a workround, we will
 //! disable some MegEngine feature on xp sp2 env, for exampe, multi-thread etc!
-#define LITE_MUTEX size_t
-#define LITE_RECURSIVE_MUTEX size_t
-#define LITE_LOCK_GUARD(mtx) LITE_MARK_USED_VAR(mtx)
+#define LITE_MUTEX                  size_t
+#define LITE_RECURSIVE_MUTEX        size_t
+#define LITE_LOCK_GUARD(mtx)        LITE_MARK_USED_VAR(mtx)
 #define LITE_LOCK_GUARD_UNIQUE(mtx) LITE_MARK_USED_VAR(mtx)
 #define LITE_LOCK_GUARD_SHARED(mtx) LITE_MARK_USED_VAR(LITE_MARK_USED_VAR)
 #else
-#define LITE_MUTEX std::mutex
+#define LITE_MUTEX           std::mutex
 #define LITE_RECURSIVE_MUTEX std::recursive_mutex
-#define LITE_LOCK_GUARD(mtx) \
-    std::lock_guard<decltype(mtx)> LITE_LOCK_GUARD_CTOR(mtx)
+#define LITE_LOCK_GUARD(mtx) std::lock_guard<decltype(mtx)> LITE_LOCK_GUARD_CTOR(mtx)
 
 #define LITE_LOCK_GUARD_UNIQUE(mtx) \
     std::unique_lock<decltype(mtx)> LITE_LOCK_GUARD_CTOR(mtx)

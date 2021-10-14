@@ -40,8 +40,9 @@ namespace matmul_mk4_8x12x4 {
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
-                      int32_t* output, int LDC, bool is_first_k) {
+static void kern_8x12(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -397,8 +398,9 @@ static void kern_8x12(const int8_t* packA, const int8_t* packB, int K,
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
-                      int32_t* output, int LDC, bool is_first_k) {
+static void kern_4x12(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -514,13 +516,12 @@ static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
             "stp q16, q17, [%[outptr0], #128]\n"
             "stp q18, q19, [%[outptr0], #160]\n"
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [k] "+r"(k),
-              [outptr0] "+r"(outptr0), [oddk] "+r"(oddk),
-              [is_first_k] "+r"(is_first_k), [a0] "=w"(a0), [a0a] "=w"(a0a),
-              [b0] "=w"(b0), [b1] "=w"(b1), [b2] "=w"(b2), [b0a] "=w"(b0a),
-              [b1a] "=w"(b1a), [b2a] "=w"(b2a)
+              [outptr0] "+r"(outptr0), [oddk] "+r"(oddk), [is_first_k] "+r"(is_first_k),
+              [a0] "=w"(a0), [a0a] "=w"(a0a), [b0] "=w"(b0), [b1] "=w"(b1),
+              [b2] "=w"(b2), [b0a] "=w"(b0a), [b1a] "=w"(b1a), [b2a] "=w"(b2a)
             :
-            : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
-              "v17", "v18", "v19", "memory", "cc");
+            : "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18",
+              "v19", "memory", "cc");
 }
 
 // Overview of register layout:
@@ -544,8 +545,9 @@ static void kern_4x12(const int8_t* packA, const int8_t* packB, int K,
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int n_remain) {
+static void kern_8x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -689,11 +691,9 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
               [oddk] "+r"(oddk), [is_first_k] "+r"(is_first_k),
               [n_remain] "+r"(n_remain), [k] "+r"(k), [outptr0] "+r"(outptr0),
               [a0] "=w"(a0), [a1] "=w"(a1), [a0a] "=w"(a0a), [a1a] "=w"(a1a),
-              [b0] "=w"(b0), [b0a] "=w"(b0a), [outptr1] "=r"(outptr1),
-              [x0] "=r"(x0)
+              [b0] "=w"(b0), [b0a] "=w"(b0a), [outptr1] "=r"(outptr1), [x0] "=r"(x0)
             :
-            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "memory",
-              "cc");
+            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "memory", "cc");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -720,8 +720,9 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
 //                            Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int n_remain) {
+static void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     K /= 4;
     const int32_t* a_ptr = reinterpret_cast<const int32_t*>(packA);
     const int32_t* b_ptr = reinterpret_cast<const int32_t*>(packB);
@@ -834,10 +835,9 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 
             "4:\n" STORE_C
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [oddk] "+r"(oddk),
-              [is_first_k] "+r"(is_first_k), [n_remain] "+r"(n_remain),
-              [LDC] "+r"(LDC), [outptr0] "+r"(outptr0), [k] "+r"(k),
-              [a0] "=w"(a0), [a0a] "=w"(a0a), [b0] "=w"(b0), [b0a] "=w"(b0a),
-              [x0] "=r"(x0)
+              [is_first_k] "+r"(is_first_k), [n_remain] "+r"(n_remain), [LDC] "+r"(LDC),
+              [outptr0] "+r"(outptr0), [k] "+r"(k), [a0] "=w"(a0), [a0a] "=w"(a0a),
+              [b0] "=w"(b0), [b0a] "=w"(b0a), [x0] "=r"(x0)
             :
             : "v4", "v5", "v6", "v7", "memory", "cc");
 
@@ -847,13 +847,11 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_mk4_s8_8x12_pack_A(dt_int8* outptr, const dt_int8* inptr,
-                                    int ldin, int y0, int ymax, int k0,
-                                    int kmax) {
-    megdnn_assert(ymax % 4 == 0 && y0 % 4 == 0,
-                  "mk4 matmul with m is not times of 4");
-    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0,
-                  "mk4 matmul with k is not times of 4");
+static void gemm_mk4_s8_8x12_pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
+    megdnn_assert(ymax % 4 == 0 && y0 % 4 == 0, "mk4 matmul with m is not times of 4");
+    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0, "mk4 matmul with k is not times of 4");
     int y = y0;
     int start_y = y0 / 4;
     for (; y + 7 < ymax; y += 8, start_y += 2) {
@@ -869,15 +867,15 @@ static void gemm_mk4_s8_8x12_pack_A(dt_int8* outptr, const dt_int8* inptr,
             interleave_2x4_4_b(inptr0, inptr1, outptr);
         }
     }
-    for (; y + 3 < ymax; y += 4, start_y ++) {
+    for (; y + 3 < ymax; y += 4, start_y++) {
         int K = kmax - k0;
         const int8_t* inptr0 = inptr + start_y * ldin + (k0 << 2);
         std::memcpy(outptr, inptr0, sizeof(dt_int8) * K * 4);
     }
 }
 
-static void gemm_mk4_s8_8x12_pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                    int x0, int xmax, int k0, int kmax) {
+static void gemm_mk4_s8_8x12_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     const int ksize = kmax - k0;
     const int ksize12 = ksize * 12;
     const int ksize4 = ksize * 4;

@@ -20,10 +20,9 @@ using namespace arm_common;
 using namespace conv_bias;
 
 template <bool add_to_dst>
-void conv_bias::conv_direct_2x2_sc_int8_int8_int16(const int8_t* src, const int8_t* filter,
-                                        int16_t* dst, size_t IH, size_t IW,
-                                        size_t OH, size_t OW, size_t PH,
-                                        size_t PW) {
+void conv_bias::conv_direct_2x2_sc_int8_int8_int16(
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = PH, OH_stop = OH - PH;
     size_t OW_start = PW, OW_stop = OW - PW;
     auto run_single = [&](size_t oh, size_t ow) {
@@ -222,10 +221,9 @@ void conv_bias::conv_direct_2x2_sc_int8_int8_int16(const int8_t* src, const int8
 }
 
 template <bool add_to_dst>
-void conv_bias::conv_direct_3x3_sc_int8_int8_int16(const int8_t* src, const int8_t* filter,
-                                        int16_t* dst, size_t IH, size_t IW,
-                                        size_t OH, size_t OW, size_t PH,
-                                        size_t PW) {
+void conv_bias::conv_direct_3x3_sc_int8_int8_int16(
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = PH, OH_stop = OH - PH;
     size_t OW_start = PW, OW_stop = OW - PW;
 
@@ -450,10 +448,9 @@ void conv_bias::conv_direct_3x3_sc_int8_int8_int16(const int8_t* src, const int8
 }
 
 template <bool add_to_dst>
-void conv_bias::conv_direct_5x5_sc_int8_int8_int16(const int8_t* src, const int8_t* filter,
-                                        int16_t* dst, size_t IH, size_t IW,
-                                        size_t OH, size_t OW, size_t PH,
-                                        size_t PW) {
+void conv_bias::conv_direct_5x5_sc_int8_int8_int16(
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW) {
     size_t OH_start = PH, OH_stop = OH - PH;
     size_t OW_start = PW, OW_stop = OW - PW;
     auto run_single = [&](size_t oh, size_t ow) {
@@ -574,22 +571,22 @@ void conv_bias::conv_direct_5x5_sc_int8_int8_int16(const int8_t* src, const int8
 }
 
 template void conv_bias::conv_direct_2x2_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_direct_2x2_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_direct_3x3_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_direct_3x3_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_direct_5x5_sc_int8_int8_int16<true>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 template void conv_bias::conv_direct_5x5_sc_int8_int8_int16<false>(
-        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH,
-        size_t IW, size_t OH, size_t OW, size_t PH, size_t PW);
+        const int8_t* src, const int8_t* filter, int16_t* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t PH, size_t PW);
 
 // vim: syntax=cpp.doxygen

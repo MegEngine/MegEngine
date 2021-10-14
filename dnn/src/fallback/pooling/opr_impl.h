@@ -19,8 +19,9 @@ namespace fallback {
 class PoolingImpl : public naive::PoolingForwardImpl {
 public:
     using naive::PoolingForwardImpl::PoolingForwardImpl;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-              _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 
 private:
     void exec_w3x3_s1x1(_megdnn_tensor_in src, _megdnn_tensor_out dst);
@@ -30,4 +31,3 @@ private:
 }  // namespace fallback
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen
-

@@ -45,11 +45,9 @@ struct QuantizedTypeCvter<int32_t, int8_t> {
 
     void cvt(const int32_t* src, int8_t* dst) {
         float32x4_t vitem0 = vmulq_f32(vcvtq_f32_s32(vld1q_s32(src)), vscale);
-        float32x4_t vitem1 =
-                vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + 4)), vscale);
+        float32x4_t vitem1 = vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + 4)), vscale);
 
-        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>(
-                {{vitem0, vitem1}});
+        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>({{vitem0, vitem1}});
         vst1_s8(dst, vres);
     }
 
@@ -75,17 +73,17 @@ struct QuantizedTypeCvter<int8_t, int32_t> {
 
     void cvt(const int8_t* src, int32_t* dst) {
         int16x8_t vitem = vmovl_s8(vld1_s8(src));
-        auto vret0 = QConverter::convert<int32x4_t, float32x4_t>(vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_low_s16(vitem))), vscale));
-        auto vret1 = QConverter::convert<int32x4_t, float32x4_t>(vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_high_s16(vitem))), vscale));
+        auto vret0 = QConverter::convert<int32x4_t, float32x4_t>(
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(vitem))), vscale));
+        auto vret1 = QConverter::convert<int32x4_t, float32x4_t>(
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(vitem))), vscale));
         vst1q_s32(dst, vret0);
         vst1q_s32(dst + 4, vret1);
     }
 
     void cvt_remain(const int8_t* src, int32_t* dst) {
-        *dst = saturate<int32_t, float>(std::round(*src * scale), -2147483648,
-                                        2147483647);
+        *dst = saturate<int32_t, float>(
+                std::round(*src * scale), -2147483648, 2147483647);
     }
 };
 
@@ -109,8 +107,7 @@ struct QuantizedTypeCvter<float, int8_t> {
         float32x4_t vitem0 = vmulq_f32(vld1q_f32(src), vscale);
         float32x4_t vitem1 = vmulq_f32(vld1q_f32(src + 4), vscale);
 
-        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>(
-                {{vitem0, vitem1}});
+        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>({{vitem0, vitem1}});
         vst1_s8(dst, vres);
     }
 
@@ -142,8 +139,8 @@ struct QuantizedTypeCvter<int32_t, int32_t> {
     }
 
     void cvt_remain(const int32_t* src, int32_t* dst) {
-        *dst = saturate<int32_t, float>(std::round(*src * scale), -2147483648,
-                                        2147483647);
+        *dst = saturate<int32_t, float>(
+                std::round(*src * scale), -2147483648, 2147483647);
     }
 };
 
@@ -164,13 +161,12 @@ struct QuantizedTypeCvter<int8_t, int8_t> {
 
     void cvt(const int8_t* src, int8_t* dst) {
         int16x8_t vdata = vmovl_s8(vld1_s8(src));
-        float32x4_t vitem0 = vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_low_s16(vdata))), vscale);
-        float32x4_t vitem1 = vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_high_s16(vdata))), vscale);
+        float32x4_t vitem0 =
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(vdata))), vscale);
+        float32x4_t vitem1 =
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(vdata))), vscale);
 
-        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>(
-                {{vitem0, vitem1}});
+        auto vres = QConverter::convert<int8x8_t, float32x4x2_t>({{vitem0, vitem1}});
         vst1_s8(dst, vres);
     }
 
@@ -236,8 +232,7 @@ struct QuantizedTypeCvter<int32_t, uint8_t> {
 
     void cvt(const int32_t* src, uint8_t* dst) {
         float32x4_t vitem0 = vmulq_f32(vcvtq_f32_s32(vld1q_s32(src)), vscale);
-        float32x4_t vitem1 =
-                vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + 4)), vscale);
+        float32x4_t vitem1 = vmulq_f32(vcvtq_f32_s32(vld1q_s32(src + 4)), vscale);
         auto vres = QConverter::convert<uint8x8_t, float32x4x2_t>(
                 {{vitem0, vitem1}}, this->vzp);
         vst1_u8(dst, vres);
@@ -274,10 +269,10 @@ struct QuantizedTypeCvter<uint8_t, uint8_t> {
     void cvt(const uint8_t* src, uint8_t* dst) {
         int16x8_t vdata = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(src)));
         vdata = vsubq_s16(vdata, vzp_src);
-        float32x4_t vitem0 = vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_low_s16(vdata))), vscale);
-        float32x4_t vitem1 = vmulq_f32(
-                vcvtq_f32_s32(vmovl_s16(vget_high_s16(vdata))), vscale);
+        float32x4_t vitem0 =
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(vdata))), vscale);
+        float32x4_t vitem1 =
+                vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(vdata))), vscale);
 
         auto vres = QConverter::convert<uint8x8_t, float32x4x2_t>(
                 {{vitem0, vitem1}}, this->vzp_dst);
@@ -322,8 +317,7 @@ struct FloatTypeCvter<float, __fp16> {
     void cvt(const float* src, __fp16* dst) {
         float32x4_t vdata0 = vld1q_f32(src);
         float32x4_t vdata1 = vld1q_f32(src + 4);
-        float16x8_t vdata =
-                vcombine_f16(vcvt_f16_f32(vdata0), vcvt_f16_f32(vdata1));
+        float16x8_t vdata = vcombine_f16(vcvt_f16_f32(vdata0), vcvt_f16_f32(vdata1));
         vst1q_f16(dst, vdata);
     }
 
@@ -332,9 +326,9 @@ struct FloatTypeCvter<float, __fp16> {
 #endif
 
 template <typename TypeCvter>
-void do_typecvt(const typename TypeCvter::stype* src,
-                typename TypeCvter::dst_type* dst, DType src_dtype,
-                DType dst_dtype, size_t nr_elems) {
+void do_typecvt(
+        const typename TypeCvter::stype* src, typename TypeCvter::dst_type* dst,
+        DType src_dtype, DType dst_dtype, size_t nr_elems) {
     TypeCvter typecvt(src_dtype, dst_dtype);
     size_t i = 0;
     for (; i + TypeCvter::SIMD_WIDTH <= nr_elems; i += TypeCvter::SIMD_WIDTH) {
@@ -362,44 +356,41 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     bool execed = false;
     if (src.layout.is_contiguous()) {
         using namespace dtype;
-#define DISPATCH_QUANTIZED(_stype_enumv, _stype, _dtype_enumv, _dtype,       \
-                           _midout_iv)                                       \
-    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&              \
-        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {              \
-        MIDOUT_BEGIN(megdnn_arm_typecvt_quantized, midout_iv(_midout_iv)) {  \
-            using _TypeCvter = QuantizedTypeCvter<_stype, _dtype>;           \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(                                    \
-                    do_typecvt<_TypeCvter>(src.compatible_ptr<_stype>(),     \
-                                           dst.compatible_ptr<_dtype>(),     \
-                                           src_dtype, dst_dtype, nr_elems)); \
-            execed = true;                                                   \
-        }                                                                    \
-        MIDOUT_END();                                                        \
+#define DISPATCH_QUANTIZED(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                    \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                    \
+        MIDOUT_BEGIN(megdnn_arm_typecvt_quantized, midout_iv(_midout_iv)) {        \
+            using _TypeCvter = QuantizedTypeCvter<_stype, _dtype>;                 \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                   \
+                    src.compatible_ptr<_stype>(), dst.compatible_ptr<_dtype>(),    \
+                    src_dtype, dst_dtype, nr_elems));                              \
+            execed = true;                                                         \
+        }                                                                          \
+        MIDOUT_END();                                                              \
     }
 
         DISPATCH_QUANTIZED(QuantizedS32, int32_t, Quantized8Asymm, uint8_t, 0);
         DISPATCH_QUANTIZED(QuantizedS32, int32_t, QuantizedS8, int8_t, 1);
         DISPATCH_QUANTIZED(QuantizedS8, int8_t, QuantizedS32, int32_t, 2);
         DISPATCH_QUANTIZED(QuantizedS8, int8_t, QuantizedS8, int8_t, 3);
-        DISPATCH_QUANTIZED(Quantized8Asymm, uint8_t, Quantized8Asymm, uint8_t,
-                           4);
+        DISPATCH_QUANTIZED(Quantized8Asymm, uint8_t, Quantized8Asymm, uint8_t, 4);
         DISPATCH_QUANTIZED(QuantizedS32, int32_t, QuantizedS32, int32_t, 5);
         DISPATCH_QUANTIZED(float, float, QuantizedS8, int8_t, 6);
         DISPATCH_QUANTIZED(float, float, Quantized8Asymm, uint8_t, 7);
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
-#define DISPATCH_FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv) \
-    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                \
-        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                \
-        MIDOUT_BEGIN(megdnn_arm_typecvt_float, midout_iv(_midout_iv)) {        \
-            using _TypeCvter = FloatTypeCvter<_stype, _dtype>;                 \
-            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(               \
-                    reinterpret_cast<_stype*>(src.raw_ptr),                    \
-                    reinterpret_cast<_dtype*>(dst.raw_ptr), src_dtype,         \
-                    dst_dtype, nr_elems));                                     \
-            execed = true;                                                     \
-        }                                                                      \
-        MIDOUT_END();                                                          \
+#define DISPATCH_FLOAT(_stype_enumv, _stype, _dtype_enumv, _dtype, _midout_iv)    \
+    if (src_dtype.enumv() == DTypeTrait<_stype_enumv>::enumv &&                   \
+        dst_dtype.enumv() == DTypeTrait<_dtype_enumv>::enumv) {                   \
+        MIDOUT_BEGIN(megdnn_arm_typecvt_float, midout_iv(_midout_iv)) {           \
+            using _TypeCvter = FloatTypeCvter<_stype, _dtype>;                    \
+            MEGDNN_DISPATCH_CPU_KERN_OPR(do_typecvt<_TypeCvter>(                  \
+                    reinterpret_cast<_stype*>(src.raw_ptr),                       \
+                    reinterpret_cast<_dtype*>(dst.raw_ptr), src_dtype, dst_dtype, \
+                    nr_elems));                                                   \
+            execed = true;                                                        \
+        }                                                                         \
+        MIDOUT_END();                                                             \
     }
         DISPATCH_FLOAT(dt_float16, __fp16, float, float, 0);
         DISPATCH_FLOAT(float, float, dt_float16, __fp16, 1);

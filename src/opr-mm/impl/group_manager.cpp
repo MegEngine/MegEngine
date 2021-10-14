@@ -26,8 +26,8 @@ void GroupInfo::sort_opr_infos() {
 void GroupInfo::gen_infos_from_opr_infos() {
     // generate rank
     bool rank_assgined = true;
-    for (auto& opr_info:m_opr_infos) {
-        if(opr_info.rank < 0) {
+    for (auto& opr_info : m_opr_infos) {
+        if (opr_info.rank < 0) {
             rank_assgined = false;
             break;
         }
@@ -39,13 +39,12 @@ void GroupInfo::gen_infos_from_opr_infos() {
         }
     } else {
         for (size_t i = 0; i < m_opr_infos.size(); i++) {
-            m_rank_map.insert(
-                    {m_opr_infos[i].comp_node_hash, m_opr_infos[i].rank});
+            m_rank_map.insert({m_opr_infos[i].comp_node_hash, m_opr_infos[i].rank});
         }
     }
 
     // generate root rank
-    for (auto& opr_info:m_opr_infos) {
+    for (auto& opr_info : m_opr_infos) {
         if (opr_info.is_root) {
             m_root_rank = opr_info.rank;
             break;
@@ -61,8 +60,9 @@ void GroupInfo::gen_infos_from_opr_infos() {
     m_hash = xxhash.digest();
 }
 
-void GroupInfo::add_opr(const std::string& key, size_t nr_expected_devices,
-        bool is_root, int rank, uint64_t comp_node_hash) {
+void GroupInfo::add_opr(
+        const std::string& key, size_t nr_expected_devices, bool is_root, int rank,
+        uint64_t comp_node_hash) {
     std::unique_lock<std::mutex> lk{m_group_mtx};
     if (m_nr_expected_devs == 0) {
         m_nr_expected_devs = nr_expected_devices;
@@ -86,13 +86,12 @@ void GroupInfo::add_opr(const std::string& key, size_t nr_expected_devices,
         m_count = m_nr_registered_devs;
         m_register_cv.notify_all();
     } else {
-        m_register_cv.wait(lk,
-                [&] { return m_nr_expected_devs == m_nr_registered_devs; });
+        m_register_cv.wait(
+                lk, [&] { return m_nr_expected_devs == m_nr_registered_devs; });
     }
 }
 
-void GroupInfo::set_output_shape(const std::string& key,
-        const TensorShape& shape) {
+void GroupInfo::set_output_shape(const std::string& key, const TensorShape& shape) {
     MGB_LOCK_GUARD(m_output_shape_mtx);
     m_output_shape = shape;
     m_output_shape_cv.notify_all();
@@ -125,10 +124,9 @@ void GroupInfo::clear() {
 
 /* ================= GroupManager ================= */
 
-GroupManager::RegisterInfo GroupManager::opr_register(const std::string& key,
-                                                      size_t nr_devices,
-                                                      bool is_root, int rank,
-                                                      uint64_t comp_node_hash) {
+GroupManager::RegisterInfo GroupManager::opr_register(
+        const std::string& key, size_t nr_devices, bool is_root, int rank,
+        uint64_t comp_node_hash) {
     GroupManager::RegisterInfo ret{0, 0, 0};
     auto&& group = get_group(key);
     group.add_opr(key, nr_devices, is_root, rank, comp_node_hash);
@@ -139,8 +137,9 @@ GroupManager::RegisterInfo GroupManager::opr_register(const std::string& key,
     return ret;
 }
 
-void GroupManager::bcast_addr(std::string& master_ip, int& port,
-    const std::string& key, uint32_t size, uint32_t rank, uint32_t root) {
+void GroupManager::bcast_addr(
+        std::string& master_ip, int& port, const std::string& key, uint32_t size,
+        uint32_t rank, uint32_t root) {
     std::unique_lock<std::mutex> lk{m_key2addr_mtx};
     if (rank == root) {
         m_key2master_ip[key] = master_ip;
@@ -151,8 +150,7 @@ void GroupManager::bcast_addr(std::string& master_ip, int& port,
         m_key2addr_flag[key] = true;
         m_bcast_cv.notify_all();
     } else {
-        m_bcast_cv.wait(
-                lk, [&] { return m_key2addr_flag.count(key) > 0; });
+        m_bcast_cv.wait(lk, [&] { return m_key2addr_flag.count(key) > 0; });
     }
     master_ip = m_key2master_ip[key];
     port = m_key2port[key];
@@ -164,8 +162,7 @@ void GroupManager::bcast_addr(std::string& master_ip, int& port,
     }
 }
 
-void GroupManager::set_output_shape(const std::string& key,
-        const TensorShape& shape) {
+void GroupManager::set_output_shape(const std::string& key, const TensorShape& shape) {
     auto&& group = get_group(key);
     group.set_output_shape(key, shape);
 }
@@ -205,8 +202,8 @@ uint32_t GroupManager::group_barrier(uint32_t size, uint32_t rank) {
     return m_barrier_size;
 }
 
-void RegInfoCache::set_info(const std::string& key,
-        const GroupManager::RegisterInfo& info) {
+void RegInfoCache::set_info(
+        const std::string& key, const GroupManager::RegisterInfo& info) {
     std::unique_lock<std::mutex> lock(RegInfoCache::mtx);
     RegInfoCache::key2info[key] = info;
 }

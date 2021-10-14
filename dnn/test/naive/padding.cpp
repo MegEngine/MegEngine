@@ -14,17 +14,17 @@
 #include "test/common/checker.h"
 #include "test/naive/fixture.h"
 
-namespace megdnn{
-namespace test{
+namespace megdnn {
+namespace test {
 
 TEST_F(NAIVE, PADDING) {
     std::vector<padding::TestArg> args = padding::get_args();
     Checker<Padding> checker(handle());
-    for(auto&& arg : args){
+    for (auto&& arg : args) {
         checker.set_param(arg.param)
-        .set_dtype(0, dtype::Float32())
-        .set_dtype(1, dtype::Float32())
-        .execs({arg.src, arg.dst});
+                .set_dtype(0, dtype::Float32())
+                .set_dtype(1, dtype::Float32())
+                .execs({arg.src, arg.dst});
     }
 }
 
@@ -48,9 +48,12 @@ TEST_F(NAIVE, PADDING_CONSTANT) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-        Testcase{TensorValue({1,1}, dtype::Float32(), {1}), {}},
-        Testcase{{},TensorValue({5,5}, dtype::Float32(), {10,10,10,10,10,10,10,10,10,10,10,1,10,10,10,10,10,10,10,10,10,10,10,10,10})}
-    );
+            Testcase{TensorValue({1, 1}, dtype::Float32(), {1}), {}},
+            Testcase{{}, TensorValue({5, 5}, dtype::Float32(), {10, 10, 10, 10, 10,
+                                                                10, 10, 10, 10, 10,
+                                                                10, 1,  10, 10, 10,
+                                                                10, 10, 10, 10, 10,
+                                                                10, 10, 10, 10, 10})});
 }
 
 TEST_F(NAIVE, PADDING_REFLECT) {
@@ -73,9 +76,11 @@ TEST_F(NAIVE, PADDING_REFLECT) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-        Testcase{TensorValue({5}, dtype::Float32(), {1,2,3,4,5}), {}},
-        Testcase{{},TensorValue({10}, dtype::Float32(), {3,2,1,2,3,4,5,4,3,2})}
-    );
+            Testcase{TensorValue({5}, dtype::Float32(), {1, 2, 3, 4, 5}), {}},
+            Testcase{
+                    {},
+                    TensorValue(
+                            {10}, dtype::Float32(), {3, 2, 1, 2, 3, 4, 5, 4, 3, 2})});
 }
 
 TEST_F(NAIVE, PADDING_REPLICATE) {
@@ -98,9 +103,14 @@ TEST_F(NAIVE, PADDING_REPLICATE) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-        Testcase{TensorValue({9}, dtype::Float32(), {1,2,3,4,5,6,7,8,9}), {}},
-        Testcase{{},TensorValue({12}, dtype::Float32(), {1,1,2,3,4,5,6,7,8,9,9,9})}
-    );
+            Testcase{
+                    TensorValue({9}, dtype::Float32(), {1, 2, 3, 4, 5, 6, 7, 8, 9}),
+                    {}},
+            Testcase{
+                    {},
+                    TensorValue(
+                            {12}, dtype::Float32(),
+                            {1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9})});
 }
 
 TEST_F(NAIVE, PADDING_REPLICATE2) {
@@ -123,10 +133,15 @@ TEST_F(NAIVE, PADDING_REPLICATE2) {
     param.back_offset_dim5 = 0;
     param.back_offset_dim6 = 0;
     checker.set_param(param).exect(
-        Testcase{TensorValue({3,3}, dtype::Float32(), {1,2,3,4,5,6,7,8,9}), {}},
-        Testcase{{},TensorValue({5,7}, dtype::Float32(), {1,1,2,3,3,3,3,1,1,2,3,3,3,3,1,1,2,3,3,3,3,4,4,5,6,6,6,6,7,7,8,9,9,9,9})}
-    );
+            Testcase{
+                    TensorValue({3, 3}, dtype::Float32(), {1, 2, 3, 4, 5, 6, 7, 8, 9}),
+                    {}},
+            Testcase{{}, TensorValue({5, 7}, dtype::Float32(), {1, 1, 2, 3, 3, 3, 3,
+                                                                1, 1, 2, 3, 3, 3, 3,
+                                                                1, 1, 2, 3, 3, 3, 3,
+                                                                4, 4, 5, 6, 6, 6, 6,
+                                                                7, 7, 8, 9, 9, 9, 9})});
 }
 
-}
-}
+}  // namespace test
+}  // namespace megdnn

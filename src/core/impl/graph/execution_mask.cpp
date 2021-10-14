@@ -40,8 +40,7 @@ public:
 MGB_TYPEINFO_OBJ_IMPL(ExecutionMask::RefHolder);
 
 ExecutionMask::ExecutionMask(VarNode* owner)
-        : m_id{sm_tot_id.fetch_add(1, std::memory_order_relaxed) + 1},
-          m_owner{owner} {
+        : m_id{sm_tot_id.fetch_add(1, std::memory_order_relaxed) + 1}, m_owner{owner} {
     sm_alive_inst.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -54,9 +53,9 @@ void ExecutionMask::register_to_opr(OperatorNodeBase* opr) {
     if (m_owner) {
         mgb_assert(m_owner->owner_graph() == opr->owner_graph());
     }
-    mgb_assert(!acc.exec_mask,
-               "multiple ExecutionMask objects registered to %s{%s}",
-               opr->cname(), opr->dyn_typeinfo()->name);
+    mgb_assert(
+            !acc.exec_mask, "multiple ExecutionMask objects registered to %s{%s}",
+            opr->cname(), opr->dyn_typeinfo()->name);
     acc.exec_mask = this;
     RefHolder::get(opr->owner_graph()).add(shared_from_this());
 #if MGB_ENABLE_JSON
@@ -92,8 +91,7 @@ void ExecutionMask::add_nested(ExecutionMask* nested) {
     m_nested.emplace_back(nested);
 }
 
-ExecutionMask* ExecutionMask::find_direct_lowest(ExecutionMask* a,
-                                                 ExecutionMask* b) {
+ExecutionMask* ExecutionMask::find_direct_lowest(ExecutionMask* a, ExecutionMask* b) {
     if (!a || a == b) {
         return b;
     }

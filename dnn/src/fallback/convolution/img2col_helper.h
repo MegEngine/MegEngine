@@ -13,10 +13,10 @@
 namespace {
 
 template <bool is_xcorr, typename dtype>
-void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
-                    const int OC, const int OH, const int OW, const int IC,
-                    const int IH, const int IW, const int FH, const int FW,
-                    const int SH, const int SW) {
+void img2col_stride(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int SH, const int SW) {
     megdnn_ignore(OC);
     size_t i = 0;
     rep(ic, IC) {
@@ -32,8 +32,9 @@ void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
                             fh2 = FH - fh - 1;
                             fw2 = FW - fw - 1;
                         }
-                        dst[i++] = src[ic * IH * IW + (oh * SH + fh2) * IW +
-                                       (ow * SW + fw2)];
+                        dst[i++] =
+                                src[ic * IH * IW + (oh * SH + fh2) * IW +
+                                    (ow * SW + fw2)];
                     }
                 }
             }
@@ -41,15 +42,14 @@ void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
     }
 }
 
-
-//!add for im2col matmul multithread
+//! add for im2col matmul multithread
 //
 template <bool is_xcorr, typename dtype>
-void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
-                    const int OC, const int OH, const int OW, const int IC,
-                    const int IH, const int IW, const int FH, const int FW,
-                    const int SH, const int SW, const int cur_index,
-                    const int block_size) {
+void img2col_stride_nchw4(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int SH, const int SW, const int cur_index,
+        const int block_size) {
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
     int start_h = cur_index / OW;
@@ -78,9 +78,9 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = cur_remain_w; w < end_remain_w; w++) {
-                            size_t index = 4 * (ic * IH * IW +
-                                                (start_h * SH + fh2) * IW +
-                                                (w * SW + fw2));
+                            size_t index =
+                                    4 * (ic * IH * IW + (start_h * SH + fh2) * IW +
+                                         (w * SW + fw2));
                             dst[i++] = src[index];
                             dst[i++] = src[index + 1];
                             dst[i++] = src[index + 2];
@@ -103,9 +103,9 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = cur_remain_w; w < OW; w++) {
-                            size_t index =4 * (ic * IH * IW +
-                                           (start_h * SH + fh2) * IW +
-                                           (w * SW + fw2));
+                            size_t index =
+                                    4 * (ic * IH * IW + (start_h * SH + fh2) * IW +
+                                         (w * SW + fw2));
                             dst[i++] = src[index + 0];
                             dst[i++] = src[index + 1];
                             dst[i++] = src[index + 2];
@@ -114,8 +114,7 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
 
                         for (int h = start_h + 1; h < end_h; h++) {
                             rep(ow, OW) {
-                                size_t index = 4 * (ic * IH * IW +
-                                                    (h * SH + fh2) * IW +
+                                size_t index = 4 * (ic * IH * IW + (h * SH + fh2) * IW +
                                                     (ow * SW + fw2));
                                 dst[i++] = src[index + 0];
                                 dst[i++] = src[index + 1];
@@ -125,8 +124,7 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = 0; w < end_remain_w; w++) {
-                            size_t index = 4 * (ic * IH * IW +
-                                                (end_h * SH + fh2) * IW +
+                            size_t index = 4 * (ic * IH * IW + (end_h * SH + fh2) * IW +
                                                 (w * SW + fw2));
                             dst[i++] = src[index + 0];
                             dst[i++] = src[index + 1];
@@ -178,8 +176,7 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                             fw2 = FW - fw - 1;
                         }
 
-                        size_t index = ic * IH * IW +
-                                       (start_h * SH + fh2) * IW +
+                        size_t index = ic * IH * IW + (start_h * SH + fh2) * IW +
                                        cur_remain_w * SW + fw2;
                         for (int w = cur_remain_w; w < OW; w++) {
                             output[i++] = uint32_src[index];
@@ -207,11 +204,11 @@ void img2col_stride_nchw4(const dtype* __restrict src, dtype* __restrict dst,
 }
 
 template <bool is_xcorr, typename dtype>
-void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
-                   const int OC, const int OH, const int OW, const int IC,
-                   const int IH, const int IW, const int FH, const int FW,
-                   const int SH, const int SW, const int cur_index,
-                   const int block_size) {
+void img2col_nchw4(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int SH, const int SW, const int cur_index,
+        const int block_size) {
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
     MEGDNN_MARK_USED_VAR(SH);
@@ -241,9 +238,8 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = cur_remain_w; w < end_remain_w; w++) {
-                            size_t index =
-                                    4 * (ic * IH * IW + (start_h + fh2) * IW +
-                                         (w + fw2));
+                            size_t index = 4 * (ic * IH * IW + (start_h + fh2) * IW +
+                                                (w + fw2));
                             dst[i++] = src[index];
                             dst[i++] = src[index + 1];
                             dst[i++] = src[index + 2];
@@ -266,9 +262,8 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = cur_remain_w; w < OW; w++) {
-                            size_t index =
-                                    4 * (ic * IH * IW + (start_h + fh2) * IW +
-                                         (w + fw2));
+                            size_t index = 4 * (ic * IH * IW + (start_h + fh2) * IW +
+                                                (w + fw2));
                             dst[i++] = src[index];
                             dst[i++] = src[index + 1];
                             dst[i++] = src[index + 2];
@@ -277,9 +272,8 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
 
                         for (int h = start_h + 1; h < end_h; h++) {
                             rep(ow, OW) {
-                                size_t index =
-                                        4 * (ic * IH * IW + (h + fh2) * IW +
-                                             (ow + fw2));
+                                size_t index = 4 * (ic * IH * IW + (h + fh2) * IW +
+                                                    (ow + fw2));
                                 dst[i++] = src[index + 0];
                                 dst[i++] = src[index + 1];
                                 dst[i++] = src[index + 2];
@@ -288,8 +282,8 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = 0; w < end_remain_w; w++) {
-                            size_t index = 4 * (ic * IH * IW +
-                                                (end_h + fh2) * IW + (w + fw2));
+                            size_t index =
+                                    4 * (ic * IH * IW + (end_h + fh2) * IW + (w + fw2));
                             dst[i++] = src[index + 0];
                             dst[i++] = src[index + 1];
                             dst[i++] = src[index + 2];
@@ -317,8 +311,8 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                             fw2 = FW - fw - 1;
                         }
                         for (int w = cur_remain_w; w < end_remain_w; w++) {
-                            size_t index = (ic * IH * IW +
-                                            (start_h + fh2) * IW + (w + fw2));
+                            size_t index =
+                                    (ic * IH * IW + (start_h + fh2) * IW + (w + fw2));
                             output[i++] = uint32_src[index];
                         }
                     }
@@ -338,22 +332,22 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
                         }
 
                         for (int w = cur_remain_w; w < OW; w++) {
-                            size_t index = ic * IH * IW + (start_h + fh2) * IW +
-                                           (w + fw2);
+                            size_t index =
+                                    ic * IH * IW + (start_h + fh2) * IW + (w + fw2);
                             output[i++] = uint32_src[index];
                         }
 
                         for (int h = start_h + 1; h < end_h; h++) {
                             rep(ow, OW) {
-                                size_t index = (ic * IH * IW + (h + fh2) * IW +
-                                                (ow + fw2));
+                                size_t index =
+                                        (ic * IH * IW + (h + fh2) * IW + (ow + fw2));
                                 output[i++] = uint32_src[index];
                             }
                         }
 
                         for (int w = 0; w < end_remain_w; w++) {
-                            size_t index = (ic * IH * IW + (end_h + fh2) * IW +
-                                            (w + fw2));
+                            size_t index =
+                                    (ic * IH * IW + (end_h + fh2) * IW + (w + fw2));
                             output[i++] = uint32_src[index];
                         }
                     }
@@ -364,11 +358,11 @@ void img2col_nchw4(const dtype* __restrict src, dtype* __restrict dst,
 }
 
 template <bool is_xcorr, typename dtype>
-void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
-                    const int OC, const int OH, const int OW, const int IC,
-                    const int IH, const int IW, const int FH, const int FW,
-                    const int SH, const int SW, const int cur_index,
-                    const int block_size) {
+void img2col_stride(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int SH, const int SW, const int cur_index,
+        const int block_size) {
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
     int start_h = cur_index / OW;
@@ -424,14 +418,16 @@ void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
 
                     for (int h = start_h + 1; h < end_h; h++) {
                         rep(ow, OW) {
-                            dst[i++] = src[ic * IH * IW + (h * SH + fh2) * IW +
-                                           (ow * SW + fw2)];
+                            dst[i++] =
+                                    src[ic * IH * IW + (h * SH + fh2) * IW +
+                                        (ow * SW + fw2)];
                         }
                     }
 
                     for (int w = 0; w < end_remain_w; w++) {
-                        dst[i++] = src[ic * IH * IW + (end_h * SH + fh2) * IW +
-                                       (w * SW + fw2)];
+                        dst[i++] =
+                                src[ic * IH * IW + (end_h * SH + fh2) * IW +
+                                    (w * SW + fw2)];
                     }
                 }
             }
@@ -440,10 +436,10 @@ void img2col_stride(const dtype* __restrict src, dtype* __restrict dst,
 }
 
 template <bool is_xcorr, typename dtype>
-void img2col(const dtype* __restrict src, dtype* __restrict dst, const int OC,
-             const int OH, const int OW, const int IC, const int IH,
-             const int IW, const int FH, const int FW, const int cur_index,
-             const int block_size) {
+void img2col(
+        const dtype* __restrict src, dtype* __restrict dst, const int OC, const int OH,
+        const int OW, const int IC, const int IH, const int IW, const int FH,
+        const int FW, const int cur_index, const int block_size) {
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
     int start_h = cur_index / OW;
@@ -469,8 +465,7 @@ void img2col(const dtype* __restrict src, dtype* __restrict dst, const int OC,
                         fw2 = FW - fw - 1;
                     }
                     for (int w = cur_remain_w; w < end_remain_w; w++) {
-                        dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW +
-                                       (w + fw2)];
+                        dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW + (w + fw2)];
                     }
                 }
             }
@@ -488,20 +483,17 @@ void img2col(const dtype* __restrict src, dtype* __restrict dst, const int OC,
                         fw2 = FW - fw - 1;
                     }
                     for (int w = cur_remain_w; w < OW; w++) {
-                        dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW +
-                                       (w + fw2)];
+                        dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW + (w + fw2)];
                     }
 
                     for (int h = start_h + 1; h < end_h; h++) {
                         rep(ow, OW) {
-                            dst[i++] = src[ic * IH * IW + (h + fh2) * IW +
-                                           (ow + fw2)];
+                            dst[i++] = src[ic * IH * IW + (h + fh2) * IW + (ow + fw2)];
                         }
                     }
 
                     for (int w = 0; w < end_remain_w; w++) {
-                        dst[i++] = src[ic * IH * IW + (end_h + fh2) * IW +
-                                       (w + fw2)];
+                        dst[i++] = src[ic * IH * IW + (end_h + fh2) * IW + (w + fw2)];
                     }
                 }
             }
@@ -510,8 +502,9 @@ void img2col(const dtype* __restrict src, dtype* __restrict dst, const int OC,
 }
 
 template <bool is_xcorr, typename dtype>
-void img2col(const dtype* src, dtype* dst, size_t /* OC */, size_t OH,
-             size_t OW, size_t IC, size_t IH, size_t IW, size_t FH, size_t FW) {
+void img2col(
+        const dtype* src, dtype* dst, size_t /* OC */, size_t OH, size_t OW, size_t IC,
+        size_t IH, size_t IW, size_t FH, size_t FW) {
     size_t offset = (4 - OW % 4) % 4;
     size_t i = 0;
     rep(ic, IC) {
@@ -528,14 +521,10 @@ void img2col(const dtype* src, dtype* dst, size_t /* OC */, size_t OH,
                             fh2 = FH - fh - 1;
                             fw2 = FW - fw - 1;
                         }
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 0];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 1];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 2];
-                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW +
-                                       (ow + fw2) + 3];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 0];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 1];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 2];
+                        dst[i++] = src[ic * IH * IW + (oh + fh2) * IW + (ow + fw2) + 3];
                     }
                     i -= offset;
                 }

@@ -73,15 +73,14 @@ public:
 
         m_description.tile_description.threadblock_stages = Operator::kStages;
 
-        m_description.tile_description.warp_count =
-                make_Coord(Operator::ConvolutionKernel::WarpCount::kM,
-                           Operator::ConvolutionKernel::WarpCount::kN,
-                           Operator::ConvolutionKernel::WarpCount::kK);
+        m_description.tile_description.warp_count = make_Coord(
+                Operator::ConvolutionKernel::WarpCount::kM,
+                Operator::ConvolutionKernel::WarpCount::kN,
+                Operator::ConvolutionKernel::WarpCount::kK);
 
-        m_description.tile_description.math_instruction.instruction_shape =
-                make_Coord(Operator::InstructionShape::kM,
-                           Operator::InstructionShape::kN,
-                           Operator::InstructionShape::kK);
+        m_description.tile_description.math_instruction.instruction_shape = make_Coord(
+                Operator::InstructionShape::kM, Operator::InstructionShape::kN,
+                Operator::InstructionShape::kK);
 
         m_description.tile_description.math_instruction.element_accumulator =
                 NumericTypeMap<ElementAccumulator>::kId;
@@ -100,13 +99,12 @@ public:
                 ArchMap<typename Operator::ArchTag,
                         typename Operator::OperatorClass>::kMax;
 
-        m_description.src = make_TensorDescription<ElementSrc, LayoutSrc>(
-                Operator::kAlignmentSrc);
-        m_description.filter =
-                make_TensorDescription<ElementFilter, LayoutFilter>(
-                        Operator::kAlignmentFilter);
-        m_description.dst = make_TensorDescription<ElementDst, LayoutDst>(
-                Operator::kAlignmentDst);
+        m_description.src =
+                make_TensorDescription<ElementSrc, LayoutSrc>(Operator::kAlignmentSrc);
+        m_description.filter = make_TensorDescription<ElementFilter, LayoutFilter>(
+                Operator::kAlignmentFilter);
+        m_description.dst =
+                make_TensorDescription<ElementDst, LayoutDst>(Operator::kAlignmentDst);
         m_description.bias = make_TensorDescription<ElementBias, LayoutBias>(
                 Operator::kAlignmentDst);
 
@@ -116,18 +114,15 @@ public:
         m_description.epilogue_type = Operator::EpilogueOutputOp::kType;
         m_description.epilogue_count = Operator::EpilogueOutputOp::kCount;
 
-        m_description.threadblock_swizzle = ThreadblockSwizzleMap<
-                typename Operator::ThreadblockSwizzle>::kId;
+        m_description.threadblock_swizzle =
+                ThreadblockSwizzleMap<typename Operator::ThreadblockSwizzle>::kId;
 
-        m_description.special_optimization =
-                Operator::kSpecialOpt;
+        m_description.special_optimization = Operator::kSpecialOpt;
         m_description.gemm_mode = Operator::kGemmMode;
         m_description.without_shared_load = Operator::kWithoutSharedLoad;
     }
 
-    virtual OperationDescription const& description() const {
-        return m_description;
-    }
+    virtual OperationDescription const& description() const { return m_description; }
 
 protected:
     ConvolutionDescription m_description;
@@ -141,8 +136,8 @@ template <typename EpilogueOp, epilogue::EpilogueType type>
 struct init_epilogue_param_;
 
 template <typename EpilogueOp>
-struct init_epilogue_param_<EpilogueOp,
-                            epilogue::EpilogueType::kBiasAddLinearCombination> {
+struct init_epilogue_param_<
+        EpilogueOp, epilogue::EpilogueType::kBiasAddLinearCombination> {
     using ElementCompute = typename EpilogueOp::ElementCompute;
     typename EpilogueOp::Params get(ConvolutionArguments const* conv_args) {
         return {*static_cast<ElementCompute const*>(conv_args->alpha),
@@ -180,8 +175,7 @@ struct init_epilogue_param_<
 
 template <typename EpilogueOp>
 struct init_epilogue_param_<
-        EpilogueOp,
-        epilogue::EpilogueType::kBiasAddLinearCombinationReluClamp> {
+        EpilogueOp, epilogue::EpilogueType::kBiasAddLinearCombinationReluClamp> {
     using ElementCompute = typename EpilogueOp::ElementCompute;
     typename EpilogueOp::Params get(ConvolutionArguments const* conv_args) {
         return {*static_cast<ElementCompute const*>(conv_args->alpha),
@@ -209,8 +203,7 @@ struct init_epilogue_param_<
 
 template <typename EpilogueOp>
 struct init_epilogue_param_<
-        EpilogueOp,
-        epilogue::EpilogueType::kBiasAddLinearCombinationHSwishClamp> {
+        EpilogueOp, epilogue::EpilogueType::kBiasAddLinearCombinationHSwishClamp> {
     using ElementCompute = typename EpilogueOp::ElementCompute;
     typename EpilogueOp::Params get(ConvolutionArguments const* conv_args) {
         return {*static_cast<ElementCompute const*>(conv_args->alpha),
@@ -250,9 +243,9 @@ public:
     ConvolutionOperation(char const* name = "unknown_gemm")
             : ConvolutionOperationBase<Operator_>(name) {}
 
-    virtual Status run(void const* arguments_ptr,
-                       void* device_workspace = nullptr,
-                       cudaStream_t stream = nullptr) const {
+    virtual Status run(
+            void const* arguments_ptr, void* device_workspace = nullptr,
+            cudaStream_t stream = nullptr) const {
         cutlass::conv::Operator conv_op = this->m_description.conv_op;
         ConvolutionArguments const* conv_args =
                 reinterpret_cast<ConvolutionArguments const*>(arguments_ptr);
@@ -263,14 +256,12 @@ public:
         args.ref_src = {
                 static_cast<ElementSrc*>(const_cast<void*>(conv_args->src)),
                 LayoutSrc::packed(implicit_gemm_tensor_a_extent(conv_op, ps))};
-        args.ref_filter = {static_cast<ElementFilter*>(
-                                   const_cast<void*>(conv_args->filter)),
-                           LayoutFilter::packed(
-                                   implicit_gemm_tensor_b_extent(conv_op, ps))};
+        args.ref_filter = {
+                static_cast<ElementFilter*>(const_cast<void*>(conv_args->filter)),
+                LayoutFilter::packed(implicit_gemm_tensor_b_extent(conv_op, ps))};
         args.ref_bias = {
                 static_cast<ElementBias*>(const_cast<void*>(conv_args->bias)),
-                LayoutBias::packed(
-                        implicit_gemm_tensor_bias_extent(conv_op, ps))};
+                LayoutBias::packed(implicit_gemm_tensor_bias_extent(conv_op, ps))};
         args.ref_z = {
                 static_cast<ElementDst*>(const_cast<void*>(conv_args->z)),
                 LayoutDst::packed(implicit_gemm_tensor_c_extent(conv_op, ps))};
@@ -278,14 +269,12 @@ public:
                 static_cast<ElementDst*>(conv_args->dst),
                 LayoutDst::packed(implicit_gemm_tensor_c_extent(conv_op, ps))};
 
-        args.output_op =
-                init_epilogue_param<typename Operator::EpilogueOutputOp>().get(
-                        conv_args);
+        args.output_op = init_epilogue_param<typename Operator::EpilogueOutputOp>().get(
+                conv_args);
 
         if (conv_args->extra_param) {
-            args.extra_param =
-                    *reinterpret_cast<typename Operator::ExtraParam const*>(
-                            conv_args->extra_param);
+            args.extra_param = *reinterpret_cast<typename Operator::ExtraParam const*>(
+                    conv_args->extra_param);
         }
 
         Operator op;

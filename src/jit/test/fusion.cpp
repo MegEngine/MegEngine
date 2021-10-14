@@ -21,11 +21,11 @@
 #include "megbrain/jit/fusion_pass.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
 #include "megbrain/opr/blas.h"
+#include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/opr/utility.h"
 #include "megbrain/test/autocheck.h"
 #include "megbrain/test/helper.h"
-#include "megbrain/opr/dnn/convolution.h"
 
 #include "../../core/impl/graph/cg_impl_seq.h"
 
@@ -34,12 +34,12 @@
 using namespace mgb;
 using namespace jit;
 
-#define FOREACH_CASE(cb)                                                       \
-    cb(basic) cb(shape_change) cb(large_num_inps) cb(simple_exp)               \
-    cb(complex_exp) cb(exp_pow) cb(cache) cb(all_oprs)                         \
-    cb(expand_jit_executor) cb(multi_device) cb(multi_shape)                   \
-    cb(non_contig) cb(visit_complexity) cb(imm_scalar)                         \
-    cb(jit_grad) cb(concat_input) cb(special_graph_input)
+#define FOREACH_CASE(cb)                                                         \
+    cb(basic) cb(shape_change) cb(large_num_inps) cb(simple_exp) cb(complex_exp) \
+            cb(exp_pow) cb(cache) cb(all_oprs) cb(expand_jit_executor)           \
+                    cb(multi_device) cb(multi_shape) cb(non_contig)              \
+                            cb(visit_complexity) cb(imm_scalar) cb(jit_grad)     \
+                                    cb(concat_input) cb(special_graph_input)
 
 namespace {
 #define def_tag(x) \
@@ -94,11 +94,10 @@ SmallVector<T*> find_oprs(cg::AsyncExecutable& func) {
 }
 
 //! make a pair of functions with and without JIT optimization
-std::pair<std::unique_ptr<cg::AsyncExecutable>,
-          std::unique_ptr<cg::AsyncExecutable>>
-make_func_pair(HostTensorND& dst0, HostTensorND& dst1,
-               thin_function<SymbolVar(ComputingGraph&)> make_dst,
-               uint8_t jit_level) {
+std::pair<std::unique_ptr<cg::AsyncExecutable>, std::unique_ptr<cg::AsyncExecutable>>
+make_func_pair(
+        HostTensorND& dst0, HostTensorND& dst1,
+        thin_function<SymbolVar(ComputingGraph&)> make_dst, uint8_t jit_level) {
     auto g0 = ComputingGraph::make();
     g0->options().graph_opt_level = 0;
     auto f0 = g0->compile({make_callback_copy(make_dst(*g0), dst0)});
@@ -141,10 +140,8 @@ void run<basic>(Backend backend, CompNode cn) {
     ASSERT_EQ(4u, jits[1]->input().size());
 
     //! check memfwd
-    ASSERT_EQ(prev_dev_ptr(jits[0]->input(0)),
-              prev_dev_ptr(jits[0]->output(0)));
-    ASSERT_EQ(prev_dev_ptr(jits[1]->input(0)),
-              prev_dev_ptr(jits[1]->output(0)));
+    ASSERT_EQ(prev_dev_ptr(jits[0]->input(0)), prev_dev_ptr(jits[0]->output(0)));
+    ASSERT_EQ(prev_dev_ptr(jits[1]->input(0)), prev_dev_ptr(jits[1]->output(0)));
 }
 
 template <>
@@ -270,8 +267,7 @@ void run<concat_input>(Backend backend, CompNode cn) {
             4,
             [](const SymbolVarArray& inp) -> SymbolVar {
                 auto spl = opr::Split::make(
-                        inp[0],
-                        opr::Split::Options::make_partition(inp[0], 1, {1, 1}));
+                        inp[0], opr::Split::Options::make_partition(inp[0], 1, {1, 1}));
                 return spl[1] * inp[1] + inp[2] * spl[1] + inp[3] + inp[3];
             },
             cn};
@@ -282,11 +278,9 @@ template <>
 void run<simple_exp>(Backend backend, CompNode cn) {
     set_backend(backend);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              return inp[0] + inp[1];
-                          },
-                          cn};
+    FusionChecker checker{
+            2, [](const SymbolVarArray& inp) -> SymbolVar { return inp[0] + inp[1]; },
+            cn};
     checker.enable_direct_build().run({TensorShape{3, 3}, {3, 3}});
 }
 
@@ -295,9 +289,7 @@ void run<jit_grad>(Backend backend, CompNode cn) {
     set_backend(backend);
 
     FusionChecker checker{
-            1,
-            [](const SymbolVarArray& inp) -> SymbolVar { return inp[0] + 1; },
-            cn};
+            1, [](const SymbolVarArray& inp) -> SymbolVar { return inp[0] + 1; }, cn};
     checker.enable_direct_build().run({TensorShape{3, 1}});
 }
 
@@ -310,11 +302,11 @@ void run<exp_pow>(Backend backend, CompNode cn) {
             [](const SymbolVarArray& inp) -> SymbolVar {
                 auto iabs = opr::abs(inp[0]) + .23f;
                 return opr::exp(inp[0]) + opr::exp(inp[1]) -
-                       opr::exp(inp[2]) * opr::pow(opr::abs(inp[1]) + 0.2f,
-                                                   opr::abs(inp[2]) + 0.1f) +
+                       opr::exp(inp[2]) * opr::pow(
+                                                  opr::abs(inp[1]) + 0.2f,
+                                                  opr::abs(inp[2]) + 0.1f) +
                        opr::powf(inp[0], 2) - opr::powf(inp[0], -3) +
-                       opr::powf(iabs, 1.f / 3.f) +
-                       opr::PowC::make(iabs, -1.f / 3.f) +
+                       opr::powf(iabs, 1.f / 3.f) + opr::PowC::make(iabs, -1.f / 3.f) +
                        opr::PowC::make(iabs, .5f) + opr::PowC::make(iabs, -.5f);
             },
             cn};
@@ -325,13 +317,13 @@ template <>
 void run<complex_exp>(Backend backend, CompNode cn) {
     set_backend(backend);
 
-    FusionChecker checker{4,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              return opr::abs(inp[0]) * (inp[1] + inp[2]) *
-                                             inp[3] -
-                                     (inp[1] + inp[2]) * inp[2] / inp[1];
-                          },
-                          cn};
+    FusionChecker checker{
+            4,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                return opr::abs(inp[0]) * (inp[1] + inp[2]) * inp[3] -
+                       (inp[1] + inp[2]) * inp[2] / inp[1];
+            },
+            cn};
     checker.run({TensorShape{3, 3}, {1, 3}, {3, 1}, {1, 3}});
 }
 
@@ -360,10 +352,7 @@ void run<cache>(Backend backend, CompNode cn) {
     func->execute();
 
     auto get_exe = [](SymbolVar var) {
-        return var.node()
-                ->owner_opr()
-                ->cast_final_safe<JITExecutor>()
-                .executable();
+        return var.node()->owner_opr()->cast_final_safe<JITExecutor>().executable();
     };
     auto ex0 = get_exe(vars[0]), ex1 = get_exe(vars[1]), ex2 = get_exe(vars[2]);
     ASSERT_EQ(ex0, ex2);
@@ -385,8 +374,9 @@ void run<all_oprs>(Backend backend, CompNode cn) {
     };
     static auto itrans_clip1 = [](SymbolVar* data, size_t size) {
         for (size_t i = 0; i < size; ++i) {
-            data[i] = opr::max(opr::min(data[i], data[i].make_scalar_dt(0.9f)),
-                               data[i].make_scalar_dt(-0.9f));
+            data[i] = opr::max(
+                    opr::min(data[i], data[i].make_scalar_dt(0.9f)),
+                    data[i].make_scalar_dt(-0.9f));
         }
     };
     static auto itrans_gt0 = [](SymbolVar* data, size_t size) {
@@ -401,34 +391,35 @@ void run<all_oprs>(Backend backend, CompNode cn) {
         }
     };
 
-#define DO_CHK_ELEM(_mode, _arity, _do_grad, _itrans, _shps...)         \
-    tasks.emplace_back(#_mode, [cn]() {                                 \
-        FusionChecker chk{_arity,                                       \
-                          [](SymbolVarArray inp) -> SymbolVar {         \
-                              itrans_##_itrans(inp.data(), inp.size()); \
-                              return opr::Elemwise::make(               \
-                                      inp, opr::Elemwise::Mode::_mode); \
-                          },                                            \
-                          cn};                                          \
-        chk.enable_direct_build();                                      \
-        if (!_do_grad) {                                                \
-            chk.disable_inp_grad();                                     \
-        }                                                               \
-        chk.run({_shps});                                               \
+#define DO_CHK_ELEM(_mode, _arity, _do_grad, _itrans, _shps...)                  \
+    tasks.emplace_back(#_mode, [cn]() {                                          \
+        FusionChecker chk{                                                       \
+                _arity,                                                          \
+                [](SymbolVarArray inp) -> SymbolVar {                            \
+                    itrans_##_itrans(inp.data(), inp.size());                    \
+                    return opr::Elemwise::make(inp, opr::Elemwise::Mode::_mode); \
+                },                                                               \
+                cn};                                                             \
+        chk.enable_direct_build();                                               \
+        if (!_do_grad) {                                                         \
+            chk.disable_inp_grad();                                              \
+        }                                                                        \
+        chk.run({_shps});                                                        \
     })
 
 #define CHECK_ELEM1(_mode, _do_grad, _itrans) \
     DO_CHK_ELEM(_mode, 1, _do_grad, _itrans, TensorShape{9, 12, 7})
-#define CHECK_ELEM2(_mode, _do_grad, _itrans)                       \
-    DO_CHK_ELEM(_mode, 2, _do_grad, _itrans, TensorShape{9, 12, 7}, \
-                TensorShape{9, 1, 7})
-#define CHECK_ELEM3(_mode, _do_grad, _itrans)                       \
-    DO_CHK_ELEM(_mode, 3, _do_grad, _itrans, TensorShape{9, 12, 7}, \
-                TensorShape{9, 1, 7}, TensorShape{1, 12, 7})
-#define CHECK_ELEM4(_mode, _do_grad, _itrans)                       \
-    DO_CHK_ELEM(_mode, 4, _do_grad, _itrans, TensorShape{9, 12, 7}, \
-                TensorShape{9, 1, 7}, TensorShape{1, 12, 7},        \
-                TensorShape{9, 12, 1})
+#define CHECK_ELEM2(_mode, _do_grad, _itrans) \
+    DO_CHK_ELEM(                              \
+            _mode, 2, _do_grad, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 1, 7})
+#define CHECK_ELEM3(_mode, _do_grad, _itrans)                                         \
+    DO_CHK_ELEM(                                                                      \
+            _mode, 3, _do_grad, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 1, 7}, \
+            TensorShape{1, 12, 7})
+#define CHECK_ELEM4(_mode, _do_grad, _itrans)                                         \
+    DO_CHK_ELEM(                                                                      \
+            _mode, 4, _do_grad, _itrans, TensorShape{9, 12, 7}, TensorShape{9, 1, 7}, \
+            TensorShape{1, 12, 7}, TensorShape{9, 12, 1})
 
     CHECK_ELEM1(RELU, true, none);
     CHECK_ELEM1(ABS, true, none);
@@ -483,8 +474,7 @@ void run<all_oprs>(Backend backend, CompNode cn) {
 
     ASSERT_EQ(ast_c::elem_opr_generator().size(), tasks.size());
 
-    auto type_cvt_test = [&](const char* name, DType src_dtype,
-                             DType dst_dtype) {
+    auto type_cvt_test = [&](const char* name, DType src_dtype, DType dst_dtype) {
         tasks.emplace_back(name, [cn, src_dtype, dst_dtype]() {
             FusionChecker checker{
                     1,
@@ -516,8 +506,7 @@ void run<all_oprs>(Backend backend, CompNode cn) {
             }
             if (!::testing::Test::HasFailure()) {
                 mgb_log("going to run %s on worker %d", tasks[id].first, wid);
-                ASSERT_NO_THROW(tasks[id].second())
-                        << "failed for " << tasks[id].first;
+                ASSERT_NO_THROW(tasks[id].second()) << "failed for " << tasks[id].first;
             }
         }
     };
@@ -550,8 +539,8 @@ void run<expand_jit_executor>(Backend backend, CompNode cn) {
         auto y = target.node();
         auto ig_gen = std::make_unique<InternalGraphGenerator>(y->owner_opr());
         auto inputs_vptr = cg::to_var_node_array(inputs);
-        for (auto i : get_rev_topo_order(
-                     target, {inputs_vptr.begin(), inputs_vptr.end()})) {
+        for (auto i :
+             get_rev_topo_order(target, {inputs_vptr.begin(), inputs_vptr.end()})) {
             ig_gen->add_opr(i);
         }
         auto igraph = ig_gen->generate();
@@ -629,8 +618,7 @@ void run<multi_device>(Backend backend, CompNode cn) {
 
     auto jits = find_oprs<JITExecutor>(*funcs.second);
     ASSERT_EQ(2u, jits.size());
-    ASSERT_EQ(jits[0]->internal_graph().output(),
-              jits[1]->internal_graph().output());
+    ASSERT_EQ(jits[0]->internal_graph().output(), jits[1]->internal_graph().output());
 }
 
 template <>
@@ -645,19 +633,16 @@ void run<multi_shape>(Backend backend, CompNode cn) {
              y = opr::Host2DeviceCopy::make(graph, host_y).rename("y"),
              jit0 = jit_stop(opr::sin(x) * x),
              a = opr::AxisAddRemove::make(
-                     opr::Reduce::make(jit0,
-                                       {opr::Reduce::Param::Mode::SUM, 2}),
+                     opr::Reduce::make(jit0, {opr::Reduce::Param::Mode::SUM, 2}),
                      {opr::AxisAddRemove::AxisDesc::make_remove(2)}),
-             jit1 = jit_stop(opr::sin(a) + opr::sin(y)),
-             jit2 = opr::sin(jit1) * jit1;
+             jit1 = jit_stop(opr::sin(a) + opr::sin(y)), jit2 = opr::sin(jit1) * jit1;
         return jit2;
     };
     HostTensorND host_z1, host_z2;
     auto funcs = make_func_pair(host_z1, host_z2, make_dst, 2);
     auto jits = find_oprs<JITExecutor>(*funcs.second);
     ASSERT_EQ(3u, jits.size());
-    ASSERT_EQ(jits[0]->internal_graph().output(),
-              jits[2]->internal_graph().output());
+    ASSERT_EQ(jits[0]->internal_graph().output(), jits[2]->internal_graph().output());
     for (int i = 0; i < 8; ++i) {
         funcs.first->execute();
         funcs.second->execute();
@@ -714,8 +699,7 @@ void run<visit_complexity>(Backend backend, CompNode cn) {
     // not correctly implemented
     set_backend(backend);
 
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.01f,
-                                                                         0.02f};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.01f, 0.02f};
     auto host_x = gen({3, 4}, cn);
     auto make_dst = [&](ComputingGraph& graph) {
         auto x = opr::Host2DeviceCopy::make(graph, host_x);
@@ -770,8 +754,8 @@ void run<special_graph_input>(Backend backend, CompNode cn) {
     auto make_dst = [&](ComputingGraph& graph) {
         auto x = opr::Host2DeviceCopy::make(graph, host_x);
         auto y = opr::Host2DeviceCopy::make(graph, host_y);
-        auto spl = opr::Split::make(x,
-                        opr::Split::Options::make_partition(x, 1, {1, 2}));
+        auto spl =
+                opr::Split::make(x, opr::Split::Options::make_partition(x, 1, {1, 2}));
         auto mat = mgb::opr::MatrixMul::make(spl[1], y);
         return (spl[0] * spl[0] + 1.f) / (mat + 1.2f) * .3f;
     };
@@ -806,17 +790,17 @@ TEST(TestJITFusionHalide, SimpleReduce) {
          z = opr::reduce_sum(a * b, opr::GetVarShape::make(a)) + y;
 
     SymbolVar z_opt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_preset_passes(true, nullptr, &(graph->options()))
-                          .apply({{z}})
-                          .endpoint_vars(),
-                  z_opt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_preset_passes(true, nullptr, &(graph->options()))
+                    .apply({{z}})
+                    .endpoint_vars(),
+            z_opt);
     ASSERT_EQ(2u, find_opr_num<mgb::jit::JITExecutor>(z_opt));
     HostTensorND h;
     graph->compile({make_callback_copy(z_opt, h)})
             ->to_json()
-            ->writeto_fpath(
-                    output_file("TestJITFusionHalide.SimpleReduce.json"));
+            ->writeto_fpath(output_file("TestJITFusionHalide.SimpleReduce.json"));
 }
 
 TEST(TestJITFusionHalide, JITExecutor) {
@@ -833,14 +817,10 @@ TEST(TestJITFusionHalide, JITExecutor) {
          b = opr::Host2DeviceCopy::make(*graph, host_x1),
          c = opr::Host2DeviceCopy::make(*graph, host_x2),
          d = opr::Host2DeviceCopy::make(*graph, host_x3),
-         shape_of_b = opr::GetVarShape::make(b),
-         shape_of_a = opr::GetVarShape::make(a),
-         y = opr::reduce_sum(a + b, shape_of_b),
-         z = opr::reduce_sum(a * b, shape_of_a);
-    auto ig_gen_1 =
-            std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
-    auto ig_gen_2 =
-            std::make_unique<InternalGraphGenerator>(z.node()->owner_opr());
+         shape_of_b = opr::GetVarShape::make(b), shape_of_a = opr::GetVarShape::make(a),
+         y = opr::reduce_sum(a + b, shape_of_b), z = opr::reduce_sum(a * b, shape_of_a);
+    auto ig_gen_1 = std::make_unique<InternalGraphGenerator>(y.node()->owner_opr());
+    auto ig_gen_2 = std::make_unique<InternalGraphGenerator>(z.node()->owner_opr());
     {
         ThinHashSet<VarNode*> nd_set;
         nd_set.insert(a.node());
@@ -864,22 +844,22 @@ TEST(TestJITFusionHalide, JITExecutor) {
     auto ig_1 = ig_gen_1->generate(), ig_2 = ig_gen_2->generate();
     auto jit_1 = JITExecutor::make(ig_1, ig_gen_1->orig_inps());
     auto jit_2 = JITExecutor::make(ig_2, ig_gen_2->orig_inps());
-    auto w = opr::reduce_sum(a * b + c * d, opr::GetVarShape::make(a)),
-         x = w + jit_1, u = x * jit_2;
+    auto w = opr::reduce_sum(a * b + c * d, opr::GetVarShape::make(a)), x = w + jit_1,
+         u = x * jit_2;
 
     SymbolVar u_opt;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_preset_passes(true, nullptr, &(graph->options()))
-                          .apply({{u}})
-                          .endpoint_vars(),
-                  u_opt);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_preset_passes(true, nullptr, &(graph->options()))
+                    .apply({{u}})
+                    .endpoint_vars(),
+            u_opt);
     ASSERT_EQ(2u, find_opr_num<mgb::jit::JITExecutor>(u_opt));
     ASSERT_GT(1u, find_opr_num<opr::Elemwise>(u_opt));
     HostTensorND h;
     graph->compile({make_callback_copy(u_opt, h)})
             ->to_json()
-            ->writeto_fpath(
-                    output_file("TestJITFusionHalide.JITExecutor.json"));
+            ->writeto_fpath(output_file("TestJITFusionHalide.JITExecutor.json"));
 }
 
 TEST(TestJITFusionHalide, BatchNormalization) {
@@ -889,19 +869,18 @@ TEST(TestJITFusionHalide, BatchNormalization) {
     auto graph1 = ComputingGraph::make();
     graph1->options().graph_opt_level = 3;
     graph1->options().graph_opt.jit = 2;
-    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.1,
-                                                                         1};
+    HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> gen{0.1, 1};
     size_t n = 32, c = 24, h = 28, w = 28;
     auto host_x0 = gen({n, c, h, w});
-    auto host_tshp = std::make_shared<HostTensorND>(host_x0->comp_node(),
-                                                    dtype::Int32());
+    auto host_tshp =
+            std::make_shared<HostTensorND>(host_x0->comp_node(), dtype::Int32());
     host_tshp->resize({4});
     host_tshp->ptr<int>()[0] = 1;
     host_tshp->ptr<int>()[1] = c;
     host_tshp->ptr<int>()[2] = 1;
     host_tshp->ptr<int>()[3] = 1;
-    auto host_pow = std::make_shared<HostTensorND>(host_x0->comp_node(),
-                                                   dtype::Float32());
+    auto host_pow =
+            std::make_shared<HostTensorND>(host_x0->comp_node(), dtype::Float32());
     host_pow->resize({1});
     host_pow->ptr<float>()[0] = -0.5;
     auto pow = opr::Host2DeviceCopy::make(*graph1, host_pow, {"pow"});
@@ -915,8 +894,8 @@ TEST(TestJITFusionHalide, BatchNormalization) {
     auto x2 = opr::reduce_sum_sqr(xx, tshp);
     auto var = (x2 - x1 * x1 / reduce_size) / (reduce_size - 1),
          regular_var = var + (float)(1e-5);
-    auto invsqrt_var = opr::Elemwise::make({regular_var, pow},
-                                           opr::Elemwise::Param::Mode::POW);
+    auto invsqrt_var =
+            opr::Elemwise::make({regular_var, pow}, opr::Elemwise::Param::Mode::POW);
     auto ovar = (x - x1 / reduce_size) * invsqrt_var;
     HostTensorND h_ovar;
 
@@ -950,8 +929,8 @@ TEST(TestJITFusionHalide, BatchNormalization) {
     auto x2_ = opr::reduce_sum_sqr(xx_, tshp_);
     auto var_ = (x2_ - x1_ * x1_ / reduce_size_) / (reduce_size_ - 1),
          regular_var_ = var_ + (float)(1e-5);
-    auto invsqrt_var_ = opr::Elemwise::make({regular_var_, pow_},
-                                            opr::Elemwise::Param::Mode::POW);
+    auto invsqrt_var_ =
+            opr::Elemwise::make({regular_var_, pow_}, opr::Elemwise::Param::Mode::POW);
     auto ovar_ = (x_ - x1_ / reduce_size_) * invsqrt_var_;
     HostTensorND h_ovar_;
 
@@ -967,7 +946,7 @@ TEST(TestJITFusionHalide, BatchNormalization) {
     func2->execute();
 
     MGB_ASSERT_TENSOR_NEAR(h_ovar_, h_ovar, 3e-5);
-    if (do_grad){
+    if (do_grad) {
         MGB_ASSERT_TENSOR_NEAR(h_grad_, h_grad, 3e-4);
     }
 }
@@ -988,9 +967,7 @@ TEST(TestJITFusionHalide, ReduceShapeManip) {
                  tshp = opr::Concat::make(
                          {one,
                           opr::GetVarShape::make(
-                                  dyn_shape ? opr::MarkDynamicVar::make(xm2)
-                                            : xm2,
-                                  1),
+                                  dyn_shape ? opr::MarkDynamicVar::make(xm2) : xm2, 1),
                           one},
                          0),
                  y = opr::reduce_sum(xm2, tshp) + 3;
@@ -1004,8 +981,8 @@ TEST(TestJITFusionHalide, ReduceShapeManip) {
             funcs.second->execute();
             MGB_ASSERT_TENSOR_NEAR(host_y0, host_y1, 1e-5);
         };
-        funcs.second->to_json()->writeto_fpath(output_file(ssprintf(
-                "TestJITFusionHalide.ReduceShapeManip%d.json", dyn_shape)));
+        funcs.second->to_json()->writeto_fpath(output_file(
+                ssprintf("TestJITFusionHalide.ReduceShapeManip%d.json", dyn_shape)));
         run();
         host_x->copy_from(*gen({13, 4, 5}, cn));
         run();
@@ -1013,13 +990,10 @@ TEST(TestJITFusionHalide, ReduceShapeManip) {
         if (!dyn_shape) {
             JITExecutor* jit;
             unpack_vector(find_oprs<JITExecutor>(*funcs.second), jit);
-            ASSERT_TRUE(jit->input(0)
-                                ->owner_opr()
-                                ->same_type<opr::Host2DeviceCopy>());
+            ASSERT_TRUE(jit->input(0)->owner_opr()->same_type<opr::Host2DeviceCopy>());
             ASSERT_EQ(2u, jit->input().size());
             auto dep_type = jit->node_prop().dep_map().at(jit->input(1));
-            ASSERT_EQ(cg::OperatorNodeBase::NodeProp::DepType::HOST_VALUE,
-                      dep_type);
+            ASSERT_EQ(cg::OperatorNodeBase::NodeProp::DepType::HOST_VALUE, dep_type);
             ASSERT_EQ(0u, find_oprs<opr::Elemwise>(*funcs.second).size());
         }
     };
@@ -1034,10 +1008,9 @@ TEST(TestJITFusionHalide, ReduceExp) {
     FusionChecker checker{
             2,
             [](const SymbolVarArray& inp) -> SymbolVar {
-                auto var1 =
-                        opr::reduce_sum(inp[0], opr::GetVarShape::make(inp[1]));
-                auto var2 = opr::reduce_sum_sqr(inp[0] + inp[1],
-                                                opr::GetVarShape::make(inp[1]));
+                auto var1 = opr::reduce_sum(inp[0], opr::GetVarShape::make(inp[1]));
+                auto var2 = opr::reduce_sum_sqr(
+                        inp[0] + inp[1], opr::GetVarShape::make(inp[1]));
                 return var1 + var2;
             },
             CompNode::load("gpu0")};
@@ -1054,13 +1027,11 @@ TEST(TestJITFusionHalide, ReduceO16xC32) {
             2,
             [](const SymbolVarArray& inp) -> SymbolVar {
                 auto var1 = opr::Reduce::make(
-                        inp[0],
-                        {opr::Reduce::Mode::SUM, 1, DataType::FLOAT_O16xC32},
+                        inp[0], {opr::Reduce::Mode::SUM, 1, DataType::FLOAT_O16xC32},
                         {});
-                auto var2 = opr::Reduce::make(inp[0],
-                                              {opr::Reduce::Mode::SUM_SQR, 1,
-                                               DataType::FLOAT_O16xC32},
-                                              {});
+                auto var2 = opr::Reduce::make(
+                        inp[0],
+                        {opr::Reduce::Mode::SUM_SQR, 1, DataType::FLOAT_O16xC32}, {});
                 return var1 + var2;
             },
             CompNode::load("gpu0")};
@@ -1071,13 +1042,13 @@ TEST(TestJITFusionHalide, ReduceSum) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::reduce_sum(
-                                      inp[0], opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::reduce_sum(inp[0], opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
     checker.run({TensorShape{3, 3}, {1}});  // test reduce to scalar
 }
@@ -1086,13 +1057,13 @@ TEST(TestJITFusionHalide, ReduceSumSqr) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::reduce_sum_sqr(
-                                      inp[0], opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::reduce_sum_sqr(inp[0], opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
     checker.run({TensorShape{3, 3}, {3, 3}});  // test side effect
 }
@@ -1101,13 +1072,13 @@ TEST(TestJITFusionHalide, ReduceMax) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::reduce_max(
-                                      inp[0], opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::reduce_max(inp[0], opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
 }
 
@@ -1115,13 +1086,13 @@ TEST(TestJITFusionHalide, ReduceMin) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::reduce_min(
-                                      inp[0], opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::reduce_min(inp[0], opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
 }
 
@@ -1129,13 +1100,13 @@ TEST(TestJITFusionHalide, ReduceProduct) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::reduce_prod(
-                                      inp[0], opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::reduce_prod(inp[0], opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
 }
 
@@ -1143,14 +1114,15 @@ TEST(TestJITFusionHalide, ReduceMean) {
     REQUIRE_GPU(1);
     set_backend(Backend::HALIDE);
 
-    FusionChecker checker{2,
-                          [](const SymbolVarArray& inp) -> SymbolVar {
-                              auto var1 = opr::Reduce::make(
-                                      inp[0], opr::Reduce::Param::Mode::MEAN,
-                                      opr::GetVarShape::make(inp[1]));
-                              return var1 + inp[1];
-                          },
-                          CompNode::load("gpu0")};
+    FusionChecker checker{
+            2,
+            [](const SymbolVarArray& inp) -> SymbolVar {
+                auto var1 = opr::Reduce::make(
+                        inp[0], opr::Reduce::Param::Mode::MEAN,
+                        opr::GetVarShape::make(inp[1]));
+                return var1 + inp[1];
+            },
+            CompNode::load("gpu0")};
     checker.run({TensorShape{3, 3}, {3, 1}});
 }
 
@@ -1366,8 +1338,7 @@ TEST(TestJITNvrtc, DimshuffleFusion) {
         auto host_x = gen({4, 3, 4, 6}, cn);
         auto make_dst = [&](ComputingGraph& graph) {
             auto x = opr::TypeCvt::make(
-                    opr::Host2DeviceCopy::make(graph, host_x),
-                    dtype::Float16{});
+                    opr::Host2DeviceCopy::make(graph, host_x), dtype::Float16{});
             auto y = opr::Dimshuffle::make(x, {3, 0, 1, 2});
             return y;
         };
@@ -1444,16 +1415,17 @@ TEST(TestJITNvrtc, DimshuffleGrad) {
         MGB_ASSERT_TENSOR_NEAR(host_y1, host_y2, 1e-3);
     }
     {
-        FusionChecker checker{2,
-            [](const SymbolVarArray& inp) -> SymbolVar {
-                auto var = opr::Dimshuffle::make(inp[0], {1, 2, 3, 0});
-                return inp[1] * var;
-            },
-            CompNode::load("gpu0")};
+        FusionChecker checker{
+                2,
+                [](const SymbolVarArray& inp) -> SymbolVar {
+                    auto var = opr::Dimshuffle::make(inp[0], {1, 2, 3, 0});
+                    return inp[1] * var;
+                },
+                CompNode::load("gpu0")};
         checker.set_jit_level(1)
-               .run({TensorShape{1, 2, 3, 4}, {2, 3, 4, 1}})
-               .run({TensorShape{3, 4, 1, 2}, {4, 1, 2, 3}})
-               .run({TensorShape{4, 6, 3, 5}, {6, 3, 5, 4}});
+                .run({TensorShape{1, 2, 3, 4}, {2, 3, 4, 1}})
+                .run({TensorShape{3, 4, 1, 2}, {4, 1, 2, 3}})
+                .run({TensorShape{4, 6, 3, 5}, {6, 3, 5, 4}});
     }
 }
 
@@ -1470,9 +1442,9 @@ TEST(TestJITNvrtc, JITConfig) {
     auto cn = CompNode::load("gpu0");
     HostTensorGenerator<> gen;
 
-    auto run = [&](int graph_opt_level, int jit_opt_level,
-                   const JITConfig& jit_config, bool expect_dimshuffle_fused,
-                   bool expect_reduce_fused, bool expect_jit_enabled) {
+    auto run = [&](int graph_opt_level, int jit_opt_level, const JITConfig& jit_config,
+                   bool expect_dimshuffle_fused, bool expect_reduce_fused,
+                   bool expect_jit_enabled) {
         auto cg = ComputingGraph::make();
         cg->options().graph_opt_level = graph_opt_level;
         cg->options().graph_opt.jit = jit_opt_level;
@@ -1490,8 +1462,7 @@ TEST(TestJITNvrtc, JITConfig) {
         auto comp_seq = dynamic_cast<CompSeq*>(func.get());
         ASSERT_TRUE(comp_seq != nullptr);
 
-        bool dimshuffle_found = false, reduce_found = false,
-             jit_executor_found = false;
+        bool dimshuffle_found = false, reduce_found = false, jit_executor_found = false;
         auto on_opr = [&](cg::OperatorNodeBase* opr) {
             if (opr->same_type<opr::Dimshuffle>()) {
                 dimshuffle_found = true;
@@ -1513,8 +1484,8 @@ TEST(TestJITNvrtc, JITConfig) {
     for (int jit_opt_level : {0, 1, 2}) {
         for (int fuse_dimshuffle : {UNSET, OFF, ON}) {
             for (int fuse_reduce : {UNSET, OFF, ON}) {
-                run(1, jit_opt_level, JITConfig{fuse_dimshuffle, fuse_reduce},
-                    false, false, false);
+                run(1, jit_opt_level, JITConfig{fuse_dimshuffle, fuse_reduce}, false,
+                    false, false);
             }
         }
     }
@@ -1581,8 +1552,7 @@ TEST(TestJITExecutor, GradBehavior) {
         set_backend(Backend::NVRTC);
         auto graph = ComputingGraph::make();
         auto host_a = gen({2, 3, 4}, cn);
-        auto a = opr::Host2DeviceCopy::make(*graph, host_a),
-            x = opr::exp(a + 1);
+        auto a = opr::Host2DeviceCopy::make(*graph, host_a), x = opr::exp(a + 1);
 
         gopt::GraphOptimizer gopt;
         gopt.add_pass<gopt::JITFusionPass>();
@@ -1605,22 +1575,20 @@ TEST(TestJITExecutor, GradBehavior) {
         ASSERT_EQ(jits[1]->input().size(), 2);
         // internal graph is (input: og, out | output: og * out)
         size_t nr_ph = 0, nr_mul = 0;
-        cg::DepOprIter{
-            [&nr_ph, &nr_mul](cg::OperatorNodeBase* op) {
-                if (op->same_type<jit::JITPlaceholder>()) {
-                    ++ nr_ph;
+        cg::DepOprIter{[&nr_ph, &nr_mul](cg::OperatorNodeBase* op) {
+            if (op->same_type<jit::JITPlaceholder>()) {
+                ++nr_ph;
+                return;
+            }
+            if (auto mul = op->try_cast_final<opr::Elemwise>()) {
+                using Mode = opr::Elemwise::Mode;
+                if (mul->param().mode == Mode::MUL) {
+                    ++nr_mul;
                     return;
                 }
-                if(auto mul = op->try_cast_final<opr::Elemwise>()) {
-                    using Mode = opr::Elemwise::Mode;
-                    if (mul->param().mode == Mode::MUL) {
-                        ++ nr_mul;
-                        return;
-                    }
-                }
-                mgb_throw(MegBrainError, "unexpected op %s", op->cname());
-            }}
-            .add(jits[1]->internal_graph_ptr()->output());
+            }
+            mgb_throw(MegBrainError, "unexpected op %s", op->cname());
+        }}.add(jits[1]->internal_graph_ptr()->output());
         ASSERT_EQ(nr_ph, 2);
         ASSERT_EQ(nr_mul, 1);
     }
@@ -1629,8 +1597,7 @@ TEST(TestJITExecutor, GradBehavior) {
         set_backend(Backend::HALIDE);
         auto graph = ComputingGraph::make();
         auto host_a = gen({2, 3, 4}, cn);
-        auto a = opr::Host2DeviceCopy::make(*graph, host_a),
-            x = opr::exp(a + 1);
+        auto a = opr::Host2DeviceCopy::make(*graph, host_a), x = opr::exp(a + 1);
 
         gopt::GraphOptimizer gopt;
         gopt.add_pass<gopt::JITFusionPass>();
@@ -1640,9 +1607,9 @@ TEST(TestJITExecutor, GradBehavior) {
         size_t nr_ops = 0, nr_jits = 0;
         auto on_opr = [&nr_jits, &nr_ops](cg::OperatorNodeBase* op) {
             if (op->same_type<jit::JITExecutor>()) {
-                ++ nr_jits;
+                ++nr_jits;
             }
-            ++ nr_ops;
+            ++nr_ops;
         };
         auto grad_a = cg::grad(x, a);
         cg::DepOprIter{on_opr}.add(grad_a);
@@ -1654,13 +1621,12 @@ TEST(TestJITExecutor, GradBehavior) {
         // GetVarShape(a) and broadcast
         ASSERT_EQ(nr_ops, 4);
     }
-#endif // MGB_JIT_HALIDE
+#endif  // MGB_JIT_HALIDE
     {
         set_backend(Backend::NVRTC);
         auto graph = ComputingGraph::make();
         auto host_a = gen({2, 3, 4}, cn);
-        auto a = opr::SharedDeviceTensor::make(*graph, *host_a),
-            x = a * 2 + 1;
+        auto a = opr::SharedDeviceTensor::make(*graph, *host_a), x = a * 2 + 1;
 
         gopt::GraphOptimizer gopt;
         gopt.add_pass<gopt::JITFusionPass>();
@@ -1672,8 +1638,8 @@ TEST(TestJITExecutor, GradBehavior) {
         // would be expanded into original graph for more optimizations,
         // so no JITExecutor can be found
         cg::DepOprIter{[](cg::OperatorNodeBase* op) {
-            ASSERT_FALSE(op->same_type<jit::JITExecutor>());}
-        }.add(grad_a);
+            ASSERT_FALSE(op->same_type<jit::JITExecutor>());
+        }}.add(grad_a);
     }
 }
 
@@ -1689,10 +1655,10 @@ void run_mlir(CompNode cn) {
 
     auto make_dst = [&](ComputingGraph& graph) {
         auto a = opr::Host2DeviceCopy::make(graph, host_x0),
-         b = opr::Host2DeviceCopy::make(graph, host_x1),
-         c = opr::Host2DeviceCopy::make(graph, host_x2),
-         d = opr::Host2DeviceCopy::make(graph, host_x3),
-         e = opr::Host2DeviceCopy::make(graph, host_x4);
+             b = opr::Host2DeviceCopy::make(graph, host_x1),
+             c = opr::Host2DeviceCopy::make(graph, host_x2),
+             d = opr::Host2DeviceCopy::make(graph, host_x3),
+             e = opr::Host2DeviceCopy::make(graph, host_x4);
         return a + opr::max(b, c) + opr::max(d, e);
     };
     HostTensorND host_y1, host_y2;
@@ -1717,7 +1683,7 @@ TEST(TestJITExecutor, TestJITMlirFusionGpu) {
     run_mlir(CompNode::load("gpu0"));
 }
 
-#endif // MGB_JIT_MLIR
+#endif  // MGB_JIT_MLIR
 
 #endif  // MGB_JIT
 

@@ -39,8 +39,8 @@ TEST(TestReformatManager, Feature) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp0 = opr::Concat::make(
-                {sub(0), sub(1), sub(2), sub(3) / 64, cv(64)}, 0);
+        auto tshp0 =
+                opr::Concat::make({sub(0), sub(1), sub(2), sub(3) / 64, cv(64)}, 0);
         auto y0 = opr::Reshape::make(x, tshp0);
         auto y1 = opr::Dimshuffle::make(y0, {0, 3, 1, 2, 4});
         return y1;
@@ -59,8 +59,7 @@ TEST(TestReformatManager, Feature) {
             nr_shapeof++;
         if (o->same_type<opr::Reshape>())
             nr_reshape++;
-    }}
-            .add(y1.node()->owner_opr());
+    }}.add(y1.node()->owner_opr());
     ASSERT_EQ(nr_shapeof, 1);
     ASSERT_EQ(nr_reshape, 1);
     HostTensorND t1, t2;
@@ -75,8 +74,7 @@ TEST(TestReformatManager, Weight) {
     constexpr size_t G = 8, K = 128, C = 128, R = 3, S = 3;
     HostTensorGenerator<> gen;
     using ReformatKey = ReformatManager::ReformatKey;
-    auto src_format = TensorFormats::GKCRS,
-         dst_format = TensorFormats::GKCRSk4c4;
+    auto src_format = TensorFormats::GKCRS, dst_format = TensorFormats::GKCRSk4c4;
     ReformatKey key{src_format, dst_format};
     auto reformat = ReformatManager::instance().get(key);
 
@@ -90,12 +88,10 @@ TEST(TestReformatManager, Weight) {
         auto sub = [&xshp, &cv](int idx) {
             return opr::IndexAt::make(xshp, {{0, cv(idx)}});
         };
-        auto tshp0 = opr::Concat::make({sub(0), sub(1) / 4, cv(4), sub(2) / 4,
-                                        cv(4), sub(3), sub(4)},
-                                       0),
-             tshp1 = opr::Concat::make({sub(0), sub(1) / 4, sub(2) / 4, sub(3),
-                                        sub(4), cv(4), cv(4)},
-                                       0);
+        auto tshp0 = opr::Concat::make(
+                     {sub(0), sub(1) / 4, cv(4), sub(2) / 4, cv(4), sub(3), sub(4)}, 0),
+             tshp1 = opr::Concat::make(
+                     {sub(0), sub(1) / 4, sub(2) / 4, sub(3), sub(4), cv(4), cv(4)}, 0);
         auto y0 = opr::Reshape::make(x, tshp0);
         auto y1 = opr::Dimshuffle::make(y0, {0, 1, 3, 5, 6, 2, 4});
         auto y2 = opr::Reshape::make(y1, tshp1);
@@ -115,8 +111,7 @@ TEST(TestReformatManager, Weight) {
             nr_shapeof++;
         if (o->same_type<opr::Reshape>())
             nr_reshape++;
-    }}
-            .add(y1.node()->owner_opr());
+    }}.add(y1.node()->owner_opr());
     ASSERT_EQ(nr_shapeof, 1);
     ASSERT_EQ(nr_reshape, 1);
     HostTensorND t1, t2;
@@ -130,8 +125,7 @@ TEST(TestReformatManager, Weight) {
 TEST(TestReformatManager, InvalidKey) {
     using ReformatKey = ReformatManager::ReformatKey;
     using Attribute = ReformatKey::Attribute;
-    auto src_format = TensorFormats::GKCRS,
-         dst_format = TensorFormats::GKCRSk4c4;
+    auto src_format = TensorFormats::GKCRS, dst_format = TensorFormats::GKCRSk4c4;
     Attribute attribute = Attribute::IMAGE2D;
     ReformatKey key{src_format, dst_format, attribute};
     ASSERT_THROW(ReformatManager::instance().get(key), AssertionError);
@@ -175,8 +169,7 @@ TEST(TestReformatManager, AutoAlignedFeature) {
     constexpr size_t N = 16, C = 22, H = 55, W = 55;
     HostTensorGenerator<> gen;
     using ReformatKey = ReformatManager::ReformatKey;
-    auto src_format = TensorFormats::NCHWc4,
-         dst_format = TensorFormats::NCHWc32;
+    auto src_format = TensorFormats::NCHWc4, dst_format = TensorFormats::NCHWc32;
     ReformatKey key{src_format, dst_format};
 
     auto graph = ComputingGraph::make();
@@ -184,8 +177,7 @@ TEST(TestReformatManager, AutoAlignedFeature) {
 
     std::shared_ptr<HostTensorND> host_orig_x = gen({N, C, H, W});
     std::shared_ptr<HostTensorND> host_x = gen({N, (C + 3) / 4, H, W, 4});
-    auto mkvar = [&](const char* name,
-                     const std::shared_ptr<HostTensorND>& host_val) {
+    auto mkvar = [&](const char* name, const std::shared_ptr<HostTensorND>& host_val) {
         return opr::Host2DeviceCopy::make(*graph, host_val).rename(name);
     };
     auto orig_x = mkvar("orig_x", host_orig_x);
@@ -208,8 +200,7 @@ TEST(TestReformatManager, AutoAlignedFeatureB4) {
     constexpr size_t N = 16, C = 94, H = 55, W = 55;
     HostTensorGenerator<> gen;
     using ReformatKey = ReformatManager::ReformatKey;
-    auto src_format = TensorFormats::NCHWc4,
-         dst_format = TensorFormats::NCHWc64;
+    auto src_format = TensorFormats::NCHWc4, dst_format = TensorFormats::NCHWc64;
     ReformatKey key{src_format, dst_format};
 
     auto graph = ComputingGraph::make();
@@ -217,17 +208,15 @@ TEST(TestReformatManager, AutoAlignedFeatureB4) {
 
     std::shared_ptr<HostTensorND> host_orig_x = gen({N, C, H, W});
     std::shared_ptr<HostTensorND> host_x = gen({N, (C + 3) / 4, H, W, 4});
-    auto mkvar = [&](const char* name,
-                     const std::shared_ptr<HostTensorND>& host_val,
+    auto mkvar = [&](const char* name, const std::shared_ptr<HostTensorND>& host_val,
                      const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::Host2DeviceCopy::make(*graph, host_val).rename(name),
-                dtype);
+                opr::Host2DeviceCopy::make(*graph, host_val).rename(name), dtype);
     };
-    auto orig_x = mkvar("orig_x", host_orig_x,
-                        dtype::Quantized4Asymm(20.f, static_cast<uint8_t>(8)));
-    auto x = mkvar("x", host_x,
-                   dtype::Quantized4Asymm(25.f, static_cast<uint8_t>(4)));
+    auto orig_x =
+            mkvar("orig_x", host_orig_x,
+                  dtype::Quantized4Asymm(20.f, static_cast<uint8_t>(8)));
+    auto x = mkvar("x", host_x, dtype::Quantized4Asymm(25.f, static_cast<uint8_t>(4)));
     auto builder = ReformatManager::instance().auto_aligned_reformat_featrue(
             orig_x.node(), TensorFormats::NCHW, key);
     auto y = builder({x.node()});
@@ -267,8 +256,9 @@ class ReformatProfiler : public PluginBase {
 
 public:
     class MarkInputContiguous;
-    ReformatProfiler(cg::ComputingGraph* graph, cg::OperatorNodeBase* opr_start,
-                     cg::OperatorNodeBase* opr_end);
+    ReformatProfiler(
+            cg::ComputingGraph* graph, cg::OperatorNodeBase* opr_start,
+            cg::OperatorNodeBase* opr_end);
     ~ReformatProfiler() noexcept;
     double duration() const;
 
@@ -277,9 +267,9 @@ private:
     cg::OperatorNodeBase *m_opr_start, *m_opr_end;
 };
 
-ReformatProfiler::ReformatProfiler(cg::ComputingGraph* graph,
-                                   cg::OperatorNodeBase* opr_start,
-                                   cg::OperatorNodeBase* opr_end)
+ReformatProfiler::ReformatProfiler(
+        cg::ComputingGraph* graph, cg::OperatorNodeBase* opr_start,
+        cg::OperatorNodeBase* opr_end)
         : PluginBase(graph), m_opr_start(opr_start), m_opr_end(opr_end) {
     using namespace cg::event;
     auto on_reformat_start = [this](BeforeKernel const& event) {
@@ -315,19 +305,18 @@ ReformatProfiler::~ReformatProfiler() noexcept {
 double ReformatProfiler::duration() const {
     mgb_assert(m_end);
     m_end->host_wait();
-    return m_start->elapsed_time_until(*m_end) -
-           m_start->elapsed_time_until(*m_start);
+    return m_start->elapsed_time_until(*m_end) - m_start->elapsed_time_until(*m_start);
 }
 
-MGB_DEFINE_OPR_CLASS(ReformatProfiler::MarkInputContiguous,
-                     cg::SingleCNOperatorNodeBase)  // {
+MGB_DEFINE_OPR_CLASS(
+        ReformatProfiler::MarkInputContiguous, cg::SingleCNOperatorNodeBase) // {
     void scn_do_execute() override{};
     void init_output_static_infer_desc() override;
     void add_input_layout_constraint() override;
-    
+
 public:
     MarkInputContiguous(VarNode* node, const OperatorNodeConfig& config);
-    
+
     static SymbolVar make(SymbolVar node, const OperatorNodeConfig& config = {});
 };  // namespace
 
@@ -342,15 +331,13 @@ ReformatProfiler::MarkInputContiguous::MarkInputContiguous(
 
 SymbolVar ReformatProfiler::MarkInputContiguous::make(
         SymbolVar node, const OperatorNodeConfig& config) {
-    return node.insert_single_output_opr<MarkInputContiguous>(node.node(),
-                                                              config);
+    return node.insert_single_output_opr<MarkInputContiguous>(node.node(), config);
 }
 
 void ReformatProfiler::MarkInputContiguous::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
-    mgr.register_shape_infer(output(0),
-                             ShapeInferDesc::make_identity(input(0)));
+    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(0)));
 }
 
 void ReformatProfiler::MarkInputContiguous::add_input_layout_constraint() {
@@ -404,8 +391,7 @@ TEST(TestReformatManager, AutoAlignedFeatureProfiling) {
     HostTensorND hval(cn, dtype);
     constexpr size_t N = 16, C = 18, H = 55, W = 55;
     hval.resize({N, (C + 63) / 64, H, W, 64});
-    std::shared_ptr<DeviceTensorND> dval =
-            std::make_shared<DeviceTensorND>(cn, dtype);
+    std::shared_ptr<DeviceTensorND> dval = std::make_shared<DeviceTensorND>(cn, dtype);
     dval->copy_from(hval).sync();
     std::shared_ptr<DeviceTensorND> dprime =
             std::make_shared<DeviceTensorND>(cn, dtype);

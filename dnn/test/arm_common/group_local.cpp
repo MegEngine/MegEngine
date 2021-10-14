@@ -23,8 +23,7 @@ TEST_F(ARM_COMMON, GROUP_LOCAL_FORWARD) {
     auto args = group_local::get_args();
     Checker<GroupLocalForward> checker(handle());
     for (auto&& arg : args) {
-        checker.set_param(arg.param).execs(
-                {arg.sshape(), arg.fshape(), arg.dshape()});
+        checker.set_param(arg.param).execs({arg.sshape(), arg.fshape(), arg.dshape()});
     }
 
     NormalRNG rng(10.f);
@@ -33,13 +32,14 @@ TEST_F(ARM_COMMON, GROUP_LOCAL_FORWARD) {
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
     for (auto&& arg : args) {
-        checker.set_dtype(0, dtype::Float16()).set_dtype(1, dtype::Float16()).set_dtype(2, dtype::Float16());
+        checker.set_dtype(0, dtype::Float16())
+                .set_dtype(1, dtype::Float16())
+                .set_dtype(2, dtype::Float16());
         checker.set_epsilon(1e-2);
-        checker.set_param(arg.param).execs(
-                {arg.sshape(), arg.fshape(), arg.dshape()});
+        checker.set_param(arg.param).execs({arg.sshape(), arg.fshape(), arg.dshape()});
     }
 #endif
 }
-} // namsepace test
-} // namespace megdnn
+}  // namespace test
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

@@ -35,8 +35,9 @@ using InternalGraphPtr = std::shared_ptr<InternalGraph>;
  */
 class InternalGraph {
 public:
-    InternalGraph(VarNode* output, VarNode* shape_infer, VarNode* value_infer,
-                  PlaceholderArray placeholders)
+    InternalGraph(
+            VarNode* output, VarNode* shape_infer, VarNode* value_infer,
+            PlaceholderArray placeholders)
             : m_output{output},
               m_shape_infer{shape_infer},
               m_value_infer{value_infer},
@@ -49,8 +50,7 @@ public:
     };
 
     struct PtrEqual {
-        bool operator()(const InternalGraph* lhs,
-                        const InternalGraph* rhs) const {
+        bool operator()(const InternalGraph* lhs, const InternalGraph* rhs) const {
             return lhs->m_output == rhs->m_output;
         }
     };
@@ -125,9 +125,7 @@ public:
     //! input vars (i.e. tree leaves) of currently added operators
     const ThinHashSet<VarNode*>& graph_input_set() { return m_graph_input_set; }
 
-    const megdnn::TensorShape& before_reduce_shape() {
-        return m_before_reduce_shape;
-    }
+    const megdnn::TensorShape& before_reduce_shape() { return m_before_reduce_shape; }
 
     //! get number of inputs of this internal graph after adding a new operator
     size_t get_cnt_input_if_add(cg::OperatorNodeBase* opr) const;
@@ -171,8 +169,7 @@ private:
     ThinHashMap<VarNode*, DepType> m_var_dep_type;
 
     //! oprs that Reduce and JITExecutor(with Reduce) oprs depend on
-    ThinHashMap<VarNode*, ThinHashSet<cg::OperatorNodeBase*>>
-            m_reduce_out_var_deps;
+    ThinHashMap<VarNode*, ThinHashSet<cg::OperatorNodeBase*>> m_reduce_out_var_deps;
 
     //! oprs that depended by Dimshuffle or JITExecutor(with Dimshuffle)
     //! kw: <opr, the latest dimshuffle or JITExecutors(with Dimshuffle)

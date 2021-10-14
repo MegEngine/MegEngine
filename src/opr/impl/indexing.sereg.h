@@ -10,8 +10,8 @@
  */
 
 #include "megbrain/opr/indexing.h"
-#include "megbrain/serialization/sereg.h"
 #include "megbrain/opr/internal/indexing_helper_sereg.h"
+#include "megbrain/serialization/sereg.h"
 
 MGB_SEREG_GET_SUBTENSOR_OPR(IndexingMultiAxisVec);
 MGB_SEREG_MODIFY_SUBTENSOR_OPR(IndexingSetMultiAxisVec);
@@ -25,13 +25,11 @@ MGB_SEREG_MODIFY_SUBTENSOR_OPR(BatchedSetMeshIndexing);
 
 namespace mgb {
 namespace opr {
-    MGB_SEREG_OPR(IndexingOneHot, 2);
-    MGB_SEREG_OPR(IndexingRemap, 2);
-    MGB_SEREG_OPR(IndexingRemapBackward, 3);
-    MGB_SEREG_OPR(IndexingSetOneHot, 3);
-} // namespace opr
-} // namespace mgb
-
+MGB_SEREG_OPR(IndexingOneHot, 2);
+MGB_SEREG_OPR(IndexingRemap, 2);
+MGB_SEREG_OPR(IndexingRemapBackward, 3);
+MGB_SEREG_OPR(IndexingSetOneHot, 3);
+}  // namespace opr
+}  // namespace mgb
 
 // vim: ft=cpp syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

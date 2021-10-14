@@ -12,13 +12,13 @@
 #pragma once
 
 #include "megbrain/graph/static_infer.h"
-#include "megbrain/graph/var_node.h"
 #include "megbrain/graph/symbol_var.h"
+#include "megbrain/graph/var_node.h"
 
-#include "megbrain/utils/hashable.h"
-#include "megbrain/utils/thin/hash_table.h"
-#include "megbrain/utils/small_vector.h"
 #include "megbrain/opr/param_defs.h"
+#include "megbrain/utils/hashable.h"
+#include "megbrain/utils/small_vector.h"
+#include "megbrain/utils/thin/hash_table.h"
 
 #include <type_traits>
 
@@ -30,132 +30,119 @@ class ExecutionMask;
 /*!
  * \brief configuration for operator nodes
  */
-class OperatorNodeConfig final: public Hashable {
+class OperatorNodeConfig final : public Hashable {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
-    public:
-        using CompNodeArray = SmallVector<CompNode, 1>;
+public:
+    using CompNodeArray = SmallVector<CompNode, 1>;
 
-        OperatorNodeConfig() = default;
-        ~OperatorNodeConfig();
+    OperatorNodeConfig() = default;
+    ~OperatorNodeConfig();
 
-        OperatorNodeConfig(std::string name):
-            m_name{std::move(name)}
-        {}
+    OperatorNodeConfig(std::string name) : m_name{std::move(name)} {}
 
-        OperatorNodeConfig(const CompNode &cn) {
-            comp_node(cn);
-        }
+    OperatorNodeConfig(const CompNode& cn) { comp_node(cn); }
 
-        OperatorNodeConfig(std::string name, const CompNode& cn,
-                           DType dtype = {})
-                : m_name{std::move(name)}, m_output_dtype{dtype} {
-            comp_node(cn);
-        }
+    OperatorNodeConfig(std::string name, const CompNode& cn, DType dtype = {})
+            : m_name{std::move(name)}, m_output_dtype{dtype} {
+        comp_node(cn);
+    }
 
-        explicit OperatorNodeConfig(DType dtype) : m_output_dtype{dtype} {};
+    explicit OperatorNodeConfig(DType dtype) : m_output_dtype{dtype} {};
 
-        /*!
-         * \brief make a name according to default name and input vars
-         */
-        std::string make_name(std::string default_name,
-                const VarNodeArrayView& input_var, size_t opr_id) const;
+    /*!
+     * \brief make a name according to default name and input vars
+     */
+    std::string make_name(
+            std::string default_name, const VarNodeArrayView& input_var,
+            size_t opr_id) const;
 
-        /*!
-         * \brief set node name
-         */
-        OperatorNodeConfig& name(std::string name) {
-            m_name = std::move(name);
-            return *this;
-        }
+    /*!
+     * \brief set node name
+     */
+    OperatorNodeConfig& name(std::string name) {
+        m_name = std::move(name);
+        return *this;
+    }
 
-        const Maybe<std::string>& name() const {
-            return m_name;
-        }
+    const Maybe<std::string>& name() const { return m_name; }
 
-        /*!
-         * \brief update instance ID
-         *
-         * Instance ID is a hashed value used to differentiate multiple
-         * instances of the same operator (with same inputs, params and
-         * config), so the deduplication system can be bypassed.
-         *
-         * This method always updates underlying instance_id.
-         */
-        template<typename T>
-        OperatorNodeConfig& update_instance_id(const T& p) {
-            static_assert(std::is_pointer<T>::value,
+    /*!
+     * \brief update instance ID
+     *
+     * Instance ID is a hashed value used to differentiate multiple
+     * instances of the same operator (with same inputs, params and
+     * config), so the deduplication system can be bypassed.
+     *
+     * This method always updates underlying instance_id.
+     */
+    template <typename T>
+    OperatorNodeConfig& update_instance_id(const T& p) {
+        static_assert(
+                std::is_pointer<T>::value,
                 "update_instance_id can only accept a pointer");
-            m_instance_id_hashed = hash_pair_combine(
-                m_instance_id_hashed, mgb::hash(p));
-            return *this;
-        }
+        m_instance_id_hashed = hash_pair_combine(m_instance_id_hashed, mgb::hash(p));
+        return *this;
+    }
 
-        /*!
-         * \brief reset instance ID to the initial value
-         */
-        OperatorNodeConfig& reset_instance_id() {
-            m_instance_id_hashed = sm_initial_instance_id;
-            return *this;
-        }
+    /*!
+     * \brief reset instance ID to the initial value
+     */
+    OperatorNodeConfig& reset_instance_id() {
+        m_instance_id_hashed = sm_initial_instance_id;
+        return *this;
+    }
 
-        /*!
-         * \brief get current hashed instance ID
-         */
-        size_t instance_id() const {
-            return m_instance_id_hashed;
-        }
+    /*!
+     * \brief get current hashed instance ID
+     */
+    size_t instance_id() const { return m_instance_id_hashed; }
 
-        /*!
-         * \brief set preferred single comp node
-         */
-        OperatorNodeConfig& comp_node(const CompNode &node);
+    /*!
+     * \brief set preferred single comp node
+     */
+    OperatorNodeConfig& comp_node(const CompNode& node);
 
-        /*!
-         * \brief directly set all the CompNodes
-         */
-        OperatorNodeConfig& comp_node_arr(const CompNodeArray &arr);
+    /*!
+     * \brief directly set all the CompNodes
+     */
+    OperatorNodeConfig& comp_node_arr(const CompNodeArray& arr);
 
-        /*!
-         * \brief get single comp node if the user has set it, or an invalid
-         *      comp node if the config is empty
-         */
-        CompNode get_single_comp_node() const;
+    /*!
+     * \brief get single comp node if the user has set it, or an invalid
+     *      comp node if the config is empty
+     */
+    CompNode get_single_comp_node() const;
 
-        /*!
-         * \brief follow the computing node of dest
-         */
-        OperatorNodeConfig& follow_comp_node(const SymbolVar &dest) {
-            return comp_node(dest.node()->comp_node());
-        }
+    /*!
+     * \brief follow the computing node of dest
+     */
+    OperatorNodeConfig& follow_comp_node(const SymbolVar& dest) {
+        return comp_node(dest.node()->comp_node());
+    }
 
-        OperatorNodeConfig& output_dtype(DType dtype);
+    OperatorNodeConfig& output_dtype(DType dtype);
 
-        DType output_dtype() const { return m_output_dtype; }
+    DType output_dtype() const { return m_output_dtype; }
 
-        /*!
-         * \brief whether at least one comp node has been set
-         */
-        bool has_comp_node_set() const {
-            return !m_comp_node.empty();
-        }
+    /*!
+     * \brief whether at least one comp node has been set
+     */
+    bool has_comp_node_set() const { return !m_comp_node.empty(); }
 
-        const CompNodeArray& comp_node() const {
-            return m_comp_node;
-        }
+    const CompNodeArray& comp_node() const { return m_comp_node; }
 
-        size_t hash() const override;
+    size_t hash() const override;
 
-        bool is_same_st(const Hashable &rhs) const override;
+    bool is_same_st(const Hashable& rhs) const override;
 
-    private:
-        static constexpr size_t sm_initial_instance_id = 1333331;
-        Maybe<std::string> m_name;
-        CompNodeArray m_comp_node;
-        size_t m_instance_id_hashed = sm_initial_instance_id;
-        DType m_output_dtype;
+private:
+    static constexpr size_t sm_initial_instance_id = 1333331;
+    Maybe<std::string> m_name;
+    CompNodeArray m_comp_node;
+    size_t m_instance_id_hashed = sm_initial_instance_id;
+    DType m_output_dtype;
 };
-
 
 /*!
  * \brief executable used internally for cg
@@ -199,7 +186,6 @@ public:
     virtual void do_runtime_check();
 };
 
-
 /*!
  * \brief operator execution environment
  *
@@ -227,8 +213,8 @@ public:
 
     //! like dispatch_on_comp_node, but with specific mask other than current
     //! opr mask
-    virtual void dispatch_on_comp_node_with_mask(CompNode cn, Task&& task,
-                                                 ExecutionMask* mask) = 0;
+    virtual void dispatch_on_comp_node_with_mask(
+            CompNode cn, Task&& task, ExecutionMask* mask) = 0;
 
     /*!
      * \brief pause execution on all threads if there are async dispatch
@@ -416,15 +402,14 @@ public:
     inline OperatorNodeProp& add_dep_type(VarNode* dest, DepType type);
 
     //! like add_dep_type() but requires \p dest to already exist in dep map
-    inline OperatorNodeProp& add_dep_type_existing_var(VarNode* dest,
-                                                       DepType type);
+    inline OperatorNodeProp& add_dep_type_existing_var(VarNode* dest, DepType type);
 
     /*!
      * \brief reset dep type; the vars could contain duplicated var nodes,
      *      in which case the corresponding dep type would be ORed together
      */
-    void reset_dep_type(const VarNodeArray& vars,
-                        const SmallVector<DepType>& dep_types);
+    void reset_dep_type(
+            const VarNodeArray& vars, const SmallVector<DepType>& dep_types);
 
     /*!
      * \brief whether a dep type require device computation order
@@ -451,8 +436,7 @@ MGB_DEF_ENUM_CLASS_BIT_OPR(OperatorNodeProp::Flag)
 MGB_DEF_ENUM_CLASS_BIT_OPR(OperatorNodeProp::DepType)
 
 constexpr bool OperatorNodeProp::is_device_comp_order_dep(DepType type) {
-    return static_cast<bool>(type &
-                             (DepType::DEV_VALUE | DepType::DEV_COMP_ORDER));
+    return static_cast<bool>(type & (DepType::DEV_VALUE | DepType::DEV_COMP_ORDER));
 }
 
 OperatorNodeProp& OperatorNodeProp::add_dep_type(VarNode* dest, DepType type) {
@@ -461,8 +445,8 @@ OperatorNodeProp& OperatorNodeProp::add_dep_type(VarNode* dest, DepType type) {
     return *this;
 }
 
-OperatorNodeProp& OperatorNodeProp::add_dep_type_existing_var(VarNode* dest,
-                                                              DepType type) {
+OperatorNodeProp& OperatorNodeProp::add_dep_type_existing_var(
+        VarNode* dest, DepType type) {
     DepType& v = m_dep_map.at(dest);
     v = v | type;
     return *this;
@@ -492,316 +476,314 @@ bool OperatorNodeProp::contain(Flag req) const {
  *
  * Each operator has an owner, the computing graph that it belongs to
  */
-class OperatorNodeBase: public GraphNodeBase, public Hashable,
-                        public GraphExecutable {
-    public:
-        using NodeProp = OperatorNodeProp;
+class OperatorNodeBase : public GraphNodeBase, public Hashable, public GraphExecutable {
+public:
+    using NodeProp = OperatorNodeProp;
 
-        //! pack of params in constructor, to ease inheritance
-        struct CtorParamPack {
-            ComputingGraph *owner;
-            const OperatorNodeConfig &config;
-            const std::string &default_name;
-            const VarNodeArrayView &input_var_naming;
-        };
+    //! pack of params in constructor, to ease inheritance
+    struct CtorParamPack {
+        ComputingGraph* owner;
+        const OperatorNodeConfig& config;
+        const std::string& default_name;
+        const VarNodeArrayView& input_var_naming;
+    };
 
-        virtual ~OperatorNodeBase() noexcept;
+    virtual ~OperatorNodeBase() noexcept;
 
 #if MGB_ENABLE_JSON
-        /* ===================== json io ===================== */
-        std::shared_ptr<json::Value> to_json() const override;
+    /* ===================== json io ===================== */
+    std::shared_ptr<json::Value> to_json() const override;
 
-        //! extra value to be added to json
-        std::shared_ptr<json::Object> to_json_extra_json = json::Object::make();
+    //! extra value to be added to json
+    std::shared_ptr<json::Object> to_json_extra_json = json::Object::make();
 #endif
 
-        /* ===================== misc getters/setters ===================== */
+    /* ===================== misc getters/setters ===================== */
 
-        const std::string& name() const { return m_name; }
+    const std::string& name() const { return m_name; }
 
-        const char* cname() const { return m_name.c_str(); }
+    const char* cname() const { return m_name.c_str(); }
 
-        void name(std::string name) { m_name = std::move(name); }
+    void name(std::string name) { m_name = std::move(name); }
 
-        const VarNodeArray& input() const { return m_input; }
+    const VarNodeArray& input() const { return m_input; }
 
-        const VarNodeArray& output() const { return m_output; }
+    const VarNodeArray& output() const { return m_output; }
 
-        // non-volatile outputs
-        const VarNodeArray usable_output() const;
+    // non-volatile outputs
+    const VarNodeArray usable_output() const;
 
-        VarNode* input(size_t idx) const { return m_input.at(idx); }
+    VarNode* input(size_t idx) const { return m_input.at(idx); }
 
-        VarNode* output(size_t idx) const { return m_output.at(idx); }
+    VarNode* output(size_t idx) const { return m_output.at(idx); }
 
-        //! hash that combines all inputs, m_config.comp_node() and all
-        //! add_equivalence_component calls
-        size_t hash() const override final;
+    //! hash that combines all inputs, m_config.comp_node() and all
+    //! add_equivalence_component calls
+    size_t hash() const override final;
 
-        /*!
-         * \brief get node prop, which is available and constant after node
-         *      construction
-         *
-         * Note that this function calls do_make_node_prop() on first call
-         */
-        const NodeProp& node_prop() const;
+    /*!
+     * \brief get node prop, which is available and constant after node
+     *      construction
+     *
+     * Note that this function calls do_make_node_prop() on first call
+     */
+    const NodeProp& node_prop() const;
 
-        /*!
-         * \brief called by ComputingGraph to mark that this node has been
-         *      inserted in graph; inputs and outputs could not be later changed
-         */
-        void set_inserted_in_graph() { m_inserted_in_graph = true; }
+    /*!
+     * \brief called by ComputingGraph to mark that this node has been
+     *      inserted in graph; inputs and outputs could not be later changed
+     */
+    void set_inserted_in_graph() { m_inserted_in_graph = true; }
 
-        bool inserted_in_graph() const { return m_inserted_in_graph; }
+    bool inserted_in_graph() const { return m_inserted_in_graph; }
 
-        const OperatorNodeConfig& config() const { return m_config; }
+    const OperatorNodeConfig& config() const { return m_config; }
 
-        /* ===================== execution ===================== */
+    /* ===================== execution ===================== */
 
-        /*!
-         * \brief Execute the operator by starting all kernels on device.
-         *
-         * 1. wait on input as indicated by get_input_waiting_spec
-         * 2. allocate memory for dynamic outputs
-         * 3. call do_execute
-         * 4. set_ready on output
-         */
-        void execute(ExecEnv &env) override final;
+    /*!
+     * \brief Execute the operator by starting all kernels on device.
+     *
+     * 1. wait on input as indicated by get_input_waiting_spec
+     * 2. allocate memory for dynamic outputs
+     * 3. call do_execute
+     * 4. set_ready on output
+     */
+    void execute(ExecEnv& env) override final;
 
-        /*!
-         * \brief specifies waiting strategy on one comp node for input vars
-         */
-        struct InputWaitingSpecElem {
-            //! on which comp node to wait other inputs
-            CompNode comp_node;
+    /*!
+     * \brief specifies waiting strategy on one comp node for input vars
+     */
+    struct InputWaitingSpecElem {
+        //! on which comp node to wait other inputs
+        CompNode comp_node;
 
-            //! vars that must be ready on device
-            VarNodeArray dev_ready;
-        };
+        //! vars that must be ready on device
+        VarNodeArray dev_ready;
+    };
 
-        using InputWaitingSpec = SmallVector<InputWaitingSpecElem, 1>;
+    using InputWaitingSpec = SmallVector<InputWaitingSpecElem, 1>;
 
-        /*!
-         * \brief get computing nodes that need to wait on other vars
-         *
-         * This is only valid after the computing func has been compiled.
-         */
-        const InputWaitingSpec& input_waiting_spec() const {
-            return m_input_waiting_spec.val();
-        }
+    /*!
+     * \brief get computing nodes that need to wait on other vars
+     *
+     * This is only valid after the computing func has been compiled.
+     */
+    const InputWaitingSpec& input_waiting_spec() const {
+        return m_input_waiting_spec.val();
+    }
 
-        /*!
-         * \brief set input waiting spec
-         *
-         * This should only be called from
-         * SeqCompNodeOptimizerImpl::init_ready_event() or EagerEvalManager
-         */
-        void input_waiting_spec(InputWaitingSpec &&spec) {
-            m_input_waiting_spec = std::move(spec);
-        }
+    /*!
+     * \brief set input waiting spec
+     *
+     * This should only be called from
+     * SeqCompNodeOptimizerImpl::init_ready_event() or EagerEvalManager
+     */
+    void input_waiting_spec(InputWaitingSpec&& spec) {
+        m_input_waiting_spec = std::move(spec);
+    }
 
-        /* =============== memory optimization =============== */
+    /* =============== memory optimization =============== */
 
-        /*!
-         * \brief add layout constraint for input vars by calling
-         *      VarNode::add_layout_constraint
-         *
-         * Note that this method is always called exactly once for operators
-         * that are inserted into the computing sequence
-         */
-        virtual void add_input_layout_constraint() {}
+    /*!
+     * \brief add layout constraint for input vars by calling
+     *      VarNode::add_layout_constraint
+     *
+     * Note that this method is always called exactly once for operators
+     * that are inserted into the computing sequence
+     */
+    virtual void add_input_layout_constraint() {}
 
-        /*!
-         * \brief called by graph compiler to setup readonly memory forwarding
-         *
-         * This function would always be called unless input has dynamic storage
-         * but output has static storage
-         */
-        virtual void mem_plan_fwd_in2out_readonly() {}
+    /*!
+     * \brief called by graph compiler to setup readonly memory forwarding
+     *
+     * This function would always be called unless input has dynamic storage
+     * but output has static storage
+     */
+    virtual void mem_plan_fwd_in2out_readonly() {}
 
-        /*!
-         * \brief called by graph compiler to setup writable memory forwarding
-         *
-         * This function would always be called unless input has dynamic storage
-         * but output has static storage
-         */
-        virtual void mem_plan_fwd_in2out_writable() {}
+    /*!
+     * \brief called by graph compiler to setup writable memory forwarding
+     *
+     * This function would always be called unless input has dynamic storage
+     * but output has static storage
+     */
+    virtual void mem_plan_fwd_in2out_writable() {}
 
-        /* ===================== event callbacks ===================== */
-        struct OprEventCallback;
+    /* ===================== event callbacks ===================== */
+    struct OprEventCallback;
 
-        /*!
-         * \brief get callbacks to be invoked on events related to this
-         *      operator; default implementation returns empty event
-         */
-        virtual OprEventCallback get_opr_event_callback();
+    /*!
+     * \brief get callbacks to be invoked on events related to this
+     *      operator; default implementation returns empty event
+     */
+    virtual OprEventCallback get_opr_event_callback();
 
-        /*!
-         * \brief called when stream of comp node of output vars is changed for
-         *      graph optimization
-         */
-        virtual void on_output_comp_node_stream_changed() = 0;
+    /*!
+     * \brief called when stream of comp node of output vars is changed for
+     *      graph optimization
+     */
+    virtual void on_output_comp_node_stream_changed() = 0;
 
-        /* ===================== initialization ===================== */
+    /* ===================== initialization ===================== */
 
-        /*!
-         * \brief initialize output dtype by calling VarNode::dtype
-         *
-         * The default implementation requires all inputs to have the same dtype
-         * and set output dtype to it
-         *
-         * This function is called once during operator insertion.
-         */
-        virtual void init_output_dtype();
+    /*!
+     * \brief initialize output dtype by calling VarNode::dtype
+     *
+     * The default implementation requires all inputs to have the same dtype
+     * and set output dtype to it
+     *
+     * This function is called once during operator insertion.
+     */
+    virtual void init_output_dtype();
 
-        /*!
-         * \brief initialize output format by calling VarNode::format
-         *
-         * The default implementation require all inputs to have the same
-         * non-default format and set all non-volatile outputs format to it.
-         *
-         * This function is called once during operator insertion
-         */
-        virtual void init_output_format();
+    /*!
+     * \brief initialize output format by calling VarNode::format
+     *
+     * The default implementation require all inputs to have the same
+     * non-default format and set all non-volatile outputs format to it.
+     *
+     * This function is called once during operator insertion
+     */
+    virtual void init_output_format();
 
-        /*!
-         * \brief inititialize output comp_node by calling VarNode::comp_node
-         *
-         * This function is called once during operator insertion.
-         */
-        virtual void init_output_comp_node() = 0;
+    /*!
+     * \brief inititialize output comp_node by calling VarNode::comp_node
+     *
+     * This function is called once during operator insertion.
+     */
+    virtual void init_output_comp_node() = 0;
 
-        /*!
-         * \brief call VarNode::add_rt_force_dynamic_mem_alloc_imply_chain on
-         *      input and output vars
-         *
-         * This function is called once during operator insertion.
-         */
-        virtual void init_rt_force_dynamic_mem_alloc_imply_chain() {}
+    /*!
+     * \brief call VarNode::add_rt_force_dynamic_mem_alloc_imply_chain on
+     *      input and output vars
+     *
+     * This function is called once during operator insertion.
+     */
+    virtual void init_rt_force_dynamic_mem_alloc_imply_chain() {}
 
-        /*!
-         * \brief register static infer descriptors for output vars by calling
-         *      methods on ComputingGraph::static_infer_manager()
-         *
-         * This function is called once during operator insertion.
-         */
-        virtual void init_output_static_infer_desc() = 0;
+    /*!
+     * \brief register static infer descriptors for output vars by calling
+     *      methods on ComputingGraph::static_infer_manager()
+     *
+     * This function is called once during operator insertion.
+     */
+    virtual void init_output_static_infer_desc() = 0;
 
-        /*!
-         * \brief initialize mem alloc plan for output nodes
-         *
-         * Mem plans are used for memory optimization; the storage of var node's
-         * device tensor should always come from mem plan
-         *
-         * Default implmentation works by calling VarNode::init_mem_plan on vars
-         * that match *dynamic* param
-         *
-         * output(...)->shape() is guaranteed to be valid before calling this
-         * function.
-         *
-         * Remember to add Flag::IMPURE_OUTPUT_MEM_PLAN if needed.
-         *
-         * \param dynamic if true, initialize mem plans for vars that could not
-         *      be statically inferred; otherwise for statically inferable vars
-         */
-        virtual void init_output_mem_plan(bool dynamic);
+    /*!
+     * \brief initialize mem alloc plan for output nodes
+     *
+     * Mem plans are used for memory optimization; the storage of var node's
+     * device tensor should always come from mem plan
+     *
+     * Default implmentation works by calling VarNode::init_mem_plan on vars
+     * that match *dynamic* param
+     *
+     * output(...)->shape() is guaranteed to be valid before calling this
+     * function.
+     *
+     * Remember to add Flag::IMPURE_OUTPUT_MEM_PLAN if needed.
+     *
+     * \param dynamic if true, initialize mem plans for vars that could not
+     *      be statically inferred; otherwise for statically inferable vars
+     */
+    virtual void init_output_mem_plan(bool dynamic);
 
-        /*
-         * =============================================================
-         * methods that should only be used by subclass or mixin classes
-         * =============================================================
-         */
+    /*
+     * =============================================================
+     * methods that should only be used by subclass or mixin classes
+     * =============================================================
+     */
 
-        //! used by add_input() to sort vars for deduplication
-        enum class AddInputSortType {
-            NONE,
-            CUR_ADDED,  //!< sort newly added vars
-            ALL         //!< sort all currently added vars
-        };
+    //! used by add_input() to sort vars for deduplication
+    enum class AddInputSortType {
+        NONE,
+        CUR_ADDED,  //!< sort newly added vars
+        ALL         //!< sort all currently added vars
+    };
 
-        //! add input var to this operator
-        void add_input(std::initializer_list<VarNode*> list,
-                AddInputSortType sort_type = AddInputSortType::NONE);
+    //! add input var to this operator
+    void add_input(
+            std::initializer_list<VarNode*> list,
+            AddInputSortType sort_type = AddInputSortType::NONE);
 
-        /*!
-         * \brief allocate a new output VarNode; the name would be appended to
-         *      this->name to form the final name
-         */
-        VarNode* add_output(const Maybe<std::string> &name);
+    /*!
+     * \brief allocate a new output VarNode; the name would be appended to
+     *      this->name to form the final name
+     */
+    VarNode* add_output(const Maybe<std::string>& name);
 
-        /*!
-         * \brief add extra component for equivalence check
-         *
-         * This is only a helper function to make the default hash() and
-         * is_same() implementation consider other components in addition to all
-         * the input nodes; you can also override hash() and is_same() to
-         * implement deduplication.
-         *
-         * Note that the order for calling add_equivalence_component matters.
-         * Also note that all input vars are used for deduplication by default.
-         */
-        template<typename T, typename ...Args>
-        void add_equivalence_component(Args &&...args) {
-            do_add_equivalence_component(
-                    HashableContainer::create<T>(std::forward<Args>(args)...));
-        }
+    /*!
+     * \brief add extra component for equivalence check
+     *
+     * This is only a helper function to make the default hash() and
+     * is_same() implementation consider other components in addition to all
+     * the input nodes; you can also override hash() and is_same() to
+     * implement deduplication.
+     *
+     * Note that the order for calling add_equivalence_component matters.
+     * Also note that all input vars are used for deduplication by default.
+     */
+    template <typename T, typename... Args>
+    void add_equivalence_component(Args&&... args) {
+        do_add_equivalence_component(
+                HashableContainer::create<T>(std::forward<Args>(args)...));
+    }
 
-        /*!
-         * \brief allocate a new node prop and initialize dep entry as all
-         *      inputs
-         */
-        virtual NodeProp* do_make_node_prop() const;
+    /*!
+     * \brief allocate a new node prop and initialize dep entry as all
+     *      inputs
+     */
+    virtual NodeProp* do_make_node_prop() const;
 
-        /*!
-         * \brief Update operator priority.
-         *
-         * This method would be invoked if and only if initializing
-         * `m_node_prop` or after the graph optimizer modified the opr's
-         * priority.
-         * \return whether the priority would be changed.
-         */
-        virtual bool update_priority() const;
+    /*!
+     * \brief Update operator priority.
+     *
+     * This method would be invoked if and only if initializing
+     * `m_node_prop` or after the graph optimizer modified the opr's
+     * priority.
+     * \return whether the priority would be changed.
+     */
+    virtual bool update_priority() const;
 
-    protected:
+protected:
+    /*!
+     * \param input_var_naming used for generating default node name
+     */
+    OperatorNodeBase(
+            ComputingGraph* owner, const OperatorNodeConfig& config,
+            const std::string& default_name, const VarNodeArrayView& input_var_naming);
 
-        /*!
-         * \param input_var_naming used for generating default node name
-         */
-        OperatorNodeBase(ComputingGraph *owner,
-                const OperatorNodeConfig &config,
-                const std::string &default_name,
-                const VarNodeArrayView &input_var_naming);
+    OperatorNodeBase(const CtorParamPack& param)
+            : OperatorNodeBase(
+                      param.owner, param.config, param.default_name,
+                      param.input_var_naming) {}
 
-        OperatorNodeBase(const CtorParamPack &param):
-            OperatorNodeBase(param.owner, param.config, param.default_name,
-                    param.input_var_naming)
-        {}
+    /*!
+     * actually execute; all input and output have been checked, and the
+     * subclasses only need to perform the actual computing
+     */
+    virtual void do_execute(ExecEnv& env) = 0;
 
-        /*!
-         * actually execute; all input and output have been checked, and the
-         * subclasses only need to perform the actual computing
-         */
-        virtual void do_execute(ExecEnv &env) = 0;
+private:
+    std::string m_name;
 
-    private:
-        std::string m_name;
+    //! user supplied config
+    const OperatorNodeConfig m_config;
 
-        //! user supplied config
-        const OperatorNodeConfig m_config;
+    bool m_inserted_in_graph = false;
+    //! input vars
+    VarNodeArray m_input;
+    //! output vars; note that they are owned by this opr and freed in the
+    //! destructor
+    VarNodeArray m_output;
+    SmallVector<HashableContainer> m_extra_equiv_comp;
+    mutable Maybe<NodeProp> m_node_prop;
+    Maybe<InputWaitingSpec> m_input_waiting_spec;
 
-        bool m_inserted_in_graph = false;
-        //! input vars
-        VarNodeArray m_input;
-        //! output vars; note that they are owned by this opr and freed in the
-        //! destructor
-        VarNodeArray m_output;
-        SmallVector<HashableContainer> m_extra_equiv_comp;
-        mutable Maybe<NodeProp> m_node_prop;
-        Maybe<InputWaitingSpec> m_input_waiting_spec;
+    void do_add_equivalence_component(HashableContainer&& hashable);
 
-        void do_add_equivalence_component(HashableContainer &&hashable);
-
-        bool is_same_st(const Hashable &rhs) const override final;
+    bool is_same_st(const Hashable& rhs) const override final;
 };
 
 /*!
@@ -825,8 +807,7 @@ struct OperatorNodeBase::OprEventCallback {
 };
 
 //! helper base class for operator mixins
-class OperatorNodeMixinBase: public NonCopyableObj {
-};
+class OperatorNodeMixinBase : public NonCopyableObj {};
 
 /*!
  * \brief mixin classes for operators
@@ -841,195 +822,183 @@ class OperatorNodeMixinBase: public NonCopyableObj {
 namespace mixin {
 
 //! check that base is OperatorNodeBase
-template<class Base_>
+template <class Base_>
 class CheckBase {
-    static_assert(std::is_base_of<OperatorNodeBase, Base_>::value,
+    static_assert(
+            std::is_base_of<OperatorNodeBase, Base_>::value,
             "Base must be OperatorNodeBase");
-    public:
-        using Base = Base_;
+
+public:
+    using Base = Base_;
 };
 
 /*!
  * \brief used as MixinImpl template parameter for mixin glue classes when Impl
  *      class has been included in Base
  */
-class EmptyMixinImpl {
-};
+class EmptyMixinImpl {};
 
 /*!
  * \brief mixin for opeators that work on a single computing node
  */
-class SingleCNOperatorNode: public OperatorNodeMixinBase {
+class SingleCNOperatorNode : public OperatorNodeMixinBase {
     CompNode m_comp_node;
 
-    protected:
-        using NodeProp = OperatorNodeBase::NodeProp;
-        using ExecEnv = OperatorNodeBase::ExecEnv;
+protected:
+    using NodeProp = OperatorNodeBase::NodeProp;
+    using ExecEnv = OperatorNodeBase::ExecEnv;
 
-        /*!
-         * \brief infer output comp node and update the comp node of all ouput
-         *      vars
-         *
-         * Note: the comp node stored in this mixin class is updated via
-         * mixin_on_output_comp_node_stream_changed(), which is called from
-         * opr.on_output_comp_node_stream_changed() invoked by this function.
-         */
-        static void mixin_init_output_comp_node(OperatorNodeBase &opr);
+    /*!
+     * \brief infer output comp node and update the comp node of all ouput
+     *      vars
+     *
+     * Note: the comp node stored in this mixin class is updated via
+     * mixin_on_output_comp_node_stream_changed(), which is called from
+     * opr.on_output_comp_node_stream_changed() invoked by this function.
+     */
+    static void mixin_init_output_comp_node(OperatorNodeBase& opr);
 
-        /*!
-         * \brief only infer output comp node, without modifying anything
-         *
-         * This implementation uses the comp node from input, requiring that at
-         * least one input exists and they are all placed on the same comp node.
-         * It also checks the comp node set in config.
-         */
-        static CompNode mixin_infer_output_comp_node(
-                const OperatorNodeBase& opr, bool cross_mem);
+    /*!
+     * \brief only infer output comp node, without modifying anything
+     *
+     * This implementation uses the comp node from input, requiring that at
+     * least one input exists and they are all placed on the same comp node.
+     * It also checks the comp node set in config.
+     */
+    static CompNode mixin_infer_output_comp_node(
+            const OperatorNodeBase& opr, bool cross_mem);
 
-        CompNode mixin_comp_node() const {
-            return m_comp_node;
-        }
+    CompNode mixin_comp_node() const { return m_comp_node; }
 
-        /*!
-         * \brief initialize NodeProp with SINGLE_COMP_NODE, and setup
-         *      dependency on input
-         */
-        NodeProp* mixin_do_make_node_prop(const OperatorNodeBase &opr) const;
+    /*!
+     * \brief initialize NodeProp with SINGLE_COMP_NODE, and setup
+     *      dependency on input
+     */
+    NodeProp* mixin_do_make_node_prop(const OperatorNodeBase& opr) const;
 
-        void mixin_do_execute(
-                OperatorNodeBase &opr, OperatorNodeBase::ExecEnv &env);
+    void mixin_do_execute(OperatorNodeBase& opr, OperatorNodeBase::ExecEnv& env);
 
-        void mixin_on_output_comp_node_stream_changed(OperatorNodeBase &opr);
+    void mixin_on_output_comp_node_stream_changed(OperatorNodeBase& opr);
 
-        /*!
-         * \brief set comp node during initializing
-         */
-        void mixin_comp_node(OperatorNodeBase &opr, CompNode node);
+    /*!
+     * \brief set comp node during initializing
+     */
+    void mixin_comp_node(OperatorNodeBase& opr, CompNode node);
 
-        /*!
-         * \brief override by subclass to perform raw computing; this function
-         *      is already dispatched on corresponding stream in ExecEnv
-         */
-        virtual void scn_do_execute() = 0;
+    /*!
+     * \brief override by subclass to perform raw computing; this function
+     *      is already dispatched on corresponding stream in ExecEnv
+     */
+    virtual void scn_do_execute() = 0;
 
-        ~SingleCNOperatorNode() = default;
+    ~SingleCNOperatorNode() = default;
 };
 
 /*!
  * \brief mixin class for implementing operators whose output shapes are
  *      completely determined by input shapes
  */
-class OutshapePureByInshapeOpr: public OperatorNodeMixinBase {
+class OutshapePureByInshapeOpr : public OperatorNodeMixinBase {
     size_t m_nr_managed_outputs = 0;
     size_t m_inp_run_id = -1;
     TensorShapeArray m_out_shp;
 
-    bool infer_desc(size_t out_idx,
-            TensorShape &dest, const StaticInferInpVal &inp);
+    bool infer_desc(size_t out_idx, TensorShape& dest, const StaticInferInpVal& inp);
 
-    protected:
-        /*!
-         * By default, all output vars would be managed by
-         * OutshapePureByInshapeOprBase; call this function to set the number
-         * of output vars that should be managed by this helper (they would be
-         * the first vars of all output vars).
-         */
-        void mixin_set_nr_managed_outputs(OperatorNodeBase &opr, size_t nr);
+protected:
+    /*!
+     * By default, all output vars would be managed by
+     * OutshapePureByInshapeOprBase; call this function to set the number
+     * of output vars that should be managed by this helper (they would be
+     * the first vars of all output vars).
+     */
+    void mixin_set_nr_managed_outputs(OperatorNodeBase& opr, size_t nr);
 
-        void mixin_init_output_static_infer_desc(OperatorNodeBase &opr);
+    void mixin_init_output_static_infer_desc(OperatorNodeBase& opr);
 
-        /*!
-         * \brief get output shapes from input shapes
-         * \param inp_shape current input shape; each element matches an input
-         *      var
-         * \param out_shape output shape; storage already allocated, and each
-         *      element matches an output var
-         */
-        virtual void get_output_var_shape(
-                const TensorShapeArray &inp_shape,
-                TensorShapeArray &out_shape) const = 0;
+    /*!
+     * \brief get output shapes from input shapes
+     * \param inp_shape current input shape; each element matches an input
+     *      var
+     * \param out_shape output shape; storage already allocated, and each
+     *      element matches an output var
+     */
+    virtual void get_output_var_shape(
+            const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const = 0;
 
-        ~OutshapePureByInshapeOpr();
+    ~OutshapePureByInshapeOpr();
 };
 
 /*!
  * \brief mixin class for operator whose all inputs and outputs are the same
  *      shape
  */
-class IOSameShapeOperatorNode: public OutshapePureByInshapeOpr {
-    protected:
-        void get_output_var_shape(
-                const TensorShapeArray &inp_shape,
-                TensorShapeArray &out_shape) const override final;
+class IOSameShapeOperatorNode : public OutshapePureByInshapeOpr {
+protected:
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override final;
 
-        ~IOSameShapeOperatorNode() = default;
+    ~IOSameShapeOperatorNode() = default;
 };
 
-} // namespace mixin
+}  // namespace mixin
 
 //! glue class to apply mixin::SingleCNOperatorNode
-template<class Base = OperatorNodeBase,
-         class MixinImpl = mixin::SingleCNOperatorNode>
+template <class Base = OperatorNodeBase, class MixinImpl = mixin::SingleCNOperatorNode>
 MGB_DEFINE_CLS_WITH_SUPER_TPL(
-        SingleCNOperatorNode, mixin::CheckBase<Base>::Base,
-        public MixinImpl) // {
-    public:
-        using NodeProp = typename Base::NodeProp;
-        using ExecEnv = typename Base::ExecEnv;
+        SingleCNOperatorNode, mixin::CheckBase<Base>::Base, public MixinImpl) // {
+public:
+    using NodeProp = typename Base::NodeProp;
+    using ExecEnv = typename Base::ExecEnv;
 
-        CompNode comp_node() const{
-            return this->mixin_comp_node();
-        }
+    CompNode comp_node() const { return this->mixin_comp_node(); }
 
-        void comp_node(CompNode node) {
-            this->mixin_comp_node(*this, node);
-        }
+    void comp_node(CompNode node) { this->mixin_comp_node(*this, node); }
 
-    protected:
-        using Base::Base;
+protected:
+    using Base::Base;
 
-        void init_output_comp_node() override {
-            MixinImpl::mixin_init_output_comp_node(*this);
-        }
+    void init_output_comp_node() override {
+        MixinImpl::mixin_init_output_comp_node(*this);
+    }
 
-        NodeProp* do_make_node_prop() const override {
-            return this->mixin_do_make_node_prop(*this);
-        }
+    NodeProp* do_make_node_prop() const override {
+        return this->mixin_do_make_node_prop(*this);
+    }
 
-        void do_execute(ExecEnv &env) override final {
-            this->mixin_do_execute(*this, env);
-        }
+    void do_execute(ExecEnv& env) override final { this->mixin_do_execute(*this, env); }
 
-        //! note: subclasses overriding this function must call Super
-        void on_output_comp_node_stream_changed() override {
-            this->mixin_on_output_comp_node_stream_changed(*this);
-        }
+    //! note: subclasses overriding this function must call Super
+    void on_output_comp_node_stream_changed() override {
+        this->mixin_on_output_comp_node_stream_changed(*this);
+    }
 };
 
 //! glue class to apply mixin::OutshapePureByInshapeOpr
-template<class Base = OperatorNodeBase,
-         class MixinImpl = mixin::OutshapePureByInshapeOpr>
-class OutshapePureByInshapeOpr: public mixin::CheckBase<Base>::Base,
-                                public MixinImpl {
-    protected:
-        using Base::Base;
+template <
+        class Base = OperatorNodeBase,
+        class MixinImpl = mixin::OutshapePureByInshapeOpr>
+class OutshapePureByInshapeOpr : public mixin::CheckBase<Base>::Base, public MixinImpl {
+protected:
+    using Base::Base;
 
-        void set_nr_managed_outputs(size_t nr) {
-            this->mixin_set_nr_managed_outputs(*this, nr);
-        }
+    void set_nr_managed_outputs(size_t nr) {
+        this->mixin_set_nr_managed_outputs(*this, nr);
+    }
 
-        void init_output_static_infer_desc() override {
-            this->mixin_init_output_static_infer_desc(*this);
-        }
+    void init_output_static_infer_desc() override {
+        this->mixin_init_output_static_infer_desc(*this);
+    }
 };
 
-template<class Impl = mixin::SingleCNOperatorNode>
+template <class Impl = mixin::SingleCNOperatorNode>
 using SingleCNOperatorNodeBaseT = SingleCNOperatorNode<OperatorNodeBase, Impl>;
 using SingleCNOperatorNodeBase = SingleCNOperatorNodeBaseT<>;
 using SingleCNOutshapePureByInshapeOprBase =
-    OutshapePureByInshapeOpr<SingleCNOperatorNodeBase>;
+        OutshapePureByInshapeOpr<SingleCNOperatorNodeBase>;
 using SingleCNIOSameShapeOperatorNodeBase = OutshapePureByInshapeOpr<
-    SingleCNOperatorNodeBase, mixin::IOSameShapeOperatorNode>;
+        SingleCNOperatorNodeBase, mixin::IOSameShapeOperatorNode>;
 using OprNodeArray = SmallVector<OperatorNodeBase*>;
 
 /*!
@@ -1037,12 +1006,12 @@ using OprNodeArray = SmallVector<OperatorNodeBase*>;
  *
  * Note that opening brace is included
  */
-#define MGB_DEFINE_OPR_CLASS(_name, _base, ...) \
-MGB_DEFINE_CLS_WITH_SUPER(_name final, _base ,##__VA_ARGS__) \
+#define MGB_DEFINE_OPR_CLASS(_name, _base, ...)                  \
+    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__) \
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
-} // namespace cg
-} // namespace mgb
+}  // namespace cg
+}  // namespace mgb
 
 namespace megdnn {
 namespace param {

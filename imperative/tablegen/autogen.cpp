@@ -10,39 +10,34 @@
  */
 
 #include "./targets/cpp_class.h"
+#include "./targets/macros.h"
 #include "./targets/pybind11.h"
 #include "./targets/python_c_extension.h"
-#include "./targets/macros.h"
 
 using llvm::raw_ostream;
 using llvm::RecordKeeper;
 
-enum ActionType {
-    None,
-    CppHeader,
-    CppBody,
-    Pybind,
-    CPython,
-    EnumListMacro
-};
+enum ActionType { None, CppHeader, CppBody, Pybind, CPython, EnumListMacro };
 
 // NOLINTNEXTLINE
 llvm::cl::opt<ActionType> action(
-    llvm::cl::desc("Action to perform:"),
-    llvm::cl::values(clEnumValN(CppHeader, "gen-cpp-header",
-                                "Generate operator cpp header"),
-                     clEnumValN(CppBody, "gen-cpp-body",
-                                "Generate operator cpp body"),
-                     clEnumValN(Pybind, "gen-python-binding",
-                                "Generate pybind11 python bindings"),
-                     clEnumValN(CPython, "gen-python-c-extension",
-                                "Generate python c extensions"),
-                     clEnumValN(EnumListMacro, "gen-enum-list-macro",
-                                "Generate enum param list macro")));
+        llvm::cl::desc("Action to perform:"),
+        llvm::cl::values(
+                clEnumValN(CppHeader, "gen-cpp-header", "Generate operator cpp header"),
+                clEnumValN(CppBody, "gen-cpp-body", "Generate operator cpp body"),
+                clEnumValN(
+                        Pybind, "gen-python-binding",
+                        "Generate pybind11 python bindings"),
+                clEnumValN(
+                        CPython, "gen-python-c-extension",
+                        "Generate python c extensions"),
+                clEnumValN(
+                        EnumListMacro, "gen-enum-list-macro",
+                        "Generate enum param list macro")));
 
 using namespace mlir::tblgen;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     llvm::InitLLVM y(argc, argv);
     llvm::cl::ParseCommandLineOptions(argc, argv);
     if (action == ActionType::CppHeader) {

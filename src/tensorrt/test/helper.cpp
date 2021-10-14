@@ -13,7 +13,9 @@
 
 #if MGB_ENABLE_TENSOR_RT
 
+#include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/framework.h"
+#include "megbrain/gopt/inference.h"
 #include "megbrain/opr/basic_arith.h"
 #include "megbrain/opr/blas.h"
 #include "megbrain/opr/io.h"
@@ -21,8 +23,6 @@
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/tensorrt/opr_replace.h"
 #include "megbrain/tensorrt/tensorrt_opr.h"
-#include "megbrain/gopt/inference.h"
-#include "megbrain/gopt/basic_arith.h"
 
 using namespace mgb;
 using namespace opr;
@@ -35,9 +35,8 @@ void TrtReplaceChecker::ensure_init_graph() {
     SymbolVarArray inputs(m_nr_input);
     for (size_t i = 0; i < m_nr_input; ++i) {
         if (m_mark_inp_const.count(i)) {
-            inputs[i] =
-                    opr::SharedDeviceTensor::make(*m_graph, *m_inputs_val[i])
-                            .rename(ssprintf("inp%zu", i));
+            inputs[i] = opr::SharedDeviceTensor::make(*m_graph, *m_inputs_val[i])
+                                .rename(ssprintf("inp%zu", i));
         } else {
             inputs[i] = opr::Host2DeviceCopy::make(*m_graph, m_inputs_val[i])
                                 .rename(ssprintf("inp%zu", i));
@@ -52,34 +51,32 @@ void TrtReplaceChecker::ensure_init_graph() {
 
     ComputingGraph::Options opt;
     opt.graph_opt_level = 0;
-    unpack_vector(gopt::GraphOptimizer{}
-                          .add_pass<gopt::ExpandFusedArithPass>()
-                          .add_pass<gopt::TensorRTReplacePass>()
-                          .add_pass<gopt::ArithFusePass>()
-                          .apply({{m_truth_y}})
-                          .endpoint_vars(),
-                  m_trt_y);
+    unpack_vector(
+            gopt::GraphOptimizer{}
+                    .add_pass<gopt::ExpandFusedArithPass>()
+                    .add_pass<gopt::TensorRTReplacePass>()
+                    .add_pass<gopt::ArithFusePass>()
+                    .apply({{m_truth_y}})
+                    .endpoint_vars(),
+            m_trt_y);
 
     size_t nr_trt_opr = 0;
     cg::DepOprIter{[&nr_trt_opr, this](cg::OperatorNodeBase* opr) {
         if (opr->same_type<TensorRTOpr>()) {
             ++nr_trt_opr;
         }
-    }}
-            .add(m_trt_y.node());
+    }}.add(m_trt_y.node());
     mgb_assert(nr_trt_opr >= 1);
 
     ComputingGraph::OutputSpec outspec(2);
-    outspec[0] =
-            make_callback_copy(m_truth_y, std::get<0>(m_output_val), false);
+    outspec[0] = make_callback_copy(m_truth_y, std::get<0>(m_output_val), false);
     outspec[1] = make_callback_copy(m_trt_y, std::get<1>(m_output_val), false);
 
     m_graph->options().graph_opt.tensorrt = false;
     m_func = m_graph->compile(outspec);
 }
 
-TrtReplaceChecker& TrtReplaceChecker::run(
-        const TensorShapeArray& input_shapes) {
+TrtReplaceChecker& TrtReplaceChecker::run(const TensorShapeArray& input_shapes) {
     if (::testing::Test::HasFailure()) {
         return *this;
     }
@@ -102,8 +99,8 @@ TrtReplaceChecker& TrtReplaceChecker::run(
     ensure_init_graph();
     m_func->execute().wait();
     auto chk = [this]() {
-        MGB_ASSERT_TENSOR_NEAR(std::get<0>(m_output_val),
-                               std::get<1>(m_output_val), m_epsilon);
+        MGB_ASSERT_TENSOR_NEAR(
+                std::get<0>(m_output_val), std::get<1>(m_output_val), m_epsilon);
     };
     chk();
     return *this;

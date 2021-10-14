@@ -32,9 +32,9 @@ Halide::Expr hl_type_cast(Halide::Expr src, DType dst_type) {
         case megdnn::DTypeEnum::Int32:
             return Halide::cast<int>(src);
         default:
-            mgb_throw(InternalError,
-                      "dtype(%s) is not any of [Float16, Float32, Int32]",
-                      dst_type.name());
+            mgb_throw(
+                    InternalError, "dtype(%s) is not any of [Float16, Float32, Int32]",
+                    dst_type.name());
     }
 }
 
@@ -64,8 +64,7 @@ Halide::Expr dispatch_elemwise_mode(
     switch (mode) {
         // unary
         case Mode::RELU:
-            return Halide::select(inp(0) <= 0, cv(0),
-                                  inp(0));
+            return Halide::select(inp(0) <= 0, cv(0), inp(0));
         case Mode::ABS:
             return Halide::abs(inp(0));
         case Mode::ACOS:
@@ -89,8 +88,7 @@ Halide::Expr dispatch_elemwise_mode(
         case Mode::NEGATE:
             return -inp(0);
         case Mode::SIGMOID:
-            return cv(1) /
-                   (cv(1) + Halide::exp(-inp(0)));
+            return cv(1) / (cv(1) + Halide::exp(-inp(0)));
         case Mode::SIN:
             return Halide::sin(inp(0));
         case Mode::TANH:
@@ -100,8 +98,7 @@ Halide::Expr dispatch_elemwise_mode(
         case Mode::ERFC:
             return cv(1) - Halide::erf(inp(0));
         case Mode::H_SWISH:
-            return inp(0) *
-                   Halide::max(Halide::min(inp(0) + cv(3), cv(6)), cv(0)) /
+            return inp(0) * Halide::max(Halide::min(inp(0) + cv(3), cv(6)), cv(0)) /
                    cv(6);
 
         // binary
@@ -118,8 +115,7 @@ Halide::Expr dispatch_elemwise_mode(
         case Mode::MOD: {
             Halide::Expr e =
                     Halide::abs(inp(0)) -
-                    Halide::abs(inp(1)) *
-                            Halide::floor(Halide::abs(inp(0) / inp(1)));
+                    Halide::abs(inp(1)) * Halide::floor(Halide::abs(inp(0) / inp(1)));
             return Halide::select(inp(0) > 0, e, -e);
         }
         case Mode::MUL:
@@ -155,13 +151,13 @@ Halide::Expr dispatch_elemwise_mode(
         case Mode::H_SWISH_GRAD:
             return Halide::select(
                     inp(0) < -3, cv(0),
-                    Halide::select(inp(0) > 3, inp(1),
-                                   (cv(2) * inp(0) + cv(3)) * inp(1) / cv(6)));
+                    Halide::select(
+                            inp(0) > 3, inp(1),
+                            (cv(2) * inp(0) + cv(3)) * inp(1) / cv(6)));
 
         // ternary
         case Mode::COND_LEQ_MOV:
-            return Halide::select(inp(0) <= inp(1), inp(2),
-                                  cv(0));
+            return Halide::select(inp(0) <= inp(1), inp(2), cv(0));
         case Mode::FUSE_MUL_ADD3:
             return inp(0) * inp(1) + inp(2);
         case Mode::FUSE_MUL_ADD4:
@@ -172,19 +168,15 @@ Halide::Expr dispatch_elemwise_mode(
             return Halide::max(inp(0) + inp(1), cv(0));
         }
         case Mode::FUSE_ADD_SIGMOID:
-            return cv(1) /
-                   (cv(1) +
-                    Halide::exp(-(inp(0) + inp(1))));
+            return cv(1) / (cv(1) + Halide::exp(-(inp(0) + inp(1))));
         case Mode::FUSE_ADD_TANH:
             return Halide::tanh(inp(0) + inp(1));
         case Mode::FUSE_ADD_H_SWISH:
             return (inp(0) + inp(1)) *
-                   Halide::max(Halide::min((inp(0) + inp(1)) + cv(3), cv(6)),
-                               cv(0)) /
+                   Halide::max(Halide::min((inp(0) + inp(1)) + cv(3), cv(6)), cv(0)) /
                    cv(6);
         case Mode::FAST_TANH: {
-            Halide::Expr e = Halide::fast_exp(inp(0)),
-                         ei = Halide::fast_inverse(e);
+            Halide::Expr e = Halide::fast_exp(inp(0)), ei = Halide::fast_inverse(e);
             return (e - ei) / (e + ei);
         }
         case Mode::FAST_TANH_GRAD:
@@ -202,8 +194,9 @@ Halide::Expr dispatch_elemwise_mode(
         case Mode::XOR:
             return cv(cv(inp(0) != cv(0)) + cv(inp(1) != cv(0)) == cv(1));
         default:
-            mgb_throw(InternalError, "unsupported Elemwise mode(%d)",
-                      static_cast<int>(mode));
+            mgb_throw(
+                    InternalError, "unsupported Elemwise mode(%d)",
+                    static_cast<int>(mode));
     }
 #undef inp
 }
@@ -325,8 +318,7 @@ void ElemwiseOp::init(cg::OperatorNodeBase* opr) {
             std::vector<Halide::Expr> exprs(odim);
             mgb_assert(static_cast<int>(cur_dim) >= odim);
             for (int j = cur_dim - 1; j >= cur_dim - odim; j--) {
-                if (inp_layouts[i].shape[j] != 1 &&
-                    inp_layouts[i].stride[j] != 0) {
+                if (inp_layouts[i].shape[j] != 1 && inp_layouts[i].stride[j] != 0) {
                     exprs[cur_dim - 1 - j] = out_vars[cur_dim - 1 - j];
                 } else {
                     exprs[cur_dim - 1 - j] = 0;
@@ -339,8 +331,7 @@ void ElemwiseOp::init(cg::OperatorNodeBase* opr) {
     Halide::Expr out;
 
     if (auto powc = gopt::try_cast_as_op<opr::PowC>(opr)) {
-        out = dispatch_powc(m_inputs[0]->m_func(exprs_of_inps[0]),
-                            powc->param().exp);
+        out = dispatch_powc(m_inputs[0]->m_func(exprs_of_inps[0]), powc->param().exp);
     } else {
         out = dispatch_elemwise_mode(
                 opr->cast_final_safe<opr::Elemwise>().param().mode, m_inputs,
@@ -372,9 +363,9 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(ReduceOp);
 namespace {
 namespace reduce_impl {
 
+using Halide::cast;
 using Halide::FuncRef;
 using Halide::Type;
-using Halide::cast;
 
 using Mode = opr::Reduce::Mode;
 template <Mode, typename otype, typename ctype>
@@ -395,9 +386,7 @@ TRAIT_IMPL_BEGIN(Mode::SUM) {
     static void apply(FuncRef comp, Halide::FuncRef in, float) {
         comp += cast<hl_comp_type>(in);
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 TRAIT_IMPL_BEGIN(Mode::SUM_SQR) {
@@ -407,9 +396,7 @@ TRAIT_IMPL_BEGIN(Mode::SUM_SQR) {
     static void apply(FuncRef comp, FuncRef in, float) {
         comp += cast<hl_comp_type>(in * in);
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 TRAIT_IMPL_BEGIN(Mode::PRODUCT) {
@@ -419,9 +406,7 @@ TRAIT_IMPL_BEGIN(Mode::PRODUCT) {
     static void apply(FuncRef comp, FuncRef in, float) {
         comp *= cast<hl_comp_type>(in);
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 TRAIT_IMPL_BEGIN(Mode::MAX) {
@@ -433,9 +418,7 @@ TRAIT_IMPL_BEGIN(Mode::MAX) {
     static void apply(FuncRef comp, FuncRef in, float) {
         comp = cast<hl_comp_type>(max(comp, in));
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 TRAIT_IMPL_BEGIN(Mode::MIN) {
@@ -447,9 +430,7 @@ TRAIT_IMPL_BEGIN(Mode::MIN) {
     static void apply(FuncRef comp, FuncRef in, float) {
         comp = cast<hl_comp_type>(min(comp, in));
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 TRAIT_IMPL_BEGIN(Mode::MEAN) {
@@ -459,14 +440,12 @@ TRAIT_IMPL_BEGIN(Mode::MEAN) {
     static void apply(FuncRef comp, FuncRef in, float scale) {
         comp += cast<hl_comp_type>(in) / cast<hl_comp_type>(scale);
     }
-    static void on(FuncRef comp, FuncRef func) {
-        func = cast<hl_out_type>(comp);
-    }
+    static void on(FuncRef comp, FuncRef func) { func = cast<hl_out_type>(comp); }
 };
 
 template <typename otype, typename ctype>
-void dispatch_reduce_mode(Mode mode, FuncRef func, FuncRef comp, FuncRef in,
-                          float scale) {
+void dispatch_reduce_mode(
+        Mode mode, FuncRef func, FuncRef comp, FuncRef in, float scale) {
     using Mode = opr::Reduce::Mode;
 #define cb(mode)                                           \
     case mode: {                                           \
@@ -476,8 +455,8 @@ void dispatch_reduce_mode(Mode mode, FuncRef func, FuncRef comp, FuncRef in,
         break;                                             \
     }
     switch (mode) {
-        cb(Mode::SUM) cb(Mode::SUM_SQR) cb(Mode::PRODUCT) cb(Mode::MAX)
-                cb(Mode::MIN) cb(Mode::MEAN) default
+        cb(Mode::SUM) cb(Mode::SUM_SQR) cb(Mode::PRODUCT) cb(Mode::MAX) cb(Mode::MIN)
+                cb(Mode::MEAN) default
                 : mgb_throw(InternalError, "invalide reduce mode");
     }
 #undef cb
@@ -488,9 +467,9 @@ void dispatch_reduce_mode(Mode mode, FuncRef func, FuncRef comp, FuncRef in,
 
 void ReduceOp::init(cg::OperatorNodeBase* opr) {
     auto&& mgb_reduce_op = opr->cast_final_safe<opr::Reduce>();
-    mgb_assert(mgb_reduce_op.output(0)->dtype().category() ==
-                       megdnn::DTypeCategory::FLOAT,
-               "invalid Reduce opr or dtype of output is not float32/float16");
+    mgb_assert(
+            mgb_reduce_op.output(0)->dtype().category() == megdnn::DTypeCategory::FLOAT,
+            "invalid Reduce opr or dtype of output is not float32/float16");
     auto dtype = mgb_reduce_op.output(0)->dtype();
     if (m_inputs.size() == 1) {
         m_layout = m_inputs[0]->m_layout;
@@ -502,14 +481,14 @@ void ReduceOp::init(cg::OperatorNodeBase* opr) {
         m_layout.init_contiguous_stride(m_inputs[1]->m_layout);
     } else if (auto imm = try_cast_as_op<ScalarImmOp>(m_inputs[1].get())) {
         int const_val = imm->m_val.iv;
-        mgb_assert(const_val == 1,
-                   "reduce target shape should be scalar, got %d", const_val);
-        m_layout = {{static_cast<size_t>(const_val)},
-                    mgb_reduce_op.output(0)->dtype()};
+        mgb_assert(
+                const_val == 1, "reduce target shape should be scalar, got %d",
+                const_val);
+        m_layout = {{static_cast<size_t>(const_val)}, mgb_reduce_op.output(0)->dtype()};
     } else {
-        mgb_throw(InternalError,
-                  "invalid input for Halide ReduceOp, inp size = %zu",
-                  m_inputs.size());
+        mgb_throw(
+                InternalError, "invalid input for Halide ReduceOp, inp size = %zu",
+                m_inputs.size());
     }
 
     auto&& inp_layout = m_inputs[0]->m_layout;
@@ -528,10 +507,11 @@ void ReduceOp::init(cg::OperatorNodeBase* opr) {
     using Var = Halide::Var;
     using namespace reduce_impl;
 
-    mgb_assert(inp_layout.ndim == out_layout.ndim,
-               "ndim of orig shape and target shape for reduce opr mismatch, "
-               "inp = %zu, out = %zu",
-               inp_layout.ndim, out_layout.ndim);
+    mgb_assert(
+            inp_layout.ndim == out_layout.ndim,
+            "ndim of orig shape and target shape for reduce opr mismatch, "
+            "inp = %zu, out = %zu",
+            inp_layout.ndim, out_layout.ndim);
     std::vector<Var> out_vars(out_layout.ndim);
     std::vector<std::pair<Expr, Expr>> ranges;
     bool need_do_reduce = false;
@@ -539,8 +519,8 @@ void ReduceOp::init(cg::OperatorNodeBase* opr) {
         if (out_layout[i] != inp_layout[i]) {
             mgb_assert(out_layout[i] == 1);
             need_do_reduce = true;
-            ranges.push_back(std::make_pair(
-                    Expr{0}, Expr{static_cast<int>(inp_layout[i])}));
+            ranges.push_back(
+                    std::make_pair(Expr{0}, Expr{static_cast<int>(inp_layout[i])}));
         }
     }
     Halide::Func out_func;
@@ -562,13 +542,11 @@ void ReduceOp::init(cg::OperatorNodeBase* opr) {
                 if (dtype == dtype::Float16()) {
                     dispatch_reduce_mode<dt_float16, dt_float16>(
                             mgb_reduce_op.param().mode, out_func(out_vars),
-                            m_comp(out_vars), m_inputs[0]->m_func(exprs),
-                            scale);
+                            m_comp(out_vars), m_inputs[0]->m_func(exprs), scale);
                 } else if (dtype == dtype::Float32()) {
                     dispatch_reduce_mode<float, float>(
                             mgb_reduce_op.param().mode, out_func(out_vars),
-                            m_comp(out_vars), m_inputs[0]->m_func(exprs),
-                            scale);
+                            m_comp(out_vars), m_inputs[0]->m_func(exprs), scale);
                 }
                 break;
             }
@@ -633,17 +611,16 @@ void ScalarImmOp::init(cg::OperatorNodeBase* opr) {
         m_val.fv = imm.get<dt_float16>();
         m_func(var) = Halide::float16_t(m_val.fv);
     } else {
-        mgb_throw(InternalError,
-                  "dtype(%s) is not any of [float16, float32, int32]",
-                  dtype.name());
+        mgb_throw(
+                InternalError, "dtype(%s) is not any of [float16, float32, int32]",
+                dtype.name());
     }
 }
 
 /* ================= BroadcastOp ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(BroadcastOp);
 void BroadcastOp::init(cg::OperatorNodeBase* opr) {
-    mgb_assert(m_inputs.size() == 2,
-               "halide BroadcastOp should have two inputs");
+    mgb_assert(m_inputs.size() == 2, "halide BroadcastOp should have two inputs");
     const TensorShape& tshape =
             m_inputs[1]->cast_final_safe<InputHostValueShapeOp>().m_layout;
     auto&& orig_layout = m_inputs[0]->m_layout;
@@ -665,10 +642,10 @@ void BroadcastOp::init(cg::OperatorNodeBase* opr) {
             } else if (orig_layout[i] == 1) {
                 exprs.emplace_back(0);
             } else {
-                mgb_throw(InternalError,
-                          "invalid boradcast shape: inpshp = %s, tshp = %s",
-                          orig_layout.to_string().c_str(),
-                          m_layout.to_string().c_str());
+                mgb_throw(
+                        InternalError,
+                        "invalid boradcast shape: inpshp = %s, tshp = %s",
+                        orig_layout.to_string().c_str(), m_layout.to_string().c_str());
             }
         }
     }

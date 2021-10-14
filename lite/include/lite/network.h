@@ -22,10 +22,10 @@
 
 namespace lite {
 
-LITE_API inline LiteAlgoSelectStrategy operator|(LiteAlgoSelectStrategy x,
-                                                 LiteAlgoSelectStrategy y) {
-    return static_cast<LiteAlgoSelectStrategy>(static_cast<uint32_t>(x) |
-                                               static_cast<uint32_t>(y));
+LITE_API inline LiteAlgoSelectStrategy operator|(
+        LiteAlgoSelectStrategy x, LiteAlgoSelectStrategy y) {
+    return static_cast<LiteAlgoSelectStrategy>(
+            static_cast<uint32_t>(x) | static_cast<uint32_t>(y));
 }
 
 /*!
@@ -170,8 +170,8 @@ public:
     virtual ~Allocator() = default;
 
     //! allocate memory of size in the given device with the given align
-    virtual void* allocate(LiteDeviceType device_type, int device_id,
-                           size_t size, size_t align) = 0;
+    virtual void* allocate(
+            LiteDeviceType device_type, int device_id, size_t size, size_t align) = 0;
 
     //! free the memory pointed by ptr in the given device
     virtual void free(LiteDeviceType device_type, int device_id, void* ptr) = 0;
@@ -191,12 +191,12 @@ using AsyncCallback = std::function<void(void)>;
  * \param unordered_map map from the io tensor name to the pair of which is the
  * corresponding IO of user config and the realy input or output tensor.
  */
-using StartCallback = std::function<void(
-        const std::unordered_map<std::string,
-                                 std::pair<IO, std::shared_ptr<Tensor>>>&)>;
-using FinishCallback = std::function<void(
-        const std::unordered_map<std::string,
-                                 std::pair<IO, std::shared_ptr<Tensor>>>&)>;
+using StartCallback =
+        std::function<void(const std::unordered_map<
+                           std::string, std::pair<IO, std::shared_ptr<Tensor>>>&)>;
+using FinishCallback =
+        std::function<void(const std::unordered_map<
+                           std::string, std::pair<IO, std::shared_ptr<Tensor>>>&)>;
 
 /*!
  * \brief The network is construct form a model, implement model load, init,
@@ -225,8 +225,7 @@ public:
     //! sync from mge tensor, when the name of input and output tensor  are the
     //! same, use LiteTensorPhase to separate
     std::shared_ptr<Tensor> get_io_tensor(
-            std::string io_name,
-            LiteTensorPhase phase = LiteTensorPhase::LITE_IO);
+            std::string io_name, LiteTensorPhase phase = LiteTensorPhase::LITE_IO);
 
     //! get the network input by index
     std::shared_ptr<Tensor> get_input_tensor(size_t index);
@@ -306,8 +305,8 @@ class LITE_API Runtime {
 public:
     //! When device is CPU, this interface will set the to be loaded model
     //! run in multi thread mode with the given thread number.
-    static void set_cpu_threads_number(std::shared_ptr<Network> dst_network,
-                                       size_t nr_threads);
+    static void set_cpu_threads_number(
+            std::shared_ptr<Network> dst_network, size_t nr_threads);
     static size_t get_cpu_threads_number(std::shared_ptr<Network> dst_network);
 
     //! set threads affinity callback;
@@ -332,9 +331,8 @@ public:
     //!                             equal,whether the content of each output
     //!                             batch is promised to be equal
     static void set_network_algo_policy(
-            std::shared_ptr<Network> dst_network,
-            LiteAlgoSelectStrategy strategy, uint32_t shared_batch_size = 0,
-            bool binary_equal_between_batch = false);
+            std::shared_ptr<Network> dst_network, LiteAlgoSelectStrategy strategy,
+            uint32_t shared_batch_size = 0, bool binary_equal_between_batch = false);
 
     //! set workspace_limit for oprs with multiple algorithms, set
     //! workspace limitation can save memory but may influence the performance
@@ -342,22 +340,23 @@ public:
             std::shared_ptr<Network> dst_network, size_t workspace_limit);
 
     //! set the network memroy allocator, the allocator is defined by user
-    static void set_memory_allocator(std::shared_ptr<Network> dst_network,
-                                     std::shared_ptr<Allocator> user_allocator);
+    static void set_memory_allocator(
+            std::shared_ptr<Network> dst_network,
+            std::shared_ptr<Allocator> user_allocator);
 
     //! share the runtime memory with other network, the weights is not shared
-    static void share_runtime_memory_with(std::shared_ptr<Network> dst_network,
-                                          std::shared_ptr<Network> src_network);
+    static void share_runtime_memory_with(
+            std::shared_ptr<Network> dst_network, std::shared_ptr<Network> src_network);
 
     //! Dump input/output values of all internal variables to output
     //! file, in txt format
-    static void enable_io_txt_dump(std::shared_ptr<Network> dst_network,
-                                   std::string io_txt_out_file);
+    static void enable_io_txt_dump(
+            std::shared_ptr<Network> dst_network, std::string io_txt_out_file);
 
     //! Dump input/output values of all internal variables to output
     //! directory, in binary format
-    static void enable_io_bin_dump(std::shared_ptr<Network> dst_network,
-                                   std::string io_bin_out_dir);
+    static void enable_io_bin_dump(
+            std::shared_ptr<Network> dst_network, std::string io_bin_out_dir);
 
     //! load a new network which will share weights with src network
     static void shared_weight_with_network(

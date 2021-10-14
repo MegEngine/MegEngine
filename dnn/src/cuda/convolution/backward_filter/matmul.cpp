@@ -23,11 +23,9 @@ namespace {
 std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
         const ConvolutionBackwardFilterImpl::CanonizedFilterMeta& fm,
         const TensorLayout& src_layout, const TensorLayout& diff_layout,
-        const TensorLayout& grad_layout,
-        const ConvolutionBackwardFilterImpl* opr) {
-    size_t N = src_layout.shape[0], IC = fm.icpg,
-           OC = fm.ocpg, OH = diff_layout.shape[2],
-           OW = diff_layout.shape[3], FH = fm.spatial[0],
+        const TensorLayout& grad_layout, const ConvolutionBackwardFilterImpl* opr) {
+    size_t N = src_layout.shape[0], IC = fm.icpg, OC = fm.ocpg,
+           OH = diff_layout.shape[2], OW = diff_layout.shape[3], FH = fm.spatial[0],
            FW = fm.spatial[1];
 
     megdnn_assert(src_layout.dtype.enumv() == diff_layout.dtype.enumv());
@@ -35,8 +33,7 @@ std::pair<TensorLayoutArray, MatrixMulForward::Param> sub_opr_config(
             Bl({IC * FH * FW, OH * OW * N}, src_layout.dtype),
             Cl({OC, OH * OW * N}, src_layout.dtype);
     MatrixMulForward::Param param;
-    if (opr->param().compute_mode ==
-        param::Convolution::ComputeMode::FLOAT32) {
+    if (opr->param().compute_mode == param::Convolution::ComputeMode::FLOAT32) {
         param.compute_mode = param::MatrixMul::ComputeMode::FLOAT32;
     }
 
@@ -50,25 +47,24 @@ std::pair<TensorLayoutArray, std::unique_ptr<MatrixMulForward>> prepare_sub_opr(
     set_execution_policy<ConvolutionBackwardFilter, MatrixMulForward*>(
             args.opr, matmul_opr.get());
 
-    auto&& config =
-            sub_opr_config(args.grad_filter_meta, *args.src_layout,
-                           *args.diff_layout, *args.grad_layout, args.opr);
+    auto&& config = sub_opr_config(
+            args.grad_filter_meta, *args.src_layout, *args.diff_layout,
+            *args.grad_layout, args.opr);
     matmul_opr->param() = config.second;
 
     return {config.first, std::move(matmul_opr)};
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-ConvolutionBackwardFilterImpl::AlgoMatmul::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+std::vector<Algorithm::SearchItem> ConvolutionBackwardFilterImpl::AlgoMatmul::
+        get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     const ConvolutionBackwardFilterImpl* conv_backward_filter_opr =
             static_cast<const ConvolutionBackwardFilterImpl*>(opr);
-    CanonizedFilterMeta fm =
-            conv_backward_filter_opr->make_canonized_filter_meta(
-                    layouts[0].ndim, layouts[2]);
-    auto&& config = sub_opr_config(fm, layouts[0], layouts[1], layouts[2],
-                                   conv_backward_filter_opr);
+    CanonizedFilterMeta fm = conv_backward_filter_opr->make_canonized_filter_meta(
+            layouts[0].ndim, layouts[2]);
+    auto&& config = sub_opr_config(
+            fm, layouts[0], layouts[1], layouts[2], conv_backward_filter_opr);
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
@@ -97,8 +93,7 @@ size_t ConvolutionBackwardFilterImpl::AlgoMatmul::get_workspace_in_bytes(
     return WorkspaceBundle(nullptr, sizes).total_size_in_bytes();
 }
 
-void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(
-        const ExecArgs& args) const {
+void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(const ExecArgs& args) const {
 #define cb(DType)                                        \
     if (args.diff_layout->dtype == DType()) {            \
         using ctype = typename DTypeTrait<DType>::ctype; \
@@ -112,16 +107,14 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec(
 }
 
 template <typename T>
-void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
-        const ExecArgs& args) {
+void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(const ExecArgs& args) {
     auto&& fm = args.grad_filter_meta;
-    size_t N = args.src_layout->shape[0], IC = fm.icpg,
-           IH = args.src_layout->shape[2], IW = args.src_layout->shape[3],
-           OC = fm.ocpg, OH = args.diff_layout->shape[2],
-           OW = args.diff_layout->shape[3], FH = fm.spatial[0],
-           FW = fm.spatial[1], PH = fm.padding[0], PW = fm.padding[1],
-           SH = fm.stride[0], SW = fm.stride[1], DH = fm.dilation[0],
-           DW = fm.dilation[1];
+    size_t N = args.src_layout->shape[0], IC = fm.icpg, IH = args.src_layout->shape[2],
+           IW = args.src_layout->shape[3], OC = fm.ocpg,
+           OH = args.diff_layout->shape[2], OW = args.diff_layout->shape[3],
+           FH = fm.spatial[0], FW = fm.spatial[1], PH = fm.padding[0],
+           PW = fm.padding[1], SH = fm.stride[0], SW = fm.stride[1],
+           DH = fm.dilation[0], DW = fm.dilation[1];
     auto stream = cuda_stream(args.handle);
 
     auto config = prepare_sub_opr(args);
@@ -145,15 +138,14 @@ void ConvolutionBackwardFilterImpl::AlgoMatmul::exec_internal(
     }
     {
         // im2col
-        convolution::im2col<T>(args.src_tensor->ptr<T>(), col, N,
-                               args.src_tensor->layout.stride[0], IC, IH, IW,
-                               FH, FW, OH, OW, PH, PW, SH, SW, DH, DW, stream);
+        convolution::im2col<T>(
+                args.src_tensor->ptr<T>(), col, N, args.src_tensor->layout.stride[0],
+                IC, IH, IW, FH, FW, OH, OW, PH, PW, SH, SW, DH, DW, stream);
     }
     {
         // take gemm grad
         TensorLayout Al({OC, IC * FH * FW}, typename DTypeTrait<T>::dtype()),
-                Bl({IC * FH * FW, OH * OW * N},
-                   typename DTypeTrait<T>::dtype()),
+                Bl({IC * FH * FW, OH * OW * N}, typename DTypeTrait<T>::dtype()),
                 Cl({OC, OH * OW * N}, typename DTypeTrait<T>::dtype());
         TensorND A(args.grad_tensor->ptr<T>(), Al), B(col, Bl), C(diff_t, Cl);
         if (fm.should_flip) {

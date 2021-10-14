@@ -8,11 +8,11 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/cuda/fixture.h"
 #include "test/common/warp_affine.h"
-#include "test/common/checker.h"
-#include "test/common/benchmarker.h"
 #include "include/megdnn/thin/small_vector.h"
+#include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/cuda/fixture.h"
 
 namespace megdnn {
 namespace test {
@@ -52,8 +52,7 @@ TEST_F(CUDA, WARP_AFFINE) {
     for (auto dtype : std::vector<DType>{dtype::Float32()}) {
         for (auto bmode :
              {WarpAffine::BorderMode::WRAP, WarpAffine::BorderMode::REFLECT,
-              WarpAffine::BorderMode::CONSTANT,
-              WarpAffine::BorderMode::REPLICATE,
+              WarpAffine::BorderMode::CONSTANT, WarpAffine::BorderMode::REPLICATE,
               WarpAffine::BorderMode::CONSTANT}) {
             Checker<WarpAffine> checker(handle_cuda());
             NormalRNG rng;
@@ -76,8 +75,7 @@ TEST_F(CUDA, WARP_AFFINE) {
     for (auto dtype : std::vector<DType>{dtype::Float32()}) {
         for (auto bmode :
              {WarpAffine::BorderMode::WRAP, WarpAffine::BorderMode::REFLECT,
-              WarpAffine::BorderMode::CONSTANT,
-              WarpAffine::BorderMode::REPLICATE,
+              WarpAffine::BorderMode::CONSTANT, WarpAffine::BorderMode::REPLICATE,
               WarpAffine::BorderMode::CONSTANT}) {
             Checker<WarpAffine> checker(handle_cuda());
             NormalRNG rng;
@@ -107,12 +105,11 @@ TEST_F(CUDA, WARP_AFFINE_BENCHMARK) {
     using Param = param::WarpAffine;
     Param param;
 
-    auto run = [&benchmark, &param](TensorShape src, TensorShape mat,
-                                    TensorShape dst) {
+    auto run = [&benchmark, &param](TensorShape src, TensorShape mat, TensorShape dst) {
         benchmark.set_param(param);
         auto used = benchmark.execs({src, mat, dst});
-        printf("src: %s dst: %s used: %.2f ms %.2f Gflops\n",
-               src.to_string().c_str(), dst.to_string().c_str(), used,
+        printf("src: %s dst: %s used: %.2f ms %.2f Gflops\n", src.to_string().c_str(),
+               dst.to_string().c_str(), used,
                //! 8 mul + 3 add
                11 * dst.total_nr_elems() / (used / RUNS) / 1e6);
     };

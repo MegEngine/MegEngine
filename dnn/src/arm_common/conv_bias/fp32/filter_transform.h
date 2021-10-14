@@ -10,17 +10,17 @@
  */
 
 #pragma once
+#include "megdnn/opr_param_defs.h"
+#include "src/arm_common/conv_bias/fp32/helper.h"
 #include "src/arm_common/simd_macro/marm_neon.h"
 #include "src/arm_common/utils.h"
 #include "src/common/unroll_macro.h"
 #include "src/common/utils.h"
-#include "src/arm_common/conv_bias/fp32/helper.h"
-#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace arm_common {
 
-template <param::MatrixMul::Format format=param::MatrixMul::Format::DEFAULT>
+template <param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT>
 struct FilterTransform6X3 {
 #define FILTER_TRANSFORM(d, wd)                       \
     do {                                              \
@@ -40,9 +40,9 @@ struct FilterTransform6X3 {
         wd##7 = d##2;                                 \
     } while (0);
 
-    static void transform(const float* filter, float* filter_transform_buf,
-                          float* transform_mid_buf, size_t OC, size_t IC,
-                          size_t oc_start, size_t oc_end) {
+    static void transform(
+            const float* filter, float* filter_transform_buf, float* transform_mid_buf,
+            size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
         // Gg * GT
         // G
         // 1.0000000       0.0000000       0.0000000
@@ -95,40 +95,38 @@ struct FilterTransform6X3 {
 #undef cb
                 rep(i, alpha) rep(j, alpha) {
                     if (format == param::MatrixMul::Format::DEFAULT) {
-                        filter_transform_buf[(i * alpha + j) * OC * IC +
-                                             ic * OC + oc] =
+                        filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC + oc] =
                                 transform_mid_buf[j * alpha + i];
                     } else {
-                        filter_transform_buf[(i * alpha + j) * OCB * ICB * 4 *
-                                                     4 +
-                                             ocb * ICB * 4 * 4 + icb * 4 * 4 +
-                                             ic4 * 4 + oc4] =
-                                transform_mid_buf[j * alpha + i];
+                        filter_transform_buf
+                                [(i * alpha + j) * OCB * ICB * 4 * 4 +
+                                 ocb * ICB * 4 * 4 + icb * 4 * 4 + ic4 * 4 + oc4] =
+                                        transform_mid_buf[j * alpha + i];
                     }
                 }
 
 #else
 
-#define cb(i)                                                                 \
-    do {                                                                      \
-        mid_buf1[0] = GET_VECTOR_ELEM(wd, i, 0);                              \
-        auto tmp0 = (GET_VECTOR_ELEM(wd, i, 0) + GET_VECTOR_ELEM(wd, i, 2)) * \
-                    -0.2222222f;                                              \
-        auto tmp1 = GET_VECTOR_ELEM(wd, i, 1) * -0.2222222f;                  \
-        mid_buf1[1] = tmp0 + tmp1;                                            \
-        mid_buf1[2] = tmp0 - tmp1;                                            \
-        tmp0 = GET_VECTOR_ELEM(wd, i, 0) * 0.0111111f +                       \
-               GET_VECTOR_ELEM(wd, i, 2) * 0.0444444f;                        \
-        tmp1 = GET_VECTOR_ELEM(wd, i, 1) * 0.0222222f;                        \
-        mid_buf1[3] = tmp0 + tmp1;                                            \
-        mid_buf1[4] = tmp0 - tmp1;                                            \
-        tmp0 = GET_VECTOR_ELEM(wd, i, 0) * 0.7111111f +                       \
-               GET_VECTOR_ELEM(wd, i, 2) * 0.1777778f;                        \
-        tmp1 = GET_VECTOR_ELEM(wd, i, 1) * 0.3555556f;                        \
-        mid_buf1[5] = tmp0 + tmp1;                                            \
-        mid_buf1[6] = tmp0 - tmp1;                                            \
-        mid_buf1[7] = GET_VECTOR_ELEM(wd, i, 2);                              \
-        mid_buf1 += 8;                                                        \
+#define cb(i)                                                                          \
+    do {                                                                               \
+        mid_buf1[0] = GET_VECTOR_ELEM(wd, i, 0);                                       \
+        auto tmp0 =                                                                    \
+                (GET_VECTOR_ELEM(wd, i, 0) + GET_VECTOR_ELEM(wd, i, 2)) * -0.2222222f; \
+        auto tmp1 = GET_VECTOR_ELEM(wd, i, 1) * -0.2222222f;                           \
+        mid_buf1[1] = tmp0 + tmp1;                                                     \
+        mid_buf1[2] = tmp0 - tmp1;                                                     \
+        tmp0 = GET_VECTOR_ELEM(wd, i, 0) * 0.0111111f +                                \
+               GET_VECTOR_ELEM(wd, i, 2) * 0.0444444f;                                 \
+        tmp1 = GET_VECTOR_ELEM(wd, i, 1) * 0.0222222f;                                 \
+        mid_buf1[3] = tmp0 + tmp1;                                                     \
+        mid_buf1[4] = tmp0 - tmp1;                                                     \
+        tmp0 = GET_VECTOR_ELEM(wd, i, 0) * 0.7111111f +                                \
+               GET_VECTOR_ELEM(wd, i, 2) * 0.1777778f;                                 \
+        tmp1 = GET_VECTOR_ELEM(wd, i, 1) * 0.3555556f;                                 \
+        mid_buf1[5] = tmp0 + tmp1;                                                     \
+        mid_buf1[6] = tmp0 - tmp1;                                                     \
+        mid_buf1[7] = GET_VECTOR_ELEM(wd, i, 2);                                       \
+        mid_buf1 += 8;                                                                 \
     } while (0);
 #define GET_VECTOR_ELEM(s, i, idx) vgetq_lane_f32(CONCAT(s, i).value, idx)
 
@@ -139,15 +137,13 @@ struct FilterTransform6X3 {
 
                 rep(i, alpha) rep(j, alpha) {
                     if (format == param::MatrixMul::Format::DEFAULT) {
-                        filter_transform_buf[(i * alpha + j) * OC * IC +
-                                             ic * OC + oc] =
+                        filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC + oc] =
                                 transform_mid_buf[i * alpha + j];
                     } else {
-                        filter_transform_buf[(i * alpha + j) * OCB * ICB * 4 *
-                                                     4 +
-                                             ocb * ICB * 4 * 4 + icb * 4 * 4 +
-                                             ic4 * 4 + oc4] =
-                                transform_mid_buf[i * alpha + j];
+                        filter_transform_buf
+                                [(i * alpha + j) * OCB * ICB * 4 * 4 +
+                                 ocb * ICB * 4 * 4 + icb * 4 * 4 + ic4 * 4 + oc4] =
+                                        transform_mid_buf[i * alpha + j];
                     }
                 }
 #endif

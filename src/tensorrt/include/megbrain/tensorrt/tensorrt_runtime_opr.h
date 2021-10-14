@@ -27,16 +27,16 @@
 namespace mgb {
 namespace opr {
 
-
 /*!
  * \brief an operator that evaluates a nvinfer::ICudaEngine object
  *
  * Input shapes and max batch size can not be changed.
  */
-MGB_DEFINE_OPR_CLASS(TensorRTRuntimeOpr,
-                           mgb::cg::SingleCNOutshapePureByInshapeOprBase) // {
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+MGB_DEFINE_OPR_CLASS(
+        TensorRTRuntimeOpr, mgb::cg::SingleCNOutshapePureByInshapeOprBase) // {
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
 
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
@@ -49,10 +49,10 @@ public:
     using TensorRTUniquePtr = intl::TensorRTUniquePtr<T>;
     using GpuAllocator = TensorRTOpr::GpuAllocator;
 
-    TensorRTRuntimeOpr(std::shared_ptr<nvinfer1::ICudaEngine> engine,
-                       std::shared_ptr<GpuAllocator> gpu_allocator,
-                       const VarNodeArray& inputs,
-                       const OperatorNodeConfig& config);
+    TensorRTRuntimeOpr(
+            std::shared_ptr<nvinfer1::ICudaEngine> engine,
+            std::shared_ptr<GpuAllocator> gpu_allocator, const VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
 
     //! get underlying TensorRT ICudaEngine object
     const std::shared_ptr<nvinfer1::ICudaEngine>& trt_cuda_engine() const {
@@ -62,15 +62,15 @@ public:
     //! serialization load/dump
     struct LoadDumpImpl;
 
-    static SymbolVarArray make(std::shared_ptr<nvinfer1::ICudaEngine> engine,
-                               std::shared_ptr<GpuAllocator> gpu_allocator,
-                               const SymbolVarArray& src,
-                               const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            std::shared_ptr<nvinfer1::ICudaEngine> engine,
+            std::shared_ptr<GpuAllocator> gpu_allocator, const SymbolVarArray& src,
+            const OperatorNodeConfig& config = {});
 
     //! create an operator from a serialized ICudaEngine
-    static SymbolVarArray make(const void* buf, size_t buf_size,
-                               const SymbolVarArray& src,
-                               const OperatorNodeConfig& config = {});
+    static SymbolVarArray make(
+            const void* buf, size_t buf_size, const SymbolVarArray& src,
+            const OperatorNodeConfig& config = {});
 
     static std::shared_ptr<nvinfer1::ICudaEngine> to_shared_ptr_engine(
             nvinfer1::ICudaEngine* engine) {
@@ -94,12 +94,12 @@ private:
 struct TensorRTRuntimeOpr::LoadDumpImpl {
     using Opr = opr::TensorRTRuntimeOpr;
 
-    static void dump(serialization::OprDumpContext& ctx,
-                     const cg::OperatorNodeBase& opr);
+    static void dump(
+            serialization::OprDumpContext& ctx, const cg::OperatorNodeBase& opr);
 
-    static cg::OperatorNodeBase* load(serialization::OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config);
+    static cg::OperatorNodeBase* load(
+            serialization::OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
 };
 
 }  // namespace opr

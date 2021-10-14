@@ -33,8 +33,7 @@ namespace jit {
     DNN_INC_FLOAT16(cb(BFloat16, dt_bfloat16)); \
     cb(Bool, dt_bool);
 
-mlir::Type megdnn_dtype_to_mlir_type(megdnn::DType type,
-                                     mlir::MLIRContext* ctx);
+mlir::Type megdnn_dtype_to_mlir_type(megdnn::DType type, mlir::MLIRContext* ctx);
 mlir::Type signless(mlir::Type type);
 
 megdnn::DType mlir_type_to_megdnn_dtype(mlir::Type type);

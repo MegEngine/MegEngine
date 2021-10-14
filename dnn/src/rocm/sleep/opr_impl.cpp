@@ -10,8 +10,8 @@
  */
 #include "hcc_detail/hcc_defs_prologue.h"
 
-#include "./opr_impl.h"
 #include "./kern.h.hip"
+#include "./opr_impl.h"
 
 #include "src/rocm/handle.h"
 
@@ -25,8 +25,7 @@ void SleepForwardImpl::exec() {
     sleep(hdl->stream(), hdl->device_prop().clockRate * 1000 * seconds);
 }
 
-} // namespace rocm
-} // namespace megdnn
+}  // namespace rocm
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

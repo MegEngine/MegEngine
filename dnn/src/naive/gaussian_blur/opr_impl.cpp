@@ -70,10 +70,10 @@ namespace megdnn {
 namespace naive {
 
 template <>
-void GaussianBlurImpl::exec_internal<uint8_t>(_megdnn_tensor_in src,
-                                              _megdnn_tensor_out dst) {
-    auto N = src.layout.shape[0], IH = src.layout.shape[1],
-         IW = src.layout.shape[2], IC = src.layout.shape[3];
+void GaussianBlurImpl::exec_internal<uint8_t>(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst) {
+    auto N = src.layout.shape[0], IH = src.layout.shape[1], IW = src.layout.shape[2],
+         IC = src.layout.shape[3];
 
     using namespace megcv;
 
@@ -109,24 +109,24 @@ void GaussianBlurImpl::exec_internal<uint8_t>(_megdnn_tensor_in src,
                 //! BORDER_CONSTANT or BORDER_TRANSPARENT
                 if (x != -1 && y != -1) {
                     val += kx.at(0, ix, 0) * ky.at(0, iy, 0) *
-                           src.ptr<uint8_t>()[n * src.layout.stride[0] +
-                                              y * src.layout.stride[1] +
-                                              x * src.layout.stride[2] +
-                                              c * src.layout.stride[3]];
+                           src.ptr<uint8_t>()
+                                   [n * src.layout.stride[0] +
+                                    y * src.layout.stride[1] +
+                                    x * src.layout.stride[2] +
+                                    c * src.layout.stride[3]];
                 }
             }
         }
-        dst.ptr<uint8_t>()[n * dst.layout.stride[0] + h * dst.layout.stride[1] +
-                           w * dst.layout.stride[2] +
-                           c * dst.layout.stride[3]] = cast_op(val);
+        dst.ptr<uint8_t>()
+                [n * dst.layout.stride[0] + h * dst.layout.stride[1] +
+                 w * dst.layout.stride[2] + c * dst.layout.stride[3]] = cast_op(val);
     }
 }
 
 template <typename T>
-void GaussianBlurImpl::exec_internal(_megdnn_tensor_in src,
-                                     _megdnn_tensor_out dst) {
-    auto N = src.layout.shape[0], IH = src.layout.shape[1],
-         IW = src.layout.shape[2], IC = src.layout.shape[3];
+void GaussianBlurImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+    auto N = src.layout.shape[0], IH = src.layout.shape[1], IW = src.layout.shape[2],
+         IC = src.layout.shape[3];
 
     using namespace megcv;
 
@@ -134,8 +134,8 @@ void GaussianBlurImpl::exec_internal(_megdnn_tensor_in src,
     Mat<float> kx(1, ksize.cols(), 1);
     Mat<float> ky(1, ksize.rows(), 1);
 
-    gaussian_blur::createGaussianKernels<float>(kx, ky, ksize, param().sigma_x,
-                                                param().sigma_y);
+    gaussian_blur::createGaussianKernels<float>(
+            kx, ky, ksize, param().sigma_x, param().sigma_y);
 
     uint32_t kernel_height = ky.width();
     uint32_t kernel_width = kx.width();
@@ -145,30 +145,32 @@ void GaussianBlurImpl::exec_internal(_megdnn_tensor_in src,
     rep(n, N) rep(h, IH) rep(w, IW) rep(c, IC) {
         double val = 0;
         rep(iy, kernel_height) {
-            int y = gaussian_blur::border_interpolate(h + iy - half_h, IH,
-                                                      param().border_mode);
+            int y = gaussian_blur::border_interpolate(
+                    h + iy - half_h, IH, param().border_mode);
             rep(ix, kernel_width) {
-                int x = gaussian_blur::border_interpolate(w + ix - half_w, IW,
-                                                          param().border_mode);
+                int x = gaussian_blur::border_interpolate(
+                        w + ix - half_w, IW, param().border_mode);
 
                 //! BORDER_CONSTANT or BORDER_TRANSPARENT
                 if (x != -1 && y != -1) {
                     val += kx.at(0, ix, 0) * ky.at(0, iy, 0) *
-                           src.ptr<T>()[n * src.layout.stride[0] +
-                                        y * src.layout.stride[1] +
-                                        x * src.layout.stride[2] +
-                                        c * src.layout.stride[3]];
+                           src.ptr<T>()
+                                   [n * src.layout.stride[0] +
+                                    y * src.layout.stride[1] +
+                                    x * src.layout.stride[2] +
+                                    c * src.layout.stride[3]];
                 }
             }
         }
-        dst.ptr<T>()[n * dst.layout.stride[0] + h * dst.layout.stride[1] +
-                     w * dst.layout.stride[2] + c * dst.layout.stride[3]] =
+        dst.ptr<T>()
+                [n * dst.layout.stride[0] + h * dst.layout.stride[1] +
+                 w * dst.layout.stride[2] + c * dst.layout.stride[3]] =
                 static_cast<T>(val);
     }
 }
 
-void GaussianBlurImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_in dst,
-                            _megdnn_workspace /*workspace*/) {
+void GaussianBlurImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace /*workspace*/) {
 #define cb(DType)                                                     \
     if (src.layout.dtype == DType()) {                                \
         using ctype = typename DTypeTrait<DType>::ctype;              \

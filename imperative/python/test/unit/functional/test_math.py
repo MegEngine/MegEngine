@@ -185,14 +185,18 @@ def test_sum_neg_axis():
         F.sum(tensor(data), axis=(-1, 1))
 
 
-def test_has_inf():
+def test_non_finite():
     shape = (32, 3, 32, 32)
     data = np.random.random(shape).astype(np.float32)
-    rst = F.math._has_inf(tensor(data))
+    rst = F.math._check_non_finite(tensor(data))
     np.testing.assert_equal(rst.numpy(), [0])
 
     data[0][0][0][0] = float("inf")
-    rst = F.math._has_inf(tensor(data))
+    rst = F.math._check_non_finite(tensor(data))
+    np.testing.assert_equal(rst.numpy(), [1])
+
+    data[0][0][0][0] = float("nan")
+    rst = F.math._check_non_finite(tensor(data))
     np.testing.assert_equal(rst.numpy(), [1])
 
 

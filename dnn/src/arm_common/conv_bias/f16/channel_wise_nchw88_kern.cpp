@@ -52,11 +52,11 @@ template <int size>
 void compute_vec(float16x8_t& dst, float16x8_t* src, float16x8_t* filter);
 
 #define cb(i) dst = vfmaq_f16(dst, src[i], filter[i]);
-#define COMPUTE_MACRO(n)                                             \
-    template <>                                                      \
-    inline void compute_vec<n>(float16x8_t & dst, float16x8_t * src, \
-                               float16x8_t * filter) {               \
-        UNROLL_CALL_NOWRAPPER(n, cb);                                \
+#define COMPUTE_MACRO(n)                                                  \
+    template <>                                                           \
+    inline void compute_vec<n>(                                           \
+            float16x8_t & dst, float16x8_t * src, float16x8_t * filter) { \
+        UNROLL_CALL_NOWRAPPER(n, cb);                                     \
     }
 COMPUTE_MACRO(2);
 COMPUTE_MACRO(3);
@@ -70,17 +70,17 @@ struct load_bias_vec;
 #define cb_bias(i) dst[i] = vld1q_f16((bptr) + i * 8);
 #define cb_init(i) dst[i] = init;
 
-#define INIT_BIAS_MACRO(n)                                          \
-    template <BiasMode bias_mode>                                   \
-    struct load_bias_vec<bias_mode, n> {                            \
-        static void impl(float16x8_t* dst, const float16x8_t& init, \
-                         const __fp16* bptr) {                      \
-            if (bias_mode == BiasMode::BIAS) {                      \
-                UNROLL_CALL_NOWRAPPER(n, cb_bias);                  \
-            } else {                                                \
-                UNROLL_CALL_NOWRAPPER(n, cb_init);                  \
-            }                                                       \
-        }                                                           \
+#define INIT_BIAS_MACRO(n)                                                       \
+    template <BiasMode bias_mode>                                                \
+    struct load_bias_vec<bias_mode, n> {                                         \
+        static void impl(                                                        \
+                float16x8_t* dst, const float16x8_t& init, const __fp16* bptr) { \
+            if (bias_mode == BiasMode::BIAS) {                                   \
+                UNROLL_CALL_NOWRAPPER(n, cb_bias);                               \
+            } else {                                                             \
+                UNROLL_CALL_NOWRAPPER(n, cb_init);                               \
+            }                                                                    \
+        }                                                                        \
     };
 
 INIT_BIAS_MACRO(1);
@@ -91,25 +91,23 @@ INIT_BIAS_MACRO(4);
 #undef INIT_BIAS_MACRO
 }  // namespace
 
-#define COMPUTE_PADDING_KERNEL(oh)                                             \
-    do {                                                                       \
-        int iw = ow * stride - PW;                                             \
-        float16x8_t result;                                                    \
-        load_bias_vec<bias_mode, 1>::impl(&result, init,                       \
-                                          bias + (oh)*OW * 8 + ow * 8);        \
-        for (int kh = 0; kh < fh; kh++) {                                      \
-            if (kh + ih < 0 || kh + ih >= static_cast<int>(IH))                \
-                continue;                                                      \
-            for (int kw = 0; kw < fh; kw++) {                                  \
-                if (kw + iw < 0 || kw + iw >= static_cast<int>(IW))            \
-                    continue;                                                  \
-                const __fp16* sptr = src + (kh + ih) * IW * 8 + (kw + iw) * 8; \
-                result = vfmaq_f16(result, kernel[kh * fh + kw],               \
-                                   vld1q_f16(sptr));                           \
-            }                                                                  \
-        }                                                                      \
-        __fp16* output = dst + (oh)*OW * 8 + ow * 8;                           \
-        op(result, output);                                                    \
+#define COMPUTE_PADDING_KERNEL(oh)                                                     \
+    do {                                                                               \
+        int iw = ow * stride - PW;                                                     \
+        float16x8_t result;                                                            \
+        load_bias_vec<bias_mode, 1>::impl(&result, init, bias + (oh)*OW * 8 + ow * 8); \
+        for (int kh = 0; kh < fh; kh++) {                                              \
+            if (kh + ih < 0 || kh + ih >= static_cast<int>(IH))                        \
+                continue;                                                              \
+            for (int kw = 0; kw < fh; kw++) {                                          \
+                if (kw + iw < 0 || kw + iw >= static_cast<int>(IW))                    \
+                    continue;                                                          \
+                const __fp16* sptr = src + (kh + ih) * IW * 8 + (kw + iw) * 8;         \
+                result = vfmaq_f16(result, kernel[kh * fh + kw], vld1q_f16(sptr));     \
+            }                                                                          \
+        }                                                                              \
+        __fp16* output = dst + (oh)*OW * 8 + ow * 8;                                   \
+        op(result, output);                                                            \
     } while (0)
 
 #define COMPUTE_PADDING_TOP()                         \
@@ -158,9 +156,9 @@ INIT_BIAS_MACRO(4);
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride1_2x2(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
     float16x8_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
@@ -194,8 +192,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2][4];
-            load_bias_vec<bias_mode, 4>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 4>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 4>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t src_v[3][5];
@@ -217,8 +215,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t src_v[3][2];
@@ -246,8 +244,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[1][4];
-            load_bias_vec<bias_mode, 4>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 4>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[2][5];
             load_vec<5>(src_v[0], input);
             COMPUTE_2X2(dst_v[0], src_v[0], &kernel[0]);
@@ -262,8 +260,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
@@ -281,12 +279,12 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride1_3x3(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
-    if (IH == OH && IW == OW && PH == 1 && PW == 1) {
-        do_conv_kern_3x3_stride1_padding1<bias_mode, Op>(src, dst, filter, bias,
-                                                         OH, OW);
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
+    if (IH == OH && IW == OW && IH >= 3 && IW >= 3 && PH == 1 && PW == 1) {
+        do_conv_kern_3x3_stride1_padding1<bias_mode, Op>(
+                src, dst, filter, bias, OH, OW);
         return;
     }
 
@@ -318,8 +316,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[1][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[3][4];
             load_vec<4>(src_v[0], input);
             load_vec<4>(src_v[1], input + IW * 8);
@@ -338,8 +336,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[1];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             load_vec<3>(src_v[1], input + IW * 8);
@@ -358,9 +356,9 @@ void channel_wise_nchw88::do_conv_kern_stride1_3x3(
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride1_5x5(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
     float16x8_t kernel[25];
     load_vec<25>(kernel, filter);
     Op op;
@@ -390,8 +388,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t kernel[2][5];
@@ -429,8 +427,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2][1];
-            load_bias_vec<bias_mode, 1>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 1>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t kernel[2][5];
@@ -471,8 +469,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[1][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t kernel[2][5];
             float16x8_t src_v[2][6];
 #define COMPUTE_5X5_2(i, dst, src, kernel)      \
@@ -498,8 +496,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 8 + ow * 8);
             float16x8_t kernel[2][5];
             float16x8_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
@@ -526,9 +524,9 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride2_2x2(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
     float16x8_t kernel[4];
     load_vec<4>(kernel, filter);
     Op op;
@@ -561,8 +559,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[4];
-            load_bias_vec<bias_mode, 4>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 4>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[2][8];
             load_vec<8>(src_v[0], input);
             COMPUTE_2X2(dst_v, src_v[0], &kernel[0]);
@@ -577,8 +575,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_2x2(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[2][2];
             load_vec<2>(src_v[0], input);
             compute_vec<2>(dst_v, &src_v[0][0], &kernel[0]);
@@ -595,9 +593,9 @@ void channel_wise_nchw88::do_conv_kern_stride2_2x2(
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride2_3x3(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
     float16x8_t kernel[9];
     load_vec<9>(kernel, filter);
     Op op;
@@ -625,8 +623,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t src_v[2][5];
@@ -656,8 +654,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t src_v[2][3];
@@ -687,8 +685,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2];
-            load_bias_vec<bias_mode, 2>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[3][5];
             load_vec<5>(src_v[0], input);
             compute_vec<3>(dst_v[0], &src_v[0][0], &kernel[0]);
@@ -706,8 +704,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 8 + ow * 8);
             float16x8_t src_v[3][3];
             load_vec<3>(src_v[0], input);
             compute_vec<3>(dst_v, &src_v[0][0], &kernel[0]);
@@ -724,9 +722,9 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
 
 template <BiasMode bias_mode, typename Op>
 void channel_wise_nchw88::do_conv_kern_stride2_5x5(
-        const __fp16* src, const __fp16* filter, const __fp16* bias,
-        __fp16* dst, const size_t IH, const size_t IW, const size_t OH,
-        const size_t OW, const size_t PH, const size_t PW) {
+        const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst,
+        const size_t IH, const size_t IW, const size_t OH, const size_t OW,
+        const size_t PH, const size_t PW) {
     float16x8_t kernel[25];
     load_vec<25>(kernel, filter);
     Op op;
@@ -754,8 +752,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2][2];
-            load_bias_vec<bias_mode, 2>::impl(dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 2>::impl(
+                    dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 2>::impl(
                     dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t kernel[3][5];
@@ -798,8 +796,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v[2];
-            load_bias_vec<bias_mode, 1>::impl(&dst_v[0], init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v[0], init, bias + oh * OW * 8 + ow * 8);
             load_bias_vec<bias_mode, 1>::impl(
                     &dst_v[1], init, bias + (oh + 1) * OW * 8 + ow * 8);
             float16x8_t kernel[3][5];
@@ -845,8 +843,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_5x5(
             const __fp16* input = src + ih * IW * 8 + iw * 8;
             __fp16* output = dst + oh * OW * 8 + ow * 8;
             float16x8_t dst_v;
-            load_bias_vec<bias_mode, 1>::impl(&dst_v, init,
-                                              bias + oh * OW * 8 + ow * 8);
+            load_bias_vec<bias_mode, 1>::impl(
+                    &dst_v, init, bias + oh * OW * 8 + ow * 8);
             float16x8_t kernel[2][5];
             float16x8_t src_v[2][5];
 #define COMPUTE_5X5_1(i, dst, src, kernel)   \
@@ -871,12 +869,10 @@ void channel_wise_nchw88::do_conv_kern_stride2_5x5(
     COMPUTE_PADDING_BOTTOM();
 }
 
-#define INSTANTIATION(stride, i, bias, Op)                                    \
-    template void                                                             \
-            channel_wise_nchw88::do_conv_kern_##stride##_##i##x##i<bias, Op>( \
-                    const __fp16*, const __fp16*, const __fp16*, __fp16*,     \
-                    const size_t, const size_t, const size_t, const size_t,   \
-                    const size_t, const size_t);
+#define INSTANTIATION(stride, i, bias, Op)                                          \
+    template void channel_wise_nchw88::do_conv_kern_##stride##_##i##x##i<bias, Op>( \
+            const __fp16*, const __fp16*, const __fp16*, __fp16*, const size_t,     \
+            const size_t, const size_t, const size_t, const size_t, const size_t);
 
 #define FOR_OP(stride, i, bias)                       \
     INSTANTIATION(stride, i, bias, SigmoidOp<__fp16>) \

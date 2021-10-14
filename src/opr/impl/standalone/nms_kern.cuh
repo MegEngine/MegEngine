@@ -23,9 +23,9 @@ namespace nms {
  *      bitmask of length n indicating whether i overlaps with each box. Only
  *      the upper triangle (row < col) are filled.
  */
-void launch_gen_mask(const int nr_boxes, const float nms_overlap_thresh,
-                     const float* dev_boxes, const int dev_mask_width,
-                     uint64_t* dev_mask, cudaStream_t stream);
+void launch_gen_mask(
+        const int nr_boxes, const float nms_overlap_thresh, const float* dev_boxes,
+        const int dev_mask_width, uint64_t* dev_mask, cudaStream_t stream);
 
 /*!
  * \brief launch the kernel to generate indices of kept boxes
@@ -36,10 +36,10 @@ void launch_gen_mask(const int nr_boxes, const float nms_overlap_thresh,
  * \param[out] out_size number of items written to out_idx; the remaining items
  *      would be filled with the last valid item
  */
-void launch_gen_indices(int nr_boxes, int max_output, int overlap_mask_width,
-                        const uint64_t* overlap_mask, uint64_t* rm_mask,
-                        uint32_t* out_idx, uint32_t* out_size,
-                        cudaStream_t stream);
+void launch_gen_indices(
+        int nr_boxes, int max_output, int overlap_mask_width,
+        const uint64_t* overlap_mask, uint64_t* rm_mask, uint32_t* out_idx,
+        uint32_t* out_size, cudaStream_t stream);
 
 }  // namespace nms
 }  // namespace standalone

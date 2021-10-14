@@ -50,8 +50,9 @@ namespace matmul_mk4_4x4x16 {
  *                            Accumulator
  */
 
-static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, bool is_first_k) {
+static void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output,
+        bool is_first_k) {
     K = div_ceil(K, 16);
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -366,17 +367,18 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
             "6:\n"
             "st1 {v0.4s, v1.4s, v2.4s, v3.4s}, [%[output]], #64\n"
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
-              [is_first_k] "+r"(is_first_k), [k] "+r"(K), [output] "+r"(output)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+              [k] "+r"(K), [output] "+r"(output)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
+              "cc", "memory");
 }
 
-static void kern_4x4_remain(const int8_t* packA, const int8_t* packB, int K,
-                            int32_t* output, bool is_first_k, size_t remain_n) {
+static void kern_4x4_remain(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output,
+        bool is_first_k, size_t remain_n) {
     K = div_ceil(K, 16);
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -718,26 +720,27 @@ static void kern_4x4_remain(const int8_t* packA, const int8_t* packB, int K,
 
             "7:\n"
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr),
-              [remain_n] "+r"(remain_n), [is_first_k] "+r"(is_first_k),
-              [k] "+r"(K), [output] "+r"(output)
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [remain_n] "+r"(remain_n),
+              [is_first_k] "+r"(is_first_k), [k] "+r"(K), [output] "+r"(output)
             :
-            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31", "cc", "memory");
+            : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11",
+              "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21",
+              "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31",
+              "cc", "memory");
 }
 
-static void gemm_mk4_s8_4x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
-                                   int ldin, int y0, int ymax, int k0,
-                                   int kmax) {
+static void gemm_mk4_s8_4x4_pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     //! pack form {oc/4, ic/4, 4(ic), 4(oc)} to {oc/4, ic/16, 4(oc), 16(ic)}
     int8_t zerobuff[4][64];
     std::memset(zerobuff, 0, sizeof(int8_t) * 64 * 4);
-    megdnn_assert(ymax % 4 == 0 && y0 % 4 == 0 && (ymax - y0) % 4 == 0,
-                  "mk4 matmul with m is not times of 4");
-    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0 && (kmax - k0) % 4 == 0,
-                  "mk4 matmul with k is not times of 4");
+    megdnn_assert(
+            ymax % 4 == 0 && y0 % 4 == 0 && (ymax - y0) % 4 == 0,
+            "mk4 matmul with m is not times of 4");
+    megdnn_assert(
+            kmax % 4 == 0 && k0 % 4 == 0 && (kmax - k0) % 4 == 0,
+            "mk4 matmul with k is not times of 4");
     size_t roundk = round_up(kmax - k0, 16);
     size_t out_offset = roundk * 4;
     int y = y0;
@@ -754,8 +757,8 @@ static void gemm_mk4_s8_4x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
         prefetch_2x(inptr3);
         int K = kmax - k0;
         for (; K > 15; K -= 16) {
-            transpose_interleave_4x4_4_b(inptr0, inptr1, inptr2, inptr3, output,
-                                         out_offset);
+            transpose_interleave_4x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, output, out_offset);
             output += 64;
         }
         if (K > 0) {
@@ -767,8 +770,8 @@ static void gemm_mk4_s8_4x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
             inptr1 = zerobuff[1];
             inptr2 = zerobuff[2];
             inptr3 = zerobuff[3];
-            transpose_interleave_4x4_4_b(inptr0, inptr1, inptr2, inptr3, output,
-                                         out_offset);
+            transpose_interleave_4x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, output, out_offset);
             output += 64;
         }
     }
@@ -790,21 +793,21 @@ static void gemm_mk4_s8_4x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
     }
 }
 
-static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                   int x0, int xmax, int k0, int kmax) {
+static void gemm_mk4_s8_4x4_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int32_t zerobuff[4];
     std::memset(zerobuff, 0, sizeof(int8_t) * 16);
     const int ksize = kmax - k0;
     const int ICB = (ksize) / 4;
     const int ksize4 = round_up<int>(ICB, 4) * 4;
     int32_t* outptr = reinterpret_cast<int32_t*>(out);
-    megdnn_assert(kmax % 4 == 0 && k0 % 4 == 0 && ksize % 4 == 0,
-                  "mk4 matmul with k is not times of 4");
+    megdnn_assert(
+            kmax % 4 == 0 && k0 % 4 == 0 && ksize % 4 == 0,
+            "mk4 matmul with k is not times of 4");
 
     int k = k0 / 4;
     for (; k + 3 < ICB; k += 4) {
-        const int32_t* inptr0 =
-                reinterpret_cast<const int32_t*>(in + k * ldin + x0);
+        const int32_t* inptr0 = reinterpret_cast<const int32_t*>(in + k * ldin + x0);
         const int32_t* inptr1 =
                 reinterpret_cast<const int32_t*>(in + (k + 1) * ldin + x0);
         const int32_t* inptr2 =
@@ -829,8 +832,7 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
         outptr += 4 * 4;
     }
     if (k < ICB) {
-        const int32_t* inptr0 =
-                reinterpret_cast<const int32_t*>(in + k * ldin + x0);
+        const int32_t* inptr0 = reinterpret_cast<const int32_t*>(in + k * ldin + x0);
         const int32_t* inptr1 =
                 reinterpret_cast<const int32_t*>(in + (k + 1) * ldin + x0);
         const int32_t* inptr2 =
@@ -844,9 +846,11 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
             if (k + 3 >= ICB) {
                 switch (k + 3 - ICB) {
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -861,9 +865,11 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
             if (k + 3 >= ICB) {
                 switch (k + 3 - ICB) {
                     case 2:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr3 = zerobuff;
                         break;
@@ -882,7 +888,7 @@ static void gemm_mk4_s8_4x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
     }
 }
 
-}  // namespace matmul_4x4x16
+}  // namespace matmul_mk4_4x4x16
 }  // namespace aarch64
 }  // namespace megdnn
 

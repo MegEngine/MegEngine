@@ -66,13 +66,13 @@ class TextOprIODump final : public OprIODumpBase {
     void dump_var(VarNode* var, bool lazy_sync) override;
 
 public:
-    TextOprIODump(cg::ComputingGraph* graph,
-                  const std::shared_ptr<FILE>& fout =
-                          std::shared_ptr<FILE>(stderr, [](FILE*) {}));
+    TextOprIODump(
+            cg::ComputingGraph* graph,
+            const std::shared_ptr<FILE>& fout =
+                    std::shared_ptr<FILE>(stderr, [](FILE*) {}));
 
     TextOprIODump(cg::ComputingGraph* graph, const char* fpath)
-            : TextOprIODump(graph,
-                            std::shared_ptr<FILE>(fopen(fpath, "w"), fclose)) {}
+            : TextOprIODump(graph, std::shared_ptr<FILE>(fopen(fpath, "w"), fclose)) {}
 
     ~TextOprIODump();
 
@@ -117,4 +117,3 @@ public:
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

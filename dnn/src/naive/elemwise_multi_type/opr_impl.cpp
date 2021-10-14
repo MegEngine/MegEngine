@@ -78,10 +78,10 @@ void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8(
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi8(
         const ElemwiseOpParamN<2>& param, dt_int8* dst) {
     switch (param[0].layout.dtype.enumv()) {
-#define cb(t)                                                             \
-    case DTypeTrait<t>::enumv:                                            \
-        return dispatch_round_shr_saturate_iXxi8xiX<DTypeTrait<t>::ctype, \
-                                                    dt_int8>(param, dst);
+#define cb(t)                                                                       \
+    case DTypeTrait<t>::enumv:                                                      \
+        return dispatch_round_shr_saturate_iXxi8xiX<DTypeTrait<t>::ctype, dt_int8>( \
+                param, dst);
         MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
 #undef cb
         default:
@@ -102,8 +102,7 @@ void ElemwiseMultiTypeImpl::dispatch_round_shr_saturate_iXxi8xiX(
         auto iB = iter_b;
         auto pD = dst;
         for (size_t i = 0; i < size; i++) {
-            *pD = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(
-                    *iA, *iB);
+            *pD = elemwise_multi_type::round_shr_saturate<ctype, dst_ctype>(*iA, *iB);
             ++iA;
             ++iB;
             ++pD;
@@ -160,10 +159,10 @@ void ElemwiseMultiTypeImpl::on_fuse_add_rmulh_round_shr_saturate_int32x32x32x8(
 void ElemwiseMultiTypeImpl::on_round_shr_saturate_iXxi8xi16(
         const ElemwiseOpParamN<2>& param, dt_int16* dst) {
     switch (param[0].layout.dtype.enumv()) {
-#define cb(t)                                                             \
-    case DTypeTrait<t>::enumv:                                            \
-        return dispatch_round_shr_saturate_iXxi8xiX<DTypeTrait<t>::ctype, \
-                                                    dt_int16>(param, dst);
+#define cb(t)                                                                        \
+    case DTypeTrait<t>::enumv:                                                       \
+        return dispatch_round_shr_saturate_iXxi8xiX<DTypeTrait<t>::ctype, dt_int16>( \
+                param, dst);
         cb(::megdnn::dtype::Int32);
         cb(::megdnn::dtype::Int16);
 #undef cb
@@ -177,11 +176,10 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         const ElemwiseOpParamN<1>& param, const TensorND& dst_tensor) {
     auto iter_a = tensor_iter_valonly<src_ctype>(param[0]).begin();
     auto size = param.size;
-    auto param0 = param[0].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
     auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param = dst_tensor.layout.dtype
-                             .param<typename DTypeTrait<dst_ctype>::dtype>();
+    auto dst_param =
+            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
 
     auto work = [size, iter_a, dst, param0, dst_param]() {
         auto iA = iter_a;
@@ -202,13 +200,11 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
     auto iter_a = tensor_iter_valonly<src_ctype>(param[0]).begin();
     auto iter_b = tensor_iter_valonly<src_ctype>(param[1]).begin();
     auto size = param.size;
-    auto param0 = param[0].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param1 = param[1].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param1 = param[1].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
     auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param = dst_tensor.layout.dtype
-                             .param<typename DTypeTrait<dst_ctype>::dtype>();
+    auto dst_param =
+            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
 
     auto work = [size, iter_a, iter_b, dst, param0, param1, dst_param]() {
         // This is needed as these iterators are captured as const value.
@@ -218,8 +214,8 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
         for (size_t i = 0; i < size; i++) {
             src_ctype a = *iA;
             src_ctype b = *iB;
-            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a),
-                                                     param1.dequantize(b)));
+            *pD = dst_param.quantize(
+                    KernImpl::apply(param0.dequantize(a), param1.dequantize(b)));
             ++iA;
             ++iB;
             ++pD;
@@ -235,15 +231,12 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
     auto iter_b = tensor_iter_valonly<src_ctype>(param[1]).begin();
     auto iter_c = tensor_iter_valonly<src_ctype>(param[2]).begin();
     auto size = param.size;
-    auto param0 = param[0].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param1 = param[1].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
-    auto param2 = param[2].layout.dtype
-                          .param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param0 = param[0].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param1 = param[1].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
+    auto param2 = param[2].layout.dtype.param<typename DTypeTrait<src_ctype>::dtype>();
     auto dst = tensor_iter_valonly<dst_ctype>(dst_tensor).begin();
-    auto dst_param = dst_tensor.layout.dtype
-                             .param<typename DTypeTrait<dst_ctype>::dtype>();
+    auto dst_param =
+            dst_tensor.layout.dtype.param<typename DTypeTrait<dst_ctype>::dtype>();
 
     auto work = [size, iter_a, iter_b, iter_c, dst, param0, param1, param2,
                  dst_param]() {
@@ -256,9 +249,8 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
             src_ctype a = *iA;
             src_ctype b = *iB;
             src_ctype c = *iC;
-            *pD = dst_param.quantize(KernImpl::apply(param0.dequantize(a),
-                                                     param1.dequantize(b),
-                                                     param2.dequantize(c)));
+            *pD = dst_param.quantize(KernImpl::apply(
+                    param0.dequantize(a), param1.dequantize(b), param2.dequantize(c)));
             ++iA;
             ++iB;
             ++iC;
@@ -269,33 +261,33 @@ void ElemwiseMultiTypeImpl::dispatch_add_qint_op(
 }
 
 template <typename KernImpl, typename src_ctype, typename ElemParam>
-void ElemwiseMultiTypeImpl::dispatch_add_qint_op_dst(const ElemParam& param,
-                                                     const TensorND& dst) {
+void ElemwiseMultiTypeImpl::dispatch_add_qint_op_dst(
+        const ElemParam& param, const TensorND& dst) {
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                                            \
-    case DTypeTrait<_dt>::enumv:                                           \
-        dispatch_add_qint_op<KernImpl, src_ctype,                          \
-                             typename DTypeTrait<_dt>::ctype>(param, dst); \
+#define cb(_dt)                                                                     \
+    case DTypeTrait<_dt>::enumv:                                                    \
+        dispatch_add_qint_op<KernImpl, src_ctype, typename DTypeTrait<_dt>::ctype>( \
+                param, dst);                                                        \
         break;
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
 #undef cb
 
         default:
-            megdnn_assert(0, "not support %s %s\n",
-                          param[0].layout.dtype.name(),
-                          dst.layout.dtype.name());
+            megdnn_assert(
+                    0, "not support %s %s\n", param[0].layout.dtype.name(),
+                    dst.layout.dtype.name());
     }
 }
 
 template <typename KernImpl, typename ElemParam>
-void ElemwiseMultiTypeImpl::dispatch_qint_op_dtype(const ElemParam& param,
-                                                   const TensorND& dst) {
+void ElemwiseMultiTypeImpl::dispatch_qint_op_dtype(
+        const ElemParam& param, const TensorND& dst) {
     switch (param[0].layout.dtype.enumv()) {
-#define cb(_dt)                                                             \
-    case DTypeTrait<_dt>::enumv:                                            \
-        dispatch_add_qint_op_dst<KernImpl, typename DTypeTrait<_dt>::ctype, \
-                                 ElemParam>(param, dst);                    \
+#define cb(_dt)                                                                    \
+    case DTypeTrait<_dt>::enumv:                                                   \
+        dispatch_add_qint_op_dst<                                                  \
+                KernImpl, typename DTypeTrait<_dt>::ctype, ElemParam>(param, dst); \
         break;
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
@@ -306,20 +298,19 @@ void ElemwiseMultiTypeImpl::dispatch_qint_op_dtype(const ElemParam& param,
     }
 }
 
-void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<1>& param,
-                                              const TensorND& dst,
-                                              Elemwise::Mode mode) {
+void ElemwiseMultiTypeImpl::on_quantized_mode(
+        const ElemwiseOpParamN<1>& param, const TensorND& dst, Elemwise::Mode mode) {
     megdnn_assert(param[0].layout.dtype.category() == DTypeCategory::QUANTIZED);
     megdnn_assert(dst.layout.dtype.category() == DTypeCategory::QUANTIZED);
 
     switch (mode) {
-#define DISPATCH(_mode)                                                    \
-    case Elemwise::Mode::_mode: {                                          \
-        typedef ElemwiseKern<megcorePlatformCPU,                           \
-                             param_enumv::Elemwise::Mode::_mode, float>    \
-                KernImpl;                                                  \
-        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<1>>(param, dst); \
-        break;                                                             \
+#define DISPATCH(_mode)                                                        \
+    case Elemwise::Mode::_mode: {                                              \
+        typedef ElemwiseKern<                                                  \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode, float> \
+                KernImpl;                                                      \
+        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<1>>(param, dst);     \
+        break;                                                                 \
     }
 
         DISPATCH(RELU);
@@ -350,22 +341,21 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<1>& param,
     }
 }
 
-void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<2>& param,
-                                              const TensorND& dst,
-                                              Elemwise::Mode mode) {
-    megdnn_assert(param[0].layout.dtype.enumv() ==
-                          param[1].layout.dtype.enumv() &&
-                  param[0].layout.dtype.category() == DTypeCategory::QUANTIZED);
+void ElemwiseMultiTypeImpl::on_quantized_mode(
+        const ElemwiseOpParamN<2>& param, const TensorND& dst, Elemwise::Mode mode) {
+    megdnn_assert(
+            param[0].layout.dtype.enumv() == param[1].layout.dtype.enumv() &&
+            param[0].layout.dtype.category() == DTypeCategory::QUANTIZED);
     megdnn_assert(dst.layout.dtype.category() == DTypeCategory::QUANTIZED);
 
     switch (mode) {
-#define DISPATCH(_mode)                                                    \
-    case Elemwise::Mode::_mode: {                                          \
-        typedef ElemwiseKern<megcorePlatformCPU,                           \
-                             param_enumv::Elemwise::Mode::_mode, float>    \
-                KernImpl;                                                  \
-        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<2>>(param, dst); \
-        break;                                                             \
+#define DISPATCH(_mode)                                                        \
+    case Elemwise::Mode::_mode: {                                              \
+        typedef ElemwiseKern<                                                  \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode, float> \
+                KernImpl;                                                      \
+        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<2>>(param, dst);     \
+        break;                                                                 \
     }
 
         DISPATCH(ABS_GRAD);
@@ -400,25 +390,22 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<2>& param,
     }
 }
 
-void ElemwiseMultiTypeImpl::on_quantized_mode(const ElemwiseOpParamN<3>& param,
-                                              const TensorND& dst,
-                                              Elemwise::Mode mode) {
-    megdnn_assert(param[0].layout.dtype.category() ==
-                          DTypeCategory::QUANTIZED &&
-                  param[0].layout.dtype.category() ==
-                          param[1].layout.dtype.category() &&
-                  param[0].layout.dtype.category() ==
-                          param[2].layout.dtype.category());
+void ElemwiseMultiTypeImpl::on_quantized_mode(
+        const ElemwiseOpParamN<3>& param, const TensorND& dst, Elemwise::Mode mode) {
+    megdnn_assert(
+            param[0].layout.dtype.category() == DTypeCategory::QUANTIZED &&
+            param[0].layout.dtype.category() == param[1].layout.dtype.category() &&
+            param[0].layout.dtype.category() == param[2].layout.dtype.category());
     megdnn_assert(dst.layout.dtype.category() == DTypeCategory::QUANTIZED);
 
     switch (mode) {
-#define DISPATCH(_mode)                                                    \
-    case Elemwise::Mode::_mode: {                                          \
-        typedef ElemwiseKern<megcorePlatformCPU,                           \
-                             param_enumv::Elemwise::Mode::_mode, float>    \
-                KernImpl;                                                  \
-        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<3>>(param, dst); \
-        break;                                                             \
+#define DISPATCH(_mode)                                                        \
+    case Elemwise::Mode::_mode: {                                              \
+        typedef ElemwiseKern<                                                  \
+                megcorePlatformCPU, param_enumv::Elemwise::Mode::_mode, float> \
+                KernImpl;                                                      \
+        dispatch_qint_op_dtype<KernImpl, ElemwiseOpParamN<3>>(param, dst);     \
+        break;                                                                 \
     }
 
         DISPATCH(FUSE_MUL_ADD3);

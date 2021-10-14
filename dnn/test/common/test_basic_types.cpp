@@ -18,43 +18,45 @@
 // clang-format on
 
 using namespace megdnn;
-using megdnn::test::TensorReshapeError;
 using megdnn::test::MegDNNError;
+using megdnn::test::TensorReshapeError;
 
 namespace {
 
-TensorLayout make_layout(std::initializer_list<size_t> shape,
-        std::initializer_list<ptrdiff_t> stride = {},
-        DType dtype = {}) {
+TensorLayout make_layout(
+        std::initializer_list<size_t> shape,
+        std::initializer_list<ptrdiff_t> stride = {}, DType dtype = {}) {
     TensorLayout rst;
     rst.init_contiguous_stride(TensorShape(shape));
     if (stride.size()) {
         megdnn_assert(stride.size() == shape.size());
         auto iter = stride.begin();
-        for (size_t i = 0; i < rst.ndim; i ++)
-            rst.stride[i] = *(iter ++);
+        for (size_t i = 0; i < rst.ndim; i++)
+            rst.stride[i] = *(iter++);
         megdnn_assert(iter == stride.end());
     }
     rst.dtype = dtype;
     return rst;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 #if MEGDNN_64_BIT
 TEST(BASIC_TYPES, TOTAL_NR_ELEMS) {
-    TensorShape shp{1u<<31, 1u<<31};
-    ASSERT_EQ(size_t(1)<<62, shp.total_nr_elems());
+    TensorShape shp{1u << 31, 1u << 31};
+    ASSERT_EQ(size_t(1) << 62, shp.total_nr_elems());
     TensorLayout lt{dtype::Float32()};
-    ASSERT_EQ(size_t(1)<<62, lt.init_contiguous_stride(shp));
+    ASSERT_EQ(size_t(1) << 62, lt.init_contiguous_stride(shp));
 
-    ASSERT_THROW(TensorShape(
-                {size_t(1ull<<33), size_t(1ull<<32)}).total_nr_elems(),
+    ASSERT_THROW(
+            TensorShape({size_t(1ull << 33), size_t(1ull << 32)}).total_nr_elems(),
             MegDNNError);
-    ASSERT_THROW(TensorShape(
-                {size_t(1ull<<32), size_t(1ull<<32)}).total_nr_elems(),
+    ASSERT_THROW(
+            TensorShape({size_t(1ull << 32), size_t(1ull << 32)}).total_nr_elems(),
             MegDNNError);
 
-    ASSERT_EQ(1ull<<63, TensorShape({size_t(1ull<<32), size_t(1ull<<31)}).total_nr_elems());
+    ASSERT_EQ(
+            1ull << 63,
+            TensorShape({size_t(1ull << 32), size_t(1ull << 31)}).total_nr_elems());
     ASSERT_EQ(static_cast<size_t>(105), TensorShape({5, 3, 7}).total_nr_elems());
     ASSERT_EQ(static_cast<size_t>(192), TensorShape({4, 6, 8}).total_nr_elems());
 }
@@ -64,31 +66,34 @@ TEST(BASIC_TYPES, RESHAPE) {
     EXPECT_EQ(make_layout({2, 3, 4}).reshape({24}), make_layout({24}));
     EXPECT_EQ(make_layout({2, 3, 4}).reshape({2, 12}), make_layout({2, 12}));
     EXPECT_EQ(make_layout({2, 3, 4}).reshape({6, 4}), make_layout({6, 4}));
-    EXPECT_EQ(make_layout({2, 3, 4}).reshape({1, 6, 1, 4, 1}),
+    EXPECT_EQ(
+            make_layout({2, 3, 4}).reshape({1, 6, 1, 4, 1}),
             make_layout({1, 6, 1, 4, 1}));
-#define EXPECT_THROWV(_v, _err) EXPECT_THROW([](auto x){return x;}(_v), _err)
-// cast to void trick does not work for GCC 7
+#define EXPECT_THROWV(_v, _err) EXPECT_THROW([](auto x) { return x; }(_v), _err)
+    // cast to void trick does not work for GCC 7
 
     EXPECT_THROWV(make_layout({2, 3}).reshape({5}), TensorReshapeError);
 
     EXPECT_EQ(make_layout({2, 3}, {6, 2}).reshape({6}), make_layout({6}, {2}));
-    EXPECT_EQ(make_layout({3, 3, 3}, {2, 2, 2}).reshape({3, 3, 3}),
+    EXPECT_EQ(
+            make_layout({3, 3, 3}, {2, 2, 2}).reshape({3, 3, 3}),
             make_layout({3, 3, 3}, {2, 2, 2}));
     EXPECT_THROWV(make_layout({2, 3}, {6, 1}).reshape({6}), TensorReshapeError);
     EXPECT_THROWV(make_layout({2, 3}, {0, 1}).reshape({6}), TensorReshapeError);
     EXPECT_THROWV(make_layout({2, 3}, {1, 0}).reshape({6}), TensorReshapeError);
-    EXPECT_THROWV(make_layout({2, 3, 3, 2, 4, 3},
-                {216, 72, 12, 36, 3, 1}).reshape(
-                    {2, 3, 8, 9}), TensorReshapeError);
+    EXPECT_THROWV(
+            make_layout({2, 3, 3, 2, 4, 3}, {216, 72, 12, 36, 3, 1})
+                    .reshape({2, 3, 8, 9}),
+            TensorReshapeError);
 
     EXPECT_EQ(make_layout({2, 3}, {0, 0}).reshape({6}), make_layout({6}, {0}));
-    EXPECT_EQ(make_layout({2, 3, 2}, {0, 0, 1}).reshape({6, 2}),
+    EXPECT_EQ(
+            make_layout({2, 3, 2}, {0, 0, 1}).reshape({6, 2}),
             make_layout({6, 2}, {0, 1}));
 }
 
 TEST(BASIC_TYPES, COLLAPSE_CONTIGUOUS) {
-    EXPECT_EQ(make_layout({3}, {2}),
-            make_layout({3, 1}, {2, 5}).collapse_contiguous());
+    EXPECT_EQ(make_layout({3}, {2}), make_layout({3, 1}, {2, 5}).collapse_contiguous());
 }
 
 TEST(BASIC_TYPES, IS_CONTIGUOUS) {
@@ -104,17 +109,12 @@ TEST(BASIC_TYPES, IS_ABS_MONOTONOUS_ALLOW_BRDCST) {
     EXPECT_TRUE(make_layout({3, 2}, {3, 1}).is_abs_monotonous_allow_brdcst());
     EXPECT_TRUE(make_layout({3, 2}, {-3, -1}).is_abs_monotonous_allow_brdcst());
     EXPECT_TRUE(make_layout({3, 2}, {3, -1}).is_abs_monotonous_allow_brdcst());
-    EXPECT_TRUE(
-            make_layout({3, 2, 3}, {3, 0, 1}).is_abs_monotonous_allow_brdcst());
-    EXPECT_TRUE(make_layout({3, 1, 3}, {3, 23, -1})
-                        .is_abs_monotonous_allow_brdcst());
+    EXPECT_TRUE(make_layout({3, 2, 3}, {3, 0, 1}).is_abs_monotonous_allow_brdcst());
+    EXPECT_TRUE(make_layout({3, 1, 3}, {3, 23, -1}).is_abs_monotonous_allow_brdcst());
     EXPECT_FALSE(make_layout({3, 2}, {1, 3}).is_abs_monotonous_allow_brdcst());
-    EXPECT_FALSE(
-            make_layout({3, 2}, {-1, -3}).is_abs_monotonous_allow_brdcst());
-    EXPECT_FALSE(
-            make_layout({3, 2, 3}, {1, 0, 3}).is_abs_monotonous_allow_brdcst());
-    EXPECT_FALSE(make_layout({3, 1, 3}, {1, 23, 3})
-                        .is_abs_monotonous_allow_brdcst());
+    EXPECT_FALSE(make_layout({3, 2}, {-1, -3}).is_abs_monotonous_allow_brdcst());
+    EXPECT_FALSE(make_layout({3, 2, 3}, {1, 0, 3}).is_abs_monotonous_allow_brdcst());
+    EXPECT_FALSE(make_layout({3, 1, 3}, {1, 23, 3}).is_abs_monotonous_allow_brdcst());
 }
 
 TEST(BASIC_TYPES, IS_NON_OVERLAP) {
@@ -133,7 +133,7 @@ TEST(BASIC_TYPES, EQ_SHAPE) {
     EXPECT_TRUE(shp0.eq_shape({2, 3}));
     EXPECT_FALSE(shp0.eq_shape({2, 4}));
     auto shp1 = shp0;
-    -- shp1.ndim;
+    --shp1.ndim;
     EXPECT_FALSE(shp0.eq_shape(shp1));
 }
 
@@ -141,11 +141,9 @@ TEST(BASIC_TYPES, EQ_LAYOUT) {
     auto ly0 = make_layout({2, 3});
     EXPECT_TRUE(ly0.eq_layout(make_layout({2, 3})));
     EXPECT_FALSE(ly0.eq_layout(make_layout({2, 3}, {2, 0})));
-    EXPECT_FALSE(make_layout({2, 2}, {2, 2}).eq_layout(
-                 make_layout({2, 2}, {2, 1})));
+    EXPECT_FALSE(make_layout({2, 2}, {2, 2}).eq_layout(make_layout({2, 2}, {2, 1})));
     // test for shape 1
-    EXPECT_TRUE(make_layout({2, 1}, {2, 2}).eq_layout(
-                make_layout({2, 1}, {2, 1})));
+    EXPECT_TRUE(make_layout({2, 1}, {2, 2}).eq_layout(make_layout({2, 1}, {2, 1})));
 }
 
 TEST(BASIC_TYPES, LAYOUT_SPAN) {
@@ -163,20 +161,20 @@ TEST(BASIC_TYPES, LAYOUT_SPAN) {
 }
 
 namespace {
-    size_t image_width(const TensorLayout& layout) {
-        return layout.format.as_impl<Image2DPack4TensorFormat>().image_width(layout);
-    }
-    size_t image_row_pitch(const TensorLayout& layout) {
-        return layout.format.as_impl<Image2DPack4TensorFormat>().image_row_pitch(layout);
-    }
-    size_t image_height(const TensorLayout& layout) {
-        return layout.format.as_impl<Image2DPack4TensorFormat>().image_height(layout);
-    }
+size_t image_width(const TensorLayout& layout) {
+    return layout.format.as_impl<Image2DPack4TensorFormat>().image_width(layout);
 }
+size_t image_row_pitch(const TensorLayout& layout) {
+    return layout.format.as_impl<Image2DPack4TensorFormat>().image_row_pitch(layout);
+}
+size_t image_height(const TensorLayout& layout) {
+    return layout.format.as_impl<Image2DPack4TensorFormat>().image_height(layout);
+}
+}  // namespace
 
 TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_WITH_VENDOR_MALI) {
-    TensorFormat fmt = Image2DPack4TensorFormat::make_raw(
-            1, 512, Handle::HandleVendorType::MALI);
+    TensorFormat fmt =
+            Image2DPack4TensorFormat::make_raw(1, 512, Handle::HandleVendorType::MALI);
     TensorLayout layout{{5, 3, 8}, dtype::Float32{}, fmt};
 
     ASSERT_EQ(layout.stride[2], 1);
@@ -186,8 +184,7 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_WITH_VENDOR_MALI) {
     ASSERT_EQ(6u, image_width(layout));
     ASSERT_EQ(5u, image_height(layout));
 
-    fmt = Image2DPack4TensorFormat::make_raw(1, 512,
-                                             Handle::HandleVendorType::MALI);
+    fmt = Image2DPack4TensorFormat::make_raw(1, 512, Handle::HandleVendorType::MALI);
     TensorLayout layout_s{{5, 3, 8}, dtype::Float16{}, fmt};
 
     ASSERT_EQ(layout_s.stride[2], 1);
@@ -231,8 +228,9 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT) {
         ASSERT_EQ(8u, impl.image_width_elems(layout));
         ASSERT_EQ(2u, impl.image_width(layout));
         ASSERT_EQ(1024u, impl.image_row_pitch(layout));
-        ASSERT_EQ(make_layout({15, 8}, {1024 / 4, 1}, layout.dtype),
-                  layout.collapse_contiguous());
+        ASSERT_EQ(
+                make_layout({15, 8}, {1024 / 4, 1}, layout.dtype),
+                layout.collapse_contiguous());
 
         // broadcast
         layout.stride[0] = layout.stride[1] = 0;
@@ -240,8 +238,9 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT) {
         ASSERT_EQ(8u, impl.image_width_elems(layout));
         ASSERT_EQ(2u, impl.image_width(layout));
         ASSERT_EQ(1024u, impl.image_row_pitch(layout));
-        ASSERT_EQ(make_layout({15, 8}, {0, 1}, layout.dtype),
-                  layout.collapse_contiguous());
+        ASSERT_EQ(
+                make_layout({15, 8}, {0, 1}, layout.dtype),
+                layout.collapse_contiguous());
     }
 
     layout = {{3, 4, 1024}, dtype::Float32{}, fmt};
@@ -293,9 +292,9 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_COLLAPSE_W) {
 
         auto contig = layout.collapse_contiguous();
         auto&& impl = contig.format.as_impl<Image2DPack4TensorFormat>();
-        ASSERT_EQ(make_layout({2, v0 * 40}, {v0 == 1 ? 64 : 128, 1},
-                              layout.dtype),
-                  contig);
+        ASSERT_EQ(
+                make_layout({2, v0 * 40}, {v0 == 1 ? 64 : 128, 1}, layout.dtype),
+                contig);
         ASSERT_EQ(1u, impl.align_axis());
         ASSERT_EQ(64u, impl.align_size_in_elements());
     }
@@ -313,30 +312,36 @@ TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS) {
     ASSERT_EQ(28671, span.high_elem);
     ASSERT_EQ(0, span.low_byte);
     ASSERT_EQ(14336, span.high_byte);
-    EXPECT_EQ(make_layout({3584, 7}, {8, 1}, dtype::QuantizedS4{1.2f}),
-              layout.collapse_contiguous());
+    EXPECT_EQ(
+            make_layout({3584, 7}, {8, 1}, dtype::QuantizedS4{1.2f}),
+            layout.collapse_contiguous());
 
-
-    layout = make_layout({16, 32, 7, 7}, {1792, 56, 8, 1},
-                            dtype::QuantizedS4{1.3f});
+    layout = make_layout({16, 32, 7, 7}, {1792, 56, 8, 1}, dtype::QuantizedS4{1.3f});
     layout.format = LowbitsAlignedToBytesTensorFormat::make(4_z);
     EXPECT_TRUE(layout.is_contiguous());
 
     layout = TensorLayout{{1, 32, 1, 1}, dtype::QuantizedS4{1.2f}};
     layout = layout.broadcast({16, 32, 7, 7});
-    EXPECT_EQ(make_layout({16, 32, 49}, {0, 2, 0}, dtype::QuantizedS4{1.2}),
-              layout.collapse_contiguous());
+    EXPECT_EQ(
+            make_layout({16, 32, 49}, {0, 2, 0}, dtype::QuantizedS4{1.2}),
+            layout.collapse_contiguous());
 }
 
 TEST(BASIC_TYPES, TENSOR_LAYOUT_FMT_LOW_BITS_VALID) {
-    ASSERT_THROW(TensorLayout({1, 32, 1, 1}, dtype::QuantizedS4{1.2f},
-                              DefaultTensorFormat::make()),
-                 MegDNNError);
-    ASSERT_THROW(TensorLayout({1, 32, 1, 1}, dtype::QuantizedS32{1.2f},
-                              LowbitsAlignedToBytesTensorFormat::make(4_z)),
-                 MegDNNError);
-    ASSERT_THROW(TensorLayout({16, 32, 7, 7}, dtype::IntB2{},
-                              LowbitsAlignedToBytesTensorFormat::make(4_z)),
-                 MegDNNError);
+    ASSERT_THROW(
+            TensorLayout(
+                    {1, 32, 1, 1}, dtype::QuantizedS4{1.2f},
+                    DefaultTensorFormat::make()),
+            MegDNNError);
+    ASSERT_THROW(
+            TensorLayout(
+                    {1, 32, 1, 1}, dtype::QuantizedS32{1.2f},
+                    LowbitsAlignedToBytesTensorFormat::make(4_z)),
+            MegDNNError);
+    ASSERT_THROW(
+            TensorLayout(
+                    {16, 32, 7, 7}, dtype::IntB2{},
+                    LowbitsAlignedToBytesTensorFormat::make(4_z)),
+            MegDNNError);
 }
 // vim: syntax=cpp.doxygen

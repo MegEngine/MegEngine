@@ -196,8 +196,7 @@ struct MathOperationMap<cutlass::arch::OpMultiplyAddComplex> {
 
 template <>
 struct MathOperationMap<cutlass::arch::OpMultiplyAddGaussianComplex> {
-    static MathOperationID const kId =
-            MathOperationID::kMultiplyAddGaussianComplex;
+    static MathOperationID const kId = MathOperationID::kMultiplyAddGaussianComplex;
 };
 
 template <>
@@ -489,37 +488,30 @@ template <typename T>
 struct ThreadblockSwizzleMap;
 
 template <int N>
-struct ThreadblockSwizzleMap<
-        gemm::threadblock::GemmIdentityThreadblockSwizzle<N>> {
+struct ThreadblockSwizzleMap<gemm::threadblock::GemmIdentityThreadblockSwizzle<N>> {
     static ThreadblockSwizzleID const kId = ThreadblockSwizzleID::kGemmIdentity;
 };
 
 template <>
-struct ThreadblockSwizzleMap<
-        gemm::threadblock::GemmHorizontalThreadblockSwizzle> {
-    static ThreadblockSwizzleID const kId =
-            ThreadblockSwizzleID::kGemmHorizontal;
+struct ThreadblockSwizzleMap<gemm::threadblock::GemmHorizontalThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId = ThreadblockSwizzleID::kGemmHorizontal;
 };
 
 template <>
-struct ThreadblockSwizzleMap<
-        gemm::threadblock::GemmBatchedIdentityThreadblockSwizzle> {
-    static ThreadblockSwizzleID const kId =
-            ThreadblockSwizzleID::kGemmBatchedIdentity;
+struct ThreadblockSwizzleMap<gemm::threadblock::GemmBatchedIdentityThreadblockSwizzle> {
+    static ThreadblockSwizzleID const kId = ThreadblockSwizzleID::kGemmBatchedIdentity;
 };
 
 template <int N>
 struct ThreadblockSwizzleMap<
         gemm::threadblock::GemmSplitKIdentityThreadblockSwizzle<N>> {
-    static ThreadblockSwizzleID const kId =
-            ThreadblockSwizzleID::kGemmSplitKIdentity;
+    static ThreadblockSwizzleID const kId = ThreadblockSwizzleID::kGemmSplitKIdentity;
 };
 
 template <>
 struct ThreadblockSwizzleMap<
         gemm::threadblock::GemmSplitKHorizontalThreadblockSwizzle> {
-    static ThreadblockSwizzleID const kId =
-            ThreadblockSwizzleID::kGemmSplitKHorizontal;
+    static ThreadblockSwizzleID const kId = ThreadblockSwizzleID::kGemmSplitKHorizontal;
 };
 
 template <>
@@ -587,8 +579,7 @@ TensorDescription make_TensorDescription(int alignment = 1) {
     desc.element = NumericTypeMap<Element>::kId;
     desc.layout = LayoutMap<Layout>::kId;
     desc.alignment = alignment;
-    desc.log_extent_range =
-            int(sizeof(typename Layout::TensorCoord::Index) - 1) * 8;
+    desc.log_extent_range = int(sizeof(typename Layout::TensorCoord::Index) - 1) * 8;
     desc.log_stride_range = int(sizeof(typename Layout::Stride::Index) - 1) * 8;
 
     return desc;

@@ -25,10 +25,6 @@ def test_basic_interface():
     cf.name = "megengine.core"
     cf.dtype = "float32"
     cf.comp_node_arr = ["xpux"]
-    print(cf.name)
-    print(cf.dtype)
-    print(cf.comp_node_arr)
-    print(cf.comp_node)
     cf.comp_node_arr = ["xpux", "xpux:1"]
     with pytest.raises(ValueError):
         cf.comp_node

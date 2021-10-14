@@ -10,12 +10,12 @@
  * implied.
  */
 #include "megdnn/dtype.h"
-#include "megdnn/oprs.h"
 #include "megdnn/opr_param_defs.h"
+#include "megdnn/oprs.h"
+#include "test/common/accuracy_shake_checker.h"
+#include "test/common/rng.h"
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
-#include "test/common/rng.h"
-#include "test/common/accuracy_shake_checker.h"
 
 namespace megdnn {
 namespace test {
@@ -34,11 +34,8 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD) {
     // convbias without z
     checker.exec({{64, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {}, {}});
     // convbias with z
-    checker.exec({{64, 16, 32, 32},
-                  {64, 16, 3, 3},
-                  {1, 64, 1, 1},
-                  {64, 64, 30, 30},
-                  {}});
+    checker.exec(
+            {{64, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {64, 64, 30, 30}, {}});
     ConvBias::Param param;
     // FIXME currently group conv cannot get the attribute of it's subopr, so we
     // just ignore group conv here.
@@ -59,28 +56,21 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHW) {
             .set_rng(2, &int_rng)
             .set_rng(3, &int_rng);
 
-
     // convolution
     checker.exec({{64, 16, 32, 32}, {64, 16, 3, 3}, {}, {}, {}});
     // convbias without z
     checker.exec({{64, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {}, {}});
     // convbias with z
-    checker.exec({{64, 16, 32, 32},
-                  {64, 16, 3, 3},
-                  {1, 64, 1, 1},
-                  {64, 64, 30, 30},
-                  {}});
+    checker.exec(
+            {{64, 16, 32, 32}, {64, 16, 3, 3}, {1, 64, 1, 1}, {64, 64, 30, 30}, {}});
     // group
     ConvBias::Param param;
     param.sparse = ConvBias::Param::Sparse::GROUP;
     checker.set_param(param);
     checker.exec({{64, 16, 32, 32}, {2, 32, 8, 3, 3}, {}, {}, {}});
     checker.exec({{64, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {}, {}});
-    checker.exec({{64, 16, 32, 32},
-                  {2, 32, 8, 3, 3},
-                  {1, 64, 1, 1},
-                  {64, 64, 30, 30},
-                  {}});
+    checker.exec(
+            {{64, 16, 32, 32}, {2, 32, 8, 3, 3}, {1, 64, 1, 1}, {64, 64, 30, 30}, {}});
 }
 
 TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NHWC) {
@@ -125,16 +115,12 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHWX) {
     auto run = [&](const TensorShapeArray& shapes, const Format& format) {
         ConvBias::Param param;
         param.format = format;
-        checker.set_param(param).exec(
-                {shapes[0], shapes[1], shapes[2], {}, {}});
+        checker.set_param(param).exec({shapes[0], shapes[1], shapes[2], {}, {}});
     };
 
     run({{20, 2, 24, 24, 4}, {24, 2, 3, 3, 4}, {1, 6, 1, 1, 4}}, Format::NCHW4);
-    run({{20, 1, 24, 24, 32}, {64, 1, 3, 3, 32}, {1, 2, 1, 1, 32}},
-        Format::NCHW32);
-    run({{16, 4, 23, 40, 4},
-         {32, 4, 3, 3, 4},
-         {1, 1, 1, 1, 32}}, Format::NCHW4_NCHW32);
+    run({{20, 1, 24, 24, 32}, {64, 1, 3, 3, 32}, {1, 2, 1, 1, 32}}, Format::NCHW32);
+    run({{16, 4, 23, 40, 4}, {32, 4, 3, 3, 4}, {1, 1, 1, 1, 32}}, Format::NCHW4_NCHW32);
 
     checker.set_dtype(0, dtype::QuantizedS8(1.9980618f))
             .set_dtype(1, dtype::QuantizedS8(1.9980927f))
@@ -145,8 +131,7 @@ TEST_F(CUDA, SHAKE_CONV_BIAS_FORWARD_QS8_NCHWX) {
             .set_rng(1, &int_rng)
             .set_rng(2, &float_rng)
             .set_rng(3, &float_rng);
-    run({{16, 4, 92, 160, 4}, {20, 4, 3, 3, 4}, {1, 20, 1, 1}},
-        Format::NCHW4_NCHW);
+    run({{16, 4, 92, 160, 4}, {20, 4, 3, 3, 4}, {1, 20, 1, 1}}, Format::NCHW4_NCHW);
 }
 
 TEST_F(CUDA, SHAKE_MATRIX_MUL_FORWARD) {
@@ -177,11 +162,8 @@ TEST_F(CUDA, SHAKE_BATCH_CONV_BIAS_QS8) {
     param.pad_h = 2, param.pad_w = 1;
     param.stride_h = 1, param.stride_w = 2;
     param.format = param::BatchConvBias::Format::NCHW4;
-    checker.set_param(param).exec({{32, 4, 24, 24, 4},
-                                    {32, 32, 4, 1, 1, 4},
-                                    {1, 8, 1, 1, 4},
-                                    {},
-                                    {}});
+    checker.set_param(param).exec(
+            {{32, 4, 24, 24, 4}, {32, 32, 4, 1, 1, 4}, {1, 8, 1, 1, 4}, {}, {}});
 }
 
 TEST_F(CUDA, SHAKE_BATCHED_MATRIX_MUL) {

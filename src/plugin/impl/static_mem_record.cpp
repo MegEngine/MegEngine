@@ -36,8 +36,7 @@ void StaticMemRecorder::dump_to_json() {
             // weight mem chunk
             Chunk c(std::to_string(i.id), Chunk::weight_mem,
                     std::to_string(i.time_begin), std::to_string(i.time_end),
-                    std::to_string(i.addr_begin), std::to_string(i.addr_end),
-                    "-1");
+                    std::to_string(i.addr_begin), std::to_string(i.addr_end), "-1");
             writer.dump_info(c);
         }
     }

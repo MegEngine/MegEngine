@@ -9,18 +9,19 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or
  * implied.
  */
+#include "test/common/matrix_mul.h"
 #include "test/armv7/fixture.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
-#include "test/common/matrix_mul.h"
 #include "test/common/rng.h"
 
 using namespace megdnn;
 using namespace test;
 
 TEST_F(ARMV7, MATRIX_MUL) {
-    matrix_mul::check_matrix_mul(dtype::Float32{}, dtype::Float32{},
-                                 dtype::Float32{}, handle(), "ARMV7_F32");
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "ARMV7_F32");
 }
 
 TEST_F(ARMV7, MATRIX_MUL_MK4) {
@@ -41,45 +42,47 @@ TEST_F(ARMV7, MATRIX_MUL_MK4_INT8) {
         for (size_t n : {1, 2, 3, 4, 5, 8, 16, 24, 25, 32})
             for (size_t k : {1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 33, 34})
                 args.emplace_back(m, n, k, 0);
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "ARMV7_INT8X8X32_MK4_4X2X16",
-                                 param::MatrixMul::Format::MK4, 1, 1e-3,
-                                 std::move(args));
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int32{}, handle(),
+            "ARMV7_INT8X8X32_MK4_4X2X16", param::MatrixMul::Format::MK4, 1, 1e-3,
+            std::move(args));
 }
 
 TEST_F(ARMV7, MATRIX_MUL_INT8x8x16_K4x8x8) {
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle(), "ARMV7_INT8X8X16_K4X8X8");
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int16{}, handle(),
+            "ARMV7_INT8X8X16_K4X8X8");
 }
 
 TEST_F(ARMV7, MATRIX_MUL_INT8x8x16_K8x8x4) {
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle(), "ARMV7_INT8X8X16_K8X8X4");
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int16{}, handle(),
+            "ARMV7_INT8X8X16_K8X8X4");
 }
 
-
 TEST_F(ARMV7, MATRIX_MUL_INT8x8x16_MK4_K8x8x4) {
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int16{},
-                                 handle(), "ARMV7_INT8X8X16_MK4_K8X8X4",
-                                 param::MatrixMul::Format::MK4, 1);
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int16{}, handle(),
+            "ARMV7_INT8X8X16_MK4_K8X8X4", param::MatrixMul::Format::MK4, 1);
 }
 
 TEST_F(ARMV7, MATRIX_MUL_INT16x16x32) {
-    matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
-                                 handle(), "ARMV7_INT16X16X32_K12X4X1");
+    matrix_mul::check_matrix_mul(
+            dtype::Int16{}, dtype::Int16{}, dtype::Int32{}, handle(),
+            "ARMV7_INT16X16X32_K12X4X1");
 }
 
 TEST_F(ARMV7, MATRIX_MUL_INT16x16x32_MK8) {
-    matrix_mul::check_matrix_mul(dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
-                                 handle(), "ARMV7_INT16X16X32_MK8_4X8",
-                                 param::MatrixMul::Format::MK8, 1);
+    matrix_mul::check_matrix_mul(
+            dtype::Int16{}, dtype::Int16{}, dtype::Int32{}, handle(),
+            "ARMV7_INT16X16X32_MK8_4X8", param::MatrixMul::Format::MK8, 1);
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 TEST_F(ARMV7, MATRIX_MUL_FP16) {
-    matrix_mul::check_matrix_mul(dtype::Float16{}, dtype::Float16{},
-                                 dtype::Float16{}, handle(),
-                                 "AARCH32_F16_K4X16X1");
+    matrix_mul::check_matrix_mul(
+            dtype::Float16{}, dtype::Float16{}, dtype::Float16{}, handle(),
+            "AARCH32_F16_K4X16X1");
 }
 TEST_F(ARMV7, MATRIX_MUL_F16_MK8) {
     matrix_mul::check_matrix_mul(
@@ -90,8 +93,9 @@ TEST_F(ARMV7, MATRIX_MUL_F16_MK8) {
 
 #if MGB_ENABLE_DOT
 TEST_F(ARMV7, MATRIX_MUL_SDOT) {
-    matrix_mul::check_matrix_mul(dtype::Int8(), dtype::Int8(), dtype::Int32(),
-                                 handle(), "AARCH32_INT8_K6X8X4");
+    matrix_mul::check_matrix_mul(
+            dtype::Int8(), dtype::Int8(), dtype::Int32(), handle(),
+            "AARCH32_INT8_K6X8X4");
 }
 
 TEST_F(ARMV7, MATRIX_MUL_UDOT) {
@@ -107,10 +111,10 @@ TEST_F(ARMV7, MATRIX_MUL_MK4_DOT_INT8) {
         for (size_t n : {1, 2, 3, 4, 5, 8, 16, 24, 25, 32})
             for (size_t k : {1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 33, 34})
                 args.emplace_back(m, n, k, 0);
-    matrix_mul::check_matrix_mul(dtype::Int8{}, dtype::Int8{}, dtype::Int32{},
-                                 handle(), "AARCH32_INT8_MK4_8X4X4_DOTPROD",
-                                 param::MatrixMul::Format::MK4_DOT, 1, 1e-3,
-                                 std::move(args));
+    matrix_mul::check_matrix_mul(
+            dtype::Int8{}, dtype::Int8{}, dtype::Int32{}, handle(),
+            "AARCH32_INT8_MK4_8X4X4_DOTPROD", param::MatrixMul::Format::MK4_DOT, 1,
+            1e-3, std::move(args));
 }
 #endif
 
@@ -134,8 +138,7 @@ void run_8x8x16_benchmark(
             .set_display(false);
     param::MatrixMul target_param;
     target_param.format = format;
-    benchmarker_int_kern_4x2x16.set_before_exec_callback(
-            AlgoChecker<MatrixMul>(algo));
+    benchmarker_int_kern_4x2x16.set_before_exec_callback(AlgoChecker<MatrixMul>(algo));
     benchmarker_int_kern_4x2x16.set_times(RUNS)
             .set_dtype(0, dtype::Int8{})
             .set_dtype(1, dtype::Int8{})
@@ -154,8 +157,7 @@ void run_8x8x16_benchmark(
                             RUNS;
         } else {
             int_kern_used =
-                    benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) /
-                    RUNS;
+                    benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) / RUNS;
         }
         auto float_used = benchmarker_float.exec({{M, K}, {K, N}, {}}) / RUNS;
         float computations = 2.f * M * K * N * 1e-6;
@@ -166,8 +168,8 @@ void run_8x8x16_benchmark(
                "%f\n",
                M, K, N, float_used, computations / float_used, int_used,
                computations / int_used, algo, int_kern_used,
-               computations / int_kern_used, algo, algo,
-               int_used / int_kern_used, float_used / int_kern_used);
+               computations / int_kern_used, algo, algo, int_used / int_kern_used,
+               float_used / int_kern_used);
     };
 
     run(256, 12 * 24, 256);
@@ -208,8 +210,7 @@ void run_8x8x16_contrast(
     param::MatrixMul target_param;
     target_param.format = format;
 
-    benchmarker_int_kern_4x2x16.set_before_exec_callback(
-            AlgoChecker<MatrixMul>(algo));
+    benchmarker_int_kern_4x2x16.set_before_exec_callback(AlgoChecker<MatrixMul>(algo));
     benchmarker_int_kern_4x2x16.set_times(RUNS)
             .set_dtype(0, dtype::Int8{})
             .set_dtype(1, dtype::Int8{})
@@ -227,21 +228,19 @@ void run_8x8x16_contrast(
                             RUNS;
         } else {
             int_kern_used =
-                    benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) /
-                    RUNS;
+                    benchmarker_int_kern_4x2x16.exec({{M, K}, {K, N}, {}}) / RUNS;
         }
 
         printf(" %f(%f)\t %f(%f)\t %f\n", int_used, computation / int_used,
-               int_kern_used, computation / int_kern_used,
-               int_used / int_kern_used);
+               int_kern_used, computation / int_kern_used, int_used / int_kern_used);
     };
-    printf("\nN\t K\t M\t %s ms(GFlops)\t %s ms(GFlops)\t SPEEDUP\n", algo0,
-           algo);
-    
+    printf("\nN\t K\t M\t %s ms(GFlops)\t %s ms(GFlops)\t SPEEDUP\n", algo0, algo);
+
     for (size_t M : {8}) {
         for (size_t K : {72}) {
-            for (size_t N : {8, 16, 32, 64, 72, 128, 256, 512, 1024, 4096, 8192,
-                             16384, 32768, 65536}) {
+            for (size_t N :
+                 {8, 16, 32, 64, 72, 128, 256, 512, 1024, 4096, 8192, 16384, 32768,
+                  65536}) {
                 printf("%zu\t %zu\t %zu\t", N, K, M);
                 run(M, N, K);
             }
@@ -274,8 +273,7 @@ void run_16x16x32_benchmark(const char* algo, Handle* handle) {
                "int: %f ms %f Gflops %s: \n"
                "speedup(%s/arm_common, %s/float): %f\n",
                M, K, N, float_used, computations / float_used, int_used,
-               computations / int_used, algo, algo, algo,
-               float_used / int_used);
+               computations / int_used, algo, algo, algo, float_used / int_used);
     };
 
     run(256, 12 * 24, 256);
@@ -321,8 +319,7 @@ void run_8x8x32_benchmark(const char* algo, Handle* handle) {
                "int: %f ms %f Gflops %s: \n"
                "speedup(%s/arm_common, %s/float): %f\n",
                M, K, N, float_used, computations / float_used, int_used,
-               computations / int_used, algo, algo, algo,
-               float_used / int_used);
+               computations / int_used, algo, algo, algo, float_used / int_used);
     };
 
     run(256, 12 * 24, 256);
@@ -343,10 +340,8 @@ void run_8x8x32_quint_benchmark(Handle* handle) {
     benchmarker_quint8_dot.set_before_exec_callback(
             AlgoChecker<MatrixMul>("AARCH32_QUINT8_K4X8X4"));
     benchmarker_quint8_dot.set_times(RUNS)
-            .set_dtype(0,
-                       dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
-            .set_dtype(1,
-                       dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
+            .set_dtype(0, dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
+            .set_dtype(1, dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
             .set_dtype(2, dtype::QuantizedS32(2.3f * 3.1f))
             .set_param(param)
             .set_display(false);
@@ -355,17 +350,14 @@ void run_8x8x32_quint_benchmark(Handle* handle) {
     benchmarker_quint8.set_before_exec_callback(
             AlgoChecker<MatrixMul>("ARMV7_QUINT8_K4X8X8"));
     benchmarker_quint8.set_times(RUNS)
-            .set_dtype(0,
-                       dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
-            .set_dtype(1,
-                       dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
+            .set_dtype(0, dtype::Quantized8Asymm(2.3f, static_cast<uint8_t>(20)))
+            .set_dtype(1, dtype::Quantized8Asymm(3.1f, static_cast<uint8_t>(30)))
             .set_dtype(2, dtype::QuantizedS32(2.3f * 3.1f))
             .set_param(param)
             .set_display(false);
 
     auto run = [&](size_t M, size_t N, size_t K) {
-        auto dot_used =
-                benchmarker_quint8_dot.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto dot_used = benchmarker_quint8_dot.exec({{M, K}, {K, N}, {}}) / RUNS;
         auto normal_used = benchmarker_quint8.exec({{M, K}, {K, N}, {}}) / RUNS;
         float computations = 2.f * M * K * N * 1e-6;
         printf("run: {%zu{M} %zu{K} %zu{N}} dot: %f ms %f Gflops \n"
@@ -420,11 +412,10 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x32_MK4_DOT) {
             .set_times(RUNS);
 
     auto run = [&](size_t M, size_t N, size_t K) {
-        auto default_used =
-                benchmarker_default.exec({{M, K}, {K, N}, {}}) / RUNS;
-        auto mk4_dot_used = benchmarker_mk4_dot.exec(
-                                    {{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
-                            RUNS;
+        auto default_used = benchmarker_default.exec({{M, K}, {K, N}, {}}) / RUNS;
+        auto mk4_dot_used =
+                benchmarker_mk4_dot.exec({{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
+                RUNS;
         float computations = 2.f * M * K * N * 1e-6;
         printf("run: {%zu{M} %zu{K} %zu{N}} default: %f ms %f Gflops mk4_dot: "
                "%f ms "
@@ -456,8 +447,8 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K8x8x4) {
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_MK4_K4x8x8) {
-    run_8x8x16_benchmark("ARMV7_INT8X8X16_MK4_K8X8X4", handle(),
-                         MatrixMul::Param::Format::MK4);
+    run_8x8x16_benchmark(
+            "ARMV7_INT8X8X16_MK4_K8X8X4", handle(), MatrixMul::Param::Format::MK4);
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT16x16x32_K12x4x1) {
@@ -465,18 +456,15 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT16x16x32_K12x4x1) {
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K8x8x4_CONTRAST) {
-    run_8x8x16_contrast("ARM_COMMON_INT8X8X16", "ARMV7_INT8X8X16_K8X8X4",
-                        handle());
+    run_8x8x16_contrast("ARM_COMMON_INT8X8X16", "ARMV7_INT8X8X16_K8X8X4", handle());
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K4x8x8_CONTRAST) {
-    run_8x8x16_contrast("ARM_COMMON_INT8X8X16", "ARMV7_INT8X8X16_K4X8X8",
-                        handle());
+    run_8x8x16_contrast("ARM_COMMON_INT8X8X16", "ARMV7_INT8X8X16_K4X8X8", handle());
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT8x8x16_K4x8x8_K8x8x4_CONTRAST) {
-    run_8x8x16_contrast("ARMV7_INT8X8X16_K4X8X8", "ARMV7_INT8X8X16_K8X8X4",
-                        handle());
+    run_8x8x16_contrast("ARMV7_INT8X8X16_K4X8X8", "ARMV7_INT8X8X16_K8X8X4", handle());
 }
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
@@ -517,37 +505,34 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_FP16) {
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_F16_MK8) {
     auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(4);
     matrix_mul::benchmark_with_contrast(
-            handle(), args, dtype::Float16{}, dtype::Float16{},
-            dtype::Float16{}, "AARCH32_F16_MK8_4X8",
-            param::MatrixMul::Format::MK8, dtype::Float16{}, dtype::Float16{},
-            dtype::Float16{}, "AARCH32_F16_K4X16X1");
+            handle(), args, dtype::Float16{}, dtype::Float16{}, dtype::Float16{},
+            "AARCH32_F16_MK8_4X8", param::MatrixMul::Format::MK8, dtype::Float16{},
+            dtype::Float16{}, dtype::Float16{}, "AARCH32_F16_K4X16X1");
 }
 #endif
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_MK4) {
     auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(8);
     matrix_mul::benchmark_with_contrast(
-            handle(), args, dtype::Float32{}, dtype::Float32{},
-            dtype::Float32{}, "ARMV7_F32_MK4_4x8",
-            param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
-            dtype::Float32{});
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "ARMV7_F32_MK4_4x8", param::MatrixMul::Format::MK4, dtype::Float32{},
+            dtype::Float32{}, dtype::Float32{});
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_PACK_MK4) {
     auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(8);
     matrix_mul::benchmark_with_contrast(
-            handle(), args, dtype::Float32{}, dtype::Float32{},
-            dtype::Float32{}, "ARMV7_F32_MK4_PACK_4X12",
-            param::MatrixMul::Format::MK4, dtype::Float32{}, dtype::Float32{},
-            dtype::Float32{});
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "ARMV7_F32_MK4_PACK_4X12", param::MatrixMul::Format::MK4, dtype::Float32{},
+            dtype::Float32{}, dtype::Float32{});
 }
 
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT16x16x32_MK8) {
     auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(4);
     matrix_mul::benchmark_with_contrast(
             handle(), args, dtype::Int16{}, dtype::Int16{}, dtype::Int32{},
-            "ARMV7_INT16X16X32_MK8_4X8", param::MatrixMul::Format::MK8,
-            dtype::Int16{}, dtype::Int16{}, dtype::Int32{});
+            "ARMV7_INT16X16X32_MK8_4X8", param::MatrixMul::Format::MK8, dtype::Int16{},
+            dtype::Int16{}, dtype::Int32{});
 }
 TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT32_MK_4X2X16) {
     constexpr size_t RUNS = 50;
@@ -576,9 +561,8 @@ TEST_F(ARMV7, BENCHMARK_MATRIX_MUL_INT32_MK_4X2X16) {
             .set_display(false);
 
     auto run = [&](size_t M, size_t N, size_t K) {
-        auto mk_used = benchmarker_mk4.exec(
-                               {{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) /
-                       RUNS;
+        auto mk_used =
+                benchmarker_mk4.exec({{M / 4, K / 4, 4, 4}, {K / 4, N, 4}, {}}) / RUNS;
         auto default_used = benchmarker.exec({{M, K}, {K, N}, {}}) / RUNS;
         float computations = 2.f * M * K * N * 1e-6;
         printf("run: {%zu{M} %zu{K} %zu{N}} normal: %f ms %f Gflops mk4: %f ms "

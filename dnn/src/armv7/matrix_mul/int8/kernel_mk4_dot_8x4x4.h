@@ -43,8 +43,9 @@ namespace matmul_mk4_dot_8x4x4 {
 //                              +--------+
 //                              Accumulator
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int n_remain) {
+static void kern_8x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     K /= 4;
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
@@ -184,8 +185,8 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
               [n_remain] "+r"(n_remain), [k] "+r"(k), [outptr0] "+r"(outptr0),
               [outptr1] "+r"(outptr1), [x0] "+r"(x0)
             :
-            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-              "q11", "q12", "q14", "cc", "memory");
+            : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
+              "q12", "q14", "cc", "memory");
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
@@ -212,8 +213,9 @@ static void kern_8x4(const int8_t* packA, const int8_t* packB, int K,
 //                              Accumulator
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int n_remain) {
+static void kern_4x4(
+        const int8_t* packA, const int8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain) {
     K /= 4;
     const int32_t* a_ptr = reinterpret_cast<const int32_t*>(packA);
     const int32_t* b_ptr = reinterpret_cast<const int32_t*>(packB);
@@ -324,9 +326,8 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 
             "4:\n" STORE_C
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [oddk] "+r"(oddk),
-              [is_first_k] "+r"(is_first_k), [n_remain] "+r"(n_remain),
-              [LDC] "+r"(LDC), [outptr0] "+r"(outptr0), [k] "+r"(k),
-              [x0] "+r"(x0)
+              [is_first_k] "+r"(is_first_k), [n_remain] "+r"(n_remain), [LDC] "+r"(LDC),
+              [outptr0] "+r"(outptr0), [k] "+r"(k), [x0] "+r"(x0)
             :
             : "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "cc", "memory");
 
@@ -336,9 +337,9 @@ static void kern_4x4(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void gemm_dots8_8x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
-                                  int ldin, int y0, int ymax, int k0,
-                                  int kmax) {
+static void gemm_dots8_8x4_pack_A(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int y = y0, y_start = y0 / 4;
     for (; y + 7 < ymax; y += 8, y_start += 2) {
         const int8_t* inptr0 = inptr + y_start * ldin + k0 * 4;
@@ -357,8 +358,8 @@ static void gemm_dots8_8x4_pack_A(dt_int8* outptr, const dt_int8* inptr,
     }
 }
 
-static void gemm_dots8_8x4_pack_B(dt_int8* out, const dt_int8* in, int ldin,
-                                  int x0, int xmax, int k0, int kmax) {
+static void gemm_dots8_8x4_pack_B(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     const int ksize = kmax - k0;
     const int ksize4 = ksize * 4;
     int8_t* outptr = out;

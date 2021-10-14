@@ -10,8 +10,8 @@
  */
 #include "megcore.h"
 
-#include "test/common/utils.h"
 #include <gtest/gtest.h>
+#include "test/common/utils.h"
 TEST(MegcoreCPU, DEVICE) {
     megcoreDeviceHandle_t handle;
     megcoreCreateDeviceHandle(&handle, megcorePlatformCPU, -1, 0);
@@ -33,7 +33,7 @@ TEST(MegcoreCPU, DEVICE) {
 
     megcoreActivate(handle);
 
-    void *ptr;
+    void* ptr;
     megcoreMalloc(handle, &ptr, 256);
     megcoreFree(handle, ptr);
 

@@ -36,7 +36,7 @@ public:
     struct ModeTrait {
         uint32_t arity = 0;  //!< number of inputs needed
         CheckDtypeFunc check_inp[MAX_ARITY];
-        SetOrCheckDtypeFunc check_out;    //!< dtype of output var
+        SetOrCheckDtypeFunc check_out;  //!< dtype of output var
         bool need_specify_out_dtype =
                 false;  //!< the dtype should be setup externally, otherwise
                         //!< would be inferred by check_out(dtype, false)
@@ -46,13 +46,10 @@ public:
         static const ModeTrait& from_mode(Mode mode);
     };
 
-    virtual void exec(_megdnn_in const TensorNDArray& src,
-                      _megdnn_tensor_out dst) = 0;
+    virtual void exec(_megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) = 0;
 
     //! get trait of current mode
-    const ModeTrait& mode_trait() const {
-        return ModeTrait::from_mode(m_param.mode);
-    }
+    const ModeTrait& mode_trait() const { return ModeTrait::from_mode(m_param.mode); }
 
     //! deduce output layout
     void deduce_layout(const TensorLayoutArray& src, TensorLayout& dst);
@@ -60,8 +57,8 @@ public:
 protected:
     //! throw exception if incorrect layout; broadcast input shape to
     //! output shape
-    void check_layout_and_broadcast(const TensorLayoutPtrArray& src,
-                                    const TensorLayout& dst);
+    void check_layout_and_broadcast(
+            const TensorLayoutPtrArray& src, const TensorLayout& dst);
 };
 
 }  // namespace megdnn

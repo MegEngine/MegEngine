@@ -23,9 +23,9 @@ namespace {
  */
 
 #define ROW_MAJOR_MAT(mat, col_dim, x, y) ((mat)[(x) * (col_dim) + (y)])
-#define U(i, j) ROW_MAJOR_MAT(U_, dim[0], i, j)
-#define S(i, j) ROW_MAJOR_MAT(S_, dim[1], i, j)
-#define V(i, j) ROW_MAJOR_MAT(V_, dim[1], i, j)
+#define U(i, j)                           ROW_MAJOR_MAT(U_, dim[0], i, j)
+#define S(i, j)                           ROW_MAJOR_MAT(S_, dim[1], i, j)
+#define V(i, j)                           ROW_MAJOR_MAT(V_, dim[1], i, j)
 
 template <class T>
 void GivensL(T* S_, const size_t dim[2], size_t m, T a, T b) {
@@ -193,8 +193,7 @@ void SVD(const size_t dim[2], T* U_, T* S_, T* V_, T eps = -1) {
         T alpha = 0;
         T beta = 0;
         // Compute mu
-        if (n - k0 == 2 && fabs(S(k0, k0)) < 1e-7 &&
-            fabs(S(k0 + 1, k0 + 1)) < 1e-7) {
+        if (n - k0 == 2 && fabs(S(k0, k0)) < 1e-7 && fabs(S(k0 + 1, k0 + 1)) < 1e-7) {
             alpha = 0;
             beta = 1;
         } else {
@@ -277,28 +276,26 @@ void SVD(const size_t dim[2], T* U_, T* S_, T* V_, T eps = -1) {
 namespace megdnn {
 namespace naive {
 
-size_t SVDForwardImpl::get_workspace_in_bytes(size_t block_cnt, size_t m,
-                                              size_t n, size_t dtype_size) {
+size_t SVDForwardImpl::get_workspace_in_bytes(
+        size_t block_cnt, size_t m, size_t n, size_t dtype_size) {
     MEGDNN_MARK_USED_VAR(block_cnt);
     return get_workspace_bundle(m, n, dtype_size).total_size_in_bytes();
 }
 
-WorkspaceBundle SVDForwardImpl::get_workspace_bundle(size_t m, size_t n,
-                                                     size_t dtype_size,
-                                                     void* raw_ptr) {
+WorkspaceBundle SVDForwardImpl::get_workspace_bundle(
+        size_t m, size_t n, size_t dtype_size, void* raw_ptr) {
     // Scratchpads for u and v.
     size_t dim0 = std::max(m, n);
     size_t dim1 = std::min(m, n);
     return {raw_ptr,
-            {m * n * dtype_size, dim0 * dim0 * dtype_size,
-             dim1 * dim1 * dtype_size},
+            {m * n * dtype_size, dim0 * dim0 * dtype_size, dim1 * dim1 * dtype_size},
             handle()->alignment_requirement()};
 }
 
 template <typename T>
-void SVDForwardImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out u,
-                                   _megdnn_tensor_out s, _megdnn_tensor_out vt,
-                                   _megdnn_workspace workspace, Param p) {
+void SVDForwardImpl::exec_internal(
+        _megdnn_tensor_in src, _megdnn_tensor_out u, _megdnn_tensor_out s,
+        _megdnn_tensor_out vt, _megdnn_workspace workspace, Param p) {
     size_t block_cnt, m, n;
     canonize_params(src.layout, &block_cnt, &m, &n);
 
@@ -316,9 +313,9 @@ void SVDForwardImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out u,
         T* tmp_s = wbundle.get_workspace(0).ptr<T>();
         T* tmp_u = wbundle.get_workspace(1).ptr<T>();
         T* tmp_v = wbundle.get_workspace(2).ptr<T>();
-#define TS(x, y) ROW_MAJOR_MAT(tmp_s, min_mn, x, y)  // m x n
-#define TU(x, y) ROW_MAJOR_MAT(tmp_u, max_mn, x, y)  // m x m
-#define TV(x, y) ROW_MAJOR_MAT(tmp_v, min_mn, x, y)  // n x n
+#define TS(x, y)  ROW_MAJOR_MAT(tmp_s, min_mn, x, y)  // m x n
+#define TU(x, y)  ROW_MAJOR_MAT(tmp_u, max_mn, x, y)  // m x m
+#define TV(x, y)  ROW_MAJOR_MAT(tmp_v, min_mn, x, y)  // n x n
 #define INP(x, y) ROW_MAJOR_MAT(inp, n, x, y)
         bool transposed = false;
         if (m < n) {
@@ -381,19 +378,19 @@ void SVDForwardImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out u,
     }
 }
 
-void SVDForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out u,
-                          _megdnn_tensor_out s, _megdnn_tensor_out vt,
-                          _megdnn_workspace workspace) {
+void SVDForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out u, _megdnn_tensor_out s,
+        _megdnn_tensor_out vt, _megdnn_workspace workspace) {
     check_exec(src.layout, u.layout, s.layout, vt.layout, workspace.size);
 
     Param p = param();
-    megdnn_assert(!p.compute_uv || !p.full_matrices,
-                  "Computing full singular vectors is not supported in naive "
-                  "implementation.");
+    megdnn_assert(
+            !p.compute_uv || !p.full_matrices,
+            "Computing full singular vectors is not supported in naive "
+            "implementation.");
     if (src.layout.dtype == dtype::Float32()) {
         using ctype = typename DTypeTrait<dtype::Float32>::ctype;
-        MEGDNN_DISPATCH_CPU_KERN_OPR(
-                exec_internal<ctype>(src, u, s, vt, workspace, p));
+        MEGDNN_DISPATCH_CPU_KERN_OPR(exec_internal<ctype>(src, u, s, vt, workspace, p));
         return;
     }
     megdnn_assert_internal(0);

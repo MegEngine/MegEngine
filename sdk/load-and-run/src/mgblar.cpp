@@ -423,10 +423,13 @@ private:
         }
 
         const std::map<std::string, megdnn::DType> type_map = {
-                {"f4", dtype::Float32()},
+                {"f4", dtype::Float32()}, 
                 {"i4", dtype::Int32()},
-                {"i1", dtype::Int8()},
-                {"u1", dtype::Uint8()}};
+                {"u2", dtype::Uint16()},  
+                {"i2", dtype::Int16()},
+                {"i1", dtype::Int8()},    
+                {"u1", dtype::Uint8()},
+        };
 
         megdnn::DType hv_type;
         for (auto& item : type_map) {

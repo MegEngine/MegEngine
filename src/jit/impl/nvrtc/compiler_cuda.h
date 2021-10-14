@@ -19,20 +19,21 @@
 #include <nvrtc.h>
 #include "megbrain/jit/compiler.h"
 
-#define MGB_NVRTC_CHECK(expr)                                            \
-    do {                                                                 \
-        nvrtcResult __nvrtc_result = (expr);                             \
-        if (!mgb_likely(__nvrtc_result == NVRTC_SUCCESS)) {              \
-            ::mgb::jit::_on_nvrtc_error(#expr, __nvrtc_result, __FILE__, \
-                                        __func__, __LINE__);             \
-        }                                                                \
+#define MGB_NVRTC_CHECK(expr)                                             \
+    do {                                                                  \
+        nvrtcResult __nvrtc_result = (expr);                              \
+        if (!mgb_likely(__nvrtc_result == NVRTC_SUCCESS)) {               \
+            ::mgb::jit::_on_nvrtc_error(                                  \
+                    #expr, __nvrtc_result, __FILE__, __func__, __LINE__); \
+        }                                                                 \
     } while (0)
 
 namespace mgb {
 namespace jit {
 
-[[noreturn]] void _on_nvrtc_error(const char* expr, nvrtcResult nvrtc_res,
-                                  const char* file, const char* func, int line);
+[[noreturn]] void _on_nvrtc_error(
+        const char* expr, nvrtcResult nvrtc_res, const char* file, const char* func,
+        int line);
 
 /*!
  * \brief Executable class for CUDA
@@ -61,10 +62,10 @@ private:
         std::string ptx;
         CompNode::UnorderedMap<Func> cn2func;
 
-        void compile(const std::string& cache_category, int major, int minor,
-                     const CudaExecutable* cuda_exe);
-        void exec(const JITExecutor* fusion_opr,
-                  const CudaExecutable* cuda_exe);
+        void compile(
+                const std::string& cache_category, int major, int minor,
+                const CudaExecutable* cuda_exe);
+        void exec(const JITExecutor* fusion_opr, const CudaExecutable* cuda_exe);
     };
 
     const std::string m_source;
@@ -93,8 +94,8 @@ public:
 
     Property property() const override {
         using F = Property::Flag;
-        return Property{F::NEED_INPUT_COLLAPSE | F::BIND_NDIM,
-                        JITFeatureBits::NONE, 64};
+        return Property{
+                F::NEED_INPUT_COLLAPSE | F::BIND_NDIM, JITFeatureBits::NONE, 64};
     }
 
     size_t get_nr_workspace_outputs(JITExecutor* opr) const override;

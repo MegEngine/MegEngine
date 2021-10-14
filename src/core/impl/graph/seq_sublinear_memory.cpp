@@ -33,7 +33,7 @@ class RNGxorshf {
     uint64_t s[2];
 
 public:
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L || (defined(__APPLE__) && __cplusplus >= 201402L)
     typedef uint64_t result_type;
     static constexpr uint64_t min() { return 0; }
     static constexpr uint64_t max() { return UINT64_MAX; }
@@ -57,12 +57,13 @@ public:
 bool is_bad_opr(OperatorNodeBase* opr) {
     using F = OperatorNodeBase::NodeProp::Flag;
     return opr->node_prop().contain(
-        F::IMPURE_FUNC | F::NO_AUTOMATIC_DUP | F::FORCE_UPDATE_INPUT_VAR);
+            F::IMPURE_FUNC | F::NO_AUTOMATIC_DUP | F::FORCE_UPDATE_INPUT_VAR);
 }
 
 }  // namespace
 /* ======================  ModifyActionPlanner ======================  */
-class SeqModifierForSublinearMemory::ModifyActionPlanner : public ModifyActionPlannerBase {
+class SeqModifierForSublinearMemory::ModifyActionPlanner
+        : public ModifyActionPlannerBase {
     using VarArray = std::vector<Var*>;
     using VarSet = ThinHashSet<Var*>;
     using OprArray = std::vector<Opr*>;
@@ -88,8 +89,8 @@ class SeqModifierForSublinearMemory::ModifyActionPlanner : public ModifyActionPl
      *      may be modified inplace, but the resulting value has no
      *      specific meaning for the caller (i.e. as temporary var)
      */
-    void refine_block_discard_rec(const OprArray& all_oprs, size_t block_num,
-                                  VarSet& discard_vars);
+    void refine_block_discard_rec(
+            const OprArray& all_oprs, size_t block_num, VarSet& discard_vars);
 
     size_t calc_bottleneck_from_discard_plan();
 
@@ -124,8 +125,7 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::get_prev_action(
     }
 }
 
-size_t
-SeqModifierForSublinearMemory::ModifyActionPlanner::get_memory_bottleneck(
+size_t SeqModifierForSublinearMemory::ModifyActionPlanner::get_memory_bottleneck(
         const SplitPointSet& split_point_set) {
     split_into_blocks(split_point_set);
     make_discard_plan();
@@ -133,9 +133,8 @@ SeqModifierForSublinearMemory::ModifyActionPlanner::get_memory_bottleneck(
     return calc_bottleneck_from_discard_plan();
 }
 
-SeqModifierForSublinearMemory::SplitPointSet
-SeqModifierForSublinearMemory::ModifyActionPlanner::get_split_point_set(
-        size_t block_size_thresh) {
+SeqModifierForSublinearMemory::SplitPointSet SeqModifierForSublinearMemory::
+        ModifyActionPlanner::get_split_point_set(size_t block_size_thresh) {
     auto split_point_set = make_split_point_set();
     size_t cur_block_usage = 0;
 
@@ -249,7 +248,7 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::apply_discard_plan() {
         auto acc = var->visit_discard_tailing_access();
         if (!acc || (acc && acc->opr->time >= timestamp)) {
             mgb_assert(var->owner_opr()->output.size() > 1);
-            for (size_t i = 0; i < var->access_rec.size(); ++ i) {
+            for (size_t i = 0; i < var->access_rec.size(); ++i) {
                 if (var->access_rec[i].time >= timestamp) {
                     mgb_assert(i > 0);
                     auto acc_rec_begin = var->access_rec.data();
@@ -322,8 +321,7 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::apply_discard_plan() {
 
             Var* new_var = nullptr;
             for (auto i : opr->output) {
-                auto&& ovar = var_mempool().alloc_unique(i->orig_var, i->size,
-                                                         new_opr);
+                auto&& ovar = var_mempool().alloc_unique(i->orig_var, i->size, new_opr);
                 new_opr->output.push_back(ovar.get());
                 if (i == var)
                     new_var = ovar.get();
@@ -350,7 +348,6 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::apply_discard_plan() {
             // find in recomputed vars and record access
             auto iter = var_map.find(i);
             if (iter != var_map.end()) {
-
                 // handle the vars which haven't been discard after recomputing
                 // try to remove access records which redirect to dup-opr
                 check_and_remove(opr->time, i);
@@ -426,8 +423,7 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::make_discard_plan() {
             mgb_assert(var->next_access.val() >= 1);
 
             // find best future time to discard
-            for (size_t i = var->next_access.val() - 1; i < rec.size() - 1;
-                 ++i) {
+            for (size_t i = var->next_access.val() - 1; i < rec.size() - 1; ++i) {
                 if (!i && var->owner_opr()->output.size() == 1) {
                     // never discard output var directly
                     continue;
@@ -454,8 +450,7 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::make_discard_plan() {
         for (auto&& i : block.back()->output) {
             i->discard_tailing_access = None;
         }
-        refine_block_discard_rec(cur_block_member, nr_blocks,
-                                 cur_block_discard_vars);
+        refine_block_discard_rec(cur_block_member, nr_blocks, cur_block_discard_vars);
         flush_block_member();
     }
 }
@@ -478,9 +473,8 @@ void SeqModifierForSublinearMemory::ModifyActionPlanner::split_into_blocks(
     mgb_assert(j >= split_point_set->size());
 }
 
-void SeqModifierForSublinearMemory::ModifyActionPlanner::
-        refine_block_discard_rec(const OprArray& all_oprs, size_t block_num,
-                                 VarSet& discard_vars) {
+void SeqModifierForSublinearMemory::ModifyActionPlanner::refine_block_discard_rec(
+        const OprArray& all_oprs, size_t block_num, VarSet& discard_vars) {
     if (block_num) {
         for (auto&& opr : all_oprs) {
             for (auto i : opr->input) {
@@ -531,7 +525,7 @@ class SeqModifierForSublinearMemory::ActionSearcherSingleCN {
     void search_genetic();
     void search_refine();
 
-    static inline bool cmp_sps(const SplitPointSet &a, const SplitPointSet &b) {
+    static inline bool cmp_sps(const SplitPointSet& a, const SplitPointSet& b) {
         if (a->size() != b->size()) {
             return a->size() < b->size();
         } else {
@@ -545,9 +539,8 @@ class SeqModifierForSublinearMemory::ActionSearcherSingleCN {
     }
 
 public:
-    ActionSearcherSingleCN(SeqModifierForSublinearMemory* par)
-            : m_par_modifier{par} {
-        auto & m_config = m_par_modifier->m_config;
+    ActionSearcherSingleCN(SeqModifierForSublinearMemory* par) : m_par_modifier{par} {
+        auto& m_config = m_par_modifier->m_config;
         //! allow environmental variable to overwrite the setting
         if (auto env = MGB_GETENV("MGB_SUBLINEAR_MEMORY_THRESH_NR_TRY")) {
             m_config->thresh_nr_try = std::stoi(env);
@@ -557,8 +550,9 @@ public:
         }
         if (auto env = MGB_GETENV("MGB_SUBLINEAR_MEMORY_GENETIC_POOL_SIZE")) {
             auto psize = static_cast<size_t>(std::stoi(env));
-            mgb_assert(psize > 0 || m_config->genetic_nr_iter == 0,
-                       "invalid pool size %zu in genetic algorithm,", psize);
+            mgb_assert(
+                    psize > 0 || m_config->genetic_nr_iter == 0,
+                    "invalid pool size %zu in genetic algorithm,", psize);
             m_config->genetic_pool_size = psize;
         }
         if (auto env = MGB_GETENV("MGB_SUBLINEAR_MEMORY_LOWER_BOUND_MB")) {
@@ -569,11 +563,10 @@ public:
     const SeqModifyAction& search(CompNode comp_node, const OprNodeArray* seq);
 };
 
-void SeqModifierForSublinearMemory::ActionSearcherSingleCN::
-        do_search_update_thresh(size_t thresh) {
+void SeqModifierForSublinearMemory::ActionSearcherSingleCN::do_search_update_thresh(
+        size_t thresh) {
     ModifyActionPlanner* planner =
-            m_par_modifier->m_thread2planner.at(std::this_thread::get_id())
-                    .get();
+            m_par_modifier->m_thread2planner.at(std::this_thread::get_id()).get();
 
     planner->init_seq(*m_cur_opr_seq);
     SplitPointSet split_point_set = planner->get_split_point_set(thresh);
@@ -593,15 +586,14 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::
 void SeqModifierForSublinearMemory::ActionSearcherSingleCN::
         do_search_update_split_point_set(SplitPointSet& split_point_set) {
     ModifyActionPlanner* planner =
-            m_par_modifier->m_thread2planner.at(std::this_thread::get_id())
-                    .get();
+            m_par_modifier->m_thread2planner.at(std::this_thread::get_id()).get();
 
     planner->init_seq(*m_cur_opr_seq);
     auto cur = planner->get_memory_bottleneck(split_point_set);
 
     MGB_LOCK_GUARD(m_mtx);
-    if (cur < m_min_bottleneck || (cur == m_min_bottleneck &&
-                cmp_sps(split_point_set, m_best_sps))) {
+    if (cur < m_min_bottleneck ||
+        (cur == m_min_bottleneck && cmp_sps(split_point_set, m_best_sps))) {
         m_min_bottleneck = cur;
         m_best_sps = split_point_set;
         planner->get_prev_action(m_action);
@@ -766,11 +758,11 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_genetic() {
             }
         }
         m_cur_records = records;
-#if __cplusplus >= 201703L
+#if __cplusplus >= 201703L || (defined(__APPLE__) && __cplusplus >= 201402L)
         std::shuffle(perm.begin(), perm.end(), rng);
 #else
-        std::random_shuffle(perm.begin(), perm.end(),
-                            [&](size_t x) { return rng() % x; });
+        std::random_shuffle(
+                perm.begin(), perm.end(), [&](size_t x) { return rng() % x; });
 #endif
         for (size_t i = 0; i < length; ++i) {
             invoke_search(mutation(mutation(records[i].first)));
@@ -781,7 +773,8 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_genetic() {
 }
 
 void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_refine() {
-    size_t lower_bound = static_cast<size_t>(m_par_modifier->m_config->lb_memory_mb) << 20;
+    size_t lower_bound = static_cast<size_t>(m_par_modifier->m_config->lb_memory_mb)
+                      << 20;
     if (m_min_bottleneck >= lower_bound)
         return;
     OprFootprint footprint;
@@ -812,8 +805,7 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_refine() {
         sort(split_point_set->begin(), split_point_set->end());
         auto f = [&] {
             ModifyActionPlanner* planner =
-                    m_par_modifier->m_thread2planner
-                            .at(std::this_thread::get_id())
+                    m_par_modifier->m_thread2planner.at(std::this_thread::get_id())
                             .get();
             planner->init_seq(*m_cur_opr_seq);
             auto cur = planner->get_memory_bottleneck(split_point_set);
@@ -828,9 +820,8 @@ void SeqModifierForSublinearMemory::ActionSearcherSingleCN::search_refine() {
     }
 }
 
-const SeqModifierForSublinearMemory::SeqModifyAction&
-SeqModifierForSublinearMemory::ActionSearcherSingleCN::search(
-        CompNode comp_node, const OprNodeArray* seq) {
+const SeqModifierForSublinearMemory::SeqModifyAction& SeqModifierForSublinearMemory::
+        ActionSearcherSingleCN::search(CompNode comp_node, const OprNodeArray* seq) {
     m_action.clear();
 
     if (comp_node.locator().stream < 0) {
@@ -862,30 +853,28 @@ SeqModifierForSublinearMemory::ActionSearcherSingleCN::search(
 
 #if MGB_ENABLE_LOGGING
     constexpr double SIZE2MB = 1.0 / 1024 / 1024;
-    std::string msg{
-            ssprintf("finished searching for sublinear memory: "
-                     "comp_node=%s seq_len=%zu nr_search=%zu "
-                     "time=%.1fms(init%.2f genetic%.2f refine%.2f)\n"
-                     "thresh     bottleneck",
-                     comp_node.to_string().c_str(), seq->size(),
-                     m_history.size(), t0 + t1 + t2, t0, t1, t2)};
+    std::string msg{ssprintf(
+            "finished searching for sublinear memory: "
+            "comp_node=%s seq_len=%zu nr_search=%zu "
+            "time=%.1fms(init%.2f genetic%.2f refine%.2f)\n"
+            "thresh     bottleneck",
+            comp_node.to_string().c_str(), seq->size(), m_history.size(), t0 + t1 + t2,
+            t0, t1, t2)};
     for (auto&& i : m_history) {
         msg.push_back('\n');
-        msg.append(ssprintf("%-10.2f %-10.2f", i.first * SIZE2MB,
-                            i.second * SIZE2MB));
+        msg.append(ssprintf("%-10.2f %-10.2f", i.first * SIZE2MB, i.second * SIZE2MB));
         if (i.second == m_min_bottleneck) {
             msg.append(" // best; ");
         }
     }
     msg.push_back('\n');
-    msg.append(ssprintf("m_min_bottleneck: %-10.2f\n",
-                        m_min_bottleneck * SIZE2MB));
-    if(!m_par_modifier->m_config->genetic_nr_iter) {
-        msg.append(ssprintf(
-            "\nGenetic algorithm is currently DISABLED, "
-            "set MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER [default = 0]"
-            " to a positive integer to set the number of iterations"
-            " in genetic algorithm.\n"));
+    msg.append(ssprintf("m_min_bottleneck: %-10.2f\n", m_min_bottleneck * SIZE2MB));
+    if (!m_par_modifier->m_config->genetic_nr_iter) {
+        msg.append(
+                ssprintf("\nGenetic algorithm is currently DISABLED, "
+                         "set MGB_SUBLINEAR_MEMORY_GENETIC_NR_ITER [default = 0]"
+                         " to a positive integer to set the number of iterations"
+                         " in genetic algorithm.\n"));
     }
     mgb_log_debug("%s", msg.c_str());
 #else
@@ -935,27 +924,29 @@ void SeqModifierForSublinearMemory::reset_opr_seq(const OprNodeArray& oprseq) {
 
     MGB_TRY { action = search_action(cn2oprseq); }
     MGB_FINALLY(m_planner_thread_pool.stop(););
-    mgb_log_debug("apply sublinear memory action: %zu opr groups to be inserted",
+    mgb_log_debug(
+            "apply sublinear memory action: %zu opr groups to be inserted",
             action.size());
     apply_action(action, oprseq);
 }
 
-SeqModifierForSublinearMemory::SeqModifyAction
-SeqModifierForSublinearMemory::search_action(
-        const CompNode::UnorderedMap<OprNodeArray>* cn2oprseq) {
+SeqModifierForSublinearMemory::SeqModifyAction SeqModifierForSublinearMemory::
+        search_action(const CompNode::UnorderedMap<OprNodeArray>* cn2oprseq) {
     m_thread2planner.clear();
 
     size_t planner_concur;
     if (auto env = MGB_GETENV("MGB_SUBLINEAR_MEMORY_WORKERS")) {
         auto set = static_cast<size_t>(std::stoi(env));
-        mgb_assert(set && set <= static_cast<size_t>(sys::get_cpu_count()) * 4,
-                   "invalid planner concurrency: %zu", set);
+        mgb_assert(
+                set && set <= static_cast<size_t>(sys::get_cpu_count()) * 4,
+                "invalid planner concurrency: %zu", set);
         planner_concur = set;
     } else {
         planner_concur = m_config->num_worker;
     }
 
-    mgb_log_debug("use %zu threads to search for sublinear memory plan; "
+    mgb_log_debug(
+            "use %zu threads to search for sublinear memory plan; "
             "this can be changed via MGB_SUBLINEAR_MEMORY_WORKERS env var",
             planner_concur);
     for (auto&& i : m_planner_thread_pool.start(planner_concur))
@@ -976,9 +967,9 @@ SeqModifierForSublinearMemory::search_action(
     std::vector<WorkerPool::Future> futures;
     for (auto&& i : *cn2oprseq) {
         searchers.emplace_back(std::make_unique<ActionSearcherSingleCN>(this));
-        futures.emplace_back(workers.launch(&ActionSearcherSingleCN::search,
-                                            searchers.back().get(), i.first,
-                                            &i.second));
+        futures.emplace_back(workers.launch(
+                &ActionSearcherSingleCN::search, searchers.back().get(), i.first,
+                &i.second));
     }
 
     SeqModifyAction action;
@@ -990,10 +981,10 @@ SeqModifierForSublinearMemory::search_action(
     return action;
 }
 
-void SeqModifierForSublinearMemory::apply_action(SeqModifyAction& action,
-                                                 const OprNodeArray& oprseq) {
-    auto cur_priority = std::numeric_limits<decltype(
-            OperatorNodeBase::NodeProp::Attribute::priority)>::min();
+void SeqModifierForSublinearMemory::apply_action(
+        SeqModifyAction& action, const OprNodeArray& oprseq) {
+    auto cur_priority = std::numeric_limits<
+            decltype(OperatorNodeBase::NodeProp::Attribute::priority)>::min();
 
     ThinHashSet<OperatorNodeBase*> modified_opr;
 
@@ -1006,9 +997,9 @@ void SeqModifierForSublinearMemory::apply_action(SeqModifyAction& action,
     auto on_opr_visited = [&](OperatorNodeBase* opr) {
         if (replace_vars(opr->input())) {
             auto&& repl_info = m_opr2replace_info[opr];
-            mgb_assert(!repl_info.recomp,
-                       "input of operator %s{%s} already replaced",
-                       opr->cname(), opr->dyn_typeinfo()->name);
+            mgb_assert(
+                    !repl_info.recomp, "input of operator %s{%s} already replaced",
+                    opr->cname(), opr->dyn_typeinfo()->name);
             opr = copy_opr_from_new_inputs(opr, true);
             repl_info.recomp = opr;
         }
@@ -1029,8 +1020,9 @@ void SeqModifierForSublinearMemory::apply_action(SeqModifyAction& action,
             for (auto i : iter->second) {
                 replace_vars(i->input());
                 auto&& repl_info = m_opr2replace_info[i];
-                mgb_assert(!repl_info.dup, "operator %s{%s} already duplicated",
-                           i->cname(), i->dyn_typeinfo()->name);
+                mgb_assert(
+                        !repl_info.dup, "operator %s{%s} already duplicated",
+                        i->cname(), i->dyn_typeinfo()->name);
                 auto opr_new = copy_opr_from_new_inputs(i, false);
                 repl_info.dup = opr_new;
                 set_priority(opr_new);
@@ -1043,8 +1035,7 @@ void SeqModifierForSublinearMemory::apply_action(SeqModifyAction& action,
     mgb_assert(action.empty());
 }
 
-void SeqModifierForSublinearMemory::modify_endpoint_vars(
-        VarNodeArray& endpoints) {
+void SeqModifierForSublinearMemory::modify_endpoint_vars(VarNodeArray& endpoints) {
     auto comp_seq = MemoryOptimizerHelper::CompSeq(owner_graph(), endpoints);
     reset_opr_seq(*comp_seq.m_seq);
     for (auto&& i : endpoints) {
@@ -1059,8 +1050,7 @@ void SeqModifierForSublinearMemory::sanity_check(const OprNodeArray& opr_seq) {
     OperatorNodeBase* first_bad_opr = nullptr;
     for (auto i : opr_seq) {
         auto iter = m_opr2replace_info.find(i);
-        if (iter != m_opr2replace_info.end() && iter->second.recomp &&
-            !first_bad_opr) {
+        if (iter != m_opr2replace_info.end() && iter->second.recomp && !first_bad_opr) {
             first_bad_opr = i;
             break;
         }
@@ -1070,9 +1060,9 @@ void SeqModifierForSublinearMemory::sanity_check(const OprNodeArray& opr_seq) {
         std::string err_msg;
         size_t nr_bad_opr = 0;
         auto add_bad_opr = [&](int type, OperatorNodeBase* opr) {
-            err_msg += ssprintf(" %d#%zu: %s{%s} id=%zu\n", type, nr_bad_opr++,
-                                opr->cname(), opr->dyn_typeinfo()->name,
-                                opr->id());
+            err_msg += ssprintf(
+                    " %d#%zu: %s{%s} id=%zu\n", type, nr_bad_opr++, opr->cname(),
+                    opr->dyn_typeinfo()->name, opr->id());
             for (auto i : opr->input()) {
                 err_msg += ssprintf("    inp var%zu %s\n", i->id(), i->cname());
             }
@@ -1101,21 +1091,22 @@ void SeqModifierForSublinearMemory::sanity_check(const OprNodeArray& opr_seq) {
                 add_bad_opr(1, i);
             }
         }
-        mgb_throw(InternalError,
-                  "sublinear memory: opreator input already replaced, but the "
-                  "orignal operator is still used. operator chain: {\n%s}",
-                  err_msg.c_str());
+        mgb_throw(
+                InternalError,
+                "sublinear memory: opreator input already replaced, but the "
+                "orignal operator is still used. operator chain: {\n%s}",
+                err_msg.c_str());
     }
 }
 
-const CompNode::UnorderedMap<size_t>&
-SeqModifierForSublinearMemory::prev_min_bottleneck() {
+const CompNode::UnorderedMap<size_t>& SeqModifierForSublinearMemory::
+        prev_min_bottleneck() {
     return m_prev_min_bottleneck;
 }
 
 SeqModifierForSublinearMemory::SeqModifierForSublinearMemory(
         ComputingGraphImpl* owner, Config* config_p)
-    : SeqModifierBase(owner), m_config(config_p) {}
+        : SeqModifierBase(owner), m_config(config_p) {}
 
 #endif  // !MGB_ENABLE_SUBLINEAR
 

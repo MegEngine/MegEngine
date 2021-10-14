@@ -13,16 +13,16 @@
 
 #if MGB_CUSTOM_OP
 
-#include "megbrain/custom/manager.h"
-#include "megbrain/custom/custom.h"
 #include "gtest/gtest.h"
+#include "megbrain/custom/custom.h"
+#include "megbrain/custom/manager.h"
 
 #define MANAGER_TEST_LOG 0
 
 namespace custom {
 
 TEST(TestOpManager, TestOpManager) {
-    CustomOpManager *com = CustomOpManager::inst();
+    CustomOpManager* com = CustomOpManager::inst();
     com->insert("Op1", CUSTOM_OP_VERSION);
     com->insert("Op2", CUSTOM_OP_VERSION);
     std::shared_ptr<CustomOp> ptr = com->find_or_reg("Op3", CUSTOM_OP_VERSION);
@@ -35,12 +35,12 @@ TEST(TestOpManager, TestOpManager) {
     ASSERT_TRUE(op_ids.size() == 3);
 
 #if MANAGER_TEST_LOG
-    for (std::string &name: op_names) {
+    for (std::string& name : op_names) {
         std::cout << name << std::endl;
     }
 #endif
 
-    for (std::string &name: op_names) {
+    for (std::string& name : op_names) {
         std::shared_ptr<const CustomOp> op = com->find(name);
         ASSERT_TRUE(op != nullptr);
         ASSERT_TRUE(op->op_type() == name);
@@ -48,7 +48,7 @@ TEST(TestOpManager, TestOpManager) {
         ASSERT_TRUE(com->find(id) == op);
     }
 
-    for (RunTimeId &id: op_ids) {
+    for (RunTimeId& id : op_ids) {
         std::shared_ptr<const CustomOp> op = com->find(id);
         ASSERT_TRUE(op != nullptr);
         ASSERT_TRUE(op->runtime_id() == id);
@@ -58,7 +58,7 @@ TEST(TestOpManager, TestOpManager) {
 
     ASSERT_FALSE(com->erase("Op0"));
 #if MANAGER_TEST_LOG
-    for (auto &name: com->op_name_list()) {
+    for (auto& name : com->op_name_list()) {
         std::cout << name << std::endl;
     }
 #endif
@@ -73,30 +73,30 @@ TEST(TestOpManager, TestOpManager) {
 
 TEST(TestOpManager, TestOpReg) {
     CUSTOM_OP_REG(Op1)
-        .add_inputs(2)
-        .add_outputs(3)
-        .add_input("lhs")
-        .add_param("param1", 1)
-        .add_param("param2", 3.45);
-    
+            .add_inputs(2)
+            .add_outputs(3)
+            .add_input("lhs")
+            .add_param("param1", 1)
+            .add_param("param2", 3.45);
+
     CUSTOM_OP_REG(Op2)
-        .add_input("lhs")
-        .add_input("rhs")
-        .add_output("out")
-        .add_param("param1", "test")
-        .add_param("param2", true)
-        .add_param("", "no name");
+            .add_input("lhs")
+            .add_input("rhs")
+            .add_output("out")
+            .add_param("param1", "test")
+            .add_param("param2", true)
+            .add_param("", "no name");
 
     (void)_Op1;
     (void)_Op2;
-        
+
 #if MANAGER_TEST_LOG
-    for (const auto &name: CustomOpManager::inst()->op_name_list()) {
+    for (const auto& name : CustomOpManager::inst()->op_name_list()) {
         std::cout << CustomOpManager::inst()->find(name)->str() << std::endl;
     }
 #endif
 }
 
-}
+}  // namespace custom
 
 #endif

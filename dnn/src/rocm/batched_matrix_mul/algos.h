@@ -43,8 +43,9 @@ public:
         TensorLayout layout_a, layout_b, layout_c;
 
         std::string to_string() const;
-        SizeArgs(BatchedMatrixMulForwardImpl* opr, const TensorLayout& A,
-                 const TensorLayout& B, const TensorLayout& C);
+        SizeArgs(
+                BatchedMatrixMulForwardImpl* opr, const TensorLayout& A,
+                const TensorLayout& B, const TensorLayout& C);
 
         bool can_be_treated_as_int8x8x32() const {
             return layout_a.dtype.enumv() == layout_b.dtype.enumv() &&
@@ -59,9 +60,9 @@ public:
         TensorND tensor_a, tensor_b, tensor_c;
         Workspace workspace;
 
-        ExecArgs(BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A,
-                 _megdnn_tensor_in B, _megdnn_tensor_out C,
-                 _megdnn_workspace workspace);
+        ExecArgs(
+                BatchedMatrixMulForwardImpl* opr, _megdnn_tensor_in A,
+                _megdnn_tensor_in B, _megdnn_tensor_out C, _megdnn_workspace workspace);
     };
     virtual bool is_available(const SizeArgs& args) const = 0;
     virtual size_t get_workspace_in_bytes(const SizeArgs& args) const = 0;
@@ -76,16 +77,14 @@ public:
             const AlgoAttribute& negative_attr = AlgoAttribute::DEFAULT,
             size_t limit = std::numeric_limits<size_t>::max()) const {
         return contain_attribute_all(positive_attr) &&
-               !contain_attribute_any(negative_attr) &&
-               is_available_wk(args, limit);
+               !contain_attribute_any(negative_attr) && is_available_wk(args, limit);
     }
-    AlgoBase& check_workspace(const SizeArgs& args,
-                              const Workspace& workspace) {
+    AlgoBase& check_workspace(const SizeArgs& args, const Workspace& workspace) {
         auto req = get_workspace_in_bytes(args);
         megdnn_assert(
                 req <= workspace.size,
-                "matrix mul fwd algo %s: required workspace %zu bytes, got %zu",
-                name(), req, workspace.size);
+                "matrix mul fwd algo %s: required workspace %zu bytes, got %zu", name(),
+                req, workspace.size);
         return *this;
     }
 };
@@ -99,9 +98,7 @@ public:
     }
     const char* name() const override { return "BLAS"; }
     void exec(const ExecArgs& args) const override;
-    AlgoAttribute attribute() const override {
-        return AlgoAttribute::REPRODUCIBLE;
-    }
+    AlgoAttribute attribute() const override { return AlgoAttribute::REPRODUCIBLE; }
     MEGDNN_DECL_ALGO_TYPE(ROCM_BLAS)
 };
 

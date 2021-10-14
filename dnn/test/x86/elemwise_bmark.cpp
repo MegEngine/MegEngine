@@ -11,25 +11,23 @@
 #include "test/x86/fixture.h"
 
 #include "megdnn/oprs.h"
+#include "test/common/benchmarker.h"
 #include "test/common/checker.h"
 #include "test/common/rng.h"
-#include "test/common/benchmarker.h"
 
 using namespace megdnn;
 using namespace test;
 
 #define TEST_IN_DIFF_DISTRUBUTION(proportion_of_inf, dataset_number) \
-    max_val = 88.3762626647949f / (1 - proportion_of_inf); \
-    UniformFloatRNG rng##dataset_number(0.f, max_val); \
-    B.set_rng(0, &rng##dataset_number); \
+    max_val = 88.3762626647949f / (1 - proportion_of_inf);           \
+    UniformFloatRNG rng##dataset_number(0.f, max_val);               \
+    B.set_rng(0, &rng##dataset_number);                              \
     B.execs({{355600}, {}});
 
-
-TEST_F(X86, BENCHMARK_ELEM_EXP_BASED_OPTRS)
-{
+TEST_F(X86, BENCHMARK_ELEM_EXP_BASED_OPTRS) {
     Benchmarker<ElemwiseForward> B(handle());
     using Mode = ElemwiseForward::Param::Mode;
-    //UniformFloatWithZeroRNG rng(80, 100, 0.1);
+    // UniformFloatWithZeroRNG rng(80, 100, 0.1);
     printf("Test Optr exp(x)\n");
     B.set_param(Mode::EXP);
     B.execs({{355600}, {}});
@@ -71,70 +69,74 @@ TEST_F(X86, BENCHMARK_ELEM_EXP_BASED_OPTRS)
 }
 
 // 1. Unary
-#define BENCHMARK_UNARY(Optr, size) \
+#define BENCHMARK_UNARY(Optr, size)  \
     printf("Test for %s \n", #Optr); \
-    B.set_param(Mode::Optr); \
-    B.execs({{4, 4, 4, 1+size/64, }, {}});
+    B.set_param(Mode::Optr);         \
+    B.execs(                         \
+            {{                       \
+                     4,              \
+                     4,              \
+                     4,              \
+                     1 + size / 64,  \
+             },                      \
+             {}});
 
 // 2. Binary
 #define BENCHMARK_BINARY(Optr, size) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);         \
     B.execs({{size}, {size}, {}});
 
 #define BENCHMARK_BINARY_SCALAR(Optr, size) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);                \
     B.execs({{size}, {1}, {}});
 
 #define BENCHMARK_BINARY_1C11(Optr, chan) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);              \
     B.execs({{9, chan, 33, 127}, {1, chan, 1, 1}, {}});
 
 #define BENCHMARK_BINARY_ALL_KINDS(Optr, size) \
-    printf("Test for %s \n", #Optr); \
-    BENCHMARK_BINARY(Optr, size) \
-    BENCHMARK_BINARY_SCALAR(Optr, size) \
-    BENCHMARK_BINARY_1C11(Optr, (1+size/37719))
+    printf("Test for %s \n", #Optr);           \
+    BENCHMARK_BINARY(Optr, size)               \
+    BENCHMARK_BINARY_SCALAR(Optr, size)        \
+    BENCHMARK_BINARY_1C11(Optr, (1 + size / 37719))
 
 // 3. Ternary
 #define BENCHMARK_TERNARY(Optr, size) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);          \
     B.execs({{size}, {size}, {size}, {}});
 
 #define BENCHMARK_TERNARY_SCALAR(Optr, size) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);                 \
     B.execs({{size}, {size}, {1}, {}});
 
 #define BENCHMARK_TERNARY_1C11(Optr, chan) \
-    B.set_param(Mode::Optr); \
+    B.set_param(Mode::Optr);               \
     B.execs({{1, chan, 1, 1}, {9, chan, 33, 127}, {1, chan, 1, 1}, {}});
 
 #define BENCHMARK_TERNARY_ALL_KINDS(Optr, size) \
-    printf("Test for %s \n", #Optr); \
-    BENCHMARK_TERNARY(Optr, size) \
-    BENCHMARK_TERNARY_SCALAR(Optr, size) \
-    BENCHMARK_TERNARY_1C11(Optr, (size/37719))
+    printf("Test for %s \n", #Optr);            \
+    BENCHMARK_TERNARY(Optr, size)               \
+    BENCHMARK_TERNARY_SCALAR(Optr, size)        \
+    BENCHMARK_TERNARY_1C11(Optr, (size / 37719))
 
-#define BENCHMARK_CASE_INT(size) \
-    BENCHMARK_BINARY_ALL_KINDS(ADD, size) \
-    BENCHMARK_BINARY_ALL_KINDS(SUB, size) \
-    BENCHMARK_BINARY_ALL_KINDS(MUL, size) \
-    BENCHMARK_BINARY_ALL_KINDS(TRUE_DIV, size) \
-    BENCHMARK_BINARY_ALL_KINDS(MIN, size) \
-    BENCHMARK_BINARY_ALL_KINDS(MAX, size) \
-    BENCHMARK_UNARY(RELU, size) \
-    BENCHMARK_UNARY(ABS, size) \
+#define BENCHMARK_CASE_INT(size)                    \
+    BENCHMARK_BINARY_ALL_KINDS(ADD, size)           \
+    BENCHMARK_BINARY_ALL_KINDS(SUB, size)           \
+    BENCHMARK_BINARY_ALL_KINDS(MUL, size)           \
+    BENCHMARK_BINARY_ALL_KINDS(TRUE_DIV, size)      \
+    BENCHMARK_BINARY_ALL_KINDS(MIN, size)           \
+    BENCHMARK_BINARY_ALL_KINDS(MAX, size)           \
+    BENCHMARK_UNARY(RELU, size)                     \
+    BENCHMARK_UNARY(ABS, size)                      \
     BENCHMARK_BINARY_ALL_KINDS(FUSE_ADD_RELU, size) \
     BENCHMARK_TERNARY_ALL_KINDS(FUSE_MUL_ADD3, size)
 
-
-#define BENCHMARK_CASE_FLOAT(size) \
-    BENCHMARK_CASE_INT(size) \
+#define BENCHMARK_CASE_FLOAT(size)                  \
+    BENCHMARK_CASE_INT(size)                        \
     BENCHMARK_BINARY_ALL_KINDS(FUSE_ADD_TANH, size) \
-    BENCHMARK_BINARY_ALL_KINDS(FUSE_ADD_SIGMOID, size) \
+    BENCHMARK_BINARY_ALL_KINDS(FUSE_ADD_SIGMOID, size)
 
-
-TEST_F(X86, BENCHMARK_ELEM_EVERY_DTYPE)
-{
+TEST_F(X86, BENCHMARK_ELEM_EVERY_DTYPE) {
     Benchmarker<ElemwiseForward> B(handle());
     using Mode = ElemwiseForward::Param::Mode;
 
@@ -144,22 +146,21 @@ TEST_F(X86, BENCHMARK_ELEM_EVERY_DTYPE)
     B.set_dtype(2, dtype::Float32());
     BENCHMARK_CASE_FLOAT(1556011)
 
-    //printf("\nTest case int32:\n");
-    //B.set_dtype(0, dtype::Int32());
-    //B.set_dtype(1, dtype::Int32());
-    //B.set_dtype(2, dtype::Int32());
-    //BENCHMARK_CASE_INT(1556011)
+    // printf("\nTest case int32:\n");
+    // B.set_dtype(0, dtype::Int32());
+    // B.set_dtype(1, dtype::Int32());
+    // B.set_dtype(2, dtype::Int32());
+    // BENCHMARK_CASE_INT(1556011)
 
-    //printf("\nTest case int16:\n");
-    //B.set_dtype(0, dtype::Int16());
-    //B.set_dtype(1, dtype::Int16());
-    //B.set_dtype(2, dtype::Int16());
-    //BENCHMARK_CASE_INT(1556011)
+    // printf("\nTest case int16:\n");
+    // B.set_dtype(0, dtype::Int16());
+    // B.set_dtype(1, dtype::Int16());
+    // B.set_dtype(2, dtype::Int16());
+    // BENCHMARK_CASE_INT(1556011)
 
-    //printf("\nTest case int8:\n");
-    //B.set_dtype(0, dtype::Int8());
-    //B.set_dtype(1, dtype::Int8());
-    //B.set_dtype(2, dtype::Int8());
-    //BENCHMARK_CASE_INT(1556011)
-
+    // printf("\nTest case int8:\n");
+    // B.set_dtype(0, dtype::Int8());
+    // B.set_dtype(1, dtype::Int8());
+    // B.set_dtype(2, dtype::Int8());
+    // BENCHMARK_CASE_INT(1556011)
 }

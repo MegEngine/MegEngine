@@ -11,8 +11,8 @@
  */
 
 #pragma once
-#include "megbrain/utils/metahelper.h"
 #include <regex>
+#include "megbrain/utils/metahelper.h"
 #ifndef __IN_TEE_ENV__
 namespace mgb {
 namespace cg {
@@ -29,8 +29,8 @@ public:
         std::string name;
     };
     struct memory_chunk_record {
-        size_t id, size_orig, time_begin, time_end, addr_begin,
-                addr_end, overwrite_dest_id;
+        size_t id, size_orig, time_begin, time_end, addr_begin, addr_end,
+                overwrite_dest_id;
         bool is_overwrite;
         std::string owner_var_name;
     };

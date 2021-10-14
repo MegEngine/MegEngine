@@ -14,16 +14,13 @@
 
 namespace megdnn {
 
-void CumsumForward::deduce_layout(const TensorLayout &src, TensorLayout &dst)
-{
+void CumsumForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     megdnn_assert_contiguous(src);
     dst = src;
 }
 
-void CumsumForward::check_exec(const TensorLayout &src,
-        const TensorLayout &dst,
-        size_t workspace_in_bytes)
-{
+void CumsumForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     megdnn_assert_contiguous(src);
     megdnn_assert_eq_layout(src, dst);
     megdnn_assert(param().axis >= 0);
@@ -32,6 +29,6 @@ void CumsumForward::check_exec(const TensorLayout &src,
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

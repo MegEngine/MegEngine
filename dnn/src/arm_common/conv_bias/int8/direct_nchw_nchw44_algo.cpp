@@ -23,10 +23,9 @@
 using namespace megdnn;
 using namespace arm_common;
 using conv_fun = std::function<void(
-        const WorkspaceBundle& bundle,
-        const ConvBiasImpl::NCBKernParam& kern_param,
-        const ConvBiasImpl::NCBKernIndex& ncb_index,
-        const CpuNDRange& workspace_ids, const CpuNDRange& ncb_range)>;
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids,
+        const CpuNDRange& ncb_range)>;
 MIDOUT_DECL(megdnn_arm_common_conv_bias_int8_nchw_nchw44)
 
 static void get_rectified_size(
@@ -68,8 +67,7 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     const size_t src_expand = stride_h == 2 ? 4 : 16;
     get_rectified_size(param, ih2, iw2, oh2, ow2);
     megdnn_assert(group == 1, "only support group == 1 now");
-    size_t src_size =
-            batch * group * ic * ih2 * iw2 * sizeof(int8_t) * src_expand;
+    size_t src_size = batch * group * ic * ih2 * iw2 * sizeof(int8_t) * src_expand;
     size_t weight_size = group * oc * ic * fh * fw * sizeof(int8_t);
     size_t tmp_size = 0;
     if (stride_h == 1) {
@@ -79,10 +77,9 @@ static WorkspaceBundle get_bundle(const ConvBiasImpl::NCBKernSizeParam& param) {
     return {nullptr, {src_size, weight_size, tmp_size * param.nr_threads}};
 };
 
-static void copy_padding_kern(const WorkspaceBundle& bundle,
-                              const ConvBiasImpl::NCBKernParam& kern_param,
-                              const ConvBiasImpl::NCBKernIndex& ncb_index,
-                              const CpuNDRange& workspace_ids) {
+static void copy_padding_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids) {
     int ih = kern_param.isz[0];
     int iw = kern_param.isz[1];
     int ic = kern_param.filter_meta.icpg;
@@ -109,11 +106,11 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
     const int8_t* sptr = static_cast<const int8_t*>(
             kern_param.src<int8_t>(batch_id, group_id, workspace_ic_id, 1, 1));
     //! copy to sptr_base to eliminate padding effect
-    int8_t* sptr_base = static_cast<int8_t*>(bundle.get(0)) +
-                        (workspace_batch_id * group * padding_group_size +
-                         workspace_group_id * padding_group_size +
-                         workspace_ic * ih2 * iw2) *
-                                src_expand;
+    int8_t* sptr_base =
+            static_cast<int8_t*>(bundle.get(0)) +
+            (workspace_batch_id * group * padding_group_size +
+             workspace_group_id * padding_group_size + workspace_ic * ih2 * iw2) *
+                    src_expand;
     if (stride_h == 1) {
         const size_t tmp_size = get_temp_bytes(iw, pw);
         int8_t* tmp_ptr = reinterpret_cast<int8_t*>(bundle.get(2)) +
@@ -125,9 +122,9 @@ static void copy_padding_kern(const WorkspaceBundle& bundle,
                 sptr, sptr_base, 1, ph, ph, pw, pw, ih, iw, iw2, pw, nullptr);
     }
 }
-static void pack_weight(const WorkspaceBundle& bundle,
-                        const ConvBiasImpl::NCBKernParam& kern_param,
-                        const ConvBiasImpl::NCBKernIndex& ncb_index) {
+static void pack_weight(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index) {
     const int group_id = ncb_index.ndrange_id[0];
     int fh = kern_param.filter_meta.spatial[0];
     int fw = kern_param.filter_meta.spatial[1];
@@ -137,8 +134,7 @@ static void pack_weight(const WorkspaceBundle& bundle,
     int fw2 = stride_h == 2 ? fw : round_up(fw, 4);
     int oc_block = oc;
     int oc_idx = 0;
-    const int8_t* fptr =
-            kern_param.filter<dt_int8>(group_id) + oc_idx * fh * fw * ic;
+    const int8_t* fptr = kern_param.filter<dt_int8>(group_id) + oc_idx * fh * fw * ic;
     auto packed_weight = reinterpret_cast<int8_t*>(bundle.get(1)) +
                          group_id * oc * ic * fh * fw2 + oc_idx * ic * fh * fw2;
 
@@ -151,11 +147,10 @@ static void pack_weight(const WorkspaceBundle& bundle,
     }
 }
 template <size_t filter, BiasMode bias_mode, typename Op, int stride>
-static void do_conv_kern(const WorkspaceBundle& bundle,
-                         const ConvBiasImpl::NCBKernParam& kern_param,
-                         const ConvBiasImpl::NCBKernIndex& ncb_index,
-                         const CpuNDRange& workspace_ids,
-                         const CpuNDRange& ncb_range) {
+static void do_conv_kern(
+        const WorkspaceBundle& bundle, const ConvBiasImpl::NCBKernParam& kern_param,
+        const ConvBiasImpl::NCBKernIndex& ncb_index, const CpuNDRange& workspace_ids,
+        const CpuNDRange& ncb_range) {
     int oh = kern_param.osz[0];
     int ow = kern_param.osz[1];
     int fh = kern_param.filter_meta.spatial[0];
@@ -166,13 +161,11 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     int group = kern_param.filter_meta.group;
     int ih2, iw2, oh2, ow2;
     get_rectified_size(kern_param, ih2, iw2, oh2, ow2);
-    bool need_post_process =
-            kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
+    bool need_post_process = kern_param.dst_type.enumv() == DTypeEnum::QuantizedS8;
     //! if dst_type is qint32, the op is not used, just fill with (1.0f,4.0f)
     Op op = Op(1.0f, 4.0f);
     if (need_post_process) {
-        float scale_bias =
-                kern_param.bias_type.param<dtype::QuantizedS32>().scale;
+        float scale_bias = kern_param.bias_type.param<dtype::QuantizedS32>().scale;
         float scale_dst = kern_param.dst_type.param<dtype::QuantizedS8>().scale;
         op = Op(scale_bias, scale_dst);
     }
@@ -192,35 +185,31 @@ static void do_conv_kern(const WorkspaceBundle& bundle,
     if (oc_id == (oc_block_num - 1)) {
         oc_block = oc - oc_id * nr_pack_per_step * pack_c;
     }
-    megdnn_assert(oc_block % pack_c == 0,
-                  "oc must be devisible by 4, but oc = %d", oc_block);
+    megdnn_assert(
+            oc_block % pack_c == 0, "oc must be devisible by 4, but oc = %d", oc_block);
     const int8_t* sptr =
             static_cast<int8_t*>(bundle.get(0)) +
             workspace_batch_id * group * padding_group_size * src_expand_size +
             workspace_group_id * padding_group_size * src_expand_size;
 
     int8_t* dst = reinterpret_cast<int8_t*>(
-            reinterpret_cast<ptrdiff_t>(
-                    kern_param.dst<void>(batch_id, group_id)) +
+            reinterpret_cast<ptrdiff_t>(kern_param.dst<void>(batch_id, group_id)) +
             oc_idx * oh * ow);
 
-    const int32_t* bptr =
-            kern_param.bias<dt_int32>(batch_id, group_id) + oc_idx;
+    const int32_t* bptr = kern_param.bias<dt_int32>(batch_id, group_id) + oc_idx;
     int8_t* packed_weight = reinterpret_cast<int8_t*>(bundle.get(1)) +
-                            group_id * oc * ic * fh * fw2 +
-                            oc_idx * ic * fh * fw2;
-    int8_direct_nchw_nchw44::conv_direct_int8_nchw_nchw44<bias_mode, Op, filter,
-                                                          stride>(
-            sptr, packed_weight, bptr, nullptr, dst, oc_block, ic, ih2, iw2, oh,
-            ow, op);
+                            group_id * oc * ic * fh * fw2 + oc_idx * ic * fh * fw2;
+    int8_direct_nchw_nchw44::conv_direct_int8_nchw_nchw44<
+            bias_mode, Op, filter, stride>(
+            sptr, packed_weight, bptr, nullptr, dst, oc_block, ic, ih2, iw2, oh, ow,
+            op);
 }
 
-bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(const NCBKernSizeParam& param,
-                                                  AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     return nchw_nchwxx_valid<NchwNchwxxType::NCHW44_INT8>(
-            param.src_type.enumv(), param.filter_type.enumv(),
-            param.dst_type.enumv(), param.filter_meta, param.bias_mode,
-            param.nonlineMode);
+            param.src_type.enumv(), param.filter_type.enumv(), param.dst_type.enumv(),
+            param.filter_meta, param.bias_mode, param.nonlineMode);
 }
 
 bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::is_preferred(
@@ -232,16 +221,16 @@ bool ConvBiasImpl::AlgoS8DirectNCHWNCHW44::is_preferred(
 
 size_t ConvBiasImpl::AlgoS8DirectNCHWNCHW44::get_workspace(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8_nchw_nchw44,
-                 midout_iv("AlgoS8DirectNCHWNCHW44::get_workspace"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_arm_common_conv_bias_int8_nchw_nchw44,
+            midout_iv("AlgoS8DirectNCHWNCHW44::get_workspace"_hash)) {
         return get_bundle(param).total_size_in_bytes();
     }
     MIDOUT_END();
     return 0;
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
         const NCBKernSizeParam& param) const {
     auto fm = param.filter_meta;
     size_t N = param.n;
@@ -251,30 +240,34 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
     conv_fun do_conv_fun = nullptr;
 // NOTE: remain_w is not used to gen hash of midout for compatible with changing
 // shape runtime
-#define DO_CONV_KERN_FUN(stride, filter, bias_mode, op)              \
-    MIDOUT_BEGIN(megdnn_arm_common_conv_bias_int8_nchw_nchw44,       \
-                 midout_iv(#stride #filter #bias_mode #op##_hash)) { \
-        do_conv_fun = do_conv_kern<filter, bias_mode, op, stride>;   \
-    }                                                                \
+#define DO_CONV_KERN_FUN(stride, filter, bias_mode, op)            \
+    MIDOUT_BEGIN(                                                  \
+            megdnn_arm_common_conv_bias_int8_nchw_nchw44,          \
+            midout_iv(#stride #filter #bias_mode #op##_hash)) {    \
+        do_conv_fun = do_conv_kern<filter, bias_mode, op, stride>; \
+    }                                                              \
     MIDOUT_END();
 
-#define GET_OP_PARAM(stride, filter, bias_mode)                          \
-    switch (param.nonlineMode) {                                         \
-        case param::ConvBias::NonlineMode::IDENTITY:                     \
-            DO_CONV_KERN_FUN(stride, filter, bias_mode,                  \
-                             TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
-            break;                                                       \
-        case param::ConvBias::NonlineMode::RELU:                         \
-            DO_CONV_KERN_FUN(stride, filter, bias_mode,                  \
-                             ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-            break;                                                       \
-        case param::ConvBias::NonlineMode::H_SWISH:                      \
-            DO_CONV_KERN_FUN(stride, filter, bias_mode,                  \
-                             HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
-            break;                                                       \
-        default:                                                         \
-            megdnn_assert(0);                                            \
-            break;                                                       \
+#define GET_OP_PARAM(stride, filter, bias_mode)                 \
+    switch (param.nonlineMode) {                                \
+        case param::ConvBias::NonlineMode::IDENTITY:            \
+            DO_CONV_KERN_FUN(                                   \
+                    stride, filter, bias_mode,                  \
+                    TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
+            break;                                              \
+        case param::ConvBias::NonlineMode::RELU:                \
+            DO_CONV_KERN_FUN(                                   \
+                    stride, filter, bias_mode,                  \
+                    ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+            break;                                              \
+        case param::ConvBias::NonlineMode::H_SWISH:             \
+            DO_CONV_KERN_FUN(                                   \
+                    stride, filter, bias_mode,                  \
+                    HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
+            break;                                              \
+        default:                                                \
+            megdnn_assert(0);                                   \
+            break;                                              \
     }
 #define GET_BIAS_MODE_PARAM(stride, filter)                                \
     switch (param.bias_mode) {                                             \
@@ -319,8 +312,9 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
             DISPATCH_CONV_KERN(2);
             break;
         default:
-            megdnn_throw(ssprintf("Unsupport stride size %u for the first conv",
-                                  param.filter_meta.stride[0])
+            megdnn_throw(ssprintf(
+                                 "Unsupport stride size %u for the first conv",
+                                 param.filter_meta.stride[0])
                                  .c_str());
             break;
     }
@@ -337,15 +331,17 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
 
     constexpr size_t pack_oc = 8;
     size_t oc_step = pack_oc;
-    auto copy_padding = [bundle](const NCBKernParam& kern_param,
-                                 const NCBKernIndex& ncb_index) mutable {
+    auto copy_padding = [bundle](
+                                const NCBKernParam& kern_param,
+                                const NCBKernIndex& ncb_index) mutable {
         bundle.set(kern_param.workspace_ptr);
         copy_padding_kern(bundle, kern_param, ncb_index, ncb_index.ndrange_id);
     };
     ret_kerns.push_back({copy_padding, {N, group, fm.icpg}});
 
-    auto do_pack_weight = [bundle](const NCBKernParam& kern_param,
-                                   const NCBKernIndex& ncb_index) mutable {
+    auto do_pack_weight = [bundle](
+                                  const NCBKernParam& kern_param,
+                                  const NCBKernIndex& ncb_index) mutable {
         bundle.set(kern_param.workspace_ptr);
         pack_weight(bundle, kern_param, ncb_index);
     };
@@ -356,8 +352,7 @@ ConvBiasImpl::AlgoS8DirectNCHWNCHW44::dispatch_kerns(
                            const NCBKernParam& kern_param,
                            const NCBKernIndex& ncb_index) mutable {
         bundle.set(kern_param.workspace_ptr);
-        do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id,
-                    ncb_range);
+        do_conv_fun(bundle, kern_param, ncb_index, ncb_index.ndrange_id, ncb_range);
     };
     ret_kerns.push_back({do_conv, ncb_range});
 

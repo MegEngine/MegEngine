@@ -44,8 +44,8 @@ TEST_F(ROCM_ERROR_INFO, INDEXING_ONE_HOT) {
 
 TEST_F(ROCM, INDEXING_ONE_HOT_BENCHMARK) {
     megdnn::rocm::enable_miopen_algo_search(handle_rocm(), true);
-    auto benchmarker = ROCMBenchmarker<IndexingOneHotForward>(
-            handle_rocm(), handle_naive(false));
+    auto benchmarker =
+            ROCMBenchmarker<IndexingOneHotForward>(handle_rocm(), handle_naive(false));
     UniformFloatRNG rng_val{-10, 10};
     UniformIntRNG rng_idx{0, 119};
     benchmarker.set_display(true);

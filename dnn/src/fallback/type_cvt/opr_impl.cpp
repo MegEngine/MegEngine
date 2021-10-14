@@ -96,8 +96,7 @@ void do_cvt_normal_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dscale = 1.f / scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<int8_t, float>(std::round(sptr[i] * dscale), -128,
-                                          127);
+        dptr[i] = saturate<int8_t, float>(std::round(sptr[i] * dscale), -128, 127);
     }
 }
 
@@ -127,8 +126,7 @@ void do_cvt_normal_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     uint8_t zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dscale = 1.f / scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<uint8_t, float>(std::round(sptr[i] * dscale) + zp, 0,
-                                           255);
+        dptr[i] = saturate<uint8_t, float>(std::round(sptr[i] * dscale) + zp, 0, 255);
     }
 }
 
@@ -180,8 +178,7 @@ void do_cvt_s8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] =
-                saturate<int8_t, float>(std::round(sptr[i] * scale), -128, 127);
+        dptr[i] = saturate<int8_t, float>(std::round(sptr[i] * scale), -128, 127);
     }
 }
 
@@ -193,8 +190,7 @@ void do_cvt_s32_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] =
-                saturate<int8_t, float>(std::round(sptr[i] * scale), -128, 127);
+        dptr[i] = saturate<int8_t, float>(std::round(sptr[i] * scale), -128, 127);
     }
 }
 
@@ -203,8 +199,7 @@ void do_cvt_asymm8_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
     int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t src_zp =
-            src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS8>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
@@ -248,8 +243,7 @@ void do_cvt_asymm8_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
     int32_t* __restrict dptr = static_cast<int32_t*>(dst.raw_ptr);
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t src_zp =
-            src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::QuantizedS32>().scale;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
@@ -266,12 +260,11 @@ void do_cvt_s8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr);
     float src_scale = src.layout.dtype.param<dtype::QuantizedS8>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t dst_zp =
-            dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t dst_zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<uint8_t, float>(std::round(sptr[i] * scale) + dst_zp,
-                                           0, 255);
+        dptr[i] =
+                saturate<uint8_t, float>(std::round(sptr[i] * scale) + dst_zp, 0, 255);
     }
 }
 
@@ -281,12 +274,11 @@ void do_cvt_s32_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     uint8_t* __restrict dptr = static_cast<uint8_t*>(dst.raw_ptr);
     float src_scale = src.layout.dtype.param<dtype::QuantizedS32>().scale;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t dst_zp =
-            dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t dst_zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
-        dptr[i] = saturate<uint8_t, float>(std::round(sptr[i] * scale) + dst_zp,
-                                           0, 255);
+        dptr[i] =
+                saturate<uint8_t, float>(std::round(sptr[i] * scale) + dst_zp, 0, 255);
     }
 }
 
@@ -295,11 +287,9 @@ void do_cvt_asymm8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     const uint8_t* __restrict sptr = static_cast<uint8_t*>(src.raw_ptr);
     int8_t* __restrict dptr = static_cast<int8_t*>(dst.raw_ptr);
     float src_scale = src.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t src_zp =
-            src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t src_zp = src.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float dst_scale = dst.layout.dtype.param<dtype::Quantized8Asymm>().scale;
-    uint8_t dst_zp =
-            dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
+    uint8_t dst_zp = dst.layout.dtype.param<dtype::Quantized8Asymm>().zero_point;
     float scale = src_scale / dst_scale;
     for (size_t i = 0; i < n; ++i) {
         dptr[i] = saturate<uint8_t, float>(
@@ -310,34 +300,34 @@ void do_cvt_asymm8_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 template <typename dtype>
 void on_dest_ctype(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                           \
-    case DTypeTrait<_dt>::enumv: {                        \
-        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,         \
-                     midout_iv(DTypeTrait<_dt>::enumv)) { \
-            TypeCvt<_dt, dtype>::do_cvt(src, dst);        \
-        }                                                 \
-        MIDOUT_END();                                     \
-        break;                                            \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype, midout_iv(DTypeTrait<_dt>::enumv)) { \
+            TypeCvt<_dt, dtype>::do_cvt(src, dst);                                     \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+        break;                                                                         \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-        cb(::megdnn::dtype::Bool)
-        case DTypeEnum::QuantizedS8:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS8)) {
-                do_cvt_s8_normal<dtype>(src, dst);
-            }
-            MIDOUT_END();
-            break;
+        cb(::megdnn::dtype::Bool) case DTypeEnum::QuantizedS8
+                : MIDOUT_BEGIN(
+                          megdnn_fb_typecvt_src_dtype,
+                          midout_iv(DTypeEnum::QuantizedS8)) {
+            do_cvt_s8_normal<dtype>(src, dst);
+        }
+        MIDOUT_END();
+        break;
         case DTypeEnum::QuantizedS32:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS32)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS32)) {
                 do_cvt_s32_normal<dtype>(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::Quantized8Asymm:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::Quantized8Asymm)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype,
+                    midout_iv(DTypeEnum::Quantized8Asymm)) {
                 do_cvt_asymm8_normal<dtype>(src, dst);
             }
             MIDOUT_END();
@@ -350,33 +340,33 @@ void on_dest_ctype(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void on_dest_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                           \
-    case DTypeTrait<_dt>::enumv: {                        \
-        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,         \
-                     midout_iv(DTypeTrait<_dt>::enumv)) { \
-            do_cvt_normal_s8<_dt>(src, dst);              \
-        }                                                 \
-        MIDOUT_END();                                     \
-        break;                                            \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype, midout_iv(DTypeTrait<_dt>::enumv)) { \
+            do_cvt_normal_s8<_dt>(src, dst);                                           \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+        break;                                                                         \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         case DTypeEnum::QuantizedS8:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS8)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS8)) {
                 do_cvt_s8_s8(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::QuantizedS32:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS32)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS32)) {
                 do_cvt_s32_s8(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::Quantized8Asymm:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::Quantized8Asymm)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype,
+                    midout_iv(DTypeEnum::Quantized8Asymm)) {
                 do_cvt_asymm8_s8(src, dst);
             }
             MIDOUT_END();
@@ -389,33 +379,33 @@ void on_dest_s8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void on_dest_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                           \
-    case DTypeTrait<_dt>::enumv: {                        \
-        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,         \
-                     midout_iv(DTypeTrait<_dt>::enumv)) { \
-            do_cvt_normal_s32<_dt>(src, dst);             \
-        }                                                 \
-        MIDOUT_END();                                     \
-        break;                                            \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype, midout_iv(DTypeTrait<_dt>::enumv)) { \
+            do_cvt_normal_s32<_dt>(src, dst);                                          \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+        break;                                                                         \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         case DTypeEnum::QuantizedS8:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS8)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS8)) {
                 do_cvt_s8_s32(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::QuantizedS32:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS32)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS32)) {
                 do_cvt_s32_s32(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::Quantized8Asymm:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::Quantized8Asymm)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype,
+                    midout_iv(DTypeEnum::Quantized8Asymm)) {
                 do_cvt_asymm8_s32(src, dst);
             }
             MIDOUT_END();
@@ -428,33 +418,33 @@ void on_dest_s32(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void on_dest_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (src.layout.dtype.enumv()) {
-#define cb(_dt)                                           \
-    case DTypeTrait<_dt>::enumv: {                        \
-        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,         \
-                     midout_iv(DTypeTrait<_dt>::enumv)) { \
-            do_cvt_normal_asymm8<_dt>(src, dst);          \
-        }                                                 \
-        MIDOUT_END();                                     \
-        break;                                            \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype, midout_iv(DTypeTrait<_dt>::enumv)) { \
+            do_cvt_normal_asymm8<_dt>(src, dst);                                       \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+        break;                                                                         \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         case DTypeEnum::QuantizedS8:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS8)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS8)) {
                 do_cvt_s8_asymm8(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::QuantizedS32:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::QuantizedS32)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype, midout_iv(DTypeEnum::QuantizedS32)) {
                 do_cvt_s32_asymm8(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::Quantized8Asymm:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_src_dtype,
-                         midout_iv(DTypeEnum::Quantized8Asymm)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_src_dtype,
+                    midout_iv(DTypeEnum::Quantized8Asymm)) {
                 do_cvt_asymm8_asymm8(src, dst);
             }
             MIDOUT_END();
@@ -467,35 +457,35 @@ void on_dest_asymm8(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 
 void run_contiguous(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
     switch (dst.layout.dtype.enumv()) {
-#define cb(_dt)                                           \
-    case DTypeTrait<_dt>::enumv: {                        \
-        MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype,         \
-                     midout_iv(DTypeTrait<_dt>::enumv)) { \
-            on_dest_ctype<_dt>(src, dst);                 \
-        }                                                 \
-        MIDOUT_END();                                     \
-        break;                                            \
+#define cb(_dt)                                                                        \
+    case DTypeTrait<_dt>::enumv: {                                                     \
+        MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype, midout_iv(DTypeTrait<_dt>::enumv)) { \
+            on_dest_ctype<_dt>(src, dst);                                              \
+        }                                                                              \
+        MIDOUT_END();                                                                  \
+        break;                                                                         \
     }
 
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
-        cb(::megdnn::dtype::Bool)
-        case DTypeEnum::QuantizedS8:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype,
-                         midout_iv(DTypeEnum::QuantizedS8)) {
-                on_dest_s8(src, dst);
-            }
-            MIDOUT_END();
-            break;
+        cb(::megdnn::dtype::Bool) case DTypeEnum::QuantizedS8
+                : MIDOUT_BEGIN(
+                          megdnn_fb_typecvt_dst_dtype,
+                          midout_iv(DTypeEnum::QuantizedS8)) {
+            on_dest_s8(src, dst);
+        }
+        MIDOUT_END();
+        break;
         case DTypeEnum::QuantizedS32:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype,
-                         midout_iv(DTypeEnum::QuantizedS32)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_dst_dtype, midout_iv(DTypeEnum::QuantizedS32)) {
                 on_dest_s32(src, dst);
             }
             MIDOUT_END();
             break;
         case DTypeEnum::Quantized8Asymm:
-            MIDOUT_BEGIN(megdnn_fb_typecvt_dst_dtype,
-                         midout_iv(DTypeEnum::Quantized8Asymm)) {
+            MIDOUT_BEGIN(
+                    megdnn_fb_typecvt_dst_dtype,
+                    midout_iv(DTypeEnum::Quantized8Asymm)) {
                 on_dest_asymm8(src, dst);
             }
             MIDOUT_END();

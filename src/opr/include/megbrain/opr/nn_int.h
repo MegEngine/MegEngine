@@ -29,19 +29,22 @@ MGB_DEFINE_OPR_CLASS(ElemwiseMultiType, intl::ElemwiseMultiTypeBase) // {
 public:
     using Mode = Param::Mode;
 
-    ElemwiseMultiType(const VarNodeArrayView& inputs, Param param,
-                      const OperatorNodeConfig& config);
+    ElemwiseMultiType(
+            const VarNodeArrayView& inputs, Param param,
+            const OperatorNodeConfig& config);
 
-    static SymbolVar make(const VarNodeArrayView& inputs, Param param,
-                          const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            const VarNodeArrayView& inputs, Param param,
+            const OperatorNodeConfig& config = {});
 
 private:
     using ModeTrait = megdnn::ElemwiseMultiType::ModeTrait;
 
     void scn_do_execute() override;
 
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
 
     void init_output_dtype() override;
 
@@ -54,12 +57,12 @@ class AffineInt final : public DynTypeObj {
 
 public:
     using Param = megdnn::param::Empty;
-    static SymbolVar make(SymbolVar x, SymbolVar k, SymbolVar b,
-                          const Param& param = {},
-                          const OperatorNodeConfig& config = {}) {
+    static SymbolVar make(
+            SymbolVar x, SymbolVar k, SymbolVar b, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
         return ElemwiseMultiType::make(
-                {x, k, b},
-                {ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8}, config);
+                {x, k, b}, {ElemwiseMultiType::Mode::FUSE_MUL_ADD3_IXxF32xF32xI8},
+                config);
     }
 
     static Param param() {

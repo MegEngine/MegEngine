@@ -18,9 +18,8 @@
 namespace megdnn {
 namespace naive {
 
-void AdaptivePoolingForwardImpl::exec(_megdnn_tensor_in src,
-                                      _megdnn_tensor_out dst,
-                                      _megdnn_workspace workspace) {
+void AdaptivePoolingForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     MEGDNN_DISPATCH_CPU_KERN(static_cast<naive::HandleImpl*>(handle()), {
         auto opr = inplace_cpu_handle()->create_operator<PoolingForward>();
         opr->param() = deduce_pooling_param(src.layout, dst.layout);
@@ -28,11 +27,9 @@ void AdaptivePoolingForwardImpl::exec(_megdnn_tensor_in src,
     });
 }
 
-void AdaptivePoolingBackwardImpl::exec(_megdnn_tensor_in src,
-                                       _megdnn_tensor_in dst,
-                                       _megdnn_tensor_in diff,
-                                       _megdnn_tensor_out grad,
-                                       _megdnn_workspace workspace) {
+void AdaptivePoolingBackwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_tensor_in diff,
+        _megdnn_tensor_out grad, _megdnn_workspace workspace) {
     MEGDNN_DISPATCH_CPU_KERN(static_cast<naive::HandleImpl*>(handle()), {
         auto opr = inplace_cpu_handle()->create_operator<PoolingBackward>();
         opr->param() = deduce_pooling_param(src.layout, dst.layout);
@@ -41,8 +38,8 @@ void AdaptivePoolingBackwardImpl::exec(_megdnn_tensor_in src,
 }
 
 size_t AdaptivePoolingBackwardImpl::get_workspace_in_bytes(
-        const TensorLayout& src, const TensorLayout& dst,
-        const TensorLayout& diff, const TensorLayout& grad) {
+        const TensorLayout& src, const TensorLayout& dst, const TensorLayout& diff,
+        const TensorLayout& grad) {
     auto opr = inplace_cpu_handle()->create_operator<PoolingBackward>();
     opr->param() = deduce_pooling_param(src, dst);
     return opr->get_workspace_in_bytes(src, dst, diff, grad);

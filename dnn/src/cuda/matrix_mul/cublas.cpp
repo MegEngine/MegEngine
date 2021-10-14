@@ -29,23 +29,22 @@ using namespace cuda;
 #define CUBLAS_COMPUTE_32I CUDA_R_32I
 #endif
 
-bool MatrixMulForwardImpl::AlgoCuBlas::is_available(
-        const SizeArgs& args) const {
+bool MatrixMulForwardImpl::AlgoCuBlas::is_available(const SizeArgs& args) const {
     if (args.opr->param().format != param::MatrixMul::Format::DEFAULT)
         return false;
     if (args.layout_a.dtype == dtype::Float32() ||
         args.layout_a.dtype == dtype::Float16()) {
         return true;
-    } else if (args.layout_a.dtype.enumv() == DTypeEnum::Int8 ||
-               args.layout_a.dtype.enumv() == DTypeEnum::QuantizedS8) {
+    } else if (
+            args.layout_a.dtype.enumv() == DTypeEnum::Int8 ||
+            args.layout_a.dtype.enumv() == DTypeEnum::QuantizedS8) {
         /**
          * \note When passing in the strides which can not be divided by 4, the
          * cublas rontine cublasGemmEx will raise a Error
          * CUBLAS_STATUS_INVALID_VALUE. The error occured because the leading
          * dimension of matrix A or B is illegal.
          */
-        return args.layout_a.stride[0] % 4 == 0 &&
-               args.layout_b.stride[0] % 4 == 0 &&
+        return args.layout_a.stride[0] % 4 == 0 && args.layout_b.stride[0] % 4 == 0 &&
                is_compute_capability_required(6, 1);
     }
     return false;
@@ -65,9 +64,8 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
                 args.tensor_b.ptr<dt_float32>(), args.tensor_b.layout.stride[0],
-                args.tensor_a.ptr<dt_float32>(), args.tensor_a.layout.stride[0],
-                zero, args.tensor_c.ptr<dt_float32>(),
-                args.tensor_c.layout.stride[0]));
+                args.tensor_a.ptr<dt_float32>(), args.tensor_a.layout.stride[0], zero,
+                args.tensor_c.ptr<dt_float32>(), args.tensor_c.layout.stride[0]));
     };
 
     auto sgemm_ex = [&]() {
@@ -117,11 +115,10 @@ void MatrixMulForwardImpl::AlgoCuBlas::exec(const ExecArgs& args) const {
         cublas_check(cublasGemmEx(
                 cublas_handle, param.transposeB ? CUBLAS_OP_T : CUBLAS_OP_N,
                 param.transposeA ? CUBLAS_OP_T : CUBLAS_OP_N, n, m, k, one,
-                args.tensor_b.raw_ptr, CUDA_R_8I,
-                args.tensor_b.layout.stride[0], args.tensor_a.raw_ptr,
-                CUDA_R_8I, args.tensor_a.layout.stride[0], zero,
-                args.tensor_c.raw_ptr, CUDA_R_32I,
-                args.tensor_c.layout.stride[0], CUBLAS_COMPUTE_32I, CUBLAS_GEMM_DFALT));
+                args.tensor_b.raw_ptr, CUDA_R_8I, args.tensor_b.layout.stride[0],
+                args.tensor_a.raw_ptr, CUDA_R_8I, args.tensor_a.layout.stride[0], zero,
+                args.tensor_c.raw_ptr, CUDA_R_32I, args.tensor_c.layout.stride[0],
+                CUBLAS_COMPUTE_32I, CUBLAS_GEMM_DFALT));
     };
 
     // Note that cublas takes column-major matrices as inputs,

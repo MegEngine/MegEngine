@@ -17,7 +17,7 @@
 
 namespace mgb::imperative::interpreter::intl {
 
-class ProfilerPlugin: public PluginBase {
+class ProfilerPlugin : public PluginBase {
 public:
     struct OprInfo {
         uint64_t id;
@@ -31,9 +31,11 @@ public:
         size_t ref_cnt;
         std::atomic_size_t rt_ref_cnt;
     };
+
 private:
     std::unordered_map<cg::OperatorNodeBase*, OprInfo> m_opr_dict;
     std::unordered_map<cg::VarNode*, std::unique_ptr<VarInfo>> m_var_dict;
+
 public:
     explicit ProfilerPlugin(cg::ComputingGraph* graph);
     void init_seq(cg::AsyncExecutable* comp_seq);
@@ -43,4 +45,4 @@ public:
     VarInfo& get_var_info(cg::VarNode* var);
 };
 
-}
+}  // namespace mgb::imperative::interpreter::intl

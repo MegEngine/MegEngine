@@ -8,8 +8,8 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "src/cuda/deformable_ps_roi_pooling/kimpl/kern.cuh"
 #include "src/cuda/deformable_ps_roi_pooling/opr_impl.h"
+#include "src/cuda/deformable_ps_roi_pooling/kimpl/kern.cuh"
 #include "src/cuda/utils.h"
 
 using namespace megdnn;
@@ -18,9 +18,9 @@ using KernParam = deformable_ps_roi_pooling::Param;
 
 namespace {
 
-void create_param(const DeformablePSROIPoolingBase* opr,
-                  const TensorLayout& data, const TensorLayout& rois,
-                  const TensorLayout& trans, KernParam& p) {
+void create_param(
+        const DeformablePSROIPoolingBase* opr, const TensorLayout& data,
+        const TensorLayout& rois, const TensorLayout& trans, KernParam& p) {
     auto&& param = opr->param();
     auto&& handle = concrete_handle(opr->handle());
 
@@ -44,16 +44,15 @@ void create_param(const DeformablePSROIPoolingBase* opr,
 namespace megdnn {
 namespace cuda {
 
-void DeformablePSROIPoolingForwardImpl::exec(_megdnn_tensor_in data,
-                                             _megdnn_tensor_in rois,
-                                             _megdnn_tensor_in trans,
-                                             _megdnn_tensor_out out_data,
-                                             _megdnn_tensor_out out_count,
-                                             _megdnn_workspace workspace) {
+void DeformablePSROIPoolingForwardImpl::exec(
+        _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
+        _megdnn_tensor_out out_data, _megdnn_tensor_out out_count,
+        _megdnn_workspace workspace) {
     KernParam p;
 
-    check_exec(data.layout, rois.layout, trans.layout, out_data.layout,
-               out_count.layout, workspace.size);
+    check_exec(
+            data.layout, rois.layout, trans.layout, out_data.layout, out_count.layout,
+            workspace.size);
 
     create_param(this, data.layout, rois.layout, trans.layout, p);
     deformable_ps_roi_pooling::DeformablePSROIPoolForward(
@@ -67,9 +66,9 @@ void DeformablePSROIPoolingBackwardImpl::exec(
         _megdnn_workspace workspace) {
     KernParam p;
 
-    check_exec(data.layout, rois.layout, trans.layout, out_diff.layout,
-               out_count.layout, data_diff.layout, trans_diff.layout,
-               workspace.size);
+    check_exec(
+            data.layout, rois.layout, trans.layout, out_diff.layout, out_count.layout,
+            data_diff.layout, trans_diff.layout, workspace.size);
     create_param(this, data.layout, rois.layout, trans.layout, p);
     deformable_ps_roi_pooling::DeformablePSROIPoolBackwardAcc(
             data, rois, trans, out_diff, out_count, data_diff, trans_diff, p);

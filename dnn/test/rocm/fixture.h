@@ -12,8 +12,8 @@
 #include <gtest/gtest.h>
 #include "test/common/fix_gtest_on_platforms_without_exception.inl"
 
-#include "megdnn/handle.h"
 #include "megcore_cdefs.h"
+#include "megdnn/handle.h"
 
 #include <memory>
 

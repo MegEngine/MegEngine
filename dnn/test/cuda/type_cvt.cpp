@@ -8,24 +8,24 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "test/cuda/fixture.h"
 #include "megdnn/oprs.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/cuda/fixture.h"
 
 using namespace megdnn;
 using namespace test;
 
 TEST_F(CUDA, TYPE_CVT) {
     UniformFloatRNG init(0, 20);
-    std::vector<DType> dtypes = {
-        dtype::Float32(), dtype::Float16(),
-        dtype::Int32(), dtype::Int16(), dtype::Int8(), dtype::Uint8()};
-    for (auto sdtype: dtypes) for (auto ddtype: dtypes) {
-        TensorLayout src({10, 10}, sdtype), dst({10, 10}, ddtype);
-        Checker<TypeCvt> checker(handle_cuda());
-        checker.set_rng(0, &init).exec(TensorLayoutArray{src, dst});
-    }
+    std::vector<DType> dtypes = {dtype::Float32(), dtype::Float16(), dtype::Int32(),
+                                 dtype::Int16(),   dtype::Int8(),    dtype::Uint8()};
+    for (auto sdtype : dtypes)
+        for (auto ddtype : dtypes) {
+            TensorLayout src({10, 10}, sdtype), dst({10, 10}, ddtype);
+            Checker<TypeCvt> checker(handle_cuda());
+            checker.set_rng(0, &init).exec(TensorLayoutArray{src, dst});
+        }
 }
 
 TEST_F(CUDA, BENCHMARK_TYPE_CVT_LAST_NOT_CONTIG) {
@@ -38,13 +38,13 @@ TEST_F(CUDA, BENCHMARK_TYPE_CVT_LAST_NOT_CONTIG) {
         dst.init_contiguous_stride();
         auto used = benchmarker.execl({src, dst});
         printf("layout: %s bandwith: %f gbps/s\n", layout.to_string().c_str(),
-               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used *
-                       1000 / (1024 * 1024 * 1024));
+               2 * layout.total_nr_elems() * layout.dtype.size() * RUNS / used * 1000 /
+                       (1024 * 1024 * 1024));
     };
 
     TensorLayout src({16, 128, 128}, {49152, 384, 3}, dtype::Float32()),
             dst({16, 128, 128}, {16384, 128, 1}, dtype::Float32());
-    run (src, dst);
+    run(src, dst);
 }
 
 TEST_F(CUDA, QUANTIZED_TYPECVT) {
@@ -132,19 +132,18 @@ TEST_F(CUDA, QUANTIZED_TYPECVT_4BIT) {
                 .execs({{16, 3, 224, 1}, {16, 3, 224, 1}});
     };
 
-    run(dtype::Quantized4Asymm{1.19990518f, 8},
-        dtype::Quantized8Asymm{1.f, 128});
+    run(dtype::Quantized4Asymm{1.19990518f, 8}, dtype::Quantized8Asymm{1.f, 128});
     run(dtype::QuantizedS4{1.19990518f}, dtype::QuantizedS8{1.19990518f});
-    run(dtype::QuantizedS4{1.19990518f},
-        dtype::Quantized4Asymm{1.19990518f, 8});
+    run(dtype::QuantizedS4{1.19990518f}, dtype::Quantized4Asymm{1.19990518f, 8});
 }
 
 TEST_F(CUDA, TYPE_CVT_BFLOAT16) {
     Checker<TypeCvt> checker(handle_cuda());
     UniformFloatRNG rng(-20, 20);
     checker.set_rng(0, &rng);
-    std::vector<DType> dtypes = {dtype::Float32(), dtype::Float16(),
-                                 dtype::Int32(), dtype::Int16(), dtype::Int8()};
+    std::vector<DType> dtypes = {
+            dtype::Float32(), dtype::Float16(), dtype::Int32(), dtype::Int16(),
+            dtype::Int8()};
     for (auto sdtype : dtypes) {
         TensorLayout src({10, 10}, sdtype), dst({10, 10}, dtype::BFloat16());
         checker.exec(TensorLayoutArray{src, dst});
@@ -202,14 +201,14 @@ TEST_F(CUDA, BENCHMARK_TYPE_CVT) {
     dst = TensorLayout{{256, 8, 56, 56, 32}, dtype::QuantizedS8(3.f)};
     run(src, dst);
     // quantize to quantize
-    src = TensorLayout{{256, 8, 56, 56, 32},
-                       dtype::Quantized8Asymm(5.f, (uint8_t)(30))};
+    src = TensorLayout{
+            {256, 8, 56, 56, 32}, dtype::Quantized8Asymm(5.f, (uint8_t)(30))};
     dst = TensorLayout{{256, 8, 56, 56, 32}, dtype::QuantizedS8(3.f)};
     run(src, dst);
     // quantize to quantize
     src = TensorLayout{{256, 8, 56, 56, 32}, dtype::QuantizedS8(3.f)};
-    dst = TensorLayout{{256, 8, 56, 56, 32},
-                       dtype::Quantized8Asymm(5.f, (uint8_t)(30))};
+    dst = TensorLayout{
+            {256, 8, 56, 56, 32}, dtype::Quantized8Asymm(5.f, (uint8_t)(30))};
     run(src, dst);
 }
 
@@ -232,10 +231,8 @@ TEST_F(CUDA, BENCHMARK_TYPE_CVT_Q4) {
     };
 
     // NCHW astype(float32)
-    TensorLayout src =
-            TensorLayout{{256, 256, 56, 56}, dtype::QuantizedS8(1.f)};
-    TensorLayout dst =
-            TensorLayout{{256, 256, 56, 56}, dtype::QuantizedS4(1.f)};
+    TensorLayout src = TensorLayout{{256, 256, 56, 56}, dtype::QuantizedS8(1.f)};
+    TensorLayout dst = TensorLayout{{256, 256, 56, 56}, dtype::QuantizedS4(1.f)};
 
     run(src, dst);
 

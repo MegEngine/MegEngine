@@ -23,9 +23,9 @@ namespace fp16 {
 namespace channel_wise_nchw88 {
 
 template <BiasMode bias_mode, typename Op>
-void do_conv_kern_3x3_stride1_padding1(const __fp16* src, __fp16* dst,
-                                       const __fp16* filter, const __fp16* bias,
-                                       int H, int W);
+void do_conv_kern_3x3_stride1_padding1(
+        const __fp16* src, __fp16* dst, const __fp16* filter, const __fp16* bias, int H,
+        int W);
 
 }  // namespace channel_wise_nchw88
 }  // namespace fp16

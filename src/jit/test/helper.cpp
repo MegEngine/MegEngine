@@ -88,25 +88,25 @@ void FusionChecker::ensure_init_graph() {
 
     SymbolVar jit_y;
     if (m_direct_build) {
-        auto ig_gen = std::make_unique<InternalGraphGenerator>(
-                m_truth_y.node()->owner_opr());
+        auto ig_gen =
+                std::make_unique<InternalGraphGenerator>(m_truth_y.node()->owner_opr());
         ThinHashSet<VarNode*> endpoints_set;
         for (size_t i = 0; i < m_nr_input; ++i) {
             endpoints_set.insert(inputs[i].node());
         }
         for (auto&& opr : get_rev_topo_order(m_truth_y, endpoints_set))
             ig_gen->add_opr(opr);
-        jit_y = JITExecutor::make(ig_gen->generate(),
-                                  cg::to_var_node_array(inputs));
+        jit_y = JITExecutor::make(ig_gen->generate(), cg::to_var_node_array(inputs));
     } else {
         ComputingGraph::Options opt;
         opt.graph_opt_level = 3;
         opt.graph_opt.jit = m_jit_level;
-        unpack_vector(gopt::GraphOptimizer{}
-                              .add_preset_passes(true, nullptr, &opt)
-                              .apply({{m_truth_y}})
-                              .endpoint_vars(),
-                      jit_y);
+        unpack_vector(
+                gopt::GraphOptimizer{}
+                        .add_preset_passes(true, nullptr, &opt)
+                        .apply({{m_truth_y}})
+                        .endpoint_vars(),
+                jit_y);
 
         size_t nr_jit_opr = 0;
         cg::DepOprIter{[&nr_jit_opr, this](cg::OperatorNodeBase* opr) {
@@ -114,16 +114,13 @@ void FusionChecker::ensure_init_graph() {
                 ++nr_jit_opr;
             } else {
                 static const ThinHashSet<Typeinfo*> allowed_types{
-                        opr::Host2DeviceCopy::typeinfo(),
-                        opr::GetVarShape::typeinfo()};
-                mgb_throw_if(m_check_opr_type &&
-                                     !allowed_types.count(opr->dyn_typeinfo()),
-                             InternalError,
-                             "encountered non-JIT opr after fusion: %s{%s}",
-                             opr->cname(), opr->dyn_typeinfo()->name);
+                        opr::Host2DeviceCopy::typeinfo(), opr::GetVarShape::typeinfo()};
+                mgb_throw_if(
+                        m_check_opr_type && !allowed_types.count(opr->dyn_typeinfo()),
+                        InternalError, "encountered non-JIT opr after fusion: %s{%s}",
+                        opr->cname(), opr->dyn_typeinfo()->name);
             }
-        }}
-                .add(jit_y.node());
+        }}.add(jit_y.node());
         mgb_assert(nr_jit_opr == 1);
     }
 
@@ -138,8 +135,8 @@ void FusionChecker::ensure_init_graph() {
                 loss_var0 = opr::Dot::make(y0, coeff);
                 loss_var1 = opr::Dot::make(y1, coeff);
             }
-            grad_vars.emplace_back(i, cg::grad(loss_var0, inputs[i]),
-                                   cg::grad(loss_var1, inputs[i]));
+            grad_vars.emplace_back(
+                    i, cg::grad(loss_var0, inputs[i]), cg::grad(loss_var1, inputs[i]));
         }
     }
 
@@ -147,10 +144,8 @@ void FusionChecker::ensure_init_graph() {
 
     ComputingGraph::OutputSpec outspec(m_outputs_val.size() * 2);
     std::get<0>(m_outputs_val[0]) = -1;
-    outspec[0] =
-            make_callback_copy(m_truth_y, std::get<1>(m_outputs_val[0]), false);
-    outspec[1] =
-            make_callback_copy(jit_y, std::get<2>(m_outputs_val[0]), false);
+    outspec[0] = make_callback_copy(m_truth_y, std::get<1>(m_outputs_val[0]), false);
+    outspec[1] = make_callback_copy(jit_y, std::get<2>(m_outputs_val[0]), false);
 
     for (size_t i = 0; i < grad_vars.size(); ++i) {
         auto&& dst = m_outputs_val[i + 1];

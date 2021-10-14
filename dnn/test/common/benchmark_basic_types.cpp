@@ -65,8 +65,7 @@ bool eq_layout0(const TensorLayout& a, const TensorLayout& b) {
 }
 
 bool eq_layout1(const TensorLayout& a, const TensorLayout& b) {
-    auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0,
-                 ptrdiff_t stride1) {
+    auto ax = [](size_t shape0, size_t shape1, ptrdiff_t stride0, ptrdiff_t stride1) {
         return (shape0 == shape1) & ((shape0 == 1) | (stride0 == stride1));
     };
     if (a.ndim == b.ndim) {
@@ -143,8 +142,8 @@ TEST(BENCHMARK_BASIC_TYPES, EQ_SHAPE) {
     timer.stop();
     auto time1 = timer.get_time_in_us();
 
-    printf("time per  eq_shape: %.3fus vs %.3fus; diff=%d\n",
-           time0 / double(NR_TEST), time1 / double(NR_TEST), nr_diff);
+    printf("time per  eq_shape: %.3fus vs %.3fus; diff=%d\n", time0 / double(NR_TEST),
+           time1 / double(NR_TEST), nr_diff);
 }
 
 TEST(BENCHMARK_BASIC_TYPES, EQ_LAYOUT) {
@@ -191,7 +190,7 @@ TEST(BENCHMARK_BASIC_TYPES, EQ_LAYOUT) {
     timer.stop();
     auto time1 = timer.get_time_in_us();
 
-    printf("time per eq_layout: %.3fus vs %.3fus; diff=%d\n",
-           time0 / double(NR_TEST), time1 / double(NR_TEST), nr_diff);
+    printf("time per eq_layout: %.3fus vs %.3fus; diff=%d\n", time0 / double(NR_TEST),
+           time1 / double(NR_TEST), nr_diff);
 }
 // vim: syntax=cpp.doxygen

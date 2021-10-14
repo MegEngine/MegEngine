@@ -13,10 +13,10 @@
 
 #include "megdnn.h"
 #include "megdnn/oprs.h"
-#include "test/common/tensor.h"
-#include "test/common/roi_copy.h"
-#include "test/common/checker.h"
 #include "test/common/benchmarker.h"
+#include "test/common/checker.h"
+#include "test/common/roi_copy.h"
+#include "test/common/tensor.h"
 #include "test/fallback/fixture.h"
 
 namespace megdnn {
@@ -32,7 +32,6 @@ TEST_F(FALLBACK, ROICOPY) {
     for (auto&& arg : args) {
         checker.set_param(arg.param).execs({arg.src, {}});
     }
-
 }
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(FALLBACK, BENCHMARK_ROICOPY) {
@@ -46,24 +45,20 @@ TEST_F(FALLBACK, BENCHMARK_ROICOPY) {
         ROICopy::Param param;
 
         for (auto&& shape : shapes) {
-            param.row_from = shape[1]/10;
-            param.row_to = shape[1]/2;
-            param.col_from = shape[2]/9;
-            param.col_to = shape[2]/3 * 2;
+            param.row_from = shape[1] / 10;
+            param.row_to = shape[1] / 2;
+            param.col_from = shape[2] / 9;
+            param.col_to = shape[2] / 3 * 2;
             benchmarker.set_param(param).execs({shape, {}});
         }
 #undef BENCHMARK_ROICopy
     };
 
-    TensorShapeArray shapes = {
-        {3, 1021, 980, 1},
-        {3, 1021, 980, 3}
-    };
+    TensorShapeArray shapes = {{3, 1021, 980, 1}, {3, 1021, 980, 3}};
 
     run(shapes);
 }
 #endif
-
 
 }  // namespace test
 }  // namespace megdnn

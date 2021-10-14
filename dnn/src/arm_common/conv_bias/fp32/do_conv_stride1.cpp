@@ -28,9 +28,9 @@ using namespace conv_stride1;
 using NCBKernSizeParam = fallback::ConvBiasImpl::NCBKernSizeParam;
 using NCBKernParam = fallback::ConvBiasImpl::NCBKernParam;
 
-void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter,
-                                       float* dst, size_t IH, size_t IW,
-                                       size_t OH, size_t OW, size_t IC) {
+void conv_stride1::do_conv_2x2_stride1(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
     //! unroll of 2
     size_t ic = 0;
@@ -65,23 +65,19 @@ void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter,
 
                 MEGDNN_SIMD_TYPE _sum = MEGDNN_SIMD_LOADU(outptr);
 
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r000,
-                                              MEGDNN_SIMD_GET_LOW(_k0), 0);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r001,
-                                              MEGDNN_SIMD_GET_LOW(_k0), 1);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r010,
-                                              MEGDNN_SIMD_GET_HIGH(_k0), 0);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r011,
-                                              MEGDNN_SIMD_GET_HIGH(_k0), 1);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r000, MEGDNN_SIMD_GET_LOW(_k0), 0);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r001, MEGDNN_SIMD_GET_LOW(_k0), 1);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(
+                        _sum, _r010, MEGDNN_SIMD_GET_HIGH(_k0), 0);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(
+                        _sum, _r011, MEGDNN_SIMD_GET_HIGH(_k0), 1);
 
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r100,
-                                              MEGDNN_SIMD_GET_LOW(_k1), 0);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r101,
-                                              MEGDNN_SIMD_GET_LOW(_k1), 1);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r110,
-                                              MEGDNN_SIMD_GET_HIGH(_k1), 0);
-                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r111,
-                                              MEGDNN_SIMD_GET_HIGH(_k1), 1);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r100, MEGDNN_SIMD_GET_LOW(_k1), 0);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(_sum, _r101, MEGDNN_SIMD_GET_LOW(_k1), 1);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(
+                        _sum, _r110, MEGDNN_SIMD_GET_HIGH(_k1), 0);
+                _sum = MEGDNN_SIMD_VMLAQ_LANE(
+                        _sum, _r111, MEGDNN_SIMD_GET_HIGH(_k1), 1);
 
                 MEGDNN_SIMD_STOREU(outptr, _sum);
 
@@ -143,9 +139,9 @@ void conv_stride1::do_conv_2x2_stride1(const float* src, const float* filter,
     }
 }
 
-void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter,
-                                       float* dst, size_t IH, size_t IW,
-                                       size_t OH, size_t OW, size_t IC) {
+void conv_stride1::do_conv_3x3_stride1(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -290,9 +286,9 @@ void conv_stride1::do_conv_3x3_stride1(const float* src, const float* filter,
     }
 }
 
-void conv_stride1::do_conv_5x5_stride1(const float* src, const float* filter,
-                                       float* dst, size_t IH, size_t IW,
-                                       size_t OH, size_t OW, size_t IC) {
+void conv_stride1::do_conv_5x5_stride1(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -530,9 +526,9 @@ void conv_stride1::do_conv_5x5_stride1(const float* src, const float* filter,
     }
 }
 
-void conv_stride1::do_conv_7x7_stride1(const float* src, const float* filter,
-                                       float* dst, size_t IH, size_t IW,
-                                       size_t OH, size_t OW, size_t IC) {
+void conv_stride1::do_conv_7x7_stride1(
+        const float* src, const float* filter, float* dst, size_t IH, size_t IW,
+        size_t OH, size_t OW, size_t IC) {
     const size_t tail_step = IW - OW;
 
     rep(ic, IC) {
@@ -564,20 +560,14 @@ void conv_stride1::do_conv_7x7_stride1(const float* src, const float* filter,
                 MEGDNN_SIMD_TYPE _k0123 = MEGDNN_SIMD_LOADU(k0);
                 MEGDNN_SIMD_TYPE _k4567 = MEGDNN_SIMD_LOADU(k0 + 4);
 
-                MEGDNN_SIMD_TYPE _r00 = MEGDNN_SIMD_LOADU(r0);      // 0 1 2 3
-                MEGDNN_SIMD_TYPE _r04 = MEGDNN_SIMD_LOADU(r0 + 4);  // 4 5 6 7
-                MEGDNN_SIMD_TYPE _r00n =
-                        MEGDNN_SIMD_LOADU(r0 + 8);  // 8 9 10 11
-                MEGDNN_SIMD_TYPE _r01 =
-                        MEGDNN_SIMD_EXT(_r00, _r04, 1);  // 1 2 3 4
-                MEGDNN_SIMD_TYPE _r02 =
-                        MEGDNN_SIMD_EXT(_r00, _r04, 2);  // 2 3 4 5
-                MEGDNN_SIMD_TYPE _r03 =
-                        MEGDNN_SIMD_EXT(_r00, _r04, 3);  // 3 4 5 6
-                MEGDNN_SIMD_TYPE _r05 =
-                        MEGDNN_SIMD_EXT(_r04, _r00n, 1);  // 5 6 7 8
-                MEGDNN_SIMD_TYPE _r06 =
-                        MEGDNN_SIMD_EXT(_r04, _r00n, 2);  // 6 7 8 9
+                MEGDNN_SIMD_TYPE _r00 = MEGDNN_SIMD_LOADU(r0);            // 0 1 2 3
+                MEGDNN_SIMD_TYPE _r04 = MEGDNN_SIMD_LOADU(r0 + 4);        // 4 5 6 7
+                MEGDNN_SIMD_TYPE _r00n = MEGDNN_SIMD_LOADU(r0 + 8);       // 8 9 10 11
+                MEGDNN_SIMD_TYPE _r01 = MEGDNN_SIMD_EXT(_r00, _r04, 1);   // 1 2 3 4
+                MEGDNN_SIMD_TYPE _r02 = MEGDNN_SIMD_EXT(_r00, _r04, 2);   // 2 3 4 5
+                MEGDNN_SIMD_TYPE _r03 = MEGDNN_SIMD_EXT(_r00, _r04, 3);   // 3 4 5 6
+                MEGDNN_SIMD_TYPE _r05 = MEGDNN_SIMD_EXT(_r04, _r00n, 1);  // 5 6 7 8
+                MEGDNN_SIMD_TYPE _r06 = MEGDNN_SIMD_EXT(_r04, _r00n, 2);  // 6 7 8 9
 
                 _sum = MEGDNN_SIMD_FMA_LANE(_sum, _r00, _k0123, 0);
                 _sum = MEGDNN_SIMD_FMA_LANE(_sum, _r01, _k0123, 1);

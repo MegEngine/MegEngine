@@ -12,17 +12,17 @@
 #include "./cg_impl.h"
 #include "./cg_impl_seq.h"
 
-#include "var_node_mem_mgr.h"
 #include "megbrain/comp_node_env.h"
+#include "var_node_mem_mgr.h"
 
 #include "megbrain/graph/cg.h"
-#include "megbrain/graph/helper.h"
-#include "megbrain/graph/exc_extra_info.h"
 #include "megbrain/graph/event.h"
+#include "megbrain/graph/exc_extra_info.h"
+#include "megbrain/graph/helper.h"
 
 #include "megbrain/system.h"
-#include "megbrain/utils/timer.h"
 #include "megbrain/utils/arith_helper.h"
+#include "megbrain/utils/timer.h"
 
 #include "megbrain/opr/io.h"
 
@@ -81,7 +81,7 @@ const DeviceTensorStorage& StaticDeviceMemoryManager::alloc(
 void StaticDeviceMemoryManager::prefault() {
     for (auto&& i : m_storage) {
         if (i.first.device_type() == CompNode::DeviceType::CPU) {
-            auto set = [ ptr = i.second.ptr(), size = i.second.size() ]() {
+            auto set = [ptr = i.second.ptr(), size = i.second.size()]() {
                 memset(ptr, 0, size);
             };
             CompNodeEnv::from_comp_node(i.first).cpu_env().dispatch(set);
@@ -100,8 +100,8 @@ size_t StaticDeviceMemoryManager::clear_all() {
     return ret;
 }
 
-std::shared_ptr<StaticDeviceMemoryManager>
-StaticDeviceMemoryManager::make_default_impl() {
+std::shared_ptr<StaticDeviceMemoryManager> StaticDeviceMemoryManager::
+        make_default_impl() {
     return std::make_shared<StaticDeviceMemoryManager>();
 }
 #else
@@ -114,8 +114,8 @@ size_t StaticDeviceMemoryManager::clear_all() {
     return 1;
 }
 
-std::shared_ptr<StaticDeviceMemoryManager>
-StaticDeviceMemoryManager::make_default_impl() {
+std::shared_ptr<StaticDeviceMemoryManager> StaticDeviceMemoryManager::
+        make_default_impl() {
     // use a global instance to share memory across all graphs. It is safe
     // because we need no thread safety
     static StaticDeviceMemoryManager inst;
@@ -125,68 +125,65 @@ StaticDeviceMemoryManager::make_default_impl() {
 #endif  // MGB_THREAD_SAFE
 
 /* ==================== AsyncVarReleaser ==================== */
-#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON  || MGB_ROCM
+#if MGB_COMMON_ASYNC_COMPNODE
 class VarNodeMemManager::AsyncVarReleaser {
     struct WaiterParam {
         CompNode cn;
-        CompNode::Event *event;
-        VarNode *var;
+        CompNode::Event* event;
+        VarNode* var;
     };
 
-    class Waiter final: public AsyncQueueSC<WaiterParam, Waiter> {
-        AsyncVarReleaser *m_par_releaser;
+    class Waiter final : public AsyncQueueSC<WaiterParam, Waiter> {
+        AsyncVarReleaser* m_par_releaser;
 
-        public:
-            Waiter(AsyncVarReleaser *releaser):
-                m_par_releaser(releaser)
-            {
+    public:
+        Waiter(AsyncVarReleaser* releaser) : m_par_releaser(releaser) {}
+
+        void process_one_task(const WaiterParam& param) {
+            if (param.event->finished()) {
+                VarNodeMemManager::decr_var_mem_refcnt_sync(param.var);
+                MGB_LOCK_GUARD(m_par_releaser->m_event_pool_lock);
+                m_par_releaser->m_event_pool.at(param.cn).free(param.event);
+                return;
             }
 
-            void process_one_task(const WaiterParam &param) {
-                if (param.event->finished()) {
-                    VarNodeMemManager::decr_var_mem_refcnt_sync(param.var);
-                    MGB_LOCK_GUARD(m_par_releaser->m_event_pool_lock);
-                    m_par_releaser->m_event_pool.at(param.cn).free(param.event);
-                    return;
-                }
-
-                using namespace std::literals;
-                std::this_thread::sleep_for(1us);
-                add_task(param);
-            }
+            using namespace std::literals;
+            std::this_thread::sleep_for(1us);
+            add_task(param);
+        }
     };
     Waiter m_waiter{this};
     CompNode::UnorderedMap<CompNode::EventPool> m_event_pool;
     Spinlock m_event_pool_lock;
 
-    public:
-        ~AsyncVarReleaser() {
-            wait_release_finish();
-        }
+public:
+    ~AsyncVarReleaser() { wait_release_finish(); }
 
-        void add(CompNode cn, VarNode *var) {
-            CompNode::EventPool *pool;
-            {
-                MGB_LOCK_GUARD(m_event_pool_lock);
-                auto iter = m_event_pool.find(cn);
-                if (iter == m_event_pool.end()) {
-                    iter = m_event_pool.emplace(
-                            std::piecewise_construct,
-                            std::forward_as_tuple(cn),
-                            std::forward_as_tuple(cn)).first;
-                }
-                pool = &iter->second;
+    void add(CompNode cn, VarNode* var) {
+        CompNode::EventPool* pool;
+        {
+            MGB_LOCK_GUARD(m_event_pool_lock);
+            auto iter = m_event_pool.find(cn);
+            if (iter == m_event_pool.end()) {
+                iter = m_event_pool
+                               .emplace(
+                                       std::piecewise_construct,
+                                       std::forward_as_tuple(cn),
+                                       std::forward_as_tuple(cn))
+                               .first;
             }
-            auto event = pool->alloc();
-            event->record();
-            m_waiter.add_task({cn, event, var});
+            pool = &iter->second;
         }
+        auto event = pool->alloc();
+        event->record();
+        m_waiter.add_task({cn, event, var});
+    }
 
-        void wait_release_finish() {
-            m_waiter.wait_task_queue_empty();
-            for (auto &&i: m_event_pool)
-                i.second.assert_all_freed();
-        }
+    void wait_release_finish() {
+        m_waiter.wait_task_queue_empty();
+        for (auto&& i : m_event_pool)
+            i.second.assert_all_freed();
+    }
 };
 #endif
 
@@ -222,7 +219,7 @@ bool VarNodeMemManager::ImpureMemPlanManager::check_need_realloc() {
     m_during_check = false;
 
     // update seq-force-update-dest
-    for (auto &&pi : m_force_update_pairs) {
+    for (auto&& pi : m_force_update_pairs) {
         auto src = pi.first, dst = pi.second;
         auto&& chk = src->m_mem_plan.chunk();
         auto&& storage = chk.owner_var->dev_tensor().storage();
@@ -248,15 +245,16 @@ bool VarNodeMemManager::ImpureMemPlanManager::check_need_realloc() {
 VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl* graph)
         : m_owner_graph(graph),
           m_seq_mem_opt(graph)
-#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON  || MGB_ROCM
-          ,m_asyn_var_releaser(new AsyncVarReleaser)
+#if MGB_COMMON_ASYNC_COMPNODE
+          ,
+          m_asyn_var_releaser(new AsyncVarReleaser)
 #endif
 {
     auto on_comp_seq_finish = [this](const event::CompSeqExecFinished& ev) {
         MGB_MARK_USED_VAR(ev);
         // async release is only used for sync between multiple comp nodes, and
         // does not wait for device to finish
-#if MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON  || MGB_ROCM
+#if MGB_COMMON_ASYNC_COMPNODE
         m_asyn_var_releaser->wait_release_finish();
 #endif
         m_cpu_async_release_barrier.wait_zero();
@@ -297,8 +295,7 @@ VarNodeMemManager::VarNodeMemManager(ComputingGraphImpl* graph)
     graph->event().register_receiver_permanent<event::CompSeqExecError>(
             on_comp_seq_error);
 
-#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER &&                                   \
-        (MGB_CUDA || MGB_ATLAS || MGB_CAMBRICON  || MGB_ROCM)
+#if MGB_ENABLE_VAR_DEV_MEM_DEFRAGMENTER && MGB_COMMON_ASYNC_COMPNODE
     auto on_mem_defrag_start = [this](const event::BeforeMemDefrag&) {
         m_asyn_var_releaser->wait_release_finish();
     };
@@ -319,15 +316,15 @@ bool VarNodeMemManager::DynamicAllocOprInfo::check_if_mem_status_change() {
         same = false;
         prev_dev_val_input.resize(dev_val_input.size());
     }
-    for (size_t i = 0; i < dev_val_input.size(); i ++) {
-        auto &&t = prev_dev_val_input[i];
+    for (size_t i = 0; i < dev_val_input.size(); i++) {
+        auto&& t = prev_dev_val_input[i];
         auto s = dev_val_input[i]->dev_tensor().as_megdnn();
         if (t.raw_ptr != s.raw_ptr || !t.layout.eq_layout(s.layout)) {
             same = false;
             t = s;
         }
     }
-    for (auto &&i: static_infer_inp) {
+    for (auto&& i : static_infer_inp) {
         auto new_v = i.first->update_infer_result_version();
         same &= i.second == new_v;
         i.second = new_v;
@@ -335,35 +332,32 @@ bool VarNodeMemManager::DynamicAllocOprInfo::check_if_mem_status_change() {
     return !same;
 }
 
-VarNodeMemManager::DynamicAllocOprInfo::DynamicAllocOprInfo(
-        OperatorNodeBase *opr) {
+VarNodeMemManager::DynamicAllocOprInfo::DynamicAllocOprInfo(OperatorNodeBase* opr) {
     alloc_comp_seq_exec_id = -1;
     prev_dev_val_input.clear();
     static_infer_inp.clear();
     dev_val_input.clear();
-    auto &&mgr = ComputingGraphImpl::downcast(opr->owner_graph())->
-        static_infer_manager_impl();
+    auto&& mgr = ComputingGraphImpl::downcast(opr->owner_graph())
+                         ->static_infer_manager_impl();
 
     CompNode single_cn;
     {
-        auto &&cnset = cg::get_opr_comp_node_set(opr);
+        auto&& cnset = cg::get_opr_comp_node_set(opr);
         if (cnset.size() == 1)
             single_cn = *cnset.begin();
     }
 
-    for (auto &&i: opr->node_prop().dep_map()) {
+    for (auto&& i : opr->node_prop().dep_map()) {
         using DT = OperatorNodeBase::NodeProp::DepType;
 
         if (i.second & DT::DEV_VALUE)
             dev_val_input.push_back(i.first);
 
         if (i.second & DT::HOST_VALUE)
-            static_infer_inp.push_back({
-                    mgr.get_tag_handler_for_value(i.first), 0});
+            static_infer_inp.push_back({mgr.get_tag_handler_for_value(i.first), 0});
 
         if (i.second & DT::SHAPE)
-            static_infer_inp.push_back({
-                    mgr.get_tag_handler_for_shape(i.first), 0});
+            static_infer_inp.push_back({mgr.get_tag_handler_for_shape(i.first), 0});
     }
 
     has_dynamic_storage_input = !is_all_input_static_storage(opr);
@@ -384,10 +378,11 @@ bool VarNodeMemManager::alloc_var_node_mem_static() {
     if (m_owner_graph->options().log_level) {
         auto time1 = timer.get_msecs();
         MGB_MARK_USED_VAR(time1);
-        mgb_log_debug("static memory allocation: nr_opr=%zu nr_var=%zu realtime=%.2fmsec"
+        mgb_log_debug(
+                "static memory allocation: nr_opr=%zu nr_var=%zu realtime=%.2fmsec"
                 " (plan%.2f alloc%.2f)",
-                m_sys_alloc_static_oprs.size(), m_sys_alloc_static_vars.size(),
-                time1, time0, time1 - time0);
+                m_sys_alloc_static_oprs.size(), m_sys_alloc_static_vars.size(), time1,
+                time0, time1 - time0);
     }
 
     return true;
@@ -398,8 +393,7 @@ bool VarNodeMemManager::update_static_alloc_plan() {
     bool free_no_need_memory = free_combine_memory_no_need_var();
     if (!m_owner_graph->static_infer_comp_seq_manager()
                  .update_static_check_shape_change() &&
-        !m_first_static_plan_run &&
-        !m_impure_mem_plan_mgr.check_need_realloc()) {
+        !m_first_static_plan_run && !m_impure_mem_plan_mgr.check_need_realloc()) {
         return false || free_no_need_memory;
     }
 
@@ -411,8 +405,8 @@ bool VarNodeMemManager::update_static_alloc_plan() {
         // kill profiling worker since shape is known
         sys::TimedFuncInvoker::ins().kill_worker();
 
-        for (auto opr: *m_opr_seq) {
-            for (auto &&var: opr->output()) {
+        for (auto opr : *m_opr_seq) {
+            for (auto&& var : opr->output()) {
                 if (auto trait = get_var_node_mem_trait_nullable(var)) {
                     trait->clear_opt_status();
                 }
@@ -437,8 +431,7 @@ bool VarNodeMemManager::update_static_alloc_plan() {
     m_first_static_plan_run = false;
     // ensure that next call to make_static_var_tensor_from_alloc_plan() would
     // be effective
-    m_static_mem_refholder_dev_mem_mgr_version =
-            DeviceMemoryAllocator::VERSION_INVALID;
+    m_static_mem_refholder_dev_mem_mgr_version = DeviceMemoryAllocator::VERSION_INVALID;
     return true;
 }
 
@@ -456,8 +449,8 @@ bool VarNodeMemManager::make_static_var_tensor_from_alloc_plan() {
     CompNode::UnorderedMap<DeviceTensorStorage> cn2storage;
 
     for (auto&& i : cn2usage) {
-        DeviceTensorStorage storage = dev_mem_mgr.alloc(m_owner_graph, i.first,
-                                                        i.second, cur_version);
+        DeviceTensorStorage storage =
+                dev_mem_mgr.alloc(m_owner_graph, i.first, i.second, cur_version);
         m_static_mem_refholder.emplace_back(storage);
         // the reference has been kept in m_static_mem_refholder, and we drop
         // the ref now so clear_static_device_memory() can be easily implemented
@@ -529,8 +522,7 @@ bool VarNodeMemManager::free_combine_memory_no_need_var() {
         if (opr->try_cast_final<opr::MultipleDeviceTensorHolder>() ||
             opr->try_cast_final<opr::MultipleDeviceTensorWithFormatHolder>()) {
             auto opr_base =
-                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(
-                            opr);
+                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(opr);
             for (size_t index = 0; index < opr_base->output().size(); index++) {
                 auto var = opr_base->output(index);
                 if (var->contain_flag(VarNode::Flag::MEMORY_NO_NEED) &&
@@ -546,8 +538,7 @@ bool VarNodeMemManager::free_combine_memory_no_need_var() {
                         mgb_log_debug(
                                 "preprocessed weight is freed, var name "
                                 "= %s, var layout = %s",
-                                var->name().c_str(),
-                                layout.to_string().c_str());
+                                var->name().c_str(), layout.to_string().c_str());
                     }
                     m_already_free_no_need_mem = true;
                 }
@@ -558,14 +549,12 @@ bool VarNodeMemManager::free_combine_memory_no_need_var() {
         //! BatchedDeviceValueLoader
         if (memory_need_reorder) {
             auto opr_base =
-                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(
-                            opr);
+                    static_cast<opr::intl::MultipleDeviceTensorHolderBase*>(opr);
             auto comp_node = opr_base->output(0)->comp_node();
             bool is_device_opr =
                     comp_node.mem_node() != CompNode::default_cpu().mem_node();
             if (memory_need_reorder && is_device_opr) {
-                for (size_t index = 0; index < opr_base->output().size();
-                     index++) {
+                for (size_t index = 0; index < opr_base->output().size(); index++) {
                     auto var = opr_base->output(index);
                     if (!var->contain_flag(VarNode::Flag::MEMORY_NO_NEED)) {
                         DeviceTensorStorage storage(var->comp_node());
@@ -574,8 +563,8 @@ bool VarNodeMemManager::free_combine_memory_no_need_var() {
                         storage.copy_from(var->m_dev_tensor.storage(), size);
 
                         var->m_dev_tensor.reset(storage, var->layout());
-                        opr_base->mutable_values()[index]->reset(storage,
-                                                                var->layout());
+                        opr_base->mutable_values()[index]->reset(
+                                storage, var->layout());
                         reordered = true;
                     }
                 }
@@ -594,7 +583,7 @@ void VarNodeMemManager::init_dynamic_alloc_opr_info() {
     m_var_dev_mem_defragmenter.set_enable(
             m_owner_graph->options().enable_var_mem_defragment);
     bool is_eager_eval = m_owner_graph->eager_eval_manager().enabled();
-    for (auto opr: *m_opr_seq) {
+    for (auto opr : *m_opr_seq) {
         auto info = m_dynamic_alloc_opr_info.alloc(opr);
 
         bool input_need_refcnt = false;
@@ -614,13 +603,14 @@ void VarNodeMemManager::init_dynamic_alloc_opr_info() {
 
         bool all_sys_alloc = true;
 
-        for (auto i: opr->output()) {
+        for (auto i : opr->output()) {
             m_node_mem_trait[i];
             bool static_alloc = m_sys_alloc_static_vars.count(i);
 
             if (static_alloc || is_eager_eval ||
-                    i->contain_flag(VarNode::Flag::NO_MEM_RECLAIM)) {
-                i->m_refcnt_init = m_owner_graph->eager_eval_manager().get_var_nr_readers(i);
+                i->contain_flag(VarNode::Flag::NO_MEM_RECLAIM)) {
+                i->m_refcnt_init =
+                        m_owner_graph->eager_eval_manager().get_var_nr_readers(i);
             } else {
                 i->m_refcnt_init = 0;
             }
@@ -641,7 +631,7 @@ void VarNodeMemManager::init_dynamic_alloc_opr_info() {
         if (all_sys_alloc) {
             // the outputs of oprs whose all output vars are managed by the
             // system can be safely moved
-            for (auto i: info->dynamic_alloc_output) {
+            for (auto i : info->dynamic_alloc_output) {
                 m_var_dev_mem_defragmenter.register_var(i);
             }
         }
@@ -657,7 +647,7 @@ void VarNodeMemManager::init_dynamic_alloc_opr_info() {
 }
 
 void VarNodeMemManager::alloc_var_node_mem_dynamic(
-        GraphExecutable::ExecEnv &env, OperatorNodeBase *opr) {
+        GraphExecutable::ExecEnv& env, OperatorNodeBase* opr) {
     auto info = m_dynamic_alloc_opr_info.get(opr);
 
     if (!info || !info->has_dyn_input_or_output())
@@ -673,16 +663,14 @@ void VarNodeMemManager::alloc_var_node_mem_dynamic(
         if (!cbspec.on_mem_status_changed.valid())
             return;
 
-        auto check_mem_status = [info,
-                 cb=cbspec.on_mem_status_changed.val()]() {
-
-            auto &&opr_mtx = info->mtx;
+        auto check_mem_status = [info, cb = cbspec.on_mem_status_changed.val()]() {
+            auto&& opr_mtx = info->mtx;
             MGB_LOCK_GUARD(opr_mtx);
             if (info->check_if_mem_status_change())
                 cb();
         };
 
-        for (auto &&cn: cnset)
+        for (auto&& cn : cnset)
             env.dispatch_on_comp_node(cn, check_mem_status);
         return;
     }
@@ -694,8 +682,8 @@ void VarNodeMemManager::alloc_var_node_mem_dynamic(
         if (info->alloc_comp_seq_exec_id == cur_run_id)
             return;
 
-        auto &&mgr = m_owner_graph->static_infer_manager_impl();
-        for (auto i: info->dynamic_alloc_output) {
+        auto&& mgr = m_owner_graph->static_infer_manager_impl();
+        for (auto i : info->dynamic_alloc_output) {
             m_node_mem_trait.at(i).clear_opt_status();
             i->shape(mgr.infer_shape(i));
             i->m_mem_plan.reset_to_uninitialized();
@@ -707,7 +695,7 @@ void VarNodeMemManager::alloc_var_node_mem_dynamic(
             m_seq_mem_opt.optimize_mem_plan_dynamic(opr);
         }
 
-        for (auto i: info->dynamic_alloc_output) {
+        for (auto i : info->dynamic_alloc_output) {
             if (!m_node_mem_trait.at(i).has_dynamic_mem_fwd_from_other()) {
                 var_alloc_with_shape(i, i->shape());
             } else {
@@ -730,45 +718,41 @@ void VarNodeMemManager::alloc_var_node_mem_dynamic(
 
     // note that alloc() is dispatched to all comp nodes, and only the first one
     // that executes alloc() is effective
-    for (auto &&cn: cnset)
+    for (auto&& cn : cnset)
         env.dispatch_on_comp_node(cn, alloc);
 }
 
-void VarNodeMemManager::init_opr_outputs_mem_plan(
-        OperatorNodeBase *opr, bool dynamic) {
-
+void VarNodeMemManager::init_opr_outputs_mem_plan(OperatorNodeBase* opr, bool dynamic) {
     opr->init_output_mem_plan(dynamic);
 
     // check output shape valid
-    for (auto i: opr->output()) {
-
+    for (auto i : opr->output()) {
         if (!i->m_should_sys_alloc)
             continue;
 
         if (!dynamic && !m_sys_alloc_static_vars.count(i))
             continue;
 
-        mgb_throw_if(!i->mem_plan().valid(), GraphError,
-                "invalid mem plan for var %s", cg::dump_var_info({i}).c_str());
+        mgb_throw_if(
+                !i->mem_plan().valid(), GraphError, "invalid mem plan for var %s",
+                cg::dump_var_info({i}).c_str());
 
         if (!i->mem_plan().chunk().size() || !i->shape().ndim) {
             // shape is known so we can check for empty mem plan here
-            bool allow_empty = i->contain_flag(
-                    VarNode::Flag::ALLOW_EMPTY_SHAPE);
+            bool allow_empty = i->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 
-            auto &&recv = opr->owner_graph()->
-                var_receiver_in_current_comp_seq(i);
-            mgb_throw_if(!allow_empty || !recv.is_empty_allowed(),
-                    GraphError,
+            auto&& recv = opr->owner_graph()->var_receiver_in_current_comp_seq(i);
+            mgb_throw_if(
+                    !allow_empty || !recv.is_empty_allowed(), GraphError,
                     "var %s has empty memplan, but allowed=%d receiver=%s",
-                    cg::dump_var_info({i}).c_str(),
-                    allow_empty, recv.to_string().c_str());
+                    cg::dump_var_info({i}).c_str(), allow_empty,
+                    recv.to_string().c_str());
         }
     }
 }
 
-void VarNodeMemManager::reset_opr_seq(CompSeqExtraInfo& extra_info,
-                                      const OprNodeArray* seq) {
+void VarNodeMemManager::reset_opr_seq(
+        CompSeqExtraInfo& extra_info, const OprNodeArray* seq) {
     auto run_id_ptr = static_cast<ComputingGraphImpl::ComputingSequence*>(
                               m_owner_graph->current_comp_seq())
                               ->get_run_id_ptr();
@@ -806,26 +790,27 @@ void VarNodeMemManager::reset_opr_seq_no_clear_dyn_alloc_info(
 void VarNodeMemManager::print_seq_info_log() {
 #if MGB_ENABLE_LOGGING
     auto seq = m_opr_seq;
-    VarNode *first_dyn_shp_var = nullptr;
+    VarNode* first_dyn_shp_var = nullptr;
     size_t nr_static = 0, nr_dynamic_shape = 0, nr_dynamic_storage = 0,
            nr_no_sys_alloc = 0;
-    for (auto i: *seq) {
-        for (auto j: i->output()) {
+    for (auto i : *seq) {
+        for (auto j : i->output()) {
             if (!j->m_should_sys_alloc) {
-                ++ nr_no_sys_alloc;
+                ++nr_no_sys_alloc;
             }
             if (!is_static_var_shape(j)) {
-                ++ nr_dynamic_shape;
+                ++nr_dynamic_shape;
                 if (!first_dyn_shp_var)
                     first_dyn_shp_var = j;
             } else if (!is_static_var_storage(j)) {
-                ++ nr_dynamic_storage;
+                ++nr_dynamic_storage;
             } else {
-                ++ nr_static;
+                ++nr_static;
             }
         }
     }
-    mgb_log_debug("opr seq of length %zu: "
+    mgb_log_debug(
+            "opr seq of length %zu: "
             "var_static=%zu var_dynamic_shape=%zu var_dynamic_storage=%zu "
             "no_sys_alloc=%zu",
             seq->size(), nr_static, nr_dynamic_shape, nr_dynamic_storage,
@@ -835,10 +820,8 @@ void VarNodeMemManager::print_seq_info_log() {
                 "there are %zu vars with dynamic shape; if this is not"
                 " expected please contact the authors to implement more"
                 " static inference (var: %s; owner_inputs: %s)",
-                nr_dynamic_shape,
-                cg::dump_var_info({first_dyn_shp_var}).c_str(),
-                cg::dump_var_info(
-                    first_dyn_shp_var->owner_opr()->input()).c_str());
+                nr_dynamic_shape, cg::dump_var_info({first_dyn_shp_var}).c_str(),
+                cg::dump_var_info(first_dyn_shp_var->owner_opr()->input()).c_str());
     }
 #endif
 }
@@ -846,7 +829,7 @@ void VarNodeMemManager::print_seq_info_log() {
 void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
     using Flag = VarNode::Flag;
 
-    auto add_flag_single_var = [](VarNode *var) {
+    auto add_flag_single_var = [](VarNode* var) {
         if (!var->contain_flag(Flag::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC)) {
             if (!var->contain_flag(Flag::NO_SYS_MEM_ALLOC)) {
                 var->add_flag(Flag::RT_FORCE_DYNAMIC_MEM_ALLOC);
@@ -857,16 +840,16 @@ void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
     };
 
     if (m_owner_graph->options().force_dynamic_alloc) {
-        for (auto opr: *m_opr_seq)
-            for (auto i: opr->output()) {
+        for (auto opr : *m_opr_seq)
+            for (auto i : opr->output()) {
                 add_flag_single_var(i);
             }
         return;
     }
 
     // clear previous flags
-    for (auto i: *m_opr_seq) {
-        for (auto j: i->output()) {
+    for (auto i : *m_opr_seq) {
+        for (auto j : i->output()) {
             j->m_flag = j->m_flag & ~Flag::RT_FORCE_DYNAMIC_MEM_ALLOC;
         }
     }
@@ -876,7 +859,7 @@ void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
 
     // add flag for sub graph defined by init_var and
     // VarNode::m_rt_force_dynamic_mem_alloc_imply_chain
-    auto add_flag_subgraph = [&](VarNode *init_var) {
+    auto add_flag_subgraph = [&](VarNode* init_var) {
         if (!modified_vars.insert(init_var).second)
             return;
         to_modify_stack.push_back(init_var);
@@ -888,32 +871,31 @@ void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
             if (!add_flag_single_var(var))
                 continue;
 
-            for (auto i: var->m_rt_force_dynamic_mem_alloc_imply_chain) {
-                if(modified_vars.insert(i).second) {
+            for (auto i : var->m_rt_force_dynamic_mem_alloc_imply_chain) {
+                if (modified_vars.insert(i).second) {
                     to_modify_stack.push_back(i);
                 }
             }
         }
     };
 
-    auto &&infer_mgr = m_owner_graph->static_infer_manager();
-    for (auto opr: *m_opr_seq) {
-
+    auto&& infer_mgr = m_owner_graph->static_infer_manager();
+    for (auto opr : *m_opr_seq) {
         bool single_opr_cn = true;
         CompNode opr_cn;
 
         bool need_add_rt_dyn = false;
-        for (auto &&i: opr->node_prop().dep_map()) {
+        for (auto&& i : opr->node_prop().dep_map()) {
             using DT = OperatorNodeBase::NodeProp::DepType;
             if ((i.second & DT::HOST_VALUE_DYNOUT) &&
-                    infer_mgr.get_infer_type(i.first).value !=
-                    static_infer::InferType::CONST) {
+                infer_mgr.get_infer_type(i.first).value !=
+                        static_infer::InferType::CONST) {
                 need_add_rt_dyn = true;
                 break;
             }
         }
 
-        for (auto i: opr->output()) {
+        for (auto i : opr->output()) {
             if (!opr_cn.valid()) {
                 opr_cn = i->comp_node();
             } else if (opr_cn != i->comp_node())
@@ -933,12 +915,12 @@ void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
         // opr_cn being invaid; when input and output are on differrent cns, we
         // have opr_cn == output_cn
 
-        auto &&dep_map = opr->node_prop().dep_map();
+        auto&& dep_map = opr->node_prop().dep_map();
         using NP = OperatorNodeBase::NodeProp;
         // force dynamic alloc for vars that are read by other comp nodes
-        for (auto &&dep_entry: dep_map) {
+        for (auto&& dep_entry : dep_map) {
             if (NP::is_device_value_dep(dep_entry.second) &&
-                    dep_entry.first->comp_node() != opr_cn) {
+                dep_entry.first->comp_node() != opr_cn) {
                 add_flag_subgraph(dep_entry.first);
             }
         }
@@ -946,20 +928,21 @@ void VarNodeMemManager::init_var_force_dynamic_alloc_flag() {
 }
 
 void VarNodeMemManager::init_layout_constraint() {
-    for (auto &&i: m_node_mem_trait) {
+    for (auto&& i : m_node_mem_trait) {
         i.second.layout_constraint.level = LayoutConstraintLevel::NONE;
         i.second.layout_constraint.custom.clear();
     }
 
     {
-        OperatorNodeBase *opr = nullptr;
+        OperatorNodeBase* opr = nullptr;
         MGB_MARK_USED_VAR(opr);
         MGB_TRY {
-            for (auto i: *m_opr_seq) {
+            for (auto i : *m_opr_seq) {
                 opr = i;
                 i->add_input_layout_constraint();
             }
-        } MGB_CATCH(MegBrainError &exc, {
+        }
+        MGB_CATCH(MegBrainError & exc, {
             if (!exc.extra_info() && opr)
                 OperatorNodeExcExtraInfo::record(opr, exc);
             throw;
@@ -967,16 +950,15 @@ void VarNodeMemManager::init_layout_constraint() {
     }
 }
 
-void VarNodeMemManager::init_sys_alloc_info(CompSeqExtraInfo &extra_info) {
-    auto &&infer_mgr = m_owner_graph->static_infer_manager_impl();
+void VarNodeMemManager::init_sys_alloc_info(CompSeqExtraInfo& extra_info) {
+    auto&& infer_mgr = m_owner_graph->static_infer_manager_impl();
 
-    auto init_var_should_sys_alloc = [&infer_mgr, graph=m_owner_graph](
-            VarNode *var) {
+    auto init_var_should_sys_alloc = [&infer_mgr, graph = m_owner_graph](VarNode* var) {
         using F = VarNode::Flag;
         if (var->contain_flag(F::NO_SYS_MEM_ALLOC))
             return false;
-        mgb_assert(infer_mgr.get_infer_type(var).shape !=
-                static_infer::InferType::NO_DESC,
+        mgb_assert(
+                infer_mgr.get_infer_type(var).shape != static_infer::InferType::NO_DESC,
                 "variable infer desc has not been set, but it does not have"
                 " NO_SYS_MEM_ALLOC flag (var: %s)",
                 cg::dump_var_info({var}).c_str());
@@ -989,18 +971,16 @@ void VarNodeMemManager::init_sys_alloc_info(CompSeqExtraInfo &extra_info) {
     };
 
     CompNode::UnorderedSet all_comp_nodes;
-    for (auto opr: *m_opr_seq) {
+    for (auto opr : *m_opr_seq) {
         bool has_static_out = false;
-        for (auto var: opr->output()) {
+        for (auto var : opr->output()) {
             all_comp_nodes.insert(var->comp_node());
             var->m_should_sys_alloc = init_var_should_sys_alloc(var);
-            extra_info.infer_dest.insert(
-                    infer_mgr.get_tag_handler_for_shape(var));
+            extra_info.infer_dest.insert(infer_mgr.get_tag_handler_for_shape(var));
 
             if (is_static_var_storage(var) && var->m_should_sys_alloc) {
                 has_static_out = true;
                 m_sys_alloc_static_vars.insert(var);
-
             }
         }
 
@@ -1010,34 +990,36 @@ void VarNodeMemManager::init_sys_alloc_info(CompSeqExtraInfo &extra_info) {
                     OperatorNodeBase::NodeProp::Flag::IMPURE_OUTPUT_MEM_PLAN;
             if (opr->node_prop().contain(impure)) {
                 for (auto i : opr->output()) {
-                    mgb_throw_if(!m_sys_alloc_static_vars.count(i), GraphError,
-                                 "oprs with IMPURE_OUTPUT_MEM_PLAN should have "
-                                 "all outputs as static; bad opr: %s{%s}",
-                                 opr->cname(), opr->dyn_typeinfo()->name);
+                    mgb_throw_if(
+                            !m_sys_alloc_static_vars.count(i), GraphError,
+                            "oprs with IMPURE_OUTPUT_MEM_PLAN should have "
+                            "all outputs as static; bad opr: %s{%s}",
+                            opr->cname(), opr->dyn_typeinfo()->name);
                 }
                 m_impure_mem_plan_mgr.add_opr_to_track(opr);
             }
         }
     }
-    m_seq_mem_opt.reset_opr_seq(m_opr_seq, &m_sys_alloc_static_oprs,
-                                &m_sys_alloc_static_vars,
-                                {all_comp_nodes.begin(), all_comp_nodes.end()});
+    m_seq_mem_opt.reset_opr_seq(
+            m_opr_seq, &m_sys_alloc_static_oprs, &m_sys_alloc_static_vars,
+            {all_comp_nodes.begin(), all_comp_nodes.end()});
 }
 
 void VarNodeMemManager::init_var_seq_force_update_dest() {
     bool eager = m_owner_graph->eager_eval_manager().enabled();
     if (!eager) {
-        for (auto &&i : m_node_mem_trait) {
+        for (auto&& i : m_node_mem_trait) {
             i.second.seq_force_update_dest = nullptr;
         }
     }
 
-    for (auto opr: *m_opr_seq) {
-        for (auto i: opr->output()) {
+    for (auto opr : *m_opr_seq) {
+        for (auto i : opr->output()) {
             auto src = m_node_mem_trait[i].force_update_src;
             if (src) {
-                auto &&src_trait = m_node_mem_trait[src];
-                mgb_assert(!src_trait.seq_force_update_dest || eager,
+                auto&& src_trait = m_node_mem_trait[src];
+                mgb_assert(
+                        !src_trait.seq_force_update_dest || eager,
                         "multiple force update dests in a single comp seq: %s",
                         cg::dump_var_info({src}).c_str());
                 src_trait.seq_force_update_dest = i;
@@ -1049,7 +1031,7 @@ void VarNodeMemManager::init_var_seq_force_update_dest() {
 /* ============= implementation for methods in VarNode ============= */
 
 bool VarNodeMemManager::fwd_in2out_readonly(
-        VarNode *src, const SubTensorSpec &sub, VarNode *dest) {
+        VarNode* src, const SubTensorSpec& sub, VarNode* dest) {
     /*
      * readonly forward is implemented by sharing memory chunk and setting
      * layout/offset
@@ -1058,32 +1040,34 @@ bool VarNodeMemManager::fwd_in2out_readonly(
     if (!dest->m_mem_plan.valid()) {
         // fwd from static storage to dynamic storage, with statically
         // inferable shape
-        mgb_assert(src->m_mem_plan.valid() &&
-                is_static_var_storage(src) && !is_static_var_storage(dest));
+        mgb_assert(
+                src->m_mem_plan.valid() && is_static_var_storage(src) &&
+                !is_static_var_storage(dest));
         return false;
     }
 
-    bool cond_low_bit = dest->m_mem_plan.layout().dtype.is_low_bit() &&
-                        sub.layout().dtype.is_low_bit() &&
-                        dest->m_mem_plan.layout().dtype.low_bit() ==
-                                sub.layout().dtype.low_bit();
+    bool cond_low_bit =
+            dest->m_mem_plan.layout().dtype.is_low_bit() &&
+            sub.layout().dtype.is_low_bit() &&
+            dest->m_mem_plan.layout().dtype.low_bit() == sub.layout().dtype.low_bit();
     bool cond_normal =
             !dest->m_mem_plan.layout().dtype.is_low_bit() &&
             !sub.layout().dtype.is_low_bit() &&
             dest->m_mem_plan.layout().dtype.size() == sub.layout().dtype.size();
     MGB_MARK_USED_VAR(cond_low_bit);
     MGB_MARK_USED_VAR(cond_normal);
-    mgb_assert(src != dest &&
-               src->comp_node().mem_node() == dest->comp_node().mem_node() &&
-               dest->m_mem_plan.valid() && src->m_mem_plan.valid() &&
-               dest->m_mem_plan.layout().eq_shape(sub.layout()) &&
-               (cond_normal || cond_low_bit));
+    mgb_assert(
+            src != dest &&
+            src->comp_node().mem_node() == dest->comp_node().mem_node() &&
+            dest->m_mem_plan.valid() && src->m_mem_plan.valid() &&
+            dest->m_mem_plan.layout().eq_shape(sub.layout()) &&
+            (cond_normal || cond_low_bit));
     assert_in_mem_opt_phase(SeqMemOptimizer::Status::ALLOW_FWD_IN2OUT_READONLY);
 
     if (!m_owner_graph->options().seq_opt.enable_mem_plan_opt)
         return false;
 
-    auto &&src_spec = m_node_mem_trait.at(src);
+    auto&& src_spec = m_node_mem_trait.at(src);
 
     if (src->comp_node() != dest->comp_node()) {
         if (src->comp_node().mem_node() != dest->comp_node().mem_node()) {
@@ -1108,7 +1092,7 @@ bool VarNodeMemManager::fwd_in2out_readonly(
         }
     }
 
-    auto &&dest_spec = m_node_mem_trait.at(dest);
+    auto&& dest_spec = m_node_mem_trait.at(dest);
     if (dest_spec.readonly_src) {
         // multiple calls may happen when an opr has multiple outputs containing
         // both static and dynamic storage, and it tries to forward static
@@ -1116,12 +1100,12 @@ bool VarNodeMemManager::fwd_in2out_readonly(
         // see TestTensorManip.SplitPreAllocatedMultiCN for a concrete example
         mgb_assert(
                 dest_spec.readonly_src == src &&
-                dest->m_mem_plan.layout().eq_layout(sub.layout()) &&
-                &dest->m_mem_plan.chunk() == &src->m_mem_plan.chunk() &&
-                dest->m_mem_plan.offset_in_chunk_byte() ==
-                    static_cast<size_t>(
-                        src->m_mem_plan.offset_in_chunk_byte() +
-                        sub.offset_byte()),
+                        dest->m_mem_plan.layout().eq_layout(sub.layout()) &&
+                        &dest->m_mem_plan.chunk() == &src->m_mem_plan.chunk() &&
+                        dest->m_mem_plan.offset_in_chunk_byte() ==
+                                static_cast<size_t>(
+                                        src->m_mem_plan.offset_in_chunk_byte() +
+                                        sub.offset_byte()),
                 "inconsistent multiple calls to fwd_in2out_readonly");
         return true;
     }
@@ -1130,20 +1114,18 @@ bool VarNodeMemManager::fwd_in2out_readonly(
     if (src_spec.seq_force_update_dest && !eager) {
         auto fu_dst = src_spec.seq_force_update_dest;
         auto og = m_owner_graph;
-        auto fu_dst_step = og->opr_step_num_in_cur_comp_seq(
-                fu_dst->owner_opr()).val(),
-             min_safe_step = og->opr_step_num_in_cur_comp_seq(
-                     dest->owner_opr()).val();
-        if (auto last_opr = og->var_receiver_in_current_comp_seq(
-                    dest).last_dev_value_reader) {
+        auto fu_dst_step = og->opr_step_num_in_cur_comp_seq(fu_dst->owner_opr()).val(),
+             min_safe_step = og->opr_step_num_in_cur_comp_seq(dest->owner_opr()).val();
+        if (auto last_opr =
+                    og->var_receiver_in_current_comp_seq(dest).last_dev_value_reader) {
             auto step = og->opr_step_num_in_cur_comp_seq(last_opr).val();
             mgb_assert(step > min_safe_step);
             min_safe_step = step;
         }
         if (fu_dst_step <= min_safe_step)
             return false;
-        if(fu_dst->comp_node() != src->comp_node()) {
-            auto &&cnopt = static_cast<SeqCompNodeOptimizerImpl&>(
+        if (fu_dst->comp_node() != src->comp_node()) {
+            auto&& cnopt = static_cast<SeqCompNodeOptimizerImpl&>(
                     og->seq_comp_node_optimizer());
             auto s = cnopt.get_opr_other_cn_nr_finish(
                     fu_dst->comp_node(), fu_dst_step, src->comp_node());
@@ -1175,13 +1157,14 @@ bool VarNodeMemManager::fwd_in2out_readonly(
 }
 
 void VarNodeMemManager::assert_in_mem_opt_phase(size_t status) {
-    mgb_assert(m_seq_mem_opt.status() & status,
+    mgb_assert(
+            m_seq_mem_opt.status() & status,
             "call mem opt function outside of mem opt phase; "
             "wrong node implementation?");
 }
 
 bool VarNodeMemManager::VarNodeMemTrait::check_layout(
-        const TensorLayout &layout) const {
+        const TensorLayout& layout) const {
     switch (layout_constraint.level) {
         case LayoutConstraintLevel::CONTIG:
             return layout.is_contiguous();
@@ -1196,19 +1179,19 @@ bool VarNodeMemManager::VarNodeMemTrait::check_layout(
             mgb_throw(InternalError, "invalid layout_constraint_level");
     }
 
-    for (auto &&i: layout_constraint.custom)
+    for (auto&& i : layout_constraint.custom)
         if (!i(layout))
             return false;
     return true;
 }
 
-void VarNodeMemManager::fwd_in2out_writable(VarNode *src, VarNode *dest) {
+void VarNodeMemManager::fwd_in2out_writable(VarNode* src, VarNode* dest) {
     /*
      * if writable forward is applicable, tell seq mem optimizer to handle it
      */
 
-    mgb_assert(dest != src &&
-            dest->comp_node().mem_node() == src->comp_node().mem_node());
+    mgb_assert(
+            dest != src && dest->comp_node().mem_node() == src->comp_node().mem_node());
 
     if (is_static_var_storage(src) != is_static_var_storage(dest))
         return;
@@ -1220,46 +1203,44 @@ void VarNodeMemManager::fwd_in2out_writable(VarNode *src, VarNode *dest) {
     if (!m_owner_graph->options().seq_opt.enable_mem_plan_opt)
         return;
     assert_in_mem_opt_phase(SeqMemOptimizer::Status::ALLOW_FWD_IN2OUT_WRITABLE);
-    auto &&dest_spec = m_node_mem_trait.at(dest);
-    mgb_assert(!dest_spec.readonly_src,
-            "already readonly forwarded from other var");
+    auto&& dest_spec = m_node_mem_trait.at(dest);
+    mgb_assert(!dest_spec.readonly_src, "already readonly forwarded from other var");
 
     MemAllocPlan* plan0 = &src->m_mem_plan;
 
     // do not allow non-contiguous writable fwd, because speed gain is by
     // inplace opr is negligible, but non-contiguous output may further affect
     // other oprs
-    if (!plan0->layout().is_contiguous() ||
-            !dest_spec.check_layout(plan0->layout()))
+    if (!plan0->layout().is_contiguous() || !dest_spec.check_layout(plan0->layout()))
         return;
 
-    m_seq_mem_opt.add_writable_fwd_mem_plan_pair(
-            plan0, &dest->m_mem_plan);
+    m_seq_mem_opt.add_writable_fwd_mem_plan_pair(plan0, &dest->m_mem_plan);
 }
 
-void VarNodeMemManager::fwd_in2out_writable_force(VarNode *src, VarNode *dest) {
+void VarNodeMemManager::fwd_in2out_writable_force(VarNode* src, VarNode* dest) {
     /*
      * this functin must be called during operator init, and actual forwarding
      * is handled by init_single_var_mem_plan and
      * make_dev_tensor_from_mem_plan_single
      */
 
-    mgb_assert(!m_optimize_started,
+    mgb_assert(
+            !m_optimize_started,
             "set_fwd_in2out_writable_force must be "
             "called during initialization");
-    m_node_mem_trait[src]; // to avoid resizing causing dangling pointer
+    m_node_mem_trait[src];  // to avoid resizing causing dangling pointer
     mgb_assert(dest->owner_opr()->node_prop().contain(
-                OperatorNodeBase::NodeProp::Flag::FORCE_UPDATE_INPUT_VAR));
-    auto &&dest_spec = m_node_mem_trait[dest];
-    mgb_assert(!dest_spec.force_update_src,
-            "force update can only be set to one src(%s)",
+            OperatorNodeBase::NodeProp::Flag::FORCE_UPDATE_INPUT_VAR));
+    auto&& dest_spec = m_node_mem_trait[dest];
+    mgb_assert(
+            !dest_spec.force_update_src, "force update can only be set to one src(%s)",
             dest->cname());
     dest_spec.force_update_src = src;
 }
 
-void VarNodeMemManager::add_layout_constraint(VarNode *dest,
-        VarNode::LayoutConstraintCallback callback) {
-    auto &&trait = m_node_mem_trait[dest].layout_constraint;
+void VarNodeMemManager::add_layout_constraint(
+        VarNode* dest, VarNode::LayoutConstraintCallback callback) {
+    auto&& trait = m_node_mem_trait[dest].layout_constraint;
     if (trait.level != LayoutConstraintLevel::CONTIG) {
         trait.custom.emplace_back(std::move(callback));
     }
@@ -1286,8 +1267,9 @@ void VarNodeMemManager::init_single_var_mem_plan(
                 // for fixed alloc, it is likely to use the same tensor
                 // repeatedly, so we add a quick return here
                 auto&& chk = var->m_mem_plan.chunk();
-                mgb_assert(chk.owner_var == var &&
-                           chk.mem_alloc_status.is_from_owner_var());
+                mgb_assert(
+                        chk.owner_var == var &&
+                        chk.mem_alloc_status.is_from_owner_var());
                 return;
             }
             m_impure_mem_plan_mgr.record_ptr_changed(this, var);
@@ -1321,8 +1303,7 @@ void VarNodeMemManager::make_dev_tensor_from_mem_plan_single(
         size_t offset_in_given_storage) {
     auto&& plan = var->m_mem_plan;
     auto&& chunk = plan.chunk();
-    mgb_assert(chunk.size() ||
-               var->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE));
+    mgb_assert(chunk.size() || var->contain_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE));
     DeviceTensorStorage storage;
     if (auto offset = offset_in_given_storage + plan.offset_in_chunk_byte()) {
         storage = given_storage.sub(offset);
@@ -1337,16 +1318,16 @@ void VarNodeMemManager::make_dev_tensor_from_mem_plan_single(
     var->m_dev_tensor.reset(std::move(storage), plan.layout());
 }
 
-void VarNodeMemManager::var_alloc_with_shape(VarNode* var,
-                                             const TensorShape& shape,
-                                             size_t size_req) {
+void VarNodeMemManager::var_alloc_with_shape(
+        VarNode* var, const TensorShape& shape, size_t size_req) {
     bool cond_default = var->format().is_default();
-    bool cond_lowbit = var->dtype().is_quantized_lowbit() &&
-                       var->format().is_lowbit_aligned();
-    mgb_assert(cond_default || cond_lowbit,
-               "dynamic shape is currently only supported for var with "
-               "default format; got %s",
-               var->format().to_string().c_str());
+    bool cond_lowbit =
+            var->dtype().is_quantized_lowbit() && var->format().is_lowbit_aligned();
+    mgb_assert(
+            cond_default || cond_lowbit,
+            "dynamic shape is currently only supported for var with "
+            "default format; got %s",
+            var->format().to_string().c_str());
     var->shape(shape);
     TensorLayout ly{shape, var->dtype()};
     if (size_req != 0) {
@@ -1366,14 +1347,13 @@ void VarNodeMemManager::var_alloc_with_shape(VarNode* var,
         if (storage.size() < size_req) {
             // clear storage ref in var
             var->m_dev_tensor.storage(DeviceTensorStorage{});
-            m_var_dev_mem_defragmenter.alloc_var_storage(var, storage,
-                                                         size_req);
+            m_var_dev_mem_defragmenter.alloc_var_storage(var, storage, size_req);
             auto addr = reinterpret_cast<size_t>(storage.ptr());
             auto alignment = var->comp_node().get_mem_addr_alignment();
             mgb_assert(
                     addr && !(addr & (alignment - 1)),
-                    "address unaligned: 0x%zx (alignment: 0x%zx); size_req=%zu",
-                    addr, alignment, size_req);
+                    "address unaligned: 0x%zx (alignment: 0x%zx); size_req=%zu", addr,
+                    alignment, size_req);
         }
         chk.update_size_for_dynamic_alloc(size_req);
         chk.mem_alloc_status.set_from_owner_var();
@@ -1387,19 +1367,19 @@ void VarNodeMemManager::var_alloc_with_shape(VarNode* var,
     make_dev_tensor_from_mem_plan_single(var, storage);
 }
 
-bool VarNodeMemManager::on_var_node_device_comp_finish_needed(
-        VarNode* var) const {
+bool VarNodeMemManager::on_var_node_device_comp_finish_needed(VarNode* var) const {
     mgb_assert(!m_first_static_plan_run);
     return m_owner_graph->eager_eval_manager().enabled() ||
            m_need_post_exec_action_vars.count(var);
 }
 
-void VarNodeMemManager::on_var_node_device_comp_finish(VarNode* var,
-                                                       bool compute_enabled) {
+void VarNodeMemManager::on_var_node_device_comp_finish(
+        VarNode* var, bool compute_enabled) {
     if (!is_inf_refcnt_init(var)) {
         size_t old_refcnt = var->m_refcnt.exchange(var->m_refcnt_init);
-        mgb_assert(!old_refcnt, "refcnt non-zero for new var: var=%s cnt=%zu",
-                   var->cname(), old_refcnt);
+        mgb_assert(
+                !old_refcnt, "refcnt non-zero for new var: var=%s cnt=%zu",
+                var->cname(), old_refcnt);
         if (!compute_enabled) {
             var->mem_plan().reset_as_invalid_cond_exec();
         }
@@ -1426,57 +1406,51 @@ void VarNodeMemManager::on_var_node_device_comp_finish(VarNode* var,
     }
 }
 
-void VarNodeMemManager::decr_var_mem_refcnt(
-        VarNode *var, CompNode dispatch_cn) {
-    if (MGB_IF_COND_EXEC(var->mem_plan().is_invalid_cond_exec() ||)
-                var->mem_plan()
-                        .chunk()
-                        .owner_var->comp_node() == dispatch_cn) {
+void VarNodeMemManager::decr_var_mem_refcnt(VarNode* var, CompNode dispatch_cn) {
+    if (MGB_IF_COND_EXEC(var->mem_plan().is_invalid_cond_exec() ||) var->mem_plan()
+                .chunk()
+                .owner_var->comp_node() == dispatch_cn) {
         decr_var_mem_refcnt_sync(var);
         return;
     }
 
     using DT = CompNode::DeviceType;
     switch (dispatch_cn.device_type()) {
-        case DT::CPU:
-            {
-                auto task = [this, var]() {
-                    decr_var_mem_refcnt_sync(var);
-                    m_cpu_async_release_barrier.incr(-1);
-                };
-                m_cpu_async_release_barrier.incr(1);
-                CompNodeEnv::from_comp_node(dispatch_cn).cpu_env().dispatch(
-                        task);
-                break;
-            }
+        case DT::CPU: {
+            auto task = [this, var]() {
+                decr_var_mem_refcnt_sync(var);
+                m_cpu_async_release_barrier.incr(-1);
+            };
+            m_cpu_async_release_barrier.incr(1);
+            CompNodeEnv::from_comp_node(dispatch_cn).cpu_env().dispatch(task);
+            break;
+        }
 #if MGB_CUDA
         case DT::CUDA:
             m_asyn_var_releaser->add(dispatch_cn, var);
             break;
 #endif
 #if MGB_ATLAS
-        case DT::ATLAS:
-            {
-                m_asyn_var_releaser->add(dispatch_cn, var);
-                break;
-            }
+        case DT::ATLAS: {
+            m_asyn_var_releaser->add(dispatch_cn, var);
+            break;
+        }
 #endif
 #if MGB_CAMBRICON
-        case DT::CAMBRICON:
-            {
-                m_asyn_var_releaser->add(dispatch_cn, var);
-                break;
-            }
+        case DT::CAMBRICON: {
+            m_asyn_var_releaser->add(dispatch_cn, var);
+            break;
+        }
 #endif
         default:
-            mgb_throw(MegBrainError,
-                      "unsupported comp node in dynamic var shape: %s",
-                      dispatch_cn.to_string().c_str());
+            mgb_throw(
+                    MegBrainError, "unsupported comp node in dynamic var shape: %s",
+                    dispatch_cn.to_string().c_str());
     }
 }
 
-void VarNodeMemManager::decr_var_mem_refcnt_sync(VarNode *var) {
-    if (! -- var->m_refcnt) {
+void VarNodeMemManager::decr_var_mem_refcnt_sync(VarNode* var) {
+    if (!--var->m_refcnt) {
         if (var->m_mem_plan.chunk().owner_var != var) {
             // var is forwarded from another var (or an invalid cond exec), so
             // we can release the device tensor; otherwise the device tensor
@@ -1493,8 +1467,7 @@ bool VarNodeMemManager::is_inf_refcnt_init(VarNode* var) {
 
 size_t VarNodeMemManager::clear_static_device_memory() {
     m_static_mem_refholder.clear();
-    m_static_mem_refholder_dev_mem_mgr_version =
-            DeviceMemoryAllocator::VERSION_INVALID;
+    m_static_mem_refholder_dev_mem_mgr_version = DeviceMemoryAllocator::VERSION_INVALID;
     return m_static_dev_mem_mgr->clear_all();
 }
 

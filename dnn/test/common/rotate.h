@@ -10,8 +10,8 @@
  */
 #pragma once
 
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -41,18 +41,17 @@ static inline std::vector<TestArg> get_args() {
         args.emplace_back(cur_param, TensorShape{2, i, i, 3}, dtype::Float32());
     }
 
-    std::vector<std::pair<size_t, size_t>> test_cases = {
-            {23, 28}, {17, 3}, {3, 83}};
+    std::vector<std::pair<size_t, size_t>> test_cases = {{23, 28}, {17, 3}, {3, 83}};
     for (auto&& item : test_cases) {
         for (auto&& CH : {1U, 3U}) {
             for (bool clockwise : {false, true}) {
                 cur_param.clockwise = clockwise;
-                args.emplace_back(cur_param,
-                                  TensorShape{1, item.first, item.second, CH},
-                                  dtype::Uint8());
-                args.emplace_back(cur_param,
-                                  TensorShape{1, item.first, item.second, CH},
-                                  dtype::Float32());
+                args.emplace_back(
+                        cur_param, TensorShape{1, item.first, item.second, CH},
+                        dtype::Uint8());
+                args.emplace_back(
+                        cur_param, TensorShape{1, item.first, item.second, CH},
+                        dtype::Float32());
             }
         }
     }

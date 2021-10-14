@@ -31,8 +31,7 @@ struct TestArg {
     // stride = 0 means the default stride, the dim is contiguous, i.e. the
     // stride value which makes tensor compact.
     TestArg(size_t m, size_t n, size_t k, size_t mask,
-            size_t A_stride = UNSET_STRIDE_VAL,
-            size_t B_stride = UNSET_STRIDE_VAL,
+            size_t A_stride = UNSET_STRIDE_VAL, size_t B_stride = UNSET_STRIDE_VAL,
             size_t C_stride = UNSET_STRIDE_VAL, size_t b = 1,
             size_t A_batch_stride = UNSET_STRIDE_VAL,
             size_t B_batch_stride = UNSET_STRIDE_VAL,
@@ -79,27 +78,23 @@ void check_matrix_mul(
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
         size_t nbase = 8, float eps = 1e-3, bool force_deduce_dst = true);
 
-void check_batched_matrix_mul(DType A_dtype, DType B_dtype, DType C_dtype,
-                              Handle* handle,
-                              const ExecutionPolicyAlgoName& algo = {"", {}},
-                              float eps = 1e-3,
-                              std::vector<TestArg>&& args = {},
-                              bool force_deduce_dst = true);
+void check_batched_matrix_mul(
+        DType A_dtype, DType B_dtype, DType C_dtype, Handle* handle,
+        const ExecutionPolicyAlgoName& algo = {"", {}}, float eps = 1e-3,
+        std::vector<TestArg>&& args = {}, bool force_deduce_dst = true);
 
 #if MEGDNN_WITH_BENCHMARK
 std::vector<TestArg> get_benchmark_matmul_args();
 std::vector<TestArg> get_benchmark_matmul_mk_packed_args(size_t nbase);
 //! benchmark performance with float matmul
 void benchmark_with_contrast(
-        Handle* handle, const std::vector<TestArg>& args, DType A_dtype,
-        DType B_dtype, DType C_dtype, const char* algo = nullptr,
+        Handle* handle, const std::vector<TestArg>& args, DType A_dtype, DType B_dtype,
+        DType C_dtype, const char* algo = nullptr,
         param::MatrixMul::Format format = param::MatrixMul::Format::DEFAULT,
         DType contrast_A_dtype = dtype::Float32{},
         DType contrast_B_dtype = dtype::Float32{},
-        DType contrast_C_dtype = dtype::Float32{},
-        const char* contrast_algo = nullptr,
-        param::MatrixMul::Format contrast_format =
-                param::MatrixMul::Format::DEFAULT);
+        DType contrast_C_dtype = dtype::Float32{}, const char* contrast_algo = nullptr,
+        param::MatrixMul::Format contrast_format = param::MatrixMul::Format::DEFAULT);
 #endif
 
 }  // namespace matrix_mul

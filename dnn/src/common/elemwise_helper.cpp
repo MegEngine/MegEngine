@@ -14,40 +14,40 @@
 
 namespace megdnn {
 
-    template<int arity>
-    void ElemwiseOpParamN<arity>::init_from_given_tensor() {
-        megdnn_assert(!size && max_ndim == -1);
-        max_ndim = 0;
-        for (int i = 0; i < arity; ++ i) {
-            TensorLayout &layout = param[i].layout;
-            layout = layout.collapse_contiguous();
-            auto cur = layout.total_nr_elems();
-            if (!i) {
-                size = cur;
-            } else {
-                megdnn_assert(size == cur);
-            }
-            max_ndim = std::max<int>(max_ndim, layout.ndim);
+template <int arity>
+void ElemwiseOpParamN<arity>::init_from_given_tensor() {
+    megdnn_assert(!size && max_ndim == -1);
+    max_ndim = 0;
+    for (int i = 0; i < arity; ++i) {
+        TensorLayout& layout = param[i].layout;
+        layout = layout.collapse_contiguous();
+        auto cur = layout.total_nr_elems();
+        if (!i) {
+            size = cur;
+        } else {
+            megdnn_assert(size == cur);
         }
-        megdnn_assert(size > 0 && max_ndim > 0);
+        max_ndim = std::max<int>(max_ndim, layout.ndim);
     }
-
-    template<int arity>
-    void ElemwiseOpParamN<arity>::assert_initialized() const {
-        megdnn_assert(size, "uninitialized ElemwiseOpParamN");
-    }
-
-    template struct ElemwiseOpParamN<7>;
-    template struct ElemwiseOpParamN<6>;
-    template struct ElemwiseOpParamN<5>;
-    template struct ElemwiseOpParamN<4>;
-    template struct ElemwiseOpParamN<3>;
-    template struct ElemwiseOpParamN<2>;
-    template struct ElemwiseOpParamN<1>;
-
-    void ElemwiseOpParamN<0>::assert_initialized() const {
-        megdnn_assert(size, "uninitialized ElemwiseOpParamN");
-    }
+    megdnn_assert(size > 0 && max_ndim > 0);
 }
+
+template <int arity>
+void ElemwiseOpParamN<arity>::assert_initialized() const {
+    megdnn_assert(size, "uninitialized ElemwiseOpParamN");
+}
+
+template struct ElemwiseOpParamN<7>;
+template struct ElemwiseOpParamN<6>;
+template struct ElemwiseOpParamN<5>;
+template struct ElemwiseOpParamN<4>;
+template struct ElemwiseOpParamN<3>;
+template struct ElemwiseOpParamN<2>;
+template struct ElemwiseOpParamN<1>;
+
+void ElemwiseOpParamN<0>::assert_initialized() const {
+    megdnn_assert(size, "uninitialized ElemwiseOpParamN");
+}
+}  // namespace megdnn
 
 // vim: ft=cpp syntax=cpp.doxygen

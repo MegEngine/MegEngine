@@ -203,7 +203,7 @@ def test_dataloader_parallel_worker_exception():
             pass
 
         def apply(self, input):
-            y = x + 1
+            raise RuntimeError("test raise error")
             return input
 
     dataloader = DataLoader(

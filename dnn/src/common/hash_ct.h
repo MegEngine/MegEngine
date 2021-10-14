@@ -67,8 +67,7 @@ private:
     static constexpr uint64_t rotl(uint64_t x, int r) {
         return ((x << r) | (x >> (64 - r)));
     }
-    static constexpr uint64_t mix1(const uint64_t h, const uint64_t prime,
-                                   int rshift) {
+    static constexpr uint64_t mix1(const uint64_t h, const uint64_t prime, int rshift) {
         return (h ^ (h >> rshift)) * prime;
     }
     static constexpr uint64_t mix2(const uint64_t p, const uint64_t v = 0) {
@@ -80,32 +79,24 @@ private:
 #ifdef XXH64_BIG_ENDIAN
     static constexpr uint32_t endian32(const char* v) {
         return uint32_t(uint8_t(v[3])) | (uint32_t(uint8_t(v[2])) << 8) |
-               (uint32_t(uint8_t(v[1])) << 16) |
-               (uint32_t(uint8_t(v[0])) << 24);
+               (uint32_t(uint8_t(v[1])) << 16) | (uint32_t(uint8_t(v[0])) << 24);
     }
     static constexpr uint64_t endian64(const char* v) {
         return uint64_t(uint8_t(v[7])) | (uint64_t(uint8_t(v[6])) << 8) |
-               (uint64_t(uint8_t(v[5])) << 16) |
-               (uint64_t(uint8_t(v[4])) << 24) |
-               (uint64_t(uint8_t(v[3])) << 32) |
-               (uint64_t(uint8_t(v[2])) << 40) |
-               (uint64_t(uint8_t(v[1])) << 48) |
-               (uint64_t(uint8_t(v[0])) << 56);
+               (uint64_t(uint8_t(v[5])) << 16) | (uint64_t(uint8_t(v[4])) << 24) |
+               (uint64_t(uint8_t(v[3])) << 32) | (uint64_t(uint8_t(v[2])) << 40) |
+               (uint64_t(uint8_t(v[1])) << 48) | (uint64_t(uint8_t(v[0])) << 56);
     }
 #else
     static constexpr uint32_t endian32(const char* v) {
         return uint32_t(uint8_t(v[0])) | (uint32_t(uint8_t(v[1])) << 8) |
-               (uint32_t(uint8_t(v[2])) << 16) |
-               (uint32_t(uint8_t(v[3])) << 24);
+               (uint32_t(uint8_t(v[2])) << 16) | (uint32_t(uint8_t(v[3])) << 24);
     }
     static constexpr uint64_t endian64(const char* v) {
         return uint64_t(uint8_t(v[0])) | (uint64_t(uint8_t(v[1])) << 8) |
-               (uint64_t(uint8_t(v[2])) << 16) |
-               (uint64_t(uint8_t(v[3])) << 24) |
-               (uint64_t(uint8_t(v[4])) << 32) |
-               (uint64_t(uint8_t(v[5])) << 40) |
-               (uint64_t(uint8_t(v[6])) << 48) |
-               (uint64_t(uint8_t(v[7])) << 56);
+               (uint64_t(uint8_t(v[2])) << 16) | (uint64_t(uint8_t(v[3])) << 24) |
+               (uint64_t(uint8_t(v[4])) << 32) | (uint64_t(uint8_t(v[5])) << 40) |
+               (uint64_t(uint8_t(v[6])) << 48) | (uint64_t(uint8_t(v[7])) << 56);
     }
 #endif
     static constexpr uint64_t fetch64(const char* p, const uint64_t v = 0) {
@@ -114,9 +105,7 @@ private:
     static constexpr uint64_t fetch32(const char* p) {
         return uint64_t(endian32(p)) * PRIME1;
     }
-    static constexpr uint64_t fetch8(const char* p) {
-        return uint8_t(*p) * PRIME5;
-    }
+    static constexpr uint64_t fetch8(const char* p) { return uint8_t(*p) * PRIME5; }
     // clang-format off
     static constexpr uint64_t finalize (const uint64_t h, const char *p,
                                        uint64_t len) {

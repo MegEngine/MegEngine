@@ -94,15 +94,14 @@ public:
 
         m_description.tile_description.threadblock_stages = Operator::kStages;
 
-        m_description.tile_description.warp_count =
-                make_Coord(Operator::GemmKernel::WarpCount::kM,
-                           Operator::GemmKernel::WarpCount::kN,
-                           Operator::GemmKernel::WarpCount::kK);
+        m_description.tile_description.warp_count = make_Coord(
+                Operator::GemmKernel::WarpCount::kM,
+                Operator::GemmKernel::WarpCount::kN,
+                Operator::GemmKernel::WarpCount::kK);
 
-        m_description.tile_description.math_instruction.instruction_shape =
-                make_Coord(Operator::InstructionShape::kM,
-                           Operator::InstructionShape::kN,
-                           Operator::InstructionShape::kK);
+        m_description.tile_description.math_instruction.instruction_shape = make_Coord(
+                Operator::InstructionShape::kM, Operator::InstructionShape::kN,
+                Operator::InstructionShape::kK);
 
         m_description.tile_description.math_instruction.element_accumulator =
                 NumericTypeMap<ElementAccumulator>::kId;
@@ -121,12 +120,12 @@ public:
                 ArchMap<typename Operator::ArchTag,
                         typename Operator::OperatorClass>::kMax;
 
-        m_description.A = make_TensorDescription<ElementA, LayoutA>(
-                Operator::kAlignmentA);
-        m_description.B = make_TensorDescription<ElementB, LayoutB>(
-                Operator::kAlignmentB);
-        m_description.C = make_TensorDescription<ElementC, LayoutC>(
-                Operator::kAlignmentC);
+        m_description.A =
+                make_TensorDescription<ElementA, LayoutA>(Operator::kAlignmentA);
+        m_description.B =
+                make_TensorDescription<ElementB, LayoutB>(Operator::kAlignmentB);
+        m_description.C =
+                make_TensorDescription<ElementC, LayoutC>(Operator::kAlignmentC);
 
         m_description.stages = Operator::kStages;
 
@@ -134,9 +133,7 @@ public:
         m_description.split_k_mode = mode();
     }
 
-    virtual OperationDescription const& description() const {
-        return m_description;
-    }
+    virtual OperationDescription const& description() const { return m_description; }
 
 protected:
     GemmDescription m_description;
@@ -162,26 +159,23 @@ public:
     GemmOperation(char const* name = "unknown_gemm")
             : GemmOperationBase<Operator_>(name) {}
 
-    virtual Status run(void const* arguments_ptr,
-                       void* device_workspace = nullptr,
-                       cudaStream_t stream = nullptr) const {
+    virtual Status run(
+            void const* arguments_ptr, void* device_workspace = nullptr,
+            cudaStream_t stream = nullptr) const {
         GemmArguments const* gemm_args =
                 reinterpret_cast<GemmArguments const*>(arguments_ptr);
 
         OperatorArguments args;
         args.problem_size = gemm_args->problem_size;
-        args.ref_A = {static_cast<ElementA const*>(gemm_args->A),
-                      int(gemm_args->lda)};
-        args.ref_B = {static_cast<ElementB const*>(gemm_args->B),
-                      int(gemm_args->ldb)};
-        args.ref_C = {static_cast<ElementC const*>(gemm_args->C),
-                      int(gemm_args->ldc)};
-        args.ref_D = {static_cast<ElementC*>(gemm_args->D),
-                      int(gemm_args->ldd)};
+        args.ref_A = {static_cast<ElementA const*>(gemm_args->A), int(gemm_args->lda)};
+        args.ref_B = {static_cast<ElementB const*>(gemm_args->B), int(gemm_args->ldb)};
+        args.ref_C = {static_cast<ElementC const*>(gemm_args->C), int(gemm_args->ldc)};
+        args.ref_D = {static_cast<ElementC*>(gemm_args->D), int(gemm_args->ldd)};
         args.split_k_slices = gemm_args->split_k_slices;
 
-        args.epilogue = {*static_cast<ElementCompute const*>(gemm_args->alpha),
-                         *static_cast<ElementCompute const*>(gemm_args->beta)};
+        args.epilogue = {
+                *static_cast<ElementCompute const*>(gemm_args->alpha),
+                *static_cast<ElementCompute const*>(gemm_args->beta)};
 
         Operator op;
         Status status = op.initialize(args, device_workspace);

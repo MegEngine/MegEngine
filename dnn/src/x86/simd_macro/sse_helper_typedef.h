@@ -1,15 +1,17 @@
-//created by Victoria Zhislina, the Senior Application Engineer, Intel Corporation,  victoria.zhislina@intel.com
+// created by Victoria Zhislina, the Senior Application Engineer, Intel Corporation,
+// victoria.zhislina@intel.com
 
 //*** Copyright (C) 2012-2019 Intel Corporation.  All rights reserved.
 
-//IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 
-//By downloading, copying, installing or using the software you agree to this license.
-//If you do not agree to this license, do not download, install, copy or use the software.
+// By downloading, copying, installing or using the software you agree to this license.
+// If you do not agree to this license, do not download, install, copy or use the
+// software.
 
 //                              License Agreement
-//Redistribution and use in source and binary forms, with or without modification,
-//are permitted provided that the following conditions are met:
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
 
 //  * Redistributions of source code must retain the above copyright notice,
 //    this list of conditions and the following disclaimer.
@@ -17,16 +19,16 @@
 //  * The name of the copyright holders may not be used to endorse or promote products
 //    derived from this software without specific prior written permission.
 
-//This software is provided by the copyright holders and contributors "as is" and
-//any express or implied warranties, including, but not limited to, the implied
-//warranties of merchantability and fitness for a particular purpose are disclaimed.
-//In no event shall the Intel Corporation or contributors be liable for any direct,
-//indirect, incidental, special, exemplary, or consequential damages
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
 //(including, but not limited to, procurement of substitute goods or services;
-//loss of use, data, or profits; or business interruption) however caused
-//and on any theory of liability, whether in contract, strict liability,
-//or tort (including negligence or otherwise) arising in any way out of
-//the use of this software, even if advised of the possibility of such damage.
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
 /* --------------------------------------------------------------------------
  * \file dnn/src/x86/simd_macro/sse_helper_typedef.h
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
@@ -42,8 +44,8 @@
  */
 #pragma once
 
-#include <xmmintrin.h> // SSE
 #include <stdint.h>
+#include <xmmintrin.h>  // SSE
 // The code is from
 // [NEON_2_SSE.h](https://github.com/intel/ARM_NEON_2_x86_SSE/blob/master/NEON_2_SSE.h)
 // Note that the performance of tranforming neon to sse is not very efficient.
@@ -63,5 +65,3 @@ typedef union __m64_128 {
     uint32_t m64_u32[2];
 } __m64_128;
 typedef __m64_128 float32x2_t;
-
-

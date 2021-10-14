@@ -23,8 +23,7 @@
 #include "midout.h"
 
 MIDOUT_DECL(megbrain_inplace)
-#define MIDOUT_B(tag) \
-    MIDOUT_BEGIN(megbrain_inplace, midout_iv(MGB_HASH_STR(tag))) {
+#define MIDOUT_B(tag) MIDOUT_BEGIN(megbrain_inplace, midout_iv(MGB_HASH_STR(tag))) {
 #define MIDOUT_E \
     }            \
     MIDOUT_END();
@@ -39,11 +38,10 @@ namespace inplace_optimize {
 using Mode = Elemwise::Mode;
 
 //! elemwise optimizer
-using SingleOptimizer = thin_function<SymbolVar(const SymbolVarArrayView&,
-                                                const OperatorNodeConfig&)>;
+using SingleOptimizer =
+        thin_function<SymbolVar(const SymbolVarArrayView&, const OperatorNodeConfig&)>;
 //! map elemwise mode to optimizer list
-using OptimizerRegistry =
-        ThinHashMap<Elemwise::Mode, std::vector<SingleOptimizer>>;
+using OptimizerRegistry = ThinHashMap<Elemwise::Mode, std::vector<SingleOptimizer>>;
 
 OptimizerRegistry make_optimizer_registry();
 
@@ -51,8 +49,7 @@ OptimizerRegistry make_optimizer_registry();
 const OptimizerRegistry& optimizer_registry();
 
 //! broadcast src to broadcasted shape of dst_shape_var
-SymbolVar broadcast_tshp(SymbolVar src,
-                         const SymbolVarArrayView& dst_shape_var) {
+SymbolVar broadcast_tshp(SymbolVar src, const SymbolVarArrayView& dst_shape_var) {
     auto dtype = src.dtype();
     for (auto i : dst_shape_var)
         dtype = dtype_promotion(dtype, i.dtype());
@@ -68,8 +65,7 @@ static inline SymbolVar broadcast_ensure(SymbolVar value, SymbolVar inp) {
 
 // a - a => 0, a / a => 1
 template <int unit>
-SymbolVar eq_to_unit(const SymbolVarArrayView& inp,
-                     const OperatorNodeConfig& config) {
+SymbolVar eq_to_unit(const SymbolVarArrayView& inp, const OperatorNodeConfig& config) {
     if (inp[0].node() == inp[1].node()) {
         return inp[0].fill_retain_dtype(unit);
     }
@@ -78,24 +74,23 @@ SymbolVar eq_to_unit(const SymbolVarArrayView& inp,
 
 // a + 0 => a, a * 1 => a
 template <int id_val>
-SymbolVar identical_op(const SymbolVarArrayView& inp,
-                       const OperatorNodeConfig& config) {
+SymbolVar identical_op(
+        const SymbolVarArrayView& inp, const OperatorNodeConfig& config) {
     auto lhs = inp[0], rhs = inp[1];
     auto k = lhs.as_immutable_scalar();
     if (!k.valid()) {
         std::swap(lhs, rhs);
         k = lhs.as_immutable_scalar();
     }
-    if (k.valid() &&
-        almost_equal(k->get_cast<float>(), static_cast<float>(id_val))) {
+    if (k.valid() && almost_equal(k->get_cast<float>(), static_cast<float>(id_val))) {
         return broadcast_tshp(rhs, inp);
     }
     return {};
 }
 
 template <int zero_val>
-SymbolVar absorbing_element(const SymbolVarArrayView& inp,
-                            const OperatorNodeConfig& config) {
+SymbolVar absorbing_element(
+        const SymbolVarArrayView& inp, const OperatorNodeConfig& config) {
     auto lhs = inp[0], rhs = inp[1];
     auto scalar = lhs.as_immutable_scalar();
     if (!scalar.valid()) {
@@ -138,9 +133,8 @@ VarNode* gopt::optimize_elemwise_expr_inplace(
                     }
                     MGB_FINALLY(opt.graph_opt_level = orig_opt;);
 
-                    opt.extra_vardeps[ret].push_back(AssertEqual::make(raw, ret)
-                                                             .rename("chk_opt")
-                                                             .node());
+                    opt.extra_vardeps[ret].push_back(
+                            AssertEqual::make(raw, ret).rename("chk_opt").node());
                 }
                 return ret;
             }
@@ -158,16 +152,14 @@ bool gopt::has_inplace_basic_arith_opt(const cg::OperatorNodeBase& opr) {
                    opr.cast_final<Elemwise>().param().mode);
 }
 
-const inplace_optimize::OptimizerRegistry&
-inplace_optimize::optimizer_registry() {
+const inplace_optimize::OptimizerRegistry& inplace_optimize::optimizer_registry() {
     MIDOUT_B("inplace_optimize::optimizer_registry")
     static OptimizerRegistry ret = make_optimizer_registry();
     return ret;
     MIDOUT_E
 }
 
-inplace_optimize::OptimizerRegistry
-inplace_optimize::make_optimizer_registry() {
+inplace_optimize::OptimizerRegistry inplace_optimize::make_optimizer_registry() {
     OptimizerRegistry ret;
     auto add_optimizer = [&](Mode mode) -> SingleOptimizer& {
         auto&& vec = ret[mode];
@@ -175,10 +167,9 @@ inplace_optimize::make_optimizer_registry() {
         return vec.back();
     };
 
-#define REG(_mode)                         \
-    add_optimizer(Mode::_mode) = [](       \
-            const SymbolVarArrayView& inp, \
-            const OperatorNodeConfig& config) -> SymbolVar
+#define REG(_mode)                 \
+    add_optimizer(Mode::_mode) = [ \
+    ](const SymbolVarArrayView& inp, const OperatorNodeConfig& config) -> SymbolVar
 
     // a - a -> 0
     add_optimizer(Mode::SUB) = eq_to_unit<0>;
@@ -238,8 +229,7 @@ inplace_optimize::make_optimizer_registry() {
             auto v0 = opr::Elemwise::make({opr->input(0)}, Mode::LOG),
                  v1 = opr::Elemwise::make({opr->input(1)}, Mode::LOG);
             return opr::Elemwise::make(
-                    {v0, v1}, mode == Mode::MUL ? Mode::ADD : Mode::SUB,
-                    config);
+                    {v0, v1}, mode == Mode::MUL ? Mode::ADD : Mode::SUB, config);
         }
 
         if (mode == Mode::EXP) {
@@ -259,8 +249,7 @@ inplace_optimize::make_optimizer_registry() {
             std::swap(i0, i1);
         }
         if (is_const_value(i0, 1)) {
-            return broadcast_ensure(
-                    opr::Elemwise::make({i1}, Mode::LOG1P, config), i0);
+            return broadcast_ensure(opr::Elemwise::make({i1}, Mode::LOG1P, config), i0);
         }
         return {};
     };
@@ -273,8 +262,8 @@ inplace_optimize::make_optimizer_registry() {
         Elemwise *a, *b;
         if ((a = as_elem_opr(add->input(0), Mode::EXP)) &&
             (b = as_elem_opr(add->input(1), Mode::EXP))) {
-            return opr::Elemwise::make({a->input(0), b->input(0)},
-                                       Mode::LOG_SUM_EXP, config);
+            return opr::Elemwise::make(
+                    {a->input(0), b->input(0)}, Mode::LOG_SUM_EXP, config);
         }
         return {};
     };
@@ -284,8 +273,7 @@ inplace_optimize::make_optimizer_registry() {
         auto i0 = as_elem_opr(inp[0].node(), Mode::EXP);
         if (i0 && is_const_value(inp[1], 1)) {
             return broadcast_ensure(
-                    opr::Elemwise::make({i0->input(0)}, Mode::EXPM1, config),
-                    inp[1]);
+                    opr::Elemwise::make({i0->input(0)}, Mode::EXPM1, config), inp[1]);
         }
         return {};
     };
@@ -297,8 +285,7 @@ inplace_optimize::make_optimizer_registry() {
             switch (inp[0].dtype().category()) {
                 case DTypeCategory::FLOAT:
                     return broadcast_ensure(
-                            opr::Elemwise::make({inp[0]}, Mode::FLOOR, config),
-                            inp[1]);
+                            opr::Elemwise::make({inp[0]}, Mode::FLOOR, config), inp[1]);
                 case DTypeCategory::INT:
                     return broadcast_tshp(inp[0], inp);
                 default:
@@ -403,8 +390,8 @@ void GradSumListOptimizer::merge_incr_subtensor() {
     }
 }
 
-GradSumListOptimizer::GradSumListOptimizer(VarNode* wrt, VarNodeArray& grads,
-                                           VarNodeArray& mid_results)
+GradSumListOptimizer::GradSumListOptimizer(
+        VarNode* wrt, VarNodeArray& grads, VarNodeArray& mid_results)
         : m_wrt{wrt}, m_grads{grads} {
     remove_broadcast();
     merge_incr_subtensor();
@@ -412,8 +399,7 @@ GradSumListOptimizer::GradSumListOptimizer(VarNode* wrt, VarNodeArray& grads,
 }
 
 void GradSumListOptimizer::calc_sum(VarNodeArray& mid_results) {
-    auto sum = elemwise_reduce_var_list(m_grads, Elemwise::Mode::ADD,
-                                        &mid_results);
+    auto sum = elemwise_reduce_var_list(m_grads, Elemwise::Mode::ADD, &mid_results);
     auto update_sum = [&](VarNode* s) {
         sum = s;
         mid_results.push_back(s);
@@ -431,8 +417,8 @@ void GradSumListOptimizer::calc_sum(VarNodeArray& mid_results) {
 
 /* ===================== global functions ===================== */
 
-bool gopt::check_is_incr_subtensor_zero(cg::OperatorNodeBase* opr,
-                                        bool require_brdcst) {
+bool gopt::check_is_incr_subtensor_zero(
+        cg::OperatorNodeBase* opr, bool require_brdcst) {
     auto type = opr->dyn_typeinfo();
     if (type != IncrSubtensor::typeinfo() &&
         type != IndexingIncrMultiAxisVec::typeinfo())
@@ -467,8 +453,7 @@ VarNode* gopt::remake_incr_subtensor_zero(
     mgb_assert(type == IndexingIncrMultiAxisVec::typeinfo());
     return IndexingIncrMultiAxisVec::make(
                    new_data, orig_opr->input(1),
-                   orig_opr->cast_final<IndexingIncrMultiAxisVec>()
-                           .index_desc(),
+                   orig_opr->cast_final<IndexingIncrMultiAxisVec>().index_desc(),
                    orig_opr->config(), input_tensor_replacer)
             .node();
 }

@@ -11,9 +11,9 @@
 
 #include "src/common/utils.h"
 #include "src/cuda/query_blocksize.cuh"
-#include "src/cuda/utils.h"
 #include "src/cuda/relayout/kern.cuh"
 #include "src/cuda/relayout/kern_contiguous.cuh"
+#include "src/cuda/utils.h"
 
 namespace megdnn {
 namespace cuda {
@@ -26,7 +26,8 @@ void ParamElemVisitor<ndim, ctype, CONTIG_OTHER>::host_init(
     m_ptr = rv.ptr<ctype>();
     for (size_t i = 0; i < rv.layout.ndim; ++i) {
         m_stride[i] = rv.layout.stride[i];
-        if (i + 1 < rv.layout.ndim) m_shape_highdim[i] = rv.layout.shape[i + 1];
+        if (i + 1 < rv.layout.ndim)
+            m_shape_highdim[i] = rv.layout.shape[i + 1];
     }
     for (int i = rv.layout.ndim - 1; i < ndim - 1; ++i) {
         m_shape_highdim[i] = 1;
@@ -38,13 +39,14 @@ void ParamElemVisitor<ndim, ctype, CONTIG_OTHER>::host_init(
 #pragma GCC diagnostic pop
 
 template <int ndim, typename ctype>
-void ParamElemVisitor<ndim, ctype, CONTIG_FULL>::host_init(const TensorND &rv, int /*grid_size*/, int /*block_size*/) {
+void ParamElemVisitor<ndim, ctype, CONTIG_FULL>::host_init(
+        const TensorND& rv, int /*grid_size*/, int /*block_size*/) {
     megdnn_assert_contiguous(rv.layout);
     m_ptr = rv.ptr<ctype>();
 }
 
 #define INST(ndim, ctype, ctg) template class ParamElemVisitor<ndim, ctype, ctg>
-#define INST_FOR_CTYPE MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
+#define INST_FOR_CTYPE         MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
 
 #define ndim_cb(_ndim)             \
     INST(_ndim, ct, CONTIG_OTHER); \
@@ -103,13 +105,13 @@ void ParamElemVisitor<ndim, dt_quint4, CONTIG_OTHER>::host_init(
 }
 
 #define INST(ndim, ctg) template class ParamElemVisitor<ndim, dt_quint4, ctg>
-#define ndim_cb(_ndim) INST(_ndim, CONTIG_OTHER);
+#define ndim_cb(_ndim)  INST(_ndim, CONTIG_OTHER);
 
 MEGDNN_FOREACH_TENSOR_NDIM(ndim_cb)
 
 #undef ndim_cb
 #undef INST
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 // vim: ft=cpp syntax=cpp.doxygen

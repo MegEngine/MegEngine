@@ -120,9 +120,7 @@ template <typename T>
 struct PowCFloat {
     T exp;
 
-    __device__ __forceinline__ T apply(T x) {
-        return static_cast<T>(powf(x, exp));
-    }
+    __device__ __forceinline__ T apply(T x) { return static_cast<T>(powf(x, exp)); }
 };
 
 template <typename T, typename PowOp>
@@ -142,8 +140,8 @@ using namespace cuda_kern;
 namespace {
 
 template <typename T, typename PowOp>
-void invoke(const TensorND& dest, const TensorND& src, PowOp pow_op,
-            cudaStream_t stream) {
+void invoke(
+        const TensorND& dest, const TensorND& src, PowOp pow_op, cudaStream_t stream) {
     ElemwiseOpParamN<1> param;
     param[0] = src;
     param.init_from_given_tensor();
@@ -159,8 +157,9 @@ bool feq(float a, float b) {
 }
 
 template <typename T>
-void dispatch_op(const TensorND& dest, const TensorND& src, const float* exp_f,
-                 const int* exp_i, cudaStream_t stream) {
+void dispatch_op(
+        const TensorND& dest, const TensorND& src, const float* exp_f, const int* exp_i,
+        cudaStream_t stream) {
 #define CALL(_op) invoke<T>(dest, src, _op, stream)
     if (exp_f) {
         float exp = *exp_f;
@@ -213,14 +212,13 @@ void dispatch_op(const TensorND& dest, const TensorND& src, const float* exp_f,
 }
 }  // anonymous namespace
 
-void cuda::powc_kern(const TensorND& dest, const TensorND& src,
-                     const float* exp_f, const int* exp_i,
-                     cudaStream_t stream) {
+void cuda::powc_kern(
+        const TensorND& dest, const TensorND& src, const float* exp_f, const int* exp_i,
+        cudaStream_t stream) {
     switch (src.layout.dtype.enumv().ev) {
-#define cb(dt)                                                             \
-    case DTypeTrait<dt>::enumv:                                            \
-        return dispatch_op<DTypeTrait<dt>::ctype>(dest, src, exp_f, exp_i, \
-                                                  stream);
+#define cb(dt)                  \
+    case DTypeTrait<dt>::enumv: \
+        return dispatch_op<DTypeTrait<dt>::ctype>(dest, src, exp_f, exp_i, stream);
         MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
         default:

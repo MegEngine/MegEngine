@@ -22,8 +22,7 @@ struct TestArg {
     param::AdaptivePooling param;
     TensorShape ishape;
     TensorShape oshape;
-    TestArg(param::AdaptivePooling param, TensorShape ishape,
-            TensorShape oshape)
+    TestArg(param::AdaptivePooling param, TensorShape ishape, TensorShape oshape)
             : param(param), ishape(ishape), oshape(oshape) {}
 };
 
@@ -33,17 +32,21 @@ inline std::vector<TestArg> get_args() {
     using Mode = param::AdaptivePooling::Mode;
 
     for (size_t i = 36; i < 40; ++i) {
-        args.emplace_back(Param{Mode::AVERAGE}, TensorShape{2, 3, i, i + 1},
-                          TensorShape{2, 3, i - 4, i - 2});
-        args.emplace_back(Param{Mode::MAX}, TensorShape{2, 3, i, i + 1},
-                          TensorShape{2, 3, i - 4, i - 2});
+        args.emplace_back(
+                Param{Mode::AVERAGE}, TensorShape{2, 3, i, i + 1},
+                TensorShape{2, 3, i - 4, i - 2});
+        args.emplace_back(
+                Param{Mode::MAX}, TensorShape{2, 3, i, i + 1},
+                TensorShape{2, 3, i - 4, i - 2});
     }
 
     for (size_t i = 5; i < 10; ++i) {
-        args.emplace_back(Param{Mode::AVERAGE}, TensorShape{2, 3, i, i + 1},
-                          TensorShape{2, 3, i - 3, i - 2});
-        args.emplace_back(Param{Mode::MAX}, TensorShape{2, 3, i, i + 1},
-                          TensorShape{2, 3, i - 3, i - 2});
+        args.emplace_back(
+                Param{Mode::AVERAGE}, TensorShape{2, 3, i, i + 1},
+                TensorShape{2, 3, i - 3, i - 2});
+        args.emplace_back(
+                Param{Mode::MAX}, TensorShape{2, 3, i, i + 1},
+                TensorShape{2, 3, i - 3, i - 2});
     }
     return args;
 }

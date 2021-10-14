@@ -16,8 +16,7 @@
 namespace mgb {
 namespace imperative {
 
-class BlobManagerImpl final: public BlobManager {
-
+class BlobManagerImpl final : public BlobManager {
     struct BlobSetWithMux {
         std::mutex mtx;
         ThinHashSet<Blob*> blobs_set;
@@ -45,14 +44,15 @@ class BlobManagerImpl final: public BlobManager {
 
     void alloc_direct(Blob* blob, size_t size) override;
 
-    DeviceTensorND alloc_workspace(CompNode cn, TensorLayout layout); 
+    DeviceTensorND alloc_workspace(CompNode cn, TensorLayout layout);
 
 public:
     static BlobManager* inst();
 
     void alloc_with_defrag(Blob* blob, size_t size) override;
 
-    DeviceTensorND alloc_workspace_with_defrag(CompNode cn, TensorLayout layout) override;
+    DeviceTensorND alloc_workspace_with_defrag(
+            CompNode cn, TensorLayout layout) override;
 
     void register_blob(Blob* blob) override;
 
@@ -61,5 +61,5 @@ public:
     void set_enable(bool flag) override;
 };
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb

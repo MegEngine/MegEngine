@@ -12,11 +12,11 @@
 
 #include "megdnn/oprs/cv.h"
 #include "megdnn/oprs/general.h"
+#include "megdnn/oprs/imgproc.h"
+#include "megdnn/oprs/linalg.h"
 #include "megdnn/oprs/nn.h"
 #include "megdnn/oprs/nn_int.h"
-#include "megdnn/oprs/imgproc.h"
 #include "megdnn/oprs/utils.h"
-#include "megdnn/oprs/linalg.h"
 
 template <typename Opr>
 struct OprArityTrait;
@@ -52,7 +52,5 @@ INST_ARITY(megdnn::PoolingForward, 1, 1);
 INST_ARITY(megdnn::PoolingBackward, 3, 1);
 
 #undef INST_ARITY
-
-
 
 // vim: syntax=cpp.doxygen

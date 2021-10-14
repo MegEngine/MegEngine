@@ -58,10 +58,10 @@ namespace {
     vst1q_u32(&output2[count], v_o2);                     \
     v_o0 = v_tmp;
 
-void fuse_packb(const dt_int8* __restrict src, dt_int8* __restrict dst,
-                dt_int8* __restrict b_panel, const int OW, const int IC,
-                const int IH, const int IW,
-                const int cur_index, const int block_size) {
+void fuse_packb(
+        const dt_int8* __restrict src, dt_int8* __restrict dst,
+        dt_int8* __restrict b_panel, const int OW, const int IC, const int IH,
+        const int IW, const int cur_index, const int block_size) {
     int start_h = cur_index / OW;
     int cur_remain_w = cur_index % OW;
     int end_h = (cur_index + block_size) / OW;
@@ -113,7 +113,7 @@ void fuse_packb(const dt_int8* __restrict src, dt_int8* __restrict dst,
                 int w = cur_remain_w;
                 index = (ic * IH + (start_h + fh)) * IW + w;
                 uint32x4_t v_o0 = vld1q_u32(&uint32_src[index]);
-                for ( ; w + 3 < OW; w += 4) {
+                for (; w + 3 < OW; w += 4) {
                     LOAD_AND_STOR_IM2COL_DST();
                     count += 4;
                     index += 4;
@@ -145,12 +145,12 @@ void fuse_packb(const dt_int8* __restrict src, dt_int8* __restrict dst,
                 index = (ic * IH + (end_h + fh)) * IW;
                 w = 0;
                 v_o0 = vld1q_u32(&uint32_src[index]);
-                for ( ; w + 3 < end_remain_w; w+=4) {
+                for (; w + 3 < end_remain_w; w += 4) {
                     LOAD_AND_STOR_IM2COL_DST();
-                    count+=4;
-                    index+=4;
+                    count += 4;
+                    index += 4;
                 }
-                for ( ; w < end_remain_w; w++) {
+                for (; w < end_remain_w; w++) {
                     STOR_IM2COL_DST();
                     count++;
                     index++;
@@ -169,15 +169,13 @@ void fuse_packb(const dt_int8* __restrict src, dt_int8* __restrict dst,
 #undef LOAD_AND_STOR_IM2COL_DST
 }  // namespace
 
-template <typename op_ctype, typename op_dtype,
-          megdnn::PostprocessMode postprocess_mode>
-void StrategyFuse8x12x4Nchw44Dot<op_ctype, op_dtype, postprocess_mode>::
-        exec_im2col(const WorkspaceBundle& bundle,
-                    const WorkspaceBundle& bundle_thread,
-                    const StrategyParam& sparam,
-                    const fallback::ConvBiasImpl::NCBKernParam& param,
-                    fallback::MatrixMulImpl::KernParam /*matmul_param*/,
-                    const fallback::MatrixMulImpl::AlgoBase* /*matmul_algo*/) {
+template <
+        typename op_ctype, typename op_dtype, megdnn::PostprocessMode postprocess_mode>
+void StrategyFuse8x12x4Nchw44Dot<op_ctype, op_dtype, postprocess_mode>::exec_im2col(
+        const WorkspaceBundle& bundle, const WorkspaceBundle& bundle_thread,
+        const StrategyParam& sparam, const fallback::ConvBiasImpl::NCBKernParam& param,
+        fallback::MatrixMulImpl::KernParam /*matmul_param*/,
+        const fallback::MatrixMulImpl::AlgoBase* /*matmul_algo*/) {
     size_t ow = param.osz[1];
     size_t ic = param.filter_meta.icpg;
     size_t ih = param.isz[0] + param.filter_meta.padding[0] * 2;
@@ -190,28 +188,28 @@ void StrategyFuse8x12x4Nchw44Dot<op_ctype, op_dtype, postprocess_mode>::
     dt_int8* src2 = reinterpret_cast<dt_int8*>(
             reinterpret_cast<uintptr_t>(bundle.get(BUNDLE_PADDING_INDEX)) +
             input_offset);
-    bool is_phpwzero = param.filter_meta.padding[0] == 0 &&
-                       param.filter_meta.padding[1] == 0;
+    bool is_phpwzero =
+            param.filter_meta.padding[0] == 0 && param.filter_meta.padding[1] == 0;
     if (is_phpwzero) {
         src2 = const_cast<dt_int8*>(
                 param.src<dt_int8>(sparam.batch_id, sparam.group_id));
     }
-    dt_int8* b_panel =
-            reinterpret_cast<dt_int8*>(reinterpret_cast<uintptr_t>(
-                    bundle_thread.get(THREAD_BUNDLE_PACKB_INDEX)));
+    dt_int8* b_panel = reinterpret_cast<dt_int8*>(
+            reinterpret_cast<uintptr_t>(bundle_thread.get(THREAD_BUNDLE_PACKB_INDEX)));
     megdnn_assert(ic % 4 == 0, "nchw44_dot with ic is not of time 4");
 
-    int8_t* im2col_dst = static_cast<int8_t*>(
-            bundle_thread.get(THREAD_BUNDLE_IM2COL_INDEX));
+    int8_t* im2col_dst =
+            static_cast<int8_t*>(bundle_thread.get(THREAD_BUNDLE_IM2COL_INDEX));
 
-    fuse_packb(src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
-               sparam.output_block_size);
+    fuse_packb(
+            src2, im2col_dst, b_panel, ow, ic, ih, iw, sparam.ohw_cur_index,
+            sparam.output_block_size);
 }
 
 namespace megdnn {
 
-template class StrategyFuse8x12x4Nchw44Dot<dt_qint32, dt_qint8,
-                                        megdnn::PostprocessMode::QUANTIZED>;
+template class StrategyFuse8x12x4Nchw44Dot<
+        dt_qint32, dt_qint8, megdnn::PostprocessMode::QUANTIZED>;
 }  // namespace megdnn
 
 #endif

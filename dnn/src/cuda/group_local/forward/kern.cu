@@ -41,14 +41,11 @@ constexpr size_t NB = 4, ICB = 4;
 // src planes are loaded into shared memory (presumably src spatial size is
 // small).
 template <uint32_t NB, uint32_t ICB, bool is_xcorr>
-__global__ void forward_kernel(const float* __restrict__ src,
-                               const float* __restrict__ filter,
-                               float* __restrict__ dst, uint32_t N, uint32_t IC,
-                               uint32_t IH, uint32_t IW, uint32_t OC,
-                               uint32_t OH, uint32_t OW, uint32_t FH,
-                               uint32_t FW, uint32_t INs, uint32_t ONs,
-                               uint32_t PH, uint32_t PW, uint32_t SH,
-                               uint32_t SW) {
+__global__ void forward_kernel(
+        const float* __restrict__ src, const float* __restrict__ filter,
+        float* __restrict__ dst, uint32_t N, uint32_t IC, uint32_t IH, uint32_t IW,
+        uint32_t OC, uint32_t OH, uint32_t OW, uint32_t FH, uint32_t FW, uint32_t INs,
+        uint32_t ONs, uint32_t PH, uint32_t PW, uint32_t SH, uint32_t SW) {
     // NB * ICB * sizeof(float) * IH * IW
     extern __shared__ float shared_mem[];
     float* src_cache = shared_mem;
@@ -74,9 +71,8 @@ __global__ void forward_kernel(const float* __restrict__ src,
             uint32_t ip = i % (IH * IW);
             uint32_t icb = i / (IH * IW) % ICB;
             uint32_t nb = i / (IH * IW) / ICB;
-            src_cache[i] =
-                    (icb < ICB_cur) *
-                    src[nb * INs + min(IC - 1, (ic + icb)) * IH * IW + ip];
+            src_cache[i] = (icb < ICB_cur) *
+                           src[nb * INs + min(IC - 1, (ic + icb)) * IH * IW + ip];
         }
         __syncthreads();
         if (oid < OC * OH * OW)
@@ -102,9 +98,9 @@ __global__ void forward_kernel(const float* __restrict__ src,
                                 float src_reg[NB];
 #pragma unroll
                                 for (uint32_t nb = 0; nb < NB; ++nb) {
-                                    src_reg[nb] = src_cache[nb * ICB * IH * IW +
-                                                            icb * IH * IW +
-                                                            ih * IW + iw];
+                                    src_reg[nb] = src_cache
+                                            [nb * ICB * IH * IW + icb * IH * IW +
+                                             ih * IW + iw];
                                 }
 #pragma unroll
                                 for (uint32_t nb = 0; nb < NB; ++nb) {
@@ -122,22 +118,21 @@ __global__ void forward_kernel(const float* __restrict__ src,
     }
 }
 
-}
+}  // namespace
 
-void group_local::exec(const float* src, const float* filter, float* dst,
-                       float* wptr, uint32_t N, uint32_t IC, uint32_t IH,
-                       uint32_t IW, uint32_t OC, uint32_t OH, uint32_t OW,
-                       uint32_t FH, uint32_t FW, uint32_t G, uint32_t PH,
-                       uint32_t PW, uint32_t SH, uint32_t SW,
-                       cudaStream_t stream) {
+void group_local::exec(
+        const float* src, const float* filter, float* dst, float* wptr, uint32_t N,
+        uint32_t IC, uint32_t IH, uint32_t IW, uint32_t OC, uint32_t OH, uint32_t OW,
+        uint32_t FH, uint32_t FW, uint32_t G, uint32_t PH, uint32_t PW, uint32_t SH,
+        uint32_t SW, cudaStream_t stream) {
     MEGDNN_MARK_USED_VAR(wptr);
     size_t threads = 256;
     dim3 blocks = dim3(DIVUP(N, NB), DIVUP(OC * OH * OW, threads), G);
     uint32_t INs = G * IC * IH * IW, ONs = G * OC * OH * OW;
     forward_kernel<NB, ICB, true>
             <<<blocks, threads, NB * ICB * sizeof(float) * IH * IW, stream>>>(
-                    src, filter, dst, N, IC, IH, IW, OC, OH, OW, FH, FW, INs,
-                    ONs, PH, PW, SH, SW);
+                    src, filter, dst, N, IC, IH, IW, OC, OH, OW, FH, FW, INs, ONs, PH,
+                    PW, SH, SW);
     after_kernel_launch();
 }
 

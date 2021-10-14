@@ -11,9 +11,9 @@
 #pragma once
 
 #if defined(__WIN32__) || defined(__APPLE__)
-# define cdecl(s) _##s
+#define cdecl(s) _##s
 #else
-# define cdecl(s) s
+#define cdecl(s) s
 #endif
 
 #if !defined(__APPLE__)
@@ -23,7 +23,5 @@
 #endif
 
 #if defined(__linux__) && defined(__ELF__) && (defined(__arm__) || defined(__aarch64__))
-.pushsection .note.GNU-stack,"",%progbits
-.popsection
+.pushsection.note.GNU - stack, "", % progbits.popsection
 #endif
-

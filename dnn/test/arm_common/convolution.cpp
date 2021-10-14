@@ -25,15 +25,13 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
     Checker<ConvolutionBackwardData> checker(handle());
     using Param = ConvolutionBackwardData::Param;
     Param param;
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t ph, size_t pw,
-                   size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t ph, size_t pw, size_t group = 1) {
         param.pad_h = ph;
         param.pad_w = pw;
         param.stride_h = param.stride_w = stride;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Int8()};
+        TensorLayout diff = TensorLayout{{n, oc * group, oh, ow}, dtype::Int8()};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -49,13 +47,11 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
             opr->param() = param;
             opr->deduce_layout(filter, diff, grad);
         }
-        if(stride == 1 ){
-            checker.set_before_exec_callback(AlgoChecker<
-                                             ConvolutionBackwardData>(
+        if (stride == 1) {
+            checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
                     "AARCH32_I8x8x32_DECONV_STRIDE1"));
         } else {
-            checker.set_before_exec_callback(AlgoChecker<
-                                             ConvolutionBackwardData>(
+            checker.set_before_exec_callback(AlgoChecker<ConvolutionBackwardData>(
                     "AARCH32_I8x8x32_DECONV_STRIDE2"));
         }
         checker.set_param(param)
@@ -83,15 +79,14 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_QUINT8) {
     Checker<ConvolutionBackwardData> checker(handle());
     using Param = ConvolutionBackwardData::Param;
     Param param;
-    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                   size_t fh, size_t fw, size_t stride, size_t ph, size_t pw,
-                   size_t group = 1) {
+    auto run = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                   size_t fw, size_t stride, size_t ph, size_t pw, size_t group = 1) {
         param.pad_h = ph;
         param.pad_w = pw;
         param.stride_h = param.stride_w = stride;
 
-        TensorLayout diff =
-                TensorLayout{{n, oc * group, oh, ow}, dtype::Quantized8Asymm(1.3f, (uint8_t)129)};
+        TensorLayout diff = TensorLayout{
+                {n, oc * group, oh, ow}, dtype::Quantized8Asymm(1.3f, (uint8_t)129)};
         TensorLayout grad;
         TensorLayout filter;
         if (group == 1) {
@@ -99,7 +94,9 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_QUINT8) {
             filter = {{oc, ic, fh, fw}, dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
         } else {
             param.sparse = Param::Sparse::GROUP;
-            filter = {{group, oc, ic, fh, fw}, dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
+            filter = {
+                    {group, oc, ic, fh, fw},
+                    dtype::Quantized8Asymm(1.2f, (uint8_t)127)};
         }
         // TensorLayout grad;
         {
@@ -109,21 +106,19 @@ TEST_F(ARM_COMMON, CONVOLUTION_BACKWARD_DATA_QUINT8) {
         }
         NormalRNG rng(128.f);
 
-        if(stride == 1 ){
+        if (stride == 1) {
             checker.set_before_exec_callback(
-                    AlgoChecker<ConvolutionBackwardData>(
-                            "ARM_COMMON_QUINT8_DIRECT_"
-                            "DECONV_STRIDE1"));
+                    AlgoChecker<ConvolutionBackwardData>("ARM_COMMON_QUINT8_DIRECT_"
+                                                         "DECONV_STRIDE1"));
         } else {
             checker.set_before_exec_callback(
-                    AlgoChecker<ConvolutionBackwardData>(
-                            "ARM_COMMON_QUINT8_DIRECT_"
-                            "DECONV_STRIDE2"));
+                    AlgoChecker<ConvolutionBackwardData>("ARM_COMMON_QUINT8_DIRECT_"
+                                                         "DECONV_STRIDE2"));
         }
         checker.set_param(param)
-            .set_dtype(0, dtype::Quantized8Asymm(1.2f, (uint8_t)127))
-            .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)129))
-            .set_dtype(2, {});
+                .set_dtype(0, dtype::Quantized8Asymm(1.2f, (uint8_t)127))
+                .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)129))
+                .set_dtype(2, {});
         checker.set_rng(0, &rng).set_rng(1, &rng);
         checker.exec(TensorLayoutArray{filter, diff, grad});
     };
@@ -158,19 +153,18 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_I8x8x32_WITHDOTPROD) {
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
         for (size_t ic : {1, 8, 16, 32, 64}) {
             for (size_t oc : {1, 8, 16, 32, 64}) {
-                    run(oc, ic, 56, 56, kernel, 1);
-                    run(oc, ic, 128, 128, kernel, 1);
-                    run(oc, ic, 256, 256, kernel, 1);
-                }
+                run(oc, ic, 56, 56, kernel, 1);
+                run(oc, ic, 128, 128, kernel, 1);
+                run(oc, ic, 256, 256, kernel, 1);
             }
+        }
     }
 
     constexpr size_t RUN = 50;
@@ -191,25 +185,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_I8x8x32_WITHDOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used_int = benchmark.set_param(arg.param).exec(
-                                {arg.src, arg.filter, {}}) /
-                        RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
+        auto used_int =
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_I8x8x32_WITHDOTPROD) {
@@ -225,9 +219,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_I8x8x32_WITHDOTPROD) {
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
@@ -258,25 +251,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_I8x8x32_WITHDOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -293,31 +286,30 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_QUINT8_WITHDOTPROD) {
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
         for (size_t ic : {1, 8, 16, 32, 64}) {
             for (size_t oc : {1, 8, 16, 32, 64}) {
-                    run(oc, ic, 56, 56, kernel, 1);
-                    run(oc, ic, 128, 128, kernel, 1);
-                    run(oc, ic, 256, 256, kernel, 1);
-                }
+                run(oc, ic, 56, 56, kernel, 1);
+                run(oc, ic, 128, 128, kernel, 1);
+                run(oc, ic, 256, 256, kernel, 1);
             }
+        }
     }
 
     constexpr size_t RUN = 50;
     Benchmarker<Convolution> benchmark(handle());
     benchmark.set_dtype(0, dtype::Quantized8Asymm(1.2f, (uint8_t)129))
-             .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)127))
-             .set_dtype(2, {});
+            .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)127))
+            .set_dtype(2, {});
 
     benchmark.set_display(false);
     benchmark.set_times(RUN);
-    benchmark.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMDOTU8STRD1"));
+    benchmark.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_ARMDOTU8STRD1"));
 
     Benchmarker<Convolution> benchmark_float(handle());
     benchmark_float.set_display(false);
@@ -327,26 +319,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1_QUINT8_WITHDOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
-      //! dst.nr_elems * IC * FH * FW * 2
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
+        //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used_int = benchmark.set_param(arg.param).exec(
-                                {arg.src, arg.filter, {}}) /
-                        RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                        RUN;
+        auto used_int =
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
-
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -363,31 +354,30 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_QUINT8_WITHDOTPROD) {
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
         for (size_t ic : {1, 8, 16, 32, 64}) {
             for (size_t oc : {1, 8, 16, 32, 64}) {
-                    run(oc, ic, 56, 56, kernel, 2);
-                    run(oc, ic, 128, 128, kernel, 2);
-                    run(oc, ic, 256, 256, kernel, 2);
-                }
+                run(oc, ic, 56, 56, kernel, 2);
+                run(oc, ic, 128, 128, kernel, 2);
+                run(oc, ic, 256, 256, kernel, 2);
             }
+        }
     }
 
     constexpr size_t RUN = 50;
     Benchmarker<Convolution> benchmark(handle());
     benchmark.set_dtype(0, dtype::Quantized8Asymm(1.2f, (uint8_t)129))
-             .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)127))
-             .set_dtype(2, {});
+            .set_dtype(1, dtype::Quantized8Asymm(1.3f, (uint8_t)127))
+            .set_dtype(2, {});
 
     benchmark.set_display(false);
     benchmark.set_times(RUN);
-    benchmark.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMDOTU8STRD2"));
+    benchmark.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_ARMDOTU8STRD2"));
 
     Benchmarker<Convolution> benchmark_float(handle());
     benchmark_float.set_display(false);
@@ -397,25 +387,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE2_QUINT8_WITHDOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used_int = benchmark.set_param(arg.param).exec(
-                                {arg.src, arg.filter, {}}) /
-                        RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
+        auto used_int =
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -442,12 +432,12 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_BACKWARD_DATA_INT8_INT8_INT32) {
         printf("time = %f \n perf= %f gops\n", time, computations * RUN / time);
     };
 
-    auto profile = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc,
-                       size_t fh, size_t fw, size_t s) {
+    auto profile = [&](size_t n, size_t ic, size_t oh, size_t ow, size_t oc, size_t fh,
+                       size_t fw, size_t s) {
         Param param;
         param.stride_h = param.stride_w = s;
-        printf("oc: %zd ic: %zd w: %zd h: %zd kernel_size: %zd sreide: %zd\n",
-               oc, ic, ow, oh, fh, s);
+        printf("oc: %zd ic: %zd w: %zd h: %zd kernel_size: %zd sreide: %zd\n", oc, ic,
+               ow, oh, fh, s);
 
         TensorLayout diff = TensorLayout{{n, oc, oh, ow}, dtype::Int8()};
         TensorLayout filter = TensorLayout{{oc, ic, fh, fw}, dtype::Int8()};
@@ -492,8 +482,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CHANWISE_CONVOLUTION) {
                             .set_param(iparam)
                             .exec(shapes);
         float int_float_ratio = static_cast<float>(tfloat) / tint;
-        printf("naive=%.3fms float=%.3fms int=%.3fms, int/float=%.3f\n",
-               tnaive / RUN, tfloat / RUN, tint / RUN, int_float_ratio);
+        printf("naive=%.3fms float=%.3fms int=%.3fms, int/float=%.3f\n", tnaive / RUN,
+               tfloat / RUN, tint / RUN, int_float_ratio);
         EXPECT_GE(int_float_ratio, 1.5);
     };
     Param param;
@@ -514,8 +504,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD1_WITHOUT_DOTPROD) {
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -524,9 +513,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD1_WITHOUT_DOTPROD) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     // compare to float direct conv here,
@@ -560,25 +548,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD1_WITHOUT_DOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -587,8 +575,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD) {
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -597,9 +584,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -625,8 +611,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD) {
     benchmark_float.set_display(false);
     benchmark_float.set_times(RUN);
 #if MEGDNN_AARCH64
-    benchmark_float.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMV8F32STRD2"));
+    benchmark_float.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_ARMV8F32STRD2"));
 #else
     benchmark_float.set_before_exec_callback(
             AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_F32STRD2"));
@@ -636,36 +622,34 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
-TEST_F(ARM_COMMON,
-       BENCHMARK_CONVOLUTION_INT8X8X32_STRD1_WITHOUT_DOTPROD_TO_MATMUL) {
+TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD1_WITHOUT_DOTPROD_TO_MATMUL) {
     // have to remove preferred restrict in usable func before run the benchmark
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -674,9 +658,8 @@ TEST_F(ARM_COMMON,
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -708,36 +691,35 @@ TEST_F(ARM_COMMON,
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used_conv = benchmark_conv.set_param(arg.param).exec(
-                                 {arg.src, arg.filter, {}}) /
-                         RUN;
-        auto used_matmul = benchmark_matmul.set_param(arg.param).exec(
-                                   {arg.src, arg.filter, {}}) /
-                           RUN;
+        auto used_conv =
+                benchmark_conv.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
+        auto used_matmul =
+                benchmark_matmul.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
 
         printf("%s %s: conv: %f ms %f Gflops matmul: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_conv, computations / used_conv, used_matmul,
-               computations / used_matmul, used_matmul / used_conv);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_conv,
+               computations / used_conv, used_matmul, computations / used_matmul,
+               used_matmul / used_conv);
     }
 }
 
-TEST_F(ARM_COMMON,
-       BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD_TO_MATMUL) {
+TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8X8X32_STRD2_WITHOUT_DOTPROD_TO_MATMUL) {
     // have to remove preferred restrict in usable func before run the benchmark
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -746,9 +728,8 @@ TEST_F(ARM_COMMON,
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -780,25 +761,26 @@ TEST_F(ARM_COMMON,
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
-        auto used_conv = benchmark_conv.set_param(arg.param).exec(
-                                 {arg.src, arg.filter, {}}) /
-                         RUN;
-        auto used_matmul = benchmark_matmul.set_param(arg.param).exec(
-                                   {arg.src, arg.filter, {}}) /
-                           RUN;
+        auto used_conv =
+                benchmark_conv.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
+        auto used_matmul =
+                benchmark_matmul.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                RUN;
 
         printf("%s %s: conv: %f ms %f Gflops matmul: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_conv, computations / used_conv, used_matmul,
-               computations / used_matmul, used_matmul / used_conv);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_conv,
+               computations / used_conv, used_matmul, computations / used_matmul,
+               used_matmul / used_conv);
     }
 }
 
@@ -807,8 +789,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD1_WITHOUT_DOTPROD) {
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -817,9 +798,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD1_WITHOUT_DOTPROD) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     // compare to float direct conv here,
@@ -853,25 +833,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD1_WITHOUT_DOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -880,8 +860,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD2_WITHOUT_DOTPROD) {
     using namespace convolution;
 
     std::vector<TestArg> args;
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -890,9 +869,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD2_WITHOUT_DOTPROD) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
-
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -918,8 +896,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD2_WITHOUT_DOTPROD) {
     benchmark_float.set_display(false);
     benchmark_float.set_times(RUN);
 #if MEGDNN_AARCH64
-    benchmark_float.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_ARMV8F32STRD2"));
+    benchmark_float.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_ARMV8F32STRD2"));
 #else
     benchmark_float.set_before_exec_callback(
             AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_F32STRD2"));
@@ -929,25 +907,25 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_QUINT8X8X32_STRD2_WITHOUT_DOTPROD) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 
@@ -958,8 +936,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8_INT8_INT16) {
         layouts.emplace_back(shapes[0], dtype::Int8());
         layouts.emplace_back(shapes[1], dtype::Int8());
         layouts.emplace_back(shapes[2], dtype::Int16());
-        Benchmarker<Convolution> benchmarker_cpu(handle()),
-                benchmarker_float(handle());
+        Benchmarker<Convolution> benchmarker_cpu(handle()), benchmarker_float(handle());
         benchmarker_cpu.set_dtype(0, dtype::Int8());
         benchmarker_cpu.set_dtype(1, dtype::Int8());
         benchmarker_cpu.set_dtype(2, dtype::Int16());
@@ -975,8 +952,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8_INT8_INT16) {
                           .exec(shapes);
         auto speedup = t4 / t2;
         std::cout << "src=" << shapes[0].to_string()
-                  << " filter=" << shapes[1].to_string()
-                  << " stride=" << param.stride_h << " float=" << t4 << "ms"
+                  << " filter=" << shapes[1].to_string() << " stride=" << param.stride_h
+                  << " float=" << t4 << "ms"
                   << " int=" << t2 << "ms"
                   << " speedup=" << speedup << std::endl;
         ASSERT_GE(speedup, 1);
@@ -1024,8 +1001,7 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8_INT8_INT32) {
         layouts.emplace_back(shapes[0], dtype::Int8());
         layouts.emplace_back(shapes[1], dtype::Int8());
         layouts.emplace_back(shapes[2], dtype::Int32());
-        Benchmarker<Convolution> benchmarker_cpu(handle()),
-                benchmarker_float(handle());
+        Benchmarker<Convolution> benchmarker_cpu(handle()), benchmarker_float(handle());
         benchmarker_cpu.set_dtype(0, dtype::Int8());
         benchmarker_cpu.set_dtype(1, dtype::Int8());
         benchmarker_cpu.set_dtype(2, dtype::Int32());
@@ -1041,8 +1017,8 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_INT8_INT8_INT32) {
                           .exec(shapes);
         auto speedup = t4 / t2;
         std::cout << "src=" << shapes[0].to_string()
-                  << " filter=" << shapes[1].to_string()
-                  << " stride=" << param.stride_h << " float=" << t4 << "ms"
+                  << " filter=" << shapes[1].to_string() << " stride=" << param.stride_h
+                  << " float=" << t4 << "ms"
                   << " int=" << t2 << "ms"
                   << " speedup=" << speedup << std::endl;
         ASSERT_GE(speedup, 1);
@@ -1106,17 +1082,17 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_DIRECT) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
-        float computations = dst_layout.total_nr_elems() * shapes[1][1] *
-                             shapes[1][2] * shapes[1][3] * 2.0 /
-                             (1024 * 1024 * 1024);
+        float computations = dst_layout.total_nr_elems() * shapes[1][1] * shapes[1][2] *
+                             shapes[1][3] * 2.0 / (1024 * 1024 * 1024);
         printf("run:%s %s float: %f ms %f Gflops VS half: %f ms %f Gflops "
                "speepup: %f\n",
-               shapes[0].to_string().c_str(), shapes[1].to_string().c_str(),
-               tfloat, computations / tfloat * 1e3, thalf,
-               computations / thalf * 1e3, tfloat / thalf);
+               shapes[0].to_string().c_str(), shapes[1].to_string().c_str(), tfloat,
+               computations / tfloat * 1e3, thalf, computations / thalf * 1e3,
+               tfloat / thalf);
     };
 
     auto profile = [&](size_t n, size_t oc, size_t ic, size_t w, size_t h,
@@ -1128,7 +1104,6 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_DIRECT) {
         param.pad_w = kernel / 2;
 
         run({{n, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
-
     };
 
     for (size_t kernel : {1, 2, 3, 4, 5, 6, 7}) {
@@ -1157,24 +1132,24 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1) {
     auto run_fp32 = [&](const TensorShapeArray& shapes, Param param) {
         Benchmarker<Convolution> benchmarker_float(handle());
         size_t RUN = 50;
-        auto tfloat =
-                benchmarker_float.set_display(false)
-                        .set_dtype(0, dtype::Float32())
-                        .set_dtype(1, dtype::Float32())
-                        .set_dtype(2, dtype::Float32())
-                        .set_before_exec_callback(AlgoChecker<Convolution>(
-                                "CONVOLUTION_DEFAULT_F32STRD1"))
-                        .set_times(RUN)
-                        .set_param(param)
-                        .exec(shapes);
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Float32())
+                              .set_dtype(1, dtype::Float32())
+                              .set_dtype(2, dtype::Float32())
+                              .set_before_exec_callback(AlgoChecker<Convolution>(
+                                      "CONVOLUTION_DEFAULT_F32STRD1"))
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
         size_t IC = shapes[1][1];
         size_t FH = shapes[1][2];
         size_t FW = shapes[1][3];
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float32()},
-                           {shapes[1], dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float32()}, {shapes[1], dtype::Float32()},
+                dst_layout);
         printf("fp32 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -1183,24 +1158,24 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1) {
     auto run_fp16 = [&](const TensorShapeArray& shapes, Param param) {
         Benchmarker<Convolution> benchmarker_float(handle());
         size_t RUN = 50;
-        auto tfloat =
-                benchmarker_float.set_display(false)
-                        .set_dtype(0, dtype::Float16())
-                        .set_dtype(1, dtype::Float16())
-                        .set_dtype(2, dtype::Float16())
-                        .set_before_exec_callback(AlgoChecker<Convolution>(
-                                "CONVOLUTION_DEFAULT_F16STRD1"))
-                        .set_times(RUN)
-                        .set_param(param)
-                        .exec(shapes);
+        auto tfloat = benchmarker_float.set_display(false)
+                              .set_dtype(0, dtype::Float16())
+                              .set_dtype(1, dtype::Float16())
+                              .set_dtype(2, dtype::Float16())
+                              .set_before_exec_callback(AlgoChecker<Convolution>(
+                                      "CONVOLUTION_DEFAULT_F16STRD1"))
+                              .set_times(RUN)
+                              .set_param(param)
+                              .exec(shapes);
         size_t IC = shapes[1][1];
         size_t FH = shapes[1][2];
         size_t FW = shapes[1][3];
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = param;
-        opr->deduce_layout({shapes[0], dtype::Float16()},
-                           {shapes[1], dtype::Float16()}, dst_layout);
+        opr->deduce_layout(
+                {shapes[0], dtype::Float16()}, {shapes[1], dtype::Float16()},
+                dst_layout);
         printf("fp16 flops: %.3f mflops\n",
                (IC * dst_layout.total_nr_elems() * FH * FW * 2) /
                        (tfloat / RUN * 1000));
@@ -1213,14 +1188,13 @@ TEST_F(ARM_COMMON, BENCHMARK_CONVOLUTION_STRIDE1) {
         param.stride_w = stride;
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
-        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n",
-               oc, ic, w, h, stride, kernel);
+        printf("oc: %zd ic: %zd w: %zd h: %zd stride: %zd kernel_size: %zd\n", oc, ic,
+               w, h, stride, kernel);
 
         run_fp32({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
         run_fp16({{1, ic, h, w}, {oc, ic, kernel, kernel}, {}}, param);
 #endif
-
     };
 
     for (size_t kernel : {2, 3, 5}) {

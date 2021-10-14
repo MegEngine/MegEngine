@@ -74,7 +74,6 @@ def test_save_load():
     optim.step()
 
     model_name = "simple.pkl"
-    print("save to {}".format(model_name))
 
     mge.save(
         {
@@ -93,7 +92,6 @@ def test_save_load():
     net.load_state_dict(checkpoint["state_dict"])
     optim = optimizer.SGD(net.parameters(), lr=1.0, momentum=0.9)
     optim.load_state_dict(checkpoint["opt_state"])
-    print("load done")
     os.remove("simple.pkl")
 
     with gm:

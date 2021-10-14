@@ -17,4 +17,4 @@ namespace mgb::imperative::python {
 
 apply_result_t apply_module_trace(ApplyContext& ctx);
 
-} // namespace mgb::imperative::python
+}  // namespace mgb::imperative::python

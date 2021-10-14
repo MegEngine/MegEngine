@@ -19,15 +19,15 @@
 using namespace megdnn;
 using namespace cuda;
 
-std::string
-MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::AlgoParam::to_string() const {
-    return ssprintf("%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n,
-                    threadblock_k, warp_m, warp_n, warp_k);
+std::string MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::AlgoParam::to_string()
+        const {
+    return ssprintf(
+            "%dX%dX%d_%dX%dX%d", threadblock_m, threadblock_n, threadblock_k, warp_m,
+            warp_n, warp_k);
 }
 
-std::pair<bool, TensorLayoutArray>
-MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::construct_aligned_layouts(
-        const SizeArgs& args) const {
+std::pair<bool, TensorLayoutArray> MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::
+        construct_aligned_layouts(const SizeArgs& args) const {
     int alignment = max_alignment(args);
     int min_alignment = min_alignment_requirement();
     bool aligned = alignment >= min_alignment;
@@ -46,8 +46,7 @@ MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::construct_aligned_layouts(
     return std::make_pair(!aligned, std::move(layouts));
 }
 
-void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(
-        const ExecArgs& args) const {
+void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(const ExecArgs& args) const {
     auto aligned = construct_aligned_layouts(args);
     if (!aligned.first)
         return do_exec(args);
@@ -65,8 +64,7 @@ void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(
 
     auto&& relayout = args.opr->handle()->create_operator<RelayoutForward>();
 
-    auto copy_stride = [](const TensorLayout& src, TensorLayout& dst,
-                          bool trans) {
+    auto copy_stride = [](const TensorLayout& src, TensorLayout& dst, bool trans) {
         dst.stride[0] = src.stride[0], dst.stride[1] = src.stride[1];
         if (trans)
             std::swap(dst.stride[0], dst.stride[1]);
@@ -94,8 +92,9 @@ void MatrixMulForwardImpl::AlgoCutlassMatrixMulBase::exec(
 
     tensor_a.layout = layouts[0];
     tensor_b.layout = layouts[1];
-    ExecArgs args_{static_cast<MatrixMulForwardImpl*>(matmul.get()), tensor_a,
-                   tensor_b, tensor_c, workspace};
+    ExecArgs args_{
+            static_cast<MatrixMulForwardImpl*>(matmul.get()), tensor_a, tensor_b,
+            tensor_c, workspace};
     do_exec(args_);
 
     tensor_c.layout.TensorShape::operator=(args.layout_c);

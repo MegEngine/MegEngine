@@ -11,14 +11,16 @@
 
 #include "./helper.h"
 
-#include "megbrain/imperative/profiler.h"
 #include "../impl/profiler/events.h"
+#include "megbrain/imperative/profiler.h"
 
 using namespace mgb;
 using namespace cg;
 using namespace imperative;
 
-namespace mgb { void imperative_log_profile(const char* message); }
+namespace mgb {
+void imperative_log_profile(const char* message);
+}
 
 TEST(TestProfiler, ImperativeLogProfile) {
     imperative::Profiler::start_profile();

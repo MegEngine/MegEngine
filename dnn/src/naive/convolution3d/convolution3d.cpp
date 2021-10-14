@@ -24,13 +24,12 @@ MIDOUT_DECL(megdnn_naive_conv3d_fwd)
 using namespace megdnn;
 using namespace naive;
 
-void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
-                                    _megdnn_tensor_in filter,
-                                    _megdnn_tensor_out dst,
-                                    _megdnn_workspace workspace) {
+void Convolution3DForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+        _megdnn_workspace workspace) {
     MIDOUT_BEGIN(megdnn_naive_conv3d_fwd) {
-        auto filter_meta = check_exec(src.layout, filter.layout, dst.layout,
-                                      workspace.size);
+        auto filter_meta =
+                check_exec(src.layout, filter.layout, dst.layout, workspace.size);
         switch (param().data_type) {
             case Param::DataType::FLOAT:
 #define cb(dt)                                                            \
@@ -51,10 +50,9 @@ void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
             case Param::DataType::FLOAT_IO16xC32:
                 DNN_INC_FLOAT16(MEGDNN_DISPATCH_CPU_KERN(
                         static_cast<HandleImpl*>(handle()),
-                        convolution3d::forward<
-                                dt_float16 MEGDNN_COMMA dt_float16 MEGDNN_COMMA
-                                        dt_float32>(src, filter, dst,
-                                                    filter_meta);));
+                        convolution3d::forward<dt_float16 MEGDNN_COMMA dt_float16
+                                                       MEGDNN_COMMA dt_float32>(
+                                src, filter, dst, filter_meta);));
                 return;
         }
         megdnn_assert_internal(0);
@@ -62,10 +60,9 @@ void Convolution3DForwardImpl::exec(_megdnn_tensor_in src,
     MIDOUT_END();
 }
 
-void Convolution3DBackwardDataImpl::exec(_megdnn_tensor_in filter,
-                                         _megdnn_tensor_in diff,
-                                         _megdnn_tensor_out grad,
-                                         _megdnn_workspace workspace) {
+void Convolution3DBackwardDataImpl::exec(
+        _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
     auto filter_meta =
             check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
 #define cb(dt)                                                            \
@@ -85,12 +82,10 @@ void Convolution3DBackwardDataImpl::exec(_megdnn_tensor_in filter,
 
     megdnn_assert_internal(0);
 }
-void Convolution3DBackwardFilterImpl::exec(_megdnn_tensor_in src,
-                                           _megdnn_tensor_in diff,
-                                           _megdnn_tensor_out grad,
-                                           _megdnn_workspace workspace) {
-    auto filter_meta =
-            check_exec(src.layout, diff.layout, grad.layout, workspace.size);
+void Convolution3DBackwardFilterImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
+    auto filter_meta = check_exec(src.layout, diff.layout, grad.layout, workspace.size);
 #define cb(dt)                                                            \
     do {                                                                  \
         if (src.layout.dtype == dt()) {                                   \
@@ -108,108 +103,91 @@ void Convolution3DBackwardFilterImpl::exec(_megdnn_tensor_in src,
 
     megdnn_assert_internal(0);
 }
-std::vector<Convolution3DForward::Algorithm*>
-Convolution3DForwardImpl::get_all_algorithms(const TensorLayout&,
-                                             const TensorLayout&,
-                                             const TensorLayout&) {
+std::vector<Convolution3DForward::Algorithm*> Convolution3DForwardImpl::
+        get_all_algorithms(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo()};
 }
-std::vector<Convolution3DForward::Algorithm*>
-Convolution3DForwardImpl::get_all_algorithms_safe(const TensorLayout&,
-                                             const TensorLayout&,
-                                             const TensorLayout&) {
+std::vector<Convolution3DForward::Algorithm*> Convolution3DForwardImpl::
+        get_all_algorithms_safe(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo()};
 }
 
-Convolution3DForward::Algorithm*
-Convolution3DForwardImpl::get_algorithm_heuristic(
+Convolution3DForward::Algorithm* Convolution3DForwardImpl::get_algorithm_heuristic(
         const TensorLayout& /* src */, const TensorLayout& /* filter */,
         const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
+        const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
     auto algo = static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo();
     algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 
-Convolution3DForward::Algorithm*
-Convolution3DForwardImpl::get_algorithm_from_desc(
+Convolution3DForward::Algorithm* Convolution3DForwardImpl::get_algorithm_from_desc(
         const AlgorithmDesc& desc) {
-    Algorithm* ret =
-            static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo();
+    Algorithm* ret = static_cast<HandleImpl*>(handle())->default_conv3d_fwd_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }
 
-std::vector<Convolution3DBackwardData::Algorithm*>
-Convolution3DBackwardDataImpl::get_all_algorithms(const TensorLayout&,
-                                                  const TensorLayout&,
-                                                  const TensorLayout&) {
+std::vector<Convolution3DBackwardData::Algorithm*> Convolution3DBackwardDataImpl::
+        get_all_algorithms(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo()};
 }
 
-std::vector<Convolution3DBackwardData::Algorithm*>
-Convolution3DBackwardDataImpl::get_all_algorithms_safe(const TensorLayout&,
-                                                  const TensorLayout&,
-                                                  const TensorLayout&) {
+std::vector<Convolution3DBackwardData::Algorithm*> Convolution3DBackwardDataImpl::
+        get_all_algorithms_safe(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
     return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo()};
 }
 
-Convolution3DBackwardData::Algorithm*
-Convolution3DBackwardDataImpl::get_algorithm_heuristic(
-        const TensorLayout& /* filter */, const TensorLayout& /* diff */,
-        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
-    auto algo =
-            static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
+Convolution3DBackwardData::Algorithm* Convolution3DBackwardDataImpl::
+        get_algorithm_heuristic(
+                const TensorLayout& /* filter */, const TensorLayout& /* diff */,
+                const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */,
+                const AlgoAttribute& positive_attr,
+                const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
     algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 
-Convolution3DBackwardData::Algorithm*
-Convolution3DBackwardDataImpl::get_algorithm_from_desc(
-        const AlgorithmDesc& desc) {
-    Algorithm* ret =
-            static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
+Convolution3DBackwardData::Algorithm* Convolution3DBackwardDataImpl::
+        get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())->default_conv3d_bwd_data_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }
 
-std::vector<Convolution3DBackwardFilter::Algorithm*>
-Convolution3DBackwardFilterImpl::get_all_algorithms(const TensorLayout&,
-                                                    const TensorLayout&,
-                                                    const TensorLayout&) {
-    return {static_cast<HandleImpl*>(handle())
-                    ->default_conv3d_bwd_filter_algo()};
+std::vector<Convolution3DBackwardFilter::Algorithm*> Convolution3DBackwardFilterImpl::
+        get_all_algorithms(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_filter_algo()};
 }
 
-std::vector<Convolution3DBackwardFilter::Algorithm*>
-Convolution3DBackwardFilterImpl::get_all_algorithms_safe(const TensorLayout&,
-                                                    const TensorLayout&,
-                                                    const TensorLayout&) {
-    return {static_cast<HandleImpl*>(handle())
-                    ->default_conv3d_bwd_filter_algo()};
+std::vector<Convolution3DBackwardFilter::Algorithm*> Convolution3DBackwardFilterImpl::
+        get_all_algorithms_safe(
+                const TensorLayout&, const TensorLayout&, const TensorLayout&) {
+    return {static_cast<HandleImpl*>(handle())->default_conv3d_bwd_filter_algo()};
 }
 
-Convolution3DBackwardFilter::Algorithm*
-Convolution3DBackwardFilterImpl::get_algorithm_heuristic(
-        const TensorLayout& /* src */, const TensorLayout& /* diff */,
-        const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */
-        ,
-        const AlgoAttribute& positive_attr,
-        const AlgoAttribute& negative_attr) {
-    auto algo = static_cast<HandleImpl*>(handle())
-                        ->default_conv3d_bwd_filter_algo();
+Convolution3DBackwardFilter::Algorithm* Convolution3DBackwardFilterImpl::
+        get_algorithm_heuristic(
+                const TensorLayout& /* src */, const TensorLayout& /* diff */,
+                const TensorLayout& /* grad */, size_t /* workspace_limit_in_bytes */
+                ,
+                const AlgoAttribute& positive_attr,
+                const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())->default_conv3d_bwd_filter_algo();
     algo->check_attribute(positive_attr, negative_attr);
     return algo;
 }
 
-Convolution3DBackwardFilter::Algorithm*
-Convolution3DBackwardFilterImpl::get_algorithm_from_desc(
-        const AlgorithmDesc& desc) {
-    Algorithm* ret = static_cast<HandleImpl*>(handle())
-                             ->default_conv3d_bwd_filter_algo();
+Convolution3DBackwardFilter::Algorithm* Convolution3DBackwardFilterImpl::
+        get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_conv3d_bwd_filter_algo();
     megdnn_assert(desc == ret->info().desc);
     return ret;
 }

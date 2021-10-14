@@ -10,7 +10,7 @@
  */
 #pragma once
 
-#include "megdnn/version.h"
 #include "megdnn/oprs.h"
+#include "megdnn/version.h"
 
 // vim: syntax=cpp.doxygen

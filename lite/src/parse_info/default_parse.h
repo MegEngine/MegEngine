@@ -33,25 +33,22 @@ bool default_parse_info(
     }
     auto info_model_name = info["name"];
     if (info_model_name != model_name) {
-        LITE_THROW(
-                ssprintf("infomation of model name is not match, packed model "
-                         "is %s, but json info get %s.",
-                         model_name.c_str(),
-                         static_cast<std::string>(info_model_name).c_str()));
+        LITE_THROW(ssprintf(
+                "infomation of model name is not match, packed model "
+                "is %s, but json info get %s.",
+                model_name.c_str(), static_cast<std::string>(info_model_name).c_str()));
     }
     //! check version
     std::string model_version = info["version"];
     int major = std::stoi(model_version.substr(0, model_version.find(".")));
     int start = model_version.find(".") + 1;
-    int minor = std::stoi(
-            model_version.substr(start, model_version.find(".", start)));
+    int minor = std::stoi(model_version.substr(start, model_version.find(".", start)));
     start = model_version.find(".", start) + 1;
     int patch = std::stoi(model_version.substr(start));
     int lite_major, lite_minor, lite_patch;
     lite::get_version(lite_major, lite_minor, lite_patch);
     size_t model_version_sum = (major * 10000 + minor) * 100 + patch;
-    size_t lite_version_sum =
-            (lite_major * 10000 + lite_minor) * 100 + lite_patch;
+    size_t lite_version_sum = (lite_major * 10000 + lite_minor) * 100 + lite_patch;
     if (model_version_sum > lite_version_sum) {
         LITE_WARN("Lite load the future version model !!!!!!!!!!!!!");
     }
@@ -75,8 +72,7 @@ bool default_parse_info(
         if (type == "NPU")
             return LiteDeviceType::LITE_NPU;
         else {
-            LITE_THROW(ssprintf("LITE not support device type of %s.",
-                                type.c_str()));
+            LITE_THROW(ssprintf("LITE not support device type of %s.", type.c_str()));
         }
     };
     if (info.contains("device")) {
@@ -138,8 +134,7 @@ bool default_parse_info(
         if (type == "shape")
             return LiteIOType::LITE_IO_SHAPE;
         else {
-            LITE_THROW(
-                    ssprintf("LITE not support IO type of %s.", type.c_str()));
+            LITE_THROW(ssprintf("LITE not support IO type of %s.", type.c_str()));
         }
     };
     auto get_data_type = [](std::string type) -> LiteDataType {
@@ -156,8 +151,7 @@ bool default_parse_info(
         if (type == "uint8")
             return LiteDataType::LITE_UINT8;
         else {
-            LITE_THROW(ssprintf("LITE not support data type of %s.",
-                                type.c_str()));
+            LITE_THROW(ssprintf("LITE not support data type of %s.", type.c_str()));
         }
     };
 #define SET_SHAPE(shape_json_, config_)                                       \
@@ -187,9 +181,9 @@ bool default_parse_info(
     }
 
     const std::string shape_name[] = {"dim0", "dim1", "dim2", "dim3"};
-    if(info.contains("IO")){
+    if (info.contains("IO")) {
         auto IOs = info["IO"];
-        if(IOs.contains("inputs")){
+        if (IOs.contains("inputs")) {
             auto inputs = IOs["inputs"];
             for (size_t i = 0; i < inputs.size(); i++) {
                 auto input_json = inputs[i];

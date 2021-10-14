@@ -25,30 +25,28 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
-#include "../nvmatrix.cuh"
 #include "../cudaconv2.cuh"
+#include "../nvmatrix.cuh"
 #include "src/cuda/utils.cuh"
 
 namespace megdnn {
 namespace cuda {
 
-#define MANYCOLOR_KEP_PARAM const float* hidActs,       \
-        const float* filters, float* targets,           \
-        const int numModulesY, const int numModulesX,   \
-        const int numImages, const int numFilters,      \
-        const int filterSize, const int imgSizeY,       \
-        const int imgSizeX, const int paddingStart,     \
-        const int moduleStride,                         \
-        const int numImgColors, const int numGroups,    \
-        const float scaleTargets, const float scaleOutputs
+#define MANYCOLOR_KEP_PARAM                                                            \
+    const float *hidActs, const float *filters, float *targets, const int numModulesY, \
+            const int numModulesX, const int numImages, const int numFilters,          \
+            const int filterSize, const int imgSizeY, const int imgSizeX,              \
+            const int paddingStart, const int moduleStride, const int numImgColors,    \
+            const int numGroups, const float scaleTargets, const float scaleOutputs
 
 /*
  * Block size: B_YxB_X.
- * blockIdx.x determines case in batches of B_X*imgsPerThread, also color in batches of B_Y*colorsPerThread.
- *  In essence, blockIdx.x.x = 1..numImages/(B_X*imgsPerThread)
+ * blockIdx.x determines case in batches of B_X*imgsPerThread, also color in batches of
+ * B_Y*colorsPerThread. In essence, blockIdx.x.x = 1..numImages/(B_X*imgsPerThread)
  *              blockIdx.x.y = 1..numImgColors/(B_Y*colorsPerThread)
  * blockIdx.y determines image pixel in target image.
  *
@@ -56,11 +54,12 @@ namespace cuda {
  * threadIdx.y determines color.
  *
  * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
- * filters:     (numFilterColors, filterPixels, numFilters)                             if conv
- *              (numModulesY, numModulesX, numFilterColors, filterPixels, numFilters)   otherwise
- * targets:     (numImageColors, imgSizeY, imgSizeX, numImages)
+ * filters:     (numFilterColors, filterPixels, numFilters) if conv (numModulesY,
+ * numModulesX, numFilterColors, filterPixels, numFilters)   otherwise targets:
+ * (numImageColors, imgSizeY, imgSizeX, numImages)
  *
- * Each block reconstructs one B_Y*colorsPerThread colors from 1 pixel from B_X*imgsPerThread cases.
+ * Each block reconstructs one B_Y*colorsPerThread colors from 1 pixel from
+ * B_X*imgsPerThread cases.
  *
  * numImages must be divisible by B_X*imgsPerThread if checkCaseBounds is false.
  * numFiltersPerGroup must be divisible by filterCacheF.
@@ -70,41 +69,36 @@ namespace cuda {
  * filterCacheF must be divisible by filterCacheH
  *
  * This version loads 32 cases at a time, so it gets full coalescing on that load.
- * It only loads filterCacheF weights at a time, so those aren't fully coalesced (depending on size of filterCacheF).
+ * It only loads filterCacheF weights at a time, so those aren't fully coalesced
+ * (depending on size of filterCacheF).
  *
  * To be used when there are >= 16 color channels.
  */
-template <int B_Y, int B_X,
-    int imgsPerThread, int colorsPerThread,
-    int filterCacheF, int filterCacheH,
-    bool scale, bool checkCaseBounds, bool conv>
+template <
+        int B_Y, int B_X, int imgsPerThread, int colorsPerThread, int filterCacheF,
+        int filterCacheH, bool scale, bool checkCaseBounds, bool conv>
 __global__ void conv_img_acts_manycolor_kepler(MANYCOLOR_KEP_PARAM);
 
-
-
-#define MED_COLOR_KEP_PARAM const float* hidActs,           \
-        const float* filters, float* targets,               \
-        const int numModulesY, const int numModulesX,       \
-        const int numImages, const int numFilters,          \
-        const int filterSize,                               \
-        const int imgSizeY, const int imgSizeX,             \
-        const int paddingStart, const int moduleStride,     \
-        const int numImgColors, const int numGroups,        \
-        const float scaleTargets, const float scaleOutputs
+#define MED_COLOR_KEP_PARAM                                                            \
+    const float *hidActs, const float *filters, float *targets, const int numModulesY, \
+            const int numModulesX, const int numImages, const int numFilters,          \
+            const int filterSize, const int imgSizeY, const int imgSizeX,              \
+            const int paddingStart, const int moduleStride, const int numImgColors,    \
+            const int numGroups, const float scaleTargets, const float scaleOutputs
 /*
  * Block size: 16x16.
- * blockIdx.x determines case in batches of 16*imgsPerThread, also color in batches of colorsPerThread.
- *  In essence, blockIdx.x.x = 1..numImages/(16*imgsPerThread)
- *              blockIdx.x.y = 1..numImgColors/colorsPerThread
- * blockIdx.y determines 4x4 image region in target image.
+ * blockIdx.x determines case in batches of 16*imgsPerThread, also color in batches of
+ * colorsPerThread. In essence, blockIdx.x.x = 1..numImages/(16*imgsPerThread)
+ * blockIdx.x.y = 1..numImgColors/colorsPerThread blockIdx.y determines 4x4 image region
+ * in target image.
  *
  * threadIdx.x determines case.
  * threadIdx.y determines pixel.
  *
  * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
- * filters:     (numFilterColors, filterPixels, numFilters)                             if conv
- *              (numModulesY, numModulesX, numFilterColors, filterPixels, numFilters)   otherwise
- * targets:     (numImageColors, imgSizeY, imgSizeX, numImages)
+ * filters:     (numFilterColors, filterPixels, numFilters) if conv (numModulesY,
+ * numModulesX, numFilterColors, filterPixels, numFilters)   otherwise targets:
+ * (numImageColors, imgSizeY, imgSizeX, numImages)
  *
  * Each block reconstructs one 4x4 pixels from 16*imgsPerThread cases.
  *
@@ -118,18 +112,17 @@ __global__ void conv_img_acts_manycolor_kepler(MANYCOLOR_KEP_PARAM);
  *
  * To be used when there are 4-16 color channels.
  */
-template <int imgsPerThread, int colorsPerThread,  bool scale, bool checkCaseBounds, bool conv>
+template <
+        int imgsPerThread, int colorsPerThread, bool scale, bool checkCaseBounds,
+        bool conv>
 __global__ void img_acts_mediumcolor(MED_COLOR_KEP_PARAM);
 
-
-#define COLOR_KEP_PARAM const float* hidActs,               \
-        const float* filters, float* targets,               \
-        const int numModulesY, const int numModulesX,       \
-        const int numImages, const int numFilters,          \
-        const int filterSize,                               \
-        const int imgSizeY, const int imgSizeX,             \
-        const int paddingStart, const int moduleStride,     \
-        const float scaleTargets, const float scaleOutputs
+#define COLOR_KEP_PARAM                                                                \
+    const float *hidActs, const float *filters, float *targets, const int numModulesY, \
+            const int numModulesX, const int numImages, const int numFilters,          \
+            const int filterSize, const int imgSizeY, const int imgSizeX,              \
+            const int paddingStart, const int moduleStride, const float scaleTargets,  \
+            const float scaleOutputs
 
 /*
  * Block size: 16x16.
@@ -140,8 +133,8 @@ __global__ void img_acts_mediumcolor(MED_COLOR_KEP_PARAM);
  * threadIdx.y determines pixel.
  *
  * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
- * filters:     (numColors, filterPixels, numFilters)                               if conv
- *              (numModulesY, numModulesX, numColors, filterPixels, numFilters)     otherwise
+ * filters:     (numColors, filterPixels, numFilters)                               if
+ * conv (numModulesY, numModulesX, numColors, filterPixels, numFilters)     otherwise
  * targets:     (numColors, imgSizeY, imgSizeX, numImages)
  *
  * Each block reconstructs one 4x4 pixels from 16*imgsPerThread cases.
@@ -157,5 +150,5 @@ __global__ void img_acts_mediumcolor(MED_COLOR_KEP_PARAM);
 template <int imgsPerThread, int numColors, bool scale, bool checkCaseBounds, bool conv>
 __global__ void img_acts_color(COLOR_KEP_PARAM);
 
-} // namespace megdnn
-} // namespace cuda
+}  // namespace cuda
+}  // namespace megdnn

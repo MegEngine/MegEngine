@@ -24,4 +24,3 @@ class ElemwiseForwardImpl final : public ElemwiseForwardImplHelper {
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen
-

@@ -43,10 +43,9 @@ private:
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultipleInputOutput);
 
-MultipleInputOutput::MultipleInputOutput(const VarNodeArray& inputs,
-                                         const OperatorNodeConfig& config)
-        : Super(inputs[0]->owner_graph(), config, "multiple_input_output",
-                inputs) {
+MultipleInputOutput::MultipleInputOutput(
+        const VarNodeArray& inputs, const OperatorNodeConfig& config)
+        : Super(inputs[0]->owner_graph(), config, "multiple_input_output", inputs) {
     for (auto&& i : inputs)
         add_input({i});
     if (inputs.size() == 1) {
@@ -58,18 +57,16 @@ MultipleInputOutput::MultipleInputOutput(const VarNodeArray& inputs,
     cg::add_workspace_output(this);
 }
 
-SymbolVarArray MultipleInputOutput::make(const SymbolVarArray& inputs,
-                                         const OperatorNodeConfig& config) {
+SymbolVarArray MultipleInputOutput::make(
+        const SymbolVarArray& inputs, const OperatorNodeConfig& config) {
     auto src = cg::to_var_node_array(inputs);
     auto multiple_io = std::make_unique<MultipleInputOutput>(src, config);
-    auto ret =
-            cg::to_symbol_var_array(src[0]->owner_graph()
-                                            ->insert_opr(std::move(multiple_io))
-                                            ->output());
+    auto ret = cg::to_symbol_var_array(
+            src[0]->owner_graph()->insert_opr(std::move(multiple_io))->output());
     ret.pop_back();
     return ret;
 }
-}
+}  // namespace
 
 TEST(TestSubGraphExtractor, MultipleOutputs) {
     HostTensorGenerator<> gen;
@@ -121,8 +118,7 @@ TEST(TestSubGraphExtractor, MultipleOutputs) {
     ASSERT_EQ(partitions[0].opr_set().size(), 4u);
     ASSERT_TRUE(partitions[0].opr_set().count(add.node()->owner_opr()) > 0);
     ASSERT_TRUE(partitions[0].opr_set().count(c1.node()->owner_opr()) > 0);
-    ASSERT_TRUE(partitions[0].opr_set().count(
-                        sym_var_arr[0].node()->owner_opr()) > 0);
+    ASSERT_TRUE(partitions[0].opr_set().count(sym_var_arr[0].node()->owner_opr()) > 0);
     ASSERT_TRUE(partitions[0].opr_set().count(z.node()->owner_opr()) > 0);
 }
 
@@ -203,11 +199,9 @@ TEST(TestSubGraphExtractor, Complicated) {
     auto data = opr::TypeCvt::make(h2d, dtype::Float32());
     auto sub_128 = data + (-128);
     auto x = opr::TypeCvt::make(sub_128, dtype::QuantizedS8(1.f));
-    auto mkcvar = [&](const char* name, const TensorShape& shp,
-                      const DType& dtype) {
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
         return opr::TypeCvt::make(
-                opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name),
-                dtype);
+                opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name), dtype);
     };
     auto w1 = mkcvar("w1", {16, 3, 3, 3}, dtype::QuantizedS8(1.f));
     auto b1 = mkcvar("b1", {1, 16, 1, 1}, dtype::QuantizedS32(1.f));
@@ -220,20 +214,19 @@ TEST(TestSubGraphExtractor, Complicated) {
             conv1, dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8)));
     auto w2 = mkcvar("w2", {16, 16, 3, 3}, dtype::QuantizedS4(1.f));
     auto b2 = mkcvar("b2", {1, 16, 1, 1}, dtype::QuantizedS32(1.f));
-    auto conv2 = opr::ConvBias::make(conv1, w2, b2, param, {},
-                                     OperatorNodeConfig(dtype::Quantized4Asymm(
-                                             1.f, static_cast<uint8_t>(8))));
+    auto conv2 = opr::ConvBias::make(
+            conv1, w2, b2, param, {},
+            OperatorNodeConfig(dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8))));
     param.pad_h = param.pad_w = 0;
     auto w3 = mkcvar("w3", {16, 16, 1, 1}, dtype::QuantizedS4(1.f));
     auto b3 = mkcvar("b3", {1, 16, 1, 1}, dtype::QuantizedS32(1.f));
-    auto conv3 = opr::ConvBias::make(conv1, w3, b3, param, {},
-                                     OperatorNodeConfig(dtype::Quantized4Asymm(
-                                             1.f, static_cast<uint8_t>(8))));
+    auto conv3 = opr::ConvBias::make(
+            conv1, w3, b3, param, {},
+            OperatorNodeConfig(dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8))));
     auto conv3f = opr::TypeCvt::make(conv3, dtype::Float32());
     auto qadd = opr::ElemwiseMultiType::make(
             {conv2, conv3}, {opr::ElemwiseMultiType::Mode::QADD},
-            OperatorNodeConfig(
-                    dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8))));
+            OperatorNodeConfig(dtype::Quantized4Asymm(1.f, static_cast<uint8_t>(8))));
     auto q8 = opr::TypeCvt::make(qadd, dtype::QuantizedS8(1.f));
 
     auto w4 = mkcvar("w4", {16, 16, 3, 3}, dtype::QuantizedS8(1.f));
@@ -248,8 +241,7 @@ TEST(TestSubGraphExtractor, Complicated) {
     conv_param.pad_h = param.pad_w = 0;
     auto w5 = mkcvar("w4", {16, 16, 1, 1}, dtype::QuantizedS8(1.f));
     auto deconv = opr::ConvolutionBackwardData::make(
-            w5, q8, conv_param, {},
-            OperatorNodeConfig(dtype::QuantizedS8(1.f)));
+            w5, q8, conv_param, {}, OperatorNodeConfig(dtype::QuantizedS8(1.f)));
     deconv = opr::TypeCvt::make(deconv, dtype::Float32());
     auto z = opr::Concat::make({conv4, deconv}, 1);
 

@@ -31,8 +31,7 @@ bool PoolingImpl::AlgoFp32ModexStridexNCHW44::usable(
                    param.format == Param::Format::NCHW44 &&
                    (param.mode == Mode::MAX || param.mode == Mode::AVERAGE) &&
                    fh == fw && sh == sw;
-    bool size_ok = ((fh == 2 || fh == 3 || fh == 4 || fh == 5) &&
-                    (sh == 1 || sh == 2));
+    bool size_ok = ((fh == 2 || fh == 3 || fh == 4 || fh == 5) && (sh == 1 || sh == 2));
     size_ok |= ((fh == 9 || fh == 13) && (sh == 1));
 
     return avaible && size_ok;
@@ -54,34 +53,32 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
     void* src_ptr = param.src_ptr;
     void* dst_ptr = param.dst_ptr;
 
-#define DISPATCH_FUNC(filter, stride, mode)                                   \
-    MIDOUT_BEGIN(megdnn_arm_common_fp32_pooling_nchw44, midout_iv(0),         \
-                 midout_iv(#filter #stride #mode##_hash)) {                   \
-        auto run = [ih, iw, oh, ow, ph, pw, src_ptr, dst_ptr](size_t index,   \
-                                                              size_t) {       \
-            const int c_idx = index;                                          \
-            pooling_fp32_nchw44<filter, stride, mode>(                        \
-                    static_cast<const float*>(src_ptr) + c_idx * ih * iw * 4, \
-                    static_cast<float*>(dst_ptr) + c_idx * oh * ow * 4, ih,   \
-                    iw, oh, ow, ph, pw);                                      \
-        };                                                                    \
-        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                \
-                static_cast<::megdnn::naive::HandleImpl*>(param.handle),      \
-                n* ic, run);                                                  \
-    }                                                                         \
+#define DISPATCH_FUNC(filter, stride, mode)                                           \
+    MIDOUT_BEGIN(                                                                     \
+            megdnn_arm_common_fp32_pooling_nchw44, midout_iv(0),                      \
+            midout_iv(#filter #stride #mode##_hash)) {                                \
+        auto run = [ih, iw, oh, ow, ph, pw, src_ptr, dst_ptr](size_t index, size_t) { \
+            const int c_idx = index;                                                  \
+            pooling_fp32_nchw44<filter, stride, mode>(                                \
+                    static_cast<const float*>(src_ptr) + c_idx * ih * iw * 4,         \
+                    static_cast<float*>(dst_ptr) + c_idx * oh * ow * 4, ih, iw, oh,   \
+                    ow, ph, pw);                                                      \
+        };                                                                            \
+        MEGDNN_DISPATCH_MULTI_THREAD_CPU_KERN(                                        \
+                static_cast<::megdnn::naive::HandleImpl*>(param.handle), n* ic, run); \
+    }                                                                                 \
     MIDOUT_END();
 
-#define DISPATCH_MODE(filter, stride)                                  \
-    switch (param.mode) {                                              \
-        case PoolingBase::Mode::MAX:                                   \
-            DISPATCH_FUNC(filter, stride, PoolingBase::Mode::MAX);     \
-            break;                                                     \
-        case PoolingBase::Mode::AVERAGE:                               \
-            DISPATCH_FUNC(filter, stride, PoolingBase::Mode::AVERAGE); \
-            break;                                                     \
-        default:                                                       \
-            megdnn_assert(0, "invalid mode %u",                        \
-                          static_cast<uint32_t>(param.mode));          \
+#define DISPATCH_MODE(filter, stride)                                               \
+    switch (param.mode) {                                                           \
+        case PoolingBase::Mode::MAX:                                                \
+            DISPATCH_FUNC(filter, stride, PoolingBase::Mode::MAX);                  \
+            break;                                                                  \
+        case PoolingBase::Mode::AVERAGE:                                            \
+            DISPATCH_FUNC(filter, stride, PoolingBase::Mode::AVERAGE);              \
+            break;                                                                  \
+        default:                                                                    \
+            megdnn_assert(0, "invalid mode %u", static_cast<uint32_t>(param.mode)); \
     }
 
 #define DISPATCH_STRIDE(filter)                        \
@@ -96,7 +93,7 @@ void PoolingImpl::AlgoFp32ModexStridexNCHW44::exec(
             megdnn_assert(0, "invalid stride %d", sh); \
     }
 
-#define DISPATCH_STRIDE_1(filter)                        \
+#define DISPATCH_STRIDE_1(filter)                      \
     switch (sh) {                                      \
         case 1:                                        \
             DISPATCH_MODE(filter, 1);                  \

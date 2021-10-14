@@ -15,103 +15,98 @@
 namespace megdnn {
 namespace naive {
 
-class ConvolutionForwardImpl: public ConvolutionForward {
-    public:
-        using ConvolutionForward::ConvolutionForward;
-        void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-                  _megdnn_tensor_out dst,
-                  const PreprocessedFilter* preprocessed_filter,
-                  _megdnn_workspace workspace) override;
-        std::vector<Algorithm *> get_all_algorithms(const TensorLayout &src,
-                const TensorLayout &filter,
-                const TensorLayout &dst) override;
-        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &src,
-                const TensorLayout &filter,
-                const TensorLayout &dst) override;
-        Algorithm* get_algorithm_heuristic(
-                const TensorLayout& src, const TensorLayout& filter,
-                const TensorLayout& dst, size_t workspace_limit_in_bytes,
-                const AlgoAttribute& positive_attr,
-                const AlgoAttribute& negative_attr) override;
-        size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                      const TensorLayout&,
-                                      const PreprocessedFilter*) override {
-            return 0;
-        }
+class ConvolutionForwardImpl : public ConvolutionForward {
+public:
+    using ConvolutionForward::ConvolutionForward;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            const PreprocessedFilter* preprocessed_filter,
+            _megdnn_workspace workspace) override;
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& filter,
+            const TensorLayout& dst, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const PreprocessedFilter*) override {
+        return 0;
+    }
 
-        size_t get_preprocess_workspace_in_bytes(const TensorLayout&,
-                                                 const TensorLayout&,
-                                                 const TensorLayout&) override {
-            return 0;
-        }
+    size_t get_preprocess_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
+        return 0;
+    }
 
-        void exec_preprocess(const TensorLayout&, _megdnn_tensor_in,
-                             const TensorLayout&, PreprocessedFilter*,
-                             _megdnn_workspace) override {}
+    void exec_preprocess(
+            const TensorLayout&, _megdnn_tensor_in, const TensorLayout&,
+            PreprocessedFilter*, _megdnn_workspace) override {}
 
-        SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
-                const TensorLayout& , const TensorLayout& ,
-                const TensorLayout& )override{
-            return {};
-        }
+    SmallVector<TensorLayout> deduce_preprocessed_filter_layout(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
+        return {};
+    }
 
-        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
-        const char* get_algorithm_set_name() const override;
+    const char* get_algorithm_set_name() const override;
 };
 
-class ConvolutionBackwardDataImpl: public ConvolutionBackwardData {
-    public:
-        using ConvolutionBackwardData::ConvolutionBackwardData;
-        void exec(_megdnn_tensor_in filter,
-                _megdnn_tensor_in diff,
-                _megdnn_tensor_out grad,
-                _megdnn_workspace workspace) override;
-        std::vector<Algorithm *> get_all_algorithms(const TensorLayout &filter,
-                const TensorLayout &diff,
-                const TensorLayout &grad) override;
-        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &filter,
-                const TensorLayout &diff,
-                const TensorLayout &grad) override;
-        Algorithm* get_algorithm_heuristic(
-                const TensorLayout& filter, const TensorLayout& diff,
-                const TensorLayout& grad, size_t workspace_limit_in_bytes,
-                const AlgoAttribute& positive_attr,
-                const AlgoAttribute& negative_attr) override;
-        size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                      const TensorLayout&) override;
+class ConvolutionBackwardDataImpl : public ConvolutionBackwardData {
+public:
+    using ConvolutionBackwardData::ConvolutionBackwardData;
+    void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& filter, const TensorLayout& diff,
+            const TensorLayout& grad, size_t workspace_limit_in_bytes,
+            const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
-        const char* get_algorithm_set_name() const override;
+    const char* get_algorithm_set_name() const override;
 
-        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 };
 
-class ConvolutionBackwardFilterImpl: public ConvolutionBackwardFilter {
-    public:
-        using ConvolutionBackwardFilter::ConvolutionBackwardFilter;
-        void exec(_megdnn_tensor_in src,
-                _megdnn_tensor_in diff,
-                _megdnn_tensor_out grad,
-                _megdnn_workspace workspace) override;
-        std::vector<Algorithm *> get_all_algorithms(const TensorLayout &src,
-                const TensorLayout &diff,
-                const TensorLayout &grad) override;
-        std::vector<Algorithm *> get_all_algorithms_safe(const TensorLayout &src,
-                const TensorLayout &diff,
-                const TensorLayout &grad) override;
-        Algorithm* get_algorithm_heuristic(
-                const TensorLayout& src, const TensorLayout& diff,
-                const TensorLayout& grad, size_t workspace_limit_in_bytes,
-                const AlgoAttribute& positive_attr,
-                const AlgoAttribute& negative_attr) override;
-        size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                      const TensorLayout&) override;
+class ConvolutionBackwardFilterImpl : public ConvolutionBackwardFilter {
+public:
+    using ConvolutionBackwardFilter::ConvolutionBackwardFilter;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
+    std::vector<Algorithm*> get_all_algorithms(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    std::vector<Algorithm*> get_all_algorithms_safe(
+            const TensorLayout& src, const TensorLayout& diff,
+            const TensorLayout& grad) override;
+    Algorithm* get_algorithm_heuristic(
+            const TensorLayout& src, const TensorLayout& diff, const TensorLayout& grad,
+            size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+            const AlgoAttribute& negative_attr) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override;
 
-        const char* get_algorithm_set_name() const override;
+    const char* get_algorithm_set_name() const override;
 
-        Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 };
 
-} // namespace naive
-} // namespace megdnn
+}  // namespace naive
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

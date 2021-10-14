@@ -14,13 +14,12 @@
 #endif
 
 /* ======================= unary ======================= */
-#define _CUR_ARITY 1
-#define _EXPAND_PARAMS \
-    ctype x = inp[0][idx]
+#define _CUR_ARITY     1
+#define _EXPAND_PARAMS ctype x = inp[0][idx]
 
-#define _ALLOW_BOOL true
+#define _ALLOW_BOOL  true
 #define _ALLOW_FLOAT false
-#define _ALLOW_INT false
+#define _ALLOW_INT   false
 DEF_TRAIT(NOT, !x)
 #undef _ALLOW_INT
 #undef _ALLOW_FLOAT

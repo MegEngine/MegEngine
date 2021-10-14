@@ -21,10 +21,9 @@ template <>
 struct OprMaker<opr::WarpPerspective, 0> {
     using Opr = opr::WarpPerspective;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -32,8 +31,7 @@ struct OprMaker<opr::WarpPerspective, 0> {
                     ->owner_opr();
         } else {
             mgb_assert(inputs.size() == 4);
-            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param,
-                             config)
+            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param, config)
                     .node()
                     ->owner_opr();
         }
@@ -44,15 +42,12 @@ template <>
 struct OprMaker<opr::Remap, 0> {
     using Opr = opr::Remap;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 2) {
-            return Opr::make(inputs[0], inputs[1], param, config)
-                    .node()
-                    ->owner_opr();
+            return Opr::make(inputs[0], inputs[1], param, config).node()->owner_opr();
         } else {
             return nullptr;
         }
@@ -63,10 +58,9 @@ template <>
 struct OprMaker<opr::RemapBackwardMat, 0> {
     using Opr = opr::RemapBackwardMat;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -82,10 +76,9 @@ template <>
 struct OprMaker<opr::RemapBackwardData, 0> {
     using Opr = opr::RemapBackwardData;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -101,10 +94,9 @@ template <>
 struct OprMaker<opr::DctChannelSelectForward, 0> {
     using Opr = opr::DctChannelSelectForward;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -121,10 +113,9 @@ template <>
 struct OprMaker<opr::WarpPerspectiveBackwardData, 0> {
     using Opr = opr::WarpPerspectiveBackwardData;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -132,8 +123,7 @@ struct OprMaker<opr::WarpPerspectiveBackwardData, 0> {
                     ->owner_opr();
         } else {
             mgb_assert(inputs.size() == 4);
-            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param,
-                             config)
+            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param, config)
                     .node()
                     ->owner_opr();
         }
@@ -144,10 +134,9 @@ template <>
 struct OprMaker<opr::WarpPerspectiveBackwardMat, 0> {
     using Opr = opr::WarpPerspectiveBackwardMat;
     using Param = Opr::Param;
-    static cg::OperatorNodeBase* make(const Param& param,
-                                      const cg::VarNodeArray& inputs,
-                                      ComputingGraph& graph,
-                                      const OperatorNodeConfig& config) {
+    static cg::OperatorNodeBase* make(
+            const Param& param, const cg::VarNodeArray& inputs, ComputingGraph& graph,
+            const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
         if (inputs.size() == 3) {
             return Opr::make(inputs[0], inputs[1], inputs[2], param, config)
@@ -155,8 +144,7 @@ struct OprMaker<opr::WarpPerspectiveBackwardMat, 0> {
                     ->owner_opr();
         } else {
             mgb_assert(inputs.size() == 4);
-            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param,
-                             config)
+            return Opr::make(inputs[0], inputs[1], inputs[2], inputs[3], param, config)
                     .node()
                     ->owner_opr();
         }

@@ -18,8 +18,7 @@ using namespace test;
 namespace {
 
 template <class T>
-std::vector<int32_t> create_offsets(const TensorShapeArray& shapes,
-                                    size_t alignment) {
+std::vector<int32_t> create_offsets(const TensorShapeArray& shapes, size_t alignment) {
     size_t dtype_size = sizeof(T);
     if (alignment < dtype_size)
         alignment = dtype_size;
@@ -42,9 +41,9 @@ std::vector<int32_t> create_offsets(const TensorShapeArray& shapes,
 }
 
 template <class T>
-std::vector<T> create_pack(size_t pack_size,
-                           const std::vector<int32_t>& offsets,
-                           const std::vector<std::vector<T>>& ptr) {
+std::vector<T> create_pack(
+        size_t pack_size, const std::vector<int32_t>& offsets,
+        const std::vector<std::vector<T>>& ptr) {
     megdnn_assert(pack_size == static_cast<size_t>(offsets.back()));
     std::vector<T> data(pack_size, 0);
     for (size_t i = 0; i * 2 < offsets.size(); ++i) {
@@ -56,8 +55,8 @@ std::vector<T> create_pack(size_t pack_size,
 }
 
 template <class T>
-std::vector<std::vector<T>> create_params(size_t nr_params,
-                                          const TensorShapeArray& shapes) {
+std::vector<std::vector<T>> create_params(
+        size_t nr_params, const TensorShapeArray& shapes) {
     std::vector<std::vector<T>> params;
     for (size_t i = 0; i < nr_params; ++i) {
         std::vector<T> expected_data;
@@ -71,24 +70,23 @@ std::vector<std::vector<T>> create_params(size_t nr_params,
 
 template <class T>
 T* create_device_data(Handle* handle, const T* data, size_t size) {
-    T* data_device =
-            static_cast<T*>(test::megdnn_malloc(handle, size * sizeof(T)));
+    T* data_device = static_cast<T*>(test::megdnn_malloc(handle, size * sizeof(T)));
     if (data)
         test::megdnn_memcpy_H2D(handle, data_device, data, size * sizeof(T));
     return data_device;
 }
 
 template <class T>
-void test_param_pack_concat(Handle* handle, const TensorShapeArray& shapes,
-                            DType type) {
+void test_param_pack_concat(
+        Handle* handle, const TensorShapeArray& shapes, DType type) {
     auto concat = handle->create_operator<ParamPackConcat>();
     size_t nr_params = shapes.size();
 
     std::vector<T*> param_ptrs;
     std::vector<std::vector<T>> params = create_params<T>(nr_params, shapes);
     for (size_t i = 0; i < nr_params; ++i) {
-        param_ptrs.push_back(create_device_data<T>(handle, params[i].data(),
-                                                   shapes[i].total_nr_elems()));
+        param_ptrs.push_back(create_device_data<T>(
+                handle, params[i].data(), shapes[i].total_nr_elems()));
     }
     std::vector<int32_t> offsets =
             create_offsets<T>(shapes, handle->alignment_requirement());
@@ -106,17 +104,15 @@ void test_param_pack_concat(Handle* handle, const TensorShapeArray& shapes,
     TensorND offsets_tensor(offsets_gpu, offsets_layout);
 
     test::WorkspaceWrapper workspace(
-            handle, concat->get_workspace_in_bytes(shapes, offsets_layout,
-                                                   {pack_size}));
-    TensorND src_tensor(param_ptrs.data(),
-                        TensorLayout({nr_params}, dtype::Int32()));
+            handle,
+            concat->get_workspace_in_bytes(shapes, offsets_layout, {pack_size}));
+    TensorND src_tensor(param_ptrs.data(), TensorLayout({nr_params}, dtype::Int32()));
 
     concat->exec(src_tensor, offsets_tensor, dst_tensor, workspace.workspace());
 
     // check
     T* actual_pack = static_cast<T*>(malloc(pack_size * sizeof(T)));
-    test::megdnn_memcpy_D2H(handle, actual_pack, pack_gpu,
-                            sizeof(T) * pack_size);
+    test::megdnn_memcpy_D2H(handle, actual_pack, pack_gpu, sizeof(T) * pack_size);
     for (size_t i = 0; i < pack_size; ++i) {
         ASSERT_EQ(actual_pack[i], expected_pack[i]);
     }
@@ -136,14 +132,15 @@ TEST_F(CUDA, PARAM_PACK) {
     shapes_vec.push_back({{129}, {21}});
     shapes_vec.push_back({{15}, {21}, {34}});
     shapes_vec.push_back({{1, 2}, {3, 5}, {5, 8}, {7, 11}, {9, 14}});
-    shapes_vec.push_back({{1, 2},
-                          {3, 5},
-                          {1},
-                          {3, 3, 3, 4},
-                          {71},
-                          {9, 14},
-                          {111, 111, 111},
-                          {128, 128, 128}});
+    shapes_vec.push_back(
+            {{1, 2},
+             {3, 5},
+             {1},
+             {3, 3, 3, 4},
+             {71},
+             {9, 14},
+             {111, 111, 111},
+             {128, 128, 128}});
     for (auto shapes : shapes_vec) {
         test_param_pack_concat<int32_t>(handle_cuda(), shapes, dtype::Int32());
         test_param_pack_concat<int16_t>(handle_cuda(), shapes, dtype::Int16());

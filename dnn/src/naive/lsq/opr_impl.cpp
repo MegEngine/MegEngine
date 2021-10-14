@@ -60,8 +60,7 @@ void backward_impl(const ElemwiseOpParamN<7> src, float qmin, float qmax) {
         bool ind_middle = ind_small ^ ind_big;
         ind_middle = !ind_middle;
 
-        *grad_s = ind_small * qmin + ind_big * qmax +
-                  ind_middle * (-x + round(x));
+        *grad_s = ind_small * qmin + ind_big * qmax + ind_middle * (-x + round(x));
         *grad_s = (*grad_s) * (*grad_scale) * (*diff);
         *grad_x = ind_middle * (*diff);
 
@@ -79,13 +78,13 @@ void backward_impl(const ElemwiseOpParamN<7> src, float qmin, float qmax) {
 namespace megdnn {
 namespace naive {
 
-void LSQForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
-                          _megdnn_tensor_in zero_point,
-                          _megdnn_tensor_in grad_scale,
-                          _megdnn_tensor_out output,
-                          _megdnn_workspace workspace) {
-    check_exec(input.layout, scale.layout, zero_point.layout, grad_scale.layout,
-               output.layout, workspace.size);
+void LSQForwardImpl::exec(
+        _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
+        _megdnn_tensor_in grad_scale, _megdnn_tensor_out output,
+        _megdnn_workspace workspace) {
+    check_exec(
+            input.layout, scale.layout, zero_point.layout, grad_scale.layout,
+            output.layout, workspace.size);
     ElemwiseOpParamN<5> src;
     src[0] = input;
     src[1] = output;
@@ -106,14 +105,14 @@ void LSQForwardImpl::exec(_megdnn_tensor_in input, _megdnn_tensor_in scale,
 #undef cb
 }
 
-void LSQBackwardImpl::exec(_megdnn_tensor_in diff, _megdnn_tensor_in input,
-                           _megdnn_tensor_in scale,
-                           _megdnn_tensor_in zero_point,
-                           _megdnn_tensor_in grad_scale,
-                           _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
-                           _megdnn_workspace workspace) {
-    check_exec(diff.layout, input.layout, scale.layout, zero_point.layout,
-               grad_scale.layout, grad_x.layout, grad_s.layout, workspace.size);
+void LSQBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
+        _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
+        _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
+        _megdnn_workspace workspace) {
+    check_exec(
+            diff.layout, input.layout, scale.layout, zero_point.layout,
+            grad_scale.layout, grad_x.layout, grad_s.layout, workspace.size);
     ElemwiseOpParamN<7> src;
     src[0] = diff;
     src[1] = input;

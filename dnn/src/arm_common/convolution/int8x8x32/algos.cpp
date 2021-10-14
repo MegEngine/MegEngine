@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "src/arm_common/convolution/img2col_helper.h"
 #include "src/arm_common/convolution/int8x8x32/algos.h"
+#include "src/arm_common/convolution/img2col_helper.h"
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride1.h"
 #include "src/arm_common/convolution/int8x8x32/conv_backdata_stride2.h"
 #include "src/common/opr_delegate.h"
@@ -26,30 +26,30 @@ using namespace arm_common;
 /* ===================== ConvolutionBackwardData  ===================== */
 /* ===================== direct stride 1 algo ===================== */
 bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::usable(
-        fallback::ConvolutionBackwardDataImpl*,
-        const NCBKernSizeParam& param) const {
-    if (!cpuinfo_has_arm_neon_dot()){
+        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
         return false;
     }
     return deconv::can_stride1_int8x8x32_dot(param);
 }
 
 size_t ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::get_workspace(
-        fallback::ConvolutionBackwardDataImpl*,
-        const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
-                 midout_iv("AlgoSdot8DirectStride1::get_workspace"_hash)) {
+        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_arm_conv_int8832_kimpl,
+            midout_iv("AlgoSdot8DirectStride1::get_workspace"_hash)) {
         return deconv::get_workspace_in_bytes_stride1_int8x8x32_dot(param);
     }
     MIDOUT_END();
     return 0;
 }
 
-ConvolutionBackwardDataImpl::ncb_kern_t
-ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::dispatch_kern(
-        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
-    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
-                 midout_iv("AlgoSdot8DirectStride1::dispatch_kern"_hash)) {
+ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::
+        AlgoSdot8DirectStride1::dispatch_kern(
+                fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
+    MIDOUT_BEGIN(
+            megdnn_arm_conv_int8832_kimpl,
+            midout_iv("AlgoSdot8DirectStride1::dispatch_kern"_hash)) {
         return deconv::stride1_int8x8x32_dot;
     }
     MIDOUT_END();
@@ -58,30 +58,30 @@ ConvolutionBackwardDataImpl::AlgoSdot8DirectStride1::dispatch_kern(
 
 /* ===================== direct stride 2 algo ===================== */
 bool ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::usable(
-        fallback::ConvolutionBackwardDataImpl*,
-        const NCBKernSizeParam& param) const {
-    if (!cpuinfo_has_arm_neon_dot()){
+        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    if (!cpuinfo_has_arm_neon_dot()) {
         return false;
     }
     return deconv::can_stride2_int8x8x32_dot(param);
 }
 
 size_t ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::get_workspace(
-        fallback::ConvolutionBackwardDataImpl*,
-        const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
-                 midout_iv("AlgoSdot8DirectStride2::get_workspace"_hash)) {
+        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam& param) const {
+    MIDOUT_BEGIN(
+            megdnn_arm_conv_int8832_kimpl,
+            midout_iv("AlgoSdot8DirectStride2::get_workspace"_hash)) {
         return deconv::get_workspace_in_bytes_stride2_int8x8x32_dot(param);
     }
     MIDOUT_END();
     return 0;
 }
 
-ConvolutionBackwardDataImpl::ncb_kern_t
-ConvolutionBackwardDataImpl::AlgoSdot8DirectStride2::dispatch_kern(
-        fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
-    MIDOUT_BEGIN(megdnn_arm_conv_int8832_kimpl,
-                 midout_iv("AlgoSdot8DirectStride2::dispatch_kern"_hash)) {
+ConvolutionBackwardDataImpl::ncb_kern_t ConvolutionBackwardDataImpl::
+        AlgoSdot8DirectStride2::dispatch_kern(
+                fallback::ConvolutionBackwardDataImpl*, const NCBKernSizeParam&) const {
+    MIDOUT_BEGIN(
+            megdnn_arm_conv_int8832_kimpl,
+            midout_iv("AlgoSdot8DirectStride2::dispatch_kern"_hash)) {
         return deconv::stride2_int8x8x32_dot;
     }
     MIDOUT_END();

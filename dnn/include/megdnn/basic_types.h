@@ -16,10 +16,10 @@
 #include "megdnn/internal/defs.h"
 
 #if MEGDNN_CC_HOST
+#include <cstdarg>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <cstdarg>
 #include "megdnn/thin/small_vector.h"
 #endif  // MEGDNN_CC_HOST
 
@@ -35,8 +35,7 @@ class ErrorHandler {
 protected:
     MEGDNN_NORETURN virtual void do_on_megdnn_error(const std::string& msg) = 0;
 
-    MEGDNN_NORETURN virtual void do_on_tensor_reshape_error(
-            const std::string& msg) {
+    MEGDNN_NORETURN virtual void do_on_tensor_reshape_error(const std::string& msg) {
         on_megdnn_error(msg);
     }
 
@@ -70,8 +69,9 @@ public:
 #if MEGDNN_CC_HOST
 enum class LogLevel { DEBUG, INFO, WARN, ERROR };
 
-typedef void (*LogHandler)(LogLevel level, const char* file, const char* func,
-                           int line, const char* fmt, va_list ap);
+typedef void (*LogHandler)(
+        LogLevel level, const char* file, const char* func, int line, const char* fmt,
+        va_list ap);
 
 /*!
  * \brief set the callback to receive all log messages
@@ -144,8 +144,7 @@ struct TensorLayout : public TensorShape {
         ptrdiff_t low_elem, low_byte;
         size_t high_elem, high_byte;
 
-        Span(ptrdiff_t low_elem, ptrdiff_t low_byte, size_t high_elem,
-             size_t high_byte)
+        Span(ptrdiff_t low_elem, ptrdiff_t low_byte, size_t high_elem, size_t high_byte)
                 : low_elem(low_elem),
                   low_byte(low_byte),
                   high_elem(high_elem),
@@ -235,11 +234,13 @@ struct TensorLayout : public TensorShape {
     TensorLayout(const TensorShape& shape, DType dtype, Format format);
 
     //! creating layout with user-specified shape and stride.
-    TensorLayout(const TensorShape& shape, const std::vector<ptrdiff_t>& stride,
-                 DType dtype);
+    TensorLayout(
+            const TensorShape& shape, const std::vector<ptrdiff_t>& stride,
+            DType dtype);
 
-    TensorLayout(const TensorShape& shape, const std::vector<ptrdiff_t>& stride,
-                 DType dtype, Format format);
+    TensorLayout(
+            const TensorShape& shape, const std::vector<ptrdiff_t>& stride, DType dtype,
+            Format format);
 
     /* =================== inplace modifiers =================== */
 
@@ -310,8 +311,7 @@ struct TensorLayout : public TensorShape {
      *
      * \throw TensorReshapeError if no stride exists for target shape.
      */
-    TensorLayout reshape(const TensorShape& shape) const
-            MEGDNN_WARN_UNUSED_RESULT;
+    TensorLayout reshape(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief try to reshape to another view; return whether these two shapes
@@ -319,15 +319,14 @@ struct TensorLayout : public TensorShape {
      * \return true iff there exists target stride so this layout can be
      *      converted to target shape and the elements can match.
      */
-    bool try_reshape(TensorLayout& output,
-                     const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
+    bool try_reshape(TensorLayout& output, const TensorShape& shape) const
+            MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief Broadcast on dims with shape == 1 to match target *shape*.
      * \throw TensorReshapeError if could not be satisfied
      */
-    TensorLayout broadcast(const TensorShape& shape) const
-            MEGDNN_WARN_UNUSED_RESULT;
+    TensorLayout broadcast(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief Collapse consecutive axes with contiguous layout together
@@ -441,8 +440,7 @@ struct Workspace {
 
     Workspace() : raw_ptr(NULL), size(0) {}
 
-    Workspace(dt_byte* raw_ptr_, size_t size_)
-            : raw_ptr(raw_ptr_), size(size_) {}
+    Workspace(dt_byte* raw_ptr_, size_t size_) : raw_ptr(raw_ptr_), size(size_) {}
 
     template <typename T>
     T* ptr(size_t offset_in_bytes = 0) const {
@@ -467,9 +465,8 @@ public:
      * \param shape requested output shape
      * \param user_data extra user data passed in DynOutMallocPolicyCall
      */
-    virtual TensorND alloc_output(size_t id, DType dtype,
-                                  const TensorShape& shape,
-                                  void* user_data) = 0;
+    virtual TensorND alloc_output(
+            size_t id, DType dtype, const TensorShape& shape, void* user_data) = 0;
 
     /*!
      * \brief allocate workspace memory
@@ -508,18 +505,14 @@ struct DynOutMallocPolicyCall {
      */
     template <typename T = void, typename elem = T>
     T* alloc_workspace(size_t nr_elem) {
-        using real_elem =
-                typename std::conditional<std::is_same<elem, void>::value,
-                                          uint8_t, elem>::type;
-        return static_cast<T*>(policy->alloc_workspace(
-                nr_elem * sizeof(real_elem), user_data));
+        using real_elem = typename std::conditional<
+                std::is_same<elem, void>::value, uint8_t, elem>::type;
+        return static_cast<T*>(
+                policy->alloc_workspace(nr_elem * sizeof(real_elem), user_data));
     }
 
-    void free_workspace(void* ptr) {
-        return policy->free_workspace(ptr, user_data);
-    }
+    void free_workspace(void* ptr) { return policy->free_workspace(ptr, user_data); }
 };
-
 
 template <typename T>
 class EnumClassBit {
@@ -528,8 +521,7 @@ class EnumClassBit {
     constexpr EnumClassBit(std::underlying_type_t<T> v) : m_val(v) {}
 
 public:
-    constexpr EnumClassBit(T v)
-            : m_val(static_cast<std::underlying_type_t<T>>(v)) {}
+    constexpr EnumClassBit(T v) : m_val(static_cast<std::underlying_type_t<T>>(v)) {}
 
     constexpr operator T() const { return static_cast<T>(m_val); }
 
@@ -542,7 +534,7 @@ public:
 
     DEF_OPR(&)
     DEF_OPR(|)
-    DEF_OPR (^)
+    DEF_OPR(^)
 
     constexpr EnumClassBit operator~() const { return ~m_val; }
 
@@ -553,14 +545,13 @@ public:
 
 }  // namespace megdnn
 
-#define _MEGDNN_DECBO_SINGLE_OPR(cls, op)                                    \
-    inline constexpr ::megdnn::EnumClassBit<cls> operator op(cls x, cls y) { \
-        return ::megdnn::EnumClassBit<cls>(x)                                \
-                op ::megdnn::EnumClassBit<cls>(y);                           \
-    }                                                                        \
-    inline constexpr ::megdnn::EnumClassBit<cls> operator op(                \
-            ::megdnn::EnumClassBit<cls> x, cls y) {                          \
-        return x op ::megdnn::EnumClassBit<cls>(y);                          \
+#define _MEGDNN_DECBO_SINGLE_OPR(cls, op)                                        \
+    inline constexpr ::megdnn::EnumClassBit<cls> operator op(cls x, cls y) {     \
+        return ::megdnn::EnumClassBit<cls>(x) op ::megdnn::EnumClassBit<cls>(y); \
+    }                                                                            \
+    inline constexpr ::megdnn::EnumClassBit<cls> operator op(                    \
+            ::megdnn::EnumClassBit<cls> x, cls y) {                              \
+        return x op ::megdnn::EnumClassBit<cls>(y);                              \
     }
 
 #define _MEGDNN_DECBO_SINGLE_OPR_ASSIGN(cls, op)          \

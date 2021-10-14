@@ -24,7 +24,7 @@
 #include "test/cuda/utils.h"
 
 #define V1(x) #x
-#define V(x) V1(x)
+#define V(x)  V1(x)
 
 namespace megdnn {
 namespace test {
@@ -106,10 +106,10 @@ std::vector<BenchArgs> get_det_first_bench_args(size_t batch) {
     return args;
 }
 
-void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
-                           DType src_dtype, DType filter_dtype,
-                           DType bias_dtype, DType dst_dtype, const char* algo,
-                           param::ConvBias::Format format) {
+void benchmark_target_algo(
+        Handle* handle, const std::vector<BenchArgs>& args, DType src_dtype,
+        DType filter_dtype, DType bias_dtype, DType dst_dtype, const char* algo,
+        param::ConvBias::Format format) {
     megdnn_assert(src_dtype.enumv() == filter_dtype.enumv());
     CUBenchmarker<ConvBiasForward> benchmarker(handle);
     CUBenchmarker<ConvBiasForward> benchmarker_cudnn(handle);
@@ -139,20 +139,17 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
     using Param = ConvBias::Param;
     using Format = Param::Format;
     // helper function to change format
-    auto get_tensor_shape = [](TensorShape shape,
-                               Format format) -> TensorShape {
+    auto get_tensor_shape = [](TensorShape shape, Format format) -> TensorShape {
         TensorShape ret;
         if (format == Format::NCHW4) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype::Int8()}
-                            .reshape({shape[0], shape[1] / 4, 4, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 4, 4, shape[2], shape[3]})
                             .dimshuffle({0, 1, 3, 4, 2}));
         } else if (format == Format::CHWN4) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype::Int8()}
-                            .reshape({shape[0], shape[1] / 4, 4, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 4, 4, shape[2], shape[3]})
                             .dimshuffle({1, 3, 4, 0, 2}));
         }
         return ret;
@@ -177,77 +174,76 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
         float time_in_ms = 0.f;
         if (algo) {
             time_in_ms =
-                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>,
-                                   CUTimer>(benchmarker,
-                                            {get_tensor_shape(src, format),
-                                             get_tensor_shape(filter, format),
-                                             get_tensor_shape(bias, format),
-                                             {},
-                                             {}},
-                                            algo) /
+                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
+                            benchmarker,
+                            {get_tensor_shape(src, format),
+                             get_tensor_shape(filter, format),
+                             get_tensor_shape(bias, format),
+                             {},
+                             {}},
+                            algo) /
                     RUNS;
         } else {
-            time_in_ms = benchmarker.execs({get_tensor_shape(src, format),
-                                            get_tensor_shape(filter, format),
-                                            get_tensor_shape(bias, format),
-                                            {},
-                                            {}}) /
+            time_in_ms = benchmarker.execs(
+                                 {get_tensor_shape(src, format),
+                                  get_tensor_shape(filter, format),
+                                  get_tensor_shape(bias, format),
+                                  {},
+                                  {}}) /
                          RUNS;
         }
         Format format_cudnn = Format::NCHW4;
         param.format = format_cudnn;
         benchmarker_cudnn.set_param(param);
-        auto time_in_ms_cudnn =
-                benchmarker_cudnn.execs({get_tensor_shape(src, format_cudnn),
+        auto time_in_ms_cudnn = benchmarker_cudnn.execs(
+                                        {get_tensor_shape(src, format_cudnn),
                                          get_tensor_shape(filter, format_cudnn),
                                          get_tensor_shape(bias, format_cudnn),
                                          {},
                                          {}}) /
-                RUNS;
-        float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f /
-                    (1e12);
+                                RUNS;
+        float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f / (1e12);
         printf("src=%s, filter=%s, dst=%s, time(algo=%s)=%.2f %.2fTops, "
                "time(cudnn)=%.2f %.2fTops, "
                "perf(algo=%s)/perf(cudnn)=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(),
-               dst.to_string().c_str(), algo, time_in_ms,
-               (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
-               (flo / (time_in_ms_cudnn * 1e-3)), algo,
+               dst.to_string().c_str(), algo, time_in_ms, (flo / (time_in_ms * 1e-3)),
+               time_in_ms_cudnn, (flo / (time_in_ms_cudnn * 1e-3)), algo,
                time_in_ms_cudnn / time_in_ms);
         printf("bench with z tensor\n");
         if (algo) {
             time_in_ms =
-                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>,
-                                   CUTimer>(benchmarker,
-                                            {get_tensor_shape(src, format),
-                                             get_tensor_shape(filter, format),
-                                             get_tensor_shape(bias, format),
-                                             get_tensor_shape(z, format),
-                                             {}},
-                                            algo) /
+                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
+                            benchmarker,
+                            {get_tensor_shape(src, format),
+                             get_tensor_shape(filter, format),
+                             get_tensor_shape(bias, format),
+                             get_tensor_shape(z, format),
+                             {}},
+                            algo) /
                     RUNS;
         } else {
-            time_in_ms = benchmarker.execs({get_tensor_shape(src, format),
-                                            get_tensor_shape(filter, format),
-                                            get_tensor_shape(bias, format),
-                                            get_tensor_shape(z, format),
-                                            {}}) /
+            time_in_ms = benchmarker.execs(
+                                 {get_tensor_shape(src, format),
+                                  get_tensor_shape(filter, format),
+                                  get_tensor_shape(bias, format),
+                                  get_tensor_shape(z, format),
+                                  {}}) /
                          RUNS;
         }
-        time_in_ms_cudnn =
-                benchmarker_cudnn.execs({get_tensor_shape(src, format_cudnn),
-                                         get_tensor_shape(filter, format_cudnn),
-                                         get_tensor_shape(bias, format_cudnn),
-                                         get_tensor_shape(z, format_cudnn),
-                                         {}}) /
-                RUNS;
+        time_in_ms_cudnn = benchmarker_cudnn.execs(
+                                   {get_tensor_shape(src, format_cudnn),
+                                    get_tensor_shape(filter, format_cudnn),
+                                    get_tensor_shape(bias, format_cudnn),
+                                    get_tensor_shape(z, format_cudnn),
+                                    {}}) /
+                           RUNS;
         printf("src=%s, filter=%s, dst=%s, time(algo=%s)=%.2f %.2fTops, "
                "time(cudnn)=%.2f %.2fTops, "
                "perf(algo=%s)/perf(cudnn)=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(),
-               dst.to_string().c_str(), algo, time_in_ms,
-               (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
-               (flo / (time_in_ms_cudnn * 1e-3)), algo,
+               dst.to_string().c_str(), algo, time_in_ms, (flo / (time_in_ms * 1e-3)),
+               time_in_ms_cudnn, (flo / (time_in_ms_cudnn * 1e-3)), algo,
                time_in_ms_cudnn / time_in_ms);
     }
 }
@@ -255,14 +251,14 @@ void benchmark_target_algo(Handle* handle, const std::vector<BenchArgs>& args,
 void benchmark_target_algo_with_cudnn_tsc(
         Handle* handle, const std::vector<BenchArgs>& args, DType src_dtype,
         DType filter_dtype, DType bias_dtype, DType dst_dtype, const char* algo,
-        param::ConvBias::Format format, bool with_cudnn,
-        const char* change_cudnn_algo,
-        param::ConvBias::Format change_cudnn_format,
-        DType change_cudnn_src_dtype, DType change_cudnn_filter_dtype,
-        DType change_cudnn_bias_dtype, DType change_cudnn_dst_dtype) {
-    megdnn_assert((src_dtype.enumv() == filter_dtype.enumv()) ||
-                  (src_dtype.enumv() == DTypeEnum::Quantized4Asymm &&
-                   filter_dtype.enumv() == DTypeEnum::QuantizedS4));
+        param::ConvBias::Format format, bool with_cudnn, const char* change_cudnn_algo,
+        param::ConvBias::Format change_cudnn_format, DType change_cudnn_src_dtype,
+        DType change_cudnn_filter_dtype, DType change_cudnn_bias_dtype,
+        DType change_cudnn_dst_dtype) {
+    megdnn_assert(
+            (src_dtype.enumv() == filter_dtype.enumv()) ||
+            (src_dtype.enumv() == DTypeEnum::Quantized4Asymm &&
+             filter_dtype.enumv() == DTypeEnum::QuantizedS4));
     CUBenchmarker<ConvBiasForward> benchmarker(handle);
     CUBenchmarker<ConvBiasForward> benchmarker_cudnn(handle);
     size_t RUNS = 200;
@@ -310,26 +306,22 @@ void benchmark_target_algo_with_cudnn_tsc(
         if (format == Format::NCHW4) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype}
-                            .reshape({shape[0], shape[1] / 4, 4, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 4, 4, shape[2], shape[3]})
                             .dimshuffle({0, 1, 3, 4, 2}));
         } else if (format == Format::NCHW32) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype}
-                            .reshape({shape[0], shape[1] / 32, 32, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 32, 32, shape[2], shape[3]})
                             .dimshuffle({0, 1, 3, 4, 2}));
         } else if (format == Format::NCHW64) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype}
-                            .reshape({shape[0], shape[1] / 64, 64, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 64, 64, shape[2], shape[3]})
                             .dimshuffle({0, 1, 3, 4, 2}));
         } else if (format == Format::CHWN4) {
             ret = static_cast<TensorShape>(
                     TensorLayout{shape, dtype}
-                            .reshape({shape[0], shape[1] / 4, 4, shape[2],
-                                      shape[3]})
+                            .reshape({shape[0], shape[1] / 4, 4, shape[2], shape[3]})
                             .dimshuffle({1, 3, 4, 0, 2}));
         } else if (format == Format::NHWC) {
             ret = static_cast<TensorShape>(
@@ -361,15 +353,13 @@ void benchmark_target_algo_with_cudnn_tsc(
         if (format == Format::NCHW64 && (arg.co % 64 != 0 || arg.ci % 64 != 0))
             continue;
         // skip testcase which cannot enable nchw4/chwn4 tensorcore
-        if ((format == Format::CHWN4 || format == Format::NCHW4) &&
-            (arg.ci % 16 != 0))
+        if ((format == Format::CHWN4 || format == Format::NCHW4) && (arg.ci % 16 != 0))
             continue;
         // skip testcase which cannot enable nhwc tensorcore
         if ((format == Format::NHWC) && (arg.ci % 4 != 0 || arg.co % 4 != 0))
             continue;
-        Format format_cudnn = arg.ci % 32 == 0 && arg.co % 32 == 0
-                                      ? Format::NCHW32
-                                      : Format::NCHW4;
+        Format format_cudnn =
+                arg.ci % 32 == 0 && arg.co % 32 == 0 ? Format::NCHW32 : Format::NCHW4;
         if (change_cudnn_algo) {
             format_cudnn = change_cudnn_format;
         }
@@ -380,8 +370,7 @@ void benchmark_target_algo_with_cudnn_tsc(
         float time_in_ms = 0.f;
         if (algo) {
             time_in_ms =
-                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>,
-                                   CUTimer>(
+                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
                             benchmarker,
                             {get_tensor_shape(src, src_dtype, format),
                              get_tensor_shape(filter, filter_dtype, format),
@@ -391,27 +380,24 @@ void benchmark_target_algo_with_cudnn_tsc(
                             algo) /
                     RUNS;
         } else {
-            time_in_ms =
-                    benchmarker.execs(
-                            {get_tensor_shape(src, src_dtype, format),
-                             get_tensor_shape(filter, filter_dtype, format),
-                             get_tensor_shape(bias, bias_dtype, format),
-                             {},
-                             {}}) /
-                    RUNS;
+            time_in_ms = benchmarker.execs(
+                                 {get_tensor_shape(src, src_dtype, format),
+                                  get_tensor_shape(filter, filter_dtype, format),
+                                  get_tensor_shape(bias, bias_dtype, format),
+                                  {},
+                                  {}}) /
+                         RUNS;
         }
         float time_in_ms_cudnn = 0;
         if (with_cudnn) {
             if (change_cudnn_algo) {
                 time_in_ms_cudnn =
-                        algo_benchmark<ConvBiasForward,
-                                       OprProxy<ConvBiasForward>, CUTimer>(
+                        algo_benchmark<
+                                ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
                                 benchmarker_cudnn,
                                 {get_tensor_shape(src, src_dtype, format_cudnn),
-                                 get_tensor_shape(filter, filter_dtype,
-                                                  format_cudnn),
-                                 get_tensor_shape(bias, bias_dtype,
-                                                  format_cudnn),
+                                 get_tensor_shape(filter, filter_dtype, format_cudnn),
+                                 get_tensor_shape(bias, bias_dtype, format_cudnn),
                                  {},
                                  {}},
                                 change_cudnn_algo) /
@@ -420,31 +406,26 @@ void benchmark_target_algo_with_cudnn_tsc(
                 time_in_ms_cudnn =
                         benchmarker_cudnn.execs(
                                 {get_tensor_shape(src, src_dtype, format_cudnn),
-                                 get_tensor_shape(filter, filter_dtype,
-                                                  format_cudnn),
-                                 get_tensor_shape(bias, bias_dtype,
-                                                  format_cudnn),
+                                 get_tensor_shape(filter, filter_dtype, format_cudnn),
+                                 get_tensor_shape(bias, bias_dtype, format_cudnn),
                                  {},
                                  {}}) /
                         RUNS;
             }
         }
 
-        float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f /
-                    (1e12);
+        float flo = 2.0 * arg.n * arg.co * ho * wo * arg.ci * arg.f * arg.f / (1e12);
         printf("src=%s, filter=%s, dst=%s, time(algo=%s)=%.2f %.2fTops, "
                "time(cudnn)=%.2f %.2fTops, "
                "perf(algo=%s)/perf(cudnn)=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(),
-               dst.to_string().c_str(), algo, time_in_ms,
-               (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
-               (flo / (time_in_ms_cudnn * 1e-3)), algo,
+               dst.to_string().c_str(), algo, time_in_ms, (flo / (time_in_ms * 1e-3)),
+               time_in_ms_cudnn, (flo / (time_in_ms_cudnn * 1e-3)), algo,
                time_in_ms_cudnn / time_in_ms);
         printf("bench with z tensor\n");
         if (algo) {
             time_in_ms =
-                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>,
-                                   CUTimer>(
+                    algo_benchmark<ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
                             benchmarker,
                             {get_tensor_shape(src, src_dtype, format),
                              get_tensor_shape(filter, filter_dtype, format),
@@ -454,27 +435,24 @@ void benchmark_target_algo_with_cudnn_tsc(
                             algo) /
                     RUNS;
         } else {
-            time_in_ms =
-                    benchmarker.execs(
-                            {get_tensor_shape(src, src_dtype, format),
-                             get_tensor_shape(filter, filter_dtype, format),
-                             get_tensor_shape(bias, bias_dtype, format),
-                             get_tensor_shape(z, src_dtype, format),
-                             {}}) /
-                    RUNS;
+            time_in_ms = benchmarker.execs(
+                                 {get_tensor_shape(src, src_dtype, format),
+                                  get_tensor_shape(filter, filter_dtype, format),
+                                  get_tensor_shape(bias, bias_dtype, format),
+                                  get_tensor_shape(z, src_dtype, format),
+                                  {}}) /
+                         RUNS;
         }
         time_in_ms_cudnn = 0;
         if (with_cudnn) {
             if (change_cudnn_algo) {
                 time_in_ms_cudnn =
-                        algo_benchmark<ConvBiasForward,
-                                       OprProxy<ConvBiasForward>, CUTimer>(
+                        algo_benchmark<
+                                ConvBiasForward, OprProxy<ConvBiasForward>, CUTimer>(
                                 benchmarker_cudnn,
                                 {get_tensor_shape(src, src_dtype, format_cudnn),
-                                 get_tensor_shape(filter, filter_dtype,
-                                                  format_cudnn),
-                                 get_tensor_shape(bias, bias_dtype,
-                                                  format_cudnn),
+                                 get_tensor_shape(filter, filter_dtype, format_cudnn),
+                                 get_tensor_shape(bias, bias_dtype, format_cudnn),
                                  get_tensor_shape(z, src_dtype, format_cudnn),
                                  {}},
                                 change_cudnn_algo) /
@@ -483,10 +461,8 @@ void benchmark_target_algo_with_cudnn_tsc(
                 time_in_ms_cudnn =
                         benchmarker_cudnn.execs(
                                 {get_tensor_shape(src, src_dtype, format_cudnn),
-                                 get_tensor_shape(filter, filter_dtype,
-                                                  format_cudnn),
-                                 get_tensor_shape(bias, bias_dtype,
-                                                  format_cudnn),
+                                 get_tensor_shape(filter, filter_dtype, format_cudnn),
+                                 get_tensor_shape(bias, bias_dtype, format_cudnn),
                                  get_tensor_shape(z, src_dtype, format_cudnn),
                                  {}}) /
                         RUNS;
@@ -496,9 +472,8 @@ void benchmark_target_algo_with_cudnn_tsc(
                "time(cudnn)=%.2f %.2fTops, "
                "perf(algo=%s)/perf(cudnn)=%.2f\n",
                src.to_string().c_str(), filter.to_string().c_str(),
-               dst.to_string().c_str(), algo, time_in_ms,
-               (flo / (time_in_ms * 1e-3)), time_in_ms_cudnn,
-               (flo / (time_in_ms_cudnn * 1e-3)), algo,
+               dst.to_string().c_str(), algo, time_in_ms, (flo / (time_in_ms * 1e-3)),
+               time_in_ms_cudnn, (flo / (time_in_ms_cudnn * 1e-3)), algo,
                time_in_ms_cudnn / time_in_ms);
     }
 }

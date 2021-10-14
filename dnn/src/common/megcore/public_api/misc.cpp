@@ -11,9 +11,10 @@
 #include "megcore.h"
 #include "src/common/utils.h"
 
-const char *megcoreGetErrorName(megcoreStatus_t status)
-{
-#define CASE(x) case x: return (#x)
+const char* megcoreGetErrorName(megcoreStatus_t status) {
+#define CASE(x) \
+    case x:     \
+        return (#x)
     switch (status) {
         CASE(megcoreSuccess);
         CASE(megcoreErrorMemoryAllocation);

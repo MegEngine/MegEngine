@@ -16,8 +16,8 @@
 
 #include "megbrain/gopt/framework.h"
 #include "megbrain/opr/io.h"
-#include "megbrain/serialization/serializer.h"
 #include "megbrain/serialization/opr_shallow_copy.h"
+#include "megbrain/serialization/serializer.h"
 
 #include <queue>
 
@@ -97,8 +97,7 @@ public:
             m_tree[k].max -= info.first;
             m_lzt[k] -= info.first;
             if (m_seg_info.find(k) != m_seg_info.end() && info.second > -1) {
-                mgb_assert(m_seg_info[k].find(info.second) !=
-                           m_seg_info[k].end());
+                mgb_assert(m_seg_info[k].find(info.second) != m_seg_info[k].end());
                 m_seg_info[k].erase(info.second);
             }
             return;
@@ -128,10 +127,11 @@ public:
             }
         }
         if (l == r) {
-            mgb_assert(x == l,
-                       "bug occurs in memory_swap's Segment Tree in line %s:%d "
-                       "%s\n",
-                       __FILE__, __LINE__, __FUNCTION__);
+            mgb_assert(
+                    x == l,
+                    "bug occurs in memory_swap's Segment Tree in line %s:%d "
+                    "%s\n",
+                    __FILE__, __LINE__, __FUNCTION__);
             return;
         }
         int mid = (l + r) >> 1;
@@ -148,10 +148,9 @@ MemorySwap::MemorySwap(ComputingGraph* graph) : m_owner_graph(graph){};
 
 MemorySwap::~MemorySwap() noexcept = default;
 
-void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
-                                     const cg::OprNodeArray& opr_seq,
-                                     std::vector<std::vector<size_t>>& g,
-                                     std::vector<std::vector<size_t>>& tg) {
+void MemorySwap::determine_swap_edge(
+        PIPSet& heap, size_t loss_idx, const cg::OprNodeArray& opr_seq,
+        std::vector<std::vector<size_t>>& g, std::vector<std::vector<size_t>>& tg) {
     auto&& infer_mgr = m_owner_graph->static_infer_manager();
     static_cast<void>(infer_mgr);
 
@@ -172,8 +171,7 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
         for (auto y : g[x.first]) {
             if (m_opr_seq_dist.find(y) == m_opr_seq_dist.end())
                 continue;
-            auto s = m_opr_map[y]->node_prop().dep_map().find(
-                    m_var_map[x.first]);
+            auto s = m_opr_map[y]->node_prop().dep_map().find(m_var_map[x.first]);
             if (s == m_opr_map[y]->node_prop().dep_map().end())
                 continue;
             if (s->second != cg::OperatorNodeBase::NodeProp::DepType::DEV_VALUE)
@@ -192,29 +190,28 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
             if (m_opr_seq_dist[last] + 1 <= m_opr_seq_dist[y] - 1) {
                 if (flag) {
                     m_all_valid_segments.push_back(
-                            PPI(PII(m_opr_seq_dist[last] + 1,
-                                    m_opr_seq_dist[y] - 1),
+                            PPI(PII(m_opr_seq_dist[last] + 1, m_opr_seq_dist[y] - 1),
                                 m_segment_race_id));
                 }
                 int seg_id = flag ? (int)m_all_valid_segments.size() - 1 : -1;
                 segment_set.push_back(PPI(
-                        PII(m_opr_seq_dist[last] + 1, m_opr_seq_dist[y] - 1),
-                        seg_id));
-                segT->insert(1, 1, fin, m_opr_seq_dist[last] + 1,
-                             m_opr_seq_dist[y] - 1, PII(sz, seg_id));
+                        PII(m_opr_seq_dist[last] + 1, m_opr_seq_dist[y] - 1), seg_id));
+                segT->insert(
+                        1, 1, fin, m_opr_seq_dist[last] + 1, m_opr_seq_dist[y] - 1,
+                        PII(sz, seg_id));
             }
             last = y;
         }
         if (a.empty())
             continue;
         sort(a.begin(), a.end());
-        auto s = new SegmentRace(sz, m_segment_race_id, x.first, segment_set,
-                                 m_consume_opr_set);
+        auto s = new SegmentRace(
+                sz, m_segment_race_id, x.first, segment_set, m_consume_opr_set);
         m_segmentRaceList.push_back(s);
 
         for (auto id : m_consume_opr_set) {
-            segT->insert(1, 1, fin, m_opr_seq_dist[id], m_opr_seq_dist[id],
-                         PII(sz, -1));
+            segT->insert(
+                    1, 1, fin, m_opr_seq_dist[id], m_opr_seq_dist[id], PII(sz, -1));
         }
         for (auto x : segment_set)
             if (x.second > -1)
@@ -295,26 +292,28 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
          */
         auto peak_decrease = [&](const int& lhs) {
             auto origin_peak = segT->query_max().first;
-            segT->remove(1, 1, fin, m_all_valid_segments[lhs].first.first,
-                         m_all_valid_segments[lhs].first.second,
-                         PII(m_segmentToRace[lhs]->m_mem, lhs));
+            segT->remove(
+                    1, 1, fin, m_all_valid_segments[lhs].first.first,
+                    m_all_valid_segments[lhs].first.second,
+                    PII(m_segmentToRace[lhs]->m_mem, lhs));
             if (m_swap_in_prev > 1) {
-                segT->insert(1, 1, fin,
-                             m_all_valid_segments[lhs].first.second -
-                                     m_swap_in_prev + 1,
-                             m_all_valid_segments[lhs].first.second - 1,
-                             PII(m_segmentToRace[lhs]->m_mem, -1));
+                segT->insert(
+                        1, 1, fin,
+                        m_all_valid_segments[lhs].first.second - m_swap_in_prev + 1,
+                        m_all_valid_segments[lhs].first.second - 1,
+                        PII(m_segmentToRace[lhs]->m_mem, -1));
             }
             auto ret = origin_peak - segT->query_max().first;
-            segT->insert(1, 1, fin, m_all_valid_segments[lhs].first.first,
-                         m_all_valid_segments[lhs].first.second,
-                         PII(m_segmentToRace[lhs]->m_mem, lhs));
+            segT->insert(
+                    1, 1, fin, m_all_valid_segments[lhs].first.first,
+                    m_all_valid_segments[lhs].first.second,
+                    PII(m_segmentToRace[lhs]->m_mem, lhs));
             if (m_swap_in_prev > 1) {
-                segT->remove(1, 1, fin,
-                             m_all_valid_segments[lhs].first.second -
-                                     m_swap_in_prev + 1,
-                             m_all_valid_segments[lhs].first.second - 1,
-                             PII(m_segmentToRace[lhs]->m_mem, -1));
+                segT->remove(
+                        1, 1, fin,
+                        m_all_valid_segments[lhs].first.second - m_swap_in_prev + 1,
+                        m_all_valid_segments[lhs].first.second - 1,
+                        PII(m_segmentToRace[lhs]->m_mem, -1));
             }
             return ret;
         };
@@ -332,25 +331,24 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
             if (peak_decrease_res[s].first.second < 0.5)
                 peak_decrease_res[s].first.first = 0;
         }
-        sort(tmp_vec.begin(), tmp_vec.end(),
-             [&](const int& lhs, const int& rhs) {
-                 return peak_decrease_res[lhs] > peak_decrease_res[rhs];
-             });
+        sort(tmp_vec.begin(), tmp_vec.end(), [&](const int& lhs, const int& rhs) {
+            return peak_decrease_res[lhs] > peak_decrease_res[rhs];
+        });
 
         auto pkd = peak_decrease(tmp_vec[0]);
-        segT->remove(1, 1, fin, m_all_valid_segments[tmp_vec[0]].first.first,
-                     m_all_valid_segments[tmp_vec[0]].first.second,
-                     PII(m_segmentToRace[tmp_vec[0]]->m_mem, tmp_vec[0]));
+        segT->remove(
+                1, 1, fin, m_all_valid_segments[tmp_vec[0]].first.first,
+                m_all_valid_segments[tmp_vec[0]].first.second,
+                PII(m_segmentToRace[tmp_vec[0]]->m_mem, tmp_vec[0]));
         if (m_swap_in_prev > 1) {
-            segT->insert(1, 1, fin,
-                         m_all_valid_segments[tmp_vec[0]].first.second -
-                                 m_swap_in_prev + 1,
-                         m_all_valid_segments[tmp_vec[0]].first.second - 1,
-                         PII(m_segmentToRace[tmp_vec[0]]->m_mem, -1));
+            segT->insert(
+                    1, 1, fin,
+                    m_all_valid_segments[tmp_vec[0]].first.second - m_swap_in_prev + 1,
+                    m_all_valid_segments[tmp_vec[0]].first.second - 1,
+                    PII(m_segmentToRace[tmp_vec[0]]->m_mem, -1));
         }
         auto u = m_segmentToRace[tmp_vec[0]]->m_st;
-        auto v = opr_seq[m_all_valid_segments[tmp_vec[0]].first.second + 1]
-                         ->id();
+        auto v = opr_seq[m_all_valid_segments[tmp_vec[0]].first.second + 1]->id();
         if (m_var_map.find(u) == m_var_map.end())
             continue;
         if (m_opr_map.find(v) == m_opr_map.end())
@@ -391,8 +389,8 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
 
         dec_tot += pkd;
         involved += m_segmentToRace[tmp_vec[0]]->m_mem * ratio;
-        m_max_swap_out_var_size = std::max(m_max_swap_out_var_size,
-                                           m_segmentToRace[tmp_vec[0]]->m_mem);
+        m_max_swap_out_var_size =
+                std::max(m_max_swap_out_var_size, m_segmentToRace[tmp_vec[0]]->m_mem);
         m_swapped_pair.insert(PSS(u, v));
 
         if (involved / m_cpu_gpu_bandwidth > m_swap_time_limit)
@@ -400,7 +398,8 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
     }
 
     if (involved > 0) {
-        mgb_log_debug("Total Swap in/out computation size : %lld byte(s), static "
+        mgb_log_debug(
+                "Total Swap in/out computation size : %lld byte(s), static "
                 "memory "
                 "allocation reduction : %lld byte(s), ratio : %.4f\n",
                 involved, dec_tot, 1.0 * dec_tot / involved);
@@ -417,8 +416,7 @@ void MemorySwap::determine_swap_edge(PIPSet& heap, size_t loss_idx,
             bool now = m_swapped_pair.count(PSS(t->m_st, t->m_consume_opr[i]));
             if ((!now) && flag) {
                 mgb_assert(m_max_swap_out_var_size >= t->m_mem);
-                heap.insert(PIP(++trash_counter,
-                                PSS(t->m_st, t->m_consume_opr[i])));
+                heap.insert(PIP(++trash_counter, PSS(t->m_st, t->m_consume_opr[i])));
             }
             flag |= now;
         }
@@ -442,8 +440,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
     /*
      * change params through env-vars
      */
-    auto env_bucket_implement =
-            MGB_GETENV("MGB_MEMORY_SWAP_PARAM_BUCKET_IMPLEMENT");
+    auto env_bucket_implement = MGB_GETENV("MGB_MEMORY_SWAP_PARAM_BUCKET_IMPLEMENT");
     if (env_bucket_implement) {
         int tmp;
         sscanf(env_bucket_implement, "%d", &tmp);
@@ -456,8 +453,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
     if (env_fuse_swap_in_bound) {
         sscanf(env_fuse_swap_in_bound, "%zu", &m_fuse_swap_in_bound);
     } else {
-        m_fuse_swap_in_bound =
-                std::max(m_fuse_swap_in_bound, opr_seq.size() / 60);
+        m_fuse_swap_in_bound = std::max(m_fuse_swap_in_bound, opr_seq.size() / 60);
     }
 
     auto env_n_tensors = MGB_GETENV("MGB_MEMORY_SWAP_PARAM_N_TENSORS");
@@ -471,8 +467,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
         mgb_assert(m_swap_in_prev > 0);
     }
 
-    auto env_swap_time_limit =
-            MGB_GETENV("MGB_MEMORY_SWAP_PARAM_SWAP_TIME_LIMIT");
+    auto env_swap_time_limit = MGB_GETENV("MGB_MEMORY_SWAP_PARAM_SWAP_TIME_LIMIT");
     if (env_swap_time_limit) {
         sscanf(env_swap_time_limit, "%lf", &m_swap_time_limit);
         mgb_assert(m_swap_time_limit + 1e-12 > 0);
@@ -484,14 +479,12 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
         sscanf(env_swap_out_var_size_lb, "%zu", &m_swap_out_var_size_lb);
     }
 
-    auto env_lb_for_distance =
-            MGB_GETENV("MGB_MEMORY_SWAP_PARAM_LB_FOR_DISTANCE");
+    auto env_lb_for_distance = MGB_GETENV("MGB_MEMORY_SWAP_PARAM_LB_FOR_DISTANCE");
     if (env_lb_for_distance) {
         sscanf(env_lb_for_distance, "%lld", &m_lb_for_distance);
         mgb_assert(m_lb_for_distance > 0);
     } else {
-        m_lb_for_distance =
-                std::min(m_lb_for_distance, (long long)opr_seq.size() / 20);
+        m_lb_for_distance = std::min(m_lb_for_distance, (long long)opr_seq.size() / 20);
     }
     if (!m_bucket_implement)
         m_swap_in_prev = 1;
@@ -522,8 +515,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
             auto x = lst.front();
             m_var_map[x->id()] = x;
             max_idx = std::max(max_idx, x->id());
-            if (m_opr_seq_dist.find(x->owner_opr()->id()) !=
-                m_opr_seq_dist.end())
+            if (m_opr_seq_dist.find(x->owner_opr()->id()) != m_opr_seq_dist.end())
                 m_opr_seq_dist[x->id()] = m_opr_seq_dist[x->owner_opr()->id()];
             lst.pop();
             size_t owner_id = x->owner_opr()->id();
@@ -644,15 +636,12 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
                 m_opr_seq_dist.find(x.second) == m_opr_seq_dist.end())
                 continue;
 
-            if (m_opr_seq_dist[x.second] - m_opr_seq_dist[x.first] <=
-                m_lb_for_distance)
+            if (m_opr_seq_dist[x.second] - m_opr_seq_dist[x.first] <= m_lb_for_distance)
                 continue;
-            if (m_var_map[x.first]
-                        ->owner_opr()
-                        ->same_type<SharedDeviceTensor>())
+            if (m_var_map[x.first]->owner_opr()->same_type<SharedDeviceTensor>())
                 continue;
-            auto s = m_opr_map[x.second]->node_prop().dep_map().find(
-                    m_var_map[x.first]);
+            auto s =
+                    m_opr_map[x.second]->node_prop().dep_map().find(m_var_map[x.first]);
             if (s == m_opr_map[x.second]->node_prop().dep_map().end())
                 continue;
             if (s->second != cg::OperatorNodeBase::NodeProp::DepType::DEV_VALUE)
@@ -668,8 +657,9 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
             static_cast<void>(sz);
             if (sz <= m_swap_out_var_size_lb)
                 continue;
-            heap.insert(PIP(-m_opr_seq_dist[x.second] + m_opr_seq_dist[x.first],
-                            PSS(x.first, x.second)));
+            heap.insert(
+                    PIP(-m_opr_seq_dist[x.second] + m_opr_seq_dist[x.first],
+                        PSS(x.first, x.second)));
         }
 #endif
     auto rewriter = subgraph.make_rewriter();
@@ -685,9 +675,8 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
         arr.push_back(ret->second);
         heap.erase(ret);
     }
-    sort(arr.begin(), arr.end(), [](const PSS& lhs, const PSS& rhs) {
-        return lhs.second < rhs.second;
-    });
+    sort(arr.begin(), arr.end(),
+         [](const PSS& lhs, const PSS& rhs) { return lhs.second < rhs.second; });
     std::vector<VarNode*> cur;
     ThinHashMap<size_t, std::vector<size_t>> fuse_swap;
     ThinHashMap<size_t, ThinHashMap<size_t, size_t>> fuse_dep_node;
@@ -729,8 +718,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
             if (dep_idx > 0) {
                 size_t j = i;
                 for (; j < x.second.size(); ++j) {
-                    if (m_opr_seq_dist[x.second[i]] +
-                                (long long)m_fuse_swap_in_bound >
+                    if (m_opr_seq_dist[x.second[i]] + (long long)m_fuse_swap_in_bound >
                         m_opr_seq_dist[x.second[j]]) {
                         fuse_dep_node[x.first][x.second[j]] = dep_idx;
                     } else
@@ -769,8 +757,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
             for (size_t i = 0; i < opr->input().size(); ++i) {
                 if (burden[opr->id()].find(opr->input()[i]->id()) !=
                     burden[opr->id()].end()) {
-                    auto dep_idx =
-                            fuse_dep_node[opr->input()[i]->id()][opr->id()];
+                    auto dep_idx = fuse_dep_node[opr->input()[i]->id()][opr->id()];
                     if (!dep_idx)
                         continue;
                     else
@@ -780,35 +767,30 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
                     VarNode* swap_res_var;
                     if (!m_bucket_implement) {
                         auto vd1_idx =
-                                opr_seq[m_opr_seq_dist[opr->input()[i]
-                                                               ->owner_opr()
-                                                               ->id()] +
+                                opr_seq[m_opr_seq_dist
+                                                [opr->input()[i]->owner_opr()->id()] +
                                         4]
                                         ->output(0)
                                         ->id();
-                        auto cpi_idx = opr_seq[m_opr_seq_dist[opr->id()] -
-                                               m_swap_in_prev / 2]
-                                               ->output(0)
-                                               ->id();
+                        auto cpi_idx =
+                                opr_seq[m_opr_seq_dist[opr->id()] - m_swap_in_prev / 2]
+                                        ->output(0)
+                                        ->id();
                         auto vd1_dep = rewriter.get_var(m_var_map[vd1_idx]);
                         auto cpi_dep = rewriter.get_var(m_var_map[cpi_idx]);
 
-                        swap_res_var = apply(rewriter.get_var(opr->input()[i]),
-                                             vd1_dep, cpi_dep, dep_node);
+                        swap_res_var =
+                                apply(rewriter.get_var(opr->input()[i]), vd1_dep,
+                                      cpi_dep, dep_node);
                     } else {
                         auto wait_dep_idx =
-                                opr_seq[m_opr_seq_dist[opr->id()] - 1]
-                                        ->output(0)
-                                        ->id();
-                        auto wait_dep =
-                                rewriter.get_var(m_var_map[wait_dep_idx]);
-                        swap_res_var =
-                                apply_bucket(rewriter.get_var(opr->input()[i]),
-                                             dep_node, wait_dep);
+                                opr_seq[m_opr_seq_dist[opr->id()] - 1]->output(0)->id();
+                        auto wait_dep = rewriter.get_var(m_var_map[wait_dep_idx]);
+                        swap_res_var = apply_bucket(
+                                rewriter.get_var(opr->input()[i]), dep_node, wait_dep);
                     }
                     swapped_input[i] = swap_res_var;
-                } else if (rewriter.get_var(opr->input()[i]) !=
-                           opr->input()[i]) {
+                } else if (rewriter.get_var(opr->input()[i]) != opr->input()[i]) {
                     auto x = rewriter.get_var(opr->input()[i]);
                     while (x != rewriter.get_var(x))
                         x = rewriter.get_var(x);
@@ -819,8 +801,8 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
                 auto neo_opr = mgb::serialization::copy_opr_shallow(
                         *opr, swapped_input, opr->config());
                 for (size_t i = 0; i < opr->output().size(); ++i) {
-                    rewriter.replace_var(opr->output()[i], neo_opr->output()[i],
-                                         nullptr);
+                    rewriter.replace_var(
+                            opr->output()[i], neo_opr->output()[i], nullptr);
                 }
             } else
                 rewriter.auto_replace_outputs(opr);
@@ -839,8 +821,7 @@ void MemorySwap::modify_dest_var_inplace(VarNodeArray& vars) {
     rewriter.apply_inplace();
 }
 
-VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
-                                  VarNode* wait_dep) {
+VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node, VarNode* wait_dep) {
     if (m_swap_map.find(lhs) != m_swap_map.end()) {
         if (m_swap_map[lhs].find(dep_node) != m_swap_map[lhs].end()) {
             return m_swap_map[lhs][dep_node];
@@ -849,20 +830,22 @@ VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
     auto graph = this->m_owner_graph;
     if (m_swap_out_map.find(lhs) == m_swap_out_map.end()) {
         auto internal = SwapOutMS::make(*graph, lhs, {}, {}).node();
-        mgb_assert(internal->owner_opr()->same_type<opr::SwapOutMS>(),
-                   "fail to cast OperatorNodeBase to SwapOutMS");
+        mgb_assert(
+                internal->owner_opr()->same_type<opr::SwapOutMS>(),
+                "fail to cast OperatorNodeBase to SwapOutMS");
         auto soo = static_cast<opr::SwapOutMS*>(internal->owner_opr());
         SwapVarInfo svi;
         svi.var = lhs;
         std::shared_ptr<SwapVarRecorder> swapVarRecorder;
         if (!m_firstSwapVarRecorderOwner) {
-            swapVarRecorder = std::make_shared<SwapVarRecorder>(
-                    &svi, m_max_swap_out_var_size);
+            swapVarRecorder =
+                    std::make_shared<SwapVarRecorder>(&svi, m_max_swap_out_var_size);
             swapVarRecorder->enable(true);
             m_firstSwapVarRecorderOwner = soo;
         } else {
-            mgb_assert(m_firstSwapVarRecorderOwner->same_type<opr::SwapOutMS>(),
-                       "fail to cast OperatorNodeBase to SwapOutMS");
+            mgb_assert(
+                    m_firstSwapVarRecorderOwner->same_type<opr::SwapOutMS>(),
+                    "fail to cast OperatorNodeBase to SwapOutMS");
             swapVarRecorder =
                     (static_cast<opr::SwapOutMS*>(m_firstSwapVarRecorderOwner))
                             ->recorder();
@@ -870,9 +853,9 @@ VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
         mgb_assert(swapVarRecorder);
         soo->set_recorder(swapVarRecorder);
 
-        auto mid = opr::SwapInMS::make(*graph, internal, dep_node,
-                                       {swapVarRecorder}, {})
-                           .node();
+        auto mid =
+                opr::SwapInMS::make(*graph, internal, dep_node, {swapVarRecorder}, {})
+                        .node();
 
         /*!
          * after enabling value_infer, sometimes the varnode above may
@@ -883,8 +866,9 @@ VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
         }
 
         auto ret = opr::WaitSwapInMS::make(*graph, {mid, wait_dep}, {}).node();
-        mgb_assert(soo->recorder() ==
-                   static_cast<opr::SwapInMS*>(mid->owner_opr())->recorder());
+        mgb_assert(
+                soo->recorder() ==
+                static_cast<opr::SwapInMS*>(mid->owner_opr())->recorder());
 
         internal->owner_opr()->node_prop().attribute().priority =
                 mid->owner_opr()->node_prop().attribute().priority =
@@ -896,14 +880,15 @@ VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
         return ret;
     } else {
         auto internal = m_swap_out_map[lhs];
-        mgb_assert(internal->owner_opr()->same_type<opr::SwapOutMS>(),
-                   "fail to cast OperatorNodeBase to SwapOutMS");
-        auto mid = opr::SwapInMS::make(
-                           *graph, internal, dep_node,
-                           {(static_cast<SwapOutMS*>(internal->owner_opr()))
-                                    ->recorder()},
-                           {})
-                           .node();
+        mgb_assert(
+                internal->owner_opr()->same_type<opr::SwapOutMS>(),
+                "fail to cast OperatorNodeBase to SwapOutMS");
+        auto mid =
+                opr::SwapInMS::make(
+                        *graph, internal, dep_node,
+                        {(static_cast<SwapOutMS*>(internal->owner_opr()))->recorder()},
+                        {})
+                        .node();
         auto ret = opr::WaitSwapInMS::make(*graph, {mid, wait_dep}, {}).node();
         mid->owner_opr()->node_prop().attribute().priority =
                 std::numeric_limits<int>::min();
@@ -915,8 +900,8 @@ VarNode* MemorySwap::apply_bucket(VarNode* lhs, VarNode* dep_node,
     return nullptr;
 }
 
-VarNode* MemorySwap::apply(VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep,
-                           VarNode* dep_node) {
+VarNode* MemorySwap::apply(
+        VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep, VarNode* dep_node) {
     if (m_swap_map.find(lhs) != m_swap_map.end()) {
         if (m_swap_map[lhs].find(dep_node) != m_swap_map[lhs].end()) {
             return m_swap_map[lhs][dep_node];
@@ -928,8 +913,7 @@ VarNode* MemorySwap::apply(VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep,
         std::shared_ptr<HostTensorND> tmp;
         tmp = std::make_shared<HostTensorND>(tms);
         auto internal = opr::SwapOut::make(*graph, lhs, {tmp}).node();
-        auto ret =
-                opr::SwapIn::make(*graph, {internal, dep_node}, tmp, {}).node();
+        auto ret = opr::SwapIn::make(*graph, {internal, dep_node}, tmp, {}).node();
         internal->owner_opr()->node_prop().attribute().priority =
                 std::numeric_limits<int>::min();
         ret->owner_opr()->node_prop().attribute().priority =
@@ -941,10 +925,9 @@ VarNode* MemorySwap::apply(VarNode* lhs, VarNode* vd1_dep, VarNode* cpi_dep,
         auto internal = m_swap_out_map[lhs];  // in fact do not need this..
         mgb_assert(internal->owner_opr()->same_type<SwapOut>());
         auto ret =
-                opr::SwapIn::make(*graph, {internal, dep_node},
-                                  (static_cast<SwapOut*>(internal->owner_opr()))
-                                          ->host_data(),
-                                  {})
+                opr::SwapIn::make(
+                        *graph, {internal, dep_node},
+                        (static_cast<SwapOut*>(internal->owner_opr()))->host_data(), {})
                         .node();
         ret->owner_opr()->node_prop().attribute().priority =
                 std::numeric_limits<int>::min();

@@ -28,9 +28,9 @@ json::Object& visit_json_obj(json::Object& obj, const std::string& key) {
     mgb_assert(val, "key %s not found", key.c_str());
     return static_cast<json::Object&>(*val);
 };
-void compile_and_run(std::shared_ptr<ComputingGraph> graph, SymbolVar& out,
-                     HostTensorND& host_out, uint64_t computation,
-                     uint64_t memory) {
+void compile_and_run(
+        std::shared_ptr<ComputingGraph> graph, SymbolVar& out, HostTensorND& host_out,
+        uint64_t computation, uint64_t memory) {
     graph->options().graph_opt_level = 0;
     auto func = graph->compile({make_callback_copy(out, host_out)});
     auto profiler = std::make_shared<GraphProfiler>(graph.get());
@@ -44,34 +44,30 @@ void compile_and_run(std::shared_ptr<ComputingGraph> graph, SymbolVar& out,
     auto&& opr_fp_item = visit_json_obj(opr_fp_rst, opr->id_str());
 
     uint64_t mem_rst =
-            static_cast<json::NumberInt*>(opr_fp_item["memory"].get())
-                    ->get_impl();
+            static_cast<json::NumberInt*>(opr_fp_item["memory"].get())->get_impl();
     uint64_t comp_rst =
-            static_cast<json::NumberInt*>(opr_fp_item["computation"].get())
-                    ->get_impl();
+            static_cast<json::NumberInt*>(opr_fp_item["computation"].get())->get_impl();
 
     ASSERT_EQ(memory, mem_rst);
     ASSERT_EQ(computation, comp_rst);
 }
 
 template <typename Func, typename DType, typename Param>
-void run_test(Func func, std::initializer_list<size_t>&& host_x_shape,
-              std::initializer_list<size_t>&& host_y_shape,
-              std::initializer_list<size_t>&& host_z_shape,
-              uint64_t computation, uint64_t nr_elems, DType dtype,
-              const Param& param, CompNode cn = CompNode::load("xpux")) {
+void run_test(
+        Func func, std::initializer_list<size_t>&& host_x_shape,
+        std::initializer_list<size_t>&& host_y_shape,
+        std::initializer_list<size_t>&& host_z_shape, uint64_t computation,
+        uint64_t nr_elems, DType dtype, const Param& param,
+        CompNode cn = CompNode::load("xpux")) {
     HostTensorGenerator<DType> gen;
     auto host_x = gen(host_x_shape, cn);
     auto host_y = gen(host_y_shape, cn);
     auto host_z = gen(host_z_shape, cn);
 
     auto graph = ComputingGraph::make();
-    SymbolVar x = opr::SharedDeviceTensor::make(*graph, *host_x.get())
-                          .rename("x"),
-              y = opr::SharedDeviceTensor::make(*graph, *host_y.get())
-                          .rename("y"),
-              z = opr::SharedDeviceTensor::make(*graph, *host_z.get())
-                          .rename("z"),
+    SymbolVar x = opr::SharedDeviceTensor::make(*graph, *host_x.get()).rename("x"),
+              y = opr::SharedDeviceTensor::make(*graph, *host_y.get()).rename("y"),
+              z = opr::SharedDeviceTensor::make(*graph, *host_z.get()).rename("z"),
               f = func(x, y, z, param);
 
     HostTensorND host_f;
@@ -79,9 +75,9 @@ void run_test(Func func, std::initializer_list<size_t>&& host_x_shape,
 }
 
 template <class Param, typename Func>
-void test_conv_group(size_t n, size_t ic, size_t oc, size_t ih, size_t iw,
-                     size_t fh, size_t fw, size_t ph, size_t pw, size_t sh,
-                     size_t sw, Func func) {
+void test_conv_group(
+        size_t n, size_t ic, size_t oc, size_t ih, size_t iw, size_t fh, size_t fw,
+        size_t ph, size_t pw, size_t sh, size_t sw, Func func) {
     Param param;
 
     size_t ow = (iw + 2 * pw - fw) / sw + 1;
@@ -95,15 +91,15 @@ void test_conv_group(size_t n, size_t ic, size_t oc, size_t ih, size_t iw,
     param.pad_h = ph;
     param.pad_w = pw;
 
-    run_test(func, {n, ic, ih, iw}, {oc, ic, fh, fw}, {n, oc, oh, ow},
-             computation, memory, dtype::Float32(), param);
+    run_test(
+            func, {n, ic, ih, iw}, {oc, ic, fh, fw}, {n, oc, oh, ow}, computation,
+            memory, dtype::Float32(), param);
 };
 
 template <class Param, typename Func>
-void test_conv_bias_group_nchw4(size_t n, size_t ic, size_t oc, size_t ih,
-                                size_t iw, size_t fh, size_t fw, size_t ph,
-                                size_t pw, size_t sh, size_t sw, Func func,
-                                size_t group) {
+void test_conv_bias_group_nchw4(
+        size_t n, size_t ic, size_t oc, size_t ih, size_t iw, size_t fh, size_t fw,
+        size_t ph, size_t pw, size_t sh, size_t sw, Func func, size_t group) {
     Param param;
 
     size_t ow = (iw + 2 * pw - fw) / sw + 1;
@@ -112,8 +108,7 @@ void test_conv_bias_group_nchw4(size_t n, size_t ic, size_t oc, size_t ih,
     uint64_t computation =
             (n * ic * oc * ow * oh * fw * fh * 2 + n * oc * ow * oh) * group;
     uint64_t memory =
-            (n * ic * ih * iw + oc * ic * fw * fh + n * oc * oh * ow + 4 * oc) *
-            group;
+            (n * ic * ih * iw + oc * ic * fw * fh + n * oc * oh * ow + 4 * oc) * group;
 
     param.stride_h = sh;
     param.stride_w = sw;
@@ -122,15 +117,16 @@ void test_conv_bias_group_nchw4(size_t n, size_t ic, size_t oc, size_t ih,
     param.format = Param::Format::NCHW4;
 
     if (group == 1) {
-        run_test(func, {n, group * ic / 4, ih, iw, 4}, {oc, ic / 4, fh, fw, 4},
-                 {1, oc * group / 4, 1, 1, 4}, computation, memory,
-                 dtype::QuantizedS8(1.0f), param, CompNode::load("cpux"));
+        run_test(
+                func, {n, group * ic / 4, ih, iw, 4}, {oc, ic / 4, fh, fw, 4},
+                {1, oc * group / 4, 1, 1, 4}, computation, memory,
+                dtype::QuantizedS8(1.0f), param, CompNode::load("cpux"));
     } else {
         param.sparse = Param::Sparse::GROUP;
-        run_test(func, {n, group * ic / 4, ih, iw, 4},
-                 {group, oc, ic / 4, fh, fw, 4}, {1, oc * group / 4, 1, 1, 4},
-                 computation, memory, dtype::QuantizedS8(1.0f), param,
-                 CompNode::load("cpux"));
+        run_test(
+                func, {n, group * ic / 4, ih, iw, 4}, {group, oc, ic / 4, fh, fw, 4},
+                {1, oc * group / 4, 1, 1, 4}, computation, memory,
+                dtype::QuantizedS8(1.0f), param, CompNode::load("cpux"));
     }
 }
 
@@ -138,23 +134,25 @@ void test_conv_bias_group_nchw4(size_t n, size_t ic, size_t oc, size_t ih,
 
 TEST(TestOprFootprint, Elemwise) {
     using Param = opr::Elemwise::Param;
-    auto test_elemwise_group = [](Param::Mode mode, size_t nr_inputs,
-                                  size_t k) {
-        auto func = [&nr_inputs](SymbolVar x, SymbolVar y, SymbolVar z,
-                                 const Param& param = {}) {
+    auto test_elemwise_group = [](Param::Mode mode, size_t nr_inputs, size_t k) {
+        auto func = [&nr_inputs](
+                            SymbolVar x, SymbolVar y, SymbolVar z,
+                            const Param& param = {}) {
             SymbolVarArray inputs{x, y, z};
             inputs.resize(nr_inputs);
             return opr::Elemwise::make(inputs, param);
         };
         Param param;
         param.mode = mode;
-        run_test(func, {2, 3, 3}, {2, 3, 3}, {2, 3, 3}, 18 * k,
-                 18 * (nr_inputs + 1), dtype::Float32(), param);
+        run_test(
+                func, {2, 3, 3}, {2, 3, 3}, {2, 3, 3}, 18 * k, 18 * (nr_inputs + 1),
+                dtype::Float32(), param);
         auto mem = 30 * (nr_inputs + 1);
         if (nr_inputs == 3)
             mem -= 2 * 3 * 4;
-        run_test(func, {2, 5, 3}, {2, 5, 3}, {2, 1, 3}, 30 * k, mem,
-                 dtype::Int32(), param);
+        run_test(
+                func, {2, 5, 3}, {2, 5, 3}, {2, 1, 3}, 30 * k, mem, dtype::Int32(),
+                param);
     };
     test_elemwise_group(Param::Mode::SIGMOID, 1, 1);
     test_elemwise_group(Param::Mode::ADD, 2, 1);
@@ -163,15 +161,12 @@ TEST(TestOprFootprint, Elemwise) {
 
 TEST(TestOprFootprint, AddUpdate) {
     using Param = opr::AddUpdate::Param;
-    auto func = [](SymbolVar x, SymbolVar y, SymbolVar z,
-                   const Param& param = {}) {
+    auto func = [](SymbolVar x, SymbolVar y, SymbolVar z, const Param& param = {}) {
         return opr::AddUpdate::make(x, y, param);
     };
     Param param;
-    run_test(func, {2, 3, 3}, {2, 3, 3}, {0}, 18 * 3, 18 * 3, dtype::Float32(),
-             param);
-    run_test(func, {2, 3, 5}, {2, 3, 5}, {0}, 30 * 3, 30 * 3, dtype::Int16(),
-             param);
+    run_test(func, {2, 3, 3}, {2, 3, 3}, {0}, 18 * 3, 18 * 3, dtype::Float32(), param);
+    run_test(func, {2, 3, 5}, {2, 3, 5}, {0}, 30 * 3, 30 * 3, dtype::Int16(), param);
 }
 
 TEST(TestOprFootprint, ConvolutionForward) {
@@ -184,8 +179,7 @@ TEST(TestOprFootprint, ConvolutionForward) {
     test_conv_group<Param, decltype(func)>
             //    n, ic, oc, ih, iw, fh, fw, ph, pw, sh, sw
             (10, 3, 2, 24, 24, 3, 3, 1, 1, 3, 3, func);
-    test_conv_group<Param, decltype(func)>(20, 4, 3, 48, 24, 3, 5, 2, 2, 2, 2,
-                                           func);
+    test_conv_group<Param, decltype(func)>(20, 4, 3, 48, 24, 3, 5, 2, 2, 2, 2, func);
 }
 
 TEST(TestOprFootprint, ConvolutionBackwardData) {
@@ -210,10 +204,8 @@ TEST(TestOprFootprint, ConvolutionBackwardFilter) {
         return OprType::make(src, diff, filter, param);
     };
     //    n, ic, oc, ih, iw, fh, fw, ph, pw, sh, sw
-    test_conv_group<Param, decltype(func)>(10, 3, 2, 24, 24, 3, 3, 1, 1, 3, 3,
-                                           func);
-    test_conv_group<Param, decltype(func)>(20, 4, 3, 48, 24, 3, 5, 2, 2, 2, 2,
-                                           func);
+    test_conv_group<Param, decltype(func)>(10, 3, 2, 24, 24, 3, 3, 1, 1, 3, 3, func);
+    test_conv_group<Param, decltype(func)>(20, 4, 3, 48, 24, 3, 5, 2, 2, 2, 2, func);
 }
 
 TEST(TestOprFootprint, MatrixMul) {
@@ -222,10 +214,12 @@ TEST(TestOprFootprint, MatrixMul) {
     auto func = [](SymbolVar x, SymbolVar y, SymbolVar z, const Param& param) {
         return OprType::make(x, y, param);
     };
-    run_test(func, {3, 5}, {5, 7}, {0}, 3 * 5 * 7 * 2, 3 * 5 + 5 * 7 + 3 * 7,
-             dtype::Float32(), Param{});
-    run_test(func, {7, 3}, {8, 7}, {0}, 3 * 7 * 8 * 2, 3 * 7 + 8 * 7 + 3 * 8,
-             dtype::Float32(), Param{true, true});
+    run_test(
+            func, {3, 5}, {5, 7}, {0}, 3 * 5 * 7 * 2, 3 * 5 + 5 * 7 + 3 * 7,
+            dtype::Float32(), Param{});
+    run_test(
+            func, {7, 3}, {8, 7}, {0}, 3 * 7 * 8 * 2, 3 * 7 + 8 * 7 + 3 * 8,
+            dtype::Float32(), Param{true, true});
 }
 
 TEST(TestOprFootprint, PoolingForward) {
@@ -237,8 +231,9 @@ TEST(TestOprFootprint, PoolingForward) {
     Param param;
     param.window_h = param.stride_h = 2;
     param.window_w = param.stride_w = 3;
-    run_test(func, {10, 7, 8, 6}, {0}, {0}, 10 * 7 * 8 * 6,
-             10 * 7 * (8 * 6 + 4 * 3), dtype::Float32(), Param{});
+    run_test(
+            func, {10, 7, 8, 6}, {0}, {0}, 10 * 7 * 8 * 6, 10 * 7 * (8 * 6 + 4 * 3),
+            dtype::Float32(), Param{});
 }
 
 TEST(TestOprFootprint, Concat) {
@@ -248,8 +243,9 @@ TEST(TestOprFootprint, Concat) {
         return OprType::make({x, y, z}, param.axis);
     };
     Param param;
-    run_test(func, {1, 3, 5}, {2, 3, 5}, {3, 3, 5}, 6 * 3 * 5, 6 * 3 * 5 * 2,
-             dtype::Float32(), param);
+    run_test(
+            func, {1, 3, 5}, {2, 3, 5}, {3, 3, 5}, 6 * 3 * 5, 6 * 3 * 5 * 2,
+            dtype::Float32(), param);
 }
 
 TEST(TestOprFootprint, Reduce) {
@@ -260,8 +256,9 @@ TEST(TestOprFootprint, Reduce) {
     };
     Param param;
     param.axis = 1;
-    run_test(func, {5, 3, 3}, {0}, {0}, 5 * 3 * 3, 5 * 3 * 3 + 5 * 3,
-             dtype::Float32(), param);
+    run_test(
+            func, {5, 3, 3}, {0}, {0}, 5 * 3 * 3, 5 * 3 * 3 + 5 * 3, dtype::Float32(),
+            param);
 }
 
 TEST(TestOprFootprint, Dimshuffle) {
@@ -270,8 +267,9 @@ TEST(TestOprFootprint, Dimshuffle) {
     auto func = [](SymbolVar x, SymbolVar y, SymbolVar z, const Param& param) {
         return OprType::make(x, {1, 2, 0}, 0);
     };
-    run_test(func, {2, 3, 5}, {3, 5, 2}, {0}, 2 * 3 * 5, 2 * 3 * 5 * 2,
-             dtype::Float32(), Param());
+    run_test(
+            func, {2, 3, 5}, {3, 5, 2}, {0}, 2 * 3 * 5, 2 * 3 * 5 * 2, dtype::Float32(),
+            Param());
 }
 
 TEST(TestOprFootprint, Host2DeviceCopy) {
@@ -279,13 +277,11 @@ TEST(TestOprFootprint, Host2DeviceCopy) {
     REQUIRE_GPU(1);
     auto&& cpu = CompNode::load("cpu1");
     auto float32 = dtype::Float32();
-    auto data = std::make_shared<HostTensorND>(
-            HostTensorND(cpu, {2, 3, 5}, float32));
+    auto data = std::make_shared<HostTensorND>(HostTensorND(cpu, {2, 3, 5}, float32));
     auto graph = ComputingGraph::make();
     auto out_var = OprType::make_no_value_infer(*graph.get(), data);
     HostTensorND host_out(cpu, float32);
-    compile_and_run(graph, out_var, host_out, 2 * 3 * 5,
-                    float32.size(2 * 3 * 5));
+    compile_and_run(graph, out_var, host_out, 2 * 3 * 5, float32.size(2 * 3 * 5));
 }
 
 TEST(TestOprFootprint, NCHW4Convolution) {
@@ -295,13 +291,13 @@ TEST(TestOprFootprint, NCHW4Convolution) {
         x = opr::TypeCvt::make(x, dtype::QuantizedS8(1.3f));
         y = opr::TypeCvt::make(y, dtype::QuantizedS8(1.4f));
         z = opr::TypeCvt::make(z, dtype::QuantizedS32(1.3f * 1.4f));
-        return OprType::make(x, y, z, param, {},
-                             OperatorNodeConfig{dtype::QuantizedS8(0.6f)});
+        return OprType::make(
+                x, y, z, param, {}, OperatorNodeConfig{dtype::QuantizedS8(0.6f)});
     };
-    test_conv_bias_group_nchw4<Param, decltype(func)>(10, 4, 8, 24, 24, 3, 3, 1,
-                                                      1, 3, 3, func, 1);
-    test_conv_bias_group_nchw4<Param, decltype(func)>(20, 4, 4, 48, 24, 3, 5, 2,
-                                                      3, 2, 1, func, 4);
+    test_conv_bias_group_nchw4<Param, decltype(func)>(
+            10, 4, 8, 24, 24, 3, 3, 1, 1, 3, 3, func, 1);
+    test_conv_bias_group_nchw4<Param, decltype(func)>(
+            20, 4, 4, 48, 24, 3, 5, 2, 3, 2, 1, func, 4);
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

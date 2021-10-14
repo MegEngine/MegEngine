@@ -86,9 +86,10 @@ struct FilterTransform4X5 {
         wd##6 = tmp0 - tmp1;                                             \
         wd##7 = d##4;                                                    \
     } while (0);
-    static void transform(const __fp16* filter, __fp16* filter_transform_buf,
-                          __fp16* transform_mid_buf, size_t OC, size_t IC,
-                          size_t oc_start, size_t oc_end) {
+    static void transform(
+            const __fp16* filter, __fp16* filter_transform_buf,
+            __fp16* transform_mid_buf, size_t OC, size_t IC, size_t oc_start,
+            size_t oc_end) {
         // Gg * GT
         // G
         //[[ 1.         0.         0.         0.         0.       ]
@@ -129,8 +130,7 @@ struct FilterTransform4X5 {
 #undef cb
                 FILTER_TRANSFORM(g, Gg)
 #if MEGDNN_AARCH64
-                float16x8_t vgr = {Ggr0, Ggr1, Ggr2, Ggr3,
-                                   Ggr4, Ggr5, Ggr6, Ggr7};
+                float16x8_t vgr = {Ggr0, Ggr1, Ggr2, Ggr3, Ggr4, Ggr5, Ggr6, Ggr7};
                 Vector<__fp16, 8> Ggt4(vgr);
                 TRANSPOSE_8x4(Gg, Ggt);
                 FILTER_TRANSFORM_FINAL(Ggt, result);
@@ -138,42 +138,42 @@ struct FilterTransform4X5 {
                 UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
                 rep(i, alpha) rep(j, alpha) {
-                    filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC +
-                                         oc] = transform_mid_buf[j * alpha + i];
+                    filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC + oc] =
+                            transform_mid_buf[j * alpha + i];
                 }
 #else
 
 #define GET_VECTOR_FP16D_ELEM(s, i, idx) vget_lane_f16(CONCAT(s, i).value, idx)
 
-#define cb(i)                                                    \
-    do {                                                         \
-        mid_buf1[0] = GET_VECTOR_FP16D_ELEM(Gg, i, 0);           \
-        auto tmp024 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) +          \
-                      GET_VECTOR_FP16D_ELEM(Gg, i, 2) + Ggr##i;  \
-        auto tmp13 = GET_VECTOR_FP16D_ELEM(Gg, i, 1) +           \
-                     GET_VECTOR_FP16D_ELEM(Gg, i, 3);            \
-        mid_buf1[1] = (tmp024 + tmp13) * -0.2222222;             \
-        mid_buf1[2] = (tmp024 - tmp13) * -0.2222222;             \
-        auto tmp0 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) * 0.7111111; \
-        auto tmp1 = GET_VECTOR_FP16D_ELEM(Gg, i, 1) * 0.3555556; \
-        auto tmp2 = GET_VECTOR_FP16D_ELEM(Gg, i, 2) * 0.1777778; \
-        auto tmp3 = GET_VECTOR_FP16D_ELEM(Gg, i, 3) * 0.0888889; \
-        auto tmp4 = Ggr##i * 0.0444444;                          \
-        tmp024 = tmp0 + tmp2 + tmp4;                             \
-        tmp13 = tmp1 + tmp3;                                     \
-        mid_buf1[3] = tmp024 + tmp13;                            \
-        mid_buf1[4] = tmp024 - tmp13;                            \
-        tmp0 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) * 0.0111111;      \
-        tmp1 = GET_VECTOR_FP16D_ELEM(Gg, i, 1) * 0.0222222;      \
-        tmp2 = GET_VECTOR_FP16D_ELEM(Gg, i, 2) * 0.0444444;      \
-        tmp3 = GET_VECTOR_FP16D_ELEM(Gg, i, 3) * 0.0888889;      \
-        tmp4 = Ggr##i * 0.1777778;                               \
-        tmp024 = tmp0 + tmp2 + tmp4;                             \
-        tmp13 = tmp1 + tmp3;                                     \
-        mid_buf1[5] = tmp024 + tmp13;                            \
-        mid_buf1[6] = tmp024 - tmp13;                            \
-        mid_buf1[7] = Ggr##i;                                    \
-        mid_buf1 += 8;                                           \
+#define cb(i)                                                                      \
+    do {                                                                           \
+        mid_buf1[0] = GET_VECTOR_FP16D_ELEM(Gg, i, 0);                             \
+        auto tmp024 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) +                            \
+                      GET_VECTOR_FP16D_ELEM(Gg, i, 2) + Ggr##i;                    \
+        auto tmp13 =                                                               \
+                GET_VECTOR_FP16D_ELEM(Gg, i, 1) + GET_VECTOR_FP16D_ELEM(Gg, i, 3); \
+        mid_buf1[1] = (tmp024 + tmp13) * -0.2222222;                               \
+        mid_buf1[2] = (tmp024 - tmp13) * -0.2222222;                               \
+        auto tmp0 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) * 0.7111111;                   \
+        auto tmp1 = GET_VECTOR_FP16D_ELEM(Gg, i, 1) * 0.3555556;                   \
+        auto tmp2 = GET_VECTOR_FP16D_ELEM(Gg, i, 2) * 0.1777778;                   \
+        auto tmp3 = GET_VECTOR_FP16D_ELEM(Gg, i, 3) * 0.0888889;                   \
+        auto tmp4 = Ggr##i * 0.0444444;                                            \
+        tmp024 = tmp0 + tmp2 + tmp4;                                               \
+        tmp13 = tmp1 + tmp3;                                                       \
+        mid_buf1[3] = tmp024 + tmp13;                                              \
+        mid_buf1[4] = tmp024 - tmp13;                                              \
+        tmp0 = GET_VECTOR_FP16D_ELEM(Gg, i, 0) * 0.0111111;                        \
+        tmp1 = GET_VECTOR_FP16D_ELEM(Gg, i, 1) * 0.0222222;                        \
+        tmp2 = GET_VECTOR_FP16D_ELEM(Gg, i, 2) * 0.0444444;                        \
+        tmp3 = GET_VECTOR_FP16D_ELEM(Gg, i, 3) * 0.0888889;                        \
+        tmp4 = Ggr##i * 0.1777778;                                                 \
+        tmp024 = tmp0 + tmp2 + tmp4;                                               \
+        tmp13 = tmp1 + tmp3;                                                       \
+        mid_buf1[5] = tmp024 + tmp13;                                              \
+        mid_buf1[6] = tmp024 - tmp13;                                              \
+        mid_buf1[7] = Ggr##i;                                                      \
+        mid_buf1 += 8;                                                             \
     } while (0);
                 __fp16* mid_buf1 = transform_mid_buf;
                 UNROLL_CALL_NOWRAPPER(8, cb);
@@ -181,8 +181,8 @@ struct FilterTransform4X5 {
 #undef cb
 #undef GET_VECTOR_FP16D_ELEM
                 rep(i, alpha) rep(j, alpha) {
-                    filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC +
-                                         oc] = transform_mid_buf[i * alpha + j];
+                    filter_transform_buf[(i * alpha + j) * OC * IC + ic * OC + oc] =
+                            transform_mid_buf[i * alpha + j];
                 }
 #endif
             }
@@ -214,10 +214,10 @@ struct InputTransform4X5 {
 #define GET_VECTOR_FP16Q_ELEM(s, i, idx) vgetq_lane_f16(CONCAT(s, i).value, idx)
 
     template <bool inner>
-    static void transform(const __fp16* input, __fp16* input_transform_buf,
-                          __fp16* transform_mid_buf, int ih_start, int iw_start,
-                          size_t ic, size_t IH, size_t IW, size_t IC,
-                          size_t unit_idx, size_t nr_units_in_tile) {
+    static void transform(
+            const __fp16* input, __fp16* input_transform_buf, __fp16* transform_mid_buf,
+            int ih_start, int iw_start, size_t ic, size_t IH, size_t IW, size_t IC,
+            size_t unit_idx, size_t nr_units_in_tile) {
         // BTd * B
         //([[ 1.  ,  0.  , -5.25,  0.  ,  5.25,  0.  , -1.  ,  0.  ],
         //  [ 0.  ,  1.  ,  1.  , -4.25, -4.25,  1.  ,  1.  ,  0.  ],
@@ -238,8 +238,7 @@ struct InputTransform4X5 {
 #undef cb
 
         if (inner) {
-            const __fp16* input_ptr =
-                    input + ic * IH * IW + ih_start * IW + iw_start;
+            const __fp16* input_ptr = input + ic * IH * IW + ih_start * IW + iw_start;
 #define cb(i) d##i = Vector<__fp16, 8>::load(input_ptr + IW * i);
             UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
@@ -273,33 +272,30 @@ struct InputTransform4X5 {
 #undef cb
 
         rep(i, alpha) rep(j, alpha) {
-            input_transform_buf[(i * alpha + j) * nr_units_in_tile * IC +
-                                unit_idx * IC + ic] =
-                    transform_mid_buf[j * alpha + i];
+            input_transform_buf
+                    [(i * alpha + j) * nr_units_in_tile * IC + unit_idx * IC + ic] =
+                            transform_mid_buf[j * alpha + i];
         }
     }
 };
 #undef INPUT_TRANSFORM
 
-#define OUTPUT_TRANSFORM(m, s)                                          \
-    do {                                                                \
-        s##0 = m##0 + m##1 + m##2 + m##3 + m##4 + m##5 + m##6;          \
-        s##1 = m##1 - m##2 + m##3 * 0.5 - m##4 * 0.5 + m##5 * 2.0 -     \
-               m##6 * 2.0;                                              \
-        s##2 = m##1 + m##2 + m##3 * 0.25 + m##4 * 0.25 + m##5 * 4.0 +   \
-               m##6 * 4.0;                                              \
-        s##3 = m##1 - m##2 + m##3 * 0.125 - m##4 * 0.125 + m##5 * 8.0 - \
-               m##6 * 8.0 + m##7;                                       \
+#define OUTPUT_TRANSFORM(m, s)                                                       \
+    do {                                                                             \
+        s##0 = m##0 + m##1 + m##2 + m##3 + m##4 + m##5 + m##6;                       \
+        s##1 = m##1 - m##2 + m##3 * 0.5 - m##4 * 0.5 + m##5 * 2.0 - m##6 * 2.0;      \
+        s##2 = m##1 + m##2 + m##3 * 0.25 + m##4 * 0.25 + m##5 * 4.0 + m##6 * 4.0;    \
+        s##3 = m##1 - m##2 + m##3 * 0.125 - m##4 * 0.125 + m##5 * 8.0 - m##6 * 8.0 + \
+               m##7;                                                                 \
     } while (0)
 template <BiasMode bmode, typename Op>
 struct OutputTransform4X5 {
-    static void transform(const dt_float16* output_transform_buf,
-                          const dt_float16* bias, dt_float16* output,
-                          dt_float16* transform_mid_buf, size_t oh_start,
-                          size_t ow_start, size_t OH, size_t OW,
-                          size_t oc_start, size_t oc_end, size_t oc_index,
-                          size_t unit_idx, size_t nr_units_in_tile,
-                          const DType& src_dtype, const DType& dst_dtype) {
+    static void transform(
+            const dt_float16* output_transform_buf, const dt_float16* bias,
+            dt_float16* output, dt_float16* transform_mid_buf, size_t oh_start,
+            size_t ow_start, size_t OH, size_t OW, size_t oc_start, size_t oc_end,
+            size_t oc_index, size_t unit_idx, size_t nr_units_in_tile,
+            const DType& src_dtype, const DType& dst_dtype) {
         Op op(src_dtype, dst_dtype);
         //! AT * m * A
         // AT f45
@@ -312,24 +308,20 @@ struct OutputTransform4X5 {
                 reinterpret_cast<const __fp16*>(output_transform_buf);
         const __fp16* fp16_bias = reinterpret_cast<const __fp16*>(bias);
         __fp16* fp16_output = reinterpret_cast<__fp16*>(output);
-        __fp16* fp16_transform_mid_buf =
-                reinterpret_cast<__fp16*>(transform_mid_buf);
+        __fp16* fp16_transform_mid_buf = reinterpret_cast<__fp16*>(transform_mid_buf);
 
         __fp16* mid_buf1 = fp16_transform_mid_buf;
 
         size_t OC = oc_end - oc_start;
         size_t oc = oc_start + oc_index;
 
-#define cb(m, n)                                                           \
-    fp16_transform_mid_buf[m * alpha + n] =                                \
-            fp16_output_transform_buf[(m * alpha + n) * nr_units_in_tile * \
-                                              OC +                         \
-                                      unit_idx * OC + oc_index];
+#define cb(m, n)                                                      \
+    fp16_transform_mid_buf[m * alpha + n] = fp16_output_transform_buf \
+            [(m * alpha + n) * nr_units_in_tile * OC + unit_idx * OC + oc_index];
         UNROLL_CALL_NOWRAPPER_D2(8, 8, cb);
 #undef cb
 
-#define cb(i) \
-    auto m##i = Vector<__fp16, 8>::load(fp16_transform_mid_buf + alpha * i);
+#define cb(i) auto m##i = Vector<__fp16, 8>::load(fp16_transform_mid_buf + alpha * i);
         UNROLL_CALL_NOWRAPPER(8, cb);
 #undef cb
 #define cb(i) Vector<__fp16, 8> s##i;
@@ -406,23 +398,20 @@ namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_4x5_1x1_f16)
 
-void winograd_4x5_1x1_f16::filter(const dt_float16* filter,
-                                  dt_float16* filter_transform_buf,
-                                  dt_float16* transform_mid_buf, size_t OC,
-                                  size_t IC, size_t oc_start, size_t oc_end) {
+void winograd_4x5_1x1_f16::filter(
+        const dt_float16* filter, dt_float16* filter_transform_buf,
+        dt_float16* transform_mid_buf, size_t OC, size_t IC, size_t oc_start,
+        size_t oc_end) {
     FilterTransform4X5::transform(
             reinterpret_cast<const __fp16*>(filter),
             reinterpret_cast<__fp16*>(filter_transform_buf),
-            reinterpret_cast<__fp16*>(transform_mid_buf), OC, IC, oc_start,
-            oc_end);
+            reinterpret_cast<__fp16*>(transform_mid_buf), OC, IC, oc_start, oc_end);
 }
 
-void winograd_4x5_1x1_f16::input(const dt_float16* input,
-                                 dt_float16* input_transform_buf,
-                                 dt_float16* transform_mid_buf, size_t IH,
-                                 size_t IW, size_t IC, size_t PH, size_t PW,
-                                 size_t unit_start_idx,
-                                 size_t nr_units_in_tile) {
+void winograd_4x5_1x1_f16::input(
+        const dt_float16* input, dt_float16* input_transform_buf,
+        dt_float16* transform_mid_buf, size_t IH, size_t IW, size_t IC, size_t PH,
+        size_t PW, size_t unit_start_idx, size_t nr_units_in_tile) {
     constexpr int alpha = 4 + 5 - 1;
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
     auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
@@ -452,12 +441,11 @@ void winograd_4x5_1x1_f16::input(const dt_float16* input,
     }
 }
 
-void winograd_4x5_1x1_f16::output(const dt_float16* output_transform_buf,
-                                  const dt_float16* bias, dt_float16* output,
-                                  dt_float16* transform_mid_buf, BiasMode bmode,
-                                  NonlineMode nonline_mode, size_t OH, size_t OW,
-                                  size_t oc_start, size_t oc_end,
-                                  size_t unit_start_idx, size_t nr_units_in_tile) {
+void winograd_4x5_1x1_f16::output(
+        const dt_float16* output_transform_buf, const dt_float16* bias,
+        dt_float16* output, dt_float16* transform_mid_buf, BiasMode bmode,
+        NonlineMode nonline_mode, size_t OH, size_t OW, size_t oc_start, size_t oc_end,
+        size_t unit_start_idx, size_t nr_units_in_tile) {
 #define cb(_bmode, _nonline_op, ...) \
     OutputTransform4X5<_bmode MEGDNN_COMMA _nonline_op>::transform(__VA_ARGS__);
 

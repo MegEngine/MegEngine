@@ -54,10 +54,11 @@ void CompNodeSyncManager::do_set_ready() {
     mgb_assert(m_comp_node.valid());
     m_have_been_waited = true;
     auto nr_ready = m_nr_ready.load();
-    mgb_assert(!nr_ready,
-               "new ready event while"
-               " previous ones have not been fetched (%zu prev)",
-               nr_ready);
+    mgb_assert(
+            !nr_ready,
+            "new ready event while"
+            " previous ones have not been fetched (%zu prev)",
+            nr_ready);
     if (m_ready_event)
         m_ready_event->record();
 
@@ -69,9 +70,10 @@ void CompNodeSyncManager::do_set_ready() {
 }
 
 CompNodeSyncManager& CompNodeSyncManager::busy_wait_set_ready() {
-    mgb_assert(m_nr_waiter,
-               "before actually waiting on a tensor,"
-               " you must call set_has_waiter first");
+    mgb_assert(
+            m_nr_waiter,
+            "before actually waiting on a tensor,"
+            " you must call set_has_waiter first");
 
     size_t spin = 0, max_spin = SCQueueSynchronizer::get_default_max_spin();
     while (!m_nr_ready.load()) {
@@ -113,4 +115,3 @@ CompNodeSyncManager& CompNodeSyncManager::busy_wait_set_ready() {
 #endif  // MGB_HAVE_THREAD
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

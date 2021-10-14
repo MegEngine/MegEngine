@@ -20,9 +20,9 @@
 using namespace megdnn;
 using namespace arm_common;
 
-static inline void accumulate_2_q_vector(int8x16_t& src0, int8x16_t& kern0,
-                                         int8x16_t& src1, int8x16_t& kern1,
-                                         int32x4_t* sum) {
+static inline void accumulate_2_q_vector(
+        int8x16_t& src0, int8x16_t& kern0, int8x16_t& src1, int8x16_t& kern1,
+        int32x4_t* sum) {
     int16x8_t tmp_sum0 = vmull_s8(vget_low_s8(src0), vget_low_s8(kern0));
     int16x8_t tmp_sum1 = vmull_high_s8(src0, kern0);
     tmp_sum0 = vmlal_s8(tmp_sum0, vget_low_s8(src1), vget_low_s8(kern1));
@@ -33,8 +33,8 @@ static inline void accumulate_2_q_vector(int8x16_t& src0, int8x16_t& kern0,
     sum[3] = vaddw_s16(sum[3], vget_high_s16(tmp_sum1));
 }
 
-static inline void accumulate_1_q_vector(int8x16_t& src0, int8x16_t& kern0,
-                                         int32x4_t* sum) {
+static inline void accumulate_1_q_vector(
+        int8x16_t& src0, int8x16_t& kern0, int32x4_t* sum) {
     int16x8_t tmp_sum0 = vmull_s8(vget_low_s8(src0), vget_low_s8(kern0));
     int16x8_t tmp_sum1 = vmull_high_s8(src0, kern0);
     sum[0] = vaddw_s16(sum[0], vget_low_s16(tmp_sum0));
@@ -43,9 +43,9 @@ static inline void accumulate_1_q_vector(int8x16_t& src0, int8x16_t& kern0,
     sum[3] = vaddw_s16(sum[3], vget_high_s16(tmp_sum1));
 }
 
-static inline void accumulate_2_d_vector(int8x16_t& src0, int8x8_t& kern0,
-                                         int8x16_t& src1, int8x8_t& kern1,
-                                         int32x4_t& sum0, int32x4_t& sum1) {
+static inline void accumulate_2_d_vector(
+        int8x16_t& src0, int8x8_t& kern0, int8x16_t& src1, int8x8_t& kern1,
+        int32x4_t& sum0, int32x4_t& sum1) {
     int16x8_t tmp_sum0 = vmull_s8(vget_low_s8(src0), kern0);
     int16x8_t tmp_sum1 = vmull_s8(vget_high_s8(src0), kern0);
     tmp_sum0 = vmlal_s8(tmp_sum0, vget_low_s8(src1), kern1);
@@ -56,20 +56,17 @@ static inline void accumulate_2_d_vector(int8x16_t& src0, int8x8_t& kern0,
     sum1 = vaddw_s16(sum1, vget_high_s16(tmp_sum1));
 }
 
-static inline void accumulate_1_line_horizon(const int8x8_t& src0,
-                                             const int8x8_t& kern0,
-                                             const int8x8_t& src1,
-                                             const int8x8_t& kern1,
-                                             int32x4_t& sum) {
+static inline void accumulate_1_line_horizon(
+        const int8x8_t& src0, const int8x8_t& kern0, const int8x8_t& src1,
+        const int8x8_t& kern1, int32x4_t& sum) {
     int16x8_t tmp_sum = vmull_s8(src0, kern0);
     tmp_sum = vmlal_s8(tmp_sum, src1, kern1);
     sum = vaddw_s16(sum, vget_low_s16(tmp_sum));
     sum = vaddw_s16(sum, vget_high_s16(tmp_sum));
 }
 
-static inline void accumulate_1_d_vector(const int8x8_t& src0,
-                                         const int8x8_t& kern0,
-                                         int32x4_t& sum) {
+static inline void accumulate_1_d_vector(
+        const int8x8_t& src0, const int8x8_t& kern0, int32x4_t& sum) {
     int16x8_t tmp_sum = vmull_s8(src0, kern0);
     sum = vaddw_s16(sum, vget_low_s16(tmp_sum));
     sum = vaddw_s16(sum, vget_high_s16(tmp_sum));
@@ -79,46 +76,42 @@ static inline void accumulate_1_d_vector(const int8x8_t& src0,
     sum = vaddw_s16(sum, vget_low_s16(tmp_sum)); \
     sum = vaddw_s16(sum, vget_high_s16(tmp_sum));
 
-#define STORE_1_LINE(dst, oh, ow, OW, sum)                               \
-    if (quantized) {                                                     \
-        dt_qint8* dptr =                                                 \
-                reinterpret_cast<dt_qint8*>(dst) + oh * OW * 4 + ow * 4; \
-        op({{sum[0], sum[1]}}, dptr);                                    \
-        op({{sum[2], sum[3]}}, dptr + 8);                                \
-    } else {                                                             \
-        dt_int32* dptr =                                                 \
-                reinterpret_cast<dt_int32*>(dst) + oh * OW * 4 + ow * 4; \
-        vst1q_s32(dptr, sum[0]);                                         \
-        vst1q_s32(dptr + 4, sum[1]);                                     \
-        vst1q_s32(dptr + 8, sum[2]);                                     \
-        vst1q_s32(dptr + 12, sum[3]);                                    \
+#define STORE_1_LINE(dst, oh, ow, OW, sum)                                        \
+    if (quantized) {                                                              \
+        dt_qint8* dptr = reinterpret_cast<dt_qint8*>(dst) + oh * OW * 4 + ow * 4; \
+        op({{sum[0], sum[1]}}, dptr);                                             \
+        op({{sum[2], sum[3]}}, dptr + 8);                                         \
+    } else {                                                                      \
+        dt_int32* dptr = reinterpret_cast<dt_int32*>(dst) + oh * OW * 4 + ow * 4; \
+        vst1q_s32(dptr, sum[0]);                                                  \
+        vst1q_s32(dptr + 4, sum[1]);                                              \
+        vst1q_s32(dptr + 8, sum[2]);                                              \
+        vst1q_s32(dptr + 12, sum[3]);                                             \
     }
 
-#define STORE_1_LINE_REMAIN(dst, oh, ow, OW, sum, remain)                \
-    if (quantized) {                                                     \
-        dt_qint8* dptr =                                                 \
-                reinterpret_cast<dt_qint8*>(dst) + oh * OW * 4 + ow * 4; \
-        if (remain == 1) {                                               \
-            op(sum[0], dptr);                                            \
-        } else if (remain == 2) {                                        \
-            op({{sum[0], sum[1]}}, dptr);                                \
-        } else if (remain == 3) {                                        \
-            op({{sum[0], sum[1]}}, dptr);                                \
-            op(sum[2], dptr + 8);                                        \
-        }                                                                \
-    } else {                                                             \
-        dt_int32* dptr =                                                 \
-                reinterpret_cast<dt_int32*>(dst) + oh * OW * 4 + ow * 4; \
-        if (remain == 1) {                                               \
-            vst1q_s32(dptr, sum[0]);                                     \
-        } else if (remain == 2) {                                        \
-            vst1q_s32(dptr, sum[0]);                                     \
-            vst1q_s32(dptr + 4, sum[1]);                                 \
-        } else if (remain == 3) {                                        \
-            vst1q_s32(dptr, sum[0]);                                     \
-            vst1q_s32(dptr + 4, sum[1]);                                 \
-            vst1q_s32(dptr + 8, sum[2]);                                 \
-        }                                                                \
+#define STORE_1_LINE_REMAIN(dst, oh, ow, OW, sum, remain)                         \
+    if (quantized) {                                                              \
+        dt_qint8* dptr = reinterpret_cast<dt_qint8*>(dst) + oh * OW * 4 + ow * 4; \
+        if (remain == 1) {                                                        \
+            op(sum[0], dptr);                                                     \
+        } else if (remain == 2) {                                                 \
+            op({{sum[0], sum[1]}}, dptr);                                         \
+        } else if (remain == 3) {                                                 \
+            op({{sum[0], sum[1]}}, dptr);                                         \
+            op(sum[2], dptr + 8);                                                 \
+        }                                                                         \
+    } else {                                                                      \
+        dt_int32* dptr = reinterpret_cast<dt_int32*>(dst) + oh * OW * 4 + ow * 4; \
+        if (remain == 1) {                                                        \
+            vst1q_s32(dptr, sum[0]);                                              \
+        } else if (remain == 2) {                                                 \
+            vst1q_s32(dptr, sum[0]);                                              \
+            vst1q_s32(dptr + 4, sum[1]);                                          \
+        } else if (remain == 3) {                                                 \
+            vst1q_s32(dptr, sum[0]);                                              \
+            vst1q_s32(dptr + 4, sum[1]);                                          \
+            vst1q_s32(dptr + 8, sum[2]);                                          \
+        }                                                                         \
     }
 
 template <bool quantized, BiasMode bias_mode, typename Op>
@@ -145,9 +138,8 @@ void channel_wise_nchw44::direct_stride1_2x2_int8(
             } else {
                 sum00 = vdupq_n_s32(0);
             }
-            int32x4_t sum01 = sum00, sum02 = sum00, sum03 = sum00,
-                      sum10 = sum00, sum11 = sum00, sum12 = sum00,
-                      sum13 = sum00;
+            int32x4_t sum01 = sum00, sum02 = sum00, sum03 = sum00, sum10 = sum00,
+                      sum11 = sum00, sum12 = sum00, sum13 = sum00;
             int8x16_t src0 = vld1q_s8(sptr0);
             int8x8_t src03 = vld1_s8(sptr0 + 3 * 4), src00 = vget_low_s8(src0),
                      src02 = vget_high_s8(src0);
@@ -552,22 +544,19 @@ void channel_wise_nchw44::direct_stride1_3x3_int8(
                     "saddw2  %[sum21].4s, %[sum21].4s, v27.8h\n"
                     "saddw   %[sum22].4s, %[sum22].4s, v28.4h\n"
                     "saddw2  %[sum23].4s, %[sum23].4s, v28.8h\n"
-                    : [k0] "+w"(kern[0]), [k1] "+w"(kern[1]),
-                      [k2] "+w"(kern[2]), [k3] "+w"(kern[3]),
-                      [k4] "+w"(kern[4]), [k5] "+w"(kern[5]),
-                      [k6] "+w"(kern[6]), [k7] "+w"(kern[7]),
-                      [k8] "+w"(kern[8]), [sum00] "+w"(sum0[0]),
-                      [sum01] "+w"(sum0[1]), [sum02] "+w"(sum0[2]),
-                      [sum03] "+w"(sum0[3]), [sum10] "+w"(sum1[0]),
-                      [sum11] "+w"(sum1[1]), [sum12] "+w"(sum1[2]),
-                      [sum13] "+w"(sum1[3]), [sum20] "+w"(sum2[0]),
-                      [sum21] "+w"(sum2[1]), [sum22] "+w"(sum2[2]),
-                      [sum23] "+w"(sum2[3]), [sptr0] "+r"(sptr0),
-                      [sptr1] "+r"(sptr1), [sptr2] "+r"(sptr2),
-                      [sptr3] "+r"(sptr3), [sptr4] "+r"(sptr4)
                     :
-                    : "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-                      "v29", "v30", "v31", "cc", "memory");
+                    [k0] "+w"(kern[0]), [k1] "+w"(kern[1]), [k2] "+w"(kern[2]),
+                    [k3] "+w"(kern[3]), [k4] "+w"(kern[4]), [k5] "+w"(kern[5]),
+                    [k6] "+w"(kern[6]), [k7] "+w"(kern[7]), [k8] "+w"(kern[8]),
+                    [sum00] "+w"(sum0[0]), [sum01] "+w"(sum0[1]), [sum02] "+w"(sum0[2]),
+                    [sum03] "+w"(sum0[3]), [sum10] "+w"(sum1[0]), [sum11] "+w"(sum1[1]),
+                    [sum12] "+w"(sum1[2]), [sum13] "+w"(sum1[3]), [sum20] "+w"(sum2[0]),
+                    [sum21] "+w"(sum2[1]), [sum22] "+w"(sum2[2]), [sum23] "+w"(sum2[3]),
+                    [sptr0] "+r"(sptr0), [sptr1] "+r"(sptr1), [sptr2] "+r"(sptr2),
+                    [sptr3] "+r"(sptr3), [sptr4] "+r"(sptr4)
+                    :
+                    : "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29",
+                      "v30", "v31", "cc", "memory");
 
             STORE_1_LINE(dst, (oh), ow, OW, sum0);
             STORE_1_LINE(dst, (oh + 1), ow, OW, sum1);
@@ -991,10 +980,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src10 = vld1q_s8(sptr1);
             int8x16_t src11 = vld1q_s8(sptr1 + 16);
 
-            accumulate_2_d_vector(src00, kern01, src10, kern23, sum[0][0],
-                                  sum[0][1]);
-            accumulate_2_d_vector(src01, kern01, src11, kern23, sum[0][2],
-                                  sum[0][3]);
+            accumulate_2_d_vector(src00, kern01, src10, kern23, sum[0][0], sum[0][1]);
+            accumulate_2_d_vector(src01, kern01, src11, kern23, sum[0][2], sum[0][3]);
 
             int8x16_t src20 = vld1q_s8(sptr2);
             int8x16_t src21 = vld1q_s8(sptr2 + 16);
@@ -1002,10 +989,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src30 = vld1q_s8(sptr3);
             int8x16_t src31 = vld1q_s8(sptr3 + 16);
 
-            accumulate_2_d_vector(src20, kern01, src30, kern23, sum[1][0],
-                                  sum[1][1]);
-            accumulate_2_d_vector(src21, kern01, src31, kern23, sum[1][2],
-                                  sum[1][3]);
+            accumulate_2_d_vector(src20, kern01, src30, kern23, sum[1][0], sum[1][1]);
+            accumulate_2_d_vector(src21, kern01, src31, kern23, sum[1][2], sum[1][3]);
 
             STORE_1_LINE(dst, oh, ow, OW, sum[0]);
             STORE_1_LINE(dst, (oh + 1), ow, OW, sum[1]);
@@ -1031,10 +1016,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src10 = vld1q_s8(sptr1);
             int8x16_t src11 = vld1q_s8(sptr1 + 16);
 
-            accumulate_2_d_vector(src00, kern01, src10, kern23, sum[0][0],
-                                  sum[0][1]);
-            accumulate_2_d_vector(src01, kern01, src11, kern23, sum[0][2],
-                                  sum[0][3]);
+            accumulate_2_d_vector(src00, kern01, src10, kern23, sum[0][0], sum[0][1]);
+            accumulate_2_d_vector(src01, kern01, src11, kern23, sum[0][2], sum[0][3]);
 
             int8x16_t src20 = vld1q_s8(sptr2);
             int8x16_t src21 = vld1q_s8(sptr2 + 16);
@@ -1042,10 +1025,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src30 = vld1q_s8(sptr3);
             int8x16_t src31 = vld1q_s8(sptr3 + 16);
 
-            accumulate_2_d_vector(src20, kern01, src30, kern23, sum[1][0],
-                                  sum[1][1]);
-            accumulate_2_d_vector(src21, kern01, src31, kern23, sum[1][2],
-                                  sum[1][3]);
+            accumulate_2_d_vector(src20, kern01, src30, kern23, sum[1][0], sum[1][1]);
+            accumulate_2_d_vector(src21, kern01, src31, kern23, sum[1][2], sum[1][3]);
 
             STORE_1_LINE_REMAIN(dst, oh, ow, OW, sum[0], remain);
             STORE_1_LINE_REMAIN(dst, (oh + 1), ow, OW, sum[1], remain);
@@ -1069,10 +1050,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src10 = vld1q_s8(sptr1);
             int8x16_t src11 = vld1q_s8(sptr1 + 16);
 
-            accumulate_2_d_vector(src00, kern01, src10, kern23, sum0[0],
-                                  sum0[1]);
-            accumulate_2_d_vector(src01, kern01, src11, kern23, sum0[2],
-                                  sum0[3]);
+            accumulate_2_d_vector(src00, kern01, src10, kern23, sum0[0], sum0[1]);
+            accumulate_2_d_vector(src01, kern01, src11, kern23, sum0[2], sum0[3]);
 
             STORE_1_LINE(dst, oh, ow, OW, sum0);
         }
@@ -1092,10 +1071,8 @@ void channel_wise_nchw44::direct_stride2_2x2_int8(
             int8x16_t src10 = vld1q_s8(sptr1);
             int8x16_t src11 = vld1q_s8(sptr1 + 16);
 
-            accumulate_2_d_vector(src00, kern01, src10, kern23, sum0[0],
-                                  sum0[1]);
-            accumulate_2_d_vector(src01, kern01, src11, kern23, sum0[2],
-                                  sum0[3]);
+            accumulate_2_d_vector(src00, kern01, src10, kern23, sum0[0], sum0[1]);
+            accumulate_2_d_vector(src01, kern01, src11, kern23, sum0[2], sum0[3]);
 
             STORE_1_LINE_REMAIN(dst, oh, ow, OW, sum0, remain);
         }
@@ -1126,15 +1103,14 @@ void channel_wise_nchw44::direct_stride2_3x3_int8(
     int8x8_t kern80 = vreinterpret_s8_s32(
             vzip_s32(vreinterpret_s32_s8(vld1_s8(filter + 28)), zero).val[1]);
 
-#define COMPUTE_ONE_LINE(src00, src01, src02, kern01, kern20, sum)             \
-    accumulate_1_line_horizon(vget_low_s8(src00), kern01, vget_high_s8(src00), \
-                              kern20, sum[0]);                                 \
-    accumulate_1_line_horizon(vget_high_s8(src00), kern01, vget_low_s8(src01), \
-                              kern20, sum[1]);                                 \
-    accumulate_1_line_horizon(vget_low_s8(src01), kern01, vget_high_s8(src01), \
-                              kern20, sum[2]);                                 \
-    accumulate_1_line_horizon(vget_high_s8(src01), kern01, src02, kern20,      \
-                              sum[3]);
+#define COMPUTE_ONE_LINE(src00, src01, src02, kern01, kern20, sum)            \
+    accumulate_1_line_horizon(                                                \
+            vget_low_s8(src00), kern01, vget_high_s8(src00), kern20, sum[0]); \
+    accumulate_1_line_horizon(                                                \
+            vget_high_s8(src00), kern01, vget_low_s8(src01), kern20, sum[1]); \
+    accumulate_1_line_horizon(                                                \
+            vget_low_s8(src01), kern01, vget_high_s8(src01), kern20, sum[2]); \
+    accumulate_1_line_horizon(vget_high_s8(src01), kern01, src02, kern20, sum[3]);
 
     size_t oh = 0_z;
     for (; oh + 2 <= OH; oh += 2) {
@@ -1341,42 +1317,42 @@ void channel_wise_nchw44::direct_stride2_5x5_int8(
     kern4[2] = vreinterpret_s8_s32(
             vzip_s32(vreinterpret_s32_s8(vld1_s8(filter + 92)), zero).val[1]);
 
-#define COMPUTE_ONE_VECTOR(src00, src01, src02, src10, src11, src12, kern0, \
-                           kern1, sum)                                      \
-    accumulate_1_line_horizon(src00, kern0[0], src10, kern1[0], sum);       \
-    accumulate_1_line_horizon(src01, kern0[1], src11, kern1[1], sum);       \
+#define COMPUTE_ONE_VECTOR(                                           \
+        src00, src01, src02, src10, src11, src12, kern0, kern1, sum)  \
+    accumulate_1_line_horizon(src00, kern0[0], src10, kern1[0], sum); \
+    accumulate_1_line_horizon(src01, kern0[1], src11, kern1[1], sum); \
     accumulate_1_line_horizon(src02, kern0[2], src12, kern1[2], sum);
 
-#define COMPUTE_TWO_LINE(src0, src1, kern0, kern1, sum)                    \
-    COMPUTE_ONE_VECTOR(vget_low_s8(src0[0]), vget_high_s8(src0[0]),        \
-                       vget_low_s8(src0[1]), vget_low_s8(src1[0]),         \
-                       vget_high_s8(src1[0]), vget_low_s8(src1[1]), kern0, \
-                       kern1, sum[0])                                      \
-    COMPUTE_ONE_VECTOR(vget_high_s8(src0[0]), vget_low_s8(src0[1]),        \
-                       vget_high_s8(src0[1]), vget_high_s8(src1[0]),       \
-                       vget_low_s8(src1[1]), vget_high_s8(src1[1]), kern0, \
-                       kern1, sum[1])                                      \
-    COMPUTE_ONE_VECTOR(vget_low_s8(src0[1]), vget_high_s8(src0[1]),        \
-                       vget_low_s8(src0[2]), vget_low_s8(src1[1]),         \
-                       vget_high_s8(src1[1]), vget_low_s8(src1[2]), kern0, \
-                       kern1, sum[2])                                      \
-    COMPUTE_ONE_VECTOR(vget_high_s8(src0[1]), vget_low_s8(src0[2]),        \
-                       vget_high_s8(src0[2]), vget_high_s8(src1[1]),       \
-                       vget_low_s8(src1[2]), vget_high_s8(src1[2]), kern0, \
-                       kern1, sum[3])
+#define COMPUTE_TWO_LINE(src0, src1, kern0, kern1, sum)                                \
+    COMPUTE_ONE_VECTOR(                                                                \
+            vget_low_s8(src0[0]), vget_high_s8(src0[0]), vget_low_s8(src0[1]),         \
+            vget_low_s8(src1[0]), vget_high_s8(src1[0]), vget_low_s8(src1[1]), kern0,  \
+            kern1, sum[0])                                                             \
+    COMPUTE_ONE_VECTOR(                                                                \
+            vget_high_s8(src0[0]), vget_low_s8(src0[1]), vget_high_s8(src0[1]),        \
+            vget_high_s8(src1[0]), vget_low_s8(src1[1]), vget_high_s8(src1[1]), kern0, \
+            kern1, sum[1])                                                             \
+    COMPUTE_ONE_VECTOR(                                                                \
+            vget_low_s8(src0[1]), vget_high_s8(src0[1]), vget_low_s8(src0[2]),         \
+            vget_low_s8(src1[1]), vget_high_s8(src1[1]), vget_low_s8(src1[2]), kern0,  \
+            kern1, sum[2])                                                             \
+    COMPUTE_ONE_VECTOR(                                                                \
+            vget_high_s8(src0[1]), vget_low_s8(src0[2]), vget_high_s8(src0[2]),        \
+            vget_high_s8(src1[1]), vget_low_s8(src1[2]), vget_high_s8(src1[2]), kern0, \
+            kern1, sum[3])
 
-#define COMPUTE_ONE_LINE(src, kern, sum)                              \
-    accumulate_1_line_horizon(vget_low_s8(src[0]), kern[0],           \
-                              vget_high_s8(src[0]), kern[1], sum[0]); \
-    accumulate_1_line_horizon(vget_high_s8(src[0]), kern[0],          \
-                              vget_low_s8(src[1]), kern[1], sum[1]);  \
-    accumulate_1_line_horizon(vget_low_s8(src[1]), kern[0],           \
-                              vget_high_s8(src[1]), kern[1], sum[2]); \
-    accumulate_1_line_horizon(vget_high_s8(src[1]), kern[0],          \
-                              vget_low_s8(src[2]), kern[1], sum[3]);  \
-    accumulate_1_d_vector(vget_low_s8(src[1]), kern[2], sum[0]);      \
-    accumulate_1_d_vector(vget_high_s8(src[1]), kern[2], sum[1]);     \
-    accumulate_1_d_vector(vget_low_s8(src[2]), kern[2], sum[2]);      \
+#define COMPUTE_ONE_LINE(src, kern, sum)                                          \
+    accumulate_1_line_horizon(                                                    \
+            vget_low_s8(src[0]), kern[0], vget_high_s8(src[0]), kern[1], sum[0]); \
+    accumulate_1_line_horizon(                                                    \
+            vget_high_s8(src[0]), kern[0], vget_low_s8(src[1]), kern[1], sum[1]); \
+    accumulate_1_line_horizon(                                                    \
+            vget_low_s8(src[1]), kern[0], vget_high_s8(src[1]), kern[1], sum[2]); \
+    accumulate_1_line_horizon(                                                    \
+            vget_high_s8(src[1]), kern[0], vget_low_s8(src[2]), kern[1], sum[3]); \
+    accumulate_1_d_vector(vget_low_s8(src[1]), kern[2], sum[0]);                  \
+    accumulate_1_d_vector(vget_high_s8(src[1]), kern[2], sum[1]);                 \
+    accumulate_1_d_vector(vget_low_s8(src[2]), kern[2], sum[2]);                  \
     accumulate_1_d_vector(vget_high_s8(src[2]), kern[2], sum[3])
 
     size_t oh = 0_z;
@@ -1606,19 +1582,15 @@ void channel_wise_nchw44::direct_stride2_5x5_int8(
 
 #define INSTANTIATION(quantized, stride, i, bias, Op)                          \
     template void channel_wise_nchw44::direct_##stride##_##i##x##i##_int8<     \
-            quantized, bias, Op>(const int8_t*, const int8_t*, const int32_t*, \
-                                 void*, const size_t, const size_t,            \
-                                 const size_t, const size_t, const Op&);
+            quantized, bias, Op>(                                              \
+            const int8_t*, const int8_t*, const int32_t*, void*, const size_t, \
+            const size_t, const size_t, const size_t, const Op&);
 
-#define FOR_OP(stride, i, bias)                               \
-    INSTANTIATION(true, stride, i, bias,                      \
-                  TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
-    INSTANTIATION(true, stride, i, bias,                      \
-                  ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
-    INSTANTIATION(true, stride, i, bias,                      \
-                  HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
-    INSTANTIATION(false, stride, i, bias,                     \
-                  NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>)
+#define FOR_OP(stride, i, bias)                                                      \
+    INSTANTIATION(true, stride, i, bias, TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_qint8>) \
+    INSTANTIATION(true, stride, i, bias, ReluOp<dt_qint32 MEGDNN_COMMA dt_qint8>)    \
+    INSTANTIATION(true, stride, i, bias, HSwishOp<dt_qint32 MEGDNN_COMMA dt_qint8>)  \
+    INSTANTIATION(false, stride, i, bias, NoneOp<dt_qint32 MEGDNN_COMMA dt_qint8>)
 
 #define FOR_BIAS(stride, i)              \
     FOR_OP(stride, i, BiasMode::NO_BIAS) \

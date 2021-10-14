@@ -13,14 +13,14 @@
 
 #include "megbrain/utils/hash.h"
 #include "megbrain/utils/metahelper.h"
+#include "megbrain/utils/thin/function.h"
 #include "megbrain/utils/thin/hash_table.h"
 #include "megbrain/utils/thread.h"
-#include "megbrain/utils/thin/function.h"
 #include "megdnn/thin/function.h"
 
 #include <cstddef>
-#include <string>
 #include <memory>
+#include <string>
 
 namespace mgb {
 
@@ -42,24 +42,16 @@ class CompNodeSeqRecorder;
 class MemNode {
     const void* m_id = nullptr;
 
-    public:
-        MemNode() = default;
+public:
+    MemNode() = default;
 
-        explicit MemNode(const void *id):
-            m_id{id}
-        {}
+    explicit MemNode(const void* id) : m_id{id} {}
 
-        bool operator == (const MemNode &rhs) const {
-            return m_id == rhs.m_id;
-        }
+    bool operator==(const MemNode& rhs) const { return m_id == rhs.m_id; }
 
-        bool operator != (const MemNode &rhs) const {
-            return m_id != rhs.m_id;
-        }
+    bool operator!=(const MemNode& rhs) const { return m_id != rhs.m_id; }
 
-        operator bool() const {
-            return m_id != nullptr;
-        }
+    operator bool() const { return m_id != nullptr; }
 };
 
 /*!
@@ -70,531 +62,495 @@ class MemNode {
  * thread
  */
 class CompNode {
-    public:
-        //! computing device type
-        enum class DeviceType {
-            //! for "xpu" comp node that would mapped to available cn on
-            //! current system
-            UNSPEC = 0,
+public:
+    //! computing device type
+    enum class DeviceType {
+        //! for "xpu" comp node that would mapped to available cn on
+        //! current system
+        UNSPEC = 0,
 
-            CUDA = 1,
-            CPU = 2,
-            CAMBRICON = 3,
-            ROCM = 8,
-            ATLAS = 9,
-            MULTITHREAD = 11,
-            MAX_DEVICE_ID,
-        };
-        static constexpr size_t NR_DEVICE_TYPE =
-                static_cast<size_t>(DeviceType::MAX_DEVICE_ID);
+        CUDA = 1,
+        CPU = 2,
+        CAMBRICON = 3,
+        ROCM = 8,
+        ATLAS = 9,
+        MULTITHREAD = 11,
+        MAX_DEVICE_ID,
+    };
+    static constexpr size_t NR_DEVICE_TYPE =
+            static_cast<size_t>(DeviceType::MAX_DEVICE_ID);
+
+    /*!
+     * \brief an identifier to specify a computing node
+     *
+     * Note: logical locator is directly parsed from a string identifier
+     * given by user; it should be translated to physical locator by calling
+     * to_physical() before actual use.
+     *
+     * Unless explicitly specified otherwise, all locators are physical
+     * locators.
+     */
+    struct Locator {
+        /*!
+         * \brief special device number for the "cpu default" comp node,
+         *      which dispatches all tasks in the caller thread
+         */
+        static constexpr int DEVICE_CPU_DEFAULT = -1024;
+        /*!
+         * \brief special device number for the "multithread_default"
+         * comp node, which dispatches all tasks to thread pool and the
+         * caller thread is the main thread of thread pool
+         */
+        static constexpr int DEVICE_MULTITHREAD_DEFAULT = -1025;
+
+        DeviceType type = DeviceType::UNSPEC;
 
         /*!
-         * \brief an identifier to specify a computing node
+         * corresponding to a physical computing device; memories between
+         * different devices are not shared.
          *
-         * Note: logical locator is directly parsed from a string identifier
-         * given by user; it should be translated to physical locator by calling
-         * to_physical() before actual use.
+         * device == -1 means logical default device (maps to 0 by default,
+         * and can be changed by set_device_map)
          *
-         * Unless explicitly specified otherwise, all locators are physical
-         * locators.
          */
-        struct Locator {
-            /*!
-             * \brief special device number for the "cpu default" comp node,
-             *      which dispatches all tasks in the caller thread
-             */
-            static constexpr int DEVICE_CPU_DEFAULT = -1024;
-            /*!
-             * \brief special device number for the "multithread_default"
-             * comp node, which dispatches all tasks to thread pool and the
-             * caller thread is the main thread of thread pool
-             */
-            static constexpr int DEVICE_MULTITHREAD_DEFAULT = -1025;
+        int device = -1;
 
-            DeviceType type = DeviceType::UNSPEC;
+        //! multiple streams can execute on one computing device and share
+        //! memory, when compnode type is multithread the field also stand
+        //! for nr_threads
+        union {
+            int stream = 0;
+            int nr_threads;
+        };
 
-            /*!
-             * corresponding to a physical computing device; memories between
-             * different devices are not shared.
-             *
-             * device == -1 means logical default device (maps to 0 by default,
-             * and can be changed by set_device_map)
-             *
-             */
-            int device = -1;
+        /*!
+         * \brief parse a string identifier
+         *
+         * currently supported ID format: (gpu|cpu)<n>[:m] where n is the
+         * device number, possibly with m as the stream id.
+         */
+        static Locator parse(const std::string& id);
 
-            //! multiple streams can execute on one computing device and share
-            //! memory, when compnode type is multithread the field also stand
-            //! for nr_threads
-            union {
-                int stream = 0;
-                int nr_threads;
-            };
+        /*!
+         * \brief set mapping between device numbers of a device type
+         */
+        static void set_device_map(DeviceType type, int from, int to);
 
-            /*!
-             * \brief parse a string identifier
-             *
-             * currently supported ID format: (gpu|cpu)<n>[:m] where n is the
-             * device number, possibly with m as the stream id.
-             */
-            static Locator parse(const std::string& id);
+        /*!
+         * \brief set the actual device type to be used for
+         *      DeviceType::UNSPEC
+         */
+        static void set_unspec_device_type(DeviceType type);
 
-            /*!
-             * \brief set mapping between device numbers of a device type
-             */
-            static void set_device_map(DeviceType type, int from, int to);
+        /*!
+         * \brief get corresponding physical Locator
+         *
+         * DeviceType::UNSPEC would be resolved, and device map would be
+         * applied on device number
+         */
+        Locator to_physical() const;
 
-            /*!
-             * \brief set the actual device type to be used for
-             *      DeviceType::UNSPEC
-             */
-            static void set_unspec_device_type(DeviceType type);
+        /*!
+         * \brief get string description of this locator that can be parsed
+         *      again
+         */
+        std::string to_string() const;
 
-            /*!
-             * \brief get corresponding physical Locator
-             *
-             * DeviceType::UNSPEC would be resolved, and device map would be
-             * applied on device number
-             */
-            Locator to_physical() const;
+        bool operator==(const Locator& rhs) const {
+            return type == rhs.type && device == rhs.device && stream == rhs.stream;
+        }
+    };
 
-            /*!
-             * \brief get string description of this locator that can be parsed
-             *      again
-             */
-            std::string to_string() const;
+    struct LocatorPairHashKey {
+        Locator locator, locator_logical;
 
-            bool operator == (const Locator &rhs) const {
-                return type == rhs.type && device == rhs.device &&
-                    stream == rhs.stream;
+        bool operator==(const LocatorPairHashKey& rhs) const {
+            return locator == rhs.locator && locator_logical == rhs.locator_logical;
+        }
+
+        struct Hash {
+            size_t operator()(const LocatorPairHashKey& k) const {
+                return hash_pair_combine(
+                        mgb::hash(k.locator), mgb::hash(k.locator_logical));
             }
-
         };
+    };
 
-        struct LocatorPairHashKey {
-            Locator locator, locator_logical;
+    //! predefined special streams
+    struct Stream {
+        static constexpr int COPY = -1, REMOTE_SEND = -2, LOOP_SWAP = -3;
+    };
 
-            bool operator==(const LocatorPairHashKey& rhs) const {
-                return locator == rhs.locator && locator_logical == rhs.locator_logical;
-            }
+    CompNode() = default;
 
-            struct Hash {
-                size_t operator()(const LocatorPairHashKey& k) const {
-                    return hash_pair_combine(mgb::hash(k.locator),
-                                             mgb::hash(k.locator_logical));
-                }
-            };
-        };
+    /*!
+     * \brief manually destroy all comp node resources
+     */
+    static void finalize();
 
-        //! predefined special streams
-        struct Stream {
-            static constexpr int
-                COPY = -1,
-                REMOTE_SEND = -2,
-                LOOP_SWAP = -3;
-        };
+    /*!
+     * \brief load a computing node from logical locator ID;
+     * \see Locator::parse
+     */
+    static CompNode load(const std::string& id) { return load(Locator::parse(id)); }
 
-        CompNode() = default;
+    /*!
+     * \brief create a CompNode object from **logical** locator
+     */
+    static CompNode load(const Locator& locator) {
+        return load(locator.to_physical(), locator);
+    }
 
-        /*!
-         * \brief manually destroy all comp node resources
-         */
-        static void finalize();
+    static CompNode load(
+            const Locator& locator_physical, const Locator& locator_logical);
 
-        /*!
-         * \brief load a computing node from logical locator ID;
-         * \see Locator::parse
-         */
-        static CompNode load(const std::string& id) {
-            return load(Locator::parse(id));
-        }
+    /* =================== memory management ======================== */
 
-        /*!
-         * \brief create a CompNode object from **logical** locator
-         */
-        static CompNode load(const Locator& locator) {
-            return load(locator.to_physical(), locator);
-        }
+    /*!
+     * \brief allocate memory on this computing node
+     *
+     * Note: allocation of device memory is synchronous with the host,
+     * meaning that the memory can be used immediately; however deallocation
+     * is asynchronous to ensure that the memory can be used by
+     * already-launched kernels on the computing node.
+     *
+     * Exception should be raised if allocation fails.
+     */
+    void* alloc_device(size_t size) const;
 
-        static CompNode load(const Locator& locator_physical,
-                             const Locator& locator_logical);
+    //! deallocate device buffer; see alloc_device() for more details
+    void free_device(void* ptr) const;
 
-        /* =================== memory management ======================== */
+    /*!
+     * \brief allocate memory on host that is associated with the device,
+     *      which may accelerate I/O
+     *
+     * Both allocation and deallocation on host are synchronous.
+     */
+    void* alloc_host(size_t size) const;
 
-        /*!
-         * \brief allocate memory on this computing node
-         *
-         * Note: allocation of device memory is synchronous with the host,
-         * meaning that the memory can be used immediately; however deallocation
-         * is asynchronous to ensure that the memory can be used by
-         * already-launched kernels on the computing node.
-         *
-         * Exception should be raised if allocation fails.
-         */
-        void *alloc_device(size_t size) const;
+    void free_host(void* ptr) const;
 
-        //! deallocate device buffer; see alloc_device() for more details
-        void free_device(void *ptr) const;
+    //! copy from underlying device to host
+    void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) const {
+        return m_impl->copy_to_host(host_ptr, device_ptr, size);
+    }
 
-        /*!
-         * \brief allocate memory on host that is associated with the device,
-         *      which may accelerate I/O
-         *
-         * Both allocation and deallocation on host are synchronous.
-         */
-        void *alloc_host(size_t size) const;
+    //! copy from host to underlying device
+    void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) const {
+        return m_impl->copy_to_device(device_ptr, host_ptr, size);
+    }
 
-        void free_host(void *ptr) const;
+    /*!
+     * \brief copy from this device to another device; would use the
+     *      computing resource on dest_node
+     * \param src source memory that must be allocated on this device
+     */
+    void peer_copy_to(
+            CompNode dest_node, void* dest, const void* src, size_t size) const {
+        return m_impl->peer_copy_to(
+                reinterpret_cast<Impl*>(dest_node.m_impl), dest, src, size);
+    }
 
-        //! copy from underlying device to host
-        void copy_to_host(
-                void *host_ptr, const void *device_ptr, size_t size) const {
-            return m_impl->copy_to_host(host_ptr, device_ptr, size);
-        }
+    //! get alignment requiement in bytes; guaranteed to be power of 2
+    size_t get_mem_addr_alignment() const { return m_impl->get_mem_addr_alignment(); }
 
-        //! copy from host to underlying device
-        void copy_to_device(
-                void *device_ptr, const void *host_ptr, size_t size) const {
-            return m_impl->copy_to_device(device_ptr, host_ptr, size);
-        }
+    /*!
+     * \brief get the size of the paddings which must be reserved at the
+     * end of memory chunk; guaranteed to be power of 2
+     */
+    size_t get_mem_padding() const {
+        size_t padding = m_impl->get_mem_padding();
+        mgb_assert(!(padding & (padding - 1)), "mem padding should be power of 2");
+        return padding;
+    }
 
-        /*!
-         * \brief copy from this device to another device; would use the
-         *      computing resource on dest_node
-         * \param src source memory that must be allocated on this device
-         */
-        void peer_copy_to(CompNode dest_node, void *dest,
-                const void *src, size_t size) const {
-            return m_impl->peer_copy_to(
-                    reinterpret_cast<Impl*>(dest_node.m_impl), dest, src, size);
-        }
+    /*!
+     * \brief release consecutive free chunks on all devices to defragment;
+     *      see DevMemAlloc::try_coalesce_free
+     */
+    static void try_coalesce_all_free_memory();
 
-        //! get alignment requiement in bytes; guaranteed to be power of 2
-        size_t get_mem_addr_alignment() const {
-            return m_impl->get_mem_addr_alignment();
-        }
+    /*
+     * \brief specifies how to pre-allocate from raw dev allocator
+     *
+     */
+    static void set_prealloc_config(
+            size_t alignment, size_t min_req, size_t max_overhead, double growth_factor,
+            DeviceType device_type);
+    /*!
+     * \brief get compute capability of the specified device
+     */
+    static size_t get_compute_capability(int dev, DeviceType device_type);
 
-        /*!
-         * \brief get the size of the paddings which must be reserved at the
-         * end of memory chunk; guaranteed to be power of 2
-         */
-        size_t get_mem_padding() const {
-            size_t padding = m_impl->get_mem_padding();
-            mgb_assert(!(padding & (padding - 1)),
-                       "mem padding should be power of 2");
-            return padding;
-        }
+    /* =================== synchronization ======================== */
 
-        /*!
-         * \brief release consecutive free chunks on all devices to defragment;
-         *      see DevMemAlloc::try_coalesce_free
-         */
-        static void try_coalesce_all_free_memory();
+    class Event;
+    class EventPool;
 
-        /*
-        * \brief specifies how to pre-allocate from raw dev allocator
-        *
-        */
-        static void set_prealloc_config(size_t alignment, size_t min_req,
-                                        size_t max_overhead, double growth_factor,
-                                        DeviceType device_type);
-        /*!
-         * \brief get compute capability of the specified device
-         */
-        static size_t get_compute_capability(int dev, DeviceType device_type);
+    std::unique_ptr<Event> create_event(size_t flags = 0) const {
+        return m_impl->create_event(flags);
+    }
 
-        /* =================== synchronization ======================== */
+    //! wait for an event created on another CompNode
+    inline void device_wait_event(Event& event) const;
 
-        class Event;
-        class EventPool;
+    /*!
+     * \brief block host thread to wait for all previous operations on this
+     *      computing node to finish
+     */
+    void sync() const { return m_impl->sync(); }
 
-        std::unique_ptr<Event> create_event(size_t flags = 0) const {
-            return m_impl->create_event(flags);
-        }
+    /*!
+     * \brief synchronize all computing nodes
+     */
+    static void sync_all();
 
-        //! wait for an event created on another CompNode
-        inline void device_wait_event(Event &event) const;
+    /* =================== misc ======================== */
 
-        /*!
-         * \brief block host thread to wait for all previous operations on this
-         *      computing node to finish
-         */
-        void sync() const {
-            return m_impl->sync();
-        }
+    /*!
+     * \brief get id of underlying memory node; comp nodes that share the
+     *      same mem node can access memory allocated by each other.
+     */
+    MemNode mem_node() const { return m_impl->mem_node(); }
 
-        /*!
-         * \brief synchronize all computing nodes
-         */
-        static void sync_all();
+    bool operator==(const CompNode& rhs) const { return m_impl == rhs.m_impl; }
 
-        /* =================== misc ======================== */
+    bool operator!=(const CompNode& rhs) const { return !this->operator==(rhs); }
 
-        /*!
-         * \brief get id of underlying memory node; comp nodes that share the
-         *      same mem node can access memory allocated by each other.
-         */
-        MemNode mem_node() const {
-            return m_impl->mem_node();
-        }
+    bool valid() const { return m_impl; }
 
-        bool operator == (const CompNode &rhs) const {
-            return m_impl == rhs.m_impl;
-        }
-
-        bool operator != (const CompNode &rhs) const {
-            return !this->operator==(rhs);
-        }
-
-        bool valid() const {
-            return m_impl;
-        }
-
-        //! get total and free memory on the computing device in bytes
-        std::pair<size_t, size_t> get_mem_status_bytes() const {
-            return m_impl->get_mem_status_bytes();
-        }
+    //! get total and free memory on the computing device in bytes
+    std::pair<size_t, size_t> get_mem_status_bytes() const {
+        return m_impl->get_mem_status_bytes();
+    }
 
 #if !MGB_BUILD_SLIM_SERVING
-        std::pair<size_t, size_t> get_free_left_and_right(size_t begin_ptr, size_t end_ptr) {
-            return m_impl->get_free_left_and_right(begin_ptr, end_ptr);
-        }
+    std::pair<size_t, size_t> get_free_left_and_right(
+            size_t begin_ptr, size_t end_ptr) {
+        return m_impl->get_free_left_and_right(begin_ptr, end_ptr);
+    }
 
-        size_t get_used_memory() const {
-            return m_impl->get_used_memory();
-        }
+    size_t get_used_memory() const { return m_impl->get_used_memory(); }
 
-        size_t get_max_block_size_available() const {
-            return m_impl->get_max_block_size_available();
-        }
+    size_t get_max_block_size_available() const {
+        return m_impl->get_max_block_size_available();
+    }
 #endif
 
-        //! change to another stream on the same memory node
-        CompNode change_stream(int dest_stream) const;
+    //! change to another stream on the same memory node
+    CompNode change_stream(int dest_stream) const;
 
-        //! get string representation
-        std::string to_string() const {
-            return m_impl ? mgb::ssprintf("CompNode(\"%s\" from \"%s\")",
-                    to_string_physical().c_str(),
-                    to_string_logical().c_str()) : "invalid";
+    //! get string representation
+    std::string to_string() const {
+        return m_impl ? mgb::ssprintf(
+                                "CompNode(\"%s\" from \"%s\")",
+                                to_string_physical().c_str(),
+                                to_string_logical().c_str())
+                      : "invalid";
+    }
+
+    //! get string representation of physical device
+    std::string to_string_physical() const {
+        return m_impl ? m_impl->locator().to_string() : "invalid";
+    }
+
+    //! get string representation of logical device
+    std::string to_string_logical() const {
+        return m_impl ? m_impl->locator_logical().to_string() : "invalid";
+    }
+
+    uint64_t get_uid() { return m_impl->get_uid(); }
+
+    //! get the physical locator that created this comp node
+    Locator locator() const { return m_impl->locator(); }
+
+    //! get the logical locator that created this comp node
+    Locator locator_logical() const { return m_impl->locator_logical(); }
+
+    //! see CompNodeEnv::activate
+    void activate() const;
+
+    //! get device type of this comp node
+    DeviceType device_type() const;
+
+    /*!
+     * \brief check for error on the asynchronous computing stream
+     *
+     * This is used for devices with limited error handling such as CUDA.
+     *
+     * It will return MegBrainError with error messages rather than
+     * directly throw exception; return nullptr if no error.
+     */
+    MGB_WARN_UNUSED_RESULT
+    std::unique_ptr<MegBrainError> check_async_error() const;
+
+    /*!
+     * \brief create a CompNodeSeqRecorder associated with this computing
+     * node
+     *
+     * Note: the implementation must be thread safe: simultaneous calls to
+     * create_seq_recorder() must block until existing CompNodeSeqRecorder
+     * objects are either destructed or stopped.
+     *
+     * \return the recorder object; nullptr is returned if recording is not
+     *      supported
+     */
+    std::unique_ptr<CompNodeSeqRecorder> create_seq_recorder(cg::ComputingGraph* cg) {
+        return m_impl->create_seq_recorder(cg);
+    }
+
+    /*!
+     *  insert callback into current compute stream.
+     *  The callack is to be called after all currently enqueued
+     *  iterms in the stream have completed. And the later tasks
+     *  in the stream must wait for the callback to finish.
+     */
+    void add_callback(megdnn::thin_function<void()>&& cb) {
+        return m_impl->add_callback(std::move(cb));
+    }
+
+    enum class Flag : uint32_t {
+        //! Whether computing recorder is supported on this comp node (i.e.
+        //! whether non-zero comp_node_seq_record_level is allowed)
+        SUPPORT_RECORDER = 1 << 0,
+
+        //! Whether dynamic memory allocation is supported in seq recorder.
+        //! If this flag is not setted, ComputingSequence::do_execute()
+        //! would skip the warm up and allow seq recorder to start
+        //! immediately
+        RECORDER_SUPPORT_DYNAMIC_ALLOC = 1 << 1,
+
+        //! Whether the capacity of the asynchronous execution queue on this
+        //! comp node is limited.
+        //! If this flag is set, tasks on multiple comp nodes would be
+        //! dispatched from multiple cpu threads.
+        //! \see ComputingGraph::Options::async_exec_level
+        QUEUE_LIMITED = 1 << 2,
+
+        //! Whether this comp node supports copy stream, so computation and
+        //! I/O can be parallelized
+        HAS_COPY_STREAM = 1 << 3,
+
+        //! Destructing an event is unsafe if the comp node is not
+        //! synchronized; setting this flag would cause computing sequence
+        //! to sync the comp node in its dtor.
+        EVENT_DTOR_UNSAFE = 1 << 4,
+
+        //! CompNode is available even there is no thread support, i.e.
+        //! MGB_HAVE_THREAD=0. Usually this means that execution on the
+        //! CompNode is synchronous, i.e. behaves like cpu:default
+        SUPPORT_NO_THREAD = 1 << 5,
+
+        //! Whether this comp node supports unified address. i.e. CPU and
+        //! CUDA supports unified address.
+        SUPPORT_UNIFIED_ADDRESS = 1 << 6,
+    };
+
+    bool contain_flag(Flag flag) { return contain_flag(device_type(), flag); }
+
+    static bool contain_flag(DeviceType device_type, Flag flag);
+
+    using UnorderedSet = ThinHashSet<CompNode>;
+
+    template <typename T>
+    using UnorderedMap = ThinHashMap<CompNode, T>;
+
+    //! apply function to each initialized comp node
+    static void foreach (thin_function<void(CompNode)> callback);
+
+    //! get total number of specific devices on this system
+    static size_t get_device_count(DeviceType type, bool warn = true);
+
+    /* =================== specialized ======================== */
+
+    //! get default CPU comp node
+    // implemented in comp_node/cpu/comp_node.cpp
+    static CompNode default_cpu();
+
+    /*!
+     * \brief set whether to enable affinity setting for CPU comp nodes
+     *
+     * If enabled, computation on cpux would be bound to the x'th CPU.
+     *
+     * This is disabled by default.
+     *
+     * (implemented in comp_node/cpu/comp_node.cpp)
+     *
+     * \return original setting
+     */
+    static bool enable_affinity_for_cpu(bool flag);
+
+protected:
+    //! ImplBase with env(); defined in CompNodeEnv
+    class Impl;
+
+    class ImplBase : public NonCopyableObj, public DynTypeObj {
+    public:
+        typedef void (*free_func_t)(ImplBase* self, void* ptr);
+        //! memory free might be called after finalize(); so we should
+        //! not rely on virtual function for this
+        const free_func_t free_device;
+        const free_func_t free_host;
+
+        virtual void* alloc_device(size_t size) = 0;
+        virtual void* alloc_host(size_t size) = 0;
+
+        virtual void copy_to_host(
+                void* host_ptr, const void* device_ptr, size_t size) = 0;
+        virtual void copy_to_device(
+                void* device_ptr, const void* host_ptr, size_t size) = 0;
+        virtual void peer_copy_to(
+                Impl* dest_impl, void* dest, const void* src, size_t size) = 0;
+
+        virtual size_t get_mem_addr_alignment() = 0;
+        virtual size_t get_mem_padding();
+
+        virtual std::unique_ptr<Event> create_event(size_t flags) = 0;
+
+        virtual void sync() = 0;
+
+        virtual MemNode mem_node() = 0;
+        virtual std::pair<size_t, size_t> get_mem_status_bytes() = 0;
+
+#if !MGB_BUILD_SLIM_SERVING
+        virtual std::pair<size_t, size_t> get_free_left_and_right(size_t x, size_t y) {
+            return {x - x, y - y};
         }
+        virtual size_t get_used_memory() { return 0; }
+        virtual size_t get_max_block_size_available() { return 0; }
+#endif
 
-        //! get string representation of physical device
-        std::string to_string_physical() const {
-            return m_impl ? m_impl->locator().to_string() : "invalid";
-        }
+        virtual Locator locator() = 0;
+        virtual Locator locator_logical() = 0;
 
-        //! get string representation of logical device
-        std::string to_string_logical() const {
-            return m_impl ? m_impl->locator_logical().to_string() : "invalid";
-        }
+        virtual std::unique_ptr<CompNodeSeqRecorder> create_seq_recorder(
+                cg::ComputingGraph* cg);
 
-        uint64_t get_uid() {
-            return m_impl->get_uid();
-        }
+        virtual void add_callback(megdnn::thin_function<void()>&&);
 
-        //! get the physical locator that created this comp node
-        Locator locator() const {
-            return m_impl->locator();
-        }
-
-        //! get the logical locator that created this comp node
-        Locator locator_logical() const {
-            return m_impl->locator_logical();
-        }
-
-        //! see CompNodeEnv::activate
-        void activate() const;
-
-        //! get device type of this comp node
-        DeviceType device_type() const;
-
-        /*!
-         * \brief check for error on the asynchronous computing stream
-         *
-         * This is used for devices with limited error handling such as CUDA.
-         *
-         * It will return MegBrainError with error messages rather than
-         * directly throw exception; return nullptr if no error.
-         */
-        MGB_WARN_UNUSED_RESULT
-        std::unique_ptr<MegBrainError> check_async_error() const;
-
-        /*!
-         * \brief create a CompNodeSeqRecorder associated with this computing
-         * node
-         *
-         * Note: the implementation must be thread safe: simultaneous calls to
-         * create_seq_recorder() must block until existing CompNodeSeqRecorder
-         * objects are either destructed or stopped.
-         *
-         * \return the recorder object; nullptr is returned if recording is not
-         *      supported
-         */
-        std::unique_ptr<CompNodeSeqRecorder> create_seq_recorder(
-                cg::ComputingGraph* cg) {
-            return m_impl->create_seq_recorder(cg);
-        }
-
-        /*!
-         *  insert callback into current compute stream.
-         *  The callack is to be called after all currently enqueued
-         *  iterms in the stream have completed. And the later tasks
-         *  in the stream must wait for the callback to finish.
-         */
-        void add_callback(megdnn::thin_function<void()>&& cb) {
-            return m_impl->add_callback(std::move(cb));
-        }
-
-        enum class Flag : uint32_t {
-            //! Whether computing recorder is supported on this comp node (i.e.
-            //! whether non-zero comp_node_seq_record_level is allowed)
-            SUPPORT_RECORDER = 1 << 0,
-
-            //! Whether dynamic memory allocation is supported in seq recorder.
-            //! If this flag is not setted, ComputingSequence::do_execute()
-            //! would skip the warm up and allow seq recorder to start
-            //! immediately
-            RECORDER_SUPPORT_DYNAMIC_ALLOC = 1 << 1,
-
-            //! Whether the capacity of the asynchronous execution queue on this
-            //! comp node is limited.
-            //! If this flag is set, tasks on multiple comp nodes would be
-            //! dispatched from multiple cpu threads.
-            //! \see ComputingGraph::Options::async_exec_level
-            QUEUE_LIMITED = 1 << 2,
-
-            //! Whether this comp node supports copy stream, so computation and
-            //! I/O can be parallelized
-            HAS_COPY_STREAM = 1 << 3,
-
-            //! Destructing an event is unsafe if the comp node is not
-            //! synchronized; setting this flag would cause computing sequence
-            //! to sync the comp node in its dtor.
-            EVENT_DTOR_UNSAFE = 1 << 4,
-
-            //! CompNode is available even there is no thread support, i.e.
-            //! MGB_HAVE_THREAD=0. Usually this means that execution on the
-            //! CompNode is synchronous, i.e. behaves like cpu:default
-            SUPPORT_NO_THREAD = 1 << 5,
-
-            //! Whether this comp node supports unified address. i.e. CPU and
-            //! CUDA supports unified address.
-            SUPPORT_UNIFIED_ADDRESS = 1 << 6,
+        virtual uint64_t get_uid() {
+            mgb_throw(MegBrainError, "get_uid is not impl yet");
         };
-
-        bool contain_flag(Flag flag) {
-            return contain_flag(device_type(), flag);
-        }
-
-        static bool contain_flag(DeviceType device_type, Flag flag);
-
-        using UnorderedSet = ThinHashSet<CompNode>;
-
-        template<typename T>
-        using UnorderedMap = ThinHashMap<CompNode, T>;
-
-        //! apply function to each initialized comp node
-        static void foreach(thin_function<void(CompNode)> callback);
-
-        //! get total number of specific devices on this system
-        static size_t get_device_count(DeviceType type, bool warn=true);
-
-        /* =================== specialized ======================== */
-
-        //! get default CPU comp node
-        // implemented in comp_node/cpu/comp_node.cpp
-        static CompNode default_cpu();
-
-        /*!
-         * \brief set whether to enable affinity setting for CPU comp nodes
-         *
-         * If enabled, computation on cpux would be bound to the x'th CPU.
-         *
-         * This is disabled by default.
-         *
-         * (implemented in comp_node/cpu/comp_node.cpp)
-         *
-         * \return original setting
-         */
-        static bool enable_affinity_for_cpu(bool flag);
 
     protected:
-        //! ImplBase with env(); defined in CompNodeEnv
-        class Impl;
+        ImplBase(free_func_t fd, free_func_t fh) : free_device{fd}, free_host{fh} {}
 
-        class ImplBase: public NonCopyableObj, public DynTypeObj {
-            public:
-                typedef void (*free_func_t)(ImplBase* self, void* ptr);
-                //! memory free might be called after finalize(); so we should
-                //! not rely on virtual function for this
-                const free_func_t free_device;
-                const free_func_t free_host;
+        ~ImplBase() = default;
+    };
 
-                virtual void* alloc_device(size_t size) = 0;
-                virtual void *alloc_host(size_t size) = 0;
+    //! implementations are allocated statically, so no memory management
+    //! is needed
+    ImplBase* m_impl = nullptr;
 
-                virtual void copy_to_host(void *host_ptr,
-                        const void *device_ptr, size_t size) = 0;
-                virtual void copy_to_device(void *device_ptr,
-                        const void *host_ptr, size_t size) = 0;
-                virtual void peer_copy_to(
-                        Impl *dest_impl, void *dest,
-                        const void *src, size_t size) = 0;
+    friend class CompNodeEnv;
+    friend struct HashTrait<CompNode>;
+    friend struct HashTrait<CompNode::Locator>;
+    friend class CompNodeImplHelper;
 
-                virtual size_t get_mem_addr_alignment() = 0;
-                virtual size_t get_mem_padding();
-
-                virtual std::unique_ptr<Event> create_event(size_t flags) = 0;
-
-                virtual void sync() = 0;
-
-                virtual MemNode mem_node() = 0;
-                virtual std::pair<size_t, size_t> get_mem_status_bytes() = 0;
-
-#if !MGB_BUILD_SLIM_SERVING
-                virtual std::pair<size_t, size_t> get_free_left_and_right(size_t x, size_t y) {
-                    return {x - x, y - y};
-                }
-                virtual size_t get_used_memory() {
-                    return 0;
-                }
-                virtual size_t get_max_block_size_available() {
-                    return 0;
-                }
-#endif
-
-                virtual Locator locator() = 0;
-                virtual Locator locator_logical() = 0;
-
-                virtual std::unique_ptr<CompNodeSeqRecorder>
-                    create_seq_recorder(cg::ComputingGraph* cg);
-
-                virtual void add_callback(megdnn::thin_function<void()>&&);
-
-                virtual uint64_t get_uid() {
-                    mgb_throw(MegBrainError, "get_uid is not impl yet");
-                };
-
-            protected:
-                ImplBase(free_func_t fd, free_func_t fh)
-                        : free_device{fd}, free_host{fh} {}
-
-                ~ImplBase() = default;
-        };
-
-        //! implementations are allocated statically, so no memory management
-        //! is needed
-        ImplBase *m_impl = nullptr;
-
-        friend class CompNodeEnv;
-        friend struct HashTrait<CompNode>;
-        friend struct HashTrait<CompNode::Locator>;
-        friend class CompNodeImplHelper;
-    public:
-        CompNode(ImplBase* impl) : m_impl{impl} {}
+public:
+    CompNode(ImplBase* impl) : m_impl{impl} {}
 };
-
 
 MGB_DEF_ENUM_CLASS_BIT_OPR(CompNode::Flag)
 
@@ -642,67 +598,58 @@ public:
  * \brief event associated with a CompNode node, used for cross-device
  *      synchronization
  */
-class CompNode::Event: public NonCopyableObj {
-    protected:
-        static int sm_cpu_sync_level;
+class CompNode::Event : public NonCopyableObj {
+protected:
+    static int sm_cpu_sync_level;
 
-        //! flags when this event is created
-        size_t const m_create_flags;
+    //! flags when this event is created
+    size_t const m_create_flags;
 
-        Event(size_t create_flags):
-            m_create_flags{create_flags}
-        {
-        }
+    Event(size_t create_flags) : m_create_flags{create_flags} {}
 
-    public:
-        enum Flags {
-            NEED_TIMER = 1
-        };
+public:
+    enum Flags { NEED_TIMER = 1 };
 
-        virtual ~Event() = default;
+    virtual ~Event() = default;
 
-        /*!
-         * \brief record this event on the comp node that creates it
-         *
-         * Note that if a comp node is recorded multiple times, then subsequent
-         * calls would overwrite its internal state and other methods that
-         * examine the status would only examine the completion of the most
-         * recent call to record().
-         */
-        virtual void record() = 0;
+    /*!
+     * \brief record this event on the comp node that creates it
+     *
+     * Note that if a comp node is recorded multiple times, then subsequent
+     * calls would overwrite its internal state and other methods that
+     * examine the status would only examine the completion of the most
+     * recent call to record().
+     */
+    virtual void record() = 0;
 
-        //! whether this event has finished; it must has been recorded
-        virtual bool finished() = 0;
+    //! whether this event has finished; it must has been recorded
+    virtual bool finished() = 0;
 
-        //! block the host thread (caller thread) to wait for this event
-        virtual void host_wait() = 0;
+    //! block the host thread (caller thread) to wait for this event
+    virtual void host_wait() = 0;
 
-        //! get elapsed time in seconds from this to another event; the events
-        //! must be finished
-        virtual double elapsed_time_until(Event &end) = 0;
+    //! get elapsed time in seconds from this to another event; the events
+    //! must be finished
+    virtual double elapsed_time_until(Event& end) = 0;
 
-        //! record an action on another comp node so it would wait for this
-        //! event
-        virtual void device_wait_by(CompNode cn) = 0;
+    //! record an action on another comp node so it would wait for this
+    //! event
+    virtual void device_wait_by(CompNode cn) = 0;
 
-        //! get the comp node to which this event is associated
-        virtual CompNode comp_node() const = 0;
+    //! get the comp node to which this event is associated
+    virtual CompNode comp_node() const = 0;
 
-        //! flags when this event is created
-        size_t create_flags() const {
-            return m_create_flags;
-        }
+    //! flags when this event is created
+    size_t create_flags() const { return m_create_flags; }
 
-        /*!
-         * \brief set CPU resource usage level when performing synchronization
-         * \param level CPU waiting level:
-         *      0. condition var (the default)
-         *      1. busy wait with yield
-         *      2. busy wait
-         */
-        static void set_cpu_sync_level(int level) {
-            sm_cpu_sync_level = level;
-        }
+    /*!
+     * \brief set CPU resource usage level when performing synchronization
+     * \param level CPU waiting level:
+     *      0. condition var (the default)
+     *      1. busy wait with yield
+     *      2. busy wait
+     */
+    static void set_cpu_sync_level(int level) { sm_cpu_sync_level = level; }
 };
 
 /*!
@@ -715,36 +662,35 @@ class CompNode::EventPool {
     Spinlock m_lock;
     size_t m_flags;
 
-    public:
-        explicit EventPool(CompNode cn, size_t flags = 0);
-        ~EventPool();
+public:
+    explicit EventPool(CompNode cn, size_t flags = 0);
+    ~EventPool();
 
-        CompNode::Event* alloc();
+    CompNode::Event* alloc();
 
-        void free(CompNode::Event *ev);
+    void free(CompNode::Event* ev);
 
-        //! assert that all allocated events have been freed
-        void assert_all_freed();
+    //! assert that all allocated events have been freed
+    void assert_all_freed();
 };
 
-void CompNode::device_wait_event(Event &event) const {
+void CompNode::device_wait_event(Event& event) const {
     event.device_wait_by(*this);
 }
 
-template<>
+template <>
 struct HashTrait<CompNode> {
-    static size_t eval(const CompNode &val) {
+    static size_t eval(const CompNode& val) {
         static_assert(sizeof(size_t) == sizeof(void*), "bad hash type");
         return reinterpret_cast<size_t>(static_cast<void*>(val.m_impl));
     }
 };
 
-template<>
+template <>
 struct HashTrait<CompNode::Locator> {
-    static size_t eval(const CompNode::Locator &val) {
-        return static_cast<size_t>(val.device)
-            + (static_cast<size_t>(val.type) << 4)
-            + (static_cast<size_t>(val.stream) << 8);
+    static size_t eval(const CompNode::Locator& val) {
+        return static_cast<size_t>(val.device) + (static_cast<size_t>(val.type) << 4) +
+               (static_cast<size_t>(val.stream) << 8);
     }
 };
 
@@ -825,6 +771,6 @@ protected:
     bool is_finalized() const { return m_state; }
 };
 
-} // namespace mgb
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

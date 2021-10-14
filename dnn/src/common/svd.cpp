@@ -14,8 +14,8 @@
 
 using namespace megdnn;
 
-void SVD::deduce_layout(const TensorLayout& src, TensorLayout& u,
-                        TensorLayout& s, TensorLayout& vt) {
+void SVD::deduce_layout(
+        const TensorLayout& src, TensorLayout& u, TensorLayout& s, TensorLayout& vt) {
     Param p = param();
     size_t m, n;
     canonize_params(src, nullptr, &m, &n);
@@ -51,9 +51,9 @@ void SVD::deduce_layout(const TensorLayout& src, TensorLayout& u,
     vt = {shape_vt, src.dtype};
 }
 
-size_t SVD::get_workspace_in_bytes(const TensorLayout& src,
-                                   const TensorLayout& u, const TensorLayout& s,
-                                   const TensorLayout& vt) {
+size_t SVD::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& u, const TensorLayout& s,
+        const TensorLayout& vt) {
     MEGDNN_MARK_USED_VAR(u);
     MEGDNN_MARK_USED_VAR(s);
     MEGDNN_MARK_USED_VAR(vt);
@@ -63,10 +63,11 @@ size_t SVD::get_workspace_in_bytes(const TensorLayout& src,
     return get_workspace_in_bytes(block_cnt, m, n, src.dtype.size());
 }
 
-void SVD::canonize_params(const TensorLayout& layout, size_t* block_cnt,
-                          size_t* m, size_t* n) {
-    megdnn_assert(layout.is_contiguous() && layout.ndim >= 2,
-                  "invalid SVD layout: %s", layout.to_string().c_str());
+void SVD::canonize_params(
+        const TensorLayout& layout, size_t* block_cnt, size_t* m, size_t* n) {
+    megdnn_assert(
+            layout.is_contiguous() && layout.ndim >= 2, "invalid SVD layout: %s",
+            layout.to_string().c_str());
     megdnn_assert(layout.dtype == dtype::Float32(), "SVD only supports f32");
     if (block_cnt) {
         *block_cnt = 1;
@@ -82,9 +83,9 @@ void SVD::canonize_params(const TensorLayout& layout, size_t* block_cnt,
     }
 }
 
-void SVD::check_exec(const TensorLayout& src, const TensorLayout& u,
-                     const TensorLayout& s, const TensorLayout& vt,
-                     size_t workspace_in_bytes) {
+void SVD::check_exec(
+        const TensorLayout& src, const TensorLayout& u, const TensorLayout& s,
+        const TensorLayout& vt, size_t workspace_in_bytes) {
     size_t m, n;
     canonize_params(src, nullptr, &m, &n);
     // get_workspace_in_bytes runs the canonize_params, thus runs the check

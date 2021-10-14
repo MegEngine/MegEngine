@@ -18,9 +18,8 @@
 using namespace megcore;
 using namespace megcore::atlas;
 
-AtlasComputingContext::AtlasComputingContext(megcoreDeviceHandle_t dev_handle,
-                                             unsigned int flags,
-                                             const AtlasContext& ctx)
+AtlasComputingContext::AtlasComputingContext(
+        megcoreDeviceHandle_t dev_handle, unsigned int flags, const AtlasContext& ctx)
         : ComputingContext(dev_handle, flags),
           m_own_stream{ctx.stream == nullptr},
           m_ctx{ctx} {
@@ -38,22 +37,22 @@ AtlasComputingContext::~AtlasComputingContext() {
     }
 }
 
-void AtlasComputingContext::memcpy(void* dst, const void* src,
-                                   size_t size_in_bytes,
-                                   megcoreMemcpyKind_t kind) {
+void AtlasComputingContext::memcpy(
+        void* dst, const void* src, size_t size_in_bytes, megcoreMemcpyKind_t kind) {
     switch (kind) {
         case megcoreMemcpyDeviceToHost:
-            acl_check(aclrtMemcpy(dst, size_in_bytes, src, size_in_bytes,
-                               ACL_MEMCPY_DEVICE_TO_HOST));
+            acl_check(aclrtMemcpy(
+                    dst, size_in_bytes, src, size_in_bytes, ACL_MEMCPY_DEVICE_TO_HOST));
             break;
         case megcoreMemcpyHostToDevice:
-            acl_check(aclrtMemcpy(dst, size_in_bytes, src, size_in_bytes,
-                        ACL_MEMCPY_HOST_TO_DEVICE));
+            acl_check(aclrtMemcpy(
+                    dst, size_in_bytes, src, size_in_bytes, ACL_MEMCPY_HOST_TO_DEVICE));
             break;
         case megcoreMemcpyDeviceToDevice:
             // async d2d is always faster than sync d2d because of SDMA
-            acl_check(aclrtMemcpyAsync(dst, size_in_bytes, src, size_in_bytes,
-                ACL_MEMCPY_DEVICE_TO_DEVICE, m_ctx.stream));
+            acl_check(aclrtMemcpyAsync(
+                    dst, size_in_bytes, src, size_in_bytes, ACL_MEMCPY_DEVICE_TO_DEVICE,
+                    m_ctx.stream));
             break;
         default:
             megdnn_throw("bad atlas memcpy kind");

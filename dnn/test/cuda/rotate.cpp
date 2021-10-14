@@ -32,15 +32,11 @@ TEST_F(CUDA, ROTATE) {
     Rotate::Param cur_param;
     for (bool clockwise : {false, true}) {
         cur_param.clockwise = clockwise;
-        args.emplace_back(cur_param, TensorShape{65535, 3, 4, 1},
-                          dtype::Int32());
-        args.emplace_back(cur_param, TensorShape{65540, 3, 4, 3},
-                          dtype::Int32());
+        args.emplace_back(cur_param, TensorShape{65535, 3, 4, 1}, dtype::Int32());
+        args.emplace_back(cur_param, TensorShape{65540, 3, 4, 3}, dtype::Int32());
     }
     for (auto&& arg : args) {
-        checker.set_dtype(0, arg.dtype)
-            .set_dtype(1, arg.dtype)
-            .execs({arg.src, {}});
+        checker.set_dtype(0, arg.dtype).set_dtype(1, arg.dtype).execs({arg.src, {}});
     }
 }
 

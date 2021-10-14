@@ -13,17 +13,15 @@
 #include "src/common/utils.h"
 
 namespace megdnn {
-void BatchConvBiasForward::deduce_dtype(DType src, DType filter,
-                                        DType /* bias */, DType /* z */,
-                                        DType& dst) {
+void BatchConvBiasForward::deduce_dtype(
+        DType src, DType filter, DType /* bias */, DType /* z */, DType& dst) {
     check_or_deduce_dtype_fwd(src, filter, dst);
 }
 
-void BatchConvBiasForward::deduce_layout(const TensorLayout& src,
-                                         const TensorLayout& filter,
-                                         const TensorLayout& /* bias */,
-                                         const TensorLayout& /* z */,
-                                         TensorLayout& dst) {
+void BatchConvBiasForward::deduce_layout(
+        const TensorLayout& src, const TensorLayout& filter,
+        const TensorLayout& /* bias */, const TensorLayout& /* z */,
+        TensorLayout& dst) {
     TensorLayout non_batch_filter;
     non_batch_filter.ndim = filter.ndim - 1;
     non_batch_filter.dtype = filter.dtype;
@@ -36,12 +34,12 @@ void BatchConvBiasForward::deduce_layout(const TensorLayout& src,
 }
 
 BatchConvBiasForward::CanonizedFilterMeta BatchConvBiasForward::check_exec(
-        const TensorLayout& src, const TensorLayout& filter,
-        const TensorLayout& bias, const TensorLayout& z,
-        const TensorLayout& dst, size_t workspace_in_bytes) {
-    megdnn_assert(src.dtype.enumv() == filter.dtype.enumv() &&
-                          src.dtype.enumv() == DTypeEnum::QuantizedS8,
-                  "batch conv only support qint8");
+        const TensorLayout& src, const TensorLayout& filter, const TensorLayout& bias,
+        const TensorLayout& z, const TensorLayout& dst, size_t workspace_in_bytes) {
+    megdnn_assert(
+            src.dtype.enumv() == filter.dtype.enumv() &&
+                    src.dtype.enumv() == DTypeEnum::QuantizedS8,
+            "batch conv only support qint8");
     float scale_src = src.dtype.param<dtype::QuantizedS8>().scale;
     float scale_filter = filter.dtype.param<dtype::QuantizedS8>().scale;
     float scale_bias = bias.dtype.param<dtype::QuantizedS32>().scale;
@@ -76,8 +74,9 @@ BatchConvBiasForward::CanonizedFilterMeta BatchConvBiasForward::check_exec(
             return ret;
         if (param().format == param::BatchConvBias::Format::NCHW4) {
             megdnn_assert(bias.shape[0] == 1);
-            megdnn_assert(bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
-                          bias.to_string().c_str(), dst.to_string().c_str());
+            megdnn_assert(
+                    bias.shape[1] == dst.shape[1], "bias:%s, dst:%s",
+                    bias.to_string().c_str(), dst.to_string().c_str());
             megdnn_assert(bias.shape[2] == 1);
             megdnn_assert(bias.shape[3] == 1);
             megdnn_assert(bias.shape[4] == 4);

@@ -12,7 +12,6 @@
 
 #include "src/common/handle_impl.h"
 
-#include "src/cuda/padding/opr_impl.h"
 #include "src/cuda/adaptive_pooling/opr_impl.h"
 #include "src/cuda/add_update/opr_impl.h"
 #include "src/cuda/argmxx/opr_impl.h"
@@ -20,7 +19,7 @@
 #include "src/cuda/batch_conv_bias/opr_impl.h"
 #include "src/cuda/batch_normalization/opr_impl.h"
 #include "src/cuda/batched_matrix_mul/opr_impl.h"
-#include "src/cuda/check_has_inf/opr_impl.h"
+#include "src/cuda/check_non_finite/opr_impl.h"
 #include "src/cuda/checksum/opr_impl.h"
 #include "src/cuda/concat/opr_impl.h"
 #include "src/cuda/cond_take/opr_impl.h"
@@ -56,6 +55,7 @@
 #include "src/cuda/matrix_mul/opr_impl.h"
 #include "src/cuda/max_tensor_diff/opr_impl.h"
 #include "src/cuda/mesh_indexing/opr_impl.h"
+#include "src/cuda/padding/opr_impl.h"
 #include "src/cuda/param_pack/opr_impl.h"
 #include "src/cuda/pooling/opr_impl.h"
 #include "src/cuda/powc/opr_impl.h"

@@ -34,9 +34,7 @@ public:
 
     public:
         Content(std::string file_name, std::string content_name, std::string id)
-                : m_file_name(file_name),
-                  m_content_name(content_name),
-                  m_id(id) {}
+                : m_file_name(file_name), m_content_name(content_name), m_id(id) {}
         const std::string& file_name() const { return m_file_name; }
         const std::string& content_name() const { return m_content_name; }
         const std::string& id() const { return m_id; }
@@ -55,16 +53,15 @@ public:
 class Chunk : public VisableDataSet::Content {
 private:
     const char* enum_str[2] = {"static_mem", "weight_mem"};
-    std::string m_type, m_time_begin, m_time_end, m_logic_addr_begin,
-            m_logic_addr_end,
+    std::string m_type, m_time_begin, m_time_end, m_logic_addr_begin, m_logic_addr_end,
             m_overwrite_dest_id;  // m_overwriter_dest_id = "-1" means no
                                   // overwrite dest
 public:
     enum chunk_type { static_mem, weight_mem };
 
-    Chunk(std::string id, chunk_type type, std::string time_begin,
-          std::string time_end, std::string logic_addr_begin,
-          std::string logic_addr_end, std::string overwrite_dest_id)
+    Chunk(std::string id, chunk_type type, std::string time_begin, std::string time_end,
+          std::string logic_addr_begin, std::string logic_addr_end,
+          std::string overwrite_dest_id)
             : Content("StaticMemoryInfo.json", "chunk", id),
               m_type(enum_str[type]),
               m_time_begin(time_begin),

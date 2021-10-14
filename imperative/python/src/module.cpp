@@ -12,14 +12,14 @@
 #include <pybind11/eval.h>
 
 #define DO_IMPORT_ARRAY
-#include "./numpy_dtypes.h"
 #include "./helper.h"
+#include "./numpy_dtypes.h"
 
 #include "./common.h"
-#include "./utils.h"
-#include "./imperative_rt.h"
 #include "./graph_rt.h"
+#include "./imperative_rt.h"
 #include "./ops.h"
+#include "./utils.h"
 
 #include "./tensor.h"
 
@@ -32,7 +32,10 @@ using namespace mgb::imperative::python;
 
 PYBIND11_MODULE(MODULE_NAME, m) {
     // initialize numpy
-    if ([]() {import_array1(1); return 0;}()) {
+    if ([]() {
+            import_array1(1);
+            return 0;
+        }()) {
         throw py::error_already_set();
     }
 
@@ -59,14 +62,15 @@ PYBIND11_MODULE(MODULE_NAME, m) {
     init_graph_rt(graph);
     init_ops(ops);
 
-    py::exec(R"(
+    py::exec(
+            R"(
         from .common import *
         from .utils import *
         from .imperative import *
         from .graph import *
         from .ops import OpDef
         )",
-        py::getattr(m, "__dict__"));
+            py::getattr(m, "__dict__"));
 
     init_tensor(submodule(m, "core2"));
 }

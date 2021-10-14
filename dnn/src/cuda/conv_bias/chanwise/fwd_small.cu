@@ -34,17 +34,18 @@ enum DepthwiseConv2dDirection { DIRECTION_FORWARD, DIRECTION_BACKWARD };
 // one each in the lower and upper half of a tile.
 // Backprop input direction is the same as forward direction with the filter
 // rotated by 180°.
-template <typename T, typename T2, DepthwiseConv2dDirection kDirection,
-          int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth,
-          bool kKnownEvenHeight>
+template <
+        typename T, typename T2, DepthwiseConv2dDirection kDirection,
+        int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth,
+        bool kKnownEvenHeight>
 __global__ void
 #if __CUDA_ARCH__ >= 750
 __launch_bounds__(1024, 1)
 #else
 __launch_bounds__(1024, 2)
 #endif
-        DepthwiseConv2dGPUKernelNCHWSmall(const Param param, const T* input,
-                                          const T* filter, T* output) {
+        DepthwiseConv2dGPUKernelNCHWSmall(
+                const Param param, const T* input, const T* filter, T* output) {
     // Holds block plus halo and filter data for blockDim.z depths.
     extern __shared__ __align__(8) unsigned char shared_memory[];
     static_assert(sizeof(T) <= 8, "Insufficient alignment detected");
@@ -54,12 +55,10 @@ __launch_bounds__(1024, 2)
     const int in_height = static_cast<int>(param.src_h);
     const int in_width = static_cast<int>(param.src_w);
     const int in_depth = static_cast<int>(param.src_chl);
-    const int filter_height = kKnownFilterHeight < 0
-                                      ? static_cast<int>(param.flt_h)
-                                      : kKnownFilterHeight;
-    const int filter_width = kKnownFilterWidth < 0
-                                     ? static_cast<int>(param.flt_w)
-                                     : kKnownFilterWidth;
+    const int filter_height =
+            kKnownFilterHeight < 0 ? static_cast<int>(param.flt_h) : kKnownFilterHeight;
+    const int filter_width =
+            kKnownFilterWidth < 0 ? static_cast<int>(param.flt_w) : kKnownFilterWidth;
     const int pad_height = static_cast<int>(param.pad_h);
     const int pad_width = static_cast<int>(param.pad_w);
 
@@ -139,8 +138,7 @@ __launch_bounds__(1024, 2)
 
         if (filter_write_offset != 0) {
             const int filter_offset =
-                    (channel + filter_channel) % in_depth * filter_pixels +
-                    filter_pix;
+                    (channel + filter_channel) % in_depth * filter_pixels + filter_pix;
             shared_data[filter_write_offset] = *(filter_offset + filter);
         }
 
@@ -181,23 +179,23 @@ __launch_bounds__(1024, 2)
     }
 }
 
-template <typename T, typename T2, DepthwiseConv2dDirection kDirection,
-          int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth,
-          bool kKnownEvenHeight>
-void LaunchDepthwiseConv2dGPUSmall(const Param& param, const T* input,
-                                   const T* filter, T* output,
-                                   cudaStream_t stream) {
+template <
+        typename T, typename T2, DepthwiseConv2dDirection kDirection,
+        int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth,
+        bool kKnownEvenHeight>
+void LaunchDepthwiseConv2dGPUSmall(
+        const Param& param, const T* input, const T* filter, T* output,
+        cudaStream_t stream) {
     const int block_height = (param.src_h + 1) / 2;
     dim3 block_dim;
     int block_count;
     void (*kernel)(const Param, const T*, const T*, T*);
     block_dim = dim3(param.src_w, block_height, kBlockDepth);
-    block_count =
-            DIVUP(param.batch * param.src_chl * param.chl_mul, kBlockDepth) *
-            kBlockDepth;
+    block_count = DIVUP(param.batch * param.src_chl * param.chl_mul, kBlockDepth) *
+                  kBlockDepth;
     kernel = DepthwiseConv2dGPUKernelNCHWSmall<
-            T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight,
-            kBlockDepth, kKnownEvenHeight>;
+            T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, kBlockDepth,
+            kKnownEvenHeight>;
     const int tile_width = param.src_w + param.flt_w - 1;
     const int tile_height = block_height * 2 + param.flt_h - 1;
     const int tile_pixels = tile_height * tile_width;
@@ -206,48 +204,51 @@ void LaunchDepthwiseConv2dGPUSmall(const Param& param, const T* input,
             kBlockDepth * (tile_pixels + filter_pixels) * sizeof(T);
     const int num_outputs = param.out_h * param.out_w * block_count;
 
-    block_count = GetFixedBlockSize(num_outputs, kernel, shared_memory_size,
-                                    block_dim.x * block_dim.y * block_dim.z);
+    block_count = GetFixedBlockSize(
+            num_outputs, kernel, shared_memory_size,
+            block_dim.x * block_dim.y * block_dim.z);
     kernel<<<block_count, block_dim, shared_memory_size, stream>>>(
             param, input, filter, output);
     after_kernel_launch();
 }
 
-template <typename T, typename T2, DepthwiseConv2dDirection kDirection,
-          int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth>
-void LaunchDepthwiseConv2dGPUSmall(const Param& param, const T* input,
-                                   const T* filter, T* output,
-                                   cudaStream_t stream) {
+template <
+        typename T, typename T2, DepthwiseConv2dDirection kDirection,
+        int kKnownFilterWidth, int kKnownFilterHeight, int kBlockDepth>
+void LaunchDepthwiseConv2dGPUSmall(
+        const Param& param, const T* input, const T* filter, T* output,
+        cudaStream_t stream) {
     if (param.src_h & 1) {
         return LaunchDepthwiseConv2dGPUSmall<
-                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight,
-                kBlockDepth, false>(param, input, filter, output, stream);
+                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, kBlockDepth,
+                false>(param, input, filter, output, stream);
     } else {
         return LaunchDepthwiseConv2dGPUSmall<
-                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight,
-                kBlockDepth, true>(param, input, filter, output, stream);
+                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, kBlockDepth,
+                true>(param, input, filter, output, stream);
     }
 }
 
-template <typename T, typename T2, DepthwiseConv2dDirection kDirection,
-          int kKnownFilterWidth, int kKnownFilterHeight>
-void LaunchDepthwiseConv2dGPUSmall(const Param& param, const T* input,
-                                   const T* filter, T* output,
-                                   cudaStream_t stream) {
+template <
+        typename T, typename T2, DepthwiseConv2dDirection kDirection,
+        int kKnownFilterWidth, int kKnownFilterHeight>
+void LaunchDepthwiseConv2dGPUSmall(
+        const Param& param, const T* input, const T* filter, T* output,
+        cudaStream_t stream) {
     // Maximize (power of two) kBlockDepth while keeping a block within 1024
     // threads (2 pixels per thread).
     const int block_pixels = (param.src_h + 1) / 2 * param.src_w;
     if (block_pixels > 256) {
-        LaunchDepthwiseConv2dGPUSmall<T, T2, kDirection, kKnownFilterWidth,
-                                      kKnownFilterHeight, 2>(
+        LaunchDepthwiseConv2dGPUSmall<
+                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, 2>(
                 param, input, filter, output, stream);
     } else if (block_pixels > 128) {
-        LaunchDepthwiseConv2dGPUSmall<T, T2, kDirection, kKnownFilterWidth,
-                                      kKnownFilterHeight, 4>(
+        LaunchDepthwiseConv2dGPUSmall<
+                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, 4>(
                 param, input, filter, output, stream);
     } else {
-        LaunchDepthwiseConv2dGPUSmall<T, T2, kDirection, kKnownFilterWidth,
-                                      kKnownFilterHeight, 8>(
+        LaunchDepthwiseConv2dGPUSmall<
+                T, T2, kDirection, kKnownFilterWidth, kKnownFilterHeight, 8>(
                 param, input, filter, output, stream);
     }
 }
@@ -260,27 +261,29 @@ namespace conv_bias {
 namespace chanwise {
 
 // =====================================fwd=====================================
-#define LAUNCH(type, type2)                                                   \
-    if (param.flt_h == 3 && param.flt_w == 3) {                               \
-        LaunchDepthwiseConv2dGPUSmall<                                        \
-                type, type2, DepthwiseConv2dDirection::DIRECTION_FORWARD, 3,  \
-                3>(param, src, flt, dst, stream);                             \
-    } else {                                                                  \
-        LaunchDepthwiseConv2dGPUSmall<                                        \
-                type, type2, DepthwiseConv2dDirection::DIRECTION_FORWARD, -1, \
-                -1>(param, src, flt, dst, stream);                            \
+#define LAUNCH(type, type2)                                                        \
+    if (param.flt_h == 3 && param.flt_w == 3) {                                    \
+        LaunchDepthwiseConv2dGPUSmall<                                             \
+                type, type2, DepthwiseConv2dDirection::DIRECTION_FORWARD, 3, 3>(   \
+                param, src, flt, dst, stream);                                     \
+    } else {                                                                       \
+        LaunchDepthwiseConv2dGPUSmall<                                             \
+                type, type2, DepthwiseConv2dDirection::DIRECTION_FORWARD, -1, -1>( \
+                param, src, flt, dst, stream);                                     \
     }
 
 template <>
-void run_fwd_small(float* dst, const float* src, const float* flt,
-                   const Param& param, cudaStream_t stream) {
+void run_fwd_small(
+        float* dst, const float* src, const float* flt, const Param& param,
+        cudaStream_t stream) {
     LAUNCH(float, float2);
 }
 
 #if CUDA_VERSION >= 9000
 template <>
-void run_fwd_small(__half* dst, const __half* src, const __half* flt,
-                   const Param& param, cudaStream_t stream) {
+void run_fwd_small(
+        __half* dst, const __half* src, const __half* flt, const Param& param,
+        cudaStream_t stream) {
     LAUNCH(__half, __half2);
 }
 #endif

@@ -43,16 +43,15 @@ public:
         struct KeyHash {
             size_t operator()(
                     const std::pair<TensorFormats, TensorFormats>& val) const {
-                size_t h1 =
-                        std::hash<uint32_t>()(static_cast<uint32_t>(val.first));
-                size_t h2 = std::hash<uint32_t>()(
-                        static_cast<uint32_t>(val.second));
+                size_t h1 = std::hash<uint32_t>()(static_cast<uint32_t>(val.first));
+                size_t h2 = std::hash<uint32_t>()(static_cast<uint32_t>(val.second));
                 return mgb::hash_pair_combine(h1, h2);
             }
         };
         const VarNode* var;  ///< pointer to var node
-        std::unordered_map<std::pair<TensorFormats, TensorFormats>, float,
-                           KeyHash>
+        std::unordered_map<
+                std::pair<TensorFormats, TensorFormats>, float,
+                KeyHash>
                 costs;  ///< costs of var node, i.e. the elapsed
                         ///< device time of the layout transform.
                         ///< Key of the hashmap indicates the
@@ -71,11 +70,10 @@ public:
         /// A hashmap, that maps the var node to the costs of layout transform
         ThinHashMap<VarNode*, VarNodeRecord> var_record;
     };
-    using OprFilter = thin_function<bool(const cg::OperatorNodeBase*,
-                                         cg::OperatorNodeBase*)>;
-    using VarNodeFilter =
-            thin_function<bool(const VarNode*, TensorShape, TensorShape,
-                               ReformatManager::ReformatKey)>;
+    using OprFilter =
+            thin_function<bool(const cg::OperatorNodeBase*, cg::OperatorNodeBase*)>;
+    using VarNodeFilter = thin_function<bool(
+            const VarNode*, TensorShape, TensorShape, ReformatManager::ReformatKey)>;
 
     ProfilerBase(float opr_threshold = 2.f, float var_node_threshold = 2.f);
     ProfilerBase(OprFilter opr_filter, VarNodeFilter var_node_filter = {})

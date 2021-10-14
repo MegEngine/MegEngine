@@ -11,8 +11,8 @@
 #pragma once
 #include "megdnn/oprs.h"
 
-#include "test/common/rng.h"
 #include "test/common/index.h"
+#include "test/common/rng.h"
 
 namespace megdnn {
 namespace test {

@@ -21,8 +21,8 @@
 #include <cusolverDn.h>
 #include "cuda.h"
 #include "cutlass/cutlass.h"
-#include "src/cuda/cudnn_with_check.h"
 #include "src/cuda/atomic_add.cuh"
+#include "src/cuda/cudnn_with_check.h"
 
 #define cuda_check(_x)                                       \
     do {                                                     \
@@ -78,16 +78,16 @@
     } while (0)
 
 #if MEGDNN_THREADS_512
-#define NR_THREADS 512
+#define NR_THREADS   512
 #define NR_THREADS_X 32
-#define NR_THREADS_Y 16 
+#define NR_THREADS_Y 16
 #else
-#define NR_THREADS 1024
+#define NR_THREADS   1024
 #define NR_THREADS_X 32
 #define NR_THREADS_Y 32
 #endif
 
-#define DIVUP(x, y) (((x) + (y)-1) / (y))
+#define DIVUP(x, y)   (((x) + (y)-1) / (y))
 #define ROUNDUP(x, y) (DIVUP(x, y) * (y))
 
 #define KERN_FOR(i, n)                                              \
@@ -100,13 +100,10 @@ namespace cuda {
 //! Error handling funcions
 MEGDNN_NORETURN void __throw_cuda_error__(cudaError_t err, const char* msg);
 MEGDNN_NORETURN void __throw_cudnn_error__(cudnnStatus_t err, const char* msg);
-MEGDNN_NORETURN void __throw_cublas_error__(cublasStatus_t err,
-                                            const char* msg);
-MEGDNN_NORETURN void __throw_cusolver_error__(cusolverStatus_t err,
-                                              const char* msg);
+MEGDNN_NORETURN void __throw_cublas_error__(cublasStatus_t err, const char* msg);
+MEGDNN_NORETURN void __throw_cusolver_error__(cusolverStatus_t err, const char* msg);
 MEGDNN_NORETURN void __throw_cuda_driver_error__(CUresult err, const char* msg);
-MEGDNN_NORETURN void __throw_cutlass_error__(cutlass::Status status,
-                                             const char* msg);
+MEGDNN_NORETURN void __throw_cutlass_error__(cutlass::Status status, const char* msg);
 MEGDNN_NORETURN void report_error(const char* msg);
 
 template <typename T, size_t N>
@@ -132,8 +129,7 @@ uint32_t safe_size_in_kern(size_t size);
 template <typename T>
 inline __device__ void fill_shared_mem(T* shared, uint32_t n, const T& val) {
     uint32_t stride = blockDim.x * blockDim.y * blockDim.z;
-    uint32_t i =
-            (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
+    uint32_t i = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
     for (; i < n; i += stride)
         shared[i] = val;
 }
@@ -154,8 +150,7 @@ struct CudaDTypeParamImpl<dt_quint8> : DTypeParamImpl<dt_quint8> {
     float inv_scale;
     CudaDTypeParamImpl() = default;
     CudaDTypeParamImpl(float scale, uint8_t zero_point)
-            : DTypeParamImpl<dt_quint8>(scale, zero_point),
-              inv_scale(1.0f / scale) {}
+            : DTypeParamImpl<dt_quint8>(scale, zero_point), inv_scale(1.0f / scale) {}
     CudaDTypeParamImpl(const DTypeParamImpl<dt_quint8>& param)
             : CudaDTypeParamImpl(param.scale, param.zero_point) {}
 
@@ -210,8 +205,7 @@ struct CudaDTypeParamImpl<dt_quint4> : DTypeParamImpl<dt_quint4> {
     float inv_scale;
     CudaDTypeParamImpl() = default;
     CudaDTypeParamImpl(float scale, uint8_t zero_point)
-            : DTypeParamImpl<dt_quint4>(scale, zero_point),
-              inv_scale(1.0f / scale) {}
+            : DTypeParamImpl<dt_quint4>(scale, zero_point), inv_scale(1.0f / scale) {}
     CudaDTypeParamImpl(const DTypeParamImpl<dt_quint4>& param)
             : CudaDTypeParamImpl(param.scale, param.zero_point) {}
 
@@ -269,8 +263,7 @@ static inline MEGDNN_DEVICE void dot_prod(int a, int b, int c, int& d) {
 // the device, which causes significant performance drop in some cases. For
 // details, refer to
 // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
-MEGDNN_DEVICE __forceinline__ static int transform_float4_to_int8x4(
-        float4 val) {
+MEGDNN_DEVICE __forceinline__ static int transform_float4_to_int8x4(float4 val) {
     int ix, iy, iz, iw;
     asm volatile("cvt.rni.s8.f32 %0, %1;" : "=r"(ix) : "f"(val.x));
     asm volatile("cvt.rni.s8.f32 %0, %1;" : "=r"(iy) : "f"(val.y));
@@ -283,8 +276,7 @@ MEGDNN_DEVICE __forceinline__ static int transform_float4_to_int8x4(
     return ix;
 }
 
-MEGDNN_DEVICE __forceinline__ static float4 transform_int8x4_to_float4(
-        int val) {
+MEGDNN_DEVICE __forceinline__ static float4 transform_int8x4_to_float4(int val) {
     int ix, iy, iz, iw = val;
 
     // Extract the 4 bytes
@@ -304,16 +296,13 @@ MEGDNN_DEVICE __forceinline__ static float4 transform_int8x4_to_float4(
     return ::make_float4(fx, fy, fz, fw);
 }
 
-MEGDNN_DEVICE __forceinline__ static float4 operator*(float scalar,
-                                                      float4 val) {
-    return make_float4(scalar * val.x, scalar * val.y, scalar * val.z,
-                       scalar * val.w);
+MEGDNN_DEVICE __forceinline__ static float4 operator*(float scalar, float4 val) {
+    return make_float4(scalar * val.x, scalar * val.y, scalar * val.z, scalar * val.w);
 }
 
-MEGDNN_DEVICE __forceinline__ static float4 operator+(float4 lval,
-                                                      float4 rval) {
-    return make_float4(lval.x + rval.x, lval.y + rval.y, lval.z + rval.z,
-                       lval.w + rval.w);
+MEGDNN_DEVICE __forceinline__ static float4 operator+(float4 lval, float4 rval) {
+    return make_float4(
+            lval.x + rval.x, lval.y + rval.y, lval.z + rval.z, lval.w + rval.w);
 }
 
 #endif

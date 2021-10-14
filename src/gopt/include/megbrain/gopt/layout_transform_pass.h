@@ -11,8 +11,8 @@
  */
 
 #pragma once
-#include "megbrain/gopt/inference.h"
 #include "megbrain/gopt/framework.h"
+#include "megbrain/gopt/inference.h"
 
 namespace mgb {
 namespace gopt {
@@ -28,11 +28,11 @@ class LayoutTransformPass final : public Pass {
 public:
     const char* name() const override { return "layout assignment pass"; }
     void apply(OptState& opt) const override;
-    LayoutTransformPass(std::unique_ptr<LayoutTransformContext> ctx,
-                         std::unique_ptr<SolverBase> solver)
+    LayoutTransformPass(
+            std::unique_ptr<LayoutTransformContext> ctx,
+            std::unique_ptr<SolverBase> solver)
             : m_ctx{std::move(ctx)}, m_solver{std::move(solver)} {}
-    static std::unique_ptr<LayoutTransformPass> make(
-            GraphTuningOptions::Target target);
+    static std::unique_ptr<LayoutTransformPass> make(GraphTuningOptions::Target target);
 
 private:
     std::unique_ptr<LayoutTransformContext> m_ctx;

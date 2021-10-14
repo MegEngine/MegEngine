@@ -9,8 +9,8 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #pragma once
-#include "megdnn/opr_param_defs.h"
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 
 namespace megdnn {
 namespace test {
@@ -36,41 +36,49 @@ std::vector<TestArg> get_args() {
                 for (size_t kw = 3; kw < 9; kw += 2) {
                     cur_param.ksize_h = kh;
                     cur_param.ksize_w = kw;
-                    cur_param.borderMode = param::SeparableFilter::BorderMode::
-                            BORDER_REPLICATE;
-                    args.emplace_back(cur_param, TensorShape{1, i, j, 1},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
-                    args.emplace_back(cur_param, TensorShape{3, i, j, 3},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
+                    cur_param.borderMode =
+                            param::SeparableFilter::BorderMode::BORDER_REPLICATE;
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, j, 1},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{3, i, j, 3},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
 
                     cur_param.borderMode =
                             param::SeparableFilter::BorderMode::BORDER_REFLECT;
-                    args.emplace_back(cur_param, TensorShape{1, i, j, 1},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
-                    args.emplace_back(cur_param, TensorShape{3, i, j, 3},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, j, 1},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{3, i, j, 3},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
 
-                    cur_param.borderMode = param::SeparableFilter::BorderMode::
-                            BORDER_REFLECT_101;
-                    args.emplace_back(cur_param, TensorShape{1, i, j, 1},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
-                    args.emplace_back(cur_param, TensorShape{3, i, j, 3},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
+                    cur_param.borderMode =
+                            param::SeparableFilter::BorderMode::BORDER_REFLECT_101;
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, j, 1},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{3, i, j, 3},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
 
                     cur_param.borderMode =
                             param::SeparableFilter::BorderMode::BORDER_CONSTANT;
-                    args.emplace_back(cur_param, TensorShape{1, i, j, 1},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
-                    args.emplace_back(cur_param, TensorShape{3, i, j, 3},
-                                      TensorShape{1, 1, 1, (size_t)kh},
-                                      TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{1, i, j, 1},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
+                    args.emplace_back(
+                            cur_param, TensorShape{3, i, j, 3},
+                            TensorShape{1, 1, 1, (size_t)kh},
+                            TensorShape{1, 1, 1, (size_t)kw});
                 }
             }
         }

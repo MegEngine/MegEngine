@@ -23,16 +23,16 @@ using megdnn::arm_common::TypeCvtOp;
 
 constexpr int32_t SHIFT = (1 << 30);
 
-inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index){
-   int8x8x2_t src;
-   src.val[0] = vget_low_s8(a);
-   src.val[1] = vget_high_s8(a);
-   uint8x8_t index_low  = vget_low_u8(index);
-   uint8x8_t index_high = vget_high_u8(index);
-   int8x8_t r00 = vtbl2_s8(src,vreinterpret_s8_u8(index_low)) ;
-   int8x8_t r01 = vtbl2_s8(src,vreinterpret_s8_u8(index_high));
-   int8x16_t r =  vcombine_s8(r00,r01);
-   return r;
+inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index) {
+    int8x8x2_t src;
+    src.val[0] = vget_low_s8(a);
+    src.val[1] = vget_high_s8(a);
+    uint8x8_t index_low = vget_low_u8(index);
+    uint8x8_t index_high = vget_high_u8(index);
+    int8x8_t r00 = vtbl2_s8(src, vreinterpret_s8_u8(index_low));
+    int8x8_t r01 = vtbl2_s8(src, vreinterpret_s8_u8(index_high));
+    int8x16_t r = vcombine_s8(r00, r01);
+    return r;
 }
 
 #define ST1_S32X4(dst0, tptr) vst1q_u32(tptr, dst0);
@@ -48,28 +48,27 @@ inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index){
         ST1_S32X4(dst1, tptr + 4);                                       \
     }
 
-#define POSTPROCESS2_1X8(dst0, tptr, dptr)                                  \
-    if (last_ic && fused_kern) {                                            \
-       uint32x4x2_t temp;                                                   \
-       uint32x4_t temp00, temp11;                                           \
-       temp = vzipq_u32(dst0.val[0], dst0.val[1]);                          \
-       temp00 = temp.val[0];                                                \
-       temp11 = temp.val[1];                                                \
-       op({{temp00,temp11}},reinterpret_cast<dt_quint8*>(dptr));            \
-    } else {                                                                \
-        ST2_S32X4X2(dst0, tptr);                                            \
+#define POSTPROCESS2_1X8(dst0, tptr, dptr)                          \
+    if (last_ic && fused_kern) {                                    \
+        uint32x4x2_t temp;                                          \
+        uint32x4_t temp00, temp11;                                  \
+        temp = vzipq_u32(dst0.val[0], dst0.val[1]);                 \
+        temp00 = temp.val[0];                                       \
+        temp11 = temp.val[1];                                       \
+        op({{temp00, temp11}}, reinterpret_cast<dt_quint8*>(dptr)); \
+    } else {                                                        \
+        ST2_S32X4X2(dst0, tptr);                                    \
     }
 
-#define POSTPROCESS_2X4(dst0, dst1, tptr1, tptr2, dptr1, dptr2)    \
-    if (last_ic && fused_kern) {                                   \
-        uint32x2_t res = reinterpret_cast<uint32x2_t>(             \
-                op({{vreinterpretq_u32_s32(dst0),                  \
-                     vreinterpretq_u32_s32(dst1)}}));              \
-        vst1_lane_u32(reinterpret_cast<uint32_t*>(dptr1), res, 0); \
-        vst1_lane_u32(reinterpret_cast<uint32_t*>(dptr2), res, 1); \
-    } else {                                                       \
-        ST1_S32X4(dst0, tptr1);                                    \
-        ST1_S32X4(dst1, tptr2);                                    \
+#define POSTPROCESS_2X4(dst0, dst1, tptr1, tptr2, dptr1, dptr2)                    \
+    if (last_ic && fused_kern) {                                                   \
+        uint32x2_t res = reinterpret_cast<uint32x2_t>(                             \
+                op({{vreinterpretq_u32_s32(dst0), vreinterpretq_u32_s32(dst1)}})); \
+        vst1_lane_u32(reinterpret_cast<uint32_t*>(dptr1), res, 0);                 \
+        vst1_lane_u32(reinterpret_cast<uint32_t*>(dptr2), res, 1);                 \
+    } else {                                                                       \
+        ST1_S32X4(dst0, tptr1);                                                    \
+        ST1_S32X4(dst1, tptr2);                                                    \
     }
 
 #define POSTPROCESS_1X4(dst0, tptr, dptr)                         \
@@ -91,9 +90,8 @@ inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index){
         tptr = vgetq_lane_u32(dst0, 0);                            \
     }
 
-#define CALC_DST(_sum)            \
-    _sum = vreinterpretq_u32_s32( \
-            vaddq_s32(vreinterpretq_s32_u32(_sum), _shift_zp))
+#define CALC_DST(_sum) \
+    _sum = vreinterpretq_u32_s32(vaddq_s32(vreinterpretq_s32_u32(_sum), _shift_zp))
 
 #define CALC_0(_k_idx, _c_idx)                                                 \
     _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx);                                 \
@@ -107,25 +105,22 @@ inline int8x16_t vqtbl1q_s8_v7(int8x16_t a, uint8x16_t index){
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_2(_k1_idx, _k2_idx, _c_idx)                                     \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx);                               \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k1_idx, _elem);            \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k1_idx));      \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k2_idx, _elem);            \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k2_idx));      \
+#define CALC_2(_k1_idx, _k2_idx, _c_idx)                                        \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx);                                  \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k1_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k1_idx)); \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));    \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k2_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k2_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_2x2_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW;
 
@@ -138,10 +133,8 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
         _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
     }
 
-    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16,
-                              2, 3, 16, 16, 3, 4, 16, 16};
-    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16,
-                              6, 7, 16, 16, 7, 8, 16, 16};
+    const uint8x16_t _idx0 = {0, 1, 16, 16, 1, 2, 16, 16, 2, 3, 16, 16, 3, 4, 16, 16};
+    const uint8x16_t _idx1 = {4, 5, 16, 16, 5, 6, 16, 16, 6, 7, 16, 16, 7, 8, 16, 16};
     //! here we use uint32_t for calc
     uint32_t* outptr = reinterpret_cast<uint32_t*>(temp);
     uint32_t* outptr2 = outptr + OW;
@@ -154,8 +147,8 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
 
     const uint8_t* k0 = filter;
 
-    uint8x16_t _k = vreinterpretq_u8_u32(
-            vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
+    uint8x16_t _k =
+            vreinterpretq_u8_u32(vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
     uint8x16_t _idx = {0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16};
     uint8x16_t _k1 = vqtbl1q_s8_v7(_k, _idx);
     _idx = {2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16};
@@ -200,13 +193,13 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
             uint8x16_t _r11 = vextq_u8(_r10, _r11_, 1);
             uint8x16_t _r21 = vextq_u8(_r20, _r21_, 1);
 
-            int16x8x2_t r_0 = vzipq_s16(vreinterpretq_s16_u8(_r00),
-                                         vreinterpretq_s16_u8(_r10));
+            int16x8x2_t r_0 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r00), vreinterpretq_s16_u8(_r10));
             uint8x16_t _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             uint8x16_t _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            int16x8x2_t r_1 = vzipq_s16(vreinterpretq_s16_u8(_r01),
-                                        vreinterpretq_s16_u8(_r11));
+            int16x8x2_t r_1 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r01), vreinterpretq_s16_u8(_r11));
             int8x16_t _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             int8x16_t _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -215,13 +208,11 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
             SUB_ZP(_sum01.val[0], _r2);
             SUB_ZP(_sum01.val[1], _r3);
 
-            r_0 = vzipq_s16(vreinterpretq_s16_u8(_r10),
-                            vreinterpretq_s16_u8(_r20));
+            r_0 = vzipq_s16(vreinterpretq_s16_u8(_r10), vreinterpretq_s16_u8(_r20));
             _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            r_1 = vzipq_s16(vreinterpretq_s16_u8(_r11),
-                            vreinterpretq_s16_u8(_r21));
+            r_1 = vzipq_s16(vreinterpretq_s16_u8(_r11), vreinterpretq_s16_u8(_r21));
             _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -362,13 +353,13 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
             uint8x16_t _r01 = vextq_u8(_r00, _r01_, 1);
             uint8x16_t _r11 = vextq_u8(_r10, _r11_, 1);
 
-            int16x8x2_t r_0 = vzipq_s16(vreinterpretq_s16_u8(_r00),
-                                         vreinterpretq_s16_u8(_r10));
+            int16x8x2_t r_0 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r00), vreinterpretq_s16_u8(_r10));
             uint8x16_t _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             uint8x16_t _r2 = vreinterpretq_u8_s8(r_0.val[1]);
 
-            int16x8x2_t r_1 = vzipq_s16(vreinterpretq_s16_u8(_r01),
-                                        vreinterpretq_s16_u8(_r11));
+            int16x8x2_t r_1 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r01), vreinterpretq_s16_u8(_r11));
             int8x16_t _r1 = vreinterpretq_u8_s8(r_1.val[0]);
             int8x16_t _r3 = vreinterpretq_u8_s8(r_1.val[1]);
 
@@ -451,14 +442,13 @@ void conv_bias::conv_direct_stride1_2x2_quint8_dot(
 #undef SUB_ZP
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_3x3_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW;
 
@@ -471,10 +461,8 @@ void conv_bias::conv_direct_stride1_3x3_quint8_dot(
         _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
     }
 
-    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16,
-                              2, 3, 4, 16, 3, 4, 5, 16};
-    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16,
-                              6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx0 = {0, 1, 2, 16, 1, 2, 3, 16, 2, 3, 4, 16, 3, 4, 5, 16};
+    const uint8x16_t _idx1 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx2 = {8,  9,  10, 16, 9,  10, 11, 16,
                               10, 11, 12, 16, 11, 12, 13, 16};
     uint32_t* outptr = reinterpret_cast<uint32_t*>(temp);
@@ -691,14 +679,13 @@ void conv_bias::conv_direct_stride1_3x3_quint8_dot(
     }
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_2x2_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - 2 * OW + IW;
 
@@ -711,8 +698,7 @@ void conv_bias::conv_direct_stride2_2x2_quint8_dot(
         _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
     }
 
-    const uint8x16_t _idx0 = {0, 1, 16, 16, 2, 3, 16, 16,
-                              4, 5, 16, 16, 6, 7, 16, 16};
+    const uint8x16_t _idx0 = {0, 1, 16, 16, 2, 3, 16, 16, 4, 5, 16, 16, 6, 7, 16, 16};
     uint32_t* outptr = reinterpret_cast<uint32_t*>(temp);
     uint8_t* dstptr = dst;
 
@@ -721,8 +707,8 @@ void conv_bias::conv_direct_stride2_2x2_quint8_dot(
 
     const uint8_t* k0 = filter;
 
-    uint8x16_t _k = vreinterpretq_u8_u32(
-            vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
+    uint8x16_t _k =
+            vreinterpretq_u8_u32(vdupq_n_u32(*reinterpret_cast<const int32_t*>(k0)));
     uint8x16_t _idx = {0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16, 0, 1, 16, 16};
     uint8x16_t _k1 = vqtbl1q_s8_v7(_k, _idx);
     _idx = {2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16, 2, 3, 16, 16};
@@ -752,8 +738,8 @@ void conv_bias::conv_direct_stride2_2x2_quint8_dot(
             //! here will not not read out of bound
             uint8x16_t _r10 = vld1q_u8(r1);
 
-            int16x8x2_t r_0 = vzipq_s16(vreinterpretq_s16_u8(_r00),
-                                         vreinterpretq_s16_u8(_r10));
+            int16x8x2_t r_0 =
+                    vzipq_s16(vreinterpretq_s16_u8(_r00), vreinterpretq_s16_u8(_r10));
             uint8x16_t _r0 = vreinterpretq_u8_s8(r_0.val[0]);
             uint8x16_t _r1 = vreinterpretq_u8_s8(r_0.val[1]);
             SUB_ZP(_sum0, _r0);
@@ -802,14 +788,13 @@ void conv_bias::conv_direct_stride2_2x2_quint8_dot(
 #undef SUB_ZP
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_3x3_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - 2 * OW + IW;
 
@@ -822,13 +807,11 @@ void conv_bias::conv_direct_stride2_3x3_quint8_dot(
         _shift_zp = vdupq_n_s32(src_filter_zp - SHIFT);
     }
 
-    const uint8x16_t _idx0 = {0, 1, 2, 16, 2, 3, 4, 16,
-                              4, 5, 6, 16, 6, 7, 8, 16};
+    const uint8x16_t _idx0 = {0, 1, 2, 16, 2, 3, 4, 16, 4, 5, 6, 16, 6, 7, 8, 16};
     const uint8x16_t _idx1 = {8,  9,  10, 16, 10, 11, 12, 16,
                               12, 13, 14, 16, 16, 16, 16, 16};
     //! start from 12 13 14 15
-    const uint8x16_t _idx2 = {2, 3, 4, 16, 4, 5, 6,  16,
-                              6, 7, 8, 16, 8, 9, 10, 16};
+    const uint8x16_t _idx2 = {2, 3, 4, 16, 4, 5, 6, 16, 6, 7, 8, 16, 8, 9, 10, 16};
     const uint8x16_t _idx3 = {10, 11, 12, 16, 16, 16, 16, 16,
                               16, 16, 16, 16, 16, 16, 16, 16};
     uint32_t* outptr = reinterpret_cast<uint32_t*>(temp);
@@ -859,8 +842,7 @@ void conv_bias::conv_direct_stride2_3x3_quint8_dot(
 
         int w = 0;
         for (; w + 3 < width; w += 3) {
-            uint32x4_t _sum00, _sum01, _sum02, _sum03, _sum10, _sum11, _sum12,
-                    _sum13;
+            uint32x4_t _sum00, _sum01, _sum02, _sum03, _sum10, _sum11, _sum12, _sum13;
             if (!first_ic) {
                 _sum00 = vld1q_u32(outptr);
                 _sum01 = vld1q_u32(outptr + 4);
@@ -1091,60 +1073,51 @@ void conv_bias::conv_direct_stride2_3x3_quint8_dot(
 #undef CALC_1
 #undef CALC_2
 
-#define CALC_0(_k00_idx, _k01_idx, _c_idx)                                   \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                               \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);           \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx));     \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                               \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);           \
-    _sum0##_c_idx =                                                          \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx));     \
+#define CALC_0(_k00_idx, _k01_idx, _c_idx)                                       \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                                \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));     \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                                \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
     _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_1(_k00_idx, _k01_idx, _c_idx)                                   \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                               \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k00_idx, _elem);           \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx));     \
-    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem)); \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                               \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k01_idx, _elem);           \
-    _sum1##_c_idx =                                                          \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx));     \
+#define CALC_1(_k00_idx, _k01_idx, _c_idx)                                       \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                                \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k00_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));     \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                                \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k01_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_filter_zp, _elem));
 
-#define CALC_2(_k00_idx, _k01_idx, _k10_idx, _k11_idx, _c_idx)           \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                           \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);       \
-    _sum0##_c_idx =                                                      \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
-    _elem2 = vdotq2_u32(_filter_zp, _elem);                              \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                    \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k10_idx, _elem);       \
-    _sum1##_c_idx =                                                      \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k10_idx)); \
-    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);                    \
-    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                           \
-    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);       \
-    _sum0##_c_idx =                                                      \
-            vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
-    _elem2 = vdotq2_u32(_filter_zp, _elem);                              \
-    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                    \
-    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k11_idx, _elem);       \
-    _sum1##_c_idx =                                                      \
-            vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k11_idx)); \
+#define CALC_2(_k00_idx, _k01_idx, _k10_idx, _k11_idx, _c_idx)                   \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##0);                                \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k00_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k00_idx)); \
+    _elem2 = vdotq2_u32(_filter_zp, _elem);                                      \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k10_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k10_idx)); \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);                            \
+    _elem = vqtbl1q_s8_v7(_tmp, _idx##_c_idx##1);                                \
+    _sum0##_c_idx = vdotq_u32(_sum0##_c_idx, _k##_k01_idx, _elem);               \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, vdotq2_u32(_src_zp, _k##_k01_idx)); \
+    _elem2 = vdotq2_u32(_filter_zp, _elem);                                      \
+    _sum0##_c_idx = vsubq_u32(_sum0##_c_idx, _elem2);                            \
+    _sum1##_c_idx = vdotq_u32(_sum1##_c_idx, _k##_k11_idx, _elem);               \
+    _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, vdotq2_u32(_src_zp, _k##_k11_idx)); \
     _sum1##_c_idx = vsubq_u32(_sum1##_c_idx, _elem2);
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_5x5_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW;
 
@@ -1446,14 +1419,13 @@ void conv_bias::conv_direct_stride1_5x5_quint8_dot(
     }
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride1_7x7_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - OW;
 
@@ -1467,8 +1439,7 @@ void conv_bias::conv_direct_stride1_7x7_quint8_dot(
     }
 
     const uint8x16_t _idx00 = {0, 1, 2, 3, 1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6};
-    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16,
-                               6, 7, 8, 16, 7, 8, 9, 16};
+    const uint8x16_t _idx01 = {4, 5, 6, 16, 5, 6, 7, 16, 6, 7, 8, 16, 7, 8, 9, 16};
     const uint8x16_t _idx10 = {4, 5, 6, 7, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 10};
     const uint8x16_t _idx11 = {8,  9,  10, 16, 9,  10, 11, 16,
                                10, 11, 12, 16, 11, 12, 13, 16};
@@ -1789,14 +1760,13 @@ void conv_bias::conv_direct_stride1_7x7_quint8_dot(
     }
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_5x5_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - 2 * OW + IW;
 
@@ -2095,14 +2065,13 @@ void conv_bias::conv_direct_stride2_5x5_quint8_dot(
     }
 }
 
-template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode,
-          typename Op>
+template <bool first_ic, bool last_ic, bool fused_kern, BiasMode bias_mode, typename Op>
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
 void conv_bias::conv_direct_stride2_7x7_quint8_dot(
-        const uint8_t* src, const uint8_t* filter, const int32_t* bias,
-        int32_t* temp, uint8_t* dst, const size_t IH, const size_t IW,
-        const size_t OH, const size_t OW, const uint8_t src_zp,
-        const uint8_t filter_zp, const int32_t src_filter_zp, const Op& op) {
+        const uint8_t* src, const uint8_t* filter, const int32_t* bias, int32_t* temp,
+        uint8_t* dst, const size_t IH, const size_t IW, const size_t OH,
+        const size_t OW, const uint8_t src_zp, const uint8_t filter_zp,
+        const int32_t src_filter_zp, const Op& op) {
     MEGDNN_MARK_USED_VAR(IH);
     const size_t tail_step = IW - 2 * OW + IW;
 
@@ -2116,8 +2085,7 @@ void conv_bias::conv_direct_stride2_7x7_quint8_dot(
     }
 
     const uint8x16_t _idx00 = {0, 1, 2, 3, 2, 3, 4, 5, 4, 5, 6, 7, 6, 7, 8, 9};
-    const uint8x16_t _idx01 = {4, 5, 6,  16, 6,  7,  8,  16,
-                               8, 9, 10, 16, 10, 11, 12, 16};
+    const uint8x16_t _idx01 = {4, 5, 6, 16, 6, 7, 8, 16, 8, 9, 10, 16, 10, 11, 12, 16};
     //! start from 8
     const uint8x16_t& _idx10 = _idx00;
     const uint8x16_t& _idx11 = _idx01;
@@ -2477,25 +2445,29 @@ void conv_bias::conv_direct_stride2_7x7_quint8_dot(
 #undef ST1_S32X4
 #undef ST2_S32X4X2
 
-#define INSTANTIATION(stride, i, first_ic, last_ic, fused_kern, bias, Op)     \
-    template void conv_bias::conv_direct_##stride##_##i##x##i##_quint8_dot<       \
-            first_ic, last_ic, fused_kern, bias, Op>(                         \
-            const uint8_t*, const uint8_t*, const int32_t*, int32_t*,         \
-            uint8_t*, const size_t, const size_t, const size_t, const size_t, \
-            const uint8_t, const uint8_t, const int32_t, const Op&);
+#define INSTANTIATION(stride, i, first_ic, last_ic, fused_kern, bias, Op)          \
+    template void conv_bias::conv_direct_##stride##_##i##x##i##_quint8_dot<        \
+            first_ic, last_ic, fused_kern, bias, Op>(                              \
+            const uint8_t*, const uint8_t*, const int32_t*, int32_t*, uint8_t*,    \
+            const size_t, const size_t, const size_t, const size_t, const uint8_t, \
+            const uint8_t, const int32_t, const Op&);
 
 #define FOR_NONLINEAR(stride, i, first_ic, last_ic, fused_kern, bias) \
-    INSTANTIATION(stride, i, first_ic, last_ic, fused_kern, bias,     \
-                  TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_quint8>)        \
-    INSTANTIATION(stride, i, first_ic, last_ic, fused_kern, bias,     \
-                  ReluOp<dt_qint32 MEGDNN_COMMA dt_quint8>)           \
-    INSTANTIATION(stride, i, first_ic, last_ic, fused_kern, bias,     \
-                  HSwishOp<dt_qint32 MEGDNN_COMMA dt_quint8>)
+    INSTANTIATION(                                                    \
+            stride, i, first_ic, last_ic, fused_kern, bias,           \
+            TypeCvtOp<dt_qint32 MEGDNN_COMMA dt_quint8>)              \
+    INSTANTIATION(                                                    \
+            stride, i, first_ic, last_ic, fused_kern, bias,           \
+            ReluOp<dt_qint32 MEGDNN_COMMA dt_quint8>)                 \
+    INSTANTIATION(                                                    \
+            stride, i, first_ic, last_ic, fused_kern, bias,           \
+            HSwishOp<dt_qint32 MEGDNN_COMMA dt_quint8>)
 
 #define FOR_BIAS(stride, i, first_ic, last_ic, fused_kern)                     \
     FOR_NONLINEAR(stride, i, first_ic, last_ic, fused_kern, BiasMode::NO_BIAS) \
-    FOR_NONLINEAR(stride, i, first_ic, last_ic, fused_kern,                    \
-                  BiasMode::BROADCAST_CHANNEL_BIAS)
+    FOR_NONLINEAR(                                                             \
+            stride, i, first_ic, last_ic, fused_kern,                          \
+            BiasMode::BROADCAST_CHANNEL_BIAS)
 
 #define FOR_KERN(stride, i, first_ic, last_ic)   \
     FOR_BIAS(stride, i, first_ic, last_ic, true) \

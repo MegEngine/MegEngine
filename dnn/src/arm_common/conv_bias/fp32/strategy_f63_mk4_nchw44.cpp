@@ -35,9 +35,9 @@ constexpr float input_parameters[12] = {5.25f, 4.25f, 0.5f, 0.25f, 2.5f, 1.25f,
 
 struct InputTransformF63_NCHW44 {
     template <bool inner>
-    static void prepare(const float* input, float* patch, float* patchT,
-                        int ih_start, int iw_start, size_t IH, size_t IW,
-                        size_t ic, size_t IC) {
+    static void prepare(
+            const float* input, float* patch, float* patchT, int ih_start, int iw_start,
+            size_t IH, size_t IW, size_t ic, size_t IC) {
         MEGDNN_MARK_USED_VAR(patch);
         size_t IW4 = IW * pack_size;
         size_t iw4_start = iw_start * pack_size;
@@ -69,17 +69,15 @@ struct InputTransformF63_NCHW44 {
                 for (int iw = iw0_act; iw < iw1_act; ++iw) {
                     size_t iho = ih - ih_start, iwo = iw - iw_start;
                     auto src = vld1q_f32(input_ptr + ih * IW4 + iw * pack_size);
-                    vst1q_f32(
-                            patchT + iho * pack_size * alpha + iwo * pack_size,
-                            src);
+                    vst1q_f32(patchT + iho * pack_size * alpha + iwo * pack_size, src);
                 }
             }
         }
     }
 
-    static void transform(const float* patchT, float* input_transform_buf,
-                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
-                          size_t IC) {
+    static void transform(
+            const float* patchT, float* input_transform_buf, size_t unit_idx,
+            size_t nr_units_in_tile, size_t ic, size_t IC) {
         // BT * d * B
 
         size_t ICB = IC / pack_size;
@@ -154,91 +152,91 @@ struct InputTransformF63_NCHW44 {
         UNROLL_CALL_RAW(8, cb);
 #undef cb
 
-#define cb(i)                                                                \
-    d0 = t0##i;                                                              \
-    d1 = t6##i;                                                              \
-    d2 = t6##i;                                                              \
-    d3 = t6##i;                                                              \
-    d4 = t6##i;                                                              \
-    d5 = t6##i;                                                              \
-    d6 = t6##i;                                                              \
-    d7 = t7##i;                                                              \
-    d0 = d0 - t6##i;                                                         \
-    d1 = d1 + t1##i;                                                         \
-    d2 = d2 - t1##i;                                                         \
-    d3 = vfmaq_laneq_f32(d3, t1##i, v0, 2);                                  \
-    d4 = vfmsq_laneq_f32(d4, t1##i, v0, 2);                                  \
-    d5 = vfmaq_laneq_f32(d5, t1##i, v1, 2);                                  \
-    d6 = vfmsq_laneq_f32(d6, t1##i, v1, 2);                                  \
-    d7 = d7 - t1##i;                                                         \
-    d0 = vfmsq_laneq_f32(d0, t2##i, v0, 0);                                  \
-    d1 = d1 + t2##i;                                                         \
-    d2 = d2 + t2##i;                                                         \
-    d3 = vfmaq_laneq_f32(d3, t2##i, v0, 3);                                  \
-    d4 = vfmaq_laneq_f32(d4, t2##i, v0, 3);                                  \
-    d5 = vfmaq_laneq_f32(d5, t2##i, v1, 3);                                  \
-    d6 = vfmaq_laneq_f32(d6, t2##i, v1, 3);                                  \
-    d1 = vfmsq_laneq_f32(d1, t3##i, v0, 1);                                  \
-    d2 = vfmaq_laneq_f32(d2, t3##i, v0, 1);                                  \
-    d3 = vfmsq_laneq_f32(d3, t3##i, v1, 0);                                  \
-    d4 = vfmaq_laneq_f32(d4, t3##i, v1, 0);                                  \
-    d5 = vfmsq_laneq_f32(d5, t3##i, v1, 0);                                  \
-    d6 = vfmaq_laneq_f32(d6, t3##i, v1, 0);                                  \
-    d7 = vfmaq_laneq_f32(d7, t3##i, v0, 0);                                  \
-    d0 = vfmaq_laneq_f32(d0, t4##i, v0, 0);                                  \
-    d1 = vfmsq_laneq_f32(d1, t4##i, v0, 1);                                  \
-    d2 = vfmsq_laneq_f32(d2, t4##i, v0, 1);                                  \
-    d3 = vfmsq_laneq_f32(d3, t4##i, v1, 1);                                  \
-    d4 = vfmsq_laneq_f32(d4, t4##i, v1, 1);                                  \
-    d5 = vfmsq_laneq_f32(d5, t4##i, v2, 0);                                  \
-    d6 = vfmsq_laneq_f32(d6, t4##i, v2, 0);                                  \
-    d1 = d1 + t5##i;                                                         \
-    d2 = d2 - t5##i;                                                         \
-    d3 = vfmaq_laneq_f32(d3, t5##i, v1, 2);                                  \
-    d4 = vfmsq_laneq_f32(d4, t5##i, v1, 2);                                  \
-    d5 = vfmaq_laneq_f32(d5, t5##i, v0, 2);                                  \
-    d6 = vfmsq_laneq_f32(d6, t5##i, v0, 2);                                  \
-    d7 = vfmsq_laneq_f32(d7, t5##i, v0, 0);                                  \
-    vst1q_f32(input_transform_buf +                                          \
-                      (0 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d0);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (1 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d1);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (2 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d2);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (3 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d3);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (4 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d4);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (5 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d5);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (6 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d6);                                                           \
-    vst1q_f32(input_transform_buf +                                          \
-                      (7 * alpha + i) * ICB * nr_units_in_tile * pack_size + \
-                      icb * nr_units_in_tile * pack_size +                   \
-                      unit_idx * pack_size,                                  \
-              d7);
+#define cb(i)                                                                  \
+    d0 = t0##i;                                                                \
+    d1 = t6##i;                                                                \
+    d2 = t6##i;                                                                \
+    d3 = t6##i;                                                                \
+    d4 = t6##i;                                                                \
+    d5 = t6##i;                                                                \
+    d6 = t6##i;                                                                \
+    d7 = t7##i;                                                                \
+    d0 = d0 - t6##i;                                                           \
+    d1 = d1 + t1##i;                                                           \
+    d2 = d2 - t1##i;                                                           \
+    d3 = vfmaq_laneq_f32(d3, t1##i, v0, 2);                                    \
+    d4 = vfmsq_laneq_f32(d4, t1##i, v0, 2);                                    \
+    d5 = vfmaq_laneq_f32(d5, t1##i, v1, 2);                                    \
+    d6 = vfmsq_laneq_f32(d6, t1##i, v1, 2);                                    \
+    d7 = d7 - t1##i;                                                           \
+    d0 = vfmsq_laneq_f32(d0, t2##i, v0, 0);                                    \
+    d1 = d1 + t2##i;                                                           \
+    d2 = d2 + t2##i;                                                           \
+    d3 = vfmaq_laneq_f32(d3, t2##i, v0, 3);                                    \
+    d4 = vfmaq_laneq_f32(d4, t2##i, v0, 3);                                    \
+    d5 = vfmaq_laneq_f32(d5, t2##i, v1, 3);                                    \
+    d6 = vfmaq_laneq_f32(d6, t2##i, v1, 3);                                    \
+    d1 = vfmsq_laneq_f32(d1, t3##i, v0, 1);                                    \
+    d2 = vfmaq_laneq_f32(d2, t3##i, v0, 1);                                    \
+    d3 = vfmsq_laneq_f32(d3, t3##i, v1, 0);                                    \
+    d4 = vfmaq_laneq_f32(d4, t3##i, v1, 0);                                    \
+    d5 = vfmsq_laneq_f32(d5, t3##i, v1, 0);                                    \
+    d6 = vfmaq_laneq_f32(d6, t3##i, v1, 0);                                    \
+    d7 = vfmaq_laneq_f32(d7, t3##i, v0, 0);                                    \
+    d0 = vfmaq_laneq_f32(d0, t4##i, v0, 0);                                    \
+    d1 = vfmsq_laneq_f32(d1, t4##i, v0, 1);                                    \
+    d2 = vfmsq_laneq_f32(d2, t4##i, v0, 1);                                    \
+    d3 = vfmsq_laneq_f32(d3, t4##i, v1, 1);                                    \
+    d4 = vfmsq_laneq_f32(d4, t4##i, v1, 1);                                    \
+    d5 = vfmsq_laneq_f32(d5, t4##i, v2, 0);                                    \
+    d6 = vfmsq_laneq_f32(d6, t4##i, v2, 0);                                    \
+    d1 = d1 + t5##i;                                                           \
+    d2 = d2 - t5##i;                                                           \
+    d3 = vfmaq_laneq_f32(d3, t5##i, v1, 2);                                    \
+    d4 = vfmsq_laneq_f32(d4, t5##i, v1, 2);                                    \
+    d5 = vfmaq_laneq_f32(d5, t5##i, v0, 2);                                    \
+    d6 = vfmsq_laneq_f32(d6, t5##i, v0, 2);                                    \
+    d7 = vfmsq_laneq_f32(d7, t5##i, v0, 0);                                    \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (0 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d0);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (1 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d1);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (2 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d2);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (3 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d3);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (4 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d4);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (5 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d5);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (6 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d6);                                                               \
+    vst1q_f32(                                                                 \
+            input_transform_buf +                                              \
+                    (7 * alpha + i) * ICB * nr_units_in_tile * pack_size +     \
+                    icb * nr_units_in_tile * pack_size + unit_idx * pack_size, \
+            d7);
         UNROLL_CALL_RAW(8, cb);
 #undef cb
     }
@@ -246,13 +244,11 @@ struct InputTransformF63_NCHW44 {
 
 template <BiasMode bmode, typename Op>
 struct OutputTransformF63_NCHW44 {
-    static void transform(const float* output_transform_buf, const float* bias,
-                          float* output, float* transform_mid_buf,
-                          size_t oh_start, size_t ow_start, size_t OH,
-                          size_t OW, size_t oc_start, size_t oc_end,
-                          size_t oc_index, size_t unit_idx,
-                          size_t nr_units_in_tile, const DType& src_dtype,
-                          const DType& dst_dtype) {
+    static void transform(
+            const float* output_transform_buf, const float* bias, float* output,
+            float* transform_mid_buf, size_t oh_start, size_t ow_start, size_t OH,
+            size_t OW, size_t oc_start, size_t oc_end, size_t oc_index, size_t unit_idx,
+            size_t nr_units_in_tile, const DType& src_dtype, const DType& dst_dtype) {
         MEGDNN_MARK_USED_VAR(transform_mid_buf);
         Op op(src_dtype, dst_dtype);
         //! AT * m * A
@@ -330,20 +326,19 @@ struct OutputTransformF63_NCHW44 {
             UNROLL_CALL_RAW_D2(6, 6, cb);
 #undef cb
         }
-#define out_save(oho, owo)                                                  \
-    do {                                                                    \
-        size_t oh = oh_start + oho;                                         \
-        size_t ow = ow_start + owo;                                         \
-        if (oh < OH && ow < OW) {                                           \
-            if (bmode == BiasMode::BIAS) {                                  \
-                v##oho##owo += Vector<float, 4>::load(bias + oc * OH * OW + \
-                                                      oh * OW * pack_size + \
-                                                      ow * pack_size);      \
-                v##oho##owo = op(v##oho##owo.value);                        \
-            }                                                               \
-            v##oho##owo.save(output + oc * OH * OW + oh * OW * pack_size +  \
-                             ow * pack_size);                               \
-        }                                                                   \
+#define out_save(oho, owo)                                                           \
+    do {                                                                             \
+        size_t oh = oh_start + oho;                                                  \
+        size_t ow = ow_start + owo;                                                  \
+        if (oh < OH && ow < OW) {                                                    \
+            if (bmode == BiasMode::BIAS) {                                           \
+                v##oho##owo += Vector<float, 4>::load(                               \
+                        bias + oc * OH * OW + oh * OW * pack_size + ow * pack_size); \
+                v##oho##owo = op(v##oho##owo.value);                                 \
+            }                                                                        \
+            v##oho##owo.save(                                                        \
+                    output + oc * OH * OW + oh * OW * pack_size + ow * pack_size);   \
+        }                                                                            \
     } while (0);
         UNROLL_CALL_RAW_D2(6, 6, out_save);
     }
@@ -357,11 +352,9 @@ namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_F63_mk4_f_nchw44)
 
-void winograd_F63_mk4_f_nchw44::filter(const float* filter,
-                                       float* filter_transform_buf,
-                                       float* transform_mid_buf, size_t OC,
-                                       size_t IC, size_t oc_start,
-                                       size_t oc_end) {
+void winograd_F63_mk4_f_nchw44::filter(
+        const float* filter, float* filter_transform_buf, float* transform_mid_buf,
+        size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
     constexpr size_t pack_size = 4;
     // Gg * GT
     // G
@@ -374,12 +367,12 @@ void winograd_F63_mk4_f_nchw44::filter(const float* filter,
     // 0.7111111       -0.3555556      0.1777778
     // 0.0000000       0.0000000       1.0000000
     MEGDNN_MARK_USED_VAR(transform_mid_buf);
-    megdnn_assert((oc_end - oc_start) % pack_size == 0 &&
-                          oc_start % pack_size == 0 &&
-                          oc_end % pack_size == 0 && IC % pack_size == 0 &&
-                          OC % pack_size == 0,
-                  "NCHW44 Winograd filter transform requires both OC and IC "
-                  "are times of 4");
+    megdnn_assert(
+            (oc_end - oc_start) % pack_size == 0 && oc_start % pack_size == 0 &&
+                    oc_end % pack_size == 0 && IC % pack_size == 0 &&
+                    OC % pack_size == 0,
+            "NCHW44 Winograd filter transform requires both OC and IC "
+            "are times of 4");
 
     size_t ICB = IC / pack_size;
 
@@ -387,9 +380,8 @@ void winograd_F63_mk4_f_nchw44::filter(const float* filter,
         for (size_t icb = 0; icb < ICB; icb++) {
             for (size_t ic_inner = 0; ic_inner < pack_size; ic_inner++) {
                 const float* fptr = filter +
-                                    (ocb * ICB + icb) * KERNEL_SIZE *
-                                            KERNEL_SIZE * pack_size *
-                                            pack_size +
+                                    (ocb * ICB + icb) * KERNEL_SIZE * KERNEL_SIZE *
+                                            pack_size * pack_size +
                                     ic_inner * pack_size;
 
 #define cb(m, n)                                       \
@@ -417,10 +409,10 @@ void winograd_F63_mk4_f_nchw44::filter(const float* filter,
                 UNROLL_CALL_RAW(3, FILTER_TRANSFORM, wd, g);
                 UNROLL_CALL_RAW(8, FILTER_TRANSFORM, ret, wd);
 #undef FILTER_TRANSFORM
-#define cb_save(m, n)                                                   \
-    ret##m##n.save(filter_transform_buf + (m * alpha + n) * OC * IC +   \
-                   ocb * IC * pack_size + icb * pack_size * pack_size + \
-                   ic_inner * pack_size);
+#define cb_save(m, n)                                                                 \
+    ret##m##n.save(                                                                   \
+            filter_transform_buf + (m * alpha + n) * OC * IC + ocb * IC * pack_size + \
+            icb * pack_size * pack_size + ic_inner * pack_size);
                 UNROLL_CALL_NOWRAPPER_D2(8, 8, cb_save)
 #undef cb_save
             }
@@ -428,19 +420,16 @@ void winograd_F63_mk4_f_nchw44::filter(const float* filter,
     }
 }
 
-void winograd_F63_mk4_f_nchw44::input(const float* input,
-                                      float* input_transform_buf,
-                                      float* transform_mid_buf, size_t IH,
-                                      size_t IW, size_t IC, size_t PH,
-                                      size_t PW, size_t unit_start_idx,
-                                      size_t nr_units_in_tile) {
+void winograd_F63_mk4_f_nchw44::input(
+        const float* input, float* input_transform_buf, float* transform_mid_buf,
+        size_t IH, size_t IW, size_t IC, size_t PH, size_t PW, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
     constexpr size_t pack_size = 4;
     megdnn_assert(IC % pack_size == 0);
     constexpr int alpha = 3 + 6 - 1;
 
     // OW = IW + 2 * PW - KERNEL_SIZE + 1
-    auto units_w =
-            div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
+    auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
     float* patch = transform_mid_buf;
     float* patchT = transform_mid_buf + pack_size * alpha * alpha;
 
@@ -453,59 +442,55 @@ void winograd_F63_mk4_f_nchw44::input(const float* input,
             int iw_start = nw * OUTPUT_BLOCK_SIZE - PW;
             if (ih_start >= 0 && ih_start + alpha <= static_cast<int>(IH) &&
                 iw_start >= 0 && iw_start + alpha <= static_cast<int>(IW)) {
-                InputTransformF63_NCHW44::prepare<true>(input, patch, patchT,
-                                                        ih_start, iw_start, IH,
-                                                        IW, ic, IC);
-                InputTransformF63_NCHW44::transform(patchT, input_transform_buf,
-                                                    unit_idx, nr_units_in_tile,
-                                                    ic, IC);
+                InputTransformF63_NCHW44::prepare<true>(
+                        input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC);
+                InputTransformF63_NCHW44::transform(
+                        patchT, input_transform_buf, unit_idx, nr_units_in_tile, ic,
+                        IC);
 
             } else {
-                InputTransformF63_NCHW44::prepare<false>(input, patch, patchT,
-                                                         ih_start, iw_start, IH,
-                                                         IW, ic, IC);
-                InputTransformF63_NCHW44::transform(patchT, input_transform_buf,
-                                                    unit_idx, nr_units_in_tile,
-                                                    ic, IC);
+                InputTransformF63_NCHW44::prepare<false>(
+                        input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC);
+                InputTransformF63_NCHW44::transform(
+                        patchT, input_transform_buf, unit_idx, nr_units_in_tile, ic,
+                        IC);
             }
         }
     }
 }
 
-void winograd_F63_mk4_f_nchw44::output(const float* output_transform_buf,
-                                       const float* bias, float* output,
-                                       float* transform_mid_buf, BiasMode bmode,
-                                       NonlineMode nonline_mode, size_t OH,
-                                       size_t OW, size_t oc_start,
-                                       size_t oc_end, size_t unit_start_idx,
-                                       size_t nr_units_in_tile) {
-#define cb(_bmode, _nonline_op, ...)                                         \
-    for (size_t oc = oc_start; oc < oc_end; oc += pack_size) {               \
-        size_t oc_index = oc - oc_start;                                     \
-        rep(unit_idx, nr_units_in_tile) {                                    \
-            size_t index = unit_start_idx + unit_idx;                        \
-            auto nh = index / units_w;                                       \
-            auto nw = index % units_w;                                       \
-            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;                        \
-            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;                        \
-            OutputTransformF63_NCHW44<_bmode MEGDNN_COMMA _nonline_op>::     \
-                    transform(output_transform_buf, bias, output,            \
-                              transform_mid_buf, oh_start, ow_start, OH, OW, \
-                              oc_start, oc_end, oc_index, unit_idx,          \
-                              nr_units_in_tile, src_dtype, dst_dtype);       \
-        }                                                                    \
+void winograd_F63_mk4_f_nchw44::output(
+        const float* output_transform_buf, const float* bias, float* output,
+        float* transform_mid_buf, BiasMode bmode, NonlineMode nonline_mode, size_t OH,
+        size_t OW, size_t oc_start, size_t oc_end, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
+#define cb(_bmode, _nonline_op, ...)                                                 \
+    for (size_t oc = oc_start; oc < oc_end; oc += pack_size) {                       \
+        size_t oc_index = oc - oc_start;                                             \
+        rep(unit_idx, nr_units_in_tile) {                                            \
+            size_t index = unit_start_idx + unit_idx;                                \
+            auto nh = index / units_w;                                               \
+            auto nw = index % units_w;                                               \
+            size_t oh_start = nh * OUTPUT_BLOCK_SIZE;                                \
+            size_t ow_start = nw * OUTPUT_BLOCK_SIZE;                                \
+            OutputTransformF63_NCHW44<_bmode MEGDNN_COMMA _nonline_op>::transform(   \
+                    output_transform_buf, bias, output, transform_mid_buf, oh_start, \
+                    ow_start, OH, OW, oc_start, oc_end, oc_index, unit_idx,          \
+                    nr_units_in_tile, src_dtype, dst_dtype);                         \
+        }                                                                            \
     }
 
     auto units_w = div_ceil<size_t>(OW, OUTPUT_BLOCK_SIZE);
     constexpr size_t pack_size = 4;
 
     size_t OC = oc_end - oc_start;
-    megdnn_assert(OC % pack_size == 0 && oc_start % pack_size == 0 &&
-                          oc_end % pack_size == 0,
-                  "NCHW44 Winograd filter transform requires OC is times of 4");
+    megdnn_assert(
+            OC % pack_size == 0 && oc_start % pack_size == 0 && oc_end % pack_size == 0,
+            "NCHW44 Winograd filter transform requires OC is times of 4");
 
-    DISPATCH_CONV_WINOGRAD_BIAS(megdnn_arm_common_winograd_fp32_F63_mk4, cb,
-                                float, float, bmode, nonline_mode);
+    DISPATCH_CONV_WINOGRAD_BIAS(
+            megdnn_arm_common_winograd_fp32_F63_mk4, cb, float, float, bmode,
+            nonline_mode);
 #undef cb
 }
 

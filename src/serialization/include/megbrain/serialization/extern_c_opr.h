@@ -23,15 +23,15 @@ extern "C" {
 #endif
 
 #ifndef MGB_C_OPR_INIT_FUNC
-#define MGB_C_OPR_INIT_FUNC  mgb_c_opr_init
+#define MGB_C_OPR_INIT_FUNC mgb_c_opr_init
 #endif
 
-#define INIT_FUNCS(s) #s
-#define INIT_FUNC(s) INIT_FUNCS(s)
+#define INIT_FUNCS(s)           #s
+#define INIT_FUNC(s)            INIT_FUNCS(s)
 #define MGB_C_OPR_INIT_FUNC_STR INIT_FUNC(MGB_C_OPR_INIT_FUNC)
 
 #define MGB_EXTERN_C_OPR_VERSION 0x24
-#define MGB_TENSOR_MAX_NDIM 8
+#define MGB_TENSOR_MAX_NDIM      8
 
 //! data types
 typedef enum MGBDType {
@@ -129,16 +129,18 @@ typedef struct MGBOprDesc {
     int (*is_same)(const struct MGBOprDesc* self, const struct MGBOprDesc* rhs);
 
     //! perform the computation
-    void (*execute)(const struct MGBOprDesc* self, const MGBTensor* input,
-                    const MGBTensor* output);
+    void (*execute)(
+            const struct MGBOprDesc* self, const MGBTensor* input,
+            const MGBTensor* output);
 
     //! infer output shapes from input shapes
-    void (*infer_shape)(const struct MGBOprDesc* self,
-                        const MGBTensorShape* input, MGBTensorShape* output);
+    void (*infer_shape)(
+            const struct MGBOprDesc* self, const MGBTensorShape* input,
+            MGBTensorShape* output);
 
     //! optional: infer output dtypes from input dtypes
-    void (*infer_dtype)(const struct MGBOprDesc* self, const MGBDType* input,
-                        MGBDType* output);
+    void (*infer_dtype)(
+            const struct MGBOprDesc* self, const MGBDType* input, MGBDType* output);
 
     //! custom user data to be associated with this descriptor
     void* user_data;
@@ -163,8 +165,7 @@ typedef struct MGBOprLoader {
      *
      * Note: there is no guarantee on the alignment of \p buf.
      */
-    MGBOprDesc* (*create_desc)(size_t nr_input, const void* buf,
-                               size_t buf_len);
+    MGBOprDesc* (*create_desc)(size_t nr_input, const void* buf, size_t buf_len);
 } MGBOprLoader;
 
 //! APIs provided by megbrain
@@ -186,8 +187,7 @@ typedef struct MGBExternCOprApi {
 } MGBExternCOprApi;
 
 //! get API ptr for specific version; return nullptr if version mismatch
-MGB_PUBLIC const MGBExternCOprApi* mgb_get_extern_c_opr_api_versioned(
-        int version);
+MGB_PUBLIC const MGBExternCOprApi* mgb_get_extern_c_opr_api_versioned(int version);
 
 #ifdef __cplusplus
 }
@@ -215,8 +215,8 @@ static inline size_t mgb_get_dtype_size(MGBDType dtype) {
     }
 }
 
-static inline void mgb_init_opr_desc(MGBOprDesc* desc, uint32_t nr_output,
-                                     const char* type_name) {
+static inline void mgb_init_opr_desc(
+        MGBOprDesc* desc, uint32_t nr_output, const char* type_name) {
     memset(desc, 0, sizeof(MGBOprDesc));
     desc->size = sizeof(MGBOprDesc);
     desc->nr_output = nr_output;

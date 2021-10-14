@@ -23,9 +23,9 @@ using namespace swap::opr;
 /* ===================== SwapInMS ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SwapInMS);
-SwapInMS::SwapInMS(ComputingGraph& graph, VarNode* swap_out_var,
-                   VarNode* dep_var, const Param& param,
-                   const OperatorNodeConfig& config)
+SwapInMS::SwapInMS(
+        ComputingGraph& graph, VarNode* swap_out_var, VarNode* dep_var,
+        const Param& param, const OperatorNodeConfig& config)
         : Super{&graph, config, "swap-in-ms", {swap_out_var}},
           m_recorder{param.swap_var_recorder_ptr},
           m_param{param} {
@@ -43,12 +43,10 @@ void SwapInMS::scn_do_execute() {
 void SwapInMS::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     owner_graph()->static_infer_manager().register_shape_infer(
-            output(0),
-            ShapeInferDesc::make_identity(input(0)->owner_opr()->input(0)));
+            output(0), ShapeInferDesc::make_identity(input(0)->owner_opr()->input(0)));
 
     owner_graph()->static_infer_manager().register_value_infer(
-            output(0),
-            ValueInferDesc::make_identity(input(0)->owner_opr()->input(0)));
+            output(0), ValueInferDesc::make_identity(input(0)->owner_opr()->input(0)));
 }
 
 cg::OperatorNodeBase::NodeProp* SwapInMS::do_make_node_prop() const {
@@ -56,18 +54,20 @@ cg::OperatorNodeBase::NodeProp* SwapInMS::do_make_node_prop() const {
     return ret;
 }
 
-SymbolVar SwapInMS::make(ComputingGraph& graph, SymbolVar inp, SymbolVar dep,
-                         const Param& param, const OperatorNodeConfig& config) {
+SymbolVar SwapInMS::make(
+        ComputingGraph& graph, SymbolVar inp, SymbolVar dep, const Param& param,
+        const OperatorNodeConfig& config) {
     return graph
-            .insert_opr(std::make_unique<SwapInMS>(graph, inp.node(),
-                                                   dep.node(), param, config))
+            .insert_opr(std::make_unique<SwapInMS>(
+                    graph, inp.node(), dep.node(), param, config))
             ->output(0);
 }
 
 /* ===================== SwapOutMS ===================== */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SwapOutMS);
-SwapOutMS::SwapOutMS(ComputingGraph& graph, VarNode* inp, const Param& param,
-                     const OperatorNodeConfig& config)
+SwapOutMS::SwapOutMS(
+        ComputingGraph& graph, VarNode* inp, const Param& param,
+        const OperatorNodeConfig& config)
         : Super{&graph, config, "swap-out-ms", {inp}},
           m_recorder{param.swap_var_recorder_ptr},
           m_param{param} {
@@ -97,20 +97,20 @@ cg::OperatorNodeBase::NodeProp* SwapOutMS::do_make_node_prop() const {
     return ret;
 }
 
-SymbolVar SwapOutMS::make(ComputingGraph& graph, const SymbolVar inp,
-                          const Param& param,
-                          const OperatorNodeConfig& config) {
+SymbolVar SwapOutMS::make(
+        ComputingGraph& graph, const SymbolVar inp, const Param& param,
+        const OperatorNodeConfig& config) {
     return graph
-            .insert_opr(std::make_unique<SwapOutMS>(graph, inp.node(), param,
-                                                    config))
+            .insert_opr(std::make_unique<SwapOutMS>(graph, inp.node(), param, config))
             ->output(0);
 }
 
 /* ===================== WaitSwapInMS ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(WaitSwapInMS);
-WaitSwapInMS::WaitSwapInMS(ComputingGraph& graph, const VarNodeArray& inputs,
-                           const OperatorNodeConfig& config)
+WaitSwapInMS::WaitSwapInMS(
+        ComputingGraph& graph, const VarNodeArray& inputs,
+        const OperatorNodeConfig& config)
         : Super{&graph, config, "wait-swap-in", inputs} {
     mgb_assert(inputs.size() == 2);
     for (auto x : inputs)
@@ -146,28 +146,26 @@ cg::OperatorNodeBase::NodeProp* WaitSwapInMS::do_make_node_prop() const {
         }
         prop->reset_dep_type(input(), dep_types);
     }
-    prop->add_flag(
-            cg::OperatorNodeBase::NodeProp::Flag::CROSS_COMP_NODE_MEMORY);
+    prop->add_flag(cg::OperatorNodeBase::NodeProp::Flag::CROSS_COMP_NODE_MEMORY);
     return prop;
 }
 
-SymbolVar WaitSwapInMS::make(ComputingGraph& graph,
-                             const SymbolVarArray& inputs,
-                             const OperatorNodeConfig& config) {
+SymbolVar WaitSwapInMS::make(
+        ComputingGraph& graph, const SymbolVarArray& inputs,
+        const OperatorNodeConfig& config) {
     mgb_assert(inputs.size() == 2);
     auto nodes = to_var_node_array(inputs);
-    return inputs[0].insert_single_output_opr<WaitSwapInMS>(graph, nodes,
-                                                            config);
+    return inputs[0].insert_single_output_opr<WaitSwapInMS>(graph, nodes, config);
 }
 
 /* ===================== SwapIn ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SwapIn);
-SwapIn::SwapIn(ComputingGraph& graph, const SymbolVarArray inputs,
-               const std::shared_ptr<HostTensorND>& host_data,
-               const OperatorNodeConfig& config)
-        : Super{&graph, config, "swap-in", {inputs[0].node()}},
-          m_host_data{host_data} {
+SwapIn::SwapIn(
+        ComputingGraph& graph, const SymbolVarArray inputs,
+        const std::shared_ptr<HostTensorND>& host_data,
+        const OperatorNodeConfig& config)
+        : Super{&graph, config, "swap-in", {inputs[0].node()}}, m_host_data{host_data} {
     // inputs[0] is the swap_out_var, and the following inputs are
     // dependency vars
     auto out_cn = inputs[0].node()->comp_node();
@@ -197,12 +195,10 @@ void SwapIn::init_output_static_infer_desc() {
     using namespace cg::static_infer;
 #if 1
     owner_graph()->static_infer_manager().register_shape_infer(
-            output(0),
-            ShapeInferDesc::make_identity(input(0)->owner_opr()->input(0)));
+            output(0), ShapeInferDesc::make_identity(input(0)->owner_opr()->input(0)));
 
     owner_graph()->static_infer_manager().register_value_infer(
-            output(0),
-            ValueInferDesc::make_identity(input(0)->owner_opr()->input(0)));
+            output(0), ValueInferDesc::make_identity(input(0)->owner_opr()->input(0)));
 
 #else
     /*!
@@ -210,13 +206,11 @@ void SwapIn::init_output_static_infer_desc() {
      * that a virtual_dep is set between SwapIn and SwapOut
      */
     owner_graph()->static_infer_manager().register_shape_infer(
-            output(0),
-            ShapeInferDesc::make_identity(
-                    input(0)->owner_opr()->input(1)->owner_opr()->input(0)));
+            output(0), ShapeInferDesc::make_identity(
+                               input(0)->owner_opr()->input(1)->owner_opr()->input(0)));
     owner_graph()->static_infer_manager().register_value_infer(
-            output(0),
-            ValueInferDesc::make_identity(
-                    input(0)->owner_opr()->input(1)->owner_opr()->input(0)));
+            output(0), ValueInferDesc::make_identity(
+                               input(0)->owner_opr()->input(1)->owner_opr()->input(0)));
 #endif
 }
 
@@ -228,27 +222,26 @@ cg::OperatorNodeBase::NodeProp* SwapIn::do_make_node_prop() const {
             dep_types.push_back(NodeProp::DepType::DEV_COMP_ORDER);
         ret->reset_dep_type(input(), dep_types);
     } else {
-        SmallVector<NodeProp::DepType> dep_types{
-                NodeProp::DepType::DEV_COMP_ORDER};
+        SmallVector<NodeProp::DepType> dep_types{NodeProp::DepType::DEV_COMP_ORDER};
         ret->reset_dep_type(input(), dep_types);
     }
     return ret;
 }
 
-SymbolVar SwapIn::make(ComputingGraph& graph, const SymbolVarArray inputs,
-                       const std::shared_ptr<HostTensorND>& host_data,
-                       const OperatorNodeConfig& config) {
-    return graph
-            .insert_opr(
-                    std::make_unique<SwapIn>(graph, inputs, host_data, config))
+SymbolVar SwapIn::make(
+        ComputingGraph& graph, const SymbolVarArray inputs,
+        const std::shared_ptr<HostTensorND>& host_data,
+        const OperatorNodeConfig& config) {
+    return graph.insert_opr(std::make_unique<SwapIn>(graph, inputs, host_data, config))
             ->output(0);
 }
 
 /* ===================== SwapOut ===================== */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SwapOut);
-SwapOut::SwapOut(ComputingGraph& graph, VarNode* inp, const Param& param,
-                 const OperatorNodeConfig& config)
+SwapOut::SwapOut(
+        ComputingGraph& graph, VarNode* inp, const Param& param,
+        const OperatorNodeConfig& config)
         : Super{&graph, config, "swap-out", {inp}},
           m_host_data{param.host_tensor_ptr},
           m_param{param} {
@@ -272,11 +265,11 @@ cg::OperatorNodeBase::NodeProp* SwapOut::do_make_node_prop() const {
     return ret;
 }
 
-SymbolVar SwapOut::make(ComputingGraph& graph, const SymbolVar inp,
-                        const Param& param, const OperatorNodeConfig& config) {
+SymbolVar SwapOut::make(
+        ComputingGraph& graph, const SymbolVar inp, const Param& param,
+        const OperatorNodeConfig& config) {
     return graph
-            .insert_opr(
-                    std::make_unique<SwapOut>(graph, inp.node(), param, config))
+            .insert_opr(std::make_unique<SwapOut>(graph, inp.node(), param, config))
             ->output(0);
 }
 

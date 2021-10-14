@@ -21,28 +21,25 @@
 using namespace megdnn;
 using namespace rocm;
 
-std::vector<BatchedMatrixMulForwardImpl::Algorithm*>
-BatchedMatrixMulForwardImpl::get_all_algorithms(const TensorLayout& A,
-                                                const TensorLayout& B,
-                                                const TensorLayout& C) {
+std::vector<BatchedMatrixMulForwardImpl::Algorithm*> BatchedMatrixMulForwardImpl::
+        get_all_algorithms(
+                const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     AlgoBase::SizeArgs args{this, A, B, C};
     return megdnn::get_all_algorithms<BatchedMatrixMulForwardImpl>(args);
 }
 
-std::vector<BatchedMatrixMulForwardImpl::Algorithm*>
-BatchedMatrixMulForwardImpl::get_all_algorithms_safe(const TensorLayout& A,
-                                                const TensorLayout& B,
-                                                const TensorLayout& C) {
+std::vector<BatchedMatrixMulForwardImpl::Algorithm*> BatchedMatrixMulForwardImpl::
+        get_all_algorithms_safe(
+                const TensorLayout& A, const TensorLayout& B, const TensorLayout& C) {
     AlgoBase::SizeArgs args{this, A, B, C};
     return megdnn::get_all_algorithms_safe<BatchedMatrixMulForwardImpl>(args);
 }
 
-BatchedMatrixMulForwardImpl::Algorithm*
-BatchedMatrixMulForwardImpl::get_algorithm_heuristic(
-        const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
-        size_t workspace_limit_in_bytes,
-            const AlgoAttribute& positive_attr,
-            const AlgoAttribute& negative_attr) {
+BatchedMatrixMulForwardImpl::Algorithm* BatchedMatrixMulForwardImpl::
+        get_algorithm_heuristic(
+                const TensorLayout& A, const TensorLayout& B, const TensorLayout& C,
+                size_t workspace_limit_in_bytes, const AlgoAttribute& positive_attr,
+                const AlgoAttribute& negative_attr) {
     AlgoBase::SizeArgs args{this, A, B, C};
     if (sm_algo_pack.blas.is_available_attribute(
                 args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
@@ -58,9 +55,9 @@ size_t BatchedMatrixMulForwardImpl::get_workspace_in_bytes(
     return get_dnn_workspace(this, A, B, C);
 }
 
-void BatchedMatrixMulForwardImpl::exec(_megdnn_tensor_in A, _megdnn_tensor_in B,
-                                       _megdnn_tensor_out C,
-                                       _megdnn_workspace workspace) {
+void BatchedMatrixMulForwardImpl::exec(
+        _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
+        _megdnn_workspace workspace) {
     check_exec(A.layout, B.layout, C.layout, workspace.size);
     AlgoBase::ExecArgs args(this, A, B, C, workspace);
     auto&& algo = get_algorithm(this, A.layout, B.layout, C.layout);

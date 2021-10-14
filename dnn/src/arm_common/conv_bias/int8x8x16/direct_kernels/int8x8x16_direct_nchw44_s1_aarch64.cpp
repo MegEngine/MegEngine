@@ -71,32 +71,31 @@ namespace {
             megdnn_assert(0, "oc 1 error remainw");                  \
     };
 
-#define STORE_2_LINE_RESULT_OW4()                                           \
-    switch (remain_w) {                                                     \
-        case 4:                                                             \
-            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));             \
-            vst1q_s16(dst_ptr + 8, vcombine_s16(c[0][2], c[0][3]));         \
-            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1])); \
-            vst1q_s16(dst_ptr + ld_dst_oc + 8,                              \
-                      vcombine_s16(c[1][2], c[1][3]));                      \
-            break;                                                          \
-        case 1:                                                             \
-            vst1_s16(dst_ptr, c[0][0]);                                     \
-            vst1_s16(dst_ptr + ld_dst_oc, c[1][0]);                         \
-            break;                                                          \
-        case 2:                                                             \
-            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));             \
-            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1])); \
-            break;                                                          \
-        case 3:                                                             \
-            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));             \
-            vst1_s16(dst_ptr + 8, c[0][2]);                                 \
-            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1])); \
-            vst1_s16(dst_ptr + ld_dst_oc + 8, c[1][2]);                     \
-            break;                                                          \
-        default:                                                            \
-            megdnn_assert(0, "oc 2 error remainw");                         \
-            break;                                                          \
+#define STORE_2_LINE_RESULT_OW4()                                               \
+    switch (remain_w) {                                                         \
+        case 4:                                                                 \
+            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));                 \
+            vst1q_s16(dst_ptr + 8, vcombine_s16(c[0][2], c[0][3]));             \
+            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1]));     \
+            vst1q_s16(dst_ptr + ld_dst_oc + 8, vcombine_s16(c[1][2], c[1][3])); \
+            break;                                                              \
+        case 1:                                                                 \
+            vst1_s16(dst_ptr, c[0][0]);                                         \
+            vst1_s16(dst_ptr + ld_dst_oc, c[1][0]);                             \
+            break;                                                              \
+        case 2:                                                                 \
+            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));                 \
+            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1]));     \
+            break;                                                              \
+        case 3:                                                                 \
+            vst1q_s16(dst_ptr, vcombine_s16(c[0][0], c[0][1]));                 \
+            vst1_s16(dst_ptr + 8, c[0][2]);                                     \
+            vst1q_s16(dst_ptr + ld_dst_oc, vcombine_s16(c[1][0], c[1][1]));     \
+            vst1_s16(dst_ptr + ld_dst_oc + 8, c[1][2]);                         \
+            break;                                                              \
+        default:                                                                \
+            megdnn_assert(0, "oc 2 error remainw");                             \
+            break;                                                              \
     }
 
 #define STORE_1_LINE_RESULT_OW4_OH2()                                    \
@@ -146,12 +145,10 @@ namespace {
             megdnn_assert(0, "oc 1 error remainw");                 \
     };
 
-template <BiasMode bias_mode,int filter_size>
-static void ker_neon_dirctconv_2x2s1_oc8_ow4(const int8_t* src_ptr,
-                                             const int8_t* weight_ptr,
-                                             const int16_t* bias_ptr,
-                                             int16_t* dst_ptr, int ic, int ih,
-                                             int iw, int remain_w,int ld_dst_oc) {
+template <BiasMode bias_mode, int filter_size>
+static void ker_neon_dirctconv_2x2s1_oc8_ow4(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+        int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int ld_dst_oc) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int ic_step = 4;
@@ -179,10 +176,8 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow4(const int8_t* src_ptr,
 #undef cb
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-        const int8_t* src_row0 =
-                src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
-        const int8_t* src_row1 =
-                src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
+        const int8_t* src_row0 = src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
+        const int8_t* src_row1 = src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
 
         src[0] = vld_dup_tbl_s32(src_row0 + 0, idx);
         src[1] = vld_dup_tbl_s32(src_row0 + 4, idx);
@@ -248,12 +243,9 @@ static void ker_neon_dirctconv_2x2s1_oc8_ow4(const int8_t* src_ptr,
 }
 
 template <BiasMode bias_mode, int filter_size>
-static void ker_neon_dirctconv_2x2s1_oc4_ow4(const int8_t* src_ptr,
-                                             const int8_t* weight_ptr,
-                                             const int16_t* bias_ptr,
-                                             int16_t* dst_ptr, int ic, int ih,
-                                             int iw, int remain_w,
-                                             int /*ld_dst_oc*/) {
+static void ker_neon_dirctconv_2x2s1_oc4_ow4(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+        int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int /*ld_dst_oc*/) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int ic_step = 4;
@@ -284,23 +276,18 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow4(const int8_t* src_ptr,
             src[2] = vld_dup_tbl_s32(src_ic_0_3 + 8, idx);
             src[3] = vld_dup_tbl_s32(src_ic_0_3 + 12, idx);
             src[4] = vld_dup_tbl_s32(src_ic_0_3 + 16, idx);
-            const int8_t* read_weight_ptr =
-                    weight_ptr + fh_idx * fw * ld_weight_ic4;
+            const int8_t* read_weight_ptr = weight_ptr + fh_idx * fw * ld_weight_ic4;
 
             weight[0][0] = vld1q_s8(read_weight_ptr);
             weight[0][1] = vld1q_s8(read_weight_ptr + 16);
             int16x8_t tmp0;
-            CALC_ONE_RESULT(src[0], src[1], weight[0][0], weight[0][1],
-                            c[0][0]);
+            CALC_ONE_RESULT(src[0], src[1], weight[0][0], weight[0][1], c[0][0]);
 
-            CALC_ONE_RESULT(src[1], src[2], weight[0][0], weight[0][1],
-                            c[0][1]);
+            CALC_ONE_RESULT(src[1], src[2], weight[0][0], weight[0][1], c[0][1]);
 
-            CALC_ONE_RESULT(src[2], src[3], weight[0][0], weight[0][1],
-                            c[0][2]);
+            CALC_ONE_RESULT(src[2], src[3], weight[0][0], weight[0][1], c[0][2]);
 
-            CALC_ONE_RESULT(src[3], src[4], weight[0][0], weight[0][1],
-                            c[0][3]);
+            CALC_ONE_RESULT(src[3], src[4], weight[0][0], weight[0][1], c[0][3]);
         }
         weight_ptr += fh * fw * ld_weight_ic4;
     }
@@ -320,12 +307,9 @@ static void ker_neon_dirctconv_2x2s1_oc4_ow4(const int8_t* src_ptr,
     } while (0);
 
 template <BiasMode bias_mode, int filter_size>
-static void ker_neon_dirctconv_3x3s1_oc4_ow4(const int8_t* src_ptr,
-                                             const int8_t* weight_ptr,
-                                             const int16_t* bias_ptr,
-                                             int16_t* dst_ptr, int ic, int ih,
-                                             int iw, int remain_w,
-                                             int /*ld_dst_oc*/) {
+static void ker_neon_dirctconv_3x3s1_oc4_ow4(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+        int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int /*ld_dst_oc*/) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int ic_step = 4;
@@ -347,12 +331,9 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4(const int8_t* src_ptr,
 #undef cb
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-        const int8_t* src_row0 =
-                src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
-        const int8_t* src_row1 =
-                src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
-        const int8_t* src_row2 =
-                src_ptr + ic_idx * ic_stride + 2 * iw * ic_step;
+        const int8_t* src_row0 = src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
+        const int8_t* src_row1 = src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
+        const int8_t* src_row2 = src_ptr + ic_idx * ic_stride + 2 * iw * ic_step;
 
         src[0] = vld_dup_tbl_s32(src_row0 + 0, idx);
         src[1] = vld_dup_tbl_s32(src_row0 + 4, idx);
@@ -416,12 +397,10 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4(const int8_t* src_ptr,
 }
 
 template <BiasMode bias_mode, int filter_size>
-static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(const int8_t* src_ptr,
-                                                 const int8_t* weight_ptr,
-                                                 const int16_t* bias_ptr,
-                                                 int16_t* dst_ptr, int ic,
-                                                 int ih, int iw, int remain_w,
-                                                 int /*ld_dst_oc*/, int ow) {
+static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(
+        const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+        int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int /*ld_dst_oc*/,
+        int ow) {
     constexpr int fh = filter_size;
     constexpr int fw = filter_size;
     constexpr int ic_step = 4;
@@ -443,14 +422,10 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(const int8_t* src_ptr,
 #undef cb
 
     for (int ic_idx = 0; ic_idx < ic; ic_idx += loop_ic_step) {
-        const int8_t* src_row0 =
-                src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
-        const int8_t* src_row1 =
-                src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
-        const int8_t* src_row2 =
-                src_ptr + ic_idx * ic_stride + 2 * iw * ic_step;
-        const int8_t* src_row3 =
-                src_ptr + ic_idx * ic_stride + 3 * iw * ic_step;
+        const int8_t* src_row0 = src_ptr + ic_idx * ic_stride + 0 * iw * ic_step;
+        const int8_t* src_row1 = src_ptr + ic_idx * ic_stride + 1 * iw * ic_step;
+        const int8_t* src_row2 = src_ptr + ic_idx * ic_stride + 2 * iw * ic_step;
+        const int8_t* src_row3 = src_ptr + ic_idx * ic_stride + 3 * iw * ic_step;
 #define LOAD_SRC(_src, _src_ptr)                   \
     _src[0] = vld_dup_tbl_s32(_src_ptr + 0, idx);  \
     _src[1] = vld_dup_tbl_s32(_src_ptr + 4, idx);  \
@@ -469,21 +444,24 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(const int8_t* src_ptr,
         weight[1][1] = vld1q_s8(weight_ptr + 64);
         weight[1][2] = vld1q_s8(weight_ptr + 80);
 
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[0],
-                        c[0][0]);  // row0 src0 w0
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[0],
+                c[0][0]);  // row0 src0 w0
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[0], c[0][1]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[0], c[0][2]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[0], c[0][3]);
 
         LOAD_SRC(src[0], src_row1);
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[0],
-                        c[0][4]);  // row1 src1 w0
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[0],
+                c[0][4]);  // row1 src1 w0
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[0], c[0][5]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[0], c[0][6]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[0], c[0][7]);
 
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[1],
-                        c[0][0]);  // row1 src1 w1
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[1],
+                c[0][0]);  // row1 src1 w1
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[1], c[0][1]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[1], c[0][2]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[1], c[0][3]);
@@ -493,22 +471,25 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(const int8_t* src_ptr,
         weight[0][0] = vld1q_s8(weight_ptr + 96);
         weight[0][1] = vld1q_s8(weight_ptr + 112);
         weight[0][2] = vld1q_s8(weight_ptr + 128);
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[1],
-                        c[0][4]);  // row2 src0 w1
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[1],
+                c[0][4]);  // row2 src0 w1
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[1], c[0][5]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[1], c[0][6]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[1], c[0][7]);
 
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[0],
-                        c[0][0]);  // row2 w0 src[0]
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[0],
+                c[0][0]);  // row2 w0 src[0]
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[0], c[0][1]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[0], c[0][2]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[0], c[0][3]);
 
         LOAD_SRC(src[0], src_row3);
 
-        CALC_ONE_RESULT(src[0][0], src[0][1], src[0][2], weight[0],
-                        c[0][4]);  // row3 w0 src1
+        CALC_ONE_RESULT(
+                src[0][0], src[0][1], src[0][2], weight[0],
+                c[0][4]);  // row3 w0 src1
         CALC_ONE_RESULT(src[0][1], src[0][2], src[0][3], weight[0], c[0][5]);
         CALC_ONE_RESULT(src[0][2], src[0][3], src[0][4], weight[0], c[0][6]);
         CALC_ONE_RESULT(src[0][3], src[0][4], src[0][5], weight[0], c[0][7]);
@@ -522,16 +503,16 @@ static void ker_neon_dirctconv_3x3s1_oc4_ow4_oh2(const int8_t* src_ptr,
 
 template <BiasMode bias_mode, int filter_size>
 struct KerNeonDirectStride1Int8 {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int remain_w, int ld_dst_oc);
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+            int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int ld_dst_oc);
 };
 
 template <BiasMode bias_mode>
 struct KerNeonDirectStride1Int8<bias_mode, 5> {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int remain_w, int /*ld_dst_oc*/) {
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+            int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int /*ld_dst_oc*/) {
         constexpr int filter_size = 5;
         constexpr int fh = filter_size;
         constexpr int fw = filter_size;
@@ -577,49 +558,49 @@ struct KerNeonDirectStride1Int8<bias_mode, 5> {
                 weight[2] = vld1q_s8(read_weight_ptr + 2 * 16);
                 weight[3] = vld1q_s8(read_weight_ptr + 3 * 16);
                 weight[4] = vld1q_s8(read_weight_ptr + 4 * 16);
-#define CALC_ONE_RESULT(_src0, _src1, _src2, _src3, _src4, _w0, _w1, _w2, _w3, \
-                        _w4, _c)                                               \
-    do {                                                                       \
-        int16x8_t tmp0 = vmull_s8(vget_low_s8(_src0), vget_low_s8(_w0));       \
-        int16x8_t tmp1 = vmull_s8(vget_high_s8(_src0), vget_high_s8(_w0));     \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src1), vget_low_s8(_w1));           \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src1), vget_high_s8(_w1));         \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src2), vget_low_s8(_w2));           \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src2), vget_high_s8(_w2));         \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src3), vget_low_s8(_w3));           \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src3), vget_high_s8(_w3));         \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src4), vget_low_s8(_w4));           \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src4), vget_high_s8(_w4));         \
-        tmp0 = vaddq_s16(tmp0, tmp1);                                          \
-        _c = vadd_s16(_c, vadd_s16(vget_low_s16(tmp0), vget_high_s16(tmp0)));  \
+#define CALC_ONE_RESULT(                                                      \
+        _src0, _src1, _src2, _src3, _src4, _w0, _w1, _w2, _w3, _w4, _c)       \
+    do {                                                                      \
+        int16x8_t tmp0 = vmull_s8(vget_low_s8(_src0), vget_low_s8(_w0));      \
+        int16x8_t tmp1 = vmull_s8(vget_high_s8(_src0), vget_high_s8(_w0));    \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src1), vget_low_s8(_w1));          \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src1), vget_high_s8(_w1));        \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src2), vget_low_s8(_w2));          \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src2), vget_high_s8(_w2));        \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src3), vget_low_s8(_w3));          \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src3), vget_high_s8(_w3));        \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src4), vget_low_s8(_w4));          \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src4), vget_high_s8(_w4));        \
+        tmp0 = vaddq_s16(tmp0, tmp1);                                         \
+        _c = vadd_s16(_c, vadd_s16(vget_low_s16(tmp0), vget_high_s16(tmp0))); \
     } while (0);
 
-                CALC_ONE_RESULT(src[0], src[1], src[2], src[3], src[4],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][0]);
-                CALC_ONE_RESULT(src[1], src[2], src[3], src[4], src[5],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][1]);
-                CALC_ONE_RESULT(src[2], src[3], src[4], src[5], src[6],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][2]);
-                CALC_ONE_RESULT(src[3], src[4], src[5], src[6], src[7],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][3]);
-                CALC_ONE_RESULT(src[4], src[5], src[6], src[7], src[8],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][4]);
-                CALC_ONE_RESULT(src[5], src[6], src[7], src[8], src[9],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][5]);
+                CALC_ONE_RESULT(
+                        src[0], src[1], src[2], src[3], src[4], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][0]);
+                CALC_ONE_RESULT(
+                        src[1], src[2], src[3], src[4], src[5], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][1]);
+                CALC_ONE_RESULT(
+                        src[2], src[3], src[4], src[5], src[6], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][2]);
+                CALC_ONE_RESULT(
+                        src[3], src[4], src[5], src[6], src[7], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][3]);
+                CALC_ONE_RESULT(
+                        src[4], src[5], src[6], src[7], src[8], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][4]);
+                CALC_ONE_RESULT(
+                        src[5], src[6], src[7], src[8], src[9], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][5]);
                 src[0] = vld_dup_tbl_s32(src_ic_0_3 + 10 * 4, idx);
                 src[1] = vld_dup_tbl_s32(src_ic_0_3 + 11 * 4, idx);
-                CALC_ONE_RESULT(src[6], src[7], src[8], src[9], src[0],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][6]);
-                CALC_ONE_RESULT(src[7], src[8], src[9], src[0], src[1],
-                                weight[0], weight[1], weight[2], weight[3],
-                                weight[4], c[0][7]);
+                CALC_ONE_RESULT(
+                        src[6], src[7], src[8], src[9], src[0], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][6]);
+                CALC_ONE_RESULT(
+                        src[7], src[8], src[9], src[0], src[1], weight[0], weight[1],
+                        weight[2], weight[3], weight[4], c[0][7]);
             }
             weight_ptr += fh * fw * ld_weight_ic4;
         }
@@ -630,9 +611,9 @@ struct KerNeonDirectStride1Int8<bias_mode, 5> {
 #undef CALC_ONE_RESULT
 template <BiasMode bias_mode>
 struct KerNeonDirectStride1Int8<bias_mode, 7> {
-    static void impl(const int8_t* src_ptr, const int8_t* weight_ptr,
-                     const int16_t* bias_ptr, int16_t* dst_ptr, int ic, int ih,
-                     int iw, int remain_w, int /*ld_dst_oc*/) {
+    static void impl(
+            const int8_t* src_ptr, const int8_t* weight_ptr, const int16_t* bias_ptr,
+            int16_t* dst_ptr, int ic, int ih, int iw, int remain_w, int /*ld_dst_oc*/) {
         constexpr int filter_size = 7;
         constexpr int fh = filter_size;
         constexpr int fw = filter_size;
@@ -682,51 +663,58 @@ struct KerNeonDirectStride1Int8<bias_mode, 7> {
                 weight[5] = vld1q_s8(read_weight_ptr + 5 * 16);
                 weight[6] = vld1q_s8(read_weight_ptr + 6 * 16);
 
-#define CALC_ONE_RESULT(_src0, _src1, _src2, _src3, _src4, _src5, _src6, _w,  \
-                        _c)                                                   \
-    do {                                                                      \
-        int16x8_t tmp0 = vmull_s8(vget_low_s8(_src0), vget_low_s8(_w[0]));    \
-        int16x8_t tmp1 = vmull_s8(vget_high_s8(_src0), vget_high_s8(_w[0]));  \
-        int16x8_t tmp2 = vmull_s8(vget_low_s8(_src1), vget_low_s8(_w[1]));    \
-        int16x8_t tmp3 = vmull_s8(vget_high_s8(_src1), vget_high_s8(_w[1]));  \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src2), vget_low_s8(_w[2]));        \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src2), vget_high_s8(_w[2]));      \
-        tmp2 = vmlal_s8(tmp2, vget_low_s8(_src3), vget_low_s8(_w[3]));        \
-        tmp3 = vmlal_s8(tmp3, vget_high_s8(_src3), vget_high_s8(_w[3]));      \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src4), vget_low_s8(_w[4]));        \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src4), vget_high_s8(_w[4]));      \
-        tmp2 = vmlal_s8(tmp2, vget_low_s8(_src5), vget_low_s8(_w[5]));        \
-        tmp3 = vmlal_s8(tmp3, vget_high_s8(_src5), vget_high_s8(_w[5]));      \
-        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src6), vget_low_s8(_w[6]));        \
-        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src6), vget_high_s8(_w[6]));      \
-        tmp0 = vaddq_s16(tmp0, tmp1);                                         \
-        tmp2 = vaddq_s16(tmp2, tmp3);                                         \
-        tmp0 = vaddq_s16(tmp0, tmp2);                                         \
-        _c = vadd_s16(_c, vadd_s16(vget_low_s16(tmp0), vget_high_s16(tmp0))); \
+#define CALC_ONE_RESULT(_src0, _src1, _src2, _src3, _src4, _src5, _src6, _w, _c) \
+    do {                                                                         \
+        int16x8_t tmp0 = vmull_s8(vget_low_s8(_src0), vget_low_s8(_w[0]));       \
+        int16x8_t tmp1 = vmull_s8(vget_high_s8(_src0), vget_high_s8(_w[0]));     \
+        int16x8_t tmp2 = vmull_s8(vget_low_s8(_src1), vget_low_s8(_w[1]));       \
+        int16x8_t tmp3 = vmull_s8(vget_high_s8(_src1), vget_high_s8(_w[1]));     \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src2), vget_low_s8(_w[2]));           \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src2), vget_high_s8(_w[2]));         \
+        tmp2 = vmlal_s8(tmp2, vget_low_s8(_src3), vget_low_s8(_w[3]));           \
+        tmp3 = vmlal_s8(tmp3, vget_high_s8(_src3), vget_high_s8(_w[3]));         \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src4), vget_low_s8(_w[4]));           \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src4), vget_high_s8(_w[4]));         \
+        tmp2 = vmlal_s8(tmp2, vget_low_s8(_src5), vget_low_s8(_w[5]));           \
+        tmp3 = vmlal_s8(tmp3, vget_high_s8(_src5), vget_high_s8(_w[5]));         \
+        tmp0 = vmlal_s8(tmp0, vget_low_s8(_src6), vget_low_s8(_w[6]));           \
+        tmp1 = vmlal_s8(tmp1, vget_high_s8(_src6), vget_high_s8(_w[6]));         \
+        tmp0 = vaddq_s16(tmp0, tmp1);                                            \
+        tmp2 = vaddq_s16(tmp2, tmp3);                                            \
+        tmp0 = vaddq_s16(tmp0, tmp2);                                            \
+        _c = vadd_s16(_c, vadd_s16(vget_low_s16(tmp0), vget_high_s16(tmp0)));    \
     } while (0);
 
-                CALC_ONE_RESULT(src[0], src[1], src[2], src[3], src[4], src[5],
-                                src[6], weight, c[0][0]);
-                CALC_ONE_RESULT(src[1], src[2], src[3], src[4], src[5], src[6],
-                                src[7], weight, c[0][1]);
+                CALC_ONE_RESULT(
+                        src[0], src[1], src[2], src[3], src[4], src[5], src[6], weight,
+                        c[0][0]);
+                CALC_ONE_RESULT(
+                        src[1], src[2], src[3], src[4], src[5], src[6], src[7], weight,
+                        c[0][1]);
                 src[0] = vld_dup_tbl_s32(src_ic_0_3 + 10 * 4, idx);
                 src[1] = vld_dup_tbl_s32(src_ic_0_3 + 11 * 4, idx);
 
-                CALC_ONE_RESULT(src[2], src[3], src[4], src[5], src[6], src[7],
-                                src[8], weight, c[0][2]);
-                CALC_ONE_RESULT(src[3], src[4], src[5], src[6], src[7], src[8],
-                                src[9], weight, c[0][3]);
+                CALC_ONE_RESULT(
+                        src[2], src[3], src[4], src[5], src[6], src[7], src[8], weight,
+                        c[0][2]);
+                CALC_ONE_RESULT(
+                        src[3], src[4], src[5], src[6], src[7], src[8], src[9], weight,
+                        c[0][3]);
 
                 src[2] = vld_dup_tbl_s32(src_ic_0_3 + 12 * 4, idx);
                 src[3] = vld_dup_tbl_s32(src_ic_0_3 + 13 * 4, idx);
-                CALC_ONE_RESULT(src[4], src[5], src[6], src[7], src[8], src[9],
-                                src[0], weight, c[0][4]);
-                CALC_ONE_RESULT(src[5], src[6], src[7], src[8], src[9], src[0],
-                                src[1], weight, c[0][5]);
-                CALC_ONE_RESULT(src[6], src[7], src[8], src[9], src[0], src[1],
-                                src[2], weight, c[0][6]);
-                CALC_ONE_RESULT(src[7], src[8], src[9], src[0], src[1], src[2],
-                                src[3], weight, c[0][7]);
+                CALC_ONE_RESULT(
+                        src[4], src[5], src[6], src[7], src[8], src[9], src[0], weight,
+                        c[0][4]);
+                CALC_ONE_RESULT(
+                        src[5], src[6], src[7], src[8], src[9], src[0], src[1], weight,
+                        c[0][5]);
+                CALC_ONE_RESULT(
+                        src[6], src[7], src[8], src[9], src[0], src[1], src[2], weight,
+                        c[0][6]);
+                CALC_ONE_RESULT(
+                        src[7], src[8], src[9], src[0], src[1], src[2], src[3], weight,
+                        c[0][7]);
             }
             weight_ptr += fh * fw * ld_weight_ic4;
         }
@@ -736,12 +724,10 @@ struct KerNeonDirectStride1Int8<bias_mode, 7> {
 
 #undef CALC_ONE_RESULT
 template <BiasMode bias_mode>
-void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
-                                         const int8_t* filter,
-                                         const int16_t* bias, int16_t* dst,
-                                         const size_t oc, const size_t ic,
-                                         const size_t ih, const size_t iw,
-                                         const size_t oh, const size_t ow) {
+void conv_direct_stride1_2x2_int8_nchw44(
+        const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+        const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+        const size_t oh, const size_t ow) {
     constexpr size_t filter_size = 2;
     constexpr size_t fh = filter_size;
     constexpr size_t fw = filter_size;
@@ -806,9 +792,9 @@ void conv_direct_stride1_2x2_int8_nchw44(const int8_t* src,
 
 template <BiasMode bias_mode>
 void conv_direct_stride1_3x3_int8x8x16_oh2_nchw44(
-        const int8_t* src, const int8_t* filter, const int16_t* bias,
-        int16_t* dst, const size_t oc, const size_t ic, const size_t ih,
-        const size_t iw, const size_t oh, const size_t ow) {
+        const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+        const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+        const size_t oh, const size_t ow) {
     constexpr size_t filter_size = 3;
     constexpr size_t fh = filter_size;
     constexpr size_t fw = filter_size;
@@ -834,8 +820,7 @@ void conv_direct_stride1_3x3_int8x8x16_oh2_nchw44(
                         oc_idx * img_stride + (oh_idx * ow + ow_idx) * oc_step;
                 ker_neon_dirctconv_3x3s1_oc4_ow4_oh2<bias_mode, filter_size>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
-                        dst + dst_offset, ic, ih, iw, ow_step, ld_oc,
-                        ow * oc_step);
+                        dst + dst_offset, ic, ih, iw, ow_step, ld_oc, ow * oc_step);
             }
             if (ow_remain > 0) {
                 const size_t src_offset = (oh_idx * iw + ow_end) * ic_step;
@@ -843,8 +828,7 @@ void conv_direct_stride1_3x3_int8x8x16_oh2_nchw44(
                         oc_idx * img_stride + (oh_idx * ow + ow_end) * oc_step;
                 ker_neon_dirctconv_3x3s1_oc4_ow4_oh2<bias_mode, filter_size>(
                         src + src_offset, filter + weight_offset, bias + oc_idx,
-                        dst + dst_offset, ic, ih, iw, ow_remain, ld_oc,
-                        ow * oc_step);
+                        dst + dst_offset, ic, ih, iw, ow_remain, ld_oc, ow * oc_step);
             }
         }
         for (; oh_idx < oh; oh_idx += oh_step) {
@@ -869,12 +853,10 @@ void conv_direct_stride1_3x3_int8x8x16_oh2_nchw44(
 }
 
 template <BiasMode bias_mode, int filter_size>
-void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
-                                          const int8_t* filter,
-                                          const int16_t* bias, int16_t* dst,
-                                          const size_t oc, const size_t ic,
-                                          const size_t ih, const size_t iw,
-                                          const size_t oh, const size_t ow) {
+void conv_direct_stride1_int8_nchw44_kern(
+        const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+        const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+        const size_t oh, const size_t ow) {
     constexpr size_t fh = filter_size;
     constexpr size_t fw = filter_size;
     constexpr size_t ic_step = 4;
@@ -914,10 +896,10 @@ void conv_direct_stride1_int8_nchw44_kern(const int8_t* src,
 namespace int8x8x16_direct_nchw44 {
 template <BiasMode bias_mode, int filter_size>
 struct ConvDirectInt8Nchw44Choose<bias_mode, filter_size, 1> {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int16_t* bias, int16_t* dst, const size_t oc,
-                     const size_t ic, const size_t ih, const size_t iw,
-                     const size_t oh, const size_t ow) {
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+            const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+            const size_t oh, const size_t ow) {
         conv_direct_stride1_int8_nchw44_kern<bias_mode, filter_size>(
                 src, filter, bias, dst, oc, ic, ih, iw, oh, ow);
     }
@@ -925,21 +907,21 @@ struct ConvDirectInt8Nchw44Choose<bias_mode, filter_size, 1> {
 
 template <BiasMode bias_mode>
 struct ConvDirectInt8Nchw44Choose<bias_mode, 2, 1> {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int16_t* bias, int16_t* dst, const size_t oc,
-                     const size_t ic, const size_t ih, const size_t iw,
-                     const size_t oh, const size_t ow) {
-        conv_direct_stride1_2x2_int8_nchw44<bias_mode>(src, filter, bias, dst,
-                                                       oc, ic, ih, iw, oh, ow);
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+            const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+            const size_t oh, const size_t ow) {
+        conv_direct_stride1_2x2_int8_nchw44<bias_mode>(
+                src, filter, bias, dst, oc, ic, ih, iw, oh, ow);
     }
 };
 
 template <BiasMode bias_mode>
 struct ConvDirectInt8Nchw44Choose<bias_mode, 3, 1> {
-    static void impl(const int8_t* src, const int8_t* filter,
-                     const int16_t* bias, int16_t* dst, const size_t oc,
-                     const size_t ic, const size_t ih, const size_t iw,
-                     const size_t oh, const size_t ow) {
+    static void impl(
+            const int8_t* src, const int8_t* filter, const int16_t* bias, int16_t* dst,
+            const size_t oc, const size_t ic, const size_t ih, const size_t iw,
+            const size_t oh, const size_t ow) {
         conv_direct_stride1_3x3_int8x8x16_oh2_nchw44<bias_mode>(
                 src, filter, bias, dst, oc, ic, ih, iw, oh, ow);
     }

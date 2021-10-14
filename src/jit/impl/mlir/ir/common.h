@@ -85,8 +85,7 @@ public:
     mlir::Value const_i32(int32_t val);
 
     // select function
-    mlir::Value select(mlir::Value cond, mlir::Value true_val,
-                       mlir::Value false_val);
+    mlir::Value select(mlir::Value cond, mlir::Value true_val, mlir::Value false_val);
 
 private:
     mlir::OpBuilder& m_builder;
@@ -94,8 +93,9 @@ private:
 };
 
 template <typename Op>
-mlir::Value get_operand(mlir::OpBuilder& builder, const mlir::Location& loc,
-                        const mlir::Value& val, const mlir::ValueRange& index) {
+mlir::Value get_operand(
+        mlir::OpBuilder& builder, const mlir::Location& loc, const mlir::Value& val,
+        const mlir::ValueRange& index) {
     if (val.getType().isa<mlir::MemRefType>()) {
         return builder.create<Op>(loc, val, index);
     } else {
@@ -103,14 +103,12 @@ mlir::Value get_operand(mlir::OpBuilder& builder, const mlir::Location& loc,
     }
 }
 
-mlir::AffineMap get_affinemap(mlir::OpBuilder& builder, const mlir::Value& val,
-                              const TensorLayout& layout);
+mlir::AffineMap get_affinemap(
+        mlir::OpBuilder& builder, const mlir::Value& val, const TensorLayout& layout);
 
-mlir::Value get_affine_load_op(mlir::OpBuilder& builder,
-                               const mlir::Location& loc,
-                               const mlir::Value& val,
-                               const mlir::ValueRange& index,
-                               const TensorLayout& dst);
+mlir::Value get_affine_load_op(
+        mlir::OpBuilder& builder, const mlir::Location& loc, const mlir::Value& val,
+        const mlir::ValueRange& index, const TensorLayout& dst);
 
 }  // namespace jit
 }  // namespace mgb

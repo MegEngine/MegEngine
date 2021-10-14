@@ -30,8 +30,9 @@ static inline const char* opr_format_to_string(
         cb(NCHW64);
         cb(CHWN4);
         default:
-            mgb_assert(false, "Invalid opr format(got:%u)",
-                       static_cast<uint32_t>(opr_format));
+            mgb_assert(
+                    false, "Invalid opr format(got:%u)",
+                    static_cast<uint32_t>(opr_format));
     }
 #undef cb
 }
@@ -53,8 +54,9 @@ static inline TensorFormats opr_format_to_tensor_formats(
         case OprFormat::CHWN4:
             return TensorFormats::CHWNc4;
         default:
-            mgb_throw(AssertionError, "format(%s) is not supported",
-                      opr_format_to_string(opr_format));
+            mgb_throw(
+                    AssertionError, "format(%s) is not supported",
+                    opr_format_to_string(opr_format));
     };
 }
 
@@ -116,8 +118,9 @@ static inline megdnn::NamedTensorShape tensor_formats_to_named_tensor_shape(
         case TensorFormats::C11RS:
             return {{"C"}, {"C%1"}, {"C%1"}, {"R"}, {"S"}};
         default:
-            mgb_throw(AssertionError, "invalid tensor formats(%u)",
-                      static_cast<uint32_t>(format));
+            mgb_throw(
+                    AssertionError, "invalid tensor formats(%u)",
+                    static_cast<uint32_t>(format));
     }
 }
 

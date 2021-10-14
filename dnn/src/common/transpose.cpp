@@ -14,18 +14,15 @@
 
 namespace megdnn {
 
-void TransposeForward::deduce_layout(const TensorLayout &src, TensorLayout &dst)
-{
+void TransposeForward::deduce_layout(const TensorLayout& src, TensorLayout& dst) {
     dst = src;
     dst.dtype = src.dtype;
     std::swap(dst.shape[0], dst.shape[1]);
     dst.init_contiguous_stride();
 }
 
-void TransposeForward::check_exec(const TensorLayout &src,
-        const TensorLayout &dst,
-        size_t workspace_in_bytes)
-{
+void TransposeForward::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
     // dtype must collide
     megdnn_assert(src.dtype == dst.dtype);
     // ndim must be 2
@@ -47,5 +44,5 @@ void TransposeForward::check_exec(const TensorLayout &src,
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
 }
 
-} // namespace megdnn
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

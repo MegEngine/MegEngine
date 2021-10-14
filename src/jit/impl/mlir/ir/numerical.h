@@ -26,8 +26,8 @@ namespace jit {
  *  C_0 + C_1 * x + C_2 * x^2 + ... + C_N * x^N
  *  where coeff = [C_N, ..., C_2, C_1, C_0]
  */
-mlir::Value polynomial(ValueBuilderHelper& helper, mlir::Value x,
-                       std::vector<mlir::Value>& coeff);
+mlir::Value polynomial(
+        ValueBuilderHelper& helper, mlir::Value x, std::vector<mlir::Value>& coeff);
 
 //! numerical approximation of arctangent
 mlir::Value atan2_approx(ValueBuilderHelper& helper, mlir::Value y, mlir::Value x);

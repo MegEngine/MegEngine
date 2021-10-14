@@ -37,10 +37,11 @@ struct KernParam {
         idx2 = offset - idx0 * shape_lo.divisor();
         idx1 = idx[offset];
         if (idx1 >= max_mid_index) {
-            set_async_error_info(error_info, error_tracker,
-                                 "invalid IndexingOneHot: "
-                                 "offset=%d idx0=%d indexer=%d idx2=%d",
-                                 offset, idx0, idx1, idx2);
+            set_async_error_info(
+                    error_info, error_tracker,
+                    "invalid IndexingOneHot: "
+                    "offset=%d idx0=%d indexer=%d idx2=%d",
+                    offset, idx0, idx1, idx2);
             idx1 = 0;
         }
         return idx0 * stride_hi + idx1 * shape_lo.divisor() + idx2;

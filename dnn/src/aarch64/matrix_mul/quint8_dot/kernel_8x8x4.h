@@ -56,9 +56,9 @@ namespace matmul_8x8x4 {
 //      zB * k
 //  A -> v27, v28 | B -> v29, v30 |  zA * zB * k -> v26
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_8x8(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k,
-                     uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
+static void kern_8x8(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
     K /= 4;
     const uint8_t* a_ptr = packA;
     const uint8_t* b_ptr = packB;
@@ -247,20 +247,18 @@ static void kern_8x8(const uint8_t* packA, const uint8_t* packB, int K,
             "stp q12, q20, [%[outptr6]]\n"
             "stp q13, q21, [%[outptr7]]\n"
 
-            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [a0] "+w"(a0),
-              [a1] "+w"(a1), [a0a] "+w"(a0a), [a1a] "+w"(a1a), [b0] "+w"(b0),
-              [b1] "+w"(b1), [k] "+r"(k), [LDC] "+r"(LDC), [oddk] "+r"(oddk),
+            : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [a0] "+w"(a0), [a1] "+w"(a1),
+              [a0a] "+w"(a0a), [a1a] "+w"(a1a), [b0] "+w"(b0), [b1] "+w"(b1),
+              [k] "+r"(k), [LDC] "+r"(LDC), [oddk] "+r"(oddk),
               [is_first_k] "+r"(is_first_k), [outptr0] "+r"(outptr0),
-              [zero_point_A] "+r"(zero_point_A),
-              [zero_point_B] "+r"(zero_point_B), [zAB] "+r"(zAB),
-              [outptr1] "=r"(outptr1), [outptr2] "=r"(outptr2),
-              [outptr3] "=r"(outptr3), [outptr4] "=r"(outptr4),
-              [outptr5] "=r"(outptr5), [outptr6] "=r"(outptr6),
-              [outptr7] "=r"(outptr7)
+              [zero_point_A] "+r"(zero_point_A), [zero_point_B] "+r"(zero_point_B),
+              [zAB] "+r"(zAB), [outptr1] "=r"(outptr1), [outptr2] "=r"(outptr2),
+              [outptr3] "=r"(outptr3), [outptr4] "=r"(outptr4), [outptr5] "=r"(outptr5),
+              [outptr6] "=r"(outptr6), [outptr7] "=r"(outptr7)
             :
-            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15",
-              "v16", "v17", "v18", "v19", "v20", "v21", "v23", "v24", "v25",
-              "v26", "v27", "v28", "v29", "v30", "cc", "memory");
+            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16",
+              "v17", "v18", "v19", "v20", "v21", "v23", "v24", "v25", "v26", "v27",
+              "v28", "v29", "v30", "cc", "memory");
 }
 
 // Overview of register layout:
@@ -293,9 +291,10 @@ static void kern_8x8(const uint8_t* packA, const uint8_t* packB, int K,
 //  A -> v28 | B -> v29, v30 |  zA * zB * k -> v26
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int m_remain,
-                     uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
+static void kern_4x8(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int m_remain, uint8_t zero_point_A, uint8_t zero_point_B,
+        uint32_t zAB) {
     K /= 4;
     const uint8_t* a_ptr = packA;
     const uint8_t* b_ptr = packB;
@@ -445,17 +444,15 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
 
             STORE_C
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [k] "+r"(k),
-              [outptr0] "+r"(outptr0), [oddk] "+r"(oddk),
-              [is_first_k] "+r"(is_first_k), [m_remain] "+r"(m_remain),
-              [zero_point_A] "+r"(zero_point_A),
-              [zero_point_B] "+r"(zero_point_B), [zAB] "+r"(zAB),
-              [LDC] "+r"(LDC), [a0] "=w"(a0), [a0a] "=w"(a0a), [b0] "=w"(b0),
-              [b1] "=w"(b1), [b0a] "=w"(b0a), [b1a] "=w"(b1a),
-              [outptr1] "=r"(outptr1), [outptr2] "=r"(outptr2),
-              [outptr3] "=r"(outptr3), [x0] "=r"(x0)
+              [outptr0] "+r"(outptr0), [oddk] "+r"(oddk), [is_first_k] "+r"(is_first_k),
+              [m_remain] "+r"(m_remain), [zero_point_A] "+r"(zero_point_A),
+              [zero_point_B] "+r"(zero_point_B), [zAB] "+r"(zAB), [LDC] "+r"(LDC),
+              [a0] "=w"(a0), [a0a] "=w"(a0a), [b0] "=w"(b0), [b1] "=w"(b1),
+              [b0a] "=w"(b0a), [b1a] "=w"(b1a), [outptr1] "=r"(outptr1),
+              [outptr2] "=r"(outptr2), [outptr3] "=r"(outptr3), [x0] "=r"(x0)
             :
-            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v23", "v24",
-              "v25", "v26", "v28", "v29", "v30", "memory", "cc");
+            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v23", "v24", "v25",
+              "v26", "v28", "v29", "v30", "memory", "cc");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -496,9 +493,10 @@ static void kern_4x8(const uint8_t* packA, const uint8_t* packB, int K,
 //  A -> v27, v28 | B -> v29 |  zA * zB * k -> v26
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_8x4(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int n_remain,
-                     uint8_t zero_point_A, uint8_t zero_point_B, uint32_t zAB) {
+static void kern_8x4(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int n_remain, uint8_t zero_point_A, uint8_t zero_point_B,
+        uint32_t zAB) {
     K /= 4;
     const uint8_t* a_ptr = packA;
     const uint8_t* b_ptr = packB;
@@ -689,16 +687,15 @@ static void kern_8x4(const uint8_t* packA, const uint8_t* packB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [LDC] "+r"(LDC),
               [oddk] "+r"(oddk), [is_first_k] "+r"(is_first_k),
               [n_remain] "+r"(n_remain), [k] "+r"(k), [outptr0] "+r"(outptr0),
-              [zero_point_A] "+r"(zero_point_A),
-              [zero_point_B] "+r"(zero_point_B), [zAB] "+r"(zAB), [a0] "=w"(a0),
-              [a1] "=w"(a1), [a0a] "=w"(a0a), [a1a] "=w"(a1a), [b0] "=w"(b0),
-              [b0a] "=w"(b0a), [outptr1] "=r"(outptr1), [outptr2] "=r"(outptr2),
-              [outptr3] "=r"(outptr3), [outptr4] "=r"(outptr4),
-              [outptr5] "=r"(outptr5), [outptr6] "=r"(outptr6),
-              [outptr7] "=r"(outptr7), [x0] "=r"(x0)
+              [zero_point_A] "+r"(zero_point_A), [zero_point_B] "+r"(zero_point_B),
+              [zAB] "+r"(zAB), [a0] "=w"(a0), [a1] "=w"(a1), [a0a] "=w"(a0a),
+              [a1a] "=w"(a1a), [b0] "=w"(b0), [b0a] "=w"(b0a), [outptr1] "=r"(outptr1),
+              [outptr2] "=r"(outptr2), [outptr3] "=r"(outptr3), [outptr4] "=r"(outptr4),
+              [outptr5] "=r"(outptr5), [outptr6] "=r"(outptr6), [outptr7] "=r"(outptr7),
+              [x0] "=r"(x0)
             :
-            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v23", "v24",
-              "v25", "v26", "v27", "v28", "v29", "memory", "cc");
+            : "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v23", "v24", "v25",
+              "v26", "v27", "v28", "v29", "memory", "cc");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -735,10 +732,10 @@ static void kern_8x4(const uint8_t* packA, const uint8_t* packB, int K,
 //  A -> v28 | B -> v29 |  zA * zB * k -> v26
 
 MEGDNN_ATTRIBUTE_TARGET("dotprod")
-static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
-                     int32_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain, uint8_t zero_point_A, uint8_t zero_point_B,
-                     uint32_t zAB) {
+static void kern_4x4(
+        const uint8_t* packA, const uint8_t* packB, int K, int32_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain, uint8_t zero_point_A,
+        uint8_t zero_point_B, uint32_t zAB) {
     K /= 4;
     const int32_t* a_ptr = reinterpret_cast<const int32_t*>(packA);
     const int32_t* b_ptr = reinterpret_cast<const int32_t*>(packB);
@@ -890,12 +887,11 @@ static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
             : [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [oddk] "+r"(oddk),
               [is_first_k] "+r"(is_first_k), [n_remain] "+r"(n_remain),
               [m_remain] "+r"(m_remain), [LDC] "+r"(LDC),
-              [zero_point_A] "+r"(zero_point_A),
-              [zero_point_B] "+r"(zero_point_B), [zAB] "+r"(zAB),
-              [outptr0] "+r"(outptr0), [k] "+r"(k), [a0] "=w"(a0),
-              [a0a] "=w"(a0a), [b0] "=w"(b0), [b0a] "=w"(b0a),
-              [outptr1] "=r"(outptr1), [outptr2] "=r"(outptr2),
-              [outptr3] "=r"(outptr3), [x0] "=r"(x0), [x1] "=r"(x1)
+              [zero_point_A] "+r"(zero_point_A), [zero_point_B] "+r"(zero_point_B),
+              [zAB] "+r"(zAB), [outptr0] "+r"(outptr0), [k] "+r"(k), [a0] "=w"(a0),
+              [a0a] "=w"(a0a), [b0] "=w"(b0), [b0a] "=w"(b0a), [outptr1] "=r"(outptr1),
+              [outptr2] "=r"(outptr2), [outptr3] "=r"(outptr3), [x0] "=r"(x0),
+              [x1] "=r"(x1)
             :
             : "v4", "v5", "v6", "v7", "v23", "v24", "v25", "v26", "v28", "v29",
               "memory", "cc");
@@ -908,9 +904,8 @@ static void kern_4x4(const uint8_t* packA, const uint8_t* packB, int K,
 
 #undef SUB_LANE
 
-static void gemm_u8_8x8_transpose_pack_helper(uint8_t* out, const uint8_t* in,
-                                              int ldin, int x0, int xmax,
-                                              int k0, int kmax) {
+static void gemm_u8_8x8_transpose_pack_helper(
+        uint8_t* out, const uint8_t* in, int ldin, int x0, int xmax, int k0, int kmax) {
     uint8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(uint8_t) * 16);
     const int ksize = kmax - k0;
@@ -997,10 +992,9 @@ static void gemm_u8_8x8_transpose_pack_helper(uint8_t* out, const uint8_t* in,
     }
 }
 
-static void gemm_u8_8x8_interleave_pack_helper(uint8_t* outptr,
-                                               const uint8_t* inptr, int ldin,
-                                               int y0, int ymax, int k0,
-                                               int kmax) {
+static void gemm_u8_8x8_interleave_pack_helper(
+        uint8_t* outptr, const uint8_t* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     uint8_t zerobuff[16];
     std::memset(zerobuff, 0, sizeof(uint8_t) * 16);
 
@@ -1027,13 +1021,15 @@ static void gemm_u8_8x8_interleave_pack_helper(uint8_t* outptr,
         int K = kmax - k0;
         //! read 8 * 4 in each row
         for (; K > 15; K -= 16) {
-            interleave_8x4_4_b(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr);
+            interleave_8x4_4_b(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
 
         if (K > 0) {
-            interleave_8(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6,
-                         inptr7, outptr, 4, K);
+            interleave_8(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr, 4, K);
         }
     }
     for (; y < ymax; y += 4) {

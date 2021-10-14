@@ -25,10 +25,10 @@ class NormalExecEnv final : public GraphExecutable::ExecEnv {
         OperatorNodeBase* opr;
         MGB_IF_COND_EXEC(ExecutionMask* mask);
 
-        TaskSeqElem(Task task_, OperatorNodeBase* opr_ MGB_IF_COND_EXEC(
-                                        , ExecutionMask* mask_))
-                : task{std::move(task_)},
-                  opr{opr_} MGB_IF_COND_EXEC(, mask{mask_}) {}
+        TaskSeqElem(
+                Task task_,
+                OperatorNodeBase* opr_ MGB_IF_COND_EXEC(, ExecutionMask* mask_))
+                : task{std::move(task_)}, opr{opr_} MGB_IF_COND_EXEC(, mask{mask_}) {}
 
         TaskSeqElem(const TaskSeqElem&) = default;
 
@@ -94,8 +94,7 @@ public:
     void set_active_opr(OperatorNodeBase* opr) {
         m_cur_active_opr = opr;
 #if MGB_ENABLE_COND_EXEC
-        m_cur_active_opr_mask =
-                opr ? ExecutionMask::get_from_opr(opr) : nullptr;
+        m_cur_active_opr_mask = opr ? ExecutionMask::get_from_opr(opr) : nullptr;
         if (m_cur_active_opr_mask) {
             m_has_exec_mask = true;
         }
@@ -104,8 +103,8 @@ public:
 
     void dispatch_on_comp_node(CompNode cn, Task&& task) override;
 
-    void dispatch_on_comp_node_with_mask(CompNode cn, Task&& task,
-                                         ExecutionMask* mask) override;
+    void dispatch_on_comp_node_with_mask(
+            CompNode cn, Task&& task, ExecutionMask* mask) override;
 
     /*!
      * \brief start running of all added tasks; if there is only one task

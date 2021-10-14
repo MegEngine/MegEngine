@@ -19,8 +19,9 @@ using namespace megdnn;
 namespace {
 
 template <typename KeyType>
-void forward_impl(size_t M, size_t N, const KeyType* sptr, KeyType* dptr,
-                  dt_int32* iptr, bool ascending) {
+void forward_impl(
+        size_t M, size_t N, const KeyType* sptr, KeyType* dptr, dt_int32* iptr,
+        bool ascending) {
     using KV = std::pair<KeyType, int>;
     std::vector<KV> row(N);
     rep(m, M) {
@@ -41,8 +42,9 @@ void forward_impl(size_t M, size_t N, const KeyType* sptr, KeyType* dptr,
 }
 
 template <typename KeyType>
-void backward_impl(size_t dst_h, size_t dst_w, size_t src_w, KeyType* dst,
-                   const KeyType* src_data, const int* src_idx) {
+void backward_impl(
+        size_t dst_h, size_t dst_w, size_t src_w, KeyType* dst, const KeyType* src_data,
+        const int* src_idx) {
     if (src_w != dst_w) {
         memset(dst, 0, sizeof(KeyType) * dst_h * dst_w);
     }
@@ -58,9 +60,9 @@ void backward_impl(size_t dst_h, size_t dst_w, size_t src_w, KeyType* dst,
 namespace megdnn {
 namespace naive {
 
-void ArgsortForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                              _megdnn_tensor_out indices,
-                              _megdnn_workspace workspace) {
+void ArgsortForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_tensor_out indices,
+        _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, indices.layout, workspace.size);
     auto M = src.layout.shape[0], N = src.layout.shape[1];
     auto iptr = indices.ptr<dt_int32>();
@@ -81,23 +83,21 @@ void ArgsortForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
     }
 }
 
-void ArgsortBackwardImpl::exec(_megdnn_tensor_in diff,
-                               _megdnn_tensor_in indices,
-                               _megdnn_tensor_out grad,
-                               _megdnn_workspace workspace) {
+void ArgsortBackwardImpl::exec(
+        _megdnn_tensor_in diff, _megdnn_tensor_in indices, _megdnn_tensor_out grad,
+        _megdnn_workspace workspace) {
     check_exec(diff.layout, indices.layout, grad.layout, workspace.size);
     size_t M = grad.layout.shape[0], N = grad.layout.shape[1],
            SRC_W = indices.layout[1];
     auto iptr = indices.ptr<dt_int32>();
     switch (diff.layout.dtype.enumv()) {
-#define cb(dt)                                                 \
-    case DTypeTrait<dt>::enumv: {                              \
-        using ctype = DTypeTrait<dt>::ctype;                   \
-        auto hptr = diff.ptr<ctype>();                         \
-        auto gptr = grad.ptr<ctype>();                         \
-        MEGDNN_DISPATCH_CPU_KERN_OPR(                          \
-                backward_impl(M, N, SRC_W, gptr, hptr, iptr)); \
-        return;                                                \
+#define cb(dt)                                                                      \
+    case DTypeTrait<dt>::enumv: {                                                   \
+        using ctype = DTypeTrait<dt>::ctype;                                        \
+        auto hptr = diff.ptr<ctype>();                                              \
+        auto gptr = grad.ptr<ctype>();                                              \
+        MEGDNN_DISPATCH_CPU_KERN_OPR(backward_impl(M, N, SRC_W, gptr, hptr, iptr)); \
+        return;                                                                     \
     }
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

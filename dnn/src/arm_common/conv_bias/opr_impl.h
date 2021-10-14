@@ -10,9 +10,9 @@
  * implied.
  */
 #pragma once
+#include "src/common/algo_base.h"
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/opr_impl.h"
-#include "src/common/algo_base.h"
 
 namespace megdnn {
 namespace arm_common {
@@ -31,8 +31,7 @@ public:
     SmallVector<fallback::ConvBiasImpl::AlgoBase*> get_all_packed_algo() override;
 
     bool is_matmul_quantized_prefer(
-            const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param)
-            const override;
+            const fallback::ConvBiasImpl::NCBKernSizeParam& ncb_param) const override;
 
     SmallVector<AlgoCategory> suggest_algo_category_order(
             const NCBKernSizeParam& param) const override;
@@ -97,6 +96,7 @@ private:
     class AlgoF16Direct;
     class AlgoF16DirectStride1;
     class AlgoF16ChannelWiseNCHW88;
+    class AlgoF16DirectNCHW88;
 #endif
 
     class AlgoPack;

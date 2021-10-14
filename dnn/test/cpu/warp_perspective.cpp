@@ -11,8 +11,8 @@
 #include "test/cpu/fixture.h"
 
 #include "test/common/checker.h"
-#include "test/common/rng.h"
 #include "test/common/random_state.h"
+#include "test/common/rng.h"
 
 #include "test/common/warp_perspective.h"
 
@@ -71,8 +71,9 @@ TEST_F(CPU, WARP_PERSPECTIVE_CV) {
     checker.set_rng(1, &rng);
     using BMode = param::WarpPerspective::BorderMode;
     param.format = param::WarpPerspective::Format::NHWC;
-    for (auto mode : {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT,
-                      BMode::WRAP, BMode::CONSTANT}) {
+    for (auto mode :
+         {BMode::REFLECT_101, BMode::REPLICATE, BMode::REFLECT, BMode::WRAP,
+          BMode::CONSTANT}) {
         param.bmode = mode;
         param.border_val = 1.737;
         checker.set_param(param);

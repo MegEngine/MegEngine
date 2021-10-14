@@ -9,61 +9,54 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "megbrain/test/helper.h"
 #include "megbrain/utils/event.h"
+#include "megbrain/test/helper.h"
 
 using namespace mgb;
 
 namespace {
-    struct Event0 {
-        int x;
+struct Event0 {
+    int x;
 
-        MGB_TYPEINFO_OBJ_DECL;
-    };
+    MGB_TYPEINFO_OBJ_DECL;
+};
 
-    struct Event1 {
-        int y;
+struct Event1 {
+    int y;
 
-        MGB_TYPEINFO_OBJ_DECL;
-    };
+    MGB_TYPEINFO_OBJ_DECL;
+};
 
-    MGB_TYPEINFO_OBJ_IMPL(Event0);
-    MGB_TYPEINFO_OBJ_IMPL(Event1);
+MGB_TYPEINFO_OBJ_IMPL(Event0);
+MGB_TYPEINFO_OBJ_IMPL(Event1);
 
-    struct TrackedHandle {
-        static int nr_inst;
+struct TrackedHandle {
+    static int nr_inst;
 
-        TrackedHandle() {
-            ++ nr_inst;
-        }
+    TrackedHandle() { ++nr_inst; }
 
-        TrackedHandle(const TrackedHandle &) {
-            ++ nr_inst;
-        }
+    TrackedHandle(const TrackedHandle&) { ++nr_inst; }
 
-        ~TrackedHandle() {
-            -- nr_inst;
-        }
+    ~TrackedHandle() { --nr_inst; }
 
-        void operator() (const Event0&) {
-        }
-    };
-    int TrackedHandle::nr_inst = 0;
-}
+    void operator()(const Event0&) {}
+};
+int TrackedHandle::nr_inst = 0;
+}  // namespace
 
 TEST(TestEvent, Simple) {
     SyncEventConnecter conn;
 
     int ev0_check = 0;
-    auto on_ev0 = [&ev0_check](const Event0 &ev) {
+    auto on_ev0 = [&ev0_check](const Event0& ev) {
         ASSERT_EQ(2, ev.x);
-        ++ ev0_check;
+        ++ev0_check;
     };
 
     int ev1_check = 0;
-    auto on_ev1 = [&ev1_check](const Event1 &ev) {
+    auto on_ev1 = [&ev1_check](const Event1& ev) {
         ASSERT_EQ(3, ev.y);
-        ++ ev1_check;
+        ++ev1_check;
     };
 
     conn.register_receiver_permanent<Event0>(on_ev0);
@@ -92,9 +85,9 @@ TEST(TestEvent, MultiRecv) {
     SyncEventConnecter conn;
 
     int chk0 = 0, chk1 = 0, delta = 0;
-    auto on_ev0 = [&delta](int *chk, const Event0 &ev) {
+    auto on_ev0 = [&delta](int* chk, const Event0& ev) {
         ASSERT_EQ(2, ev.x);
-        ++ delta;
+        ++delta;
         (*chk) += delta;
     };
 
@@ -111,7 +104,6 @@ TEST(TestEvent, MultiRecv) {
     conn.signal_inplace<Event0>(2);
     ASSERT_EQ(4, chk0);
     ASSERT_EQ(2, chk1);
-
 
     hdl0.reset();
     conn.signal_inplace<Event0>(2);
@@ -144,4 +136,3 @@ TEST(TestEvent, HandleDtor1) {
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
-

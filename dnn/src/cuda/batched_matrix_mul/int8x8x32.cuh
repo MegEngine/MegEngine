@@ -24,10 +24,8 @@ struct UnrollConfig {
     static int const unroll_k = k_tot;
     static int const unroll = k_;
     static int const thread_k = k_tot / k_;
-    static int const load_m =
-            (m_ / 4) / (ThreadConfig::thread_y / thread_k) * 4;
-    static int const load_n =
-            (n_ / 4) / (ThreadConfig::thread_x / thread_k) * 4;
+    static int const load_m = (m_ / 4) / (ThreadConfig::thread_y / thread_k) * 4;
+    static int const load_n = (n_ / 4) / (ThreadConfig::thread_x / thread_k) * 4;
 };
 
 template <int x_, int y_>
@@ -58,10 +56,9 @@ struct Global2SharedMem {
     bool tr;
     bool aligned;
 
-    __device__ __forceinline__ Global2SharedMem(int32_t* smem_, int s_off,
-                                                int s_bound, int ld_src_,
-                                                int ld_dst_, int b_r_, int b_c_,
-                                                int step_, bool tr_, bool al_)
+    __device__ __forceinline__ Global2SharedMem(
+            int32_t* smem_, int s_off, int s_bound, int ld_src_, int ld_dst_, int b_r_,
+            int b_c_, int step_, bool tr_, bool al_)
             : smem(smem_),
               smem_off(s_off),
               smem_bound(s_bound),
@@ -79,15 +76,14 @@ struct Global2SharedMem {
 };
 
 template <typename UnrollConfig, typename ThreadConfig>
-__global__ void batched_8x8x32_kern(const int8_t* a, int lda, int sta, bool tra,
-                                    const int8_t* b, int ldb, int stb, bool trb,
-                                    int32_t* c, int ldc, int stc, int m, int n,
-                                    int k);
+__global__ void batched_8x8x32_kern(
+        const int8_t* a, int lda, int sta, bool tra, const int8_t* b, int ldb, int stb,
+        bool trb, int32_t* c, int ldc, int stc, int m, int n, int k);
 
-void exec_igemm_8x8x32(const int8_t* A, const int8_t* B, int32_t* C,
-                       const int batch_count, const int m, const int n,
-                       const int k, int ldA, int ldB, int ldC, int stA, int stB,
-                       int stC, bool transA, bool transB, cudaStream_t stream);
+void exec_igemm_8x8x32(
+        const int8_t* A, const int8_t* B, int32_t* C, const int batch_count,
+        const int m, const int n, const int k, int ldA, int ldB, int ldC, int stA,
+        int stB, int stC, bool transA, bool transB, cudaStream_t stream);
 
 }  // namespace cuda
 }  // namespace megdnn

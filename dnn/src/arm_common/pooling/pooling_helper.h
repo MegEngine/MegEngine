@@ -84,8 +84,7 @@ struct MeanInPooler<area, dt_quint8, uint8_t, float>
         feed_cnt += 1;
     }
     void post(uint8_t* dst) {
-        this->res =
-                this->res + static_cast<float>(area - feed_cnt) * zero_point;
+        this->res = this->res + static_cast<float>(area - feed_cnt) * zero_point;
         this->res *= this->coef;
         *dst = std::round(this->res);
     }
@@ -137,11 +136,12 @@ struct NeonMeanPooler<area, dt_qint8, int8_t, float> {
     void feed(const int8_t* val) {
         int8x16_t item = vld1q_s8(val);
         float32x4_t tmp;
-#define cb(i)                                                                \
-    tmp = (float32x4_t){static_cast<float>(vgetq_lane_s8(item, 4 * i + 0)),  \
-                        static_cast<float>(vgetq_lane_s8(item, 4 * i + 1)),  \
-                        static_cast<float>(vgetq_lane_s8(item, 4 * i + 2)),  \
-                        static_cast<float>(vgetq_lane_s8(item, 4 * i + 3))}; \
+#define cb(i)                                                    \
+    tmp = (float32x4_t){                                         \
+            static_cast<float>(vgetq_lane_s8(item, 4 * i + 0)),  \
+            static_cast<float>(vgetq_lane_s8(item, 4 * i + 1)),  \
+            static_cast<float>(vgetq_lane_s8(item, 4 * i + 2)),  \
+            static_cast<float>(vgetq_lane_s8(item, 4 * i + 3))}; \
     sum##i = vaddq_f32(sum##i, tmp);
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
@@ -211,11 +211,12 @@ struct NeonMeanPooler<area, dt_quint8, uint8_t, float> {
     void feed(const uint8_t* val) {
         uint8x16_t item = vld1q_u8(val);
         float32x4_t tmp;
-#define cb(i)                                                                \
-    tmp = (float32x4_t){static_cast<float>(vgetq_lane_u8(item, 4 * i + 0)),  \
-                        static_cast<float>(vgetq_lane_u8(item, 4 * i + 1)),  \
-                        static_cast<float>(vgetq_lane_u8(item, 4 * i + 2)),  \
-                        static_cast<float>(vgetq_lane_u8(item, 4 * i + 3))}; \
+#define cb(i)                                                    \
+    tmp = (float32x4_t){                                         \
+            static_cast<float>(vgetq_lane_u8(item, 4 * i + 0)),  \
+            static_cast<float>(vgetq_lane_u8(item, 4 * i + 1)),  \
+            static_cast<float>(vgetq_lane_u8(item, 4 * i + 2)),  \
+            static_cast<float>(vgetq_lane_u8(item, 4 * i + 3))}; \
     sum##i = vaddq_f32(sum##i, tmp);
         UNROLL_CALL_NOWRAPPER(4, cb);
 #undef cb
@@ -322,8 +323,7 @@ struct NeonMaxPooler<area, dt_qint8, int8_t, float> {
     static constexpr int SIMD_WIDTH = 16;
 
     int8x16_t res;
-    NeonMaxPooler(DType)
-            : res(vdupq_n_s8(std::numeric_limits<int8_t>::lowest())) {}
+    NeonMaxPooler(DType) : res(vdupq_n_s8(std::numeric_limits<int8_t>::lowest())) {}
     void feed(const int8_t* val) { res = vmaxq_s8(res, vld1q_s8(val)); }
     void post(int8_t* dst) { vst1q_s8(dst, res); }
 };
@@ -335,8 +335,7 @@ struct NeonMaxPooler<area, dt_quint8, uint8_t, float> {
     static constexpr int SIMD_WIDTH = 16;
 
     uint8x16_t res;
-    NeonMaxPooler(DType)
-            : res(vdupq_n_u8(std::numeric_limits<uint8_t>::lowest())) {}
+    NeonMaxPooler(DType) : res(vdupq_n_u8(std::numeric_limits<uint8_t>::lowest())) {}
     void feed(const uint8_t* val) { res = vmaxq_u8(res, vld1q_u8(val)); }
     void post(uint8_t* dst) { vst1q_u8(dst, res); }
 };
@@ -356,10 +355,10 @@ struct NeonMaxPooler<area, dt_float16, __fp16, __fp16> {
 #endif
 
 template <typename Pooler, int window>
-void do_pxl_naive(int oh, int ow, const typename Pooler::ctype* src,
-                  typename Pooler::ctype* dst, DType src_dtype, const int IH,
-                  const int IW, const int OH, const int OW, const int PH,
-                  const int PW, const int SH, const int SW) {
+void do_pxl_naive(
+        int oh, int ow, const typename Pooler::ctype* src, typename Pooler::ctype* dst,
+        DType src_dtype, const int IH, const int IW, const int OH, const int OW,
+        const int PH, const int PW, const int SH, const int SW) {
     MEGDNN_MARK_USED_VAR(OH);
     Pooler pooler(src_dtype);
     rep(wh, window) rep(ww, window) {
@@ -376,18 +375,18 @@ namespace detail {
 
 template <typename Pooler, Pooling::Mode mode>
 struct do_pxl_2x2_pack_proxy {
-    static void gao(int oh, int ow, const typename Pooler::ctype* src,
-                    typename Pooler::ctype* dst, DType, const int IH,
-                    const int IW, const int OH, const int OW, const int PH,
-                    const int PW);
+    static void gao(
+            int oh, int ow, const typename Pooler::ctype* src,
+            typename Pooler::ctype* dst, DType, const int IH, const int IW,
+            const int OH, const int OW, const int PH, const int PW);
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_float32, float, float>,
-                             Pooling::Mode::AVERAGE> {
-    static void gao(int oh, int ow, const dt_float32* src, dt_float32* dst,
-                    DType, const int IH, const int IW, const int OH,
-                    const int OW, const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MeanInPooler<4, dt_float32, float, float>, Pooling::Mode::AVERAGE> {
+    static void gao(
+            int oh, int ow, const dt_float32* src, dt_float32* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         static const auto avg_coef = vdupq_n_f32(0.25f);
@@ -407,11 +406,11 @@ struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_float32, float, float>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_qint8, int8_t, float>,
-                             Pooling::Mode::AVERAGE> {
-    static void gao(int oh, int ow, const int8_t* src, int8_t* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MeanInPooler<4, dt_qint8, int8_t, float>, Pooling::Mode::AVERAGE> {
+    static void gao(
+            int oh, int ow, const int8_t* src, int8_t* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -446,11 +445,11 @@ struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_qint8, int8_t, float>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_quint8, uint8_t, float>,
-                             Pooling::Mode::AVERAGE> {
-    static void gao(int oh, int ow, const uint8_t* src, uint8_t* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MeanInPooler<4, dt_quint8, uint8_t, float>, Pooling::Mode::AVERAGE> {
+    static void gao(
+            int oh, int ow, const uint8_t* src, uint8_t* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -478,11 +477,11 @@ struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_quint8, uint8_t, float>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_float32, float, float>,
-                             Pooling::Mode::MAX> {
-    static void gao(int oh, int ow, const dt_float32* src, dt_float32* dst,
-                    DType, const int IH, const int IW, const int OH,
-                    const int OW, const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MaxPooler<4, dt_float32, float, float>, Pooling::Mode::MAX> {
+    static void gao(
+            int oh, int ow, const dt_float32* src, dt_float32* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -500,11 +499,11 @@ struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_float32, float, float>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_qint8, int8_t, float>,
-                             Pooling::Mode::MAX> {
-    static void gao(int oh, int ow, const int8_t* src, int8_t* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MaxPooler<4, dt_qint8, int8_t, float>, Pooling::Mode::MAX> {
+    static void gao(
+            int oh, int ow, const int8_t* src, int8_t* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -522,11 +521,11 @@ struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_qint8, int8_t, float>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_quint8, uint8_t, float>,
-                             Pooling::Mode::MAX> {
-    static void gao(int oh, int ow, const uint8_t* src, uint8_t* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MaxPooler<4, dt_quint8, uint8_t, float>, Pooling::Mode::MAX> {
+    static void gao(
+            int oh, int ow, const uint8_t* src, uint8_t* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -545,11 +544,11 @@ struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_quint8, uint8_t, float>,
 
 #if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 template <>
-struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_float16, __fp16, __fp16>,
-                             Pooling::Mode::AVERAGE> {
-    static void gao(int oh, int ow, const __fp16* src, __fp16* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MeanInPooler<4, dt_float16, __fp16, __fp16>, Pooling::Mode::AVERAGE> {
+    static void gao(
+            int oh, int ow, const __fp16* src, __fp16* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         static const auto avg_coef = vdupq_n_f16(0.25f);
@@ -569,11 +568,11 @@ struct do_pxl_2x2_pack_proxy<MeanInPooler<4, dt_float16, __fp16, __fp16>,
 };
 
 template <>
-struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_float16, __fp16, __fp16>,
-                             Pooling::Mode::MAX> {
-    static void gao(int oh, int ow, const __fp16* src, __fp16* dst, DType,
-                    const int IH, const int IW, const int OH, const int OW,
-                    const int PH, const int PW) {
+struct do_pxl_2x2_pack_proxy<
+        MaxPooler<4, dt_float16, __fp16, __fp16>, Pooling::Mode::MAX> {
+    static void gao(
+            int oh, int ow, const __fp16* src, __fp16* dst, DType, const int IH,
+            const int IW, const int OH, const int OW, const int PH, const int PW) {
         MEGDNN_MARK_USED_VAR(IH);
         MEGDNN_MARK_USED_VAR(OH);
         int ih = -PH + 2 * oh;
@@ -594,20 +593,19 @@ struct do_pxl_2x2_pack_proxy<MaxPooler<4, dt_float16, __fp16, __fp16>,
 }  // namespace detail
 
 template <typename Pooler, Pooling::Mode mode>
-void do_pxl_2x2_pack(int oh, int ow, const typename Pooler::ctype* src,
-                     typename Pooler::ctype* dst, DType src_dtype, const int IH,
-                     const int IW, const int OH, const int OW, const int PH,
-                     const int PW) {
+void do_pxl_2x2_pack(
+        int oh, int ow, const typename Pooler::ctype* src, typename Pooler::ctype* dst,
+        DType src_dtype, const int IH, const int IW, const int OH, const int OW,
+        const int PH, const int PW) {
     detail::do_pxl_2x2_pack_proxy<Pooler, mode>::gao(
             oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW);
 }
 
 template <typename NeonPooler, int window>
-void do_pxl_compact_packed(int oh, int ow,
-                           const typename NeonPooler::ctype* src,
-                           typename NeonPooler::ctype* dst, DType src_dtype,
-                           const int IH, const int IW, const int OH,
-                           const int OW, const int PH, const int PW) {
+void do_pxl_compact_packed(
+        int oh, int ow, const typename NeonPooler::ctype* src,
+        typename NeonPooler::ctype* dst, DType src_dtype, const int IH, const int IW,
+        const int OH, const int OW, const int PH, const int PW) {
     MEGDNN_MARK_USED_VAR(IH);
     MEGDNN_MARK_USED_VAR(OH);
     NeonPooler pooler(src_dtype);
@@ -620,27 +618,29 @@ void do_pxl_compact_packed(int oh, int ow,
 }
 
 template <typename Pooler, typename NeonPooler, int window>
-void do_pooling_compact(const typename Pooler::ctype* src,
-                        typename Pooler::ctype* dst, DType src_dtype,
-                        const int IH, const int IW, const int OH, const int OW,
-                        const int PH, const int PW) {
-    static_assert(std::is_same<typename Pooler::ctype,
-                               typename NeonPooler::ctype>::value,
-                  "ctype of Pooler and NeonPooler is not the same");
+void do_pooling_compact(
+        const typename Pooler::ctype* src, typename Pooler::ctype* dst, DType src_dtype,
+        const int IH, const int IW, const int OH, const int OW, const int PH,
+        const int PW) {
+    static_assert(
+            std::is_same<typename Pooler::ctype, typename NeonPooler::ctype>::value,
+            "ctype of Pooler and NeonPooler is not the same");
     const int stride = 1;
     int oh = 0;
     for (; oh < OH && oh - PH < 0; ++oh) {
         int ow = 0;
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
     for (; oh < OH && oh - PH + window <= IH; ++oh) {
         int ow = 0;
         for (; ow < OW && ow - PW < 0; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
         for (; ow + NeonPooler::SIMD_WIDTH <= OW &&
                ow + NeonPooler::SIMD_WIDTH - 1 - PW + window <= IW;
@@ -649,56 +649,62 @@ void do_pooling_compact(const typename Pooler::ctype* src,
                     oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW);
         }
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
     for (; oh < OH; ++oh) {
         int ow = 0;
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
 }
 
 template <typename Pooler, Pooling::Mode mode>
-void do_pooling_2x2(const typename Pooler::ctype* src,
-                    typename Pooler::ctype* dst, DType src_dtype, const int IH,
-                    const int IW, const int OH, const int OW, const int PH,
-                    const int PW) {
+void do_pooling_2x2(
+        const typename Pooler::ctype* src, typename Pooler::ctype* dst, DType src_dtype,
+        const int IH, const int IW, const int OH, const int OW, const int PH,
+        const int PW) {
     const int window = 2;
     const int stride = 2;
     int oh = 0;
     for (; oh < OH && -PH + stride * oh < 0; ++oh) {
         int ow = 0;
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
     for (; oh < OH && -PH + stride * oh + window <= IH; ++oh) {
         int ow = 0;
         for (; ow < OW && -PW + stride * ow < 0; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
         for (; ow + Pooler::SIMD_WIDTH <= OW &&
                -PW + stride * (ow + Pooler::SIMD_WIDTH - 1) + window <= IW;
              ow += Pooler::SIMD_WIDTH) {
-            do_pxl_2x2_pack<Pooler, mode>(oh, ow, src, dst, src_dtype, IH, IW,
-                                          OH, OW, PH, PW);
+            do_pxl_2x2_pack<Pooler, mode>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW);
         }
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
     for (; oh < OH; ++oh) {
         int ow = 0;
         for (; ow < OW; ++ow) {
-            do_pxl_naive<Pooler, window>(oh, ow, src, dst, src_dtype, IH, IW,
-                                         OH, OW, PH, PW, stride, stride);
+            do_pxl_naive<Pooler, window>(
+                    oh, ow, src, dst, src_dtype, IH, IW, OH, OW, PH, PW, stride,
+                    stride);
         }
     }
 }
@@ -782,11 +788,10 @@ inline float16x8x2_t vunzip(float16x8_t a, float16x8_t b) {
 
 // because the __fp16 can't get the lowest value, so add dtype
 template <typename dtype, typename ctype>
-void do_max_pooling_w5x5_s2x2_NEON(const ctype* src, ctype* dst, const int IH,
-                                   const int IW, const int OH, const int OW,
-                                   const int PH, const int PW,
-                                   const WorkspaceBundle& ws,
-                                   const int MEGDNN_SIMD_WIDTH) {
+void do_max_pooling_w5x5_s2x2_NEON(
+        const ctype* src, ctype* dst, const int IH, const int IW, const int OH,
+        const int OW, const int PH, const int PW, const WorkspaceBundle& ws,
+        const int MEGDNN_SIMD_WIDTH) {
     ctype* cache[5] = {
             static_cast<ctype*>(ws.get(0)), static_cast<ctype*>(ws.get(1)),
             static_cast<ctype*>(ws.get(2)), static_cast<ctype*>(ws.get(3)),
@@ -872,8 +877,9 @@ void do_max_pooling_w5x5_s2x2_NEON(const ctype* src, ctype* dst, const int IH,
                 vset(dptr + ow, d);
             }
             for (; ow < OW; ++ow)
-                dptr[ow] = std::max({cache[0][ow], cache[1][ow], cache[2][ow],
-                                     cache[3][ow], cache[4][ow]});
+                dptr[ow] = std::max(
+                        {cache[0][ow], cache[1][ow], cache[2][ow], cache[3][ow],
+                         cache[4][ow]});
         } else {
             std::memcpy(dptr, cache[0], sizeof(ctype) * OW);
             for (int i = 1; i < ih_to - ih_from; ++i) {
@@ -892,17 +898,16 @@ void do_max_pooling_w5x5_s2x2_NEON(const ctype* src, ctype* dst, const int IH,
 }
 
 template <typename ctype>
-void do_average_pooling_3x3_s2x2_NEON(const ctype* src, ctype* dst, size_t IH_,
-                                      size_t IW_, size_t OH_, size_t OW_,
-                                      size_t PH_, size_t PW_,
-                                      const WorkspaceBundle& ws,
-                                      const int MEGDNN_SIMD_WIDTH) {
+void do_average_pooling_3x3_s2x2_NEON(
+        const ctype* src, ctype* dst, size_t IH_, size_t IW_, size_t OH_, size_t OW_,
+        size_t PH_, size_t PW_, const WorkspaceBundle& ws,
+        const int MEGDNN_SIMD_WIDTH) {
     int IH = IH_, IW = IW_, OH = OH_, OW = OW_, PH = PH_, PW = PW_;
     // cache[i] stores the answer of the i-th line after
     // pooling along the W dimension.
-    ctype* cache[3] = {static_cast<ctype*>(ws.get(0)),
-                       static_cast<ctype*>(ws.get(1)),
-                       static_cast<ctype*>(ws.get(2))};
+    ctype* cache[3] = {
+            static_cast<ctype*>(ws.get(0)), static_cast<ctype*>(ws.get(1)),
+            static_cast<ctype*>(ws.get(2))};
     ctype* odd = static_cast<ctype*>(ws.get(3));
     ctype* even = static_cast<ctype*>(ws.get(4));
     int ih_next = 0;
@@ -1001,8 +1006,7 @@ void do_average_pooling_3x3_s2x2_NEON(const ctype* src, ctype* dst, size_t IH_,
 #pragma clang loop vectorize(disable)
 #endif
             for (; ow < OW; ++ow) {
-                dptr[ow] =
-                        (cache[0][ow] + cache[1][ow] + cache[2][ow]) * factor;
+                dptr[ow] = (cache[0][ow] + cache[1][ow] + cache[2][ow]) * factor;
             }
         } else {
             std::memcpy(dptr, cache[0], sizeof(ctype) * OW);

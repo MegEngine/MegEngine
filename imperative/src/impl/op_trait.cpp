@@ -39,51 +39,50 @@ StaticData& static_data() {
     return data;
 }
 
-void OpMethFallbackByProxyGraph::impl(ApplyOnPhysicalTensor& func,
-                          op_meth_tag::ApplyOnPhysicalTensor) {
+void OpMethFallbackByProxyGraph::impl(
+        ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor) {
     func.Base::operator=(proxy_graph_detail::apply_on_physical_tensor);
 }
 void OpMethFallbackByProxyGraph::impl(Execute& func, op_meth_tag::Execute) {
     func.Base::operator=(proxy_graph_detail::execute);
 }
-void OpMethFallbackByProxyGraph::impl(InferOutputMemDesc& func,
-                          op_meth_tag::InferOutputMemDesc) {
+void OpMethFallbackByProxyGraph::impl(
+        InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc) {
     func.Base::operator=(proxy_graph_detail::infer_output_mem_desc);
 }
-void OpMethFallbackByProxyGraph::impl(InferOutputAttrsFallible& func,
-                          op_meth_tag::InferOutputAttrsFallible) {
+void OpMethFallbackByProxyGraph::impl(
+        InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(proxy_graph_detail::infer_output_attrs_fallible);
 }
 void OpMethFallbackByProxyGraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
     func.Base::operator=(proxy_graph_detail::make_backward_graph);
 }
 
-void OpMethFallbackFromSubgraph::impl(ApplyOnPhysicalTensor& func,
-                          op_meth_tag::ApplyOnPhysicalTensor) {
+void OpMethFallbackFromSubgraph::impl(
+        ApplyOnPhysicalTensor& func, op_meth_tag::ApplyOnPhysicalTensor) {
     func.Base::operator=(subgraph_detail::apply_on_physical_tensor);
 }
-void OpMethFallbackFromSubgraph::impl(InferOutputMemDesc& func,
-                          op_meth_tag::InferOutputMemDesc) {
+void OpMethFallbackFromSubgraph::impl(
+        InferOutputMemDesc& func, op_meth_tag::InferOutputMemDesc) {
     func.Base::operator=(subgraph_detail::infer_output_mem_desc);
 }
-void OpMethFallbackFromSubgraph::impl(ApplyOnVarNode& func,
-                          op_meth_tag::ApplyOnVarNode) {
+void OpMethFallbackFromSubgraph::impl(
+        ApplyOnVarNode& func, op_meth_tag::ApplyOnVarNode) {
     func.Base::operator=(subgraph_detail::apply_on_var_node);
 }
-void OpMethFallbackFromSubgraph::impl(InferOutputAttrsFallible& func,
-                          op_meth_tag::InferOutputAttrsFallible) {
+void OpMethFallbackFromSubgraph::impl(
+        InferOutputAttrsFallible& func, op_meth_tag::InferOutputAttrsFallible) {
     func.Base::operator=(subgraph_detail::infer_output_attrs_fallible);
 }
 void OpMethFallbackFromSubgraph::impl(GradMaker& func, op_meth_tag::GradMaker) {
     func.Base::operator=(subgraph_detail::make_backward_graph);
 }
 
-void OpMethFallback::impl(DecideDispatchMode& func,
-                          op_meth_tag::DecideDispatchMode) {
-    static auto decide_dispatch_mode =
-            [](const OpDef&, const SmallVector<LogicalTensorDesc>&) {
-                return DispatchMode::KERNEL;
-            };
+void OpMethFallback::impl(DecideDispatchMode& func, op_meth_tag::DecideDispatchMode) {
+    static auto decide_dispatch_mode = [](const OpDef&,
+                                          const SmallVector<LogicalTensorDesc>&) {
+        return DispatchMode::KERNEL;
+    };
     func.Base::operator=(decide_dispatch_mode);
 }
 void OpMethFallback::impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc) {
@@ -92,9 +91,9 @@ void OpMethFallback::impl(MakeNameFunc& func, op_meth_tag::MakeNameFunc) {
     };
     func.Base::operator=(make_name);
 }
-} // detail
+}  // namespace detail
 
-OpTrait::OpTrait(const char* name_): name(name_) {}
+OpTrait::OpTrait(const char* name_) : name(name_) {}
 
 OpTrait* OpTrait::find_by_typeinfo(Typeinfo* type) {
     auto&& type2reg = detail::static_data().type2reg;
@@ -114,8 +113,8 @@ OpTrait* OpTrait::find_by_name(const char* name) {
     return iter->second;
 }
 
-void OpTrait::for_each_trait(thin_function<void(OpTrait&)> visitor){
-    for(auto& trait: detail::static_data().registries){
+void OpTrait::for_each_trait(thin_function<void(OpTrait&)> visitor) {
+    for (auto& trait : detail::static_data().registries) {
         visitor(trait);
     }
 }
@@ -130,8 +129,7 @@ OpTraitRegistry& OpTraitRegistry::fallback() {
         mode |= Mode::ByProxyGraph;
     }
     mode |= Mode::Default;
-#define SET_FALLBACK_MODE(meth) \
-    trait->meth.fallback_mode = mode;
+#define SET_FALLBACK_MODE(meth) trait->meth.fallback_mode = mode;
     FOR_EACH_OP_METH(SET_FALLBACK_MODE)
 #undef SET_FALLBACK_MODE
 
@@ -141,7 +139,8 @@ OpTraitRegistry& OpTraitRegistry::fallback() {
 void OpTraitRegistry::do_insert(Typeinfo* type) {
     auto&& sd = detail::static_data();
     auto ret = sd.type2reg.emplace(type, trait);
-    mgb_assert(ret.second || ret.first->second == trait,
+    mgb_assert(
+            ret.second || ret.first->second == trait,
             "OpTrait for %s has already been registered", type->name);
 }
 
@@ -161,7 +160,7 @@ OpTraitRegistry OpTraitRegistry::do_insert(const char* name) {
     return {ret};
 }
 
-} // namespace imperative
-} // namespace mgb
+}  // namespace imperative
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

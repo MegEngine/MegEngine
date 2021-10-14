@@ -919,10 +919,10 @@ namespace megdnn {
 namespace x86 {
 namespace detail {
 
-void convolution_conv_fh3_sse(const float *src, const float *filter, float *dst,
-        const size_t src_h, const size_t src_w, const size_t dst_h, const size_t dst_w,
-        const size_t flt_w)
-{
+void convolution_conv_fh3_sse(
+        const float* src, const float* filter, float* dst, const size_t src_h,
+        const size_t src_w, const size_t dst_h, const size_t dst_w,
+        const size_t flt_w) {
     (void)src_h;
     const size_t dst_h_beg = 0;
     const size_t dst_h_end = dst_h;
@@ -967,9 +967,9 @@ void convolution_conv_fh3_sse(const float *src, const float *filter, float *dst,
     }
 }
 
-} // namespace detail
-} // namespace x86
-} // namespace megdnn
+}  // namespace detail
+}  // namespace x86
+}  // namespace megdnn
 #undef SIMD_H1
 #undef SIMD_H2
 #undef SIMD_H3

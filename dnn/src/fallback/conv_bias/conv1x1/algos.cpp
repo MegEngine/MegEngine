@@ -10,9 +10,9 @@
  * implied.
  */
 
+#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
-#include "src/fallback/conv_bias/conv1x1/algos.h"
 #include "src/fallback/conv_bias/conv1x1/conv1x1_dispatcher.h"
 #include "src/fallback/conv_bias/conv1x1/conv1x1_strategy.h"
 #include "src/fallback/conv_bias/opr_impl.h"
@@ -60,49 +60,44 @@ WorkspaceBundle ConvBiasImpl::AlgoConv1x1::get_bundle_according_packmode(
 
     auto pack_mode = m_matmul_algo->packmode();
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_bundle_default"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_bundle_default"_hash)) {
             return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT>()
-                    .get_bundle(param, matmul_param, m_matmul_algo,
-                                compt_oc_block_size);
+                    .get_bundle(
+                            param, matmul_param, m_matmul_algo, compt_oc_block_size);
         }
         MIDOUT_END();
     } else if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_bundle_only_packa"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_bundle_only_packa"_hash)) {
             return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>()
-                    .get_bundle(param, matmul_param, m_matmul_algo,
-                                compt_oc_block_size);
+                    .get_bundle(
+                            param, matmul_param, m_matmul_algo, compt_oc_block_size);
         }
         MIDOUT_END();
     } else {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_bundle_no_pack"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_bundle_no_pack"_hash)) {
             return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::NO_PACK>()
-                    .get_bundle(param, matmul_param, m_matmul_algo,
-                                compt_oc_block_size);
+                    .get_bundle(
+                            param, matmul_param, m_matmul_algo, compt_oc_block_size);
         }
         MIDOUT_END();
     }
     return {nullptr, {}};
 }
 
-size_t ConvBiasImpl::AlgoConv1x1::get_workspace(
-        const NCBKernSizeParam& param) const {
+size_t ConvBiasImpl::AlgoConv1x1::get_workspace(const NCBKernSizeParam& param) const {
     return get_bundle_according_packmode(param).total_size_in_bytes();
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoConv1x1::get_kerns_according_packmode(
-        const NCBKernSizeParam& param, bool weight_preprocess) const {
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::
+        get_kerns_according_packmode(
+                const NCBKernSizeParam& param, bool weight_preprocess) const {
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     size_t compt_oc_block_size = get_oc_tile_size_heuristic(param);
     auto pack_mode = m_matmul_algo->packmode();
 
-    Conv1x1StrategyBase* conv1x1_strategy =
-            Conv1x1Factory::make_conv1x1_strategy(param, pack_mode,
-                                                  param.filter_meta.format);
+    Conv1x1StrategyBase* conv1x1_strategy = Conv1x1Factory::make_conv1x1_strategy(
+            param, pack_mode, param.filter_meta.format);
     auto matmul_param =
             utils::get_matmul_kern_param(param, OH * OW, compt_oc_block_size);
 
@@ -110,8 +105,7 @@ ConvBiasImpl::AlgoConv1x1::get_kerns_according_packmode(
     //! NO_PACK not implement get_bundle
     WorkspaceBundle matmul_bundle = {nullptr, {}};
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::NO_PACK) {
-        matmul_bundle = {nullptr,
-                         {0, 0, m_matmul_algo->get_workspace(matmul_param)}};
+        matmul_bundle = {nullptr, {0, 0, m_matmul_algo->get_workspace(matmul_param)}};
     } else {
         matmul_bundle = m_matmul_algo->get_bundle(matmul_param);
     }
@@ -119,56 +113,47 @@ ConvBiasImpl::AlgoConv1x1::get_kerns_according_packmode(
             param, matmul_bundle.get_size(2), compt_oc_block_size);
 
     if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::DEFAULT) {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_kern_default"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_kern_default"_hash)) {
             if (!weight_preprocess) {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::DEFAULT>()
-                        .get_kern(param, whole_bundle, matmul_bundle,
-                                  thread_bundle, conv1x1_strategy,
-                                  m_matmul_algo, compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT>()
+                        .get_kern(
+                                param, whole_bundle, matmul_bundle, thread_bundle,
+                                conv1x1_strategy, m_matmul_algo, compt_oc_block_size);
             } else {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::DEFAULT>()
-                        .get_kern_preprocess(param, whole_bundle, matmul_bundle,
-                                             conv1x1_strategy, m_matmul_algo,
-                                             compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::DEFAULT>()
+                        .get_kern_preprocess(
+                                param, whole_bundle, matmul_bundle, conv1x1_strategy,
+                                m_matmul_algo, compt_oc_block_size);
             }
         }
         MIDOUT_END();
     } else if (pack_mode == MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA) {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_kern_only_packa"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_kern_only_packa"_hash)) {
             if (!weight_preprocess) {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>()
-                        .get_kern(param, whole_bundle, matmul_bundle,
-                                  thread_bundle, conv1x1_strategy,
-                                  m_matmul_algo, compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>()
+                        .get_kern(
+                                param, whole_bundle, matmul_bundle, thread_bundle,
+                                conv1x1_strategy, m_matmul_algo, compt_oc_block_size);
             } else {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>()
-                        .get_kern_preprocess(param, whole_bundle, matmul_bundle,
-                                             conv1x1_strategy, m_matmul_algo,
-                                             compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::ONLY_PACKA>()
+                        .get_kern_preprocess(
+                                param, whole_bundle, matmul_bundle, conv1x1_strategy,
+                                m_matmul_algo, compt_oc_block_size);
             }
         }
         MIDOUT_END();
     } else {
-        MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                     midout_iv("get_kern_no_pack"_hash)) {
+        MIDOUT_BEGIN(megdnn_fallback_conv1x1, midout_iv("get_kern_no_pack"_hash)) {
             if (!weight_preprocess) {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::NO_PACK>()
-                        .get_kern(param, whole_bundle, matmul_bundle,
-                                  thread_bundle, conv1x1_strategy,
-                                  m_matmul_algo, compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::NO_PACK>()
+                        .get_kern(
+                                param, whole_bundle, matmul_bundle, thread_bundle,
+                                conv1x1_strategy, m_matmul_algo, compt_oc_block_size);
             } else {
-                return Conv1x1Kerns<
-                               MatrixMulImpl::AlgoBase::PackMode::NO_PACK>()
-                        .get_kern_preprocess(param, whole_bundle, matmul_bundle,
-                                             conv1x1_strategy, m_matmul_algo,
-                                             compt_oc_block_size);
+                return Conv1x1Kerns<MatrixMulImpl::AlgoBase::PackMode::NO_PACK>()
+                        .get_kern_preprocess(
+                                param, whole_bundle, matmul_bundle, conv1x1_strategy,
+                                m_matmul_algo, compt_oc_block_size);
             }
         }
         MIDOUT_END();
@@ -180,38 +165,33 @@ SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_kerns(
     return get_kerns_according_packmode(param, false);
 }
 
-SmallVector<TensorLayout>
-ConvBiasImpl::AlgoConv1x1::deduce_preprocessed_filter_layout(
+SmallVector<TensorLayout> ConvBiasImpl::AlgoConv1x1::deduce_preprocessed_filter_layout(
         const NCBKernSizeParam& param) const {
-    MIDOUT_BEGIN(megdnn_fallback_conv1x1,
-                 midout_iv("deduce_preprocessed_filter_layout"_hash)) {
+    MIDOUT_BEGIN(
+            megdnn_fallback_conv1x1,
+            midout_iv("deduce_preprocessed_filter_layout"_hash)) {
         WorkspaceBundle wb = get_bundle_according_packmode(param);
 
         size_t GROUP = param.filter_meta.group;
         SmallVector<TensorLayout> preprocessed_layouts;
-        preprocessed_layouts.push_back(
-                {{GROUP, wb.get_size(0)}, dtype::Int8()});
+        preprocessed_layouts.push_back({{GROUP, wb.get_size(0)}, dtype::Int8()});
         return preprocessed_layouts;
     }
     MIDOUT_END();
     return {};
 }
 
-SmallVector<ConvBiasImpl::NCBKern>
-ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns(
+SmallVector<ConvBiasImpl::NCBKern> ConvBiasImpl::AlgoConv1x1::dispatch_preprocess_kerns(
         const NCBKernSizeParam& param) const {
     return get_kerns_according_packmode(param, true);
 }
 
-bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
-                                       AlgoSelectionStrategy) const {
+bool ConvBiasImpl::AlgoConv1x1::usable(
+        const NCBKernSizeParam& param, AlgoSelectionStrategy) const {
     MIDOUT_BEGIN(megdnn_fallback_conv1x1, 0, 2) {
-        size_t FH = param.filter_meta.spatial[0],
-               FW = param.filter_meta.spatial[1];
-        size_t PH = param.filter_meta.padding[0],
-               PW = param.filter_meta.padding[1];
-        size_t SH = param.filter_meta.stride[0],
-               SW = param.filter_meta.stride[1];
+        size_t FH = param.filter_meta.spatial[0], FW = param.filter_meta.spatial[1];
+        size_t PH = param.filter_meta.padding[0], PW = param.filter_meta.padding[1];
+        size_t SH = param.filter_meta.stride[0], SW = param.filter_meta.stride[1];
         auto format = param.filter_meta.format;
         size_t OH = param.osz[0];
         size_t OW = param.osz[1];
@@ -229,7 +209,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                 return false;
             }
         }
-#else   //! x86 only support nchw mode
+#else  //! x86 only support nchw mode
         if (format != param::ConvBias::Format::NCHW) {
             return false;
         }
@@ -266,16 +246,14 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
                 return false;
             }
         }
-        MatrixMulImpl::KernSizeParam matmul_param =
-                utils::get_matmul_kern_param(param, OH * OW,
-                                             get_oc_tile_size_heuristic(param));
+        MatrixMulImpl::KernSizeParam matmul_param = utils::get_matmul_kern_param(
+                param, OH * OW, get_oc_tile_size_heuristic(param));
         bool matmul_usable = m_matmul_algo->usable(matmul_param);
         auto pack_mode = m_matmul_algo->packmode();
         bool strategy_usable = Conv1x1Factory::can_make_conv1x1_strategy(
                 param, pack_mode, param.filter_meta.format);
         return matmul_usable && strategy_usable &&
-               (param.filter_meta.dilation[0] ==
-                        param.filter_meta.dilation[1] &&
+               (param.filter_meta.dilation[0] == param.filter_meta.dilation[1] &&
                 param.filter_meta.dilation[0] == 1) &&
                param.compute_mode == param::ConvBias::ComputeMode::DEFAULT;
     }
@@ -283,8 +261,7 @@ bool ConvBiasImpl::AlgoConv1x1::usable(const NCBKernSizeParam& param,
     return false;
 }
 
-bool ConvBiasImpl::AlgoConv1x1::is_preferred(
-        const NCBKernSizeParam& param) const {
+bool ConvBiasImpl::AlgoConv1x1::is_preferred(const NCBKernSizeParam& param) const {
     size_t OH = param.osz[0];
     size_t OW = param.osz[1];
     if (OH * OW != 1) {

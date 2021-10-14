@@ -20,8 +20,7 @@ using namespace cuda;
 
 bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
         const SizeArgs& args) const {
-    if (!args.src_layout->is_contiguous() ||
-        !args.dst_layout->is_contiguous()) {
+    if (!args.src_layout->is_contiguous() || !args.dst_layout->is_contiguous()) {
         return false;
     }
     if (args.bias_layout->ndim <= 0)
@@ -41,18 +40,15 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     valid_format |= param.format == Format::NCHW4_NCHW &&
                     args.bias_layout->dtype.enumv() == DTypeEnum::Float32 &&
                     args.dst_layout->dtype.enumv() == DTypeEnum::Float32;
-    valid_format |=
-            param.format == Format::NCHW4_NHWC &&
-            args.bias_layout->dtype.enumv() == DTypeEnum::QuantizedS32 &&
-            (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
-             args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm);
+    valid_format |= param.format == Format::NCHW4_NHWC &&
+                    args.bias_layout->dtype.enumv() == DTypeEnum::QuantizedS32 &&
+                    (args.dst_layout->dtype.enumv() == DTypeEnum::QuantizedS4 ||
+                     args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm);
     valid_format |= param.format == Format::NCHW4;
     if (!valid_format)
         return false;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 4,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 4,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
     size_t co;
     size_t dst_spatial_pos;
     if (param.format == Format::NCHW4) {
@@ -78,12 +74,11 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     // mode must be cross correlation
     available &= param.mode == Mode::CROSS_CORRELATION;
     // check data type
-    auto src_dtype = args.src_layout->dtype,
-         filter_dtype = args.filter_layout->dtype,
-         bias_dtype = args.bias_layout->dtype,
-         dst_dtype = args.dst_layout->dtype;
-    available &= (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
-                  filter_dtype.enumv() == DTypeEnum::QuantizedS8);
+    auto src_dtype = args.src_layout->dtype, filter_dtype = args.filter_layout->dtype,
+         bias_dtype = args.bias_layout->dtype, dst_dtype = args.dst_layout->dtype;
+    available &=
+            (src_dtype.enumv() == DTypeEnum::QuantizedS8 &&
+             filter_dtype.enumv() == DTypeEnum::QuantizedS8);
     available &= (bias_dtype.enumv() == DTypeEnum::QuantizedS32 &&
                   (dst_dtype.enumv() == DTypeEnum::QuantizedS8 ||
                    dst_dtype.enumv() == DTypeEnum::QuantizedS4 ||
@@ -109,9 +104,8 @@ bool ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::is_available(
     return available;
 }
 
-WorkspaceBundle
-ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_bundle(
-        dt_byte* raw_ptr, const SizeArgs& args) const {
+WorkspaceBundle ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+        get_workspace_bundle(dt_byte* raw_ptr, const SizeArgs& args) const {
     if (args.preprocessed_filter) {
         return WorkspaceBundle{raw_ptr, {}};
     } else {
@@ -120,8 +114,7 @@ ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_bundle(
     }
 }
 
-size_t
-ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_in_bytes(
+size_t ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::get_workspace_in_bytes(
         const SizeArgs& args) const {
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
@@ -131,10 +124,8 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 4,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 4,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
     size_t co, dst_spatial_pos;
     if (param.format == Format::NCHW4) {
         co = args.dst_layout->operator[](1) * 4;
@@ -169,17 +160,15 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         ts_src.layout = src;
         ts_dst.raw_ptr = args.workspace.raw_ptr;
         ts_dst.layout = dst;
-        auto&& transpose =
-                args.opr->handle()->create_operator<RelayoutForward>();
+        auto&& transpose = args.opr->handle()->create_operator<RelayoutForward>();
         transpose->exec(ts_src, ts_dst);
     } else {
-        filter_ptr = reinterpret_cast<int8_t*>(
-                args.preprocessed_filter->tensors[0].raw_ptr);
+        filter_ptr =
+                reinterpret_cast<int8_t*>(args.preprocessed_filter->tensors[0].raw_ptr);
     }
 
     float src_scale = args.src_layout->dtype.param<dtype::QuantizedS8>().scale,
-          filter_scale =
-                  args.filter_layout->dtype.param<dtype::QuantizedS8>().scale;
+          filter_scale = args.filter_layout->dtype.param<dtype::QuantizedS8>().scale;
 
     // \note these constants of cutlass epilogue will be passed to method
     // `execute_cutlass_conv_op` by pointer and interpreted as ElementCompute*,
@@ -190,14 +179,11 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
     float gamma = 0.f;
     float theta = 0.f;
     if (args.dst_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
-        theta = args.dst_layout->dtype.param<dtype::Quantized4Asymm>()
-                        .zero_point;
+        theta = args.dst_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
     }
     if (args.bias_layout->dtype.enumv() == DTypeEnum::QuantizedS32) {
-        megdnn_assert(args.dst_layout->dtype.category() ==
-                      DTypeCategory::QUANTIZED);
-        float bias_scale =
-                args.bias_layout->dtype.param<dtype::QuantizedS32>().scale;
+        megdnn_assert(args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED);
+        float bias_scale = args.bias_layout->dtype.param<dtype::QuantizedS32>().scale;
         dst_scale = get_scale(args.dst_layout->dtype);
         alpha /= dst_scale, beta = bias_scale / dst_scale;
     }
@@ -207,15 +193,14 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
         z_ptr = args.z_tensor->raw_ptr;
         gamma = 1.f;
         if (args.z_layout->dtype.category() == DTypeCategory::QUANTIZED) {
-            megdnn_assert(args.dst_layout->dtype.category() ==
-                          DTypeCategory::QUANTIZED);
+            megdnn_assert(
+                    args.dst_layout->dtype.category() == DTypeCategory::QUANTIZED);
             float z_scale = get_scale(args.z_layout->dtype);
             gamma = z_scale / dst_scale;
         }
         if (args.z_layout->dtype.enumv() == DTypeEnum::Quantized4Asymm) {
             uint8_t z_zero =
-                    args.z_layout->dtype.param<dtype::Quantized4Asymm>()
-                            .zero_point;
+                    args.z_layout->dtype.param<dtype::Quantized4Asymm>().zero_point;
             delta = -z_zero * gamma;
         }
     }
@@ -228,10 +213,10 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec(
             use_conv_filter_unity_opt, without_shared_load);
 
     execute_cutlass_conv_op(
-            op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr,
-            z_ptr, args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw,
-            ho, wo, ph, pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta,
-            &theta, &threshold, &dst_scale, stream);
+            op, args.src_tensor->raw_ptr, filter_ptr, args.bias_tensor->raw_ptr, z_ptr,
+            args.dst_tensor->raw_ptr, nullptr, n, hi, wi, ci, co, fh, fw, ho, wo, ph,
+            pw, sh, sw, dh, dw, &alpha, &beta, &gamma, &delta, &theta, &threshold,
+            &dst_scale, stream);
 
     after_kernel_launch();
 }
@@ -241,9 +226,8 @@ size_t ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::
     return 0_z;
 }
 
-SmallVector<TensorLayout> ConvBiasForwardImpl::
-        AlgoInt8NCHW4DotProdImplicitGemm::deduce_preprocessed_filter_layout(
-                const SizeArgs& args) const {
+SmallVector<TensorLayout> ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::
+        deduce_preprocessed_filter_layout(const SizeArgs& args) const {
     return {args.filter_layout->collapse_contiguous()};
 }
 
@@ -252,10 +236,8 @@ void ConvBiasForwardImpl::AlgoInt8NCHW4DotProdImplicitGemm::exec_preprocess(
     using Format = Param::Format;
     auto&& param = args.opr->param();
     auto&& fm = args.filter_meta;
-    size_t n = args.src_layout->operator[](0),
-           ci = args.src_layout->operator[](1) * 4,
-           hi = args.src_layout->operator[](2),
-           wi = args.src_layout->operator[](3);
+    size_t n = args.src_layout->operator[](0), ci = args.src_layout->operator[](1) * 4,
+           hi = args.src_layout->operator[](2), wi = args.src_layout->operator[](3);
     size_t co, dst_spatial_pos;
     if (param.format == Format::NCHW4) {
         co = args.dst_layout->operator[](1) * 4;

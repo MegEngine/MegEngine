@@ -11,8 +11,8 @@
 
 #pragma once
 #include "megbrain/common.h"
-#include "megbrain/system.h"
 #include "megbrain/comp_node.h"
+#include "megbrain/system.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -43,9 +43,7 @@ struct TaskElem {
 struct Worker {
 public:
     Worker(thin_function<void()>&& run) : thread{run} {}
-    ~Worker() {
-        thread.join();
-    }
+    ~Worker() { thread.join(); }
     //! Worker thread
     std::thread thread;
     //! Indicate whether the Worker thread need run

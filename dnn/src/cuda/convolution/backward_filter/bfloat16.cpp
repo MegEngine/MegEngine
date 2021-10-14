@@ -20,9 +20,8 @@ using namespace cuda;
 using namespace convolution;
 
 namespace {
-std::pair<TensorLayoutArray, ConvolutionBackwardFilterImpl::Param>
-sub_opr_config(const TensorLayoutArray& layouts,
-               const ConvolutionBackwardFilterImpl* opr) {
+std::pair<TensorLayoutArray, ConvolutionBackwardFilterImpl::Param> sub_opr_config(
+        const TensorLayoutArray& layouts, const ConvolutionBackwardFilterImpl* opr) {
     megdnn_assert(layouts.size() >= 3);
     std::pair<TensorLayoutArray, ConvolutionBackwardFilterImpl::Param> ret;
     ret.first = layouts;
@@ -36,13 +35,12 @@ sub_opr_config(const TensorLayoutArray& layouts,
     change_dtype(ret.first[2]);
 
     ret.second = opr->param();
-    ret.second.compute_mode =
-            ConvolutionBackwardFilter::Param::ComputeMode::DEFAULT;
+    ret.second.compute_mode = ConvolutionBackwardFilter::Param::ComputeMode::DEFAULT;
     return ret;
 }
 
-std::pair<TensorLayoutArray, std::unique_ptr<ConvolutionBackwardFilter>>
-prepare_sub_opr(const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
+std::pair<TensorLayoutArray, std::unique_ptr<ConvolutionBackwardFilter>> prepare_sub_opr(
+        const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
     auto conv_back_filter_opr =
             args.handle->create_operator<ConvolutionBackwardFilter>();
 
@@ -54,16 +52,15 @@ prepare_sub_opr(const ConvolutionBackwardFilterImpl::AlgoBase::SizeArgs& args) {
 }
 }  // namespace
 
-std::vector<Algorithm::SearchItem>
-ConvolutionBackwardFilterImpl::AlgoBFloat16::get_subopr_list(
-        const TensorLayoutArray& layouts, const OperatorBase* opr) const {
+std::vector<Algorithm::SearchItem> ConvolutionBackwardFilterImpl::AlgoBFloat16::
+        get_subopr_list(
+                const TensorLayoutArray& layouts, const OperatorBase* opr) const {
     auto&& config = sub_opr_config(
             layouts, static_cast<const ConvolutionBackwardFilterImpl*>(opr));
 
     std::string param_str;
     Algorithm::serialize_write_pod(config.second, param_str);
-    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER, param_str,
-             config.first}};
+    return {{Algorithm::OprType::CONVOLUTION_BACKWARD_FILTER, param_str, config.first}};
 }
 
 bool ConvolutionBackwardFilterImpl::AlgoBFloat16::is_available(
@@ -71,18 +68,16 @@ bool ConvolutionBackwardFilterImpl::AlgoBFloat16::is_available(
     auto config = prepare_sub_opr(args);
     return args.src_layout->dtype == args.diff_layout->dtype &&
            args.src_layout->dtype == dtype::BFloat16() &&
-           get_algorithm(static_cast<ConvolutionBackwardFilterImpl*>(
-                                 config.second.get()),
-                         config.first[0], config.first[1], config.first[2]);
+           get_algorithm(
+                   static_cast<ConvolutionBackwardFilterImpl*>(config.second.get()),
+                   config.first[0], config.first[1], config.first[2]);
 }
 
-WorkspaceBundle
-ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
+WorkspaceBundle ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_bundle(
         void* ptr, const SizeArgs& args) const {
     auto config = prepare_sub_opr(args);
     SmallVector<size_t> sizes;
-    auto get_workspace = [&sizes](const TensorLayout& src,
-                                  const TensorLayout& dst) {
+    auto get_workspace = [&sizes](const TensorLayout& src, const TensorLayout& dst) {
         if (src.dtype != dst.dtype) {
             sizes.push_back(dst.span().dist_byte());
         }
@@ -102,8 +97,7 @@ size_t ConvolutionBackwardFilterImpl::AlgoBFloat16::get_workspace_in_bytes(
     return get_workspace_bundle(nullptr, args).total_size_in_bytes();
 }
 
-void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(
-        const ExecArgs& args) const {
+void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(const ExecArgs& args) const {
     TensorND fsrc_tensor = *args.src_tensor;
     TensorND fdiff_tensor = *args.diff_tensor;
     TensorND fgrad_tensor = *args.grad_tensor;
@@ -116,8 +110,7 @@ void ConvolutionBackwardFilterImpl::AlgoBFloat16::exec(
     }
     {
         auto config = prepare_sub_opr(args);
-        config.second->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor,
-                            cvter.workspace());
+        config.second->exec(fsrc_tensor, fdiff_tensor, fgrad_tensor, cvter.workspace());
     }
     { cvter.comp_to_dst_type(fgrad_tensor, *args.grad_tensor); }
 }

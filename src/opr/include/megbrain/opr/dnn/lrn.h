@@ -17,27 +17,26 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(LRNForward,
-        intl::MegDNNOprWrapperFwd<megdnn::LRNForward>) // {
-    public:
-        LRNForward(VarNode *src, const Param &param,
-                const OperatorNodeConfig &config);
-        static SymbolVar make(SymbolVar src, const Param &param,
-                const OperatorNodeConfig &config = {});
+MGB_DEFINE_OPR_CLASS(LRNForward, intl::MegDNNOprWrapperFwd<megdnn::LRNForward>) // {
+public:
+    LRNForward(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    static SymbolVar make(
+            SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
 };
 using LRN = LRNForward;
 
-MGB_DEFINE_OPR_CLASS(LRNBackward,
-        intl::MegDNNOprWrapperBwd<megdnn::LRNBackward>) // {
-    public:
-        LRNBackward(VarNode *src, VarNode *dst, VarNode *diff,
-                const Param &param, const OperatorNodeConfig &config);
-        static SymbolVar make(SymbolVar src, SymbolVar dst, SymbolVar diff,
-                const Param &param,
-                const OperatorNodeConfig &config = {});
+MGB_DEFINE_OPR_CLASS(
+        LRNBackward, intl::MegDNNOprWrapperBwd<megdnn::LRNBackward>) // {
+public:
+    LRNBackward(
+            VarNode* src, VarNode* dst, VarNode* diff, const Param& param,
+            const OperatorNodeConfig& config);
+    static SymbolVar make(
+            SymbolVar src, SymbolVar dst, SymbolVar diff, const Param& param,
+            const OperatorNodeConfig& config = {});
 };
 
-} // namespace opr
-} // namespace mgb
+}  // namespace opr
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

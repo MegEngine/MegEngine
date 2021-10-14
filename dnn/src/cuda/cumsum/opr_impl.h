@@ -14,16 +14,16 @@
 namespace megdnn {
 namespace cuda {
 
-class CumsumForwardImpl: public CumsumForward {
-    public:
-        using CumsumForward::CumsumForward;
-        void exec(_megdnn_tensor_in src,
-                _megdnn_tensor_out dst,
-                _megdnn_workspace workspace) override;
-        size_t get_workspace_in_bytes(const TensorLayout &src,
-                const TensorLayout &dst) override;
+class CumsumForwardImpl : public CumsumForward {
+public:
+    using CumsumForward::CumsumForward;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
+    size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) override;
 };
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn
 // vim: syntax=cpp.doxygen

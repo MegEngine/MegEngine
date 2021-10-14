@@ -72,8 +72,9 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
             cuda_rt /= 1000;
             auto&& handle = static_cast<megdnn::cuda::HandleImpl*>(m_handle);
             auto&& prop = handle->device_prop();
-            ctg.append(ssprintf(";dev=%s;cap=%d.%d;runtime=%d;",
-                            prop.name, prop.major, prop.minor, cuda_rt));
+            ctg.append(ssprintf(
+                    ";dev=%s;cap=%d.%d;runtime=%d;", prop.name, prop.major, prop.minor,
+                    cuda_rt));
             break;
         }
 #endif
@@ -84,8 +85,9 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
             int drv = -1, hip_rt = -1;
             hip_check(hipDriverGetVersion(&drv));
             hip_check(hipRuntimeGetVersion(&hip_rt));
-            ctg.append(ssprintf(";dev=%s;cap=%d.%d,drv=%d;runtime=%d;",
-                            prop.name, prop.major, prop.minor, drv, hip_rt));
+            ctg.append(ssprintf(
+                    ";dev=%s;cap=%d.%d,drv=%d;runtime=%d;", prop.name, prop.major,
+                    prop.minor, drv, hip_rt));
             break;
         }
 #endif
@@ -103,10 +105,9 @@ HeuristicCache::KeyStorage HeuristicCache::Key::build_key_storage() const {
         case Handle::HandleType::ARMV7:
 #endif
         {
-            size_t nr_threads =
-                    static_cast<megdnn::naive::HandleImpl*>(m_handle)
-                            ->megcore_dispatcher()
-                            ->nr_threads();
+            size_t nr_threads = static_cast<megdnn::naive::HandleImpl*>(m_handle)
+                                        ->megcore_dispatcher()
+                                        ->nr_threads();
             ctg.append(";");
             ctg.append(std::to_string(nr_threads));
             ctg.append(";");

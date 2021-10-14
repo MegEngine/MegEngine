@@ -52,8 +52,7 @@ class ComputingGraphImpl final : public ComputingGraph {
 
         struct Hash {
             size_t operator()(const CallbackCallerKey& b) const {
-                return hash_pair_combine(mgb::hash(b.opr),
-                                         mgb::hash(b.comp_node));
+                return hash_pair_combine(mgb::hash(b.opr), mgb::hash(b.comp_node));
             }
         };
     };
@@ -122,8 +121,8 @@ class ComputingGraphImpl final : public ComputingGraph {
      * \param[out] has_virtual_grad whether there are VirtualGrad oprs that
      *      need to be expanded
      */
-    VarNodeArray get_dest_vars_from_out_spec(const OutputSpec& spec,
-                                             SpecialOprStat& sopr_stat);
+    VarNodeArray get_dest_vars_from_out_spec(
+            const OutputSpec& spec, SpecialOprStat& sopr_stat);
 
     void cleanup();
 
@@ -149,7 +148,8 @@ public:
     ComputingGraphImpl();
     ~ComputingGraphImpl();
 
-    template<typename T> static ComputingGraphImpl* downcast(T* ptr) = delete;
+    template <typename T>
+    static ComputingGraphImpl* downcast(T* ptr) = delete;
 
     inline static ComputingGraphImpl* downcast(ComputingGraph* graph) {
         mgb_assert(!graph->options().imperative_proxy_graph);
@@ -158,18 +158,16 @@ public:
 
     friend struct ComputingGraph::Options;
 
-    std::unique_ptr<AsyncExecutable> compile(
-            const OutputSpec& out_spec) override;
+    std::unique_ptr<AsyncExecutable> compile(const OutputSpec& out_spec) override;
 
     SmallVector<std::unique_ptr<AsyncExecutable>> compile_multi_part(
             const SmallVector<OutputSpec>& out_specs) override;
 
-    OperatorNodeBase* insert_opr(
-            std::unique_ptr<OperatorNodeBase> opr) override;
+    OperatorNodeBase* insert_opr(std::unique_ptr<OperatorNodeBase> opr) override;
 
     void* alloc_varnode_storage() override;
 
-    void free_varnode_storage(void *ptr) override;
+    void free_varnode_storage(void* ptr) override;
 
     const VarReceiverInfo& var_receiver_in_current_comp_seq(
             const VarNode* var) const override;
@@ -214,9 +212,7 @@ public:
 
     GraphOptimizer& graph_optimizer() { return components().graph_optimizer; }
 
-    EagerEvalManager& eager_eval_manager() {
-        return components().eager_eval_manager;
-    }
+    EagerEvalManager& eager_eval_manager() { return components().eager_eval_manager; }
 
 #if MGB_ENABLE_SUBLINEAR
     SeqModifierForSublinearMemory& seq_modifier_for_sublinear_memory();

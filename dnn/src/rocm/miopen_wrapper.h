@@ -21,9 +21,9 @@ class TensorDesc {
 public:
     TensorDesc();
     //! default layout is nchw
-    void set(const TensorLayout& layout,
-             const param::Convolution::Format =
-                     param::Convolution::Format::NCHW);
+    void set(
+            const TensorLayout& layout,
+            const param::Convolution::Format = param::Convolution::Format::NCHW);
     ~TensorDesc();
     miopenTensorDescriptor_t desc;
 };
@@ -32,8 +32,9 @@ class ConvDesc {
 public:
     ConvDesc();
     //! We need more information to determine detphwise convolution
-    void set(const param::Convolution& param, const size_t nr_group,
-             const bool is_depthwise = false);
+    void set(
+            const param::Convolution& param, const size_t nr_group,
+            const bool is_depthwise = false);
     ~ConvDesc();
     miopenConvolutionDescriptor_t desc;
 };

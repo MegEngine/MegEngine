@@ -253,7 +253,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
  add_enum_alias('Format', 'Convolution')
  )
 
-(pdef('AdaptivePooling', version=0,is_legacy=True).
+(pdef('AdaptivePooling', version=0, is_legacy=True).
  add_enum_alias('Mode', 'PoolingV0').
  add_enum_alias('Format', 'ConvolutionV0')
  )
@@ -276,6 +276,7 @@ pdef('Axis').add_fields('int32', 'axis', 0)
      Doc('DIM_11HW = 0', 'Dim of params (Sigma, Mu) is 1 x 1 x H x W'),
      Doc('DIM_1CHW = 1', 'Dim of params (Sigma, Mu) is 1 x C x H x W'),
      Doc('DIM_1C11 = 2', 'Dim of params (Sigma, Mu) is 1 x C x 1 x 1'),
+     Doc('DIM_111C = 3', 'Dim of params (Sigma, Mu) is 1 x 1 x 1 x C'),
      name_field='param_dim'
  ).
  add_enum(
@@ -780,6 +781,9 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
      'dtype', Doc('dtype', 'The dtype of output Tensor. Int32, Int16 and '
                   'Float32 are supported.'),
      'DTypeEnum::Int32'))
+
+(pdef('ShuffleRNG').
+ add_fields('uint64', 'seed', 0))
 
 (pdef('Flip').
  add_fields('bool', 'vertical', 'false', 'horizontal', 'false'))

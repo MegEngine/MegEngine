@@ -15,30 +15,30 @@
 #include "megdnn/oprs.h"
 namespace mgb {
 namespace opr {
-MGB_DEFINE_OPR_CLASS(FakeQuantForward,
-                     intl::MegDNNOprWrapperFwd<megdnn::FakeQuantForward>) // {
+MGB_DEFINE_OPR_CLASS(
+        FakeQuantForward, intl::MegDNNOprWrapperFwd<megdnn::FakeQuantForward>) // {
 public:
-FakeQuantForward(VarNode* src, VarNode* scale, VarNode* zero_point,
-                 const Param& param, const OperatorNodeConfig& config);
+    FakeQuantForward(
+            VarNode* src, VarNode* scale, VarNode* zero_point, const Param& param,
+            const OperatorNodeConfig& config);
 
-static SymbolVar make(SymbolVar src, SymbolVar scale, SymbolVar zero_point,
-                      const Param& param = {},
-                      const OperatorNodeConfig& config = {});
+    static SymbolVar make(
+            SymbolVar src, SymbolVar scale, SymbolVar zero_point,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
 };  // namespace opr
 using FakeQuant = FakeQuantForward;
 
-MGB_DEFINE_OPR_CLASS(FakeQuantBackward,
-                     intl::MegDNNOprWrapperBwd<megdnn::FakeQuantBackward>) // {
+MGB_DEFINE_OPR_CLASS(
+        FakeQuantBackward, intl::MegDNNOprWrapperBwd<megdnn::FakeQuantBackward>) // {
 public:
-FakeQuantBackward(VarNode* diff, VarNode* input, VarNode* scale,
-                  VarNode* zero_point, const Param& param,
-                  const OperatorNodeConfig& config);
+    FakeQuantBackward(
+            VarNode* diff, VarNode* input, VarNode* scale, VarNode* zero_point,
+            const Param& param, const OperatorNodeConfig& config);
 
-static SymbolVar make(SymbolVar diff, SymbolVar input, SymbolVar scale,
-                      SymbolVar zero_point, const Param& param = {},
-                      const OperatorNodeConfig& config = {});
-
+    static SymbolVar make(
+            SymbolVar diff, SymbolVar input, SymbolVar scale, SymbolVar zero_point,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
 };
 
-}  // namespace mgb
 }  // namespace opr
+}  // namespace mgb

@@ -8,9 +8,9 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+#include "src/rocm/utils.h"
 #include "hcc_detail/hcc_defs_prologue.h"
 #include "src/rocm/utils.h.hip"
-#include "src/rocm/utils.h"
 
 #include "src/common/utils.h"
 #include "src/rocm/handle.h"
@@ -54,20 +54,23 @@ const char* rocblasGetErrorString(rocblas_status error) {
 }  // anonymous namespace
 
 void rocm::__throw_hip_error__(hipError_t err, const char* msg) {
-    auto s = ssprintf("hip error %s(%d) occurred; expr: %s",
-                      hipGetErrorString(err), int(err), msg);
+    auto s = ssprintf(
+            "hip error %s(%d) occurred; expr: %s", hipGetErrorString(err), int(err),
+            msg);
     megdnn_throw(s.c_str());
 }
 
 void rocm::__throw_miopen_error__(miopenStatus_t err, const char* msg) {
-    auto s = ssprintf("miopen error %s(%d) occurred; expr: %s",
-                      miopenGetErrorString(err), int(err), msg);
+    auto s = ssprintf(
+            "miopen error %s(%d) occurred; expr: %s", miopenGetErrorString(err),
+            int(err), msg);
     megdnn_throw(s.c_str());
 }
 
 void rocm::__throw_rocblas_error__(rocblas_status err, const char* msg) {
-    auto s = ssprintf("rocblas error %s(%d) occurred; expr: %s",
-                      rocblasGetErrorString(err), int(err), msg);
+    auto s = ssprintf(
+            "rocblas error %s(%d) occurred; expr: %s", rocblasGetErrorString(err),
+            int(err), msg);
     megdnn_throw(s.c_str());
 }
 
@@ -78,10 +81,10 @@ void rocm::report_error(const char* msg) {
 
 uint32_t rocm::safe_size_in_kern(size_t size) {
     if (!size || size > Uint32Fastdiv::MAX_DIVIDEND) {
-        megdnn_throw(
-                ssprintf("invalid size for element-wise kernel: %zu; "
-                         "max supported size is %u",
-                         size, Uint32Fastdiv::MAX_DIVIDEND));
+        megdnn_throw(ssprintf(
+                "invalid size for element-wise kernel: %zu; "
+                "max supported size is %u",
+                size, Uint32Fastdiv::MAX_DIVIDEND));
     }
     return size;
 }
@@ -106,4 +109,3 @@ size_t rocm::max_batch_x_channel_size() {
 }
 
 // vim: syntax=cpp.doxygen
-

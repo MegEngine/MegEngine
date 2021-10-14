@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "src/common/opr_param_defs_enumv.cuh"
 #include "megdnn/arch.h"
+#include "src/common/opr_param_defs_enumv.cuh"
 
 #if MEGDNN_CC_HOST
 #include "megdnn/opr_param_defs.h"
@@ -28,85 +28,76 @@
 
 namespace megdnn {
 namespace cond_take {
-    typedef param_enumv::CondTake::Mode PEnum;
+typedef param_enumv::CondTake::Mode PEnum;
 
-    struct KParam {
-        float val, eps;
+struct KParam {
+    float val, eps;
 #if MEGDNN_CC_HOST
-        KParam(const param::CondTake &p):
-            val(p.val), eps(p.eps)
-        {}
+    KParam(const param::CondTake& p) : val(p.val), eps(p.eps) {}
 #endif
+};
+
+template <uint32_t mode, typename ctype>
+struct Pred;
+
+#define do_inst_eq_f(_ct)                                    \
+    template <>                                              \
+    struct Pred<PEnum::EQ, _ct> {                            \
+        typedef _ct ctype;                                   \
+        ctype val, eps;                                      \
+        Pred(const KParam& p) : val(p.val), eps(p.eps) {}    \
+        __device__ __host__ bool operator()(ctype x) const { \
+            return fabsf(val - x) < eps;                     \
+        }                                                    \
     };
 
-    template<uint32_t mode, typename ctype>
-    struct Pred;
-
-#define do_inst_eq_f(_ct) \
-    template<> \
-    struct Pred<PEnum::EQ, _ct> { \
-        typedef _ct ctype; \
-        ctype val, eps; \
-        Pred(const KParam &p): val(p.val), eps(p.eps) {} \
-        __device__ __host__ bool operator() (ctype x) const { \
-            return fabsf(val - x) < eps; \
-        } \
-    };
-
-#define do_inst_eq_i(_ct) \
-    template<> \
-    struct Pred<PEnum::EQ, _ct> { \
-        typedef _ct ctype; \
-        ctype val; \
-        Pred(const KParam &p): val(p.val) {} \
-        __device__ __host__ bool operator() (ctype x) const { \
-            return val == x; \
-        } \
+#define do_inst_eq_i(_ct)                                                       \
+    template <>                                                                 \
+    struct Pred<PEnum::EQ, _ct> {                                               \
+        typedef _ct ctype;                                                      \
+        ctype val;                                                              \
+        Pred(const KParam& p) : val(p.val) {}                                   \
+        __device__ __host__ bool operator()(ctype x) const { return val == x; } \
     };
 
 #define inst_eq_f(_dt) do_inst_eq_f(DTypeTrait<_dt>::ctype)
 #define inst_eq_i(_dt) do_inst_eq_i(DTypeTrait<_dt>::ctype)
-    MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(inst_eq_f)
-    MEGDNN_FOREACH_COMPUTING_DTYPE_INT(inst_eq_i)
-    inst_eq_i(::megdnn::dtype::Bool)
+MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(inst_eq_f)
+MEGDNN_FOREACH_COMPUTING_DTYPE_INT(inst_eq_i)
+inst_eq_i(::megdnn::dtype::Bool)
 #undef inst_eq_f
 #undef inst_eq_i
 
-    template<typename ctype_>
-    struct Pred<PEnum::NEQ, ctype_> {
-        typedef ctype_ ctype;
-        Pred<PEnum::EQ, ctype> eq;
+        template <typename ctype_>
+        struct Pred<PEnum::NEQ, ctype_> {
+    typedef ctype_ ctype;
+    Pred<PEnum::EQ, ctype> eq;
 
-        Pred(const KParam &p): eq(p) {}
+    Pred(const KParam& p) : eq(p) {}
 
-        __device__ __host__ bool operator() (ctype x) const {
-            return !this->eq(x);
-        }
-    };
+    __device__ __host__ bool operator()(ctype x) const { return !this->eq(x); }
+};
 
-#define DEF_OP(_name, _op) \
-    template<typename ctype_> \
-    struct Pred<PEnum::_name, ctype_> { \
-        typedef ctype_ ctype; \
-        ctype val; \
-        Pred(const KParam &p): val(p.val) {} \
-        __device__ __host__ bool operator() (ctype x) const { \
-            return x _op val; \
-        } \
+#define DEF_OP(_name, _op)                                                       \
+    template <typename ctype_>                                                   \
+    struct Pred<PEnum::_name, ctype_> {                                          \
+        typedef ctype_ ctype;                                                    \
+        ctype val;                                                               \
+        Pred(const KParam& p) : val(p.val) {}                                    \
+        __device__ __host__ bool operator()(ctype x) const { return x _op val; } \
     }
 
-    DEF_OP(LT, < );
-    DEF_OP(LEQ, <= );
-    DEF_OP(GT, > );
-    DEF_OP(GEQ, >= );
+DEF_OP(LT, <);
+DEF_OP(LEQ, <=);
+DEF_OP(GT, >);
+DEF_OP(GEQ, >=);
 
 #undef DEF_OP
 
-#define MEGDNN_FOREACH_COND_TAKE_MODE(cb) \
-    cb(EQ) cb(NEQ) cb(LT) cb(LEQ) cb(GT) cb(GEQ)
+#define MEGDNN_FOREACH_COND_TAKE_MODE(cb) cb(EQ) cb(NEQ) cb(LT) cb(LEQ) cb(GT) cb(GEQ)
 
-} // namespace cond_take
-} // namespace megdnn
+}  // namespace cond_take
+}  // namespace megdnn
 
 #ifdef def_device
 #undef __device__

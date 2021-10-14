@@ -1,5 +1,6 @@
 /**
- * \file dnn/src/cuda/local/cuda-convnet2/weight_acts/weight_acts_c_kepler_sw_by_16_pt_4.cu
+ * \file
+ * dnn/src/cuda/local/cuda-convnet2/weight_acts/weight_acts_c_kepler_sw_by_16_pt_4.cu
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -25,23 +26,24 @@
  *
  * --------------------------------------------------------------------------
  * * This file has been modified by Megvii ("Megvii Modifications").
- * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights reserved.
+ * * All Megvii Modifications are Copyright (C) 2014-2021 Megvii Inc. All rights
+ * reserved.
  * --------------------------------------------------------------------------
  */
 #include "wet_act_c_kepler_sw.cuh"
 namespace megdnn {
 namespace cuda {
 
-    WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, false, false > (C_KEP_SW_PARAM);
-    WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, false, true > (C_KEP_SW_PARAM);
-    //WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, true, false > (C_KEP_SW_PARAM);
-    //WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, true, true > (C_KEP_SW_PARAM);
-    WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, false, false > (C_KEP_SW_PARAM);
-    WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, false, true > (C_KEP_SW_PARAM);
-    //WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, true, false > (C_KEP_SW_PARAM);
-    //WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, true, true > (C_KEP_SW_PARAM);
-    WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 3, false, true > (C_KEP_SW_PARAM);
-    //WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 3, true, true > (C_KEP_SW_PARAM);
+WET_ACT_C_KEPLER_SW_HEAD<16, 16, 2, 4, 3, 32, 1, false, false>(C_KEP_SW_PARAM);
+WET_ACT_C_KEPLER_SW_HEAD<16, 16, 2, 4, 3, 32, 1, false, true>(C_KEP_SW_PARAM);
+// WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, true, false > (C_KEP_SW_PARAM);
+// WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 1, true, true > (C_KEP_SW_PARAM);
+WET_ACT_C_KEPLER_SW_HEAD<16, 16, 2, 4, 3, 32, 2, false, false>(C_KEP_SW_PARAM);
+WET_ACT_C_KEPLER_SW_HEAD<16, 16, 2, 4, 3, 32, 2, false, true>(C_KEP_SW_PARAM);
+// WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, true, false > (C_KEP_SW_PARAM);
+// WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 2, true, true > (C_KEP_SW_PARAM);
+WET_ACT_C_KEPLER_SW_HEAD<16, 16, 2, 4, 3, 32, 3, false, true>(C_KEP_SW_PARAM);
+// WET_ACT_C_KEPLER_SW_HEAD< 16, 16, 2, 4, 3, 32, 3, true, true > (C_KEP_SW_PARAM);
 
-} // namespace cuda
-} // namespace megdnn
+}  // namespace cuda
+}  // namespace megdnn

@@ -55,8 +55,9 @@ class InFilePersistentCache final : public mgb::PersistentCache {
             size_t operator()(const BlobStorage& b) const { return b.hash; }
         };
     };
-    std::unordered_map<std::string, std::unordered_map<BlobStorage, BlobStorage,
-                                                       BlobStorage::Hash>>
+    std::unordered_map<
+            std::string,
+            std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
             m_cache;
     LITE_MUTEX m_mtx;
     std::shared_ptr<OutputFile> m_always_open_file;
@@ -77,8 +78,7 @@ public:
     void dump_cache(OutputFile* out_file);
 
     mgb::Maybe<Blob> get(const std::string& category, const Blob& key) override;
-    void put(const std::string& category, const Blob& key,
-             const Blob& value) override;
+    void put(const std::string& category, const Blob& key, const Blob& value) override;
 };
 
 }  // namespace lite

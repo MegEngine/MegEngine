@@ -9,10 +9,10 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include "../src/common/utils.h"
+#include "megdnn/oprs.h"
 #include "test/cuda/fixture.h"
 #include "test/cuda/utils.h"
-#include "megdnn/oprs.h"
-#include "../src/common/utils.h"
 
 #include <chrono>
 #include <cstdio>
@@ -39,18 +39,15 @@ TEST_F(CUDA, SLEEP) {
     // warmv7up
     run(0.01);
 
-    for (auto i: {0.1, 0.3}) {
+    for (auto i : {0.1, 0.3}) {
         auto get = run(i);
         // sleep kernel in cuda is easily affected by the frequency change of
         // GPU, so we just print warn log instead assert. more refer to
         // XPU-226
         if (get < i || get > i * 2) {
-            megdnn_log_warn("expect time between [%f, %f], got %f", i, 2 * i,
-                            get);
+            megdnn_log_warn("expect time between [%f, %f], got %f", i, 2 * i, get);
         }
     }
 }
 
-
 // vim: syntax=cpp.doxygen
-

@@ -22,12 +22,12 @@ namespace arm_common {
 namespace fp16 {
 namespace channel_wise_nchw88 {
 
-#define KERN(stride, i)                                                     \
-    template <BiasMode bias_mode, typename Op>                              \
-    void do_conv_kern_##stride##_##i##x##i(                                 \
-            const __fp16* src, const __fp16* filter, const __fp16* bias,    \
-            __fp16* dst, const size_t IH, const size_t IW, const size_t OH, \
-            const size_t OW, const size_t PH, const size_t PW);
+#define KERN(stride, i)                                                               \
+    template <BiasMode bias_mode, typename Op>                                        \
+    void do_conv_kern_##stride##_##i##x##i(                                           \
+            const __fp16* src, const __fp16* filter, const __fp16* bias, __fp16* dst, \
+            const size_t IH, const size_t IW, const size_t OH, const size_t OW,       \
+            const size_t PH, const size_t PW);
 
 KERN(stride1, 2)
 KERN(stride1, 3)

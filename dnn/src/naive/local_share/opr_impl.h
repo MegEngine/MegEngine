@@ -18,11 +18,12 @@ namespace naive {
 class LocalShareForwardImpl : public LocalShareForward {
 public:
     using LocalShareForward::LocalShareForward;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in filter,
-              _megdnn_tensor_out dst, _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -47,11 +48,12 @@ public:
 class LocalShareBackwardDataImpl : public LocalShareBackwardData {
 public:
     using LocalShareBackwardData::LocalShareBackwardData;
-    void exec(_megdnn_tensor_in filter, _megdnn_tensor_in diff,
-              _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
 
@@ -76,11 +78,12 @@ public:
 class LocalShareBackwardFilterImpl : public LocalShareBackwardFilter {
 public:
     using LocalShareBackwardFilter::LocalShareBackwardFilter;
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_in diff,
-              _megdnn_tensor_out grad, _megdnn_workspace workspace) override;
+    void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
+            _megdnn_workspace workspace) override;
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&,
-                                  const TensorLayout&) override {
+    size_t get_workspace_in_bytes(
+            const TensorLayout&, const TensorLayout&, const TensorLayout&) override {
         return 0;
     }
     std::vector<Algorithm*> get_all_algorithms(

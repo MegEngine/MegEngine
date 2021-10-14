@@ -31,9 +31,8 @@
 using namespace mgb;
 using namespace jit;
 
-mlir::Value jit::insert_alloc_and_dealloc(mlir::MemRefType type,
-                                          mlir::Location loc,
-                                          mlir::PatternRewriter& rewriter) {
+mlir::Value jit::insert_alloc_and_dealloc(
+        mlir::MemRefType type, mlir::Location loc, mlir::PatternRewriter& rewriter) {
     auto alloc = rewriter.create<mlir::AllocOp>(loc, type);
 
     // Make sure to allocate at the beginning of the block.
@@ -80,8 +79,8 @@ megdnn::TensorLayout jit::mlir_type_to_layout(mlir::Type type) {
     return ret;
 }
 
-mlir::MemRefType jit::layout_to_mlir_type(const megdnn::TensorLayout& layout,
-                                          mlir::Builder& builder) {
+mlir::MemRefType jit::layout_to_mlir_type(
+        const megdnn::TensorLayout& layout, mlir::Builder& builder) {
     std::vector<int64_t> shape;
     for (size_t i = 0; i < layout.ndim; i++) {
         shape.push_back(layout[i]);

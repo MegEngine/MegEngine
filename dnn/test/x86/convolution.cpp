@@ -13,9 +13,9 @@
 
 #include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs.h"
+#include "test/common/accuracy_shake_checker.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
-#include "test/common/accuracy_shake_checker.h"
 #include "test/common/convolution.h"
 #include "test/common/rng.h"
 #include "test/common/tensor.h"
@@ -34,24 +34,24 @@ std::vector<ConvArg> get_dense_conv_args() {
             for (size_t sh : {1, 2}) {
                 for (size_t ph : std::vector<size_t>{0, fh / 2}) {
                     for (size_t oc : {3, 4}) {
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  15, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  14, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  13, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  12, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  11, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  10, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  9, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  8, oc, 1});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 4, 7,
-                                                  8, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 15, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 14, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 13, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 12, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 11, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 10, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 9, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 8, oc, 1});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 4, 7, 8, oc, 1});
 
                     }  // end oc
                 }      // end ph
@@ -68,22 +68,22 @@ std::vector<ConvArg> get_group_conv_args() {
             for (size_t sh : {1, 2}) {
                 for (size_t ph : std::vector<size_t>{0, fh / 2}) {
                     for (size_t oc : {3}) {
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  15, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  14, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  13, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  12, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  11, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  10, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  9, oc, 2});
-                        args.emplace_back(ConvArg{batch_size, fh, sh, ph, 2, 7,
-                                                  8, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 15, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 14, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 13, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 12, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 11, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 10, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 9, oc, 2});
+                        args.emplace_back(
+                                ConvArg{batch_size, fh, sh, ph, 2, 7, 8, oc, 2});
                     }  // end oc
                 }      // end ph
             }          // end sh
@@ -103,8 +103,7 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE1) {
     using namespace convolution;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -113,8 +112,8 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE1) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {1, 2, 3, 4, 5, 6, 7})
@@ -145,8 +144,7 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE2) {
     using namespace convolution;
     std::vector<TestArg> args;
 
-    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel,
-                   size_t p) {
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p) {
         if (w + 2 * p < kernel || h + 2 * p < kernel)
             return;
         param::Convolution param;
@@ -155,8 +153,8 @@ TEST_F(X86, DEFAULT_CONV_DIRECT_STRIDE2) {
         param.pad_h = p;
         param.pad_w = p;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7})
@@ -225,8 +223,8 @@ TEST_F(X86, CONVOLUTION_FORWARD_INT8) {
 TEST_F(X86, CONVOLUTION_FORWARD_MATMUL_INT8) {
     std::vector<ConvArg> args = get_dense_conv_args();
     Checker<ConvolutionForward> checker(handle());
-    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_MKLDNN_MATMUL_INT8"));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_MKLDNN_MATMUL_INT8"));
     param::Convolution param;
     param.sparse = param::Convolution::Sparse::DENSE;
     UniformIntRNG rng{-128, 127};
@@ -245,16 +243,14 @@ TEST_F(X86, CONVOLUTION_FORWARD_MATMUL_INT8) {
     }
 }
 
-static void x86_correctness_fp32_mkldnn_run(Checker<Convolution>& checker,
-                                            UniformIntRNG& rng, Handle* handle,
-                                            size_t n, size_t stride,
-                                            size_t kernel, size_t oc, size_t ic,
-                                            size_t h, size_t w, size_t group) {
+static void x86_correctness_fp32_mkldnn_run(
+        Checker<Convolution>& checker, UniformIntRNG& rng, Handle* handle, size_t n,
+        size_t stride, size_t kernel, size_t oc, size_t ic, size_t h, size_t w,
+        size_t group) {
     auto oc_per_group = oc / group;
     auto ic_per_group = ic / group;
     bool ok_group = oc_per_group % 8 == 0 && oc_per_group > 0 &&
-                    (ic_per_group % 8 == 0 || ic_per_group == 3) &&
-                    ic_per_group > 0;
+                    (ic_per_group % 8 == 0 || ic_per_group == 3) && ic_per_group > 0;
     bool ok_depthwise = oc == ic && oc == group;
     if (!(ok_group || ok_depthwise)) {
         return;
@@ -273,8 +269,7 @@ static void x86_correctness_fp32_mkldnn_run(Checker<Convolution>& checker,
         src_tensor_shape = TensorShape{n, ic, h, w};
     }
 
-    auto weight_tensor_shape =
-            TensorShape{oc / 8, ic / 8, kernel_h, kernel_w, 8, 8};
+    auto weight_tensor_shape = TensorShape{oc / 8, ic / 8, kernel_h, kernel_w, 8, 8};
     if (ic == 3) {
         weight_tensor_shape = TensorShape{oc / 8, kernel_h, kernel_w, ic, 8};
     }
@@ -283,14 +278,13 @@ static void x86_correctness_fp32_mkldnn_run(Checker<Convolution>& checker,
         param.sparse = param::Convolution::Sparse::DENSE;
     } else if (group > 1 && ic / group == 1 && oc / group == 1) {
         param.sparse = param::Convolution::Sparse::GROUP;
-        weight_tensor_shape =
-                TensorShape{group / 8, 1, 1, kernel_h, kernel_w, 8};
-    } else if (group > 1 && oc / group % 8 == 0 && oc / group > 0 &&
-               ic / group % 8 == 0 && ic / group > 0) {
+        weight_tensor_shape = TensorShape{group / 8, 1, 1, kernel_h, kernel_w, 8};
+    } else if (
+            group > 1 && oc / group % 8 == 0 && oc / group > 0 && ic / group % 8 == 0 &&
+            ic / group > 0) {
         param.sparse = param::Convolution::Sparse::GROUP;
         weight_tensor_shape = TensorShape{
-                group, oc / group / 8, ic / group / 8, kernel_h, kernel_w, 8,
-                8};
+                group, oc / group / 8, ic / group / 8, kernel_h, kernel_w, 8, 8};
     }
     checker.set_dtype(0, dtype::Float32())
             .set_dtype(1, dtype::Float32())
@@ -304,8 +298,8 @@ static void x86_correctness_fp32_mkldnn_run(Checker<Convolution>& checker,
 static void x86_correctness_fp32_mkldnn(Handle* handle) {
     Checker<Convolution> checker(handle);
     UniformIntRNG rng{-127, 127};
-    checker.set_before_exec_callback(AlgoChecker<ConvolutionForward>(
-            "CONVOLUTION_DEFAULT_MKLDNN_CONV_FP32"));
+    checker.set_before_exec_callback(
+            AlgoChecker<ConvolutionForward>("CONVOLUTION_DEFAULT_MKLDNN_CONV_FP32"));
     for (size_t n : {1, 2})
         for (size_t stride : {1, 2})
             for (size_t kernel : {3, 5, 7})
@@ -313,11 +307,11 @@ static void x86_correctness_fp32_mkldnn(Handle* handle) {
                     for (size_t ic : {3, 8, 16})
                         for (size_t h : {22, 33})
                             for (size_t w : {22, 33}) {
-                                for (size_t group = 1;
-                                     group <= std::min(oc, ic); ++group) {
+                                for (size_t group = 1; group <= std::min(oc, ic);
+                                     ++group) {
                                     x86_correctness_fp32_mkldnn_run(
-                                            checker, rng, handle, n, stride,
-                                            kernel, oc, ic, h, w, group);
+                                            checker, rng, handle, n, stride, kernel, oc,
+                                            ic, h, w, group);
                                 }
                             }
 }
@@ -347,8 +341,9 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x16) {
                     TensorShape{group, oc / group, ic / group, kernel, kernel});
         } else {
             param.sparse = param::Convolution::Sparse::DENSE;
-            args.emplace_back(param, TensorShape{1, ic, h, w},
-                              TensorShape{oc, ic, kernel, kernel});
+            args.emplace_back(
+                    param, TensorShape{1, ic, h, w},
+                    TensorShape{oc, ic, kernel, kernel});
         }
     };
 
@@ -369,21 +364,20 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x16) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float icpg = arg.filter.ndim == 4 ? arg.filter[1] : arg.filter[2];
         float filter = arg.filter.ndim == 4 ? arg.filter[2] : arg.filter[3];
-        float computations = dst_layout.total_nr_elems() * icpg * filter *
-                             filter * 2.0 / (1024 * 1024 * 1024) * 1e3;
+        float computations = dst_layout.total_nr_elems() * icpg * filter * filter *
+                             2.0 / (1024 * 1024 * 1024) * 1e3;
 
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
-                RUN;
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
 
         printf("%s %s: int: %f ms %f Gflops \n", arg.src.to_string().c_str(),
-               arg.filter.to_string().c_str(), used_int,
-               computations / used_int);
+               arg.filter.to_string().c_str(), used_int, computations / used_int);
     }
 }
 #if MEGDNN_X86_WITH_MKL_DNN
@@ -400,8 +394,8 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
         param.pad_h = kernel / 2;
         param.pad_w = kernel / 2;
 
-        args.emplace_back(param, TensorShape{1, ic, h, w},
-                          TensorShape{oc, ic, kernel, kernel});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel});
     };
 
     for (size_t kernel : {2, 3, 5, 7}) {
@@ -430,24 +424,24 @@ TEST_F(X86, BENCHMARK_CONVOLUTION_I8x8x32_MKLDNN) {
         TensorLayout dst_layout;
         auto opr = handle()->create_operator<Convolution>();
         opr->param() = arg.param;
-        opr->deduce_layout({arg.src, dtype::Float32()},
-                           {arg.filter, dtype::Float32()}, dst_layout);
+        opr->deduce_layout(
+                {arg.src, dtype::Float32()}, {arg.filter, dtype::Float32()},
+                dst_layout);
         //! dst.nr_elems * IC * FH * FW * 2
         float computations = dst_layout.total_nr_elems() * arg.filter[1] *
                              arg.filter[2] * arg.filter[3] * 2.0 /
                              (1024 * 1024 * 1024) * 1e3;
         auto used_int =
-                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
+                benchmark.set_param(arg.param).exec({arg.src, arg.filter, {}}) / RUN;
+        auto used_float =
+                benchmark_float.set_param(arg.param).exec({arg.src, arg.filter, {}}) /
                 RUN;
-        auto used_float = benchmark_float.set_param(arg.param).exec(
-                                  {arg.src, arg.filter, {}}) /
-                          RUN;
 
         printf("%s %s: int: %f ms %f Gflops float: %f ms %f GFlops speedup: "
                "%f\n",
-               arg.src.to_string().c_str(), arg.filter.to_string().c_str(),
-               used_int, computations / used_int, used_float,
-               computations / used_float, used_float / used_int);
+               arg.src.to_string().c_str(), arg.filter.to_string().c_str(), used_int,
+               computations / used_int, used_float, computations / used_float,
+               used_float / used_int);
     }
 }
 #endif

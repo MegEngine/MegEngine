@@ -18,10 +18,9 @@ namespace cuda {
 namespace param_pack {
 
 template <typename T>
-__global__ void concat_kernel(const T** srcs, T* dst,
-                                      const int32_t* offsets,
-                                      size_t srcs_size,
-                                      size_t total_size) {
+__global__ void concat_kernel(
+        const T** srcs, T* dst, const int32_t* offsets, size_t srcs_size,
+        size_t total_size) {
     size_t addr = threadIdx.x + blockIdx.x * blockDim.x;
     if (addr < total_size) {
         size_t l = 0, r = srcs_size - 1, mid;
@@ -41,19 +40,18 @@ __global__ void concat_kernel(const T** srcs, T* dst,
 }
 
 template <typename T>
-void concat_proxy(const T** srcs, T* dst, size_t srcs_size, size_t total_size,
-                          const int32_t* offsets,
-                          cudaStream_t stream) {
+void concat_proxy(
+        const T** srcs, T* dst, size_t srcs_size, size_t total_size,
+        const int32_t* offsets, cudaStream_t stream) {
     size_t NR_BLOCKS = DIVUP(total_size, NR_THREADS);
     concat_kernel<<<NR_BLOCKS, NR_THREADS, 0, stream>>>(
             srcs, dst, offsets, srcs_size, total_size);
     after_kernel_launch();
 }
 
-#define INST(T)                                                           \
-    template void concat_proxy<T>(const T**, T*, size_t, size_t,          \
-                                          const int32_t*,                 \
-                                          cudaStream_t);                  
+#define INST(T)                    \
+    template void concat_proxy<T>( \
+            const T**, T*, size_t, size_t, const int32_t*, cudaStream_t);
 #define cb(DType) INST(typename DTypeTrait<DType>::ctype)
 MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb

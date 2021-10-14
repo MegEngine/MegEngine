@@ -16,10 +16,10 @@
 #include "src/common/utils.h"
 #include "src/fallback/conv_bias/winograd/winograd.h"
 
-#include "src/arm_common/conv_bias/winograd_common/winograd_common.h"
-#include "src/naive/matrix_mul/matrix_mul_helper.h"
-#include "src/arm_common/elemwise_helper/op_unary.h"
 #include "src/arm_common/conv_bias/fp32/helper.h"
+#include "src/arm_common/conv_bias/winograd_common/winograd_common.h"
+#include "src/arm_common/elemwise_helper/op_unary.h"
+#include "src/naive/matrix_mul/matrix_mul_helper.h"
 
 #include "midout.h"
 
@@ -30,9 +30,10 @@ using namespace arm_common;
 namespace {
 struct InputTransform2X3 {
     template <bool inner>
-    static void prepare(const int8_t* input, float* patch, float* patchT,
-                        int ih_start, int iw_start, size_t IH, size_t IW,
-                        size_t ic, size_t IC, size_t PH, size_t PW) {
+    static void prepare(
+            const int8_t* input, float* patch, float* patchT, int ih_start,
+            int iw_start, size_t IH, size_t IW, size_t ic, size_t IC, size_t PH,
+            size_t PW) {
         megdnn_assert(
                 ic % 4 == 0 && IC % 4 == 0,
                 "Winograd input prepare param is not times of 4!");
@@ -50,14 +51,10 @@ struct InputTransform2X3 {
                 int32x4_t v_2 = vmovl_s16(vget_low_s16(v_high));
                 int32x4_t v_3 = vmovl_s16(vget_high_s16(v_high));
 
-                vst1q_f32(patchT + ico * 4 * alpha + 0 * 4,
-                          vcvtq_f32_s32(v_0));
-                vst1q_f32(patchT + ico * 4 * alpha + 1 * 4,
-                          vcvtq_f32_s32(v_1));
-                vst1q_f32(patchT + ico * 4 * alpha + 2 * 4,
-                          vcvtq_f32_s32(v_2));
-                vst1q_f32(patchT + ico * 4 * alpha + 3 * 4,
-                          vcvtq_f32_s32(v_3));
+                vst1q_f32(patchT + ico * 4 * alpha + 0 * 4, vcvtq_f32_s32(v_0));
+                vst1q_f32(patchT + ico * 4 * alpha + 1 * 4, vcvtq_f32_s32(v_1));
+                vst1q_f32(patchT + ico * 4 * alpha + 2 * 4, vcvtq_f32_s32(v_2));
+                vst1q_f32(patchT + ico * 4 * alpha + 3 * 4, vcvtq_f32_s32(v_3));
                 input_ptr += IW * 4;
             }
         } else {
@@ -74,21 +71,21 @@ struct InputTransform2X3 {
             for (int ih = ih0_act; ih < ih1_act; ++ih) {
                 for (int iw = iw0_act; iw < iw1_act; ++iw) {
                     size_t iho = ih - ih_start, iwo = iw - iw_start;
-                    vst1q_f32(patchT + iho * alpha * 4 + iwo * 4,
-                              getter(input_ptr + ih * IW * 4 + iw * 4));
+                    vst1q_f32(
+                            patchT + iho * alpha * 4 + iwo * 4,
+                            getter(input_ptr + ih * IW * 4 + iw * 4));
                 }
             }
         }
     }
 
-    static void transform(const float* patchT, float* input_transform_buf,
-                          size_t unit_idx, size_t nr_units_in_tile, size_t ic,
-                          size_t IC) {
+    static void transform(
+            const float* patchT, float* input_transform_buf, size_t unit_idx,
+            size_t nr_units_in_tile, size_t ic, size_t IC) {
         constexpr size_t alpha = 2 + 3 - 1;
         // BT * d * B
-#define cb(m, n)               \
-    Vector<float, 4> d##m##n = \
-            Vector<float, 4>::load(patchT + m * 4 * 4 + n * 4);
+#define cb(m, n) \
+    Vector<float, 4> d##m##n = Vector<float, 4>::load(patchT + m * 4 * 4 + n * 4);
 
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
@@ -117,10 +114,10 @@ struct InputTransform2X3 {
 
         size_t ICB = IC / 4;
         size_t icb = ic / 4;
-#define cb(m, n)                                                \
-    d##m##n.save(input_transform_buf +                          \
-                 (m * alpha + n) * ICB * nr_units_in_tile * 4 + \
-                 icb * nr_units_in_tile * 4 + unit_idx * 4);
+#define cb(m, n)                                                                 \
+    d##m##n.save(                                                                \
+            input_transform_buf + (m * alpha + n) * ICB * nr_units_in_tile * 4 + \
+            icb * nr_units_in_tile * 4 + unit_idx * 4);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
     }
@@ -128,13 +125,12 @@ struct InputTransform2X3 {
 
 template <BiasMode bmode, typename Op>
 struct OutputTransform2X3 {
-    static void transform(const float* output_transform_buf, const float* bias,
-                          int8_t* output, float* transform_mid_buf,
-                          size_t oh_start, size_t ow_start, size_t OH,
-                          size_t OW, size_t oc_start, size_t oc_end,
-                          size_t oc_index, size_t unit_idx,
-                          size_t nr_units_in_tile, const DType& src_dtype,
-                          const DType& filter_dtype, const DType& dst_dtype) {
+    static void transform(
+            const float* output_transform_buf, const float* bias, int8_t* output,
+            float* transform_mid_buf, size_t oh_start, size_t ow_start, size_t OH,
+            size_t OW, size_t oc_start, size_t oc_end, size_t oc_index, size_t unit_idx,
+            size_t nr_units_in_tile, const DType& src_dtype, const DType& filter_dtype,
+            const DType& dst_dtype) {
         float scale_filter = 0.f;
         MEGDNN_MARK_USED_VAR(transform_mid_buf);
         if (filter_dtype.enumv() == DTypeEnum::QuantizedS8) {
@@ -155,10 +151,9 @@ struct OutputTransform2X3 {
         size_t OCB = (oc_end - oc_start) / 4;
         size_t ocb = oc_index / 4;
 
-#define cb(m, n)                                           \
-    auto v##m##n = Vector<float, 4>::load(                 \
-            output_transform_buf +                         \
-            (m * alpha + n) * OCB * nr_units_in_tile * 4 + \
+#define cb(m, n)                                                                  \
+    auto v##m##n = Vector<float, 4>::load(                                        \
+            output_transform_buf + (m * alpha + n) * OCB * nr_units_in_tile * 4 + \
             ocb * nr_units_in_tile * 4 + unit_idx * 4);
         UNROLL_CALL_NOWRAPPER_D2(4, 4, cb);
 #undef cb
@@ -187,10 +182,10 @@ struct OutputTransform2X3 {
             const float32x4_t vvbias = vcvtq_f32_s32(vld1q_s32(tmp_bias + oc));
             vbias = Vector<float, 4>(vvbias);
 
-          result[0][0] += vbias;
-          result[0][1] += vbias;
-          result[1][0] += vbias;
-          result[1][1] += vbias;
+            result[0][0] += vbias;
+            result[0][1] += vbias;
+            result[1][0] += vbias;
+            result[1][1] += vbias;
         }
 
 #undef cb
@@ -206,8 +201,8 @@ struct OutputTransform2X3 {
                 Vector<float, 4> res;
                 res = result[oho][owo];
                 if (bmode == BiasMode::BIAS) {
-                    const float32x4_t vvbias = vcvtq_f32_s32(vld1q_s32(
-                            tmp_bias + oc * OH * OW + oh * OW * 4 + ow * 4));
+                    const float32x4_t vvbias = vcvtq_f32_s32(
+                            vld1q_s32(tmp_bias + oc * OH * OW + oh * OW * 4 + ow * 4));
                     res += Vector<float, 4>(vvbias);
                 }
 #if MEGDNN_AARCH64
@@ -235,10 +230,9 @@ namespace arm_common {
 namespace winograd {
 
 MEGDNN_REG_WINOGRAD_STRATEGY_IMPL(winograd_2x3_4x4_s8_f32_nchw44)
-void winograd_2x3_4x4_s8_f32_nchw44::filter(const int8_t* filter,
-                                 float* filter_transform_buf,
-                                 float* transform_mid_buf, size_t OC, size_t IC,
-                                 size_t oc_start, size_t oc_end) {
+void winograd_2x3_4x4_s8_f32_nchw44::filter(
+        const int8_t* filter, float* filter_transform_buf, float* transform_mid_buf,
+        size_t OC, size_t IC, size_t oc_start, size_t oc_end) {
     constexpr int alpha = 2 + 3 - 1;
     /**
      * origin: (4x3) * (3 x 3) * (3 x 4)
@@ -250,21 +244,21 @@ void winograd_2x3_4x4_s8_f32_nchw44::filter(const int8_t* filter,
 
     InputGetter<const int8_t*, float32x4_t> getter;
     MEGDNN_MARK_USED_VAR(transform_mid_buf);
-    megdnn_assert((oc_end - oc_start) % 4 == 0 && oc_start % 4 == 0 &&
-                          oc_end % 4 == 0 && IC % 4 == 0 && OC % 4 == 0,
-                  "Winograd filter transform input param is not times of 4!");
+    megdnn_assert(
+            (oc_end - oc_start) % 4 == 0 && oc_start % 4 == 0 && oc_end % 4 == 0 &&
+                    IC % 4 == 0 && OC % 4 == 0,
+            "Winograd filter transform input param is not times of 4!");
     size_t OCB = OC / 4;
     size_t ICB = IC / 4;
 
     for (size_t ocb = oc_start / 4; ocb < oc_end / 4; ocb++) {
         for (size_t icb = 0; icb < ICB; icb++) {
             for (size_t ic_inner = 0; ic_inner < 4; ic_inner++) {
-                const int8_t* fptr = filter + (ocb * ICB + icb) * 3 * 3 * 4 * 4 +
-                                    ic_inner * 4;
+                const int8_t* fptr =
+                        filter + (ocb * ICB + icb) * 3 * 3 * 4 * 4 + ic_inner * 4;
 
-#define cb(m, n)               \
-    Vector<float, 4> g##m##n = \
-            Vector<float, 4>(getter(fptr + (m * 3 + n) * 4 * 4));
+#define cb(m, n) \
+    Vector<float, 4> g##m##n = Vector<float, 4>(getter(fptr + (m * 3 + n) * 4 * 4));
 
                 UNROLL_CALL_NOWRAPPER_D2(3, 3, cb)
 #undef cb
@@ -281,11 +275,10 @@ void winograd_2x3_4x4_s8_f32_nchw44::filter(const int8_t* filter,
                 UNROLL_CALL_RAW(4, FILTER_TRANSFORM, ret, wd);
 #undef FILTER_TRANSFORM
 
-
-#define cb(m, n)                                                             \
-    ret##m##n.save(filter_transform_buf +                                    \
-                   (m * alpha + n) * OCB * ICB * 4 * 4 + ocb * ICB * 4 * 4 + \
-                   icb * 4 * 4 + ic_inner * 4);
+#define cb(m, n)                                                         \
+    ret##m##n.save(                                                      \
+            filter_transform_buf + (m * alpha + n) * OCB * ICB * 4 * 4 + \
+            ocb * ICB * 4 * 4 + icb * 4 * 4 + ic_inner * 4);
                 UNROLL_CALL_NOWRAPPER_D2(4, 4, cb)
 #undef cb
             }
@@ -293,16 +286,14 @@ void winograd_2x3_4x4_s8_f32_nchw44::filter(const int8_t* filter,
     }
 }
 
-void winograd_2x3_4x4_s8_f32_nchw44::input(const int8_t* input, float* input_transform_buf,
-                                float* transform_mid_buf, size_t IH, size_t IW,
-                                size_t IC, size_t PH, size_t PW,
-                                size_t unit_start_idx,
-                                size_t nr_units_in_tile) {
+void winograd_2x3_4x4_s8_f32_nchw44::input(
+        const int8_t* input, float* input_transform_buf, float* transform_mid_buf,
+        size_t IH, size_t IW, size_t IC, size_t PH, size_t PW, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
     megdnn_assert(IC % 4 == 0);
     constexpr int alpha = 3 + 2 - 1;
 
-    auto units_w =
-            div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
+    auto units_w = div_ceil<size_t>(IW + 2 * PW - KERNEL_SIZE + 1, OUTPUT_BLOCK_SIZE);
     float* patch = transform_mid_buf;
     float* patchT = transform_mid_buf + 4 * alpha * alpha;
 
@@ -315,31 +306,30 @@ void winograd_2x3_4x4_s8_f32_nchw44::input(const int8_t* input, float* input_tra
             int iw_start = nw * OUTPUT_BLOCK_SIZE - PW;
             if (ih_start >= 0 && ih_start + alpha <= static_cast<int>(IH) &&
                 iw_start >= 0 && iw_start + alpha <= static_cast<int>(IW)) {
-                InputTransform2X3::prepare<true>(input, patch, patchT, ih_start,
-                                                 iw_start, IH, IW, ic, IC,PH,PW);
-                InputTransform2X3::transform(patchT, input_transform_buf,
-                                             unit_idx, nr_units_in_tile, ic,
-                                             IC);
+                InputTransform2X3::prepare<true>(
+                        input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC, PH,
+                        PW);
+                InputTransform2X3::transform(
+                        patchT, input_transform_buf, unit_idx, nr_units_in_tile, ic,
+                        IC);
 
             } else {
-                InputTransform2X3::prepare<false>(input, patch, patchT,
-                                                  ih_start, iw_start, IH, IW,
-                                                  ic, IC,PH,PW);
-                InputTransform2X3::transform(patchT, input_transform_buf,
-                                             unit_idx, nr_units_in_tile, ic,
-                                             IC);
+                InputTransform2X3::prepare<false>(
+                        input, patch, patchT, ih_start, iw_start, IH, IW, ic, IC, PH,
+                        PW);
+                InputTransform2X3::transform(
+                        patchT, input_transform_buf, unit_idx, nr_units_in_tile, ic,
+                        IC);
             }
         }
     }
 }
 
-void winograd_2x3_4x4_s8_f32_nchw44::output(const float* output_transform_buf,
-                                 const float* bias, int8_t* output,
-                                 float* transform_mid_buf, BiasMode bmode,
-                                 NonlineMode nonline_mode, size_t OH, size_t OW,
-                                 size_t oc_start, size_t oc_end,
-                                 size_t unit_start_idx,
-                                 size_t nr_units_in_tile) {
+void winograd_2x3_4x4_s8_f32_nchw44::output(
+        const float* output_transform_buf, const float* bias, int8_t* output,
+        float* transform_mid_buf, BiasMode bmode, NonlineMode nonline_mode, size_t OH,
+        size_t OW, size_t oc_start, size_t oc_end, size_t unit_start_idx,
+        size_t nr_units_in_tile) {
 #define cb(_bmode, _nonline_op, ...) \
     OutputTransform2X3<_bmode MEGDNN_COMMA _nonline_op>::transform(__VA_ARGS__);
 
@@ -353,11 +343,10 @@ void winograd_2x3_4x4_s8_f32_nchw44::output(const float* output_transform_buf,
             size_t oh_start = nh * OUTPUT_BLOCK_SIZE;
             size_t ow_start = nw * OUTPUT_BLOCK_SIZE;
             DISPATCH_CONV_WINOGRAD_BIAS_QUANTIZED(
-                    megdnn_arm_common_winograd_nchw44_s8_comp_fp32_f23, cb,
-                    dt_qint32, dt_qint8, bmode, nonline_mode,
-                    output_transform_buf, bias, output, transform_mid_buf,
-                    oh_start, ow_start, OH, OW, oc_start, oc_end, oc_index,
-                    unit_idx, nr_units_in_tile, src_dtype, filter_dtype,
+                    megdnn_arm_common_winograd_nchw44_s8_comp_fp32_f23, cb, dt_qint32,
+                    dt_qint8, bmode, nonline_mode, output_transform_buf, bias, output,
+                    transform_mid_buf, oh_start, ow_start, OH, OW, oc_start, oc_end,
+                    oc_index, unit_idx, nr_units_in_tile, src_dtype, filter_dtype,
                     dst_dtype);
         }
     }

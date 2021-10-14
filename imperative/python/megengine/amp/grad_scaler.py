@@ -11,7 +11,7 @@ import numpy as np
 
 from ..autodiff import GradManager
 from ..functional import full_like
-from ..functional.math import _has_inf
+from ..functional.math import _check_non_finite
 from ..tensor import Tensor
 
 
@@ -76,7 +76,7 @@ class GradScaler:
         self.growth_interval = growth_interval
 
         self._growth_tracker = 0
-        self._found_inf = False
+        self._found_non_finite = False
 
     def backward(
         self,
@@ -135,10 +135,10 @@ class GradScaler:
                 continue
             # to support tracing, _check_gradients should be applied to every grad.
             if self._check_gradients(tensor.grad):
-                self._found_inf = True
+                self._found_non_finite = True
             tensor.grad *= inv_scale
 
-        if self._found_inf:
+        if self._found_non_finite:
             for tensor in grad_tensors:
                 if tensor is None or getattr(tensor, "grad", None) is None:
                     continue
@@ -148,7 +148,7 @@ class GradScaler:
     def _check_gradients(self, grad):
         if self.growth_interval == 0:
             return False
-        return _has_inf(grad)
+        return _check_non_finite(grad)
 
     def update(self, new_scale: float = None):
         r"""Update the scale factor according to whether encountered overflow grad.
@@ -160,7 +160,7 @@ class GradScaler:
         if new_scale is not None:
             self.scale_factor = float(new_scale)
         else:
-            if self._found_inf:
+            if self._found_non_finite:
                 self.scale_factor *= self.backoff_factor
                 self._growth_tracker = 0
             else:
@@ -168,7 +168,7 @@ class GradScaler:
                 if self._growth_tracker >= self.growth_interval:
                     self.scale_factor *= self.growth_factor
                     self._growth_tracker = 0
-        self._found_inf = False
+        self._found_non_finite = False
 
     def state_dict(self):
         return {

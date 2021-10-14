@@ -9,13 +9,13 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "./cg_impl.h"
 #include "./grad_manager.h"
+#include "./cg_impl.h"
 
-#include "megbrain/graph/helper.h"
 #include "megbrain/graph/exc_extra_info.h"
-#include "megbrain/opr/io.h"
+#include "megbrain/graph/helper.h"
 #include "megbrain/opr/basic_arith_wrapper.h"
+#include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
 
 using namespace mgb;
@@ -30,15 +30,15 @@ namespace {
  * \param opr fwd opr, only used in error message and can be nullptr
  */
 class GradShapeChecker {
-    AsyncExecutable *m_cur_comp_seq = nullptr;
+    AsyncExecutable* m_cur_comp_seq = nullptr;
     size_t m_cur_run_id = 0;
 
     int m_nr_wrt = 0, m_nr_grad = 0;
-    OperatorNodeBase * const m_opr;
-    VarNode * const m_wrt, * const m_grad;
+    OperatorNodeBase* const m_opr;
+    VarNode *const m_wrt, *const m_grad;
     TensorShape m_prev_wrt_shape, m_prev_grad_shape;
 
-    void do_on_var_shape(VarNode *var) {
+    void do_on_var_shape(VarNode* var) {
         MGB_MARK_USED_VAR(m_opr);
         auto graph = ComputingGraphImpl::downcast(var->owner_graph());
 
@@ -52,17 +52,17 @@ class GradShapeChecker {
             }
         }
         if (var == m_wrt) {
-            ++ m_nr_wrt;
+            ++m_nr_wrt;
             m_prev_wrt_shape = var->shape();
         } else {
             mgb_assert(var == m_grad);
-            ++ m_nr_grad;
+            ++m_nr_grad;
             m_prev_grad_shape = var->shape();
         }
 
         if (m_nr_wrt == m_nr_grad) {
-            mgb_throw_if(!m_prev_wrt_shape.eq_shape(m_prev_grad_shape),
-                    GraphError,
+            mgb_throw_if(
+                    !m_prev_wrt_shape.eq_shape(m_prev_grad_shape), GraphError,
                     "grad should have same shape as original var "
                     "(opr: %s{%s}, wrt_var: %s, grad_var: %s): "
                     "wrt_shape=%s grad_shape=%s",
@@ -75,37 +75,33 @@ class GradShapeChecker {
         }
     }
 
-
     static void on_var_shape(
-            const std::shared_ptr<GradShapeChecker> &checker,
-            VarNode *var) {
+            const std::shared_ptr<GradShapeChecker>& checker, VarNode* var) {
         checker->do_on_var_shape(var);
     }
 
-    public:
+public:
+    GradShapeChecker(OperatorNodeBase* opr, VarNode* wrt, VarNode* grad)
+            : m_opr(opr), m_wrt(wrt), m_grad(grad) {}
 
-        GradShapeChecker(OperatorNodeBase *opr, VarNode *wrt, VarNode *grad):
-            m_opr(opr), m_wrt(wrt), m_grad(grad)
-        {
+    static void make(OperatorNodeBase* opr, VarNode* wrt, VarNode* grad) {
+        if (ComputingGraphImpl::downcast(wrt->owner_graph())
+                    ->eager_eval_manager()
+                    .enabled())
+            return;
+        using namespace std::placeholders;
+        auto checker = std::make_shared<GradShapeChecker>(opr, wrt, grad);
+        auto func = std::bind(&on_var_shape, checker, _1);
+        wrt->add_shape_update_callback(grad, func);
+        grad->add_shape_update_callback(wrt, func);
+
+        if (wrt->shape().ndim && grad->shape().ndim) {
+            // eager check if shape available
+            checker->do_on_var_shape(wrt);
+            checker->do_on_var_shape(grad);
         }
-
-        static void make(OperatorNodeBase *opr, VarNode *wrt, VarNode *grad) {
-            if (ComputingGraphImpl::downcast(wrt->owner_graph())
-                    ->eager_eval_manager().enabled())
-                return;
-            using namespace std::placeholders;
-            auto checker = std::make_shared<GradShapeChecker>(opr, wrt, grad);
-            auto func = std::bind(&on_var_shape, checker, _1);
-            wrt->add_shape_update_callback(grad, func);
-            grad->add_shape_update_callback(wrt, func);
-
-            if (wrt->shape().ndim && grad->shape().ndim) {
-                // eager check if shape available
-                checker->do_on_var_shape(wrt);
-                checker->do_on_var_shape(grad);
-            }
-        }
-}; // GradShapeChecker
+    }
+};  // GradShapeChecker
 
 struct StaticData {
     ThinHashMap<Typeinfo*, OprGradFunc> grad_func_registry;
@@ -116,24 +112,22 @@ StaticData& static_data() {
     return sd;
 }
 
-
-} // anonymous namespace
+}  // anonymous namespace
 
 VarNodeArray& OprGradResult::all(OperatorNodeBase* opr) {
-    mgb_assert(m_all.size() == opr->input().size(),
-               "input grad size mismatch: opr=%s{%s} inputs=%zu grads=%zu",
-               opr->cname(), opr->dyn_typeinfo()->name, opr->input().size(),
-               m_all.size());
+    mgb_assert(
+            m_all.size() == opr->input().size(),
+            "input grad size mismatch: opr=%s{%s} inputs=%zu grads=%zu", opr->cname(),
+            opr->dyn_typeinfo()->name, opr->input().size(), m_all.size());
     return m_all;
 }
 
-void cg::register_grad_func(Typeinfo *opr_type, OprGradFunc grad) {
+void cg::register_grad_func(Typeinfo* opr_type, OprGradFunc grad) {
     auto ins = static_data().grad_func_registry.emplace(opr_type, grad);
-    mgb_assert(ins.second, "duplicated grad registry for type %s",
-            opr_type->name);
+    mgb_assert(ins.second, "duplicated grad registry for type %s", opr_type->name);
 }
 
-OprGradFunc* cg::lookup_grad_func(Typeinfo *opr_type) {
+OprGradFunc* cg::lookup_grad_func(Typeinfo* opr_type) {
     auto giter = static_data().grad_func_registry.find(opr_type);
     if (giter != static_data().grad_func_registry.end()) {
         return &giter->second;
@@ -146,14 +140,14 @@ class GradManager::StreamStrongPropInfer {
     DepOprIter m_opr_iter;
     ThinHashSet<OperatorNodeBase*> m_strong_oprs;
 
-    void on_opr(OperatorNodeBase *opr) {
+    void on_opr(OperatorNodeBase* opr) {
         // grads for vars that only depend on SharedDeviceTensor should be moved
         // to copy stream
         if (!opr->same_type<opr::SharedDeviceTensor>()) {
-            auto &&dep_map = opr->node_prop().dep_map();
-            for (auto i: opr->input()) {
+            auto&& dep_map = opr->node_prop().dep_map();
+            for (auto i : opr->input()) {
                 if (need_device_computing_on_var(i, dep_map.at(i)) &&
-                        !m_strong_oprs.count(i->owner_opr())) {
+                    !m_strong_oprs.count(i->owner_opr())) {
                     return;
                 }
             }
@@ -162,35 +156,29 @@ class GradManager::StreamStrongPropInfer {
         m_strong_oprs.insert(opr);
     }
 
-    public:
+public:
+    StreamStrongPropInfer() : m_opr_iter([this](OperatorNodeBase* o) { on_opr(o); }) {}
 
-        StreamStrongPropInfer():
-            m_opr_iter([this](OperatorNodeBase *o){on_opr(o);})
-        {
-        }
-
-        bool need_strong_stream(VarNode *var) {
-            auto opr = var->owner_opr();
-            m_opr_iter.add(opr);
-            return m_strong_oprs.count(opr);
-        }
+    bool need_strong_stream(VarNode* var) {
+        auto opr = var->owner_opr();
+        m_opr_iter.add(opr);
+        return m_strong_oprs.count(opr);
+    }
 };
 
-GradManager::GradManager(ComputingGraphImpl *graph):
-    m_owner_graph(graph),
-    m_stream_strong_prop_infer{new StreamStrongPropInfer}
-{
-}
+GradManager::GradManager(ComputingGraphImpl* graph)
+        : m_owner_graph(graph), m_stream_strong_prop_infer{new StreamStrongPropInfer} {}
 
 GradManager::~GradManager() noexcept = default;
 
-VarNode* GradManager::grad(VarNode *target, VarNode *wrt) {
+VarNode* GradManager::grad(VarNode* target, VarNode* wrt) {
     mgb_assert(target->owner_graph() == wrt->owner_graph());
 
-    auto check_target_shape = [](VarNode *var) {
+    auto check_target_shape = [](VarNode* var) {
         if (!var->shape().is_scalar()) {
-            mgb_throw(OperatorNodeExcExtraInfo::ExcMaker{var->owner_opr()}.
-                    make<GraphError>,
+            mgb_throw(
+                    OperatorNodeExcExtraInfo::ExcMaker{var->owner_opr()}
+                            .make<GraphError>,
                     "grad target var must be scalar; got shape %s",
                     var->shape().to_string().c_str());
         }
@@ -205,27 +193,28 @@ VarNode* GradManager::grad(VarNode *target, VarNode *wrt) {
         auto ret = do_grad_with_cache(target, wrt);
         m_target_stack.pop_back();
         return ret;
-    } MGB_CATCH(..., {
+    }
+    MGB_CATCH(..., {
         m_target_stack.pop_back();
         throw;
     })
 }
 
-VarNode* GradManager::do_grad_with_cache(VarNode* target, VarNode *wrt) {
+VarNode* GradManager::do_grad_with_cache(VarNode* target, VarNode* wrt) {
     mgb_assert(target->owner_graph() == m_owner_graph);
     auto tgt_wrt_pair = std::make_pair(target, wrt);
 
     if (m_in_stack.count(tgt_wrt_pair)) {
-        mgb_throw(OperatorNodeExcExtraInfo::ExcMaker{wrt->owner_opr()}.
-                make<GraphError>,
+        mgb_throw(
+                OperatorNodeExcExtraInfo::ExcMaker{wrt->owner_opr()}.make<GraphError>,
                 "infinite recursion detected while computing grad: "
-                "target=%s wrt=%s", cg::dump_var_info({target}).c_str(),
-                cg::dump_var_info({wrt}).c_str());
+                "target=%s wrt=%s",
+                cg::dump_var_info({target}).c_str(), cg::dump_var_info({wrt}).c_str());
     }
 
-    auto &&tgt_context = m_target_context[target];
+    auto&& tgt_context = m_target_context[target];
     tgt_context.init(this, target);
-    auto &&cache = tgt_context.cache;
+    auto&& cache = tgt_context.cache;
     {
         auto iter = cache.find(wrt);
         if (iter != cache.end())
@@ -237,16 +226,15 @@ VarNode* GradManager::do_grad_with_cache(VarNode* target, VarNode *wrt) {
     m_in_stack.insert(tgt_wrt_pair);
     VarNodeArray tmp_var_arrs[2];
     MGB_TRY {
-        VarNode *ret = nullptr;
-        for (auto &&dep: deps) {
+        VarNode* ret = nullptr;
+        for (auto&& dep : deps) {
             auto ins = cache.emplace(dep.first, nullptr);
             if (ins.second) {
-                auto rst = compute_grad_of_single_var(target, dep.first,
-                                                      tgt_context, dep.second,
-                                                      tmp_var_arrs);
+                auto rst = compute_grad_of_single_var(
+                        target, dep.first, tgt_context, dep.second, tmp_var_arrs);
                 auto trans_iter = m_grad_transformers.find(dep.first);
                 if (trans_iter != m_grad_transformers.end()) {
-                    for (auto &&i: trans_iter->second) {
+                    for (auto&& i : trans_iter->second) {
                         rst = i(target, dep.first, rst);
                     }
                 }
@@ -260,22 +248,22 @@ VarNode* GradManager::do_grad_with_cache(VarNode* target, VarNode *wrt) {
 
         m_in_stack.erase(tgt_wrt_pair);
         return ret;
-    } MGB_CATCH (..., {
+    }
+    MGB_CATCH(..., {
         m_in_stack.erase(tgt_wrt_pair);
         throw;
     })
 }
 
-void GradManager::ContextForTargetVar::init(
-        GradManager *manager, VarNode *target) {
+void GradManager::ContextForTargetVar::init(GradManager* manager, VarNode* target) {
     if (m_virtual_receiver_version == manager->m_virtual_receiver_version &&
-            !m_dep_oprs.empty())
+        !m_dep_oprs.empty())
         return;
 
     m_dep_oprs.clear();
     VarNodeArray stack;
     VarNodeSet visited;
-    auto add_var = [&](VarNode *var) {
+    auto add_var = [&](VarNode* var) {
         if (visited.insert(var).second) {
             stack.push_back(var);
             m_dep_oprs.insert(var->owner_opr());
@@ -288,7 +276,7 @@ void GradManager::ContextForTargetVar::init(
         stack.pop_back();
 
         // add input vars
-        for (auto i: var->owner_opr()->input()) {
+        for (auto i : var->owner_opr()->input()) {
             add_var(i);
         }
 
@@ -296,8 +284,8 @@ void GradManager::ContextForTargetVar::init(
         {
             auto iter = manager->m_var2virtual_receiver_inv.find(var);
             if (iter != manager->m_var2virtual_receiver_inv.end()) {
-                for (VarVirtualReceiverDesc* desc: iter->second) {
-                    for (auto i: desc->inputs) {
+                for (VarVirtualReceiverDesc* desc : iter->second) {
+                    for (auto i : desc->inputs) {
                         add_var(i);
                     }
                 }
@@ -308,7 +296,7 @@ void GradManager::ContextForTargetVar::init(
         {
             auto iter = manager->m_extra_deps_inv_lookup.find(var);
             if (iter != manager->m_extra_deps_inv_lookup.end()) {
-                for (auto i: iter->second) {
+                for (auto i : iter->second) {
                     add_var(i);
                 }
             }
@@ -319,7 +307,7 @@ void GradManager::ContextForTargetVar::init(
 }
 
 struct GradManager::GetDepSeqStackFrame {
-    VarNode * const var;
+    VarNode* const var;
     size_t cur_output_idx = 0;
 
     OprNodeArray::const_iterator opr_recv_iter;
@@ -333,35 +321,31 @@ struct GradManager::GetDepSeqStackFrame {
     size_t const tot_nr_recv;
 
     GetDepSeqStackFrame(
-            VarNode *var, const OprNodeArray &opr_recv,
-            const VarVirtualReceiverArray &vrt_recv):
-        var{var},
-        opr_recv_iter{opr_recv.begin()}, opr_recv_begin{opr_recv_iter},
-        opr_recv_end{opr_recv.end()},
-        vrt_recv_iter{vrt_recv.begin()}, vrt_recv_begin{vrt_recv_iter},
-        vrt_recv_end{vrt_recv.end()},
-        tot_nr_recv{opr_recv.size() + vrt_recv.size()}
-    {
-    }
+            VarNode* var, const OprNodeArray& opr_recv,
+            const VarVirtualReceiverArray& vrt_recv)
+            : var{var},
+              opr_recv_iter{opr_recv.begin()},
+              opr_recv_begin{opr_recv_iter},
+              opr_recv_end{opr_recv.end()},
+              vrt_recv_iter{vrt_recv.begin()},
+              vrt_recv_begin{vrt_recv_iter},
+              vrt_recv_end{vrt_recv.end()},
+              tot_nr_recv{opr_recv.size() + vrt_recv.size()} {}
 
-    bool opr_recv_done() const {
-        return opr_recv_iter == opr_recv_end;
-    }
+    bool opr_recv_done() const { return opr_recv_iter == opr_recv_end; }
 
-    bool vrt_recv_done() const {
-        return vrt_recv_iter == vrt_recv_end;
-    }
+    bool vrt_recv_done() const { return vrt_recv_iter == vrt_recv_end; }
 };
 
 GradManager::DepSeq GradManager::get_dep_seq(
-        VarNode *start_var, const ContextForTargetVar &tgt_context) {
+        VarNode* start_var, const ContextForTargetVar& tgt_context) {
     DepSeq seq;
     VarNodeSet visited;
     std::vector<GetDepSeqStackFrame> stack;
 
-    auto push_stack = [&](VarNode *var)  {
+    auto push_stack = [&](VarNode* var) {
         if (!tgt_context.cache.count(var) && visited.insert(var).second) {
-            VarVirtualReceiverArray *vptr;
+            VarVirtualReceiverArray* vptr;
             auto viter = m_var2virtual_receiver.find(var);
             if (viter != m_var2virtual_receiver.end()) {
                 vptr = &viter->second;
@@ -370,28 +354,27 @@ GradManager::DepSeq GradManager::get_dep_seq(
                 vptr = &e;
             }
             mgb_assert(var->owner_graph() == m_owner_graph);
-            stack.emplace_back(
-                    var, m_owner_graph->var_receiver(var), *vptr);
+            stack.emplace_back(var, m_owner_graph->var_receiver(var), *vptr);
         }
     };
 
     push_stack(start_var);
     while (!stack.empty()) {
-        auto &&frame = stack.back();
+        auto&& frame = stack.back();
 
         if (frame.opr_recv_done() && frame.vrt_recv_done()) {
             // pop stack if all receivers have been processed
             seq.emplace_back(frame.var, VarReceiverArray{});
-            auto &&arr = seq.back().second;
+            auto&& arr = seq.back().second;
             arr.reserve(frame.tot_nr_recv);
-            for (auto i = frame.opr_recv_begin; i != frame.opr_recv_end; ++ i) {
+            for (auto i = frame.opr_recv_begin; i != frame.opr_recv_end; ++i) {
                 // for oprs that tgt does not depend on, we do not need to
                 // consider it as a receiver
                 if (tgt_context.has_dep_opr(*i)) {
                     arr.push_back(*i);
                 }
             }
-            for (auto i = frame.vrt_recv_begin; i != frame.vrt_recv_end; ++ i) {
+            for (auto i = frame.vrt_recv_begin; i != frame.vrt_recv_end; ++i) {
                 arr.push_back(i->get());
             }
             stack.pop_back();
@@ -401,8 +384,8 @@ GradManager::DepSeq GradManager::get_dep_seq(
         // process opr receiver
         if (!frame.opr_recv_done()) {
             auto opr = *frame.opr_recv_iter;
-            if (!frame.cur_output_idx && (opr->same_type<opr::SetGrad>() ||
-                        !tgt_context.has_dep_opr(opr))) {
+            if (!frame.cur_output_idx &&
+                (opr->same_type<opr::SetGrad>() || !tgt_context.has_dep_opr(opr))) {
                 // For SetGrad: we do not need to compute its output gradients
                 // eagerly, since its callback would call cg::grad if it needs
                 // output grad.
@@ -410,27 +393,27 @@ GradManager::DepSeq GradManager::get_dep_seq(
                 // output grad.
                 //
                 // In these two cases we just ignore the receiver opr.
-                ++ frame.opr_recv_iter;
+                ++frame.opr_recv_iter;
                 continue;
             }
-            auto &&output = opr->output();
+            auto&& output = opr->output();
             if (frame.cur_output_idx == output.size()) {
-                ++ frame.opr_recv_iter;
+                ++frame.opr_recv_iter;
                 frame.cur_output_idx = 0;
             } else {
-                push_stack(output[frame.cur_output_idx ++]);
+                push_stack(output[frame.cur_output_idx++]);
             }
 
             continue;
         }
 
         // process virtual receiver
-        auto &&output = frame.vrt_recv_iter->get()->outputs;
+        auto&& output = frame.vrt_recv_iter->get()->outputs;
         if (frame.cur_output_idx == output.size()) {
-            ++ frame.vrt_recv_iter;
+            ++frame.vrt_recv_iter;
             frame.cur_output_idx = 0;
         } else {
-            push_stack(output[frame.cur_output_idx ++]);
+            push_stack(output[frame.cur_output_idx++]);
         }
     }
 
@@ -438,22 +421,23 @@ GradManager::DepSeq GradManager::get_dep_seq(
 }
 
 VarNode* GradManager::compute_grad_of_single_var(
-        VarNode *target, VarNode *wrt, ContextForTargetVar& context,
-        const  VarReceiverArray &wrt_recv, VarNodeArray *tmp_var_arrs) {
+        VarNode* target, VarNode* wrt, ContextForTargetVar& context,
+        const VarReceiverArray& wrt_recv, VarNodeArray* tmp_var_arrs) {
     if (target == wrt)
         return SymbolVar{wrt}.make_scalar_dt(1.f).node();
 
     // grads of the receivers that should be summed to get final grad
-    auto &&recv_grads_to_sum = tmp_var_arrs[0];
+    auto&& recv_grads_to_sum = tmp_var_arrs[0];
     recv_grads_to_sum.clear();
 
     // current outgrad when append_opr_grad() is called
-    auto &&outgrad = tmp_var_arrs[1];
+    auto&& outgrad = tmp_var_arrs[1];
 
-    auto &&grad_func_registry = static_data().grad_func_registry;
+    auto&& grad_func_registry = static_data().grad_func_registry;
 
-    auto add_to_recv_grads_to_sum = [&](OperatorNodeBase *opr, VarNode *grad) {
-        mgb_assert(grad->comp_node() == wrt->comp_node(),
+    auto add_to_recv_grads_to_sum = [&](OperatorNodeBase* opr, VarNode* grad) {
+        mgb_assert(
+                grad->comp_node() == wrt->comp_node(),
                 "grad comp node must be the same of original var");
         mgb_assert(
                 grad->dtype() == wrt->dtype(),
@@ -497,16 +481,15 @@ VarNode* GradManager::compute_grad_of_single_var(
                 if (inp_grad_result) {
                     cur = inp_grad_result->at(i);
                 } else {
-                    auto gfunc_iter =
-                            grad_func_registry.find(opr->dyn_typeinfo());
-                    mgb_assert(gfunc_iter != grad_func_registry.end(),
-                               "grad for type %s not implemented",
-                               opr->dyn_typeinfo()->name);
+                    auto gfunc_iter = grad_func_registry.find(opr->dyn_typeinfo());
+                    mgb_assert(
+                            gfunc_iter != grad_func_registry.end(),
+                            "grad for type %s not implemented",
+                            opr->dyn_typeinfo()->name);
                     auto res = gfunc_iter->second(opr, i, outgrad);
                     if (res.from_single()) {
                         cur = res.single();
                     } else {
-
                         auto ins = context.holistic_input_grads.emplace(
                                 opr, std::move(res.all(opr)));
                         mgb_assert(ins.second);
@@ -516,38 +499,37 @@ VarNode* GradManager::compute_grad_of_single_var(
                 }
                 if (cur) {
                     add_to_recv_grads_to_sum(opr, cur);
-                    cur->name(ssprintf("grad[var%zu,opr%zu]:%zu", wrt->id(),
-                                       opr->id(), i));
+                    cur->name(ssprintf(
+                            "grad[var%zu,opr%zu]:%zu", wrt->id(), opr->id(), i));
                 }
             }
         }
         mgb_assert(found);
     };
 
-    auto &&opr_list = m_owner_graph->m_opr_refkeeper;
+    auto&& opr_list = m_owner_graph->m_opr_refkeeper;
 
-    auto setup_outgrad = [&](const VarNodeArray &output) {
-        for (auto i: output)
+    auto setup_outgrad = [&](const VarNodeArray& output) {
+        for (auto i : output)
             outgrad.push_back(context.cache.at(i));
     };
 
-    for (auto &&recv_item: wrt_recv) {
+    for (auto&& recv_item : wrt_recv) {
         outgrad.clear();
 
         if (recv_item.vrt) {
             auto vrecv = recv_item.vrt;
             setup_outgrad(vrecv->outputs);
             bool found = false;
-            for (size_t i = 0; i < vrecv->inputs.size(); ++ i) {
+            for (size_t i = 0; i < vrecv->inputs.size(); ++i) {
                 auto inp = vrecv->inputs[i];
                 if (inp == wrt) {
                     found = true;
-                    auto cur = vrecv->grad(
-                            vrecv->inputs, vrecv->outputs, i, outgrad);
+                    auto cur = vrecv->grad(vrecv->inputs, vrecv->outputs, i, outgrad);
                     if (cur) {
                         add_to_recv_grads_to_sum(nullptr, cur);
-                        cur->name(ssprintf("grad[var%zu,virtual_recv]:%zu",
-                                    wrt->id(), i));
+                        cur->name(ssprintf(
+                                "grad[var%zu,virtual_recv]:%zu", wrt->id(), i));
                     }
                 }
             }
@@ -561,10 +543,10 @@ VarNode* GradManager::compute_grad_of_single_var(
         }
 
         // add grad source tracker to opr attr
-        auto add_grad_src = [&, orig_size=opr_list.size()]() {
-            for (size_t i = orig_size; i < opr_list.size(); ++ i) {
-                auto &&attr = opr_list[i]->node_prop().attribute();
-                auto &&tk = attr.grad_tracker;
+        auto add_grad_src = [&, orig_size = opr_list.size()]() {
+            for (size_t i = orig_size; i < opr_list.size(); ++i) {
+                auto&& attr = opr_list[i]->node_prop().attribute();
+                auto&& tk = attr.grad_tracker;
                 if (!tk.valid()) {
                     tk.emplace(recv_opr, target, wrt);
                 }
@@ -576,11 +558,11 @@ VarNode* GradManager::compute_grad_of_single_var(
         };
 
         // take grad and add extra info on error
-        MGB_TRY {
-            append_opr_grad(recv_opr);
-        } MGB_CATCH(MegBrainError &exc, {
+        MGB_TRY { append_opr_grad(recv_opr); }
+        MGB_CATCH(MegBrainError & exc, {
             if (!exc.extra_info()) {
-                mgb_log_warn("error while taking grad to %s{%s}; "
+                mgb_log_warn(
+                        "error while taking grad to %s{%s}; "
                         "but exc extra info has not been set; "
                         "use original operator",
                         recv_opr->cname(), recv_opr->dyn_typeinfo()->name);
@@ -591,14 +573,13 @@ VarNode* GradManager::compute_grad_of_single_var(
         })
 
         add_grad_src();
-
     }
     if (recv_grads_to_sum.empty())
         return nullptr;
 
     // prompt copy stream vars to strong
-    auto &&comp_node_opt = m_owner_graph->components().seq_comp_node_opt;
-    for (auto i: recv_grads_to_sum) {
+    auto&& comp_node_opt = m_owner_graph->components().seq_comp_node_opt;
+    for (auto i : recv_grads_to_sum) {
         using T = SeqCompNodeOptimizer::StreamPropType;
         auto stream_prop_type = comp_node_opt.stream_prop_type(i);
         if (stream_prop_type.prop_type != T::NONE) {
@@ -609,12 +590,12 @@ VarNode* GradManager::compute_grad_of_single_var(
         }
     }
 
-    VarNode *result = opr::Elemwise::sum_grad_list(wrt, recv_grads_to_sum);
+    VarNode* result = opr::Elemwise::sum_grad_list(wrt, recv_grads_to_sum);
 
     result->name(ssprintf("grad[var%zu:%s]", wrt->id(), wrt->cname()));
 
     if (m_owner_graph->options().enable_grad_var_static_reshape &&
-            is_static_var_shape(wrt) && !is_static_var_shape(result)) {
+        is_static_var_shape(wrt) && !is_static_var_shape(result)) {
         // use static shape to facilitate memory allocation
         result = SymbolVar{result}.reshape(SymbolVar{wrt}.symshape()).node();
     }
@@ -622,18 +603,18 @@ VarNode* GradManager::compute_grad_of_single_var(
 }
 
 void GradManager::add_var_virtual_receiver(
-        const std::shared_ptr<VarVirtualReceiverDesc> &desc) {
-    ++ m_virtual_receiver_version;
+        const std::shared_ptr<VarVirtualReceiverDesc>& desc) {
+    ++m_virtual_receiver_version;
     mgb_assert(!desc->inputs.empty() && !desc->outputs.empty());
-    for (auto i: desc->inputs) {
+    for (auto i : desc->inputs) {
         mgb_assert(i->owner_graph() == m_owner_graph);
     }
-    for (auto i: desc->outputs) {
+    for (auto i : desc->outputs) {
         mgb_assert(i->owner_graph() == m_owner_graph);
     }
 
     VarNodeSet vars_dedup;
-    for (size_t i = 0; i < desc->inputs.size(); ++ i) {
+    for (size_t i = 0; i < desc->inputs.size(); ++i) {
         auto inp = desc->inputs[i];
         if (vars_dedup.insert(inp).second) {
             m_var2virtual_receiver[inp].push_back(desc);
@@ -641,7 +622,7 @@ void GradManager::add_var_virtual_receiver(
     }
 
     vars_dedup.clear();
-    for (size_t i = 0; i < desc->outputs.size(); ++ i) {
+    for (size_t i = 0; i < desc->outputs.size(); ++i) {
         auto out = desc->outputs[i];
         if (vars_dedup.insert(out).second) {
             m_var2virtual_receiver_inv[out].push_back(desc.get());
@@ -649,61 +630,59 @@ void GradManager::add_var_virtual_receiver(
     }
 }
 
-void cg::add_grad_transformer(VarNode *var, const GradTransformer &cb) {
-    ComputingGraphImpl::downcast(var->owner_graph())->
-        grad_manager().
-        add_grad_transformer(var, cb);
+void cg::add_grad_transformer(VarNode* var, const GradTransformer& cb) {
+    ComputingGraphImpl::downcast(var->owner_graph())
+            ->grad_manager()
+            .add_grad_transformer(var, cb);
 }
 
-void cg::add_extra_dep_for_grad(VarNode *inp, VarNode *out) {
-    ComputingGraphImpl::downcast(inp->owner_graph())->grad_manager().
-        add_extra_dep_for_grad(inp, out);
+void cg::add_extra_dep_for_grad(VarNode* inp, VarNode* out) {
+    ComputingGraphImpl::downcast(inp->owner_graph())
+            ->grad_manager()
+            .add_extra_dep_for_grad(inp, out);
 }
 
 void cg::add_var_virtual_receiver(
-        const VarNodeArray &inputs, const VarNodeArray &outputs,
-        const VarVirtualReceiverGrad &grad) {
+        const VarNodeArray& inputs, const VarNodeArray& outputs,
+        const VarVirtualReceiverGrad& grad) {
     auto desc = std::make_shared<GradManager::VarVirtualReceiverDesc>();
     desc->inputs = inputs;
     desc->outputs = outputs;
     desc->grad = grad;
-    ComputingGraphImpl::downcast(inputs.at(0)->owner_graph())->
-        grad_manager().
-        add_var_virtual_receiver(desc);
+    ComputingGraphImpl::downcast(inputs.at(0)->owner_graph())
+            ->grad_manager()
+            .add_var_virtual_receiver(desc);
 }
 
 VarNode* cg::call_opr_grad_on_given_io(
-        OperatorNodeBase *opr,
-        const VarNodeArray &inputs, const VarNodeArray &outputs,
-        size_t idx, const VarNodeArray &out_grad,
-        bool add_volatile_out) {
-
-    VarNodeArray *cur_out = const_cast<VarNodeArray*>(&outputs),
-                 outputs_with_volatile;
+        OperatorNodeBase* opr, const VarNodeArray& inputs, const VarNodeArray& outputs,
+        size_t idx, const VarNodeArray& out_grad, bool add_volatile_out) {
+    VarNodeArray *cur_out = const_cast<VarNodeArray*>(&outputs), outputs_with_volatile;
     if (add_volatile_out) {
         if (outputs.size() != opr->output().size()) {
             size_t used = 0;
-            for (auto i: opr->output()) {
+            for (auto i : opr->output()) {
                 if (i->contain_flag(VarNode::Flag::VOLATILE_CONTENT)) {
                     outputs_with_volatile.push_back(nullptr);
                 } else {
-                    outputs_with_volatile.push_back(outputs.at(used ++));
+                    outputs_with_volatile.push_back(outputs.at(used++));
                 }
             }
             mgb_assert(used == outputs.size());
             cur_out = &outputs_with_volatile;
         } else {
-            for (auto i: opr->output())
+            for (auto i : opr->output())
                 mgb_assert(!i->contain_flag(VarNode::Flag::VOLATILE_CONTENT));
         }
     }
 
-    mgb_assert(inputs.size() == opr->input().size() &&
+    mgb_assert(
+            inputs.size() == opr->input().size() &&
             cur_out->size() == opr->output().size());
     auto giter = static_data().grad_func_registry.find(opr->dyn_typeinfo());
-    mgb_assert(giter != static_data().grad_func_registry.end(),
-            "grad for type %s not implemented",
-            opr->dyn_typeinfo()->name);
+    mgb_assert(
+            giter != static_data().grad_func_registry.end(),
+            "grad for type %s not implemented", opr->dyn_typeinfo()->name);
 
     auto &&opr_inp = const_cast<VarNodeArray&>(opr->input()),
          &&opr_out = const_cast<VarNodeArray&>(opr->output()),
@@ -711,9 +690,8 @@ VarNode* cg::call_opr_grad_on_given_io(
     opr_inp.swap(cur_inp);
     opr_out.swap(*cur_out);
     OprGradResult res;
-    MGB_TRY {
-        res = giter->second(opr, idx, out_grad);
-    } MGB_FINALLY({
+    MGB_TRY { res = giter->second(opr, idx, out_grad); }
+    MGB_FINALLY({
         opr_inp.swap(cur_inp);
         opr_out.swap(*cur_out);
     });
@@ -723,11 +701,11 @@ VarNode* cg::call_opr_grad_on_given_io(
 }
 
 void cg::add_var_virtual_receiver_reuse_opr_grad(
-        const VarNodeArray &inputs, const VarNodeArray &outputs,
-        OperatorNodeBase *opr, bool add_volatile_out) {
+        const VarNodeArray& inputs, const VarNodeArray& outputs, OperatorNodeBase* opr,
+        bool add_volatile_out) {
     using namespace std::placeholders;
-    auto grad = std::bind(call_opr_grad_on_given_io, opr,
-            _1, _2, _3, _4, add_volatile_out);
+    auto grad =
+            std::bind(call_opr_grad_on_given_io, opr, _1, _2, _3, _4, add_volatile_out);
     add_var_virtual_receiver(inputs, outputs, grad);
 }
 
@@ -739,18 +717,17 @@ void cg::add_grad_transformer(VarNode*, const GradTransformer&) {}
 
 void cg::add_extra_dep_for_grad(VarNode*, VarNode*) {}
 
-void cg::add_var_virtual_receiver(const VarNodeArray&, const VarNodeArray&,
-                                  const VarVirtualReceiverGrad&) {}
+void cg::add_var_virtual_receiver(
+        const VarNodeArray&, const VarNodeArray&, const VarVirtualReceiverGrad&) {}
 
-VarNode* cg::call_opr_grad_on_given_io(OperatorNodeBase*, const VarNodeArray&,
-                                       const VarNodeArray&, size_t,
-                                       const VarNodeArray&, bool) {
+VarNode* cg::call_opr_grad_on_given_io(
+        OperatorNodeBase*, const VarNodeArray&, const VarNodeArray&, size_t,
+        const VarNodeArray&, bool) {
     mgb_throw(MegBrainError, "grad disabled at compile time");
 }
 
-void cg::add_var_virtual_receiver_reuse_opr_grad(const VarNodeArray&,
-                                                 const VarNodeArray&,
-                                                 OperatorNodeBase*, bool) {}
+void cg::add_var_virtual_receiver_reuse_opr_grad(
+        const VarNodeArray&, const VarNodeArray&, OperatorNodeBase*, bool) {}
 
 #endif  // MGB_ENABLE_GRAD
 

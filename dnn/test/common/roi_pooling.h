@@ -10,8 +10,8 @@
  */
 #include "megdnn/oprs.h"
 
-#include "test/common/rng.h"
 #include "test/common/random_state.h"
+#include "test/common/rng.h"
 
 namespace megdnn {
 namespace test {

@@ -124,6 +124,7 @@ def _test_optimizer(opt_str, test_case, check_class, update_lr=False):
     "case",
     [
         {"momentum": 0.9, "lr": 0.01},  # SGD with momentum
+        {"momentum": 0.9, "lr": 0.01, "nesterov": True},  # with nesterov momentum
         {"lr": 0.01},  # simple SGD
         {"weight_decay": 0.1, "lr": 0.01},  # with weight_decay
     ],
@@ -144,9 +145,12 @@ def test_sgd(monkeypatch, case, update_lr, inplace_mode):
                 grad = param.grad.numpy()
                 if hasattr(self, "weight_decay") and self.weight_decay != 0.0:
                     grad = grad + ori_params[param] * self.weight_decay
-                if hasattr(self, "momentum"):
+                if hasattr(self, "momentum") and self.momentum != 0.0:
                     self.slots[param] = grad + self.slots[param] * self.momentum
-                    delta = -self.lr * self.slots[param]
+                    if hasattr(self, "nesterov") and self.nesterov:
+                        delta = -self.lr * (grad + self.slots[param] * self.momentum)
+                    else:
+                        delta = -self.lr * self.slots[param]
                 else:
                     delta = -self.lr * grad
                 np.testing.assert_almost_equal(

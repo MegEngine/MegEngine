@@ -13,9 +13,9 @@
 #include "./cg_impl_partial.h"
 #include "./cg_impl_seq.h"
 
+#include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/framework.h"
 #include "megbrain/gopt/inference.h"
-#include "megbrain/gopt/basic_arith.h"
 #include "megbrain/gopt/misc.h"
 #include "megbrain/graph/cg.h"
 #include "megbrain/graph/event.h"
@@ -30,7 +30,6 @@
 #if MGB_JIT
 #include "megbrain/jit/fusion_pass.h"
 #endif
-
 
 using namespace mgb;
 using namespace cg;
@@ -49,9 +48,10 @@ void check_opr_not_cross_mem(OperatorNodeBase* opr) {
             first = false;
             mem_node_id = cur;
         } else
-            mgb_assert(mem_node_id == cur,
-                       "for non cross-memory oprs, "
-                       "all vars should reside on the same memory node");
+            mgb_assert(
+                    mem_node_id == cur,
+                    "for non cross-memory oprs, "
+                    "all vars should reside on the same memory node");
     };
     for (auto i : opr->input()) {
         check(i);
@@ -61,8 +61,9 @@ void check_opr_not_cross_mem(OperatorNodeBase* opr) {
     }
 }
 
-void update_output_shapes(static_infer::StaticInferManagerImpl& infer_mgr,
-                          OperatorNodeBase* opr, bool add_freeze_flag) {
+void update_output_shapes(
+        static_infer::StaticInferManagerImpl& infer_mgr, OperatorNodeBase* opr,
+        bool add_freeze_flag) {
     for (auto i : opr->output()) {
         if (add_freeze_flag) {
             i->add_flag(VarNode::Flag::FLAG_FREEZED);
@@ -89,27 +90,26 @@ void update_output_shapes(static_infer::StaticInferManagerImpl& infer_mgr,
 
 /* ========================== global helpers ========================== */
 void cg::update_output_var_shapes(OperatorNodeBase* opr) {
-    update_output_shapes(static_cast<static_infer::StaticInferManagerImpl&>(
-                                 opr->owner_graph()->static_infer_manager()),
-                         opr, false);
+    update_output_shapes(
+            static_cast<static_infer::StaticInferManagerImpl&>(
+                    opr->owner_graph()->static_infer_manager()),
+            opr, false);
 }
 
 /* ========================= DeviceMemoryAllocator ========================= */
-void DeviceMemoryAllocator::alloc_static(ComputingGraph*,
-                                         DeviceTensorStorage& dest,
-                                         size_t size) {
+void DeviceMemoryAllocator::alloc_static(
+        ComputingGraph*, DeviceTensorStorage& dest, size_t size) {
     dest.ensure_size(size);
 }
 
-void DeviceMemoryAllocator::alloc_dynamic(VarNode*, DeviceTensorStorage& dest,
-                                          size_t size) {
+void DeviceMemoryAllocator::alloc_dynamic(
+        VarNode*, DeviceTensorStorage& dest, size_t size) {
     dest.ensure_size(size);
 }
 
-void DeviceMemoryAllocator::defrag_prealloc_contig(ComputingGraph* graph,
-                                                   CompNode comp_node,
-                                                   size_t size){
-        MGB_TRY{comp_node.free_device(comp_node.alloc_device(size));
+void DeviceMemoryAllocator::defrag_prealloc_contig(
+        ComputingGraph* graph, CompNode comp_node,
+        size_t size){MGB_TRY{comp_node.free_device(comp_node.alloc_device(size));
 }
 MGB_CATCH(MemAllocError&, {})
 }
@@ -125,8 +125,8 @@ ComputingGraph::ComputingGraph() {
 }
 
 void ComputingGraph::assert_destroy(std::shared_ptr<ComputingGraph>& ptr) {
-    mgb_assert(ptr.use_count() == 1, "unexpected use_count: %zu",
-               size_t(ptr.use_count()));
+    mgb_assert(
+            ptr.use_count() == 1, "unexpected use_count: %zu", size_t(ptr.use_count()));
     ptr.reset();
 }
 
@@ -147,13 +147,14 @@ size_t ComputingGraph::prealloc_static_storage(size_t size) {
 /* ========================== JITConfig ========================== */
 
 bool ComputingGraph::Options::GraphOpt::JITConfig::enabled() const {
-    if (fuse_dimshuffle != UNSET) return true;
-    if (fuse_reduce != UNSET) return true;
+    if (fuse_dimshuffle != UNSET)
+        return true;
+    if (fuse_reduce != UNSET)
+        return true;
     return false;
 }
 
-void ComputingGraph::Options::GraphOpt::JITConfig::update(
-        const JITConfig& modifier) {
+void ComputingGraph::Options::GraphOpt::JITConfig::update(const JITConfig& modifier) {
     if (modifier.fuse_dimshuffle != UNSET) {
         this->fuse_dimshuffle = modifier.fuse_dimshuffle;
     }
@@ -163,8 +164,8 @@ void ComputingGraph::Options::GraphOpt::JITConfig::update(
 }
 
 /* ========================== CallbackCaller ========================== */
-MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::CallbackCaller,
-                           SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS(
+        ComputingGraphImpl::CallbackCaller, SingleCNOperatorNodeBase) // {
     std::vector<std::vector<ComputingGraph::Callback>> m_cb;
 
     void scn_do_execute() override {
@@ -207,8 +208,7 @@ MGB_DEFINE_OPR_CLASS(ComputingGraphImpl::CallbackCaller,
     NodeProp* do_make_node_prop() const override {
         auto ret = Super::do_make_node_prop();
         for (auto&& inp : input()) {
-            ret->add_dep_type_existing_var(
-                    inp, NodeProp::DepType::VALUE_ALLOW_EMPTY);
+            ret->add_dep_type_existing_var(inp, NodeProp::DepType::VALUE_ALLOW_EMPTY);
         }
         return ret;
     }
@@ -227,9 +227,7 @@ public:
             add_input({i});
         }
         using F = VarNode::Flag;
-        add_output(None)
-                ->add_flag(F::ALLOW_EMPTY_SHAPE)
-                .add_flag(F::VOLATILE_CONTENT);
+        add_output(None)->add_flag(F::ALLOW_EMPTY_SHAPE).add_flag(F::VOLATILE_CONTENT);
     }
 
     static SymbolVar make(const VarNodeArrayView& inp) {
@@ -264,12 +262,11 @@ ComputingGraphImpl::Components::Components(ComputingGraphImpl* owner)
           static_infer_comp_seq_manager{owner},
           grad_manager{owner},
 #if MGB_ENABLE_SUBLINEAR
-          seq_modifier_for_sublinear_memory{owner,
-              &(owner->options().sublinear_mem_config)},
+          seq_modifier_for_sublinear_memory{
+                  owner, &(owner->options().sublinear_mem_config)},
 #endif
 #if MGB_ENABLE_DTR
-          seq_modifier_for_dtr{owner,
-              &(owner->options().dtr_config)},
+          seq_modifier_for_dtr{owner, &(owner->options().dtr_config)},
 #endif
 #if MGB_ENABLE_MEMORY_SWAP
           memory_swap_support{owner},
@@ -321,7 +318,7 @@ void* ComputingGraphImpl::alloc_varnode_storage() {
     return m_var_node_pool.alloc_raw();
 };
 
-void ComputingGraphImpl::free_varnode_storage(void *ptr) {
+void ComputingGraphImpl::free_varnode_storage(void* ptr) {
     m_var_node_pool.free_raw(ptr);
 };
 
@@ -352,12 +349,14 @@ OperatorNodeBase* ComputingGraphImpl::insert_opr(
         // we can release it directly.
         mgb_throw_if(
 #if MGB_BUILD_SLIM_SERVING
-            true,
+                true,
 #else
-            !options().eager_evaluation,
+                !options().eager_evaluation,
 #endif
-            GraphError, "an inserted opr %s re-insert into graph"
-            "with eager evaluation mode OFF.", opr->cname());
+                GraphError,
+                "an inserted opr %s re-insert into graph"
+                "with eager evaluation mode OFF.",
+                opr->cname());
         opr_uniqp.release();
         // No need to do the insert_post under eager mode
         eager_eval_manager().on_opr_insert(opr);
@@ -396,8 +395,7 @@ OperatorNodeBase* ComputingGraphImpl::insert_opr(
 
     MGB_TRY {
         mgb_assert(!opr->inserted_in_graph());
-        mgb_assert(!opr->output().empty(),
-                   "operator must have at least one output");
+        mgb_assert(!opr->output().empty(), "operator must have at least one output");
         opr->set_inserted_in_graph();
 
         // basic init
@@ -465,8 +463,7 @@ std::unique_ptr<AsyncExecutable> ComputingGraphImpl::compile(
     return compile_commit(compile_prepare(out_spec));
 }
 
-SmallVector<std::unique_ptr<AsyncExecutable>>
-ComputingGraphImpl::compile_multi_part(
+SmallVector<std::unique_ptr<AsyncExecutable>> ComputingGraphImpl::compile_multi_part(
         const SmallVector<OutputSpec>& out_specs) {
 #if MGB_ENABLE_PARTIAL_EXECUTION
     return MultiPartCompiler{this}.compile(out_specs);
@@ -478,12 +475,14 @@ ComputingGraphImpl::compile_multi_part(
 ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         const OutputSpec& out_spec) {
     auto&& cmpnt = components();
-    mgb_throw_if(m_recorded_seq_level2_dtor_chk, GraphError,
-                 "graphs with comp_node_seq_record_level==2 can only be "
-                 "compiled once");
+    mgb_throw_if(
+            m_recorded_seq_level2_dtor_chk, GraphError,
+            "graphs with comp_node_seq_record_level==2 can only be "
+            "compiled once");
 
-    mgb_throw_if(out_spec.empty(), GraphError,
-                 "empty output spec given to ComputingGraph::compile");
+    mgb_throw_if(
+            out_spec.empty(), GraphError,
+            "empty output spec given to ComputingGraph::compile");
     // topo sorter may have modified opr properties; restore them before this
     // new compiling
     topo_sorter().restore_opr_prop();
@@ -500,8 +499,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
                     "no virtual grad var; sublinear memory may produce "
                     "unsatisfying result");
         }
-        seq_modifier_for_sublinear_memory().set_priority_before_opt(
-                dest_vars);
+        seq_modifier_for_sublinear_memory().set_priority_before_opt(dest_vars);
     }
 #else
     mgb_assert(!options().enable_sublinear_memory_opt);
@@ -514,11 +512,11 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
     }
 #else
     mgb_assert(!options().enable_dtr_memory_opt);
-#endif //   MGB_ENABLE_DTR
+#endif  //   MGB_ENABLE_DTR
 
 #if !MGB_BUILD_SLIM_SERVING
-    mgb_assert(!options().eager_evaluation,
-               "attempt to compile eager_evaluation graph");
+    mgb_assert(
+            !options().eager_evaluation, "attempt to compile eager_evaluation graph");
 
     {
         bool need_opt = std::abs(options().graph_opt_level) >= 2;
@@ -554,7 +552,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 #endif
 
 #if MGB_JIT
-   if (std::abs(options().graph_opt_level) == 0 &&
+    if (std::abs(options().graph_opt_level) == 0 &&
         (options().graph_opt.jit || options().graph_opt.jit_config.enabled())) {
         // Deprecated usage added previously. It allows NVRTC JIT optimization
         // when graph_opt_level is 0. This usage is not recommanded any more.
@@ -563,9 +561,9 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
                 "graph_opt_level is 0.");
         setenv("MGB_JIT_BACKEND", "NVRTC", 1);
         gopt::GraphOptimizer optimizer;
-        optimizer.add_pass<gopt::JITFusionPass>(sopr_stat.has_virtual_grad,
-                                                options().graph_opt.jit,
-                                                options().graph_opt.jit_config);
+        optimizer.add_pass<gopt::JITFusionPass>(
+                sopr_stat.has_virtual_grad, options().graph_opt.jit,
+                options().graph_opt.jit_config);
         optimizer.apply_inplace(dest_vars);
     }
 #endif
@@ -599,17 +597,16 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         mgb_assert(!init_flag);
         init_flag = true;
         ThinHashMap<VarNode*, size_t> var2idx;
-        std::unordered_map<CallbackCallerKey, CallbackCallerVal,
-                           CallbackCallerKey::Hash>
+        std::unordered_map<
+                CallbackCallerKey, CallbackCallerVal, CallbackCallerKey::Hash>
                 opr2vars;
         using F = VarNode::Flag;
         if (dest_vars[0]->owner_graph()->options().force_output_dynamic_alloc) {
             for (auto&& i : dest_vars) {
-                if (!i->contain_flag(F::NO_SYS_MEM_ALLOC |
-                                     F::NO_SYS_STATIC_MEM_ALLOC)) {
+                if (!i->contain_flag(
+                            F::NO_SYS_MEM_ALLOC | F::NO_SYS_STATIC_MEM_ALLOC)) {
                     mgb_assert(
-                            !i->contain_flag(
-                                    F::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC),
+                            !i->contain_flag(F::DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC),
                             "Can not force graph output dynamic alloc with "
                             "DISALLOW_RT_FORCE_DYNAMIC_MEM_ALLOC flag, var: %s",
                             i->cname());
@@ -625,7 +622,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
                 CallbackCallerKey key{var->owner_opr(), var->comp_node()};
                 auto&& vals = opr2vars[key];
                 auto&& var2idx_iter = var2idx.find(var);
-                if ( var2idx_iter == var2idx.end()) {
+                if (var2idx_iter == var2idx.end()) {
                     vals.vars.push_back(var);
                     vals.indexs.push_back({i});
                     var2idx[var] = vals.vars.size() - 1;
@@ -637,12 +634,11 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
         for (auto& item : opr2vars) {
             auto&& val = item.second;
             auto dvar = CallbackCaller::make(val.vars);
-            CallbackCaller* cb_caller = &dvar.node()
-                                 ->owner_opr()
-                                 ->cast_final_safe<CallbackCaller>();
+            CallbackCaller* cb_caller =
+                    &dvar.node()->owner_opr()->cast_final_safe<CallbackCaller>();
             ++extra_info.var2recvinfo[dvar.node()].nr_direct_comp_req;
             cb_caller->clear_callback();
-            for (size_t i=0;i<val.vars.size(); ++i) {
+            for (size_t i = 0; i < val.vars.size(); ++i) {
                 for (auto&& idx : val.indexs[i]) {
                     cb_caller->add_callback(out_spec[idx].second, i);
                     dest_vars[idx] = cb_caller->output(0);
@@ -654,12 +650,10 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 
 #if MGB_ENABLE_MEMORY_SWAP
     bool enable_swap_memory_after_sublinear =
-            options().enable_sublinear_memory_opt &&
-            options().enable_memory_swap;
+            options().enable_sublinear_memory_opt && options().enable_memory_swap;
 
     bool enable_swap_memory_without_sublinear =
-            !(options().enable_sublinear_memory_opt) &&
-            options().enable_memory_swap;
+            !(options().enable_sublinear_memory_opt) && options().enable_memory_swap;
 
     if (enable_swap_memory_without_sublinear) {
         components().memory_swap_support.modify_dest_var_inplace(dest_vars);
@@ -680,8 +674,7 @@ ComputingGraphImpl::CompileState ComputingGraphImpl::compile_prepare(
 #if MGB_ENABLE_SUBLINEAR
     if (options().enable_sublinear_memory_opt) {
         MGB_TRY {
-            seq_modifier_for_sublinear_memory().modify_endpoint_vars(
-                    dest_vars);
+            seq_modifier_for_sublinear_memory().modify_endpoint_vars(dest_vars);
 #if MGB_ENABLE_MEMORY_SWAP
             if (enable_swap_memory_after_sublinear) {
                 cmpnt.memory_swap_support.modify_dest_var_inplace(dest_vars);
@@ -719,8 +712,7 @@ std::unique_ptr<AsyncExecutable> ComputingGraphImpl::compile_commit(
     for (auto&& i : *opr_seq) {
         for (auto&& j : i->node_prop().dep_map()) {
             if (OperatorNodeBase::NodeProp::is_device_value_dep(j.second)) {
-                comp_seq->extra_info.var2recvinfo.at(j.first)
-                        .last_dev_value_reader = i;
+                comp_seq->extra_info.var2recvinfo.at(j.first).last_dev_value_reader = i;
             }
         }
     }
@@ -739,13 +731,14 @@ std::unique_ptr<AsyncExecutable> ComputingGraphImpl::compile_commit(
     event().signal_inplace<event::CompSeqOrderDetermined>(this, comp_seq.get());
 
     if (options().comp_node_seq_record_level > 1) {
-        mgb_assert(options().comp_node_seq_record_level <= 2,
-                   "invalid comp_node_seq_record_level: %u",
-                   options().comp_node_seq_record_level);
-        mgb_assert(!options().fake_next_exec &&
-                           !options().var_sanity_check_first_run,
-                   "both fake_next_exec and var_sanity_check_first_run "
-                   "must be false when comp_node_seq_record_level is 2");
+        mgb_assert(
+                options().comp_node_seq_record_level <= 2,
+                "invalid comp_node_seq_record_level: %u",
+                options().comp_node_seq_record_level);
+        mgb_assert(
+                !options().fake_next_exec && !options().var_sanity_check_first_run,
+                "both fake_next_exec and var_sanity_check_first_run "
+                "must be false when comp_node_seq_record_level is 2");
         return comp_seq->as_recorded_seq();
     }
     return comp_seq;
@@ -757,12 +750,11 @@ VarNodeArray ComputingGraphImpl::get_dest_vars_from_out_spec(
     for (auto&& i : spec) {
         sym_vars.push_back(i.first);
     }
-    return to_var_node_array(
-            get_dest_vars_with_extra_deps(sym_vars, &sopr_stat));
+    return to_var_node_array(get_dest_vars_with_extra_deps(sym_vars, &sopr_stat));
 }
 
-const ComputingGraph::VarReceiverInfo&
-ComputingGraphImpl::var_receiver_in_current_comp_seq(const VarNode* var) const {
+const ComputingGraph::VarReceiverInfo& ComputingGraphImpl::
+        var_receiver_in_current_comp_seq(const VarNode* var) const {
     static VarReceiverInfo empty;
     if (auto ret = components().eager_eval_manager.var_receiver_info(var)) {
         return *ret;
@@ -792,15 +784,13 @@ VarNode* ComputingGraphImpl::find_var_by_id(size_t id) const {
 }
 
 #if MGB_ENABLE_SUBLINEAR
-SeqModifierForSublinearMemory&
-ComputingGraphImpl::seq_modifier_for_sublinear_memory() {
+SeqModifierForSublinearMemory& ComputingGraphImpl::seq_modifier_for_sublinear_memory() {
     return components().seq_modifier_for_sublinear_memory;
 }
 #endif
 
 #if MGB_ENABLE_DTR
-SeqModifierForDTR&
-ComputingGraphImpl::seq_modifier_for_dtr() {
+SeqModifierForDTR& ComputingGraphImpl::seq_modifier_for_dtr() {
     return components().seq_modifier_for_dtr;
 }
 #endif
@@ -847,12 +837,10 @@ void ComputingGraphImpl::set_as_subgraph(ComputingGraph& par_graph) {
     m_node_id_counter = m_parent_graph->m_node_id_counter;
     options().var_sanity_check_first_run =
             par_graph.options().var_sanity_check_first_run;
-    par_graph.event().signal_inplace<event::SubgraphAssociated>(&par_graph,
-                                                                this);
+    par_graph.event().signal_inplace<event::SubgraphAssociated>(&par_graph, this);
 }
 
-void ComputingGraphImpl::record_async_error(
-        std::unique_ptr<MegBrainError> async_exc) {
+void ComputingGraphImpl::record_async_error(std::unique_ptr<MegBrainError> async_exc) {
     mgb_assert(m_current_comp_seq);
     static_cast<ComputingSequence*>(m_current_comp_seq)
             ->set_async_error(std::move(async_exc));
@@ -876,11 +864,9 @@ GraphExecutable::ExecEnv* ComputingGraphImpl::current_exec_env() {
     return nullptr;
 }
 
-Maybe<size_t> ComputingGraphImpl::opr_step_num_in_cur_comp_seq(
-        OperatorNodeBase* opr) {
+Maybe<size_t> ComputingGraphImpl::opr_step_num_in_cur_comp_seq(OperatorNodeBase* opr) {
     mgb_assert(m_current_comp_seq && opr->owner_graph() == this);
-    return static_cast<ComputingSequence*>(m_current_comp_seq)
-            ->opr2stepnum(opr);
+    return static_cast<ComputingSequence*>(m_current_comp_seq)->opr2stepnum(opr);
 }
 
 std::string ComputingGraphImpl::VarReceiverInfo::to_string() const {
@@ -888,41 +874,38 @@ std::string ComputingGraphImpl::VarReceiverInfo::to_string() const {
             "VarReceiverInfo("
             "nr_direct_comp_req=%zu dev_value=%zu, host_value=%zu, shape=%zu, "
             "allow_empty_value=%zu)",
-            nr_direct_comp_req, dev_value, host_value, shape,
-            allow_empty_value);
+            nr_direct_comp_req, dev_value, host_value, shape, allow_empty_value);
 }
 
 std::string ComputingGraphImpl::get_mem_allocation_info() const {
 #if MGB_ENABLE_JSON
     auto make_var_json = [](VarNode* single_var) {
-        auto &&cur_mem_plan = single_var->mem_plan();
+        auto&& cur_mem_plan = single_var->mem_plan();
         if (cur_mem_plan.valid())
-            return json::Object::make({
-                {"name", json::String::make(single_var->name())},
-                {"memory", json::Number::make(cur_mem_plan.chunk().size())},
-                {"dev_ptr", json::NumberInt::make(
-                reinterpret_cast<size_t>(single_var->dev_tensor().raw_ptr()))}
-            });
+            return json::Object::make(
+                    {{"name", json::String::make(single_var->name())},
+                     {"memory", json::Number::make(cur_mem_plan.chunk().size())},
+                     {"dev_ptr", json::NumberInt::make(reinterpret_cast<size_t>(
+                                         single_var->dev_tensor().raw_ptr()))}});
         else
-            return json::Object::make({
-                {"name", json::String::make(single_var->name())},
-                {"memory", json::Null::make()},
-                {"dev_ptr", json::Null::make()}
-            });
+            return json::Object::make(
+                    {{"name", json::String::make(single_var->name())},
+                     {"memory", json::Null::make()},
+                     {"dev_ptr", json::Null::make()}});
     };
 
     auto objlist = json::Array::make();
 
-    for(auto &opri: m_opr_refkeeper){
+    for (auto& opri : m_opr_refkeeper) {
         auto cur_opr = opri.get();
 
         auto objptr = json::Object::make();
-        auto &&objbody = *objptr;
+        auto&& objbody = *objptr;
 
         objbody["name"] = json::String::make(cur_opr->name());
 
         auto jvars = json::Array::make();
-        for(auto &outputi: cur_opr->output()){
+        for (auto& outputi : cur_opr->output()) {
             jvars->add(make_var_json(outputi));
         }
         objbody["output"] = jvars;
@@ -933,9 +916,10 @@ std::string ComputingGraphImpl::get_mem_allocation_info() const {
     }
 
     return objlist->to_string();
-#endif // MGB_ENABLE_JSON
-    mgb_log_warn("target is not configured with JSON BUILD on,"
-                 "get_mem_allocation_info returns null string");
+#endif  // MGB_ENABLE_JSON
+    mgb_log_warn(
+            "target is not configured with JSON BUILD on,"
+            "get_mem_allocation_info returns null string");
     return std::string();
 }
 

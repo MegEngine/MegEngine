@@ -36,9 +36,9 @@ namespace matmul_s4_4x4x16 {
  *                            Accumulator
  */
 
-static void s4_kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void s4_kern_8x8_remain(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
     const int8_t* a_ptr = packA;
@@ -170,7 +170,7 @@ static void s4_kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
             "dup v5.8b,v20.b[5]\n"
             "dup v6.8b,v20.b[6]\n"
             "dup v7.8b,v20.b[7]\n"
-            
+
             "ld1  {v17.8b}, [%[b_ptr]], 8\n"
 
             "dup v8.8b,v20.b[8]\n"
@@ -318,16 +318,16 @@ static void s4_kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
             STORE_C
 
             :
-            [ a_ptr ] "+r"(a_ptr), [ b_ptr ] "+r"(b_ptr),
-            [ is_first_k ] "+r"(is_first_k), [ K ] "+r"(K), [ LDC ] "+r"(LDC),
-            [ outptr ] "+r"(outptr), [ m_remain ] "+r"(m_remain),
-            [ n_remain ] "+r"(n_remain)  //,[tmp_packa1]"+r"(tmp_packa1),[tmp_packb1]"+r"(tmp_packb1)
+            [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+            [K] "+r"(K), [LDC] "+r"(LDC), [outptr] "+r"(outptr),
+            [m_remain] "+r"(m_remain),
+            [n_remain] "+r"(
+                    n_remain)  //,[tmp_packa1]"+r"(tmp_packa1),[tmp_packb1]"+r"(tmp_packb1)
             :
-            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-              "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31");
+            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "v0",
+              "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
+              "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+              "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
 
 #undef LOAD_LINE
 #undef LOAD_C
@@ -335,14 +335,14 @@ static void s4_kern_8x8_remain(const int8_t* packA, const int8_t* packB, int K,
 #undef STORE_C
 }
 
-static void s4_kern_8x8(const int8_t* packA, const int8_t* packB, int K,
-                     int16_t* output, int LDC, bool is_first_k, int m_remain,
-                     int n_remain) {
+static void s4_kern_8x8(
+        const int8_t* packA, const int8_t* packB, int K, int16_t* output, int LDC,
+        bool is_first_k, int m_remain, int n_remain) {
     K /= 8;
     LDC = LDC * sizeof(int16_t);
     const int8_t* a_ptr = packA;
     const int8_t* b_ptr = packB;
-// clang-format off
+    // clang-format off
 
 #define LOAD_C_8 \
     "ld1 {v24.8h}, [x0], #16\n"     \
@@ -363,9 +363,9 @@ static void s4_kern_8x8(const int8_t* packA, const int8_t* packB, int K,
     "st1 {v28.8h}, [x4], #16\n"     \
     "st1 {v29.8h}, [x5], #16\n"     \
     "st1 {v30.8h}, [x6], #16\n"     \
-    "st1 {v31.8h}, [x7], #16\n"     \
+    "st1 {v31.8h}, [x7], #16\n"
 
-// clang-format on
+    // clang-format on
     register int16_t* outptr asm("x0") = output;
     asm volatile(
             "add x1, x0, %x[LDC]\n"
@@ -395,8 +395,8 @@ static void s4_kern_8x8(const int8_t* packA, const int8_t* packB, int K,
             "PRFM PLDL1KEEP, [%[a_ptr], #512]\n"
             "PRFM PLDL1KEEP, [%[b_ptr], #512]\n"
             "1:\n"
-           // "ld1  {v20.16b}, [%[a_ptr]],#16\n"
-           // "ld1  {v21.16b}, [%[a_ptr]],#16\n"
+            // "ld1  {v20.16b}, [%[a_ptr]],#16\n"
+            // "ld1  {v21.16b}, [%[a_ptr]],#16\n"
             "dup v0.8b,v20.b[0]\n"
             "ld1  {v22.16b}, [%[a_ptr]],#16\n"
             "dup v1.8b,v20.b[1]\n"
@@ -409,7 +409,6 @@ static void s4_kern_8x8(const int8_t* packA, const int8_t* packB, int K,
             "dup v5.8b,v20.b[5]\n"
             "dup v6.8b,v20.b[6]\n"
             "dup v7.8b,v20.b[7]\n"
-            
 
             "dup v8.8b,v20.b[8]\n"
             "smlal   v24.8h,  v0.8b,  v16.8b\n"
@@ -560,26 +559,26 @@ static void s4_kern_8x8(const int8_t* packA, const int8_t* packB, int K,
             STORE_C_8
 
             :
-            [ a_ptr ] "+r"(a_ptr), [ b_ptr ] "+r"(b_ptr),
-            [ is_first_k ] "+r"(is_first_k), [ K ] "+r"(K), [ LDC ] "+r"(LDC),
-            [ outptr ] "+r"(outptr), [ m_remain ] "+r"(m_remain),
-            [ n_remain ] "+r"(n_remain)  //,[tmp_packa1]"+r"(tmp_packa1),[tmp_packb1]"+r"(tmp_packb1)
+            [a_ptr] "+r"(a_ptr), [b_ptr] "+r"(b_ptr), [is_first_k] "+r"(is_first_k),
+            [K] "+r"(K), [LDC] "+r"(LDC), [outptr] "+r"(outptr),
+            [m_remain] "+r"(m_remain),
+            [n_remain] "+r"(
+                    n_remain)  //,[tmp_packa1]"+r"(tmp_packa1),[tmp_packb1]"+r"(tmp_packb1)
             :
-            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-              "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10",
-              "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19",
-              "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
-              "v29", "v30", "v31");
+            : "cc", "memory", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "v0",
+              "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12",
+              "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+              "v23", "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31");
 
 #undef LOAD_LINE
 #undef LOAD_C
 #undef STORE_LINE
 #undef STORE_C
 }
-//packa 
-static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* inptr,
-                                      int ldin, int y0, int ymax, int k0,
-                                      int kmax) {
+// packa
+static void gemm_s4x4x16_8x8x8_transpose_pack(
+        dt_int8* outptr, const dt_int8* inptr, int ldin, int y0, int ymax, int k0,
+        int kmax) {
     int8_t zerobuff[8];
     int8_t tmpbuff0[8];
     int8_t tmpbuff1[8];
@@ -617,22 +616,23 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
         prefetch_2x(inptr5);
         prefetch_2x(inptr6);
         prefetch_2x(inptr7);
-        int K = (kmax - k0)/2;
+        int K = (kmax - k0) / 2;
         //! read 4 * 16 in each row
         for (; K > 3; K -= 4) {
-            transpose_4x8_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                         inptr5, inptr6, inptr7, outptr);
+            transpose_4x8_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
 
         if (K > 0) {
-            std::memcpy(tmpbuff0,inptr0,K);
-            std::memcpy(tmpbuff1,inptr1,K);
-            std::memcpy(tmpbuff2,inptr2,K);
-            std::memcpy(tmpbuff3,inptr3,K);
-            std::memcpy(tmpbuff4,inptr4,K);
-            std::memcpy(tmpbuff5,inptr5,K);
-            std::memcpy(tmpbuff6,inptr6,K);
-            std::memcpy(tmpbuff7,inptr7,K);
+            std::memcpy(tmpbuff0, inptr0, K);
+            std::memcpy(tmpbuff1, inptr1, K);
+            std::memcpy(tmpbuff2, inptr2, K);
+            std::memcpy(tmpbuff3, inptr3, K);
+            std::memcpy(tmpbuff4, inptr4, K);
+            std::memcpy(tmpbuff5, inptr5, K);
+            std::memcpy(tmpbuff6, inptr6, K);
+            std::memcpy(tmpbuff7, inptr7, K);
             inptr0 = tmpbuff0;
             inptr1 = tmpbuff1;
             inptr2 = tmpbuff2;
@@ -641,8 +641,9 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
             inptr5 = tmpbuff5;
             inptr6 = tmpbuff6;
             inptr7 = tmpbuff7;
-            transpose_4x8_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                         inptr5, inptr6, inptr7, outptr);
+            transpose_4x8_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
     }
     for (; y < ymax; y += 8) {
@@ -655,23 +656,29 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
         const int8_t* inptr6 = inptr5 + ldin;
         const int8_t* inptr7 = inptr6 + ldin;
 
-        int K = (kmax - k0)/2;
+        int K = (kmax - k0) / 2;
         //! read 4 * 16 in each row
         for (; K > 3; K -= 4) {
             if (y + 7 >= ymax) {
                 switch (y + 7 - ymax) {
                     case 6:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff; MEGDNN_FALLTHRU
+                        inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff; MEGDNN_FALLTHRU
+                        inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff; MEGDNN_FALLTHRU
+                        inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff; MEGDNN_FALLTHRU
+                        inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -679,24 +686,31 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
                         megdnn_assert(0);
                 }
             }
-            transpose_4x8_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                         inptr5, inptr6, inptr7, outptr);
+            transpose_4x8_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
         if (K > 0) {
             if (y + 7 >= ymax) {
                 switch (y + 7 - ymax) {
                     case 6:
-                        inptr1 = zerobuff; MEGDNN_FALLTHRU
+                        inptr1 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 5:
-                        inptr2 = zerobuff; MEGDNN_FALLTHRU
+                        inptr2 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 4:
-                        inptr3 = zerobuff; MEGDNN_FALLTHRU
+                        inptr3 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 3:
-                        inptr4 = zerobuff; MEGDNN_FALLTHRU
+                        inptr4 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 2:
-                        inptr5 = zerobuff; MEGDNN_FALLTHRU
+                        inptr5 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 1:
-                        inptr6 = zerobuff; MEGDNN_FALLTHRU
+                        inptr6 = zerobuff;
+                        MEGDNN_FALLTHRU
                     case 0:
                         inptr7 = zerobuff;
                         break;
@@ -705,14 +719,14 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
                 }
             }
 
-            std::memcpy(tmpbuff0,inptr0,K);
-            std::memcpy(tmpbuff1,inptr1,K);
-            std::memcpy(tmpbuff2,inptr2,K);
-            std::memcpy(tmpbuff3,inptr3,K);
-            std::memcpy(tmpbuff4,inptr4,K);
-            std::memcpy(tmpbuff5,inptr5,K);
-            std::memcpy(tmpbuff6,inptr6,K);
-            std::memcpy(tmpbuff7,inptr7,K);
+            std::memcpy(tmpbuff0, inptr0, K);
+            std::memcpy(tmpbuff1, inptr1, K);
+            std::memcpy(tmpbuff2, inptr2, K);
+            std::memcpy(tmpbuff3, inptr3, K);
+            std::memcpy(tmpbuff4, inptr4, K);
+            std::memcpy(tmpbuff5, inptr5, K);
+            std::memcpy(tmpbuff6, inptr6, K);
+            std::memcpy(tmpbuff7, inptr7, K);
             inptr0 = tmpbuff0;
             inptr1 = tmpbuff1;
             inptr2 = tmpbuff2;
@@ -721,14 +735,15 @@ static void gemm_s4x4x16_8x8x8_transpose_pack(dt_int8* outptr, const dt_int8* in
             inptr5 = tmpbuff5;
             inptr6 = tmpbuff6;
             inptr7 = tmpbuff7;
-            transpose_4x8_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4,
-                                         inptr5, inptr6, inptr7, outptr);
+            transpose_4x8_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr);
         }
     }
 }
-//packb
-static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, int ldin,
-                                      int x0, int xmax, int k0, int kmax) {
+// packb
+static void gemm_s4x4x16_8x8x8_interleave_pack(
+        dt_int8* out, const dt_int8* in, int ldin, int x0, int xmax, int k0, int kmax) {
     int8_t zerobuff[8];
     int8_t tmpbuff0[8];
     int8_t tmpbuff1[8];
@@ -748,7 +763,7 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
     std::memset(tmpbuff6, 0, sizeof(int8_t) * 8);
     std::memset(tmpbuff7, 0, sizeof(int8_t) * 8);
     const int ksize = kmax - k0;
-    const int ksize8 = round_up(ksize, 8) * 8; //pack to int8 *8 packto s4 *4
+    const int ksize8 = round_up(ksize, 8) * 8;  // pack to int8 *8 packto s4 *4
     int8_t* outptr = out;
     int8_t* outptr_interleave = nullptr;
 
@@ -776,21 +791,22 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
         int8_t* outptr_inner = outptr;
         for (; x + 3 < xmax; x += 4) {
             outptr_interleave = outptr_inner;
-            interleave_8x4_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x4_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr_inner += ksize8;
         }
 
         if (x < xmax) {
             int remainx = xmax - x;
-            std::memcpy(tmpbuff0,inptr0,remainx);
-            std::memcpy(tmpbuff1,inptr1,remainx);
-            std::memcpy(tmpbuff2,inptr2,remainx);
-            std::memcpy(tmpbuff3,inptr3,remainx);
-            std::memcpy(tmpbuff4,inptr4,remainx);
-            std::memcpy(tmpbuff5,inptr5,remainx);
-            std::memcpy(tmpbuff6,inptr6,remainx);
-            std::memcpy(tmpbuff7,inptr7,remainx);
+            std::memcpy(tmpbuff0, inptr0, remainx);
+            std::memcpy(tmpbuff1, inptr1, remainx);
+            std::memcpy(tmpbuff2, inptr2, remainx);
+            std::memcpy(tmpbuff3, inptr3, remainx);
+            std::memcpy(tmpbuff4, inptr4, remainx);
+            std::memcpy(tmpbuff5, inptr5, remainx);
+            std::memcpy(tmpbuff6, inptr6, remainx);
+            std::memcpy(tmpbuff7, inptr7, remainx);
             inptr0 = tmpbuff0;
             inptr1 = tmpbuff1;
             inptr2 = tmpbuff2;
@@ -801,8 +817,9 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
             inptr7 = tmpbuff7;
 
             outptr_interleave = outptr_inner;
-            interleave_8x4_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x4_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr_inner += ksize8;
         }
         outptr += 64;
@@ -847,8 +864,9 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
                     break;
             }
             outptr_interleave = outptr_inner;
-            interleave_8x4_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x4_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr_inner += ksize8;
         }
         if (x < xmax) {
@@ -880,14 +898,14 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
             }
             int remainx = xmax - x;
             outptr_interleave = outptr_inner;
-            std::memcpy(tmpbuff0,inptr0,remainx);
-            std::memcpy(tmpbuff1,inptr1,remainx);
-            std::memcpy(tmpbuff2,inptr2,remainx);
-            std::memcpy(tmpbuff3,inptr3,remainx);
-            std::memcpy(tmpbuff4,inptr4,remainx);
-            std::memcpy(tmpbuff5,inptr5,remainx);
-            std::memcpy(tmpbuff6,inptr6,remainx);
-            std::memcpy(tmpbuff7,inptr7,remainx);
+            std::memcpy(tmpbuff0, inptr0, remainx);
+            std::memcpy(tmpbuff1, inptr1, remainx);
+            std::memcpy(tmpbuff2, inptr2, remainx);
+            std::memcpy(tmpbuff3, inptr3, remainx);
+            std::memcpy(tmpbuff4, inptr4, remainx);
+            std::memcpy(tmpbuff5, inptr5, remainx);
+            std::memcpy(tmpbuff6, inptr6, remainx);
+            std::memcpy(tmpbuff7, inptr7, remainx);
             inptr0 = tmpbuff0;
             inptr1 = tmpbuff1;
             inptr2 = tmpbuff2;
@@ -898,16 +916,16 @@ static void gemm_s4x4x16_8x8x8_interleave_pack(dt_int8* out, const dt_int8* in, 
             inptr7 = tmpbuff7;
 
             outptr_interleave = outptr_inner;
-            interleave_8x4_1_b_with_shift(inptr0, inptr1, inptr2, inptr3, inptr4, inptr5,
-                               inptr6, inptr7, outptr_interleave);
+            interleave_8x4_1_b_with_shift(
+                    inptr0, inptr1, inptr2, inptr3, inptr4, inptr5, inptr6, inptr7,
+                    outptr_interleave);
             outptr_inner += ksize8;
         }
     }
 }
 
-}  // namespace matmul_4x4x16
+}  // namespace matmul_s4_4x4x16
 }  // namespace aarch64
 }  // namespace megdnn
-
 
 // vim: syntax=cpp.doxygen

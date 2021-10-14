@@ -11,21 +11,22 @@
 
 #pragma once
 
+#include "megdnn/thin/small_vector.h"
 #include "src/fallback/conv_bias/opr_impl.h"
 #include "src/fallback/matrix_mul/opr_impl.h"
-#include "megdnn/thin/small_vector.h"
 
 namespace megdnn {
 namespace fallback {
 
 class ConvBiasImpl::AlgoNaive final : public AlgoBase {
 public:
-    AlgoAttribute attribute() const override{
+    AlgoAttribute attribute() const override {
         return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
     }
     const char* name() const override { return "FALLBACK_NAIVE"; }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
@@ -56,8 +57,9 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
@@ -87,8 +89,9 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
@@ -118,8 +121,9 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 
@@ -149,8 +153,9 @@ public:
         }
         return m_name.c_str();
     }
-    bool usable(const NCBKernSizeParam& param,
-                AlgoSelectionStrategy algo_selection_strategy) const override;
+    bool usable(
+            const NCBKernSizeParam& param,
+            AlgoSelectionStrategy algo_selection_strategy) const override;
     size_t get_workspace(const NCBKernSizeParam& param) const override;
     SmallVector<NCBKern> dispatch_kerns(const NCBKernSizeParam&) const override;
 

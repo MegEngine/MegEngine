@@ -9,13 +9,13 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "src/x86/pooling/opr_impl.h"
+#include "src/common/algo_chooser.h"
 #include "src/common/opr_delegate.h"
 #include "src/common/utils.h"
 #include "src/naive/handle.h"
 #include "src/x86/handle.h"
-#include "src/x86/utils.h"
 #include "src/x86/pooling/algo.h"
-#include "src/common/algo_chooser.h"
+#include "src/x86/utils.h"
 
 #if MEGDNN_X86_WITH_MKL_DNN
 #include "mkldnn.hpp"
@@ -24,9 +24,8 @@
 using namespace megdnn;
 using namespace x86;
 
-WorkspaceBundle megdnn::x86::get_bundle(const TensorLayout& src,
-                                        const TensorLayout& dst,
-                                        const param::Pooling& param) {
+WorkspaceBundle megdnn::x86::get_bundle(
+        const TensorLayout& src, const TensorLayout& dst, const param::Pooling& param) {
     megdnn_assert(
             is_supported(SIMDType::SSE) && src.dtype == dtype::Float32() &&
             param.format == param::Pooling::Format::NCHW &&
@@ -36,20 +35,20 @@ WorkspaceBundle megdnn::x86::get_bundle(const TensorLayout& src,
     auto IW = src.shape[3];
     auto OW = dst.shape[3];
 
-    WorkspaceBundle ws(nullptr,
-                       {OW * src.dtype.size(), OW * src.dtype.size(),
-                        OW * src.dtype.size(), (IW + 1) / 2 * src.dtype.size(),
-                        (IW + 1) / 2 * src.dtype.size()},
-                       16);
+    WorkspaceBundle ws(
+            nullptr,
+            {OW * src.dtype.size(), OW * src.dtype.size(), OW * src.dtype.size(),
+             (IW + 1) / 2 * src.dtype.size(), (IW + 1) / 2 * src.dtype.size()},
+            16);
     return ws;
 }
 
-size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
-                                           const TensorLayout& dst) {
+size_t PoolingImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
     TensorLayoutArray layouts{src, dst};
     HeuristicCache::Key key{this->handle(), this->get_opr_type(),
-                            layouts.data(), layouts.size(), &this->param(),
-                            sizeof(this->param())};
+                            layouts.data(), layouts.size(),
+                            &this->param(), sizeof(this->param())};
     auto rst = HeuristicCache::instance().get(key);
     if (rst.policy.algo.valid()) {
         return rst.workspace;
@@ -58,9 +57,8 @@ size_t PoolingImpl::get_workspace_in_bytes(const TensorLayout& src,
     auto algo = get_algorithm(this, src, dst);
     if (!is_fallback_algo(algo)) {
         if (is_supported(SIMDType::SSE) && src.dtype == dtype::Float32() &&
-            param().mode == Mode::MAX &&
-            param().format == Param::Format::NCHW && param().window_h == 3 &&
-            param().window_w == 3 && param().stride_h == 2 &&
+            param().mode == Mode::MAX && param().format == Param::Format::NCHW &&
+            param().window_h == 3 && param().window_w == 3 && param().stride_h == 2 &&
             param().stride_w == 2) {
             WorkspaceBundle ws = get_bundle(src, dst, param());
 
@@ -95,16 +93,16 @@ Algorithm* PoolingImpl::get_algorithm_heuristic(
             return iter;
         }
     }
-    megdnn_throw(
-            ssprintf("require algorithm with attribute(%s) and without "
-                     "attribute(%s), but can't get suitable algo.\n",
-                     Algorithm::attribute_str(positive_attr).c_str(),
-                     Algorithm::attribute_str(negative_attr).c_str()));
+    megdnn_throw(ssprintf(
+            "require algorithm with attribute(%s) and without "
+            "attribute(%s), but can't get suitable algo.\n",
+            Algorithm::attribute_str(positive_attr).c_str(),
+            Algorithm::attribute_str(negative_attr).c_str()));
     return nullptr;
 }
 
-void PoolingImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst,
-                       _megdnn_workspace workspace) {
+void PoolingImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     check_exec(src.layout, dst.layout, workspace.size);
     AlgoBase::ExecArgs args(this, src, dst, workspace);
     auto algo = get_algorithm(this, src.layout, dst.layout);

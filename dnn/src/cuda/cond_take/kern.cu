@@ -9,11 +9,11 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+#include <limits>
 #include "./kern.cuh"
+#include "src/common/cond_take/predicate.cuh"
 #include "src/cuda/cumsum/kern_impl.cuinl"
 #include "src/cuda/query_blocksize.cuh"
-#include "src/common/cond_take/predicate.cuh"
-#include <limits>
 
 using namespace megdnn;
 using namespace megdnn::cond_take;

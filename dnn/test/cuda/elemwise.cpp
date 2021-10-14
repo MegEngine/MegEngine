@@ -11,16 +11,16 @@
  */
 
 #include "test/common/elemwise.h"
-#include "test/cuda/fixture.h"
-#include "megdnn/oprs.h"
-#include "test/common/tensor.h"
-#include "test/common/rng.h"
 #include "./utils.h"
+#include "megdnn/oprs.h"
 #include "test/common/benchmarker.h"
 #include "test/common/checker.h"
+#include "test/common/rng.h"
+#include "test/common/tensor.h"
+#include "test/cuda/fixture.h"
 
-#include <cudnn.h>
 #include <cuda_profiler_api.h>
+#include <cudnn.h>
 
 using namespace megdnn;
 using namespace test;
@@ -38,29 +38,30 @@ __attribute__((unused)) cudnnTensorDescriptor_t make_cudnn_tensor_desc(
     cudnnTensorDescriptor_t ret;
     cudnn_check(cudnnCreateTensorDescriptor(&ret));
     // cudnn requires tensors to be at-least 4D
-    cudnn_check(cudnnSetTensor4dDescriptorEx(ret, CUDNN_DATA_FLOAT, dim[0],
-                                             dim[1], dim[2], dim[3], stride[0],
-                                             stride[1], stride[2], stride[3]));
+    cudnn_check(cudnnSetTensor4dDescriptorEx(
+            ret, CUDNN_DATA_FLOAT, dim[0], dim[1], dim[2], dim[3], stride[0], stride[1],
+            stride[2], stride[3]));
 
     return ret;
 }
 
-void run_tensor_add(Handle* handle_cuda, const TensorND& a, const TensorND& b,
-                    const TensorND& c) {
+void run_tensor_add(
+        Handle* handle_cuda, const TensorND& a, const TensorND& b, const TensorND& c) {
 #if 1
     cudnnHandle_t cudnn_handle;
     cudnn_check(cudnnCreate(&cudnn_handle));
     cuda_check(cudaDeviceSynchronize());
-    cuda_check(cudaMemcpy(c.raw_ptr, a.raw_ptr, a.layout.span().dist_byte(),
-                          cudaMemcpyDeviceToDevice));
+    cuda_check(cudaMemcpy(
+            c.raw_ptr, a.raw_ptr, a.layout.span().dist_byte(),
+            cudaMemcpyDeviceToDevice));
 
     auto bdesc = make_cudnn_tensor_desc(b.layout),
          cdesc = make_cudnn_tensor_desc(c.layout);
 
     float alpha = 1, beta = 1;
     cudaProfilerStart();
-    cudnn_check(cudnnAddTensor(cudnn_handle, &alpha, bdesc, b.raw_ptr, &beta,
-                               cdesc, c.raw_ptr));
+    cudnn_check(cudnnAddTensor(
+            cudnn_handle, &alpha, bdesc, b.raw_ptr, &beta, cdesc, c.raw_ptr));
     cudaProfilerStop();
 
     cudnn_check(cudnnDestroyTensorDescriptor(cdesc));
@@ -133,36 +134,31 @@ TEST_F(CUDA, ELEMWISE_IBYTE) {
 #undef RUN_BINARY_IBYTE
     auto run_ternary = [&](size_t N, size_t C, size_t H, size_t W, Mode mode,
                            DType dtype) {
-        checker.set_param(mode)
-                .set_dtype(0, dtype)
-                .set_dtype(1, dtype)
-                .set_dtype(2, dtype);
+        checker.set_param(mode).set_dtype(0, dtype).set_dtype(1, dtype).set_dtype(
+                2, dtype);
         checker.execs({{5}, {5}, {5}, {}});
         checker.execs({{4}, {4}, {1}, {}});
-        checker.execs({{N, C / 4, H, W, 4},
-                       {N, C / 4, H, W, 4},
-                       {N, C / 4, H, W, 4},
-                       {}});
-        checker.execs({{N, C / 4, H, W, 4},
-                       {1, C / 4, 1, 1, 4},
-                       {1, C / 4, 1, 1, 4},
-                       {}});
-        checker.execs({{N, C / 32, H, W, 32},
-                       {N, C / 32, H, W, 32},
-                       {N, C / 32, H, W, 32},
-                       {}});
-        checker.execs({{N, C / 32, H, W, 32},
-                       {1, C / 32, 1, 1, 32},
-                       {1, C / 32, 1, 1, 32},
-                       {}});
+        checker.execs(
+                {{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}});
+        checker.execs(
+                {{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {1, C / 4, 1, 1, 4}, {}});
+        checker.execs(
+                {{N, C / 32, H, W, 32},
+                 {N, C / 32, H, W, 32},
+                 {N, C / 32, H, W, 32},
+                 {}});
+        checker.execs(
+                {{N, C / 32, H, W, 32},
+                 {1, C / 32, 1, 1, 32},
+                 {1, C / 32, 1, 1, 32},
+                 {}});
         checker.execs({{1}, {3, 5, 7}, {3, 5, 7}, {}});
         checker.execs({{3, 5, 7}, {3, 5, 1}, {3, 5, 1}, {}});
         checker.execs({{3, 5, 1}, {3, 5, 7}, {3, 5, 1}, {}});
         checker.execs({{1}, {3, 5, 7}, {1}, {}});
         checker.execs({{3, 5, 7}, {1}, {3, 5, 7}, {}});
     };
-#define RUN_TERNARY_IBYTE(_dt) \
-    run_ternary(4, 32, 10, 10, Mode::FUSE_MUL_ADD3, _dt);
+#define RUN_TERNARY_IBYTE(_dt) run_ternary(4, 32, 10, 10, Mode::FUSE_MUL_ADD3, _dt);
     checker.set_rng(0, &i_rng).set_rng(1, &i_rng);
     RUN_TERNARY_IBYTE(dtype::Int8());
     checker.set_rng(0, &ui_rng).set_rng(1, &ui_rng);
@@ -238,24 +234,19 @@ TEST_F(CUDA, ELEMWISE_BFLOAT16) {
 #undef BUILD_BINARY_COMPLATE_TEST_CASE
 
     // ternary
-#define TERNARY_COMPLATE_TEST_CASE(_optr)                               \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});     \
-    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}}); \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}});              \
-    checker.set_param(Mode::_optr)                                      \
-            .execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}});              \
+#define TERNARY_COMPLATE_TEST_CASE(_optr)                                        \
+    checker.set_param(Mode::_optr).execs({{3, 4, 7}, {3, 4, 7}, {3, 4, 7}, {}}); \
+    checker.set_param(Mode::_optr)                                               \
+            .execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {1, 4, 1, 1}, {}});              \
+    checker.set_param(Mode::_optr).execs({{1, 4, 1}, {3, 4, 7}, {1, 4, 1}, {}}); \
+    checker.set_param(Mode::_optr)                                               \
+            .execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {1, 1, 1, 1}, {}});              \
+    checker.set_param(Mode::_optr).execs({{1, 7}, {1, 7}, {1, 7}, {}});          \
+    checker.set_param(Mode::_optr).execs({{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {}}); \
+    checker.set_param(Mode::_optr).execs({{1, 2, 2}, {1, 2, 2}, {1, 1, 1}, {}}); \
     checker.set_param(Mode::_optr).execs({{3, 4, 1}, {3, 4, 1}, {3, 4, 1}, {}});
 
-#define BUILD_TERNARY_COMPLATE_TEST_CASE \
-    TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
+#define BUILD_TERNARY_COMPLATE_TEST_CASE TERNARY_COMPLATE_TEST_CASE(FUSE_MUL_ADD3)
 
     UniformFloatRNG rng2(1e-5, 7e1);
     checker.set_rng(0, &rng2);
@@ -271,8 +262,7 @@ TEST_F(CUDA, ELEMWISE_BFLOAT16) {
 
 TEST_F(CUDA, ELEMWISE_ADD_BCAST_10_INT8_INPLACE) {
     constexpr size_t A = 2, B = 48, C0 = 14, C1 = 14, C = C0 * C1;
-    SyncedTensor<dt_int8> t0(handle_cuda(),
-                             {TensorShape{A, B, C0, C1}, dtype::Int8()}),
+    SyncedTensor<dt_int8> t0(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Int8()}),
             t1(handle_cuda(), {TensorShape{1, B, C0, C1}, dtype::Int8()}),
             t2(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Int8()});
     UniformIntRNG rng{-128, 127};
@@ -310,13 +300,12 @@ TEST_F(CUDA, ELEMWISE_ADD_BCAST_10_INT8_INPLACE) {
 TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
     constexpr size_t A = 256 * 1024 * 64, S0 = 16, S1 = 256, S2 = 64, S3 = 64;
     static_assert(A == S0 * S1 * S2 * S3, "bad value");
-    SyncedTensor<> t0(handle_cuda(),
-                      {TensorShape{S0, S1, S2, S3}, dtype::Float32()}),
+    SyncedTensor<> t0(handle_cuda(), {TensorShape{S0, S1, S2, S3}, dtype::Float32()}),
             t1(handle_cuda(), {TensorShape{S0, S1, S2, S3}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
-    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t0.tensornd_dev(),
-                   t1.tensornd_dev());
+    run_tensor_add(
+            handle_cuda(), t0.tensornd_dev(), t0.tensornd_dev(), t1.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host();
     for (size_t i = 0; i < A; ++i) {
         ASSERT_EQ(p0[i] + p0[i], p1[i]) << "at index " << i << "/" << A;
@@ -326,15 +315,14 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_DENSE) {
 #if MEGDNN_WITH_BENCHMARK
 TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_101) {
     constexpr size_t A = 511, B = 509, C0 = 23, C1 = 23, C = C0 * C1;
-    SyncedTensor<> t0(handle_cuda(),
-                      {TensorShape{A, B, C0, C1}, dtype::Float32()}),
+    SyncedTensor<> t0(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Float32()}),
             t1(handle_cuda(), {TensorShape{1, B, 1, 1}, dtype::Float32()}),
             t2(handle_cuda(), {TensorShape{A, B, C0, C1}, dtype::Float32()});
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
-                   t2.tensornd_dev());
+    run_tensor_add(
+            handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
     for (size_t i = 0; i < A; ++i) {
         for (size_t j = 0; j < B; ++j) {
@@ -354,8 +342,8 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_10) {
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
-                   t2.tensornd_dev());
+    run_tensor_add(
+            handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
     for (size_t i = 0; i < A; ++i) {
         for (size_t j = 0; j < B; ++j) {
@@ -373,8 +361,8 @@ TEST_F(CUDA, ELEMWISE_BENCHMARK_BCAST_01) {
     UniformFloatRNG rng{-2.f, 2.f};
     rng.gen(t0.tensornd_host());
     rng.gen(t1.tensornd_host());
-    run_tensor_add(handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(),
-                   t2.tensornd_dev());
+    run_tensor_add(
+            handle_cuda(), t0.tensornd_dev(), t1.tensornd_dev(), t2.tensornd_dev());
     auto p0 = t0.ptr_host(), p1 = t1.ptr_host(), p2 = t2.ptr_host();
     for (size_t i = 0; i < A; ++i) {
         for (size_t j = 0; j < B; ++j) {
@@ -393,39 +381,32 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_IBYTE) {
                 .set_param(Mode::FUSE_ADD_RELU)
                 .set_dtype(0, dtype::Int8())
                 .set_dtype(1, dtype::Int8());
-        auto time =
-                bencher.execs({{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
-                nr_times;
+        auto time = bencher.execs({{N * C * H * W + 1}, {N * C * H * W + 1}, {}}) /
+                    nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * (N * C * H * W + 1)) / (time * 1e6));
-        time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
-               nr_times;
+        time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * N * C * H * W) / (time * 1e6));
-        time = bencher.execs({{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {}}) /
-               nr_times;
+        time = bencher.execs({{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (C + 2.0 * N * C * H * W) / (time * 1e6));
         time = bencher.execs({{N, C / 4, H, W, 4}, {1}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (2.0 * N * C * H * W + 1) / (time * 1e6));
-        time = bencher.execs(
-                       {{N, C / 32, H, W, 32}, {N, C / 32, H, W, 32}, {}}) /
+        time = bencher.execs({{N, C / 32, H, W, 32}, {N, C / 32, H, W, 32}, {}}) /
                nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * N * C * H * W) / (time * 1e6));
-        time = bencher.execs(
-                       {{N, C / 32, H, W, 32}, {1, C / 32, 1, 1, 32}, {}}) /
+        time = bencher.execs({{N, C / 32, H, W, 32}, {1, C / 32, 1, 1, 32}, {}}) /
                nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (C + 2.0 * N * C * H * W) / (time * 1e6));
         bencher.set_dtype(0, dtype::Float32()).set_dtype(1, dtype::Float32());
-        time = bencher.execs({{N, C / 4, H, W}, {N, C / 4, H, W}, {}}) /
-               nr_times;
+        time = bencher.execs({{N, C / 4, H, W}, {N, C / 4, H, W}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * N * C * H * W) / (time * 1e6));
-        time = bencher.execs({{N, C / 4, H, W}, {1, C / 4, 1, 1}, {}}) /
-               nr_times;
+        time = bencher.execs({{N, C / 4, H, W}, {1, C / 4, 1, 1}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (C + 2.0 * N * C * H * W) / (time * 1e6));
     };
@@ -444,14 +425,12 @@ TEST_F(CUDA, BENCHMARK_ELEMWISE_MIN_MAX) {
                 .set_rng(1, &rng)
                 .set_dtype(0, dtype)
                 .set_dtype(1, dtype);
-        auto time =
-                bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
-                nr_times;
+        auto time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
+                    nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * N * C * H * W) / (time * 1e6));
         bencher.set_param(Mode::MAX).set_rng(0, &const_1).set_rng(1, &const_1);
-        time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) /
-               nr_times;
+        time = bencher.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}}) / nr_times;
         printf("time = %.2fms, bandwidth = %.2fGB/s\n", time,
                (3.0 * N * C * H * W) / (time * 1e6));
     };

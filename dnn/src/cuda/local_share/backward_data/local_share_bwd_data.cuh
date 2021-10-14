@@ -15,10 +15,9 @@ namespace cuda {
 namespace local_share_bwd_data {
 
 void _do_local_share_bwd_data_implicit_gemm(
-        const float* d_filter, const float* d_diff, float* d_grad,
-        float* workspace, int fh, int fw, int sh, int sw,
-        const local_share::Param& param, cublasHandle_t cublas_handle,
-        cudaStream_t stream, float* one, float* zero);
+        const float* d_filter, const float* d_diff, float* d_grad, float* workspace,
+        int fh, int fw, int sh, int sw, const local_share::Param& param,
+        cublasHandle_t cublas_handle, cudaStream_t stream, float* one, float* zero);
 
 }  // namespace local_share_bwd_data
 }  // namespace cuda

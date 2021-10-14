@@ -20,8 +20,8 @@ void SmallVectorBase::on_invalid_at(size_t idx, size_t size) {
     MEGDNN_MARK_USED_VAR(size);
 }
 
-void SmallVectorBase::grow_pod(void* first_elm_ptr, size_t min_sz_in_bytes,
-                               size_t type_size) {
+void SmallVectorBase::grow_pod(
+        void* first_elm_ptr, size_t min_sz_in_bytes, size_t type_size) {
     size_t cur_sz_in_bytes = size_in_bytes();
     size_t new_capacity_in_bytes = 2 * capacity_in_bytes() + type_size;
     if (new_capacity_in_bytes < min_sz_in_bytes) {

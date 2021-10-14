@@ -11,20 +11,20 @@
 
 #pragma once
 
-#define MGB_MAJOR   8
-#define MGB_MINOR   9999
-#define MGB_PATCH   0
+#define MGB_MAJOR 8
+#define MGB_MINOR 9999
+#define MGB_PATCH 0
 //! whether it is development version
 #ifndef MGB_IS_DEV
-#define MGB_IS_DEV  0
+#define MGB_IS_DEV 0
 #endif  // MGB_IS_DEV
 
 namespace mgb {
-    struct Version {
-        int major, minor, patch, is_dev;
-    };
+struct Version {
+    int major, minor, patch, is_dev;
+};
 
-    Version get_version();
-}
+Version get_version();
+}  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -19,16 +19,16 @@ namespace mgb {
 namespace opr {
 
 //! an operator to run extern C oprs
-MGB_DEFINE_OPR_CLASS(ExternCOprRunner,
-                           cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS(ExternCOprRunner, cg::SingleCNOutshapePureByInshapeOprBase) // {
     std::shared_ptr<MGBOprDesc> m_desc;
     //! store ExternCOprRunner opr full dump name
     std::string m_dump_name;
     //! store dynamic store param
     std::shared_ptr<ExternCOprParam> m_param;
 
-    void get_output_var_shape(const TensorShapeArray& inp_shape,
-                              TensorShapeArray& out_shape) const override;
+    void get_output_var_shape(
+            const TensorShapeArray& inp_shape,
+            TensorShapeArray& out_shape) const override;
     void scn_do_execute() override;
     void add_input_layout_constraint() override;
     void init_output_dtype() override;
@@ -40,9 +40,9 @@ MGB_DEFINE_OPR_CLASS(ExternCOprRunner,
             std::shared_ptr<MGBOprDesc> desc, const OperatorNodeConfig& config);
 
 public:
-    ExternCOprRunner(std::string& name, const VarNodeArray& inputs,
-                     std::shared_ptr<MGBOprDesc> desc,
-                     const OperatorNodeConfig& config);
+    ExternCOprRunner(
+            std::string& name, const VarNodeArray& inputs,
+            std::shared_ptr<MGBOprDesc> desc, const OperatorNodeConfig& config);
 
     //! create from MGBOprDesc and steal its reference
     static cg::OperatorNodeBase* make_from_desc(
@@ -74,13 +74,13 @@ public:
     static bool unregister_loader(const char* name);
 
     //! impl for serialization dump
-    static void dump(serialization::OprDumpContext& ctx,
-                     const cg::OperatorNodeBase& opr);
+    static void dump(
+            serialization::OprDumpContext& ctx, const cg::OperatorNodeBase& opr);
 
     //! impl for serialization load
-    static cg::OperatorNodeBase* load(serialization::OprLoadContext& ctx,
-                                      const cg::VarNodeArray& inputs,
-                                      const OperatorNodeConfig& config);
+    static cg::OperatorNodeBase* load(
+            serialization::OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config);
 
     //! impl for serialization shallow copy
     static cg::OperatorNodeBase* shallow_copy(
@@ -94,13 +94,12 @@ public:
     //! helper for converting MGBTensorShape to TensorShape
     static TensorShape tensor_shape_from_c(const MGBTensorShape& shape);
 
-    const std::string& get_dump_name() {
-        return m_dump_name;
-    }
+    const std::string& get_dump_name() { return m_dump_name; }
 
     void set_param(const std::shared_ptr<ExternCOprParam>& param) {
-        mgb_assert(is_loader_support_dynamic_param,
-                   "set_param function need loader imp dynamic_param");
+        mgb_assert(
+                is_loader_support_dynamic_param,
+                "set_param function need loader imp dynamic_param");
         m_param = param;
         m_desc->dynamic_param = m_param.get();
     }

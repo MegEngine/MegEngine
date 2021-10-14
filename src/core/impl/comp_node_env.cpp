@@ -49,19 +49,20 @@ MegDNNHandle& MegDNNHandle::get(const CompNodeEnv& env) {
 
 MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
     auto megdnn_version = megdnn::get_version();
-    mgb_throw_if(megdnn_version.major != MEGDNN_MAJOR ||
-                         megdnn_version.minor < MEGDNN_MINOR,
-                 SystemError,
-                 "incompatible dnn version: compiled with %d.%d, get %d.%d.%d "
-                 "at runtime",
-                 MEGDNN_MAJOR, MEGDNN_MINOR, megdnn_version.major,
-                 megdnn_version.minor, megdnn_version.patch);
+    mgb_throw_if(
+            megdnn_version.major != MEGDNN_MAJOR || megdnn_version.minor < MEGDNN_MINOR,
+            SystemError,
+            "incompatible dnn version: compiled with %d.%d, get %d.%d.%d "
+            "at runtime",
+            MEGDNN_MAJOR, MEGDNN_MINOR, megdnn_version.major, megdnn_version.minor,
+            megdnn_version.patch);
     bool init = false;
 #if MGB_CUDA
     if (env.property().type == CompNode::DeviceType::CUDA) {
-        megcoreCreateDeviceHandle(&m_dev_hdl, megcorePlatformCUDA,
-                                  env.cuda_env().device, 0);
-        megcore::createComputingHandleWithCUDAContext(&m_comp_hdl, m_dev_hdl, 0,
+        megcoreCreateDeviceHandle(
+                &m_dev_hdl, megcorePlatformCUDA, env.cuda_env().device, 0);
+        megcore::createComputingHandleWithCUDAContext(
+                &m_comp_hdl, m_dev_hdl, 0,
                 {env.cuda_env().stream, make_async_error_info(env)});
         init = true;
     }
@@ -69,8 +70,8 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
 
 #if MGB_ROCM
     if (env.property().type == CompNode::DeviceType::ROCM) {
-        megcoreCreateDeviceHandle(&m_dev_hdl, megcorePlatformROCM,
-                                  env.rocm_env().device, 0);
+        megcoreCreateDeviceHandle(
+                &m_dev_hdl, megcorePlatformROCM, env.rocm_env().device, 0);
         megcore::createComputingHandleWithROCMContext(
                 &m_comp_hdl, m_dev_hdl, 0,
                 {env.rocm_env().stream, make_async_error_info(env)});
@@ -102,8 +103,8 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
 
     if (env.property().type == CompNode::DeviceType::CPU) {
         megcoreCreateDeviceHandle(&m_dev_hdl, megcorePlatformCPU);
-        megcoreCreateComputingHandleWithCPUDispatcher(&m_comp_hdl, m_dev_hdl,
-                                                      env.cpu_env().dispatcher);
+        megcoreCreateComputingHandleWithCPUDispatcher(
+                &m_comp_hdl, m_dev_hdl, env.cpu_env().dispatcher);
         init = true;
     }
 
@@ -133,8 +134,7 @@ MegDNNHandle::~MegDNNHandle() noexcept {
 }
 
 #if MGB_NEED_MEGDNN_ASYNC_ERROR
-megcore::AsyncErrorInfo* MegDNNHandle::make_async_error_info(
-        const CompNodeEnv& env) {
+megcore::AsyncErrorInfo* MegDNNHandle::make_async_error_info(const CompNodeEnv& env) {
     auto cn = env.comp_node();
     auto del = [cn](megcore::AsyncErrorInfo* ptr) {
         if (ptr) {
@@ -151,27 +151,29 @@ megcore::AsyncErrorInfo* MegDNNHandle::make_async_error_info(
 }
 #endif
 
-    /* =================== misc =================== */
+/* =================== misc =================== */
 
 #if MGB_CUDA
 
-void mgb::_on_cuda_error(const char* expr, cudaError_t err, const char* file,
-                         const char* func, int line) {
-    mgb_throw(CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(err),
-              cudaGetErrorString(err), expr, file, func, line);
+void mgb::_on_cuda_error(
+        const char* expr, cudaError_t err, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(err),
+            cudaGetErrorString(err), expr, file, func, line);
 }
 
-void mgb::_on_cuda_cu_error(const char* expr, CUresult err, const char* file,
-                         const char* func, int line) {
+void mgb::_on_cuda_cu_error(
+        const char* expr, CUresult err, const char* file, const char* func, int line) {
     const char* msg;
     cuGetErrorName(err, &msg);
-    mgb_throw(CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(err), msg,
-              expr, file, func, line);
+    mgb_throw(
+            CudaError, "cuda error %d: %s (%s at %s:%s:%d)", int(err), msg, expr, file,
+            func, line);
 }
 
-
-void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
-                                  const ContinuationCtx<cudaStream_t>& cont) {
+void CompNodeEnv::init_cuda_async(
+        int dev, CompNode comp_node, const ContinuationCtx<cudaStream_t>& cont) {
     m_comp_node = comp_node;
 
     mgb_assert(!m_user_data_container && !m_async_init_need_wait);
@@ -193,15 +195,14 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
         MGB_MARK_USED_VAR(stream_done);
         MGB_TRY {
             m_cuda_env.activate();
-            MGB_CUDA_CHECK(cudaStreamCreateWithFlags(&m_cuda_env.stream,
-                                                     cudaStreamNonBlocking));
+            MGB_CUDA_CHECK(cudaStreamCreateWithFlags(
+                    &m_cuda_env.stream, cudaStreamNonBlocking));
             stream_done = true;
 
             m_user_data_container = std::make_unique<UserDataContainer>();
 
 #if MGB_ENABLE_DEBUG_UTIL
-            nvtxNameCudaStreamA(m_cuda_env.stream,
-                                m_comp_node.to_string().c_str());
+            nvtxNameCudaStreamA(m_cuda_env.stream, m_comp_node.to_string().c_str());
 #endif
             cont.next(m_cuda_env.stream);
 
@@ -233,10 +234,11 @@ void CompNodeEnv::init_cuda_async(int dev, CompNode comp_node,
 
 #if MGB_ATLAS
 
-void mgb::_on_atlas_error(const char* expr, int err, const char* file,
-                          const char* func, int line) {
-    mgb_throw(AtlasError, "atlas error %d: %s (%s at %s:%s:%d)", int(err),
-              megcore::atlas::get_error_str(err), expr, file, func, line);
+void mgb::_on_atlas_error(
+        const char* expr, int err, const char* file, const char* func, int line) {
+    mgb_throw(
+            AtlasError, "atlas error %d: %s (%s at %s:%s:%d)", int(err),
+            megcore::atlas::get_error_str(err), expr, file, func, line);
 }
 
 CompNodeEnv::AtlasEnv::InitStatus CompNodeEnv::AtlasEnv::init_status;
@@ -249,21 +251,24 @@ void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
     m_atlas_env.activate();
     MGB_ATLAS_CHECK(aclrtCreateStream(&m_atlas_env.stream));
     m_user_data_container = std::make_unique<UserDataContainer>();
-    mgb_assert(m_property.mem_alignment ==
-               MegDNNHandle::get(*this).handle()->alignment_requirement());
+    mgb_assert(
+            m_property.mem_alignment ==
+            MegDNNHandle::get(*this).handle()->alignment_requirement());
 }
 #endif
 
 #if MGB_ROCM
 
-void mgb::_on_hip_error(const char* expr, hipError_t err, const char* file,
-                        const char* func, int line) {
-    mgb_throw(ROCmError, "rocm error %d: %s (%s at %s:%s:%d)", int(err),
-              hipGetErrorString(err), expr, file, func, line);
+void mgb::_on_hip_error(
+        const char* expr, hipError_t err, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            ROCmError, "rocm error %d: %s (%s at %s:%s:%d)", int(err),
+            hipGetErrorString(err), expr, file, func, line);
 }
 
-void CompNodeEnv::init_rocm_async(int dev, CompNode comp_node,
-                                  const ContinuationCtx<hipStream_t>& cont) {
+void CompNodeEnv::init_rocm_async(
+        int dev, CompNode comp_node, const ContinuationCtx<hipStream_t>& cont) {
     m_comp_node = comp_node;
 
     mgb_assert(!m_user_data_container && !m_async_init_need_wait);
@@ -286,8 +291,8 @@ void CompNodeEnv::init_rocm_async(int dev, CompNode comp_node,
         MGB_MARK_USED_VAR(stream_done);
         MGB_TRY {
             m_rocm_env.activate();
-            MGB_ROCM_CHECK(hipStreamCreateWithFlags(&m_rocm_env.stream,
-                                                    hipStreamNonBlocking));
+            MGB_ROCM_CHECK(
+                    hipStreamCreateWithFlags(&m_rocm_env.stream, hipStreamNonBlocking));
             stream_done = true;
 
             m_user_data_container = std::make_unique<UserDataContainer>();
@@ -345,22 +350,27 @@ const char* mgb::cnml_get_error_string(cnmlStatus_t err) {
     return "Unknown CNML error";
 }
 
-void mgb::_on_cnrt_error(const char* expr, cnrtRet_t err, const char* file,
-                         const char* func, int line) {
-    mgb_throw(CnrtError, "cnrt error %d: %s (%s at %s:%s:%d)", int(err),
-              cnrtGetErrorStr(err), expr, file, func, line);
+void mgb::_on_cnrt_error(
+        const char* expr, cnrtRet_t err, const char* file, const char* func, int line) {
+    mgb_throw(
+            CnrtError, "cnrt error %d: %s (%s at %s:%s:%d)", int(err),
+            cnrtGetErrorStr(err), expr, file, func, line);
 }
 
-void mgb::_on_cndev_error(const char* expr, cndevRet_t err, const char* file,
-                         const char* func, int line) {
-   mgb_throw(CndevError, "cndev error %d: %s (%s at %s:%s:%d)", int(err),
-              cndevGetErrorString(err), expr, file, func, line);
+void mgb::_on_cndev_error(
+        const char* expr, cndevRet_t err, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            CndevError, "cndev error %d: %s (%s at %s:%s:%d)", int(err),
+            cndevGetErrorString(err), expr, file, func, line);
 }
 
-void mgb::_on_cnml_error(const char* expr, cnmlStatus_t err, const char* file,
-                         const char* func, int line) {
-    mgb_throw(CnmlError, "cnml error %d: %s (%s at %s:%s:%d)", int(err),
-              cnml_get_error_string(err), expr, file, func, line);
+void mgb::_on_cnml_error(
+        const char* expr, cnmlStatus_t err, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            CnmlError, "cnml error %d: %s (%s at %s:%s:%d)", int(err),
+            cnml_get_error_string(err), expr, file, func, line);
 }
 #endif
 
@@ -376,8 +386,8 @@ void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {
 }
 
 #if MGB_CAMBRICON
-void CompNodeEnv::init_cnrt(int dev, CompNode comp_node,
-                            const ContinuationCtx<cnrtQueue_t>& cont) {
+void CompNodeEnv::init_cnrt(
+        int dev, CompNode comp_node, const ContinuationCtx<cnrtQueue_t>& cont) {
     m_comp_node = comp_node;
     m_cnrt_env.device = dev;
     m_property.type = DeviceType::CAMBRICON;
@@ -395,8 +405,9 @@ void CompNodeEnv::init_cnrt(int dev, CompNode comp_node,
         m_user_data_container = std::make_unique<UserDataContainer>();
         cont.next(m_cnrt_env.queue);
         // TODO: initialize megdnn handle
-        mgb_assert(m_property.mem_alignment ==
-                   MegDNNHandle::get(*this).handle()->alignment_requirement());
+        mgb_assert(
+                m_property.mem_alignment ==
+                MegDNNHandle::get(*this).handle()->alignment_requirement());
     }
     MGB_CATCH(std::exception & exc, {
         mgb_log_error("cnrt init failed: %s", exc.what());
@@ -456,8 +467,9 @@ void CompNodeEnv::wait_async_init() {
 #endif
 
 void CompNodeEnv::on_bad_device_type(DeviceType expected) const {
-    mgb_throw(MegBrainError, "bad device type: expected=%d actual=%d",
-              static_cast<int>(expected), static_cast<int>(m_property.type));
+    mgb_throw(
+            MegBrainError, "bad device type: expected=%d actual=%d",
+            static_cast<int>(expected), static_cast<int>(m_property.type));
 }
 
 MGB_VERSION_SYMBOL3(MEGDNN, MEGDNN_MAJOR, MEGDNN_MINOR, MEGDNN_PATCH);

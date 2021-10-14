@@ -35,15 +35,14 @@ static inline int gcd(const int& p, const int& q) {
 }
 
 static inline size_t extra_alignment(
-        ReformatManager::ReformatKey::Attribute attr,
-        TensorFormats target_formats, DType dt, size_t channel_alignment) {
+        ReformatManager::ReformatKey::Attribute attr, TensorFormats target_formats,
+        DType dt, size_t channel_alignment) {
     using Attribute = ReformatManager::ReformatKey::Attribute;
     if (attr & Attribute::AUTO_PADDING_NHWC) {
         constexpr size_t alignment_in_bits = 32;
         size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
-        size_t extra_alignment = alignment_in_bits >= dtype_bits
-                                         ? alignment_in_bits / dtype_bits
-                                         : 1;
+        size_t extra_alignment =
+                alignment_in_bits >= dtype_bits ? alignment_in_bits / dtype_bits : 1;
         if (target_formats == TensorFormats::NHWC)
             channel_alignment = extra_alignment * channel_alignment /
                                 gcd(channel_alignment, extra_alignment);
@@ -59,19 +58,15 @@ static inline std::tuple<size_t, size_t> extra_alignment(
     if (key.attribute & Attribute::AUTO_PADDING_NHWC) {
         constexpr size_t alignment_in_bits = 32;
         size_t dtype_bits = dt.is_low_bit() ? dt.low_bit() : dt.size(1) * 8;
-        size_t extra_alignment = alignment_in_bits >= dtype_bits
-                                         ? alignment_in_bits / dtype_bits
-                                         : 1;
+        size_t extra_alignment =
+                alignment_in_bits >= dtype_bits ? alignment_in_bits / dtype_bits : 1;
         if (key.input_format == TensorFormats::NHWC)
-            input_channel_alignment =
-                    input_channel_alignment * extra_alignment /
-                    gcd(input_channel_alignment, extra_alignment);
+            input_channel_alignment = input_channel_alignment * extra_alignment /
+                                      gcd(input_channel_alignment, extra_alignment);
         if (key.output_format == TensorFormats::NHWC)
-            output_channel_alignment =
-                    output_channel_alignment * extra_alignment /
-                    gcd(output_channel_alignment, extra_alignment);
-        return std::make_tuple(input_channel_alignment,
-                               output_channel_alignment);
+            output_channel_alignment = output_channel_alignment * extra_alignment /
+                                       gcd(output_channel_alignment, extra_alignment);
+        return std::make_tuple(input_channel_alignment, output_channel_alignment);
     }
     return std::make_tuple(input_channel_alignment, output_channel_alignment);
 }
@@ -89,8 +84,9 @@ std::string ReformatManager::ReformatKey::to_string() const {
     } else
     MEGDNN_FOREACH_DTYPE_NAME(cb)
     MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb) {
-        mgb_throw(MegBrainError, "invalid input dtype enum(%u)",
-                  static_cast<uint32_t>(input_dtype));
+        mgb_throw(
+                MegBrainError, "invalid input dtype enum(%u)",
+                static_cast<uint32_t>(input_dtype));
     }
 #undef cb
 #define cb(_name)                           \
@@ -99,18 +95,18 @@ std::string ReformatManager::ReformatKey::to_string() const {
     } else
     MEGDNN_FOREACH_DTYPE_NAME(cb)
     MEGDNN_FOREACH_PARAMETERIZED_DTYPE(cb) {
-        mgb_throw(MegBrainError, "invalid output dtype enum(%u)",
-                  static_cast<uint32_t>(output_dtype));
+        mgb_throw(
+                MegBrainError, "invalid output dtype enum(%u)",
+                static_cast<uint32_t>(output_dtype));
     }
 #undef cb
-    return ssprintf("%s;%s;%s;%s;%s", i.to_string().c_str(),
-                    o.to_string().c_str(),
-                    std::to_string(static_cast<uint32_t>(attribute)).c_str(),
-                    input_name.c_str(), output_name.c_str());
+    return ssprintf(
+            "%s;%s;%s;%s;%s", i.to_string().c_str(), o.to_string().c_str(),
+            std::to_string(static_cast<uint32_t>(attribute)).c_str(),
+            input_name.c_str(), output_name.c_str());
 }
 
-size_t ReformatManager::ReformatKey::Hash::operator()(
-        const ReformatKey& key) const {
+size_t ReformatManager::ReformatKey::Hash::operator()(const ReformatKey& key) const {
     auto enumhash = mgb::enumhash();
     size_t h = enumhash(key.input_format);
     h = mgb::hash_pair_combine(h, enumhash(key.output_format));
@@ -124,8 +120,7 @@ bool ReformatManager::ReformatKey::Equal::operator()(
         const ReformatKey& lhs, const ReformatKey& rhs) const {
     return lhs.input_format == rhs.input_format &&
            lhs.output_format == rhs.output_format &&
-           lhs.input_dtype == rhs.input_dtype &&
-           lhs.output_dtype == rhs.output_dtype &&
+           lhs.input_dtype == rhs.input_dtype && lhs.output_dtype == rhs.output_dtype &&
            lhs.attribute == rhs.attribute;
 }
 
@@ -136,15 +131,13 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::NCHWc4, o = TensorFormats::CHWNc4;
         auto&& impl1 = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW4_CHWN4)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW4_CHWN4)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o}, impl1);
         auto&& impl2 = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::CHWN4_NCHW4)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::CHWN4_NCHW4)
                     .node();
         };
         m_cache.emplace(ReformatKey{o, i}, impl2);
@@ -152,9 +145,9 @@ ReformatManager::ReformatManager() {
     {
         auto i = TensorFormats::NCHW, o = TensorFormats::NCHWc4;
         auto&& impl = [](const VarNodeArray& vars) {
-            return opr::RelayoutFormat::make(vars[0],
-                                             megdnn::param::RelayoutFormat::
-                                                     Mode::NCHW_NCHW4_IC_SMALL)
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::NCHW_NCHW4_IC_SMALL)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IC_SMALL}, impl);
@@ -163,9 +156,8 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::KCRS, o = TensorFormats::KCRSc4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::
-                                   NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::
+                                            NCHW_NCHW4_IC_SMALL_CONV_DENSE_WEIGHT)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IC_SMALL}, impl);
@@ -174,77 +166,81 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::NCHW, o = TensorFormats::NCHWc64;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NCHW64)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NCHW64)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
-                            DTypeEnum::QuantizedS4},
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
+                        DTypeEnum::QuantizedS4},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::DEFAULT,
-                                    DTypeEnum::Quantized4Asymm,
-                                    DTypeEnum::Quantized4Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::Quantized4Asymm,
+                        DTypeEnum::Quantized4Asymm},
+                impl);
     }
     {
         auto i = TensorFormats::NCHWc64, o = TensorFormats::NCHW;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW64_NCHW)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW64_NCHW)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
-                            DTypeEnum::QuantizedS4},
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
+                        DTypeEnum::QuantizedS4},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::DEFAULT,
-                                    DTypeEnum::Quantized4Asymm,
-                                    DTypeEnum::Quantized4Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::Quantized4Asymm,
+                        DTypeEnum::Quantized4Asymm},
+                impl);
     }
     {
         auto i = TensorFormats::NCHW, o = TensorFormats::NHWC;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NHWC)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NHWC)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
-                            DTypeEnum::QuantizedS4},
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
+                        DTypeEnum::QuantizedS4},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::DEFAULT,
-                                    DTypeEnum::Quantized4Asymm,
-                                    DTypeEnum::Quantized4Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::Quantized4Asymm,
+                        DTypeEnum::Quantized4Asymm},
+                impl);
     }
     {
         auto i = TensorFormats::NHWC, o = TensorFormats::NCHW;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NHWC_NCHW)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NHWC_NCHW)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
-                            DTypeEnum::QuantizedS4},
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::QuantizedS4,
+                        DTypeEnum::QuantizedS4},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::DEFAULT,
-                                    DTypeEnum::Quantized4Asymm,
-                                    DTypeEnum::Quantized4Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::DEFAULT, DTypeEnum::Quantized4Asymm,
+                        DTypeEnum::Quantized4Asymm},
+                impl);
     }
     // nhcw4
     {
         auto i = TensorFormats::KCRS, o = TensorFormats::KRSCk4;
         auto&& impl = [](const VarNodeArray& vars) {
-            return opr::RelayoutFormat::make(vars[0],
-                                             megdnn::param::RelayoutFormat::
-                                                     Mode::INTER_WEIGHT_DENSEI)
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_DENSEI)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -252,9 +248,9 @@ ReformatManager::ReformatManager() {
     {
         auto i = TensorFormats::KCRS, o = TensorFormats::GKRSCk4;
         auto&& impl = [](const VarNodeArray& vars) {
-            return opr::RelayoutFormat::make(vars[0],
-                                             megdnn::param::RelayoutFormat::
-                                                     Mode::INTER_WEIGHT_GROUPI)
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_GROUPI)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -262,9 +258,9 @@ ReformatManager::ReformatManager() {
     {
         auto i = TensorFormats::KCRS, o = TensorFormats::C1RSc4;
         auto&& impl = [](const VarNodeArray& vars) {
-            return opr::RelayoutFormat::make(vars[0],
-                                             megdnn::param::RelayoutFormat::
-                                                     Mode::INTER_WEIGHT_CHANI)
+            return opr::RelayoutFormat::make(
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_CHANI)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -273,8 +269,7 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::NCHW, o = TensorFormats::NHCWc4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -283,8 +278,7 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::NHCWc4, o = TensorFormats::NCHW;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0],
-                           megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I)
+                           vars[0], megdnn::param::RelayoutFormat::Mode::NCHW_NHWCD4I)
                     .node();
         };
         m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D}, impl);
@@ -294,40 +288,43 @@ ReformatManager::ReformatManager() {
         auto i = TensorFormats::KCRS, o = TensorFormats::KRSCk4c4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0], megdnn::param::RelayoutFormat::Mode::
-                                            INTER_WEIGHT_DENSEI_DOT)
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_DENSEI_DOT)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::IMAGE2D, DTypeEnum::QuantizedS8,
-                            DTypeEnum::QuantizedS8},
+                ReformatKey{
+                        i, o, Attribute::IMAGE2D, DTypeEnum::QuantizedS8,
+                        DTypeEnum::QuantizedS8},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D,
-                                    DTypeEnum::Quantized8Asymm,
-                                    DTypeEnum::Quantized8Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::IMAGE2D, DTypeEnum::Quantized8Asymm,
+                        DTypeEnum::Quantized8Asymm},
+                impl);
     }
     {
         auto i = TensorFormats::GKCRS, o = TensorFormats::GKRSCk4c4;
         auto&& impl = [](const VarNodeArray& vars) {
             return opr::RelayoutFormat::make(
-                           vars[0], megdnn::param::RelayoutFormat::Mode::
-                                            INTER_WEIGHT_GROUPI_DOT)
+                           vars[0],
+                           megdnn::param::RelayoutFormat::Mode::INTER_WEIGHT_GROUPI_DOT)
                     .node();
         };
         m_cache.emplace(
-                ReformatKey{i, o, Attribute::IMAGE2D, DTypeEnum::QuantizedS8,
-                            DTypeEnum::QuantizedS8},
+                ReformatKey{
+                        i, o, Attribute::IMAGE2D, DTypeEnum::QuantizedS8,
+                        DTypeEnum::QuantizedS8},
                 impl);
-        m_cache.emplace(ReformatKey{i, o, Attribute::IMAGE2D,
-                                    DTypeEnum::Quantized8Asymm,
-                                    DTypeEnum::Quantized8Asymm},
-                        impl);
+        m_cache.emplace(
+                ReformatKey{
+                        i, o, Attribute::IMAGE2D, DTypeEnum::Quantized8Asymm,
+                        DTypeEnum::Quantized8Asymm},
+                impl);
     }
 }
 
-ReformatManager::ReformatImpl ReformatManager::get(
-        const ReformatKey& key) const {
+ReformatManager::ReformatImpl ReformatManager::get(const ReformatKey& key) const {
     using Attribute = ReformatKey::Attribute;
     MGB_TRY {
         {
@@ -346,8 +343,9 @@ ReformatManager::ReformatImpl ReformatManager::get(
                 return rst;
             }
         }
-        mgb_assert(!(key.attribute & Attribute::IMAGE2D) &&
-                   !(key.attribute & Attribute::IC_SMALL));
+        mgb_assert(
+                !(key.attribute & Attribute::IMAGE2D) &&
+                !(key.attribute & Attribute::IC_SMALL));
         auto&& i = key.input_format;
         auto&& o = key.output_format;
         auto ishp = tensor_formats_to_named_tensor_shape(i);
@@ -373,8 +371,7 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             tensor_formats_to_named_tensor_shape(key.output_format);
     size_t input_alignment = 0;
     size_t output_alignment = 0;
-    size_t input_channel_idx = input_shape.ndim,
-           output_channel_idx = input_shape.ndim;
+    size_t input_channel_idx = input_shape.ndim, output_channel_idx = input_shape.ndim;
     for (size_t i = 0; i < input_shape.ndim; ++i) {
         if (input_shape[i].name() == Dimension::Name::C &&
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -391,25 +388,25 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             break;
         }
     }
-    mgb_assert(input_channel_idx < input_shape.ndim &&
-                       output_channel_idx < input_shape.ndim,
-               "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
-               input_channel_idx, output_channel_idx,
-               input_shape.to_string().c_str());
-    mgb_assert(input_alignment > 0 && output_alignment > 0,
-               "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
-               input_alignment, output_alignment,
-               input_shape.to_string().c_str());
-    std::tie(input_alignment, output_alignment) = extra_alignment(
-            key, orig_var->dtype(), input_alignment, output_alignment);
-    NamedTensorShape orig_shape =
-            tensor_formats_to_named_tensor_shape(orig_format);
+    mgb_assert(
+            input_channel_idx < input_shape.ndim &&
+                    output_channel_idx < input_shape.ndim,
+            "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
+            input_channel_idx, output_channel_idx, input_shape.to_string().c_str());
+    mgb_assert(
+            input_alignment > 0 && output_alignment > 0,
+            "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
+            input_alignment, output_alignment, input_shape.to_string().c_str());
+    std::tie(input_alignment, output_alignment) =
+            extra_alignment(key, orig_var->dtype(), input_alignment, output_alignment);
+    NamedTensorShape orig_shape = tensor_formats_to_named_tensor_shape(orig_format);
     size_t orig_channel = 0;
-    mgb_assert(orig_var->shape().ndim == orig_shape.ndim,
-               "incompatible NamedTensorShape for "
-               "feature(var:%s;shape:%s)",
-               cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
-               orig_shape.to_string().c_str());
+    mgb_assert(
+            orig_var->shape().ndim == orig_shape.ndim,
+            "incompatible NamedTensorShape for "
+            "feature(var:%s;shape:%s)",
+            cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
+            orig_shape.to_string().c_str());
     for (size_t i = 0; i < orig_shape.ndim; ++i) {
         if (orig_shape[i].name() == Dimension::Name::C &&
             orig_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
@@ -417,38 +414,35 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_featrue(
             break;
         }
     }
-    mgb_assert(orig_channel > 0,
-               "incompatible NamedTensorShape for "
-               "feature(var:%s;shape:%s)",
-               cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
-               orig_shape.to_string().c_str());
-    size_t aligned_in_channel =
-            divup(orig_channel, input_alignment) * input_alignment;
+    mgb_assert(
+            orig_channel > 0,
+            "incompatible NamedTensorShape for "
+            "feature(var:%s;shape:%s)",
+            cg::dump_var_info({const_cast<VarNode*>(orig_var)}).c_str(),
+            orig_shape.to_string().c_str());
+    size_t aligned_in_channel = divup(orig_channel, input_alignment) * input_alignment;
     size_t aligned_out_channel =
             divup(orig_channel, output_alignment) * output_alignment;
-    size_t common_alignment = input_alignment * output_alignment /
-                              gcd(input_alignment, output_alignment);
-    size_t aligned_channel =
-            divup(orig_channel, common_alignment) * common_alignment;
-    auto builder = [key, aligned_channel, aligned_in_channel,
-                    aligned_out_channel, input_shape, input_channel_idx,
-                    output_shape,
+    size_t common_alignment =
+            input_alignment * output_alignment / gcd(input_alignment, output_alignment);
+    size_t aligned_channel = divup(orig_channel, common_alignment) * common_alignment;
+    auto builder = [key, aligned_channel, aligned_in_channel, aligned_out_channel,
+                    input_shape, input_channel_idx, output_shape,
                     output_channel_idx](const VarNodeArray& vars) {
         VarNode *x, *cur;
         x = cur = vars[0];
         if (aligned_channel > aligned_in_channel) {
             auto padding_shape = input_shape;
             auto&& dim = padding_shape[input_channel_idx];
-            size_t const_extent =
-                    (aligned_channel - aligned_in_channel) / dim.stride();
+            size_t const_extent = (aligned_channel - aligned_in_channel) / dim.stride();
             padding_shape[input_channel_idx] =
                     Dimension(dim.name(), dim.stride(), const_extent);
-            auto make_shape = std::get<0>(
-                    MakeShapeEmitter{input_shape, padding_shape}.emit());
+            auto make_shape =
+                    std::get<0>(MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({x});
-            auto padding = std::get<0>(PaddingEmitter{
-                    padding_shape, const_extent, input_channel_idx}
-                                               .emit());
+            auto padding = std::get<0>(
+                    PaddingEmitter{padding_shape, const_extent, input_channel_idx}
+                            .emit());
             cur = padding({cur, padding_shp_var});
         }
         cur = ReformatManager::instance().get(key)({cur});
@@ -470,62 +464,62 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
     size_t in_channels = 0, out_channels = 0;
     Dimension::Name out_channel_name = Dimension::Name::C;
     auto input_shape = tensor_formats_to_named_tensor_shape(key.input_format);
-    size_t input_channel_idx = input_shape.ndim,
-           output_channel_idx = input_shape.ndim;
+    size_t input_channel_idx = input_shape.ndim, output_channel_idx = input_shape.ndim;
     for (size_t i = 0; i < input_shape.ndim; ++i) {
         if (input_shape[i].name() == Dimension::Name::C &&
             input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             in_channels = orig_var->shape()[i] * input_shape[i].stride();
             input_channel_idx = i;
-//            mgb_assert(input_shape[i].stride() == 1,
-//                       "unsupport weight format(got:%s)",
-//                       input_shape.to_string().c_str());
-        } else if ((input_shape[i].name() == Dimension::Name::K ||
-                    input_shape[i].name() == Dimension::Name::N) &&
-                   input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
+            //            mgb_assert(input_shape[i].stride() == 1,
+            //                       "unsupport weight format(got:%s)",
+            //                       input_shape.to_string().c_str());
+        } else if (
+                (input_shape[i].name() == Dimension::Name::K ||
+                 input_shape[i].name() == Dimension::Name::N) &&
+                input_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             out_channels = orig_var->shape()[i];
             out_channel_name = input_shape[i].name();
             output_channel_idx = i;
-            mgb_assert(input_shape[i].stride() == 1,
-                       "unsupport weight format(got:%s)",
-                       input_shape.to_string().c_str());
+            mgb_assert(
+                    input_shape[i].stride() == 1, "unsupport weight format(got:%s)",
+                    input_shape.to_string().c_str());
         }
     }
-    mgb_assert(out_channel_name == Dimension::Name::K ||
-                       out_channel_name == Dimension::Name::N,
-               "invalid out channel(shp:%s)", input_shape.to_string().c_str());
-    mgb_assert(input_channel_idx < input_shape.ndim &&
-                       output_channel_idx < input_shape.ndim,
-               "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
-               input_channel_idx, output_channel_idx,
-               input_shape.to_string().c_str());
+    mgb_assert(
+            out_channel_name == Dimension::Name::K ||
+                    out_channel_name == Dimension::Name::N,
+            "invalid out channel(shp:%s)", input_shape.to_string().c_str());
+    mgb_assert(
+            input_channel_idx < input_shape.ndim &&
+                    output_channel_idx < input_shape.ndim,
+            "invalid channel idx(in_channel:%zu, out_channel:%zu, shp:%s)",
+            input_channel_idx, output_channel_idx, input_shape.to_string().c_str());
     size_t in_channel_alignment = 0, out_channel_alignment = 0;
     auto output_shape = tensor_formats_to_named_tensor_shape(key.output_format);
     for (size_t i = 0; i < output_shape.ndim; ++i) {
         if (output_shape[i].name() == Dimension::Name::C &&
             output_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             in_channel_alignment = output_shape[i].stride();
-        } else if (output_shape[i].name() == out_channel_name &&
-                   output_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
+        } else if (
+                output_shape[i].name() == out_channel_name &&
+                output_shape[i].extent() == Dimension::UNDETERMINED_EXTENT) {
             out_channel_alignment = output_shape[i].stride();
         }
     }
-    mgb_assert(in_channel_alignment > 0 && out_channel_alignment > 0,
-               "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
-               in_channel_alignment, out_channel_alignment,
-               output_shape.to_string().c_str());
-    in_channel_alignment =
-            ::extra_alignment(key.attribute, key.output_format,
-                              orig_var->dtype(), in_channel_alignment);
-    out_channel_alignment =
-            ::extra_alignment(key.attribute, key.output_format,
-                              orig_var->dtype(), out_channel_alignment);
+    mgb_assert(
+            in_channel_alignment > 0 && out_channel_alignment > 0,
+            "invalid alignment(in_channel:%zu, out_channel:%zu, shp:%s)",
+            in_channel_alignment, out_channel_alignment,
+            output_shape.to_string().c_str());
+    in_channel_alignment = ::extra_alignment(
+            key.attribute, key.output_format, orig_var->dtype(), in_channel_alignment);
+    out_channel_alignment = ::extra_alignment(
+            key.attribute, key.output_format, orig_var->dtype(), out_channel_alignment);
     size_t aligned_in_channel =
             divup(in_channels, in_channel_alignment) * in_channel_alignment;
     if (extra_alignment.name == out_channel_name) {
-        out_channel_alignment =
-                extra_alignment.alignment * out_channel_alignment /
-                gcd(extra_alignment.alignment, out_channel_alignment);
+        out_channel_alignment = extra_alignment.alignment * out_channel_alignment /
+                                gcd(extra_alignment.alignment, out_channel_alignment);
     }
     size_t aligned_out_channel =
             divup(out_channels, out_channel_alignment) * out_channel_alignment;
@@ -537,31 +531,29 @@ ReformatManager::ReformatImpl ReformatManager::auto_aligned_reformat_weight(
         if (aligned_in_channel > in_channels) {
             auto padding_shape = input_shape;
             auto&& dim = padding_shape[input_channel_idx];
-            size_t const_extent =
-                    (aligned_in_channel - in_channels) / dim.stride();
+            size_t const_extent = (aligned_in_channel - in_channels) / dim.stride();
             padding_shape[input_channel_idx] =
                     Dimension(dim.name(), dim.stride(), const_extent);
-            auto make_shape = std::get<0>(
-                    MakeShapeEmitter{input_shape, padding_shape}.emit());
+            auto make_shape =
+                    std::get<0>(MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({x});
-            auto padding = std::get<0>(PaddingEmitter{
-                    padding_shape, const_extent, input_channel_idx}
-                                               .emit());
+            auto padding = std::get<0>(
+                    PaddingEmitter{padding_shape, const_extent, input_channel_idx}
+                            .emit());
             cur = padding({cur, padding_shp_var});
         }
         if (aligned_out_channel > out_channels) {
             auto padding_shape = input_shape;
             auto&& dim = padding_shape[output_channel_idx];
-            size_t const_extent =
-                    (aligned_out_channel - out_channels) / dim.stride();
+            size_t const_extent = (aligned_out_channel - out_channels) / dim.stride();
             padding_shape[output_channel_idx] =
                     Dimension(dim.name(), dim.stride(), const_extent);
-            auto make_shape = std::get<0>(
-                    MakeShapeEmitter{input_shape, padding_shape}.emit());
+            auto make_shape =
+                    std::get<0>(MakeShapeEmitter{input_shape, padding_shape}.emit());
             auto padding_shp_var = make_shape({cur});
-            auto padding = std::get<0>(PaddingEmitter{
-                    padding_shape, const_extent, output_channel_idx}
-                                               .emit());
+            auto padding = std::get<0>(
+                    PaddingEmitter{padding_shape, const_extent, output_channel_idx}
+                            .emit());
             cur = padding({cur, padding_shp_var});
         }
         cur = ReformatManager::instance().get(key)({cur});
@@ -576,20 +568,19 @@ const ReformatManager& ReformatManager::instance() {
 }
 
 TensorShape ReformatManager::make_aligned_tensor_shape(
-        const VarNode* var, TensorFormats orig_formats,
-        TensorFormats target_formats, ReformatKey::Attribute extra_attribute) {
+        const VarNode* var, TensorFormats orig_formats, TensorFormats target_formats,
+        ReformatKey::Attribute extra_attribute) {
     using Dimension = megdnn::Dimension;
-    static constexpr uint32_t UNDETERMINED_EXTENT =
-            Dimension::UNDETERMINED_EXTENT;
+    static constexpr uint32_t UNDETERMINED_EXTENT = Dimension::UNDETERMINED_EXTENT;
     auto orig_shape = tensor_formats_to_named_tensor_shape(orig_formats);
     auto target_shape = tensor_formats_to_named_tensor_shape(target_formats);
 
     TensorShape oshp = var->shape();
-    mgb_assert(oshp.is_scalar() || oshp.ndim == orig_shape.ndim,
-               "orig shape of var node is not compatible with tensor "
-               "formats(var:%s;shp:%s;fmt:%s)",
-               var->cname(), oshp.to_string().c_str(),
-               orig_shape.to_string().c_str());
+    mgb_assert(
+            oshp.is_scalar() || oshp.ndim == orig_shape.ndim,
+            "orig shape of var node is not compatible with tensor "
+            "formats(var:%s;shp:%s;fmt:%s)",
+            var->cname(), oshp.to_string().c_str(), orig_shape.to_string().c_str());
     if (oshp.is_scalar())
         return oshp;
     TensorShape tshp;
@@ -617,9 +608,9 @@ TensorShape ReformatManager::make_aligned_tensor_shape(
             if (name == Dimension::Name::C) {
                 size_t channel_alignment = target_shape[i].stride();
                 size_t channels = tshp[i] * channel_alignment;
-                size_t new_channel_alignment =
-                        extra_alignment(extra_attribute, target_formats,
-                                        var->dtype(), channel_alignment);
+                size_t new_channel_alignment = extra_alignment(
+                        extra_attribute, target_formats, var->dtype(),
+                        channel_alignment);
                 tshp[i] = divup(channels, new_channel_alignment) *
                           new_channel_alignment / channel_alignment;
             }
@@ -631,24 +622,22 @@ TensorShape ReformatManager::make_aligned_tensor_shape(
 }
 
 TensorShape ReformatManager::make_aligned_weight_shape(
-        const VarNode* var, TensorFormats orig_formats,
-        TensorFormats target_formats, TensorFormats extra_formats,
-        ReformatKey::Attribute extra_attribute) {
-    auto tshp = make_aligned_tensor_shape(var, orig_formats, target_formats,
-                                          extra_attribute);
+        const VarNode* var, TensorFormats orig_formats, TensorFormats target_formats,
+        TensorFormats extra_formats, ReformatKey::Attribute extra_attribute) {
+    auto tshp = make_aligned_tensor_shape(
+            var, orig_formats, target_formats, extra_attribute);
     auto extra_shape = tensor_formats_to_named_tensor_shape(extra_formats);
     using Dimension = megdnn::Dimension;
-    static constexpr uint32_t UNDETERMINED_EXTENT =
-            Dimension::UNDETERMINED_EXTENT;
+    static constexpr uint32_t UNDETERMINED_EXTENT = Dimension::UNDETERMINED_EXTENT;
     size_t out_channel_alignment = 1;
     for (size_t i = 0; i < extra_shape.ndim; ++i) {
         auto name = extra_shape[i].name();
         if (name == Dimension::Name::C &&
             extra_shape[i].extent() == UNDETERMINED_EXTENT) {
             out_channel_alignment = extra_shape[i].stride();
-            out_channel_alignment =
-                    extra_alignment(extra_attribute, target_formats,
-                                    var->dtype(), out_channel_alignment);
+            out_channel_alignment = extra_alignment(
+                    extra_attribute, target_formats, var->dtype(),
+                    out_channel_alignment);
         }
     }
 

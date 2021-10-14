@@ -26,8 +26,7 @@ void CAMBRICON::SetUp() {
 
     megcoreDeviceHandle_t dev_handle;
     // use card 0
-    megcore_check(megcoreCreateDeviceHandle(&dev_handle,
-                                            megcorePlatformCambricon, 0));
+    megcore_check(megcoreCreateDeviceHandle(&dev_handle, megcorePlatformCambricon, 0));
 
     megcoreComputingHandle_t comp_handle;
     megcore_check(megcoreCreateComputingHandle(&comp_handle, dev_handle));
@@ -48,4 +47,3 @@ void CAMBRICON::TearDown() {
 }
 
 // vim: syntax=cpp.doxygen
-

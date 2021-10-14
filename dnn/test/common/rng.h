@@ -62,8 +62,7 @@ public:
              exp < (1u << exponent_bits) - (1u << (exponent_bits - 2)); ++exp) {
             for (size_t x = 0; x < 1u << mantissa_bits; ++x) {
                 size_t pos_num = (exp << mantissa_bits) + x;
-                size_t neg_num =
-                        (1u << (bits - 1)) + (exp << mantissa_bits) + x;
+                size_t neg_num = (1u << (bits - 1)) + (exp << mantissa_bits) + x;
                 union U {
                     U() {}
                     uint16_t i;
@@ -75,13 +74,11 @@ public:
                 m_sequence.push_back(i2f.f);
             }
         }
-        std::shuffle(m_sequence.begin(), m_sequence.end(),
-                     RandomState::generator());
+        std::shuffle(m_sequence.begin(), m_sequence.end(), RandomState::generator());
     }
 
     void gen(const TensorND& tensor) override {
-        megdnn_assert(tensor.layout.dtype.enumv() ==
-                      DTypeTrait<dt_bfloat16>::enumv);
+        megdnn_assert(tensor.layout.dtype.enumv() == DTypeTrait<dt_bfloat16>::enumv);
         size_t nr_elems = tensor.layout.span().dist_elem();
         auto offset = tensor.layout.span().low_elem;
         for (size_t i = 0; i < nr_elems; ++i) {
@@ -188,8 +185,8 @@ public:
 
 class UniformFloatWithValueRNG : public UniformFloatRNG {
 public:
-    UniformFloatWithValueRNG(dt_float32 a, dt_float32 b, float val_proportion,
-                             float val)
+    UniformFloatWithValueRNG(
+            dt_float32 a, dt_float32 b, float val_proportion, float val)
             : UniformFloatRNG(a, b), val_(val) {
         if (val_proportion < 0.f)
             val_proportion_ = 0.f;
@@ -206,8 +203,7 @@ private:
 
 class UniformFloatWithZeroRNG final : public UniformFloatWithValueRNG {
 public:
-    UniformFloatWithZeroRNG(dt_float32 a, dt_float32 b,
-                            float zero_val_proportion)
+    UniformFloatWithZeroRNG(dt_float32 a, dt_float32 b, float zero_val_proportion)
             : UniformFloatWithValueRNG(a, b, zero_val_proportion, 0.f) {}
 };
 

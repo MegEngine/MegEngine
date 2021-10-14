@@ -23,8 +23,7 @@ using namespace cg;
 MGB_TYPEINFO_OBJ_IMPL(opr_profile::OprProfileHolder);
 
 GraphProfiler::GraphProfiler(cg::ComputingGraph* graph) : PluginBase(graph) {
-    graph->options()
-            .user_data.get_user_data_or_create<opr_profile::OprProfileHolder>();
+    graph->options().user_data.get_user_data_or_create<opr_profile::OprProfileHolder>();
 
     using namespace cg::event;
     auto on_seq_start = [this](CompSeqExecBeforeStart const& event) {
@@ -58,8 +57,7 @@ GraphProfiler::GraphProfiler(cg::ComputingGraph* graph) : PluginBase(graph) {
         for (auto&& comp_node : get_opr_comp_node_set(event.opr)) {
             auto runner = [this, opr]() {
                 MGB_LOCK_GUARD(m_mtx);
-                m_host_time[{opr, std::this_thread::get_id()}].end =
-                        m_timer.get_secs();
+                m_host_time[{opr, std::this_thread::get_id()}].end = m_timer.get_secs();
             };
             event.env->dispatch_on_comp_node(comp_node, runner);
         }
@@ -101,14 +99,12 @@ GraphProfiler::GraphProfiler(cg::ComputingGraph* graph) : PluginBase(graph) {
         m_start_of_time = None;
     };
     auto&& ev = graph->event();
-    add_event_handler(
-            ev.register_receiver<CompSeqExecBeforeStart>(on_seq_start));
+    add_event_handler(ev.register_receiver<CompSeqExecBeforeStart>(on_seq_start));
     add_event_handler(ev.register_receiver<OprExecStart>(on_opr_start));
     add_event_handler(ev.register_receiver<OprExecFinished>(on_opr_finish));
     add_event_handler(ev.register_receiver<BeforeKernel>(on_before_kern));
     add_event_handler(ev.register_receiver<AfterKernel>(on_after_kern));
-    add_event_handler(
-            ev.register_receiver<CompSeqOrderDetermined>(on_graph_compile));
+    add_event_handler(ev.register_receiver<CompSeqOrderDetermined>(on_graph_compile));
 }
 
 GraphProfiler::~GraphProfiler() noexcept {
@@ -122,17 +118,15 @@ GraphProfiler::~GraphProfiler() noexcept {
         wait(i.second.end);
     }
 
-    m_owner_graph->options()
-            .user_data.pop_user_data<opr_profile::OprProfileHolder>();
+    m_owner_graph->options().user_data.pop_user_data<opr_profile::OprProfileHolder>();
 }
 
 void GraphProfiler::ensure_start_time() {
     if (!m_start_of_time.valid()) {
         // set up for the first time
-        m_start_of_time =
-                CompNode::UnorderedMap<std::unique_ptr<CompNode::Event>>();
+        m_start_of_time = CompNode::UnorderedMap<std::unique_ptr<CompNode::Event>>();
 
-        for (auto i: *m_used_comp_node) {
+        for (auto i : *m_used_comp_node) {
             i.sync();
             auto&& event = m_start_of_time.val()[i];
             event = i.create_event(CompNode::Event::NEED_TIMER);
@@ -154,8 +148,7 @@ bool GraphProfiler::opr_filter(cg::OperatorNodeBase* opr) {
     if (!opr->input_waiting_spec().empty())
         return true;
     auto type = opr->dyn_typeinfo();
-    return type == opr::Copy::typeinfo() ||
-           type == opr::Host2DeviceCopy::typeinfo();
+    return type == opr::Copy::typeinfo() || type == opr::Host2DeviceCopy::typeinfo();
 }
 
 std::shared_ptr<json::Object> GraphProfiler::to_json() const {
@@ -170,15 +163,13 @@ std::shared_ptr<json::Object> GraphProfiler::to_json() const {
     };
 
     for (auto&& kern_ev : m_kern_event) {
-        auto&& opr_prof =
-                visit_json_obj(*dev_prof, kern_ev.first.first->id_str());
+        auto&& opr_prof = visit_json_obj(*dev_prof, kern_ev.first.first->id_str());
         auto comp_node = kern_ev.first.second;
         auto&& event = kern_ev.second;
         auto&& start = m_start_of_time->at(comp_node);
         event.end->host_wait();
         opr_prof[comp_node.to_string()] = Object::make({
-                {"start",
-                 Number::make(start->elapsed_time_until(*event.start))},
+                {"start", Number::make(start->elapsed_time_until(*event.start))},
                 {"kern", Number::make(start->elapsed_time_until(*event.kern))},
                 {"end", Number::make(start->elapsed_time_until(*event.end))},
         });
@@ -186,13 +177,12 @@ std::shared_ptr<json::Object> GraphProfiler::to_json() const {
 
     auto host_prof = Object::make();
     for (auto&& tpair : m_host_time) {
-        auto&& opr_prof =
-                visit_json_obj(*host_prof, tpair.first.first->id_str());
+        auto&& opr_prof = visit_json_obj(*host_prof, tpair.first.first->id_str());
         auto&& ev = tpair.second;
-        opr_prof[sys::get_thread_name(tpair.first.second)] =
-                Object::make({{"start", Number::make(ev.start)},
-                              {"kern", Number::make(ev.kern)},
-                              {"end", Number::make(ev.end)}});
+        opr_prof[sys::get_thread_name(tpair.first.second)] = Object::make(
+                {{"start", Number::make(ev.start)},
+                 {"kern", Number::make(ev.kern)},
+                 {"end", Number::make(ev.end)}});
     }
 
     auto opr_fp = Object::make();
@@ -208,15 +198,15 @@ std::shared_ptr<json::Object> GraphProfiler::to_json() const {
     auto opr_internal_pf = Object::make();
     if ((pf_holder_pair.first[0]->id2object_map).size()) {
         for (auto&& pf_pair : pf_holder_pair.first[0]->id2object_map) {
-            auto&& opr_itnl_pf_item =
-                    *static_cast<Object*>(opr_internal_pf.get());
+            auto&& opr_itnl_pf_item = *static_cast<Object*>(opr_internal_pf.get());
             opr_itnl_pf_item[pf_pair.first->id_str()] = pf_pair.second;
         }
     }
-    return Object::make({{"device", dev_prof},
-                         {"host", host_prof},
-                         {"opr_footprint", opr_fp},
-                         {"opr_internal_pf", opr_internal_pf}});
+    return Object::make(
+            {{"device", dev_prof},
+             {"host", host_prof},
+             {"opr_footprint", opr_fp},
+             {"opr_internal_pf", opr_internal_pf}});
 }
 
 #endif  // MGB_ENABLE_JSON

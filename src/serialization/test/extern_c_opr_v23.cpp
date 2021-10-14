@@ -13,8 +13,8 @@
 
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/utility.h"
-#include "megbrain/serialization/serializer.h"
 #include "megbrain/serialization/extern_c_opr_io.h"
+#include "megbrain/serialization/serializer.h"
 #include "megbrain/test/helper.h"
 
 using namespace mgb;
@@ -45,14 +45,14 @@ class MGBOprDescImpl {
         return user_data(self)->bias == user_data(rhs)->bias;
     }
 
-    static void execute(const MGBOprDesc* self, const MGBTensor* input,
-                        MGBTensor* output) {
+    static void execute(
+            const MGBOprDesc* self, const MGBTensor* input, MGBTensor* output) {
         auto&& i = input[0].layout;
         auto&& o = output[0].layout;
-        mgb_assert(i.shape.ndim == 1 && o.shape.ndim == 1 &&
-                   i.shape.shape[0] == o.shape.shape[0]);
-        mgb_assert(i.dtype == MGB_DTYPE_FLOAT32 &&
-                   o.dtype == MGB_DTYPE_FLOAT32);
+        mgb_assert(
+                i.shape.ndim == 1 && o.shape.ndim == 1 &&
+                i.shape.shape[0] == o.shape.shape[0]);
+        mgb_assert(i.dtype == MGB_DTYPE_FLOAT32 && o.dtype == MGB_DTYPE_FLOAT32);
         auto pi = static_cast<float*>(input[0].data),
              po = static_cast<float*>(output[0].data);
         auto bias = user_data(self)->bias;
@@ -61,8 +61,8 @@ class MGBOprDescImpl {
         }
     }
 
-    static void infer_shape(const MGBOprDesc*, const MGBTensorShape* input,
-                            MGBTensorShape* output) {
+    static void infer_shape(
+            const MGBOprDesc*, const MGBTensorShape* input, MGBTensorShape* output) {
         output[0] = input[0];
     }
 
@@ -85,13 +85,13 @@ public:
 int MGBOprDescImpl::nr_inst = 0;
 
 class MGBOprLoaderImpl {
-    static MGBOprDesc* create_desc(size_t nr_input, const void* buf,
-                                   size_t buf_len) {
+    static MGBOprDesc* create_desc(size_t nr_input, const void* buf, size_t buf_len) {
         mgb_assert(buf_len == sizeof(float));
         float fv;
         memcpy(&fv, buf, buf_len);
         return MGBOprDescImpl::make(fv);
     }
+
 public:
     static MGBOprLoader make() { return {"bias_adder_dump_v23", &create_desc}; }
 };
@@ -107,8 +107,7 @@ public:
 };
 MGBOprLoaderReg loader_reg;
 
-std::vector<uint8_t> create_graph_dump(float bias, float extra_scale,
-                                       float sleep) {
+std::vector<uint8_t> create_graph_dump(float bias, float extra_scale, float sleep) {
     HostTensorGenerator<> gen;
     auto host_x = gen({1}, "cpux");
     auto graph = ComputingGraph::make();
@@ -131,9 +130,7 @@ void run_compute_test(CompNode cn) {
     float bias = 1.2, scale = -2.1;
     auto graph_dump = create_graph_dump(bias, scale, 0.3);
     GraphLoadConfig config;
-    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator & t) {
-        t = loc;
-    };
+    config.comp_node_mapper = [loc = cn.locator()](CompNode::Locator& t) { t = loc; };
     auto loader = GraphLoader::make(
             InputFile::make_mem_proxy(graph_dump.data(), graph_dump.size()));
     auto load_ret = loader->load(config);

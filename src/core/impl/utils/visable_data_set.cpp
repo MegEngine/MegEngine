@@ -83,8 +83,7 @@ void VisableDataSet::draw_graph(std::shared_ptr<json::Value> graph_json) {
 void VisableDataSet::dump_info(Content& c) {
     auto&& content_set = m_file2content[c.file_name()];
     content_set.insert(c.content_name());
-    auto&& value_list =
-            m_filecontent2value[c.file_name() + "/" + c.content_name()];
+    auto&& value_list = m_filecontent2value[c.file_name() + "/" + c.content_name()];
     value_list.push_back(c.to_json());
 }
 

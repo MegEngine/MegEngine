@@ -13,11 +13,11 @@
 
 #if MGB_CUSTOM_OP
 
-#include "megbrain/custom/tensor.h"
-#include "megbrain/custom/data_adaptor.h"
-#include "megbrain/comp_node.h"
-#include "megbrain/tensor.h"
 #include "gtest/gtest.h"
+#include "megbrain/comp_node.h"
+#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/tensor.h"
+#include "megbrain/tensor.h"
 #include "megbrain_build_config.h"
 
 #define TENSOR_TEST_LOG 0
@@ -50,8 +50,10 @@ TEST(TestDevice, TestDevice) {
     ASSERT_TRUE(dev4.enumv() == DeviceEnum::cuda);
 
 #if TENSOR_TEST_LOG
-    std::cout << dev1.str() << "\n" << dev2.str() << "\n" 
-              << dev3.str() << "\n" << dev4.str() << std::endl;
+    std::cout << dev1.str() << "\n"
+              << dev2.str() << "\n"
+              << dev3.str() << "\n"
+              << dev4.str() << std::endl;
 #endif
 
     CompNode compnode = to_builtin<CompNode, Device>(dev3);
@@ -93,7 +95,7 @@ TEST(TestShape, TestShape) {
     ASSERT_TRUE(shape3[0] == 32);
     ASSERT_TRUE(shape4[0] == 16);
 
-    Shape shape5 = {2, 3, 4}; 
+    Shape shape5 = {2, 3, 4};
     TensorShape bshape1 = to_builtin<TensorShape, Shape>(shape5);
     ASSERT_TRUE(bshape1.ndim == 3);
     ASSERT_TRUE(bshape1[0] == 2);
@@ -113,7 +115,7 @@ TEST(TestShape, TestShape) {
 
     std::vector<Shape> shapes1 = {{2, 3, 4}, {6}, {5, 7}};
     megdnn::SmallVector<TensorShape> bshapes = to_builtin<TensorShape, Shape>(shapes1);
-    ASSERT_TRUE(bshapes[0].total_nr_elems() == 2*3*4);
+    ASSERT_TRUE(bshapes[0].total_nr_elems() == 2 * 3 * 4);
     ASSERT_TRUE(bshapes[1].total_nr_elems() == 6);
     ASSERT_TRUE(bshapes[2].total_nr_elems() == 35);
 
@@ -156,8 +158,8 @@ TEST(TestDType, TestDType) {
     ASSERT_TRUE(dtype7.enumv() == DTypeEnum::bfloat16);
 
     std::vector<DType> dtypes1 = {"int8", "uint8", "float16"};
-    megdnn::SmallVector<megdnn::DType> bdtypes 
-        = to_builtin<megdnn::DType, DType>(dtypes1);
+    megdnn::SmallVector<megdnn::DType> bdtypes =
+            to_builtin<megdnn::DType, DType>(dtypes1);
     ASSERT_TRUE(bdtypes[0].name() == std::string("Int8"));
     ASSERT_TRUE(bdtypes[1].name() == std::string("Uint8"));
     ASSERT_TRUE(bdtypes[2].name() == std::string("Float16"));
@@ -222,32 +224,32 @@ TEST(TestTensor, TestTensor) {
     ASSERT_TRUE(shape == std::vector<size_t>({3, 2, 4}));
     ASSERT_TRUE(dtype == "int32");
 
-    int *raw_ptr1 = tensor1.data<int>();
-    for (size_t i=0; i<tensor1.size(); i++)
+    int* raw_ptr1 = tensor1.data<int>();
+    for (size_t i = 0; i < tensor1.size(); i++)
         raw_ptr1[i] = i;
 
-    int *raw_ptr2 = tensor2.data<int>();
-    for (size_t i=0; i<tensor2.size(); i++)
+    int* raw_ptr2 = tensor2.data<int>();
+    for (size_t i = 0; i < tensor2.size(); i++)
         ASSERT_TRUE(raw_ptr2[i] == static_cast<int>(i));
-    
+
     Tensor tensor3 = tensor2;
-    int *raw_ptr3 = tensor3.data<int>();
-    for (size_t i=0; i<tensor3.size(); i++)
+    int* raw_ptr3 = tensor3.data<int>();
+    for (size_t i = 0; i < tensor3.size(); i++)
         ASSERT_TRUE(raw_ptr3[i] == static_cast<int>(i));
     ASSERT_TRUE(raw_ptr1 == raw_ptr2);
     ASSERT_TRUE(raw_ptr1 == raw_ptr3);
 
-    for (size_t i=0; i<tensor3.size(); i++) {
+    for (size_t i = 0; i < tensor3.size(); i++) {
         raw_ptr3[i] = -static_cast<int>(i);
     }
-    for (size_t i=0; i<tensor1.size(); i++) {
+    for (size_t i = 0; i < tensor1.size(); i++) {
         ASSERT_TRUE(raw_ptr1[i] == -static_cast<int>(i));
     }
-    
+
     DeviceTensorND new_dev_tensor = to_builtin<DeviceTensorND, Tensor>(tensor3);
-    
-    int *builtin_ptr = new_dev_tensor.ptr<int>();
-    for (size_t i=0; i<new_dev_tensor.shape().total_nr_elems(); i++) {
+
+    int* builtin_ptr = new_dev_tensor.ptr<int>();
+    for (size_t i = 0; i < new_dev_tensor.shape().total_nr_elems(); i++) {
         ASSERT_TRUE(builtin_ptr[i] == -static_cast<int>(i));
     }
 }
@@ -289,18 +291,18 @@ TEST(TestTensor, TestTensorAccessorND) {
     megdnn::DType builtin_dtype = dtype::Int32{};
 
     DeviceTensorND dev_tensor(builtin_device, builtin_shape, builtin_dtype);
-    int *builtin_ptr = dev_tensor.ptr<int>();
-    for (size_t i=0; i<dev_tensor.shape().total_nr_elems(); i++) {
+    int* builtin_ptr = dev_tensor.ptr<int>();
+    for (size_t i = 0; i < dev_tensor.shape().total_nr_elems(); i++) {
         builtin_ptr[i] = i;
     }
 
     Tensor tensor = to_custom_tensor(dev_tensor);
     auto accessor = tensor.accessor<int32_t, 4>();
-    for (size_t n=0; n<N; ++n) {
-        for (size_t c=0; c<C; ++c) {
-            for (size_t h=0; h<H; ++h) {
-                for (size_t w=0; w<W; ++w) {
-                    int32_t idx = n*C*H*W + c*H*W + h*W + w;
+    for (size_t n = 0; n < N; ++n) {
+        for (size_t c = 0; c < C; ++c) {
+            for (size_t h = 0; h < H; ++h) {
+                for (size_t w = 0; w < W; ++w) {
+                    int32_t idx = n * C * H * W + c * H * W + h * W + w;
                     ASSERT_TRUE(accessor[n][c][h][w] == idx);
                 }
             }
@@ -314,18 +316,18 @@ TEST(TestTensor, TestTensorAccessor1D) {
     megdnn::DType builtin_dtype = dtype::Float32{};
 
     DeviceTensorND dev_tensor(builtin_device, builtin_shape, builtin_dtype);
-    float *builtin_ptr = dev_tensor.ptr<float>();
-    for (size_t i=0; i<dev_tensor.shape().total_nr_elems(); i++) {
+    float* builtin_ptr = dev_tensor.ptr<float>();
+    for (size_t i = 0; i < dev_tensor.shape().total_nr_elems(); i++) {
         builtin_ptr[i] = i;
     }
 
     Tensor tensor = to_custom_tensor(dev_tensor);
     auto accessor = tensor.accessor<float, 1>();
-    for (size_t n=0; n<32; ++n) {
+    for (size_t n = 0; n < 32; ++n) {
         ASSERT_TRUE(accessor[n] == n);
     }
 }
 
-}
+}  // namespace custom
 
 #endif
