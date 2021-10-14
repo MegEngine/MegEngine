@@ -61,6 +61,8 @@ def Convolution3DBackwardData: MgbHashableOp<"Convolution3DBackwardData", [Convo
 
 def DeformableConv : MgbHashableOp<"DeformableConv", [ConvolutionParam, ExecutionPolicyParamBase<"policy">]>;
 
+def PartialConv : MgbHashableOp<"PartialConv", [ConvolutionParam, ExecutionPolicyParamBase<"policy">]>;
+
 def GroupLocal: MgbHashableOp<"GroupLocal", [ConvolutionParam]>;
 
 def Pooling: MgbHashableOp<"Pooling", [PoolingParam]>;

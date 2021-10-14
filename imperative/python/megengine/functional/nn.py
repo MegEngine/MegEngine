@@ -60,6 +60,7 @@ __all__ = [
     "conv_transpose3d",
     "deformable_conv2d",
     "deformable_psroi_pooling",
+    "partial_conv2d",
     "dropout",
     "embedding",
     "gelu",
@@ -587,6 +588,71 @@ def conv_transpose3d(
     if bias is not None:
         output += bias
     return output
+
+def partial_conv2d(
+    inp: Tensor,
+    mask: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+    stride: Union[int, Tuple[int, int]] = 1,
+    padding: Union[int, Tuple[int, int]] = 0,
+    dilation: Union[int, Tuple[int, int]] = 1,
+    groups: int = 1,
+    conv_mode="cross_correlation",
+    compute_mode="default",
+) -> Tensor:
+    r"""partial conv
+
+    Example:
+
+    .. testcode::
+
+        from megengine import tensor
+        import megengine.functional as f
+        import numpy as np
+
+    Outputs:
+
+    .. testoutput::
+
+        pass
+
+    """
+    assert (
+        conv_mode.lower() == "cross_correlation"
+        or conv_mode.name == "CROSS_CORRELATION"
+    )
+    if amp._enabled:
+        compute_mode = "float32"
+        inp, weight, bias = cast_tensors(inp, weight, bias)
+    else:
+        dtype = dtype_promotion(inp, weight)
+        if inp.dtype != dtype:
+            inp = inp.astype(dtype)
+        if weight.dtype != dtype:
+            weight = weight.astype(dtype)
+
+    stride_h, stride_w = expand_hw(stride)
+    pad_h, pad_w = expand_hw(padding)
+    dilate_h, dilate_w = expand_hw(dilation)
+
+    sparse_type = "dense" if groups == 1 else "group"
+    op = builtin.PartialConv(
+        stride_h=stride_h,
+        stride_w=stride_w,
+        pad_h=pad_h,
+        pad_w=pad_w,
+        dilate_h=dilate_h,
+        dilate_w=dilate_w,
+        strategy=get_execution_strategy(),
+        mode=conv_mode,
+        compute_mode=compute_mode,
+        sparse=sparse_type,
+    )
+    (output, updated_mask) = apply(op, inp, mask, weight)
+    if bias is not None:
+        output += bias
+    return output, updated_mask
 
 
 def max_pool2d(
