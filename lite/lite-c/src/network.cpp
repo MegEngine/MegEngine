@@ -558,4 +558,19 @@ int LITE_share_runtime_memroy(LiteNetwork dst_network, LiteNetwork src_network) 
     LITE_CAPI_END();
 }
 
+int LITE_get_static_memory_alloc_info(LiteNetwork network, const char* log_dir) {
+    LITE_CAPI_BEGIN();
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
+    LITE_ASSERT(network, "The network pass to LITE api is null");
+    static_cast<lite::Network*>(network)->get_static_memory_alloc_info(log_dir);
+    return 0;
+#endif
+#endif
+    LITE_MARK_USED_VAR(network);
+    LITE_MARK_USED_VAR(log_dir);
+    LITE_THROW("Doesn't support get_static_memory_alloc_info().Please check macro.");
+    LITE_CAPI_END();
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

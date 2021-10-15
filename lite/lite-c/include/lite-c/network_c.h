@@ -512,6 +512,15 @@ LITE_API int LITE_enable_io_txt_dump(LiteNetwork network, const char* io_txt_out
  */
 LITE_API int LITE_enable_io_bin_dump(LiteNetwork network, const char* io_bin_out_dir);
 
+/**
+ * \brief get static peak memory info showed by Graph visualization
+ * \param[in] log_dir The dumped json file directory
+ * \return int if the return is not zero, error happened, the error message
+ * can get by LITE_get_last_error
+ */
+LITE_API int LITE_get_static_memory_alloc_info(
+        LiteNetwork network, const char* log_dir);
+
 #ifdef __cplusplus
 }
 #endif
