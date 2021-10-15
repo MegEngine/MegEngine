@@ -283,6 +283,20 @@ LiteDeviceType Network::get_device_type() const {
     LITE_ERROR_HANDLER_END
 }
 
+void Network::get_static_memory_alloc_info(const std::string& log_dir) const {
+    LITE_ERROR_HANDLER_BEGIN
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
+    LITE_ASSERT(m_loaded, "get_all_output_name should be used after model loaded.");
+    m_impl->get_static_memory_alloc_info(log_dir);
+    return;
+#endif
+#endif
+    LITE_MARK_USED_VAR(log_dir);
+    LITE_THROW("Doesn't support get_static_memory_alloc_info().Please check macro.");
+    LITE_ERROR_HANDLER_END
+}
+
 /*********************** MGE special network function ***************/
 
 void Runtime::set_cpu_threads_number(

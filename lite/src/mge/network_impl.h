@@ -163,6 +163,10 @@ public:
     //! directory, in binary format
     void enable_io_bin_dump(std::string io_bin_out_dir);
 
+    //! get static peak memory info showed by Graph visualization
+    void get_static_memory_alloc_info(
+            const std::string& log_dir = "logs/test") const override;
+
 private:
     //! construct the outputspec according to the m_network_io, and set the
     //! call_back to the outputspec

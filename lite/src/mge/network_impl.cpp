@@ -778,6 +778,16 @@ void inline NetworkImplDft::output_plugin_result() const {
     }
 #endif
 }
-#endif
 
+void NetworkImplDft::get_static_memory_alloc_info(const std::string& log_dir) const {
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
+    m_execute_func->get_static_memory_alloc_info(log_dir);
+    return;
+#endif
+#endif
+    LITE_MARK_USED_VAR(log_dir);
+}
+
+#endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -646,6 +646,35 @@ TEST(TestNetWork, GetModelExtraInfo) {
     printf("extra_info %s \n", extra_info.c_str());
 }
 
+#ifndef __IN_TEE_ENV__
+#if MGB_ENABLE_JSON
+TEST(TestNetWork, GetMemoryInfo) {
+    Config config;
+    auto lite_tensor = get_input_data("./input_data.npy");
+    std::string model_path = "./shufflenet.mge";
+
+    auto result_mgb = mgb_lar(model_path, config, "data", lite_tensor);
+
+    std::shared_ptr<Network> network = std::make_shared<Network>(config);
+    Runtime::set_cpu_threads_number(network, 2);
+
+    network->load_model(model_path);
+    network->get_static_memory_alloc_info();
+    std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
+
+    auto src_ptr = lite_tensor->get_memory_ptr();
+    auto src_layout = lite_tensor->get_layout();
+    input_tensor->reset(src_ptr, src_layout);
+
+    network->forward();
+    network->wait();
+    std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+
+    compare_lite_tensor<float>(output_tensor, result_mgb);
+}
+#endif
+#endif
+
 #if LITE_WITH_CUDA
 
 TEST(TestNetWork, BasicDevice) {

@@ -125,6 +125,14 @@ public:
 
     //! enable profile the network, a file will be generated
     virtual void enable_profile_performance(std::string profile_file_path) = 0;
+
+    //! get static peak memory info showed by Graph visualization
+    virtual void get_static_memory_alloc_info(const std::string& log_dir) const {
+        LITE_MARK_USED_VAR(log_dir);
+        LITE_THROW(
+                "This nerworkimpl doesn't support get_static_memory_alloc_info() "
+                "function.");
+    }
 };
 
 /******************************** friend class *****************************/

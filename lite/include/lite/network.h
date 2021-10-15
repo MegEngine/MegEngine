@@ -282,6 +282,9 @@ public:
     //! get device type
     LiteDeviceType get_device_type() const;
 
+    //! get static peak memory info showed by Graph visualization
+    void get_static_memory_alloc_info(const std::string& log_dir = "logs/test") const;
+
 public:
     friend class NetworkHelper;
 
