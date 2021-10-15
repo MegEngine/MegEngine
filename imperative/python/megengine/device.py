@@ -16,6 +16,7 @@ from .core._imperative_rt.common import (
 )
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
 from .core._imperative_rt.common import what_is_xpu as _what_is_xpu
+from .core._imperative_rt.utils import _try_coalesce_all_free_memory
 
 __all__ = [
     "is_cuda_available",
@@ -25,6 +26,7 @@ __all__ = [
     "get_mem_status_bytes",
     "get_cuda_compute_capability",
     "set_prealloc_config",
+    "coalesce_free_memory",
     "DeviceType",
 ]
 
@@ -186,3 +188,18 @@ def set_prealloc_config(
 
 def what_is_xpu():
     return _what_is_xpu().name.lower()
+
+
+def coalesce_free_memory():
+    r"""This function will try it best to free all consecutive free chunks back to operating system,
+    small pieces may not be returned.
+    
+    because of the async processing of megengine, the effect of this func may not be reflected 
+    immediately. if you want to see the effect immediately, you can call megengine._full_sync after
+    this func was called
+
+    .. note::
+    Please notice that this function will not move any memory in-use.
+    Please notice that this function may do nothing if there are no chunks that can be freed
+    """
+    return _try_coalesce_all_free_memory()

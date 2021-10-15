@@ -194,6 +194,10 @@ void init_utils(py::module m) {
     m.def("_get_device_count", &mgb::CompNode::get_device_count,
           "Get total number of specific devices on this system");
 
+    m.def("_try_coalesce_all_free_memory", &mgb::CompNode::try_coalesce_all_free_memory,
+          "This function will try it best to free all consecutive free chunks back to "
+          "operating system");
+
     using mgb::imperative::TensorSanityCheck;
     py::class_<TensorSanityCheck>(m, "TensorSanityCheckImpl")
             .def(py::init<>())
