@@ -83,70 +83,134 @@ private:
  * \brief iterate though each operator class name; useful for explicit
  *      instantialization of create_operator<> templates
  */
-#define MEGDNN_FOREACH_OPR_CLASS(cb)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-    cb(ConvolutionForward) cb(ConvolutionBackwardData) cb(ConvolutionBackwardFilter) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-            ConvPoolingForward) cb(ConvBiasForward) cb(Images2NeibsForward) cb(Images2NeibsBackward)                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-            cb(SlidingWindowTransposeForward) cb(SlidingWindowTransposeBackward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-                    ElemwiseForward) cb(ElemwiseMultiType) cb(AddUpdateForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         \
-                    cb(RelayoutForward) cb(PoolingForward) cb(PoolingBackward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-                            LocalForward) cb(LocalBackwardData) cb(LocalBackwardFilter)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-                            cb(LRNForward) cb(LRNBackward) cb(ROIPoolingForward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-                                    ROIPoolingBackward) cb(WarpPerspectiveForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-                                    cb(WarpPerspectiveBackwardData) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-                                            WarpPerspectiveBackwardMat) cb(DotForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-                                            cb(MatrixInverse) cb(MatrixMulForward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-                                                    BatchedMatrixMulForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-                                                    cb(SVDForward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \
-                                                            ReduceForward) cb(CondTake)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-                                                            cb(CumsumForward) cb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-                                                                    ArgmaxForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-                                                                    cb(ArgminForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-                                                                            cb(TransposeForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                        \
-                                                                                    cb(ConcatForward)                                                                                                                                                                                                                                                                                                                                                                                                                                                   \
-                                                                                            cb(SplitForward)                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-                                                                                                    cb(TileForward)                                                                                                                                                                                                                                                                                                                                                                                                                                     \
-                                                                                                            cb(TileBackward)                                                                                                                                                                                                                                                                                                                                                                                                                            \
-                                                                                                                    cb(RepeatForward)                                                                                                                                                                                                                                                                                                                                                                                                                   \
-                                                                                                                            cb(RepeatBackward)                                                                                                                                                                                                                                                                                                                                                                                                          \
-                                                                                                                                    cb(ArgsortForward)                                                                                                                                                                                                                                                                                                                                                                                                  \
-                                                                                                                                            cb(ArgsortBackward)                                                                                                                                                                                                                                                                                                                                                                                         \
-                                                                                                                                                    cb(TypeCvt)                                                                                                                                                                                                                                                                                                                                                                                         \
-                                                                                                                                                            cb(IndexingRemapForward)                                                                                                                                                                                                                                                                                                                                                                    \
-                                                                                                                                                                    cb(IndexingRemapBackward)                                                                                                                                                                                                                                                                                                                                                           \
-                                                                                                                                                                            cb(ChecksumForward) cb(IndexingOneHotForward) cb(IndexingSetOneHotForward) cb(IndexingMultiAxisVec) cb(IndexingSetMultiAxisVec) cb(IndexingIncrMultiAxisVec)                                                                                                                                                                                                                \
-                                                                                                                                                                                    cb(                                                                                                                                                                                                                                                                                                                                                                 \
-                                                                                                                                                                                            MeshIndexing) cb(IncrMeshIndexing) cb(SetMeshIndexing) cb(BatchedMeshIndexing) cb(BatchedIncrMeshIndexing) cb(BatchedSetMeshIndexing) cb(Linspace) cb(Eye) cb(SleepForward)                                                                                                                                                                                 \
-                                                                                                                                                                                            cb(UniformRNG) cb(GaussianRNG) cb(                                                                                                                                                                                                                                                                                                                          \
-                                                                                                                                                                                                    GammaRNG)                                                                                                                                                                                                                                                                                                                                           \
-                                                                                                                                                                                                    cb(BetaRNG) cb(PoissonRNG) cb(PermutationRNG) cb(ShuffleRNGForward) cb(ShuffleRNGBackward) cb(SeparableConvForward) cb(                                                                                                                                                                                                                             \
-                                                                                                                                                                                                            SeparableFilterForward)                                                                                                                                                                                                                                                                                                                     \
-                                                                                                                                                                                                            cb(                                                                                                                                                                                                                                                                                                                                         \
-                                                                                                                                                                                                                    BNForward) cb(BNBackward) cb(GroupLocalForward) cb(GroupLocalBackwardData)                                                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                    cb(GroupLocalBackwardFilter)                                                                                                                                                                                                                                                                                                        \
-                                                                                                                                                                                                                            cb(Flip) cb(                                                                                                                                                                                                                                                                                                                \
-                                                                                                                                                                                                                                    Rotate)                                                                                                                                                                                                                                                                                                             \
-                                                                                                                                                                                                                                    cb(                                                                                                                                                                                                                                                                                                                 \
-                                                                                                                                                                                                                                            ROICopy) cb(CvtColor) cb(WarpAffine) cb(GaussianBlur) cb(Resize) cb(ResizeBackward)                                                                                                                                                                                                                         \
-                                                                                                                                                                                                                                            cb(ParamPackConcat) cb(MaxTensorDiff) cb(MaskConvForward) cb(                                                                                                                                                                                                                                               \
-                                                                                                                                                                                                                                                    MaskPropagate)                                                                                                                                                                                                                                                                                      \
-                                                                                                                                                                                                                                                    cb(Convolution3DForward)                                                                                                                                                                                                                                                                            \
-                                                                                                                                                                                                                                                            cb(Convolution3DBackwardData) cb(Convolution3DBackwardFilter) cb(DeformableConvForward) cb(                                                                                                                                                                                                 \
-                                                                                                                                                                                                                                                                    DeformableConvBackwardFilter)                                                                                                                                                                                                                                                       \
-                                                                                                                                                                                                                                                                    cb(                                                                                                                                                                                                                                                                                 \
-                                                                                                                                                                                                                                                                            DeformableConvBackwardData) cb(DeformablePSROIPoolingForward) cb(DeformablePSROIPoolingBackward) cb(RelayoutFormat) cb(TopK)                                                                                                                                                \
-                                                                                                                                                                                                                                                                            cb(PowC) cb(LocalShareForward) cb(                                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                                                                                    LocalShareBackwardData) cb(LocalShareBackwardFilter)                                                                                                                                                                                                                \
-                                                                                                                                                                                                                                                                                    cb(                                                                                                                                                                                                                                                                 \
-                                                                                                                                                                                                                                                                                            ROIAlignForward) cb(ROIAlignBackward) cb(CorrelationForward) cb(CorrelationBackwardData1) cb(CorrelationBackwardData2) cb(BatchConvBiasForward) cb(Remap) cb(RemapBackwardData) cb(RemapBackwardMat) cb(AdaptivePoolingForward) cb(AdaptivePoolingBackward) \
-                                                                                                                                                                                                                                                                                            cb(DctChannelSelectForward) cb(FakeQuantForward) cb(FakeQuantBackward)                                                                                                                                                                                      \
-                                                                                                                                                                                                                                                                                                    cb(TQTForward) cb(                                                                                                                                                                                                                                  \
-                                                                                                                                                                                                                                                                                                            TQTBackward)                                                                                                                                                                                                                                \
-                                                                                                                                                                                                                                                                                                            cb(CheckNonFinite)                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                                                                                                                    cb(LSQForward) cb(                                                                                                                                                                                                                  \
-                                                                                                                                                                                                                                                                                                                            LSQBackward)                                                                                                                                                                                                                \
-                                                                                                                                                                                                                                                                                                                            cb(Fill) cb(                                                                                                                                                                                                                \
-                                                                                                                                                                                                                                                                                                                                    PaddingForward)                                                                                                                                                                                                     \
-                                                                                                                                                                                                                                                                                                                                    cb(PaddingBackward)
+// clang-format off
+#define MEGDNN_FOREACH_OPR_CLASS(cb) \
+    cb(ConvolutionForward) \
+    cb(ConvolutionBackwardData) \
+    cb(ConvolutionBackwardFilter) \
+    cb(ConvPoolingForward) \
+    cb(ConvBiasForward) \
+    cb(Images2NeibsForward) \
+    cb(Images2NeibsBackward) \
+    cb(SlidingWindowTransposeForward) \
+    cb(SlidingWindowTransposeBackward) \
+    cb(ElemwiseForward) \
+    cb(ElemwiseMultiType) \
+    cb(AddUpdateForward) \
+    cb(RelayoutForward) \
+    cb(PoolingForward) \
+    cb(PoolingBackward) \
+    cb(LocalForward) \
+    cb(LocalBackwardData) \
+    cb(LocalBackwardFilter) \
+    cb(LRNForward) \
+    cb(LRNBackward) \
+    cb(ROIPoolingForward) \
+    cb(ROIPoolingBackward) \
+    cb(WarpPerspectiveForward) \
+    cb(WarpPerspectiveBackwardData) \
+    cb(WarpPerspectiveBackwardMat) \
+    cb(DotForward) \
+    cb(MatrixInverse) \
+    cb(MatrixMulForward) \
+    cb(BatchedMatrixMulForward) \
+    cb(SVDForward) \
+    cb(ReduceForward) \
+    cb(CondTake) \
+    cb(CumsumForward) \
+    cb(ArgmaxForward) \
+    cb(ArgminForward) \
+    cb(TransposeForward) \
+    cb(ConcatForward) \
+    cb(SplitForward) \
+    cb(TileForward) \
+    cb(TileBackward) \
+    cb(RepeatForward) \
+    cb(RepeatBackward) \
+    cb(ArgsortForward) \
+    cb(ArgsortBackward) \
+    cb(TypeCvt) \
+    cb(IndexingRemapForward) \
+    cb(IndexingRemapBackward) \
+    cb(ChecksumForward) \
+    cb(IndexingOneHotForward) \
+    cb(IndexingSetOneHotForward) \
+    cb(IndexingMultiAxisVec) \
+    cb(IndexingSetMultiAxisVec) \
+    cb(IndexingIncrMultiAxisVec) \
+    cb(MeshIndexing) \
+    cb(IncrMeshIndexing) \
+    cb(SetMeshIndexing) \
+    cb(BatchedMeshIndexing) \
+    cb(BatchedIncrMeshIndexing) \
+    cb(BatchedSetMeshIndexing) \
+    cb(Linspace) \
+    cb(Eye) \
+    cb(SleepForward) \
+    cb(UniformRNG) \
+    cb(GaussianRNG) \
+    cb(GammaRNG) \
+    cb(BetaRNG) \
+    cb(PoissonRNG) \
+    cb(PermutationRNG) \
+    cb(ShuffleRNGForward) \
+    cb(ShuffleRNGBackward) \
+    cb(SeparableConvForward) \
+    cb(SeparableFilterForward) \
+    cb(BNForward) \
+    cb(BNBackward) \
+    cb(GroupLocalForward) \
+    cb(GroupLocalBackwardData) \
+    cb(GroupLocalBackwardFilter) \
+    cb(Flip) \
+    cb(Rotate) \
+    cb(ROICopy) \
+    cb(CvtColor) \
+    cb(WarpAffine) \
+    cb(GaussianBlur) \
+    cb(Resize) \
+    cb(ResizeBackward) \
+    cb(ParamPackConcat) \
+    cb(MaxTensorDiff) \
+    cb(MaskConvForward) \
+    cb(MaskPropagate) \
+    cb(Convolution3DForward) \
+    cb(Convolution3DBackwardData) \
+    cb(Convolution3DBackwardFilter) \
+    cb(DeformableConvForward) \
+    cb(DeformableConvBackwardFilter) \
+    cb(DeformableConvBackwardData) \
+    cb(DeformablePSROIPoolingForward) \
+    cb(DeformablePSROIPoolingBackward) \
+    cb(RelayoutFormat) \
+    cb(TopK) \
+    cb(PowC) \
+    cb(LocalShareForward) \
+    cb(LocalShareBackwardData) \
+    cb(LocalShareBackwardFilter) \
+    cb(ROIAlignForward) \
+    cb(ROIAlignBackward) \
+    cb(CorrelationForward) \
+    cb(CorrelationBackwardData1) \
+    cb(CorrelationBackwardData2) \
+    cb(BatchConvBiasForward) \
+    cb(Remap) \
+    cb(RemapBackwardData) \
+    cb(RemapBackwardMat) \
+    cb(AdaptivePoolingForward) \
+    cb(AdaptivePoolingBackward) \
+    cb(DctChannelSelectForward) \
+    cb(FakeQuantForward) \
+    cb(FakeQuantBackward) \
+    cb(TQTForward) \
+    cb(TQTBackward) \
+    cb(CheckNonFinite) \
+    cb(LSQForward) \
+    cb(LSQBackward) \
+    cb(Fill) \
+    cb(PaddingForward) \
+    cb(PaddingBackward)
+// clang-format on
 
 /*!
  * \brief specialize HandleImpl::create_operator for a single opr type;
