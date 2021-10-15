@@ -290,6 +290,7 @@ class _NetworkAPI(_LiteCObjBase):
         ("LITE_set_async_callback", [_Cnetwork, LiteAsyncCallback]),
         ("LITE_set_start_callback", [_Cnetwork]),
         ("LITE_set_finish_callback", [_Cnetwork]),
+        ("LITE_get_static_memory_alloc_info", [_Cnetwork, c_char_p]),
     ]
 
 
@@ -532,3 +533,7 @@ class LiteNetwork(object):
     def io_bin_dump(self, bin_dir):
         c_dir = bin_dir.encode("utf-8")
         self._api.LITE_enable_io_bin_dump(self._network, c_dir)
+
+    def get_static_memory_alloc_info(self, log_dir="logs/test"):
+        c_log_dir = log_dir.encode("utf-8")
+        self._api.LITE_get_static_memory_alloc_info(self._network, c_log_dir)
