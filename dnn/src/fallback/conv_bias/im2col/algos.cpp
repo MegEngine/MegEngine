@@ -8,11 +8,11 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-
-#include "src/fallback/conv_bias/im2col/algos.h"
 #include "megdnn/opr_param_defs.h"
+
 #include "src/common/opr_delegate.h"
 #include "src/fallback/conv_bias/common.h"
+#include "src/fallback/conv_bias/im2col/algos.h"
 #include "src/fallback/conv_bias/im2col/factory.h"
 #include "src/fallback/conv_bias/im2col/im2col_kerns.h"
 #include "src/fallback/conv_bias/opr_impl.h"
@@ -68,16 +68,16 @@ static void choice_ohw_oc_block(
         fallback::MatrixMulImpl::AlgoBase::PackMode pack_mode) {
     //! calculate m_oc_tile_size in choice_ohw_oc_block() fucntion,
     //! when ohw_tile_size < this value ohw_tile_size = ohw
-    static constexpr size_t DEFAULT_OHW_MIN_TILE_SIZE = 32;
+    size_t DEFAULT_OHW_MIN_TILE_SIZE = round_up(static_cast<size_t>(32), block_n);
     //! when nr_threads > 1 and round(ohw,nr_threads)>nr_threads,
     //! oc_tile_size = DEFAULT_OC_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_TILE_SIZE = 512;
+    size_t DEFAULT_OC_TILE_SIZE = round_up(static_cast<size_t>(512), block_m);
     //! when oc_tile_size > this value m_oc_tile_size =
     //! DEFAULT_OC_MAX_TILE_SIZE
-    static constexpr size_t DEFAULT_OC_MAX_TILE_SIZE = 1024;
+    size_t DEFAULT_OC_MAX_TILE_SIZE = round_up(static_cast<size_t>(1024), block_m);
     //! when oc_tile_size < this value oc_tile_size =
     //! DEFAULT_OC_MIN_TILE_SIZE the purpose is aligning the calculation
-    static constexpr size_t DEFAULT_OC_MIN_TILE_SIZE = 128;
+    size_t DEFAULT_OC_MIN_TILE_SIZE = round_up(static_cast<size_t>(128), block_m);
     size_t nr_threads = param.nr_threads;
     size_t OC = param.filter_meta.ocpg;
     size_t ohw = param.osz[0] * param.osz[1];

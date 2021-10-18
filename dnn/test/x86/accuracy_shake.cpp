@@ -84,6 +84,15 @@ TEST_F(X86, SHAKE_MATRIX_MUL_FORWARD) {
             .exec({{20, 100}, {100, 60}, {}});
 }
 
+TEST_F(X86, SHAKE_MATRIX_MUL_6x16_FORWARD) {
+    AccuracyShakeChecker<MatrixMul> checker(handle());
+    checker.set_before_exec_callback(AlgoGenerator<MatrixMul>("X86_F32_6x16"));
+    checker.set_dtype(0, dtype::Float32())
+            .set_dtype(1, dtype::Float32())
+            .set_dtype(2, dtype::Float32())
+            .exec({{20, 100}, {100, 60}, {}});
+}
+
 }  // namespace test
 }  // namespace megdnn
 

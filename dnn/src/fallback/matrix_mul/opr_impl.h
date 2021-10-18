@@ -123,6 +123,7 @@ public:
             X86_INT8X8X16_SSE,
             X86_INT8X8X32_SSE_4X8X2,
             X86_F32_MK8_8X8,
+            X86_F32_6x16,
             X86_INT8X8X32_VNNI,
             X86_INT8X8X32_MKLDNN,
 #elif MEGDNN_AARCH64 || MEGDNN_ARMV7

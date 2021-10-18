@@ -34,6 +34,7 @@ class MatrixMulImpl::AlgoPack : NonCopyableObj {
     AlgoInt8x8x16AVX2 algoint8x8x16avx2_m4n16k2;
     AlgoInt8x8x16SSE algoint8x8x16sse_m4n8k2;
     AlgoF32MK8_8x8 algof32mk8_8x8;
+    AlgoFloatAVX2M6N16 algof32_6x16;
 
     SmallVector<fallback::MatrixMulImpl::AlgoBase*> m_all_algos;
     fallback::MatrixMulImpl::AlgoBase::Mapper m_all_algos_map;
@@ -51,6 +52,7 @@ public:
         m_all_algos.emplace_back(&algoint8x8x32sse_m4n8k2);
         m_all_algos.emplace_back(&algoint8x8x16sse_m4n8k2);
         m_all_algos.emplace_back(&algof32mk8_8x8);
+        m_all_algos.emplace_back(&algof32_6x16);
 #if MEGDNN_X86_WITH_MKL_DNN
         m_all_algos.emplace_back(&algoint8x8x32mkldnn);
 #endif

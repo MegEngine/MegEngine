@@ -1150,6 +1150,56 @@ TEST_F(X86, CONV_BIAS_IM2COLMATMUL_FP32_NOPACK_PREPROCESS) {
 
 #endif
 
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_6x16) {
+    using namespace conv_bias;
+    std::vector<TestArg> args;
+    auto run = [&](size_t oc, size_t ic, size_t w, size_t h, size_t kernel, size_t p,
+                   NonlineMode nonline_mode) {
+        if (w + 2 * p < kernel || h + 2 * p < kernel)
+            return;
+        param::ConvBias param;
+        param.stride_h = 1;
+        param.stride_w = 1;
+        param.pad_h = p;
+        param.pad_w = p;
+        param.nonlineMode = nonline_mode;
+
+        //! no bias
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{1, oc, 1, 1});
+        args.emplace_back(
+                param, TensorShape{1, ic, h, w}, TensorShape{oc, ic, kernel, kernel},
+                TensorShape{
+                        1, oc, (h + 2 * p - kernel) / param.stride_h + 1,
+                        (w + 2 * p - kernel) / param.stride_w + 1});
+    };
+
+    for (size_t kernel : {2, 3, 4, 5, 6, 7})
+        for (size_t ic : {1, 4, 8, 16})
+            for (size_t oc : {1, 4, 8, 16, 300})
+                for (size_t p : {0, 2})
+                    for (size_t size : {8, 24})
+                        for (NonlineMode nonline_mode :
+                             {NonlineMode::IDENTITY, NonlineMode::RELU}) {
+                            run(oc, ic, size, size, kernel, p, nonline_mode);
+                        }
+
+    run(2046, 8, 20, 20, 3, 1, NonlineMode::IDENTITY);
+    Checker<ConvBias> checker(handle());
+
+#define cb(algo_name)                                                                \
+    checker.set_before_exec_callback(                                                \
+            conv_bias::ConvBiasAlgoChecker<ConvBias>(algo_name));                    \
+    for (auto&& arg : args) {                                                        \
+        checker.set_param(arg.param).execs({arg.src, arg.filter, arg.bias, {}, {}}); \
+    }
+    cb("IM2COLMATMUL:X86_F32_6x16:192");
+}
+
 #if MEGDNN_X86_WITH_MKL && SUPPORT_MKL_PACKED_GEMM
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_FP32_PACKA) {
     using namespace conv_bias;
@@ -1434,6 +1484,12 @@ TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_INT8X8X32_PREPROCESS) {
 /************************* End Conv1x1 PackA ************************/
 
 #endif
+
+TEST_F(X86_MULTI_THREADS, CONV_BIAS_CONV1X1_S1_FP32_6x16) {
+    using namespace conv_bias;
+    std::vector<conv_bias::TestArg> args = get_conv_bias_1x1_args(false, false);
+    check_conv_bias(args, handle(), "CONV1x1:X86_F32_6x16:48");
+}
 
 TEST_F(X86_MULTI_THREADS, CONV_BIAS_IM2COLMATMUL_QINT8) {
     using namespace conv_bias;
@@ -2642,6 +2698,148 @@ TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32_single_thread)
     std::string algo_name = "IM2COLMATMUL:X86_F32_MKL_PACKA:192";
     std::string algo_name1 = "IM2COLMATMUL:X86_F32_BLAS:192";
     printf("Benchmark IM2COLMATMUL:X86_F32_BLAS algo\n");
+    benchmark_impl_comp(
+            param, shapes_and_computation, algo_name, algo_name1, RUNS, {1, {4}},
+            {1, {4}}, data_type);
+    benchmark_impl_comp(
+            param, shapes_and_computation, algo_name, algo_name1, RUNS, {1, {7}},
+            {1, {7}}, data_type);
+    shapes_and_computation.clear();
+}
+
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32_6x16) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
+        TensorShape dst{N, OC, H, W};
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 1);
+
+    bench_case(1, 64, 32, 7, 7, 3, 1);
+    bench_case(1, 64, 64, 7, 7, 3, 1);
+    bench_case(1, 64, 128, 7, 7, 3, 1);
+    bench_case(1, 64, 256, 7, 7, 3, 1);
+    bench_case(1, 64, 512, 7, 7, 3, 1);
+    bench_case(1, 64, 1024, 7, 7, 3, 1);
+
+    bench_case(1, 64, 32, 14, 14, 3, 1);
+    bench_case(1, 64, 64, 14, 14, 3, 1);
+    bench_case(1, 64, 128, 14, 14, 3, 1);
+    bench_case(1, 64, 256, 14, 14, 3, 1);
+    bench_case(1, 64, 512, 14, 14, 3, 1);
+
+    bench_case(1, 64, 1024, 14, 14, 3, 1);
+    bench_case(1, 128, 128, 14, 14, 3, 1);
+    bench_case(1, 128, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 256, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 1024, 14, 14, 3, 1);
+    bench_case(1, 1024, 1024, 14, 14, 3, 1);
+
+    std::string algo_name = "IM2COLMATMUL:X86_F32_6x16:192";
+    printf("Benchmark IM2COLMATMUL:X86_F32_6x16 algo\n");
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {4}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {4, {4, 5, 6, 7}}, {1, {7}},
+            data_type);
+    benchmark_impl(
+            param, shapes_and_computation, algo_name, RUNS, {2, {4, 5}}, {1, {4}},
+            data_type);
+    shapes_and_computation.clear();
+}
+
+TEST_F(X86_BENCHMARK_MULTI_THREADS, BENCHMARK_CONVBIAS_IM2COL_F32_6X16_single_thread) {
+    constexpr size_t RUNS = 50;
+
+    param::ConvBias param;
+    param.nonlineMode = param::ConvBias::NonlineMode::RELU;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+
+    std::vector<DType> data_type = {
+            dtype::Float32(), dtype::Float32(), dtype::Float32(), dtype::Float32()};
+    std::vector<std::pair<SmallVector<TensorShape>, float>> shapes_and_computation;
+    auto bench_case = [&](size_t N, size_t IC, size_t OC, size_t H, size_t W, size_t FS,
+                          size_t group) {
+        SmallVector<TensorShape> shapes{
+                {N, IC, H, W},
+                {OC / group, IC / group, FS, FS},
+                {1, OC, 1, 1},
+                {},
+                {N, OC, H, W}};
+        TensorShape dst{N, OC, H, W};
+        float computations = ((IC / group) * FS * FS * dst.total_nr_elems() * 2 +
+                              dst.total_nr_elems()) *
+                             1e-6;
+        shapes_and_computation.push_back(std::make_pair(shapes, computations));
+    };
+
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 200, 200, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 128, 128, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 100, 100, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 1);
+    bench_case(1, 32, 32, 80, 80, 3, 1);
+
+    bench_case(1, 64, 32, 7, 7, 3, 1);
+    bench_case(1, 64, 64, 7, 7, 3, 1);
+    bench_case(1, 64, 128, 7, 7, 3, 1);
+    bench_case(1, 64, 256, 7, 7, 3, 1);
+    bench_case(1, 64, 512, 7, 7, 3, 1);
+    bench_case(1, 64, 1024, 7, 7, 3, 1);
+
+    bench_case(1, 64, 32, 14, 14, 3, 1);
+    bench_case(1, 64, 64, 14, 14, 3, 1);
+    bench_case(1, 64, 128, 14, 14, 3, 1);
+    bench_case(1, 64, 256, 14, 14, 3, 1);
+    bench_case(1, 64, 512, 14, 14, 3, 1);
+
+    bench_case(1, 64, 1024, 14, 14, 3, 1);
+    bench_case(1, 128, 128, 14, 14, 3, 1);
+    bench_case(1, 128, 256, 14, 14, 3, 1);
+    bench_case(1, 512, 512, 14, 14, 3, 1);
+    bench_case(1, 256, 512, 14, 14, 3, 1);
+    bench_case(1, 512, 1024, 14, 14, 3, 1);
+    bench_case(1, 1024, 1024, 14, 14, 3, 1);
+
+    std::string algo_name = "IM2COLMATMUL:X86_F32_MKL_PACKA:192";
+    std::string algo_name1 = "IM2COLMATMUL:X86_F32_6x16:192";
+    printf("Benchmark IM2COLMATMUL:X86_F32_6x16 algo\n");
     benchmark_impl_comp(
             param, shapes_and_computation, algo_name, algo_name1, RUNS, {1, {4}},
             {1, {4}}, data_type);

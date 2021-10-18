@@ -309,6 +309,33 @@ void gemm_s8s8s32_sse_4x8x2(const MatrixMulImpl::KernParam& kern_param) {
     MIDOUT_END();
 }
 
+void gemm_f32_avx2_6x16(const MatrixMulImpl::KernParam& kern_param) {
+    MEGDNN_MARK_USED_VAR(kern_param);
+    MIDOUT_BEGIN(megdnn_x86_matmul_kern_avx2_6x16x2, midout_iv(0)) {
+        constexpr int cacheline = 64;
+        const size_t m = kern_param.M;
+        const size_t n = kern_param.N;
+        const size_t k = kern_param.K;
+        const bool trans_a = kern_param.trA;
+        const bool trans_b = kern_param.trB;
+        const size_t lda = kern_param.LDA;
+        const size_t ldb = kern_param.LDB;
+        const size_t ldc = kern_param.LDC;
+        auto a_type = kern_param.A_type;
+        auto b_type = kern_param.B_type;
+        auto c_type = kern_param.C_type;
+        const auto a_ptr = kern_param.A<float>();
+        const auto b_ptr = kern_param.B<float>();
+        auto c_ptr = kern_param.C<float>();
+        x86::matmul::sgemm_pack_6x16_avx2 strategy(m, n, k, a_type, b_type, c_type);
+
+        megdnn::matmul::GemmInterleaved<x86::matmul::sgemm_pack_6x16_avx2>(
+                m, n, k, trans_a, trans_b, strategy, cacheline)
+                .execute(a_ptr, lda, b_ptr, ldb, c_ptr, ldc, kern_param.workspace_ptr);
+    }
+    MIDOUT_END();
+}
+
 }  // namespace
 
 /*************************AlgoInt8x8x16AVX2********************/
@@ -624,5 +651,44 @@ size_t MatrixMulImpl::AlgoF32MK8_8x8::get_workspace(
     }
     MIDOUT_END();
 }
+
+/*************************AlgoFloatAVX2M6N16********************/
+MatrixMulImpl::kern_t MatrixMulImpl::AlgoFloatAVX2M6N16::get_kern(
+        const KernSizeParam&) const {
+    return gemm_f32_avx2_6x16;
+}
+bool MatrixMulImpl::AlgoFloatAVX2M6N16::usable(
+        const KernSizeParam& kern_size_param) const {
+    bool is_param_ok =
+            kern_size_param.A_type.enumv() == kern_size_param.B_type.enumv() &&
+            ((kern_size_param.A_type.enumv() == DTypeEnum::Float32 &&
+              kern_size_param.C_type.enumv() == DTypeEnum::Float32)) &&
+            kern_size_param.compute_mode == Param::ComputeMode::DEFAULT &&
+            kern_size_param.format == Param::Format::DEFAULT &&
+            is_supported(SIMDType::AVX2);
+    return is_param_ok;
+}
+size_t MatrixMulImpl::AlgoFloatAVX2M6N16::get_workspace(
+        const KernSizeParam& kern_param) const {
+    constexpr int cacheline = 64;
+    const size_t m = kern_param.M;
+    const size_t n = kern_param.N;
+    const size_t k = kern_param.K;
+    const bool trans_a = kern_param.trA;
+    const bool trans_b = kern_param.trB;
+    auto a_type = kern_param.A_type;
+    auto b_type = kern_param.B_type;
+    auto c_type = kern_param.C_type;
+    x86::matmul::sgemm_pack_6x16_avx2 strategy(m, n, k, a_type, b_type, c_type);
+
+    return megdnn::matmul::GemmInterleaved<x86::matmul::sgemm_pack_6x16_avx2>(
+                   m, n, k, trans_a, trans_b, strategy, cacheline)
+            .get_workspace_size();
+}
+
+MEGDNN_REG_GEMM_FUNC_FOR_IM2COL_IMPL_DETAIL(
+        AlgoFloatAVX2M6N16, megdnn_x86_matmul_kern, "AlgoFloatAVX2M6N16"_hash,
+        x86::matmul::sgemm_pack_6x16_avx2, float, float, float, AlgoDataType::FLOAT32,
+        DEFAULT);
 
 // vim: syntax=cpp.doxygen

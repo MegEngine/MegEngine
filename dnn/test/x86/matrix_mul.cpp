@@ -83,6 +83,12 @@ TEST_F(X86, MATRIX_MUL_AVX2_MK8_8X8) {
             "X86_F32MK8_8X8", param::MatrixMul::Format::MK8, 1, 1e-3, false);
 }
 
+TEST_F(X86, MATRIX_MUL_AVX2_6x16) {
+    matrix_mul::check_matrix_mul(
+            dtype::Float32{}, dtype::Float32{}, dtype::Float32{}, handle(),
+            "X86_F32_6x16", param::MatrixMul::Format::DEFAULT, 1, 1e-3, false);
+}
+
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(X86, BENCHMARK_MATRIX_MUL_AVX2_MK8_8X8) {
@@ -90,6 +96,14 @@ TEST_F(X86, BENCHMARK_MATRIX_MUL_AVX2_MK8_8X8) {
     matrix_mul::benchmark_with_contrast(
             handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
             "X86_F32MK8_8X8", param::MatrixMul::Format::MK8, dtype::Float32{},
+            dtype::Float32{}, dtype::Float32{}, "X86_F32_BLAS");
+}
+
+TEST_F(X86, BENCHMARK_MATRIX_MUL_AVX2_6x16) {
+    auto args = matrix_mul::get_benchmark_matmul_mk_packed_args(8);
+    matrix_mul::benchmark_with_contrast(
+            handle(), args, dtype::Float32{}, dtype::Float32{}, dtype::Float32{},
+            "X86_F32_6x16", param::MatrixMul::Format::DEFAULT, dtype::Float32{},
             dtype::Float32{}, dtype::Float32{}, "X86_F32_BLAS");
 }
 

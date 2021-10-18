@@ -67,6 +67,7 @@ private:
     class AlgoInt8x8x16SSE;
     class AlgoPack;
     class AlgoF32MK8_8x8;
+    class AlgoFloatAVX2M6N16;
 
 public:
     static const AlgoPack& algo_pack();
