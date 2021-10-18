@@ -32,8 +32,7 @@ const char* target_to_string(Target target) {
         return #_target
     switch (target) {
         cb(CUDA);
-        cb(X86);
-        cb(ARM);
+        cb(CPU);
         cb(UNSPEC);
         default:
             mgb_assert(
@@ -89,7 +88,7 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
     return ctx;
 }
 
-std::unique_ptr<LayoutTransformContext> make_arm_ctx(
+std::unique_ptr<LayoutTransformContext> make_cpu_ctx(
         OprFormatConfigID base_config_id, TensorFormats base_tensor_format) {
     OprList opr_list = {
             opr::ConvBiasForward::typeinfo(),
@@ -104,34 +103,30 @@ std::unique_ptr<LayoutTransformContext> make_arm_ctx(
     };
 
     SmallVector<TensorFormats> available_tensor_formats = {
-            TensorFormats::NCHW, TensorFormats::NCHWc4,
-            DNN_INC_FLOAT16(TensorFormats::NCHWc8)};
-    Attribute attribute = {base_config_id, base_tensor_format, Target::ARM};
+            TensorFormats::NCHW, TensorFormats::NCHWc4, TensorFormats::NCHWc8};
+    Attribute attribute = {base_config_id, base_tensor_format, Target::CPU};
     auto ctx = std::make_unique<LayoutTransformContext>(
             std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
                {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
-                OprFormatConfigID::NCHW44_HYBRID,
-                DNN_INC_FLOAT16(OprFormatConfigID::NCHW88),
-                DNN_INC_FLOAT16(OprFormatConfigID::NCHW88_HYBRID),
-                OprFormatConfigID::NCHW44_DOT, OprFormatConfigID::NCHW44_DOT_HYBRID})
+                OprFormatConfigID::NCHW44_HYBRID, OprFormatConfigID::NCHW88,
+                OprFormatConfigID::NCHW88_HYBRID, OprFormatConfigID::NCHW44_DOT,
+                OprFormatConfigID::NCHW44_DOT_HYBRID})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
                     {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
-                     OprFormatConfigID::NCHW44_HYBRID,
-                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88),
-                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88_HYBRID),
-                     OprFormatConfigID::NCHW44_DOT,
+                     OprFormatConfigID::NCHW44_HYBRID, OprFormatConfigID::NCHW88,
+                     OprFormatConfigID::NCHW88_HYBRID, OprFormatConfigID::NCHW44_DOT,
                      OprFormatConfigID::NCHW44_DOT_HYBRID})
             .add_opr_config(
                     opr::PoolingForward::typeinfo(),
                     {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
-                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88)})
+                     OprFormatConfigID::NCHW88})
             .add_opr_config(
                     opr::ResizeForward::typeinfo(),
                     {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW44,
-                     DNN_INC_FLOAT16(OprFormatConfigID::NCHW88)});
+                     OprFormatConfigID::NCHW88});
     return ctx;
 }
 }  // namespace
@@ -162,8 +157,8 @@ std::unique_ptr<LayoutTransformContext> LayoutTransformContext::make(
     switch (target) {
         case Target::CUDA:
             return make_cuda_ctx(base_config_id, base_tensor_format);
-        case Target::ARM:
-            return make_arm_ctx(base_config_id, base_tensor_format);
+        case Target::CPU:
+            return make_cpu_ctx(base_config_id, base_tensor_format);
         default:
             mgb_assert(false, "unsupported target %s\n", target_to_string(target));
     }

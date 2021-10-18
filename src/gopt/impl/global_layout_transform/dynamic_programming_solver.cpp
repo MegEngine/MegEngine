@@ -491,7 +491,6 @@ DynamicProgrammingSolver::Solution DynamicProgrammingSolver::Impl::solve(
             auto& states = cuts.back().states;
             prune(states, edges[cur], ctx);
             force_prune(states);
- 
         }
         cur++;
     }

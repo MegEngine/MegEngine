@@ -57,7 +57,10 @@ SymbolVar Network::add_group_conv(
             {groups, output_channels / groups, input_channels / groups, kern_size[0],
              kern_size[1]});
     auto bias = add_cvar(ssprintf("b%d", bias_idx).c_str(), {1, output_channels, 1, 1});
-    mgb_assert(out_dtype.category() == DTypeCategory::FLOAT);
+    if (out_dtype.category() == DTypeCategory::QUANTIZED) {
+        weight = add_type_cvt(weight, out_dtype);
+        bias = add_type_cvt(bias, dtype::QuantizedS32{1.f});
+    }
     opr::ConvBias::Param param;
     param.sparse = opr::ConvBias::Param::Sparse::GROUP;
     param.stride_h = stride[0], param.stride_w = stride[1];
@@ -68,8 +71,15 @@ SymbolVar Network::add_group_conv(
         param.nonlineMode = opr::ConvBias::Param::NonlineMode::IDENTITY;
     }
 
-    auto conv = opr::ConvBias::make(
-            f, weight, bias, param, {}, OperatorNodeConfig{out_dtype});
+    weight_idx++;
+    bias_idx++;
+    SymbolVar conv;
+    if (out_dtype.category() == DTypeCategory::QUANTIZED) {
+        conv = opr::ConvBias::make(
+                f, weight, bias, param, {}, OperatorNodeConfig{out_dtype});
+    } else {
+        conv = opr::ConvBias::make(f, weight, bias, param, {});
+    }
     weight_idx++;
     bias_idx++;
     return conv;
@@ -269,17 +279,17 @@ SymbolVarArray mgb::make_det(Network& network, size_t batch, DType out_dtype) {
 
 SymbolVar mgb::bottleneck(
         Network& network, SymbolVar f, size_t input_channels, size_t channels, size_t t,
-        size_t stride) {
+        size_t stride, DType out_dtype) {
     size_t in_channels = f.node()->shape()[1];
     SymbolVar x = f;
     if (t != 1) {
         x = network.add_conv(
-                f, input_channels * t, {1, 1}, dtype::Float32(), true, {1, 1}, {0, 0});
+                f, input_channels * t, {1, 1}, out_dtype, true, {1, 1}, {0, 0});
     }
     x = network.add_group_conv(
-            x, input_channels * t, input_channels * t, {3, 3}, dtype::Float32(), true,
+            x, input_channels * t, input_channels * t, {3, 3}, out_dtype, true,
             {stride, stride}, {1, 1});
-    x = network.add_conv(x, channels, {1, 1}, dtype::Float32(), false, {1, 1}, {0, 0});
+    x = network.add_conv(x, channels, {1, 1}, out_dtype, false, {1, 1}, {0, 0});
     if (stride == 1 && in_channels == channels)
         x = f + x;
     return x;
@@ -287,11 +297,11 @@ SymbolVar mgb::bottleneck(
 
 SymbolVar mgb::bottleneck_group(
         Network& network, SymbolVar f, size_t input_channels, size_t channels,
-        size_t stages, size_t s, size_t t) {
+        size_t stages, size_t s, size_t t, DType out_dtype) {
     SymbolVar x = f;
     for (size_t i = 0; i < stages; ++i) {
         size_t stride = i == 0 ? s : 1;
-        x = bottleneck(network, x, input_channels, channels, t, stride);
+        x = bottleneck(network, x, input_channels, channels, t, stride, out_dtype);
         input_channels = channels;
     }
     return x;
@@ -307,22 +317,34 @@ size_t make_divisible(size_t v, size_t divisor) {
 }
 }  // namespace
 
-SymbolVar mgb::make_mobilenet_v2(Network& network, size_t batch) {
+SymbolVar mgb::make_mobilenet_v2(Network& network, size_t batch, DType out_dtype) {
     auto data = network.add_var("data", {batch, 3, 224, 224});
+    if (out_dtype.category() == DTypeCategory::QUANTIZED) {
+        data = network.add_type_cvt(data, dtype::QuantizedS8{1.f});
+    }
     constexpr size_t round_nearest = 8;
     auto x = network.add_conv(
-            data, make_divisible(32, round_nearest), {3, 3}, dtype::Float32(), true,
-            {2, 2}, {1, 1});
-    x = bottleneck(network, x, 32, make_divisible(16, round_nearest), 1, 1);
-    x = bottleneck_group(network, x, 16, make_divisible(24, round_nearest), 2, 2, 6);
-    x = bottleneck_group(network, x, 24, make_divisible(32, round_nearest), 3, 2, 6);
-    x = bottleneck_group(network, x, 32, make_divisible(64, round_nearest), 4, 2, 6);
-    x = bottleneck_group(network, x, 64, make_divisible(96, round_nearest), 3, 1, 6);
-    x = bottleneck_group(network, x, 96, make_divisible(160, round_nearest), 3, 2, 6);
-    x = bottleneck_group(network, x, 160, make_divisible(320, round_nearest), 1, 1, 6);
+            data, make_divisible(32, round_nearest), {3, 3}, out_dtype, true, {2, 2},
+            {1, 1});
+    x = bottleneck(network, x, 32, make_divisible(16, round_nearest), 1, 1, out_dtype);
+    x = bottleneck_group(
+            network, x, 16, make_divisible(24, round_nearest), 2, 2, 6, out_dtype);
+    x = bottleneck_group(
+            network, x, 24, make_divisible(32, round_nearest), 3, 2, 6, out_dtype);
+    x = bottleneck_group(
+            network, x, 32, make_divisible(64, round_nearest), 4, 2, 6, out_dtype);
+    x = bottleneck_group(
+            network, x, 64, make_divisible(96, round_nearest), 3, 1, 6, out_dtype);
+    x = bottleneck_group(
+            network, x, 96, make_divisible(160, round_nearest), 3, 2, 6, out_dtype);
+    x = bottleneck_group(
+            network, x, 160, make_divisible(320, round_nearest), 1, 1, 6, out_dtype);
     x = network.add_conv(
-            x, make_divisible(1280, round_nearest), {1, 1}, dtype::Float32(), true,
-            {1, 1}, {0, 0});
+            x, make_divisible(1280, round_nearest), {1, 1}, out_dtype, true, {1, 1},
+            {0, 0});
+    if (out_dtype.category() == DTypeCategory::QUANTIZED) {
+        x = network.add_type_cvt(x, dtype::Float32());
+    }
     return x;
 }
 

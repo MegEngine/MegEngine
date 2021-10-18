@@ -357,9 +357,8 @@ struct GraphTuningOptions {
     enum class Target : uint32_t {
         UNSPEC = 0,  ///< unspecific device target
         CUDA = 1,    ///< CUDA device, usually refer to GPU devices of Nvidia
-        X86 = 2,     ///< x86 cpu
-        ARM = 3,     ///< arm cpu
-        OPENCL = 4,  ///< opencl, usually run on mobile devices
+        CPU = 2,     ///< cpu
+        OPENCL = 3,  ///< opencl, usually run on mobile devices
     };
     Target target;
     bool layout_transform = false;  ///< whether to enable graph level

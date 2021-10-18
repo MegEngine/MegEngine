@@ -23,7 +23,7 @@
 #include "megbrain/plugin/profiler.h"
 #include "megbrain/serialization/serializer.h"
 
-#define MGB_WITH_CACHED_TEST 0
+#define MGB_WITH_CACHED_TEST 1
 
 #if MGB_WITH_CACHED_TEST
 #include "./cache_data.h"
@@ -923,9 +923,196 @@ TEST(TestLayoutTransform, MobileNetV2) {
     HostTensorND t2;
     auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
     func2->execute();
-    gprof.to_json_full(func2.get())->writeto_fpath(output_file("mobilenet_v2_f32.json"));
+    gprof.to_json_full(func2.get())
+            ->writeto_fpath(output_file("mobilenet_v2_f32.json"));
     /// check correct
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 
+TEST(TestLayoutTransform, MobileNetV2_NCHW88) {
+    auto cn = CompNode::load("cpu0");
+
+    Network network(cn);
+    auto output = make_mobilenet_v2(network, 1);
+
+    HostTensorND t1;
+    auto func1 = network.graph->compile({make_callback_copy(output, t1)});
+    func1->execute();
+
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
+    using OprList = LayoutTransformContext::OprList;
+    using Target = LayoutTransformContext::Target;
+    using Attribute = LayoutTransformContext::Attribute;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::Concat::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::WarpPerspectiveForward::typeinfo(),
+            opr::Resize::typeinfo(),
+    };
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW,
+            TensorFormats::NCHWc4,
+            TensorFormats::NCHWc8,
+    };
+    Attribute attribute = {
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {
+                       OprFormatConfigID::NCHW88,
+                       OprFormatConfigID::NCHW,
+                       OprFormatConfigID::NCHW88_HYBRID,
+               })
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {
+                            OprFormatConfigID::NCHW88,
+                            OprFormatConfigID::NCHW,
+                            OprFormatConfigID::NCHW88_HYBRID,
+                    })
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(), {
+                                                             OprFormatConfigID::NCHW,
+                                                             OprFormatConfigID::NCHW88,
+                                                     });
+#if MGB_WITH_CACHED_TEST
+    auto profiler = std::make_unique<ProfilerMock>(
+            static_cast<const uint8_t*>(TestLayoutTransform_MobileNetV2_NCHW88.data()),
+            TestLayoutTransform_MobileNetV2_NCHW88.size());
+#else
+    auto profiler = ProfilerBase::make_cached_profiler(
+            "TestLayoutTransform.MobileNetV2_NCHW88.cache");
+#endif
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
+    auto new_out_var = new_output[0];
+    /// check global layout transform pass
+    auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
+    ASSERT_EQ(nr_dimshuffle, 1u);
+    /// check first conv format
+    const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
+    const auto& cast = first_conv.cast_final_safe<opr::ConvBiasForward>();
+    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NCHW88);
+
+    GraphProfiler gprof{network.graph.get()};
+    HostTensorND t2;
+    auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
+    func2->execute();
+    gprof.to_json_full(func2.get())
+            ->writeto_fpath(output_file("mobilenet_v2_nchw88.json"));
+    /// check correct
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
+
+TEST(TestLayoutTransform, MobileNetV2_NCHW44_DOT) {
+    auto cn = CompNode::load("cpu0");
+
+    Network network(cn);
+    auto output = make_mobilenet_v2(network, 1, dtype::QuantizedS8{1.f});
+
+    HostTensorND t1;
+    auto func1 = network.graph->compile({make_callback_copy(output, t1)});
+    func1->execute();
+
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
+    using OprList = LayoutTransformContext::OprList;
+    using Target = LayoutTransformContext::Target;
+    using Attribute = LayoutTransformContext::Attribute;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(),
+            opr::ConvolutionForward::typeinfo(),
+            opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),
+            opr::TypeCvt::typeinfo(),
+            opr::Concat::typeinfo(),
+            opr::PoolingForward::typeinfo(),
+            opr::WarpPerspectiveForward::typeinfo(),
+            opr::Resize::typeinfo(),
+    };
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW,
+            TensorFormats::NCHWc4,
+            TensorFormats::NCHWc8,
+    };
+    Attribute attribute = {
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+               opr::ConvBiasForward::typeinfo(),
+               {
+                       OprFormatConfigID::NCHW,
+                       OprFormatConfigID::NCHW44,
+                       OprFormatConfigID::NCHW44_HYBRID,
+                       OprFormatConfigID::NCHW44_DOT,
+                       OprFormatConfigID::NCHW44_DOT_HYBRID,
+               })
+            .add_opr_config(
+                    opr::ConvolutionForward::typeinfo(),
+                    {
+                            OprFormatConfigID::NCHW,
+                            OprFormatConfigID::NCHW44,
+                            OprFormatConfigID::NCHW44_HYBRID,
+                            OprFormatConfigID::NCHW44_DOT,
+                            OprFormatConfigID::NCHW44_DOT_HYBRID,
+                    })
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(), {
+                                                             OprFormatConfigID::NCHW,
+                                                             OprFormatConfigID::NCHW44,
+                                                     });
+#if MGB_WITH_CACHED_TEST
+    auto profiler = std::make_unique<ProfilerMock>(
+            static_cast<const uint8_t*>(
+                    TestLayoutTransform_MobileNetV2_NCHW44_DOT.data()),
+            TestLayoutTransform_MobileNetV2_NCHW44_DOT.size());
+#else
+    auto profiler = ProfilerBase::make_cached_profiler(
+            "TestLayoutTransform.MobileNetV2_NCHW44_DOT.cache");
+#endif
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto new_output =
+            gopt::GraphOptimizer{}
+                    .add_pass<FuseConvBiasNonlinPass>()
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply({{output}})
+                    .endpoint_vars();
+    auto new_out_var = new_output[0];
+    /// check global layout transform pass
+    auto nr_dimshuffle = find_opr_num<opr::Dimshuffle>(new_out_var);
+    ASSERT_EQ(nr_dimshuffle, 1u);
+    /// check first conv format
+    const auto& first_conv = find_opr<opr::ConvBiasForward>(new_out_var);
+    const auto& cast = first_conv.cast_final_safe<opr::ConvBiasForward>();
+    ASSERT_EQ(cast.param().format, opr::ConvBias::Param::Format::NCHW44_DOT);
+
+    GraphProfiler gprof{network.graph.get()};
+    HostTensorND t2;
+    auto func2 = network.graph->compile({make_callback_copy(new_out_var, t2)});
+    func2->execute();
+    gprof.to_json_full(func2.get())
+            ->writeto_fpath(output_file("mobilenet_v2_nchw44_dot.json"));
+    /// check correct
+    MGB_ASSERT_TENSOR_EQ(t1, t2);
+}
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

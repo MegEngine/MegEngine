@@ -79,13 +79,14 @@ SymbolVarArray make_det(
 
 SymbolVar bottleneck(
         Network& network, SymbolVar f, size_t input_channels, size_t channels, size_t t,
-        size_t stride);
+        size_t stride, DType out_dtype = dtype::Float32());
 
 SymbolVar bottleneck_group(
         Network& network, SymbolVar f, size_t input_channels, size_t channels,
-        size_t stages, size_t s, size_t t);
+        size_t stages, size_t s, size_t t, DType out_dtype = dtype::Float32());
 
-SymbolVar make_mobilenet_v2(Network& network, size_t batch = 1);
+SymbolVar make_mobilenet_v2(
+        Network& network, size_t batch = 1, DType out_dtype = dtype::Float32());
 
 }  // namespace mgb
 
