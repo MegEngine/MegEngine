@@ -133,12 +133,6 @@ def test_xornet_trace_dump():
 
     data = tensor(test_data.astype(np.float32))
     out = pred_fun(data)
-    pred_output = out.numpy()
-    pred_label = np.argmax(pred_output, 1)
-
-    with np.printoptions(precision=4, suppress=True):
-        print("Predicated probability:")
-        print(pred_output)
 
     with mkstemp() as out:
         pred_fun.dump(out, arg_names=["data"], output_names=["label"])

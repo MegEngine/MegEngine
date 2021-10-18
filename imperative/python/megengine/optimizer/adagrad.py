@@ -62,7 +62,7 @@ class Adagrad(Optimizer):
         eps = param_group["eps"]
 
         def make_scalar(val):
-            return tensor(val)
+            return tensor(val, dtype="float32")
 
         # since `conver_inputs` is disabled for param updates,
         # scalar should be explicitly tansforred to tensor
