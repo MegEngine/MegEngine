@@ -27,7 +27,7 @@ static inline bool is_contig(const TensorLayout& layout) {
 
 //! [b][m][n][c] to [b][n][m][c]
 struct TransposeParam {
-    size_t batch, m, n, c;
+    size_t batch, m, n, c, stride_m;
 };
 
 /**
@@ -36,7 +36,9 @@ struct TransposeParam {
  * Note that \p src and \p dst should have been processed by
  * RelayoutForward::check_layout_and_canonize
  */
-bool is_transpose(const TensorLayout& src, const TensorLayout& dst, TransposeParam& p);
+bool is_transpose(
+        const TensorLayout& src, const TensorLayout& dst, TransposeParam& p,
+        bool allow_non_contig = false);
 
 namespace transpose_fallback {
 
@@ -105,20 +107,23 @@ void transpose_block(
  * \brief transpose contiguous (batch, m, n) to (batch, n, m)
  */
 template <typename T>
-void transpose(size_t batch, size_t m, size_t n, T* src, T* dst) {
+void transpose(size_t batch, size_t m, size_t n, T* src, T* dst, size_t stride_m = 0) {
+    if (stride_m == 0) {
+        stride_m = n;
+    }
     auto batch_src = src;
     auto batch_dst = dst;
     constexpr size_t B = transpose_traits<T>::block_size;
 
-    auto work_block = [m, n, &batch_src, &batch_dst](
+    auto work_block = [m, stride_m, &batch_src, &batch_dst](
                               const size_t i, const size_t j, const size_t h,
                               const size_t w) {
-        auto src = batch_src + i * n + j, dst = batch_dst + j * m + i;
+        auto src = batch_src + i * stride_m + j, dst = batch_dst + j * m + i;
         MIDOUT_BEGIN(transpose_fallback, midout_iv(0)) {
             if (h == B && w == B) {
-                transpose_block(src, dst, n, m);
+                transpose_block(src, dst, stride_m, m);
             } else {
-                transpose_block(src, dst, n, m, h, w);
+                transpose_block(src, dst, stride_m, m, h, w);
             }
         }
         MIDOUT_END();
@@ -141,7 +146,7 @@ void transpose(size_t batch, size_t m, size_t n, T* src, T* dst) {
         if (i < m) {
             work_row(i, m - i);
         }
-        batch_src += m * n;
+        batch_src += m * stride_m;
         batch_dst += m * n;
     }
 }

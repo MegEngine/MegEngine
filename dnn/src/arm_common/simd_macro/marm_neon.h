@@ -321,6 +321,12 @@ __ai void vst1q_f32_x2(const float* p, float32x4x2_t v) {
 }
 #endif
 
+#if !defined(vld1q_u32_x2) && (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 3))
+__ai uint32x4x2_t vld1q_u32_x2(const uint32_t* p) {
+    return {{vld1q_u32(p), vld1q_u32(p + 4)}};
+}
+#endif
+
 __ai int8x16_t vtranslq_s8(int8x8_t a) {
     int8x16_t ret;
 #if MEGDNN_AARCH64

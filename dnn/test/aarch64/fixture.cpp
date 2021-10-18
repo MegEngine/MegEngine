@@ -1,5 +1,5 @@
 /**
- * \file dnn/test/aarch64/fixture.h
+ * \file dnn/test/aarch64/fixture.cpp
  * MegEngine is Licensed under the Apache License, Version 2.0 (the "License")
  *
  * Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
@@ -8,28 +8,22 @@
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#pragma once
-#include <gtest/gtest.h>
+#include "test/aarch64/fixture.h"
 
-#include "megdnn/handle.h"
-#include "test/arm_common/fixture.h"
-
-#include <memory>
+#include "test/common/memory_manager.h"
+#include "test/common/random_state.h"
+#include "test/common/utils.h"
 
 namespace megdnn {
 namespace test {
 
-class AARCH64 : public ARM_COMMON {
-public:
-    Handle* fallback_handle();
-
-private:
-    std::unique_ptr<Handle> m_handle, m_fallback_handle;
-};
-
-class AARCH64_MULTI_THREADS : public ARM_COMMON_MULTI_THREADS {};
+Handle* AARCH64::fallback_handle() {
+    if (!m_fallback_handle) {
+        m_fallback_handle = create_cpu_handle(1);
+    }
+    return m_fallback_handle.get();
+}
 
 }  // namespace test
 }  // namespace megdnn
-
 // vim: syntax=cpp.doxygen

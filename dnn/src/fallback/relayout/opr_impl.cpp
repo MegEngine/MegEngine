@@ -48,10 +48,12 @@ void memcpy_noncont2cont(void* cont, void* non_cont, size_t size) {
 }
 
 template <typename T>
-void call_transpose(size_t batch, size_t m, size_t n, size_t ch, void* src, void* dst) {
+void call_transpose(
+        size_t batch, size_t m, size_t n, size_t ch, void* src, void* dst,
+        size_t stride_m) {
     megdnn_assert(ch == 1);
     relayout::transpose_fallback::transpose<T>(
-            batch, m, n, static_cast<T*>(src), static_cast<T*>(dst));
+            batch, m, n, static_cast<T*>(src), static_cast<T*>(dst), stride_m);
 }
 
 //! one operand contiguous, and the other non-contiguous
@@ -186,7 +188,10 @@ void transpose_cv_row(
 }
 
 template <typename ctype>
-void transpose_cv(size_t batch, size_t m, size_t n, size_t ch, void* src, void* dst) {
+void transpose_cv(
+        size_t batch, size_t m, size_t n, size_t ch, void* src, void* dst,
+        size_t stride_m) {
+    megdnn_assert(stride_m == 0);
     constexpr size_t B = BLOCK_SIZE;
     auto batch_src = static_cast<ctype*>(src);
     auto batch_dst = static_cast<ctype*>(dst);
@@ -237,7 +242,7 @@ void RelayoutForwardImpl::exec(
     }
 
     relayout::TransposeParam trans_param;
-    bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param);
+    bool trans = relayout::is_transpose(src.layout, dst.layout, trans_param, true);
     exec_after_preprocess(src, dst, trans ? &trans_param : nullptr);
 }
 
@@ -245,7 +250,7 @@ void RelayoutForwardImpl::exec_after_preprocess(
         const TensorND& src, const TensorND& dst, relayout::TransposeParam* transpose) {
     if (transpose) {
         auto dsize = src.layout.dtype.size() * transpose->c;
-        void (*kptr)(size_t, size_t, size_t, size_t, void*, void*) = nullptr;
+        void (*kptr)(size_t, size_t, size_t, size_t, void*, void*, size_t) = nullptr;
         auto src_addr = reinterpret_cast<uintptr_t>(src.raw_ptr),
              dst_addr = reinterpret_cast<uintptr_t>(dst.raw_ptr);
         if (dsize == 1) {
@@ -293,7 +298,9 @@ void RelayoutForwardImpl::exec_after_preprocess(
 
         if (kptr) {
             auto kern = [t = *transpose, sptr = src.raw_ptr, dptr = dst.raw_ptr,
-                         kptr]() { kptr(t.batch, t.m, t.n, t.c, sptr, dptr); };
+                         kptr]() {
+                kptr(t.batch, t.m, t.n, t.c, sptr, dptr, t.stride_m);
+            };
             static_cast<naive::HandleImpl*>(handle())->dispatch_kern(kern);
             return;
         } else {

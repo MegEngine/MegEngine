@@ -23,7 +23,8 @@ namespace {
 
 //! whether current shape is [b][n][m][c] and is a transpose of contig
 //! [b][m][n][c]
-bool is_transpose_single(const TensorLayout& layout, TransposeParam& p) {
+bool is_transpose_single(
+        const TensorLayout& layout, TransposeParam& p, bool allow_no_contig) {
     /*
      * assuming contig layout is:
      *  shape: b, m, n, c
@@ -42,8 +43,9 @@ bool is_transpose_single(const TensorLayout& layout, TransposeParam& p) {
      *
      * if b == 1 && c == 1:
      *  shape: n, m
-     *  stride: 1, n
+     *  stride: 1, n(stride_m for no-contig)
      */
+    p.stride_m = 0;
     auto strd = [&](size_t idx, ptrdiff_t v) { return layout.stride[idx] == v; };
     if (layout.ndim == 4) {
         p.batch = layout[0];
@@ -80,7 +82,15 @@ bool is_transpose_single(const TensorLayout& layout, TransposeParam& p) {
         p.n = layout.shape[0];
         p.m = layout.shape[1];
         p.c = 1;
-        return strd(0, 1) && strd(1, p.n);
+        if (strd(0, 1) && strd(1, p.n)) {
+            return true;
+        } else if (
+                strd(0, 1) && layout.stride[1] > 0 &&
+                (size_t)(layout.stride[1]) >= p.n && allow_no_contig) {
+            //! stride_m used in no-contig mode, stride_m >= p.n
+            p.stride_m = layout.stride[1];
+            return true;
+        }
     }
     return false;
 }
@@ -98,15 +108,16 @@ void RelayoutForward::check_layout_and_canonize(TensorLayout& src, TensorLayout&
 }
 
 bool relayout::is_transpose(
-        const TensorLayout& src, const TensorLayout& dst, TransposeParam& p) {
-    if (is_contig(dst) && is_transpose_single(src, p)) {
+        const TensorLayout& src, const TensorLayout& dst, TransposeParam& p,
+        bool allow_non_contig) {
+    if (is_contig(dst) && is_transpose_single(src, p, allow_non_contig)) {
         // if the original intention is to transpose (m, n) to (n, m),
         // then we should use (n, m) as the contig dst and use a corrsponding
         // non-contig src with the same (n, m) shape (remember relayout is
         // defined on element correspondence on the logical view)
         return true;
     }
-    if (is_contig(src) && is_transpose_single(dst, p)) {
+    if (is_contig(src) && is_transpose_single(dst, p, allow_non_contig)) {
         std::swap(p.m, p.n);
         return true;
     }
