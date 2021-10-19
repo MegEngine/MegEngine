@@ -19,7 +19,7 @@
 # 2. 编译megbrain_test，并运行所有全局图优化相关测试：
 #    ./megbrain_test --gtest_filter="*LayoutTransform*"
 # 3. 用这个脚本把所有的cache文件打包在一起
-#    python3 embed_cache.py -o cache_data.h $(ls /path/to/cache/*.cache)
+#    python3 embed_cache.py -o cache_data.h -r $(ls /path/to/cache/*.cache)
 # 4. 将步骤1中的 define 语句改回原样，这样 profile 过程就会使用 cache 下来的数据。
 # 5. 最后可以重新构建一下 megbrain_test ，确保测试结果正确。
 import os.path
@@ -30,6 +30,7 @@ import struct
 import itertools
 import sys
 import subprocess
+import re
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format='%(asctime)-15s %(message)s')
@@ -42,8 +43,9 @@ def _u32(data):
 class CacheDataGenerator:
     _cache_files = None
 
-    def __init__(self, cache_files):
+    def __init__(self, cache_files, remove_plat_info = True):
         self._cache_files = cache_files
+        self._remove_plat_info = remove_plat_info
 
     def _get_hash(self):
         return _u32(self._hash.digest()[:4])
@@ -52,6 +54,14 @@ class CacheDataGenerator:
         fname = os.path.basename(fpath)
         with open(fpath, 'rb') as fcache:
             cache_data = fcache.read()
+        if self._remove_plat_info:
+            for matched in re.finditer(
+                rb"(layout_transform_profile:plat=.*);dev=.*;cap=\d.\d",
+                cache_data
+            ):
+                plat_info = matched.group(1)
+                cat_info = cache_data[matched.span()[0] - 4: matched.span()[1]]
+                cache_data = re.sub(cat_info, struct.pack('I', len(plat_info)) + plat_info, cache_data)
         cache_data = struct.unpack(
             "<{}B".format(len(cache_data)), cache_data)
         ret = list(map(CHAR_MAP.__getitem__, cache_data))
@@ -89,7 +99,14 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-o', '--output', help='output source file',
                         required=True)
+    parser.add_argument(
+        "-r",
+        "--remove-plat-info",
+        action='store_true',
+        default=True,
+        help="whether remove platform infomation in the cache (default: True)"
+    )
     parser.add_argument('cache', help='cache files to be embedded', nargs='+')
     args = parser.parse_args()
-    cache_generator = CacheDataGenerator(args.cache)
+    cache_generator = CacheDataGenerator(args.cache, args.remove_plat_info)
     cache_generator.invoke(args.output)

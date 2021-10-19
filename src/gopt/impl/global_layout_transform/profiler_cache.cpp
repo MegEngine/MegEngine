@@ -77,9 +77,12 @@ void ProfilerCache::Key::build_category(CompNode cn) {
     switch (env.property().type) {
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA: {
-            auto&& prop = env.cuda_env().device_prop;
-            m_category += ssprintf(
-                    "plat=cuda;dev=%s;cap=%d.%d", prop.name, prop.major, prop.minor);
+            m_category += "plat=cuda";
+            if (ProfilerCache::inst().enable_device_info()) {
+                auto&& prop = env.cuda_env().device_prop;
+                m_category += ssprintf(
+                        ";dev=%s;cap=%d.%d", prop.name, prop.major, prop.minor);
+            }
             break;
         }
 #endif

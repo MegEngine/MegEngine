@@ -291,8 +291,14 @@ public:
 
     void put(const Key& key, Result& result);
 
+    bool enable_device_info() { return m_enable_device_info; }
+
+    void enable_device_info(bool flag) { m_enable_device_info = flag; }
+
 private:
     std::unique_ptr<PersistentCache> m_impl;
+    // whether to save platform information into the cache.
+    bool m_enable_device_info = true;
 };
 
 class CachedProfiler final : public ProfilerImpl {

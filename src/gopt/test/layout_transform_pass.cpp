@@ -90,6 +90,8 @@ public:
         mgb_assert(bin != nullptr);
         ProfilerCache::inst().set_impl(
                 std::make_unique<InFilePersistentCache>(bin, size));
+        // disable saving platform information to make ci stable.
+        ProfilerCache::inst().enable_device_info(false);
     }
     ~ProfilerMock() {
         // reset in memory cache
