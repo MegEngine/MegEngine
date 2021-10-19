@@ -29,8 +29,6 @@
 #include "./cache_data.h"
 #endif
 
-#include "megbrain/plugin/opr_io_dump.h"
-
 using namespace mgb;
 using namespace gopt;
 using namespace serialization;
