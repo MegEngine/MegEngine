@@ -25,10 +25,10 @@ MGB_DEFINE_OPR_CLASS(
         intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
                 mixin::MegDNNOprHolderImpl<megdnn::AdaptivePoolingForward>>>) // {
 public:
-    AdaptivePoolingForward(
+    MGE_WIN_DECLSPEC_FUC AdaptivePoolingForward(
             VarNode* src, VarNode* out_shape, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar out_shape, const Param& param,
             const OperatorNodeConfig& config = {});
     static SymbolVar make(
@@ -55,10 +55,10 @@ MGB_DEFINE_OPR_CLASS(
         AdaptivePoolingBackward,
         intl::MegDNNOprWrapperBwd<megdnn::AdaptivePoolingBackward>) // {
 public:
-    AdaptivePoolingBackward(
+    MGE_WIN_DECLSPEC_FUC AdaptivePoolingBackward(
             VarNode* src, VarNode* out_shape, VarNode* dst, VarNode* diff,
             const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar out_shape, SymbolVar dst, SymbolVar diff,
             const Param& param, const OperatorNodeConfig& config = {});
 

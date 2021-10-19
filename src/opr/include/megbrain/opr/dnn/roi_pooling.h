@@ -43,11 +43,11 @@ MGB_DEFINE_OPR_CLASS(
         intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
                 mixin::MegDNNOprHolderImpl<megdnn::ROIPoolingForward>>>) // {
 public:
-    ROIPoolingForward(
+    MGE_WIN_DECLSPEC_FUC ROIPoolingForward(
             VarNode* src, VarNode* rois, VarNode* dst_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar rois, SymbolVar dst_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -76,11 +76,11 @@ using ROIPooling = ROIPoolingForward;
 MGB_DEFINE_OPR_CLASS(
         ROIPoolingBackward, intl::MegDNNOprWrapperBwd<megdnn::ROIPoolingBackward>) // {
 public:
-    ROIPoolingBackward(
+    MGE_WIN_DECLSPEC_FUC ROIPoolingBackward(
             VarNode* diff, VarNode* src, VarNode* rois, VarNode* index,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar diff, SymbolVar src, SymbolVar rois, SymbolVar index,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 };
@@ -94,14 +94,14 @@ MGB_DEFINE_OPR_CLASS(
         DeformablePSROIPoolingForward,
         intl::MegDNNOprWrapperFwd<megdnn::DeformablePSROIPoolingForward>) // {
 public:
-    DeformablePSROIPoolingForward(
+    MGE_WIN_DECLSPEC_FUC DeformablePSROIPoolingForward(
             VarNode* src, VarNode* rois, VarNode* trans, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make_all(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make_all(
             SymbolVar src, SymbolVar rois, SymbolVar trans, const Param& param = {},
             const OperatorNodeConfig& config = {});
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar rois, SymbolVar trans, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -110,18 +110,18 @@ using DeformablePSROIPooling = DeformablePSROIPoolingForward;
 MGB_DEFINE_OPR_CLASS(
         DeformablePSROIPoolingBackward, intl::DeformablePSROIPoolingBackwardT) // {
 public:
-    DeformablePSROIPoolingBackward(
+    MGE_WIN_DECLSPEC_FUC DeformablePSROIPoolingBackward(
             VarNode* src, VarNode* rois, VarNode* trans, VarNode* grad, VarNode* count,
             const Param& param, const OperatorNodeConfig& config);
-    static SymbolVarArray make_all(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make_all(
             SymbolVar src, SymbolVar rois, SymbolVar trans, SymbolVar grad,
             SymbolVar count, const Param& param = {},
             const OperatorNodeConfig& config = {});
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar rois, SymbolVar trans, SymbolVar grad,
             SymbolVar count, const Param& param = {},
             const OperatorNodeConfig& config = {});
-    void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
 
 private:
     void get_output_var_shape(

@@ -93,7 +93,7 @@ class ConvolutionTestingPeer;
 
 }  // namespace testing
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ConvolutionForward, intl::ConvolutionForwardBase,
         public mixin::AlgoChooserHelper) // {
     void init_output_dtype() override;
@@ -114,17 +114,17 @@ MGB_DEFINE_OPR_CLASS(
     friend testing::ConvolutionTestingPeer;
 
 public:
-    ConvolutionForward(
+    MGE_WIN_DECLSPEC_FUC ConvolutionForward(
             VarNode* src, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
 using Convolution = ConvolutionForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ConvBiasForward, intl::ConvBiasForwardBase, public mixin::AlgoChooserHelper) // {
     void init_output_dtype() override;
     size_t get_workspace_size_bytes(
@@ -147,37 +147,37 @@ MGB_DEFINE_OPR_CLASS(
 
 public:
     //! src * filter
-    ConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC ConvBiasForward(
             VarNode* src, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
     //! src * filter + bias
-    ConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC ConvBiasForward(
             VarNode* src, VarNode* filter, VarNode* bias, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar bias, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
     //! src * filter + bias + z
-    ConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC ConvBiasForward(
             VarNode* src, VarNode* filter, VarNode* bias, VarNode* z,
             const Param& param, const ExecutionPolicy& policy,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar bias, SymbolVar z,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
 
-    static void check_winograd_param_valid(
+    MGE_WIN_DECLSPEC_FUC static void check_winograd_param_valid(
             const megdnn::ConvBias::WinogradParam& param, const DType& dtype);
-    static megdnn::param::MatrixMul::Format get_matmul_format(
+    MGE_WIN_DECLSPEC_FUC static megdnn::param::MatrixMul::Format get_matmul_format(
             const megdnn::ConvBias::WinogradParam& param);
 };
 using ConvBias = ConvBiasForward;
@@ -185,7 +185,7 @@ using ConvBias = ConvBiasForward;
 /*!
  * \brief Can be used in two ways: compute gradient of conv, or deconv
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ConvolutionBackwardData,
         cg::SingleCNOperatorNodeBaseT<
                 mixin::MegDNNOprHolderImpl<megdnn::ConvolutionBackwardData>>,
@@ -200,30 +200,30 @@ MGB_DEFINE_OPR_CLASS(
     NodeProp* do_make_node_prop() const override;
 
 public:
-    ConvolutionBackwardData(
+    MGE_WIN_DECLSPEC_FUC ConvolutionBackwardData(
             VarNode* filter, VarNode* diff, VarNode* src_for_shp, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
     //! grad mode; original data shape is required
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar filter, SymbolVar diff, SymbolVar src_for_shp,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
 
     //! sereg for deconvolution mode
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar filter, SymbolVar data, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
     //! user interface for deconv
-    static SymbolVar make_deconv(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make_deconv(
             SymbolVar data, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {}) {
         return make(filter, data, param, policy, config);
     }
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ConvolutionBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::ConvolutionBackwardFilter>,
         public mixin::AlgoChooserHelper) // {
@@ -232,40 +232,41 @@ MGB_DEFINE_OPR_CLASS(
             const TensorShapeArray& output_shapes) const override final;
 
 public:
-    ConvolutionBackwardFilter(
+    MGE_WIN_DECLSPEC_FUC ConvolutionBackwardFilter(
             VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar diff, SymbolVar filter, const Param& param,
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MaskConvolution, intl::MegDNNOprWrapperFwd<megdnn::MaskConvolution>) // {
     void init_output_dtype() override final;
 
 public:
-    MaskConvolution(
+    MGE_WIN_DECLSPEC_FUC MaskConvolution(
             VarNode* src, VarNode* filter, VarNode* mask, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar mask, const Param& param,
             const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MaskPropagate, intl::MegDNNOprWrapperFwd<megdnn::MaskPropagate>) // {
     void init_output_dtype() override final;
 
 public:
-    MaskPropagate(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC MaskPropagate(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Convolution3DForward, intl::MegDNNOprWrapperFwd<megdnn::Convolution3DForward>,
         public mixin::AlgoChooserHelper) // {
     void init_output_dtype() override;
@@ -274,11 +275,11 @@ MGB_DEFINE_OPR_CLASS(
             const TensorShapeArray& output_shapes) const override final;
 
 public:
-    Convolution3DForward(
+    MGE_WIN_DECLSPEC_FUC Convolution3DForward(
             VarNode* src, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
@@ -287,7 +288,7 @@ using Convolution3D = Convolution3DForward;
 /*!
  * \brief Can be used in two ways: compute gradient of conv, or deconv
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Convolution3DBackwardData,
         cg::SingleCNOperatorNodeBaseT<
                 mixin::MegDNNOprHolderImpl<megdnn::Convolution3DBackwardData>>,
@@ -300,18 +301,18 @@ MGB_DEFINE_OPR_CLASS(
     NodeProp* do_make_node_prop() const override;
 
 public:
-    Convolution3DBackwardData(
+    MGE_WIN_DECLSPEC_FUC Convolution3DBackwardData(
             VarNode* filter, VarNode* diff, VarNode* src_for_shp, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
     //! grad mode; original data shape is required
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar filter, SymbolVar diff, SymbolVar src_for_shp,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
 
     //! sereg for deconvolution3D mode
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar filter, SymbolVar data, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
@@ -323,7 +324,7 @@ public:
     }
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Convolution3DBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::Convolution3DBackwardFilter>,
         public mixin::AlgoChooserHelper) // {
@@ -332,15 +333,15 @@ MGB_DEFINE_OPR_CLASS(
             const TensorShapeArray& output_shapes) const override final;
 
 public:
-    Convolution3DBackwardFilter(
+    MGE_WIN_DECLSPEC_FUC Convolution3DBackwardFilter(
             VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar diff, SymbolVar filter, const Param& param,
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         LocalShareForward, intl::MegDNNOprWrapperFwd<megdnn::LocalShareForward>,
         public mixin::AlgoChooserHelper) // {
     void init_output_dtype() override;
@@ -351,16 +352,16 @@ MGB_DEFINE_OPR_CLASS(
             const TensorShapeArray& output_shapes) const override final;
 
 public:
-    LocalShareForward(
+    MGE_WIN_DECLSPEC_FUC LocalShareForward(
             VarNode* src, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
 using LocalShare = LocalShareForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         LocalShareBackwardData,
         cg::SingleCNOperatorNodeBaseT<
                 mixin::MegDNNOprHolderImpl<megdnn::LocalShareBackwardData>>,
@@ -374,18 +375,18 @@ MGB_DEFINE_OPR_CLASS(
     NodeProp* do_make_node_prop() const override;
 
 public:
-    LocalShareBackwardData(
+    MGE_WIN_DECLSPEC_FUC LocalShareBackwardData(
             VarNode* filter, VarNode* diff, VarNode* src_for_shp, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
     //! grad mode; original data shape is required
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar filter, SymbolVar diff, SymbolVar src_for_shp,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         LocalShareBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::LocalShareBackwardFilter>,
         public mixin::AlgoChooserHelper) // {
@@ -394,24 +395,24 @@ MGB_DEFINE_OPR_CLASS(
             const TensorShapeArray& output_shapes) const override final;
 
 public:
-    LocalShareBackwardFilter(
+    MGE_WIN_DECLSPEC_FUC LocalShareBackwardFilter(
             VarNode* src, VarNode* diff, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar diff, SymbolVar filter, const Param& param,
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         DeformableConvForward, intl::MegDNNOprWrapperFwd<megdnn::DeformableConvForward>,
         public mixin::AlgoChooserHelper) // {
 public:
-    DeformableConvForward(
+    MGE_WIN_DECLSPEC_FUC DeformableConvForward(
             VarNode* src, VarNode* filter, VarNode* offset, VarNode* mask,
             const Param& param, const ExecutionPolicy& policy,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar offset, SymbolVar mask,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
@@ -425,21 +426,21 @@ private:
 };
 using DeformableConv = DeformableConvForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         DeformableConvBackwardData, intl::DeformableConvBackwardDataBase,
         public mixin::AlgoChooserHelper, public mixin::ConvolutionBackwardDataMixin) // {
 public:
-    DeformableConvBackwardData(
+    MGE_WIN_DECLSPEC_FUC DeformableConvBackwardData(
             VarNode* src, VarNode* filter, VarNode* offset, VarNode* mask,
             VarNode* diff, const Param& param, const ExecutionPolicy& policy,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make_all(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make_all(
             SymbolVar src, SymbolVar filter, SymbolVar offset, SymbolVar mask,
             SymbolVar diff, const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar offset, SymbolVar mask,
             SymbolVar diff, const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
@@ -463,17 +464,17 @@ private:
     }
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         DeformableConvBackwardFilter,
         intl::MegDNNOprWrapperBwd<megdnn::DeformableConvBackwardFilter>,
         public mixin::AlgoChooserHelper) // {
 public:
-    DeformableConvBackwardFilter(
+    MGE_WIN_DECLSPEC_FUC DeformableConvBackwardFilter(
             VarNode* src, VarNode* filter, VarNode* offset, VarNode* mask,
             VarNode* diff, const Param& param, const ExecutionPolicy& policy,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar offset, SymbolVar mask,
             SymbolVar diff, const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});
@@ -486,7 +487,7 @@ private:
             const TensorShapeArray& output_shapes) const override final;
 };
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         BatchConvBiasForward, intl::BatchConvBiasForwardBase,
         public mixin::AlgoChooserHelper) // {
     void init_output_dtype() override;
@@ -506,30 +507,30 @@ MGB_DEFINE_OPR_CLASS(
 
 public:
     //! src * filter
-    BatchConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC BatchConvBiasForward(
             VarNode* src, VarNode* filter, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
     //! src * filter + bias
-    BatchConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC BatchConvBiasForward(
             VarNode* src, VarNode* filter, VarNode* bias, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar bias, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
     //! src * filter + bias + z
-    BatchConvBiasForward(
+    MGE_WIN_DECLSPEC_FUC BatchConvBiasForward(
             VarNode* src, VarNode* filter, VarNode* bias, VarNode* z,
             const Param& param, const ExecutionPolicy& policy,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar filter, SymbolVar bias, SymbolVar z,
             const Param& param = {}, const ExecutionPolicy& policy = {},
             const OperatorNodeConfig& config = {});

@@ -97,7 +97,7 @@ public:
     /*!
      * \brief set to given value by raw storage
      */
-    DTypeScalar& set_raw(DType dtype, const void* storage);
+    MGE_WIN_DECLSPEC_FUC DTypeScalar& set_raw(DType dtype, const void* storage);
 
     /*!
      * \brief set to given value, with dtype corresponding to ctype
@@ -114,7 +114,8 @@ public:
      * \brief set to given value, but use current dtype and cast value to it
      */
     template <typename ctype>
-    typename ctype_enable_if<ctype>::type set_retain_dtype(ctype val);
+    MGE_WIN_DECLSPEC_FUC typename ctype_enable_if<ctype>::type set_retain_dtype(
+            ctype val);
 
     /*!
      * \brief get underlying value, which must be exactly given type
@@ -172,30 +173,32 @@ static_assert(
         sizeof(DTypeScalar) == sizeof(DTypeScalar::max_ctype) + sizeof(DType),
         "bad DTypeScalar size");
 
-DType dtype_promotion(DType t0, DType t1);
+MGE_WIN_DECLSPEC_FUC DType dtype_promotion(DType t0, DType t1);
 
 /*!
  * \brief copy from byte representation to compact representation for lowbit
  *      types
  */
-void lowbit_memcpy_byte2compact(DType dtype, void* dest, const void* src, size_t n);
+MGE_WIN_DECLSPEC_FUC void lowbit_memcpy_byte2compact(
+        DType dtype, void* dest, const void* src, size_t n);
 
 /*!
  * \brief copy from compact representation to byte representation for lowbit
  *      types
  */
-void lowbit_memcpy_compact2byte(DType dtype, void* dest, const void* src, size_t n);
+MGE_WIN_DECLSPEC_FUC void lowbit_memcpy_compact2byte(
+        DType dtype, void* dest, const void* src, size_t n);
 
 /*!
  * \brief copy from byte representation to an aligend tensor for lowbit types
  */
-void lowbit_memcpy_byte2aligned(
+MGE_WIN_DECLSPEC_FUC void lowbit_memcpy_byte2aligned(
         void* dest, const void* src, const ::megdnn::TensorLayout& ly);
 
 /*!
  * \brief copy from an aligend tensor to byte representation for lowbit types
  */
-void lowbit_memcpy_aligned2byte(
+MGE_WIN_DECLSPEC_FUC void lowbit_memcpy_aligned2byte(
         void* dest, const void* src, const ::megdnn::TensorLayout& ly);
 
 }  // namespace mgb

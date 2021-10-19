@@ -22,10 +22,10 @@ namespace opr {
 MGB_DEFINE_OPR_CLASS(
         IndexingOneHot, intl::MegDNNOprWrapperFwd<megdnn::IndexingOneHotForward>) // {
 public:
-    IndexingOneHot(
+    MGE_WIN_DECLSPEC_FUC IndexingOneHot(
             VarNode* src, VarNode* index, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar index, const Param& param,
             const OperatorNodeConfig& config = {});
 
@@ -38,10 +38,10 @@ MGB_DEFINE_OPR_CLASS(
         intl::WorkspaceSizeInfer<cg::SingleCNOperatorNodeBaseT<
                 mixin::MegDNNOprHolderImpl<megdnn::IndexingSetOneHotForward>>>) // {
 public:
-    IndexingSetOneHot(
+    MGE_WIN_DECLSPEC_FUC IndexingSetOneHot(
             VarNode* data, VarNode* index, VarNode* sub, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar data, SymbolVar index, SymbolVar sub, const Param& param,
             const OperatorNodeConfig& config = {});
 
@@ -62,10 +62,10 @@ private:
 MGB_DEFINE_OPR_CLASS(
         IndexingRemap, intl::MegDNNOprWrapperFwd<megdnn::IndexingRemap>) // {
 public:
-    IndexingRemap(
+    MGE_WIN_DECLSPEC_FUC IndexingRemap(
             VarNode* src, VarNode* map, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar map, const Param& param,
             const OperatorNodeConfig& config = {});
 
@@ -77,10 +77,10 @@ MGB_DEFINE_OPR_CLASS(
         IndexingRemapBackward,
         intl::MegDNNOprWrapperBwd<megdnn::IndexingRemapBackward>) // {
 public:
-    IndexingRemapBackward(
+    MGE_WIN_DECLSPEC_FUC IndexingRemapBackward(
             VarNode* out_diff, VarNode* map, VarNode* src_for_shape, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar out_diff, SymbolVar map, SymbolVar src_for_shape,
             const Param& param, const OperatorNodeConfig& config = {});
 };

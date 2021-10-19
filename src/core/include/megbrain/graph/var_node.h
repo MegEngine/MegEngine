@@ -145,7 +145,7 @@ public:
     MemAllocPlan& layout(const TensorLayout& dest, bool allow_shape_change = false);
 
 #if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> to_json() const override;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> to_json() const override;
 #endif
 
     /*!
@@ -153,13 +153,13 @@ public:
      *
      * Release tensor storage if refcnt drops to zero
      */
-    MemAllocPlan& release_chunk();
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& release_chunk();
 
     /*!
      * \brief reset chunk to a privately owned chunk, and setup offset and
      *      layout from owner var, and clear tensor storage
      */
-    MemAllocPlan& reset_from_owner_var();
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& reset_from_owner_var();
 
     /*!
      * \brief reset to a special marker that indicates this var is not
@@ -187,10 +187,11 @@ public:
     }
 
     //! assign layout, offset and chunk from another mem alloc plan
-    MemAllocPlan& assign(const MemAllocPlan& src);
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& assign(const MemAllocPlan& src);
 
     //! assign for readonly forward
-    MemAllocPlan& assign_for_forward(const MemAllocPlan& src, const SubTensorSpec& sub);
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& assign_for_forward(
+            const MemAllocPlan& src, const SubTensorSpec& sub);
 
     /*!
      * \brief next readonly-forward reader of this MemAllocPlan
@@ -212,7 +213,7 @@ private:
 
     public:
         MemAllocPlan* next() const { return m_next; }
-        void reset();
+        MGE_WIN_DECLSPEC_FUC void reset();
         inline void insert_after(const MemAllocPlan& prev, MemAllocPlan* self);
         inline void remove_self();
     };
@@ -261,7 +262,8 @@ public:
      * with given layout may be forwarded to opr directly, otherwise it
      * will be implicitly rearranged to a contiguous one.
      */
-    VarNode& add_layout_constraint(LayoutConstraintCallback callback);
+    MGE_WIN_DECLSPEC_FUC VarNode& add_layout_constraint(
+            LayoutConstraintCallback callback);
 
     /*!
      * \brief requires the layout to be contiguous
@@ -272,7 +274,7 @@ public:
      * existing callbacks would be cleared and new callbacks would be
      * ignored after add_layout_constraint_contiguous() is invoked.
      */
-    VarNode& add_layout_constraint_contiguous();
+    MGE_WIN_DECLSPEC_FUC VarNode& add_layout_constraint_contiguous();
 
     /*!
      * \brief requires the layout to be monotone while allowing broadcast
@@ -281,7 +283,7 @@ public:
      * implemented by marking a flag; however user-defined callbacks are
      * still invoked since they might impose stronger constraints.
      */
-    VarNode& add_layout_constraint_monotone();
+    MGE_WIN_DECLSPEC_FUC VarNode& add_layout_constraint_monotone();
 
     /*!
      * \brief request that memory should be readonly forwarded from other
@@ -292,7 +294,7 @@ public:
      *
      * \return whether this request could be satisfied
      */
-    MGB_WARN_UNUSED_RESULT bool set_fwd_in2out_readonly(
+    MGB_WARN_UNUSED_RESULT MGE_WIN_DECLSPEC_FUC bool set_fwd_in2out_readonly(
             VarNode* input, const SubTensorSpec& sub);
 
     /*!
@@ -302,7 +304,7 @@ public:
      * Note that this function must be called from
      *      OperatorNodeBase::mem_plan_fwd_in2out_writable.
      */
-    VarNode& set_fwd_in2out_writable(VarNode* input);
+    MGE_WIN_DECLSPEC_FUC VarNode& set_fwd_in2out_writable(VarNode* input);
 
     /*!
      * \brief require this var to share memory from another var; only used
@@ -311,14 +313,14 @@ public:
      * Note that this function must be called during operator node
      * initialization
      */
-    VarNode& set_fwd_in2out_writable_force(VarNode* input);
+    MGE_WIN_DECLSPEC_FUC VarNode& set_fwd_in2out_writable_force(VarNode* input);
 
     /* ===================== getter and setters =====================  */
 
     OperatorNodeBase* owner_opr() const { return m_owner; }
 
     //! get name; if name is not valid, get name of owner opr
-    const std::string& name() const;
+    MGE_WIN_DECLSPEC_FUC const std::string& name() const;
 
     //! get name as C-string
     const char* cname() const { return name().c_str(); }
@@ -327,7 +329,7 @@ public:
     bool has_name_set() const { return m_has_name_set; }
 
     //! set name explicitly
-    VarNode& name(std::string name);
+    MGE_WIN_DECLSPEC_FUC VarNode& name(std::string name);
 
     //! get data type of data in this var
     DType dtype() const { return m_dev_tensor.dtype(); }
@@ -336,10 +338,10 @@ public:
     TensorFormat format() const { return m_dev_tensor.format(); }
 
     //! set dtype; this function can only be called once
-    VarNode& dtype(DType dtype);
+    MGE_WIN_DECLSPEC_FUC VarNode& dtype(DType dtype);
 
     //! set format; this function can only be called once
-    VarNode& format(TensorFormat format);
+    MGE_WIN_DECLSPEC_FUC VarNode& format(TensorFormat format);
 
     MemAllocPlan& mem_plan() { return m_mem_plan; }
 
@@ -351,7 +353,7 @@ public:
     }
 
     //! get the underlying device tensor to fill data
-    const DeviceTensorND& dev_tensor() const;
+    MGE_WIN_DECLSPEC_FUC const DeviceTensorND& dev_tensor() const;
 
     /*!
      * \brief get the underlying device tensor that can be modified(like
@@ -360,7 +362,7 @@ public:
      * This should only be called from the owner opr of this var, and this
      * var must have flag NO_SYS_MEM_ALLOC.
      */
-    DeviceTensorND& mutable_dev_tensor();
+    MGE_WIN_DECLSPEC_FUC DeviceTensorND& mutable_dev_tensor();
 
     /*!
      * \brief previous dev ptr before deallocating dev_tensor; used for
@@ -377,7 +379,7 @@ public:
      * \brief set comp node; only the memory node could be changed if called
      *      multiple times
      */
-    VarNode& comp_node(const CompNode& cn);
+    MGE_WIN_DECLSPEC_FUC VarNode& comp_node(const CompNode& cn);
 
     const TensorShape& shape() const { return m_shape; }
 
@@ -389,7 +391,7 @@ public:
      * \brief reset VarNode shape
      * \return whether shape differs from old shape
      */
-    VarNode& shape(const TensorShape& shape);
+    MGE_WIN_DECLSPEC_FUC VarNode& shape(const TensorShape& shape);
 
     bool allow_shape_change() const { return m_allow_shape_change; }
 
@@ -399,7 +401,7 @@ public:
     }
 
 #if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> to_json() const override;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> to_json() const override;
 #endif
 
     /*!
@@ -413,7 +415,7 @@ public:
 
     enum class Flag : uint32_t;
 
-    VarNode& add_flag(Flag flag);
+    MGE_WIN_DECLSPEC_FUC VarNode& add_flag(Flag flag);
 
     inline bool contain_flag(Flag flag) const;
 
@@ -429,7 +431,8 @@ public:
      *
      * \warning Alloc size_req memory if size_req != 0.
      */
-    VarNode& shape_alloc(const TensorShape& shape, size_t size_req = 0);
+    MGE_WIN_DECLSPEC_FUC VarNode& shape_alloc(
+            const TensorShape& shape, size_t size_req = 0);
 
     /*!
      * \brief directly reset device tensor from another var
@@ -459,7 +462,8 @@ public:
      * \param value the tensor to be used; it must be contiguous or empty
      *       and be placed on the same comp node of this var.
      */
-    VarNode& reset_dev_tensor_from_tensor(const DeviceTensorND& value);
+    MGE_WIN_DECLSPEC_FUC VarNode& reset_dev_tensor_from_tensor(
+            const DeviceTensorND& value);
 
     /*!
      * \brief add a var to add RT_FORCE_DYNAMIC_MEM_ALLOC flag if such flag
@@ -472,7 +476,8 @@ public:
      * This method should be called from
      * OperatorNodeBase::init_rt_force_dynamic_mem_alloc_imply_chain impls.
      */
-    VarNode& add_rt_force_dynamic_mem_alloc_imply_chain(VarNode* dest);
+    MGE_WIN_DECLSPEC_FUC VarNode& add_rt_force_dynamic_mem_alloc_imply_chain(
+            VarNode* dest);
 
     /* ===================== graph compiler special ===================== */
 
@@ -486,7 +491,8 @@ public:
      * \param fixed_alloc if not null, it should be a tensor providing
      *      memory allocation for this var.
      */
-    MemAllocPlan& init_mem_plan(const DeviceTensorND* fixed_alloc = nullptr);
+    MGE_WIN_DECLSPEC_FUC MemAllocPlan& init_mem_plan(
+            const DeviceTensorND* fixed_alloc = nullptr);
 
     /*!
      * \brief get the shape and value infer trait
@@ -541,12 +547,14 @@ private:
 
     std::vector<VarNode*> m_rt_force_dynamic_mem_alloc_imply_chain;
 
-    void modify_flag(Flag delta, Flag new_flag);
+    MGE_WIN_DECLSPEC_FUC void modify_flag(Flag delta, Flag new_flag);
 
-    void assign_dev_tensor_from_tensor(const DeviceTensorND& value);
+    MGE_WIN_DECLSPEC_FUC void assign_dev_tensor_from_tensor(
+            const DeviceTensorND& value);
 
 #if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> dump_static_infer_info_to_json() const;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> dump_static_infer_info_to_json()
+            const;
 #endif
 
     friend class static_infer::StaticInferManagerImpl;

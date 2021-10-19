@@ -28,7 +28,7 @@ public:
     using SystemError::SystemError;
 
     //! function to throw this exception; could be overwritten
-    static void (*throw_)();
+    static MGE_WIN_DECLSPEC_DATA void (*throw_)();
 };
 
 struct BacktraceResult {
@@ -53,7 +53,7 @@ BacktraceResult backtrace(int nr_exclude = 1);
  *      1: log warning message
  *      2: throw ForkAfterCudaError() exception
  */
-void set_fork_cuda_warning_flag(int flag);
+MGE_WIN_DECLSPEC_FUC void set_fork_cuda_warning_flag(int flag);
 
 /*!
  * \brief supress fork warning in this scope
@@ -79,7 +79,8 @@ public:
  * The binary can be parsed by `megbrain.plugin.load_tensor_binary` python
  * function
  */
-std::string dump_tensor(const HostTensorND& value, const std::string& name);
+MGE_WIN_DECLSPEC_FUC std::string dump_tensor(
+        const HostTensorND& value, const std::string& name);
 
 static inline std::string dump_tensor(
         const DeviceTensorND& value, const std::string& name) {
@@ -87,7 +88,7 @@ static inline std::string dump_tensor(
 }
 
 //! write the value of a string to file
-void write_to_file(
+MGE_WIN_DECLSPEC_FUC void write_to_file(
         const char* filename, const std::string& content, const char* mode = "wb");
 
 /*!
@@ -96,7 +97,7 @@ void write_to_file(
  * \return None if tensors are considered equal; or a human-readable
  *      message indicating their difference
  */
-Maybe<std::string> compare_tensor_value(
+MGE_WIN_DECLSPEC_FUC Maybe<std::string> compare_tensor_value(
         const HostTensorND& expect, const char* expect_expr, const HostTensorND& get,
         const char* get_expr, float maxerr);
 

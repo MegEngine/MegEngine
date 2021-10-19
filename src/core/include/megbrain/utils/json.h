@@ -28,19 +28,21 @@ class Value : public std::enable_shared_from_this<Value>, public DynTypeObj {
 public:
     virtual void writeto(std::string& fout, int indent = 0) const = 0;
 
-    void writeto_fpath(const std::string& fout_path, int indent = 0) const {
+    MGE_WIN_DECLSPEC_FUC void writeto_fpath(
+            const std::string& fout_path, int indent = 0) const {
         writeto_fpath(fout_path.c_str(), indent);
     }
 
-    void writeto_fpath(const char* fout_path, int indent = 0) const;
+    MGE_WIN_DECLSPEC_FUC void writeto_fpath(
+            const char* fout_path, int indent = 0) const;
 
-    virtual std::string to_string(int indent = 0) const final;
+    MGE_WIN_DECLSPEC_FUC virtual std::string to_string(int indent = 0) const final;
 
     virtual ~Value() = default;
 };
 
 class Number final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     double m_val;
 
@@ -59,7 +61,7 @@ public:
 };
 
 class NumberInt final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     int64_t m_val;
 
@@ -70,7 +72,7 @@ public:
         return std::make_shared<NumberInt>(v);
     }
 
-    void writeto(std::string& fout, int indent = 0) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int indent = 0) const override;
 
     auto&& get_impl() { return m_val; }
 
@@ -78,7 +80,7 @@ public:
 };
 
 class Bool final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     bool m_val;
 
@@ -87,7 +89,7 @@ public:
 
     static std::shared_ptr<Bool> make(bool v);
 
-    void writeto(std::string& fout, int indent = 0) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int indent = 0) const override;
 
     auto&& get_impl() { return m_val; }
 
@@ -95,7 +97,7 @@ public:
 };
 
 class String final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     std::string m_val;
 
@@ -110,7 +112,7 @@ public:
 
     bool operator==(const String& rhs) const { return m_val == rhs.m_val; }
 
-    void writeto(std::string& fout, int indent = 0) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int indent = 0) const override;
 
     auto&& get_impl() { return m_val; }
 
@@ -118,7 +120,7 @@ public:
 };
 
 class Object final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     std::unordered_map<String, std::shared_ptr<Value>, StdHashAdaptor<String>> m_val;
 
@@ -140,7 +142,7 @@ public:
 
     std::shared_ptr<Value>& operator[](const char* s) { return m_val[std::string(s)]; }
 
-    void writeto(std::string& fout, int indent = 0) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int indent = 0) const override;
 
     auto&& get_impl() { return m_val; }
 
@@ -148,7 +150,7 @@ public:
 };
 
 class Array final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     std::vector<std::shared_ptr<Value>> m_val;
 
@@ -162,7 +164,7 @@ public:
 
     std::shared_ptr<Value>& operator[](size_t idx) { return m_val.at(idx); }
 
-    void writeto(std::string& fout, int indent = 0) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int indent = 0) const override;
 
     auto&& get_impl() { return m_val; }
 
@@ -170,7 +172,7 @@ public:
 };
 
 class Null final : public Value {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
 public:
     static std::shared_ptr<Value> make() {
@@ -178,7 +180,7 @@ public:
         return v;
     }
 
-    void writeto(std::string& fout, int /*indent*/) const override;
+    MGE_WIN_DECLSPEC_FUC void writeto(std::string& fout, int /*indent*/) const override;
 };
 
 class Serializable {

@@ -66,7 +66,7 @@ class TextOprIODump final : public OprIODumpBase {
     void dump_var(VarNode* var, bool lazy_sync) override;
 
 public:
-    TextOprIODump(
+    MGE_WIN_DECLSPEC_FUC TextOprIODump(
             cg::ComputingGraph* graph,
             const std::shared_ptr<FILE>& fout =
                     std::shared_ptr<FILE>(stderr, [](FILE*) {}));
@@ -74,7 +74,7 @@ public:
     TextOprIODump(cg::ComputingGraph* graph, const char* fpath)
             : TextOprIODump(graph, std::shared_ptr<FILE>(fopen(fpath, "w"), fclose)) {}
 
-    ~TextOprIODump();
+    MGE_WIN_DECLSPEC_FUC ~TextOprIODump();
 
     void flush_lazy() override;
 
@@ -109,8 +109,9 @@ class BinaryOprIODump final : public OprIODumpBase {
     void dump_var(VarNode* var, bool lazy_sync) override;
 
 public:
-    BinaryOprIODump(cg::ComputingGraph* graph, std::string output_dir);
-    ~BinaryOprIODump();
+    MGE_WIN_DECLSPEC_FUC BinaryOprIODump(
+            cg::ComputingGraph* graph, std::string output_dir);
+    MGE_WIN_DECLSPEC_FUC ~BinaryOprIODump();
     void flush_lazy() override;
 };
 

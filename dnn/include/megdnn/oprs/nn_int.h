@@ -43,7 +43,7 @@ public:
         const char* name = nullptr;  //!< name of the mode
 
         //! get trait from a mode; this function is thread safe
-        static const ModeTrait& from_mode(Mode mode);
+        MGE_WIN_DECLSPEC_FUC static const ModeTrait& from_mode(Mode mode);
     };
 
     virtual void exec(_megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) = 0;

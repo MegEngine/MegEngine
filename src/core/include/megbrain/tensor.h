@@ -50,7 +50,7 @@ public:
     }
 
     //! make a SubTensorSpec from given layout and offset
-    static SubTensorSpec make_from_offset_elem(
+    MGE_WIN_DECLSPEC_FUC static SubTensorSpec make_from_offset_elem(
             const TensorLayout& layout, ptrdiff_t offset_elem);
 
     //! get underlying layout
@@ -72,7 +72,7 @@ public:
      * \brief merge with another SubTensorSpec: accum offset, and replace
      *      layout by rhs
      */
-    void merge_with(const SubTensorSpec& rhs);
+    MGE_WIN_DECLSPEC_FUC void merge_with(const SubTensorSpec& rhs);
 };
 
 /*!
@@ -99,7 +99,7 @@ public:
      * \param axis the axis to apply this slice; -1 can be used for
      *      flattened layout
      */
-    SubTensorSpec apply(TensorLayout layout, int axis) const;
+    MGE_WIN_DECLSPEC_FUC SubTensorSpec apply(TensorLayout layout, int axis) const;
 };
 
 template <class Trait>
@@ -133,7 +133,7 @@ public:
 
     TensorStorage(const TensorStorage& rhs) { *this = rhs; }
 
-    TensorStorage& operator=(const TensorStorage& rhs);
+    MGE_WIN_DECLSPEC_FUC TensorStorage& operator=(const TensorStorage& rhs);
 
     /*!
      * \brief whether given tensor span is valid in this storage
@@ -153,14 +153,14 @@ public:
      * 2. This method would only grow storage, but it would not release
      *    memory
      */
-    TensorStorage& ensure_size(size_t sz);
+    MGE_WIN_DECLSPEC_FUC TensorStorage& ensure_size(size_t sz);
 
     /*!
      * \brief return a subtensor that shares the memory; the returned
      *      subtensor is not allowed to realloc
      * \param offset offset given in bytes
      */
-    TensorStorage sub(ptrdiff_t offset) const;
+    MGE_WIN_DECLSPEC_FUC TensorStorage sub(ptrdiff_t offset) const;
 
     //! apply lazy resize and get ptr
     dt_byte* ptr() const {
@@ -204,7 +204,8 @@ public:
      * changed, the underlying data would be released and this tensor would
      * become empty
      */
-    TensorStorage& comp_node(CompNode node, bool allow_mem_node_change = false);
+    MGE_WIN_DECLSPEC_FUC TensorStorage& comp_node(
+            CompNode node, bool allow_mem_node_change = false);
 
     /*!
      * \brief copy from another TensorStorage, possibly of other storage
@@ -216,12 +217,13 @@ public:
      *      this or src
      */
     template <class RTrait>
-    void copy_from(const TensorStorage<RTrait>& src, size_t size) const;
+    MGE_WIN_DECLSPEC_FUC void copy_from(
+            const TensorStorage<RTrait>& src, size_t size) const;
 
     /*!
      * \brief reset the tensor storage to given memory area
      */
-    void reset(CompNode node, size_t size, RawStorage data);
+    MGE_WIN_DECLSPEC_FUC void reset(CompNode node, size_t size, RawStorage data);
 
     /*!
      * \brief make a TensorStorage that shares memory with another
@@ -233,7 +235,8 @@ public:
     template <
             class RTrait, typename = typename std::enable_if<
                                   !std::is_same<Trait, RTrait>::value>::type>
-    static TensorStorage make_proxy(const TensorStorage<RTrait>& src);
+    MGE_WIN_DECLSPEC_FUC static TensorStorage make_proxy(
+            const TensorStorage<RTrait>& src);
 
     /*!
      * \brief make a DeviceTensorStorage on default_cpu
@@ -302,9 +305,9 @@ private:
             on_invalid_comp_node();
     }
 
-    dt_byte* apply_lazy_and_get_ptr();
+    MGE_WIN_DECLSPEC_FUC dt_byte* apply_lazy_and_get_ptr();
 
-    [[noreturn]] static void on_invalid_comp_node();
+    [[noreturn]] MGE_WIN_DECLSPEC_FUC static void on_invalid_comp_node();
 };
 
 template <class TensorStorage>
@@ -326,30 +329,31 @@ class TensorND {
 public:
     using ChainReturnType = TensorND<TensorStorage>;
 
-    TensorND();
+    MGE_WIN_DECLSPEC_FUC TensorND();
 
-    explicit TensorND(CompNode node);
+    MGE_WIN_DECLSPEC_FUC explicit TensorND(CompNode node);
 
-    explicit TensorND(DType dtype);
+    MGE_WIN_DECLSPEC_FUC explicit TensorND(DType dtype);
 
-    TensorND(CompNode node, DType dtype);
+    MGE_WIN_DECLSPEC_FUC TensorND(CompNode node, DType dtype);
 
     //! allocate contiguous tensor
-    TensorND(
+    MGE_WIN_DECLSPEC_FUC TensorND(
             CompNode node, const TensorShape& shape, DType dtype = dtype::Float32{},
             TensorFormat format = {});
 
     //! allocate contiguous tensor from given comp node and layout; layout
     //! is required to be contiguous, and its dtype and format would be used
-    TensorND(CompNode node, const TensorLayout& layout);
+    MGE_WIN_DECLSPEC_FUC TensorND(CompNode node, const TensorLayout& layout);
 
     /* ================= shape and basic functionality =================  */
 
     //! get subtensor according to given slices
-    ChainReturnType operator[](std::initializer_list<Slice> slice) const;
+    MGE_WIN_DECLSPEC_FUC ChainReturnType
+    operator[](std::initializer_list<Slice> slice) const;
 
     //! get subtensor according to spec
-    ChainReturnType sub(const SubTensorSpec& spec) const;
+    MGE_WIN_DECLSPEC_FUC ChainReturnType sub(const SubTensorSpec& spec) const;
 
     //! whether underlying storage is empty
     bool empty() const { return m_storage.empty(); }
@@ -409,19 +413,21 @@ public:
      *
      * dtype and format would not be changed
      */
-    ChainReturnType& resize(const TensorShape& shape);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& resize(const TensorShape& shape);
 
     /*!
      * \brief totally reset the tensor to given storage and layout
      */
-    ChainReturnType& reset(TensorStorage storage, const TensorLayout& layout);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& reset(
+            TensorStorage storage, const TensorLayout& layout);
 
     /* ================= getter and setters =================  */
 
     /*!
      * \brief change comp node; see TensorStorage::comp_node()
      */
-    ChainReturnType& comp_node(CompNode comp_node, bool allow_mem_node_change = false);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& comp_node(
+            CompNode comp_node, bool allow_mem_node_change = false);
 
     CompNode comp_node() const { return m_storage.comp_node(); }
 
@@ -431,7 +437,7 @@ public:
      * \brief change the storage and invalidate all data, resulting in an
      *      empty tensor
      */
-    ChainReturnType& storage(const TensorStorage& storage);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& storage(const TensorStorage& storage);
 
     //! get data type
     DType dtype() const { return m_layout.dtype; }
@@ -444,14 +450,14 @@ public:
      *
      * layout would be cleared (reset to ndim=0) if dtype actually changes
      */
-    ChainReturnType& dtype(DType dtype);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& dtype(DType dtype);
 
     /*!
      * \brief change underlying tensor format
      *
      * layout would be cleared (reset to ndim=0) if format actually changes
      */
-    ChainReturnType& format(TensorFormat format);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& format(TensorFormat format);
 
     /*!
      * \brief copy from another tensor and initialize contiguous layout
@@ -470,7 +476,7 @@ public:
      *    to be contiguous.
      */
     template <class RStorage>
-    ChainReturnType& copy_from(const TensorND<RStorage>& src);
+    MGE_WIN_DECLSPEC_FUC ChainReturnType& copy_from(const TensorND<RStorage>& src);
 
     /*!
      * \brief copy from another tensor of the same shape, retaining current
@@ -481,7 +487,8 @@ public:
      * contiguous.
      */
     template <class RStorage>
-    const ChainReturnType& copy_from_fixlayout(const TensorND<RStorage>& src) const;
+    MGE_WIN_DECLSPEC_FUC const ChainReturnType& copy_from_fixlayout(
+            const TensorND<RStorage>& src) const;
 
     //! non-const version of copy_from_fixlayout
     template <class RStorage>
@@ -547,7 +554,7 @@ public:
 /*!
  * \brief call memset in the data of a device tensor
  */
-void dev_tensor_memset(const DeviceTensorND& tensor, int val);
+MGE_WIN_DECLSPEC_FUC void dev_tensor_memset(const DeviceTensorND& tensor, int val);
 
 /*!
  * \brief fill zeros in the content of a dev tensor

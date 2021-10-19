@@ -253,16 +253,16 @@ protected:
             : OprLoadContext(SerializationFormat::RAW_POD, mgb_version),
               m_check_param_tag{check_param_tag} {}
 
-    virtual void read_raw(void* dest, size_t size) = 0;
+    MGE_WIN_DECLSPEC_FUC virtual void read_raw(void* dest, size_t size) = 0;
 
     //! used for implementing load_shared_buf_with_len(); the default
     //! implementation uses read_raw()
-    virtual SharedBuffer load_shared_buf(size_t size);
+    MGE_WIN_DECLSPEC_FUC virtual SharedBuffer load_shared_buf(size_t size);
 
 public:
-    std::string load_buf_with_len() override;
+    MGE_WIN_DECLSPEC_FUC std::string load_buf_with_len() override;
 
-    SharedBuffer load_shared_buf_with_len() override;
+    MGE_WIN_DECLSPEC_FUC SharedBuffer load_shared_buf_with_len() override;
 
     template <class Param>
     Param read_param() {

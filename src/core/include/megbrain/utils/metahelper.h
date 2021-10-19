@@ -115,6 +115,13 @@ public:                                                                \
 private:                                                               \
     static ::mgb::Typeinfo sm_typeinfo
 
+#define MGB_TYPEINFO_OBJ_DECL_WITH_EXPORT                              \
+public:                                                                \
+    static inline ::mgb::Typeinfo* typeinfo() { return &sm_typeinfo; } \
+                                                                       \
+private:                                                               \
+    static MGE_WIN_DECLSPEC_DATA ::mgb::Typeinfo sm_typeinfo
+
 #if MGB_VERBOSE_TYPEINFO_NAME
 //! get class name from class object
 #define _MGB_TYPEINFO_CLASS_NAME(_cls) #_cls
@@ -132,6 +139,11 @@ private:                                                               \
 public:                                                   \
     ::mgb::Typeinfo* dyn_typeinfo() const override final; \
     MGB_TYPEINFO_OBJ_DECL
+
+#define MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT                                \
+public:                                                                        \
+    MGE_WIN_DECLSPEC_FUC ::mgb::Typeinfo* dyn_typeinfo() const override final; \
+    MGB_TYPEINFO_OBJ_DECL_WITH_EXPORT
 
 //! put in the impl file of a final class inherited from DynTypeObj
 #define MGB_DYN_TYPE_OBJ_FINAL_IMPL(_cls)                                \
@@ -364,7 +376,7 @@ public:
         virtual ~UserData() = default;
     };
 
-    ~UserDataContainer() noexcept;
+    MGE_WIN_DECLSPEC_FUC ~UserDataContainer() noexcept;
 
     /*!
      * \brief register new user data
@@ -430,10 +442,10 @@ public:
     }
 
 private:
-    void do_add(Typeinfo* type, std::shared_ptr<UserData> ptr);
-    std::pair<void* const*, size_t> do_get(Typeinfo* type) const;
-    void* do_get_one(Typeinfo* type) const;
-    int do_pop(Typeinfo* type);
+    MGE_WIN_DECLSPEC_FUC void do_add(Typeinfo* type, std::shared_ptr<UserData> ptr);
+    MGE_WIN_DECLSPEC_FUC std::pair<void* const*, size_t> do_get(Typeinfo* type) const;
+    MGE_WIN_DECLSPEC_FUC void* do_get_one(Typeinfo* type) const;
+    MGE_WIN_DECLSPEC_FUC int do_pop(Typeinfo* type);
 
     //! use a set to help erase
     std::unordered_set<std::shared_ptr<UserData>> m_refkeeper;

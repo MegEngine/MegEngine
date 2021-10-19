@@ -65,7 +65,7 @@ public:
     class ReceiverHandlerImpl;
     struct ReceiverHandlerImplDeleter {
     public:
-        void operator()(ReceiverHandlerImpl*);
+        MGE_WIN_DECLSPEC_FUC void operator()(ReceiverHandlerImpl*);
     };
     using ReceiverHandler =
             std::unique_ptr<ReceiverHandlerImpl, ReceiverHandlerImplDeleter>;
@@ -109,8 +109,8 @@ public:
 private:
     std::vector<ReceiverHandler> m_permanent_handler;
 
-    ReceiverHandler do_register_receiver(
-            Typeinfo* type, std::unique_ptr<ReceiverBase> receiver);
+    MGE_WIN_DECLSPEC_FUC ReceiverHandler
+    do_register_receiver(Typeinfo* type, std::unique_ptr<ReceiverBase> receiver);
 };
 
 }  // namespace mgb

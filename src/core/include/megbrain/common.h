@@ -110,7 +110,7 @@ void __on_exception_throw__(const std::exception& exc) __attribute__((noreturn))
     } while (0)
 
 // assert
-void __assert_fail__(
+MGE_WIN_DECLSPEC_FUC void __assert_fail__(
         const char* file, int line, const char* func, const char* expr,
         const char* msg_fmt = 0, ...) __attribute__((format(printf, 5, 6), noreturn));
 #if MGB_ASSERT_LOC
@@ -165,23 +165,23 @@ typedef void (*LogHandler)(
  *
  * \return previous log level
  */
-LogLevel set_log_level(LogLevel level);
+MGE_WIN_DECLSPEC_FUC LogLevel set_log_level(LogLevel level);
 
 /*!
  * \brief get logging level
  *
  * \return current log level
  */
-LogLevel get_log_level();
+MGE_WIN_DECLSPEC_FUC LogLevel get_log_level();
 
 /*!
  * \brief set callback for receiving log requests
  * \return previous log handler
  */
-LogHandler set_log_handler(LogHandler handler);
+MGE_WIN_DECLSPEC_FUC LogHandler set_log_handler(LogHandler handler);
 
 #if MGB_ENABLE_LOGGING
-void __log__(
+MGE_WIN_DECLSPEC_FUC void __log__(
         LogLevel level, const char* file, const char* func, int line, const char* fmt,
         ...) __attribute__((format(printf, 5, 6)));
 
@@ -233,9 +233,10 @@ void __log__(
 /*!
  * \brief printf-like std::string constructor
  */
-std::string ssprintf(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
+MGE_WIN_DECLSPEC_FUC std::string ssprintf(const char* fmt, ...)
+        __attribute__((format(printf, 1, 2)));
 
-std::string svsprintf(const char* fmt, va_list ap);
+MGE_WIN_DECLSPEC_FUC std::string svsprintf(const char* fmt, va_list ap);
 
 #if 0
 // used for win32 with vs prior to 2015

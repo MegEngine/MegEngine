@@ -20,11 +20,11 @@ namespace opr {
 MGB_DEFINE_OPR_CLASS(
         CorrelationForward, intl::MegDNNOprWrapperFwd<megdnn::CorrelationForward>) // {
 public:
-    CorrelationForward(
+    MGE_WIN_DECLSPEC_FUC CorrelationForward(
             VarNode* data1, VarNode* data2, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar data1, SymbolVar data2, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -34,11 +34,11 @@ MGB_DEFINE_OPR_CLASS(
         CorrelationBackwardData1,
         intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData1>) // {
 public:
-    CorrelationBackwardData1(
+    MGE_WIN_DECLSPEC_FUC CorrelationBackwardData1(
             VarNode* diff, VarNode* data1, VarNode* data2, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar diff, SymbolVar data1, SymbolVar data2, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -53,11 +53,11 @@ MGB_DEFINE_OPR_CLASS(
         CorrelationBackwardData2,
         intl::MegDNNOprWrapperBwd<megdnn::CorrelationBackwardData2>) // {
 public:
-    CorrelationBackwardData2(
+    MGE_WIN_DECLSPEC_FUC CorrelationBackwardData2(
             VarNode* diff, VarNode* data1, VarNode* data2, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar diff, SymbolVar data1, SymbolVar data2, const Param& param = {},
             const OperatorNodeConfig& config = {});
 

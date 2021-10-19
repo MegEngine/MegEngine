@@ -60,37 +60,37 @@
 
 // whether atlas is available
 #ifndef MGB_ATLAS
-#define MGB_ATLAS  0
+#define MGB_ATLAS 0
 #endif
 
 // whether cuda is available
 #ifndef MGB_CUDA
-#define MGB_CUDA    1
+#define MGB_CUDA 1
 #endif
 
 // whether to include file/line location for assert message
 #ifndef MGB_ASSERT_LOC
-#define MGB_ASSERT_LOC          1
+#define MGB_ASSERT_LOC 1
 #endif
 
 // whether to enable utils/debug.h and other debug methods
 #ifndef MGB_ENABLE_DEBUG_UTIL
-#define MGB_ENABLE_DEBUG_UTIL   1
+#define MGB_ENABLE_DEBUG_UTIL 1
 #endif
 
 // whether to enable logging
 #ifndef MGB_ENABLE_LOGGING
-#define MGB_ENABLE_LOGGING      1
+#define MGB_ENABLE_LOGGING 1
 #endif
 
 // whether to enable registering opr grad functions
 #ifndef MGB_ENABLE_GRAD
-#define MGB_ENABLE_GRAD         1
+#define MGB_ENABLE_GRAD 1
 #endif
 
 // whether to enable cpuinfo
 #ifndef MGB_ENABLE_CPUINFO
-#define MGB_ENABLE_CPUINFO      1
+#define MGB_ENABLE_CPUINFO 1
 #endif
 
 //! use one MACRO indicate enable_arm_dotprod
@@ -100,7 +100,6 @@
 #endif
 #define MGB_ENABLE_DOT 1
 #endif
-
 
 //! ENABLE MGB DOT should enable CPUINFO
 #if MGB_ENABLE_DOT
@@ -115,38 +114,38 @@
 //! IOS disabled cpuinfo and dotprod, cpuinfo has some problem on ios
 #ifdef IOS
 #undef MGB_ENABLE_CPUINFO
-#define MGB_ENABLE_CPUINFO      0
+#define MGB_ENABLE_CPUINFO 0
 #undef MGB_ENABLE_DOT
 #endif
 
 // whether to include actual class name in mgb::Typeinfo object; if this is
 // disabled, mgb::serialization::OprRegistry::find_opr_by_name would not work.
 #ifndef MGB_VERBOSE_TYPEINFO_NAME
-#define MGB_VERBOSE_TYPEINFO_NAME   1
+#define MGB_VERBOSE_TYPEINFO_NAME 1
 #endif
 
 // whether to enbale configuing megbrain internals through env vars
 #ifndef MGB_ENABLE_GETENV
-#define MGB_ENABLE_GETENV       MGB_ASSERT_LOC
+#define MGB_ENABLE_GETENV MGB_ASSERT_LOC
 #endif
 
 // whether to remove unnecessary features when used for serving
 #ifndef MGB_BUILD_SLIM_SERVING
-#define MGB_BUILD_SLIM_SERVING  0
+#define MGB_BUILD_SLIM_SERVING 0
 #endif
 
 // whether to enable exception
 #ifndef MGB_ENABLE_EXCEPTION
 #if __EXCEPTIONS
-#define MGB_ENABLE_EXCEPTION    1
+#define MGB_ENABLE_EXCEPTION 1
 #else
-#define MGB_ENABLE_EXCEPTION    0
+#define MGB_ENABLE_EXCEPTION 0
 #endif
 #endif
 
 // whether <thread> is available and usable
 #ifndef MGB_HAVE_THREAD
-#define MGB_HAVE_THREAD         1
+#define MGB_HAVE_THREAD 1
 #endif
 
 // whether to trade thread safety for memory usage
@@ -156,7 +155,7 @@
 
 // whether to enable JIT
 #ifndef MGB_JIT
-#define MGB_JIT     1
+#define MGB_JIT 1
 #endif
 #ifndef MGB_JIT_HALIDE
 #define MGB_JIT_HALIDE 0
@@ -174,10 +173,9 @@
 #define MGB_CAMBRICON MEGDNN_WITH_CAMBRICON
 #endif
 
-
 // whether to enable TensorRT support
 #ifndef MGB_ENABLE_TENSOR_RT
-#define MGB_ENABLE_TENSOR_RT    MGB_CUDA
+#define MGB_ENABLE_TENSOR_RT MGB_CUDA
 #endif
 
 // whether to enable fastrun profile
@@ -252,4 +250,26 @@
 #define MEGDNN_X86_WITH_MKL_DNN 0
 #endif
 
-#endif // _HEADER_MGB_BUILD_CONFIG
+#ifdef WIN32
+#ifdef MGE_DLL_EXPORT
+#define MGE_WIN_DECLSPEC_FUC __declspec(dllexport)
+#else
+#define MGE_WIN_DECLSPEC_FUC
+#endif
+#else
+#define MGE_WIN_DECLSPEC_FUC
+#endif
+
+#ifdef WIN32
+#if defined(MGE_DLL_EXPORT_DATA)
+#define MGE_WIN_DECLSPEC_DATA __declspec(dllexport)
+#elif defined(MGE_DLL_IMPORT_DATA)
+#define MGE_WIN_DECLSPEC_DATA __declspec(dllimport)
+#else
+#define MGE_WIN_DECLSPEC_DATA
+#endif
+#else
+#define MGE_WIN_DECLSPEC_DATA
+#endif
+
+#endif  // _HEADER_MGB_BUILD_CONFIG

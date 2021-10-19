@@ -51,7 +51,7 @@ public:
                   name(NULL) {}
 
         //! get trait from a mode; this function is thread safe
-        static const ModeTrait& from_mode(Mode mode);
+        MGE_WIN_DECLSPEC_FUC static const ModeTrait& from_mode(Mode mode);
     };
 
     //! get trait of current mode
@@ -69,17 +69,20 @@ public:
     virtual void exec(_megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) = 0;
 
     //! deduce output shape (do not check whether arity matches)
-    static void deduce_shape(const TensorShapeArray& src, TensorShape& dst);
+    MGE_WIN_DECLSPEC_FUC static void deduce_shape(
+            const TensorShapeArray& src, TensorShape& dst);
 
-    static void deduce_format(const TensorFormatArray& src, TensorFormat& dst);
+    MGE_WIN_DECLSPEC_FUC static void deduce_format(
+            const TensorFormatArray& src, TensorFormat& dst);
 
     //! deduce output layout
-    void deduce_layout(const TensorLayoutArray& src, TensorLayout& dst);
+    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            const TensorLayoutArray& src, TensorLayout& dst);
 
 protected:
     //! throw exception if incorrect layout; broadcast input shape to
     //! output shape
-    void check_layout_and_broadcast(
+    MGE_WIN_DECLSPEC_FUC void check_layout_and_broadcast(
             const TensorLayoutPtrArray& src, const TensorLayout& dst);
 
 private:
@@ -577,7 +580,7 @@ public:
     ParamPackConcatSplitBase(Handle* handle) : OperatorBase(handle) {}
 
     //! generate offsets to be used with ParamPackConcat and ParamPackSplit
-    static std::vector<dt_int32> gen_offsets(
+    MGE_WIN_DECLSPEC_FUC static std::vector<dt_int32> gen_offsets(
             const TensorShapeArray& shapes, size_t alignment, size_t dtype_size);
 };
 

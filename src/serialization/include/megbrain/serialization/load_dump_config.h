@@ -29,7 +29,7 @@ struct GraphDumpConfig {
 
     //! a fallback to implement custom tensor value dumper; it just writes
     //! the raw tensor value to output file. Implemented in serializer.cpp
-    static void default_tensor_value_dumper(
+    MGE_WIN_DECLSPEC_FUC static void default_tensor_value_dumper(
             OutputFile& fout, const cg::OperatorNodeBase& opr,
             const HostTensorND& tensor);
 
@@ -100,7 +100,7 @@ struct GraphLoadConfig {
 
     //! a fallback to implement custom tensor value reader; it just reads
     //! the raw tensor value from input file. Implemented in serializer.cpp
-    static void default_tensor_value_loader(
+    MGE_WIN_DECLSPEC_FUC static void default_tensor_value_loader(
             void* ptr, const TensorLayout& layout, InputFile& fin);
 
     //! whether to make all SharedDeviceTensor and Host2DeviceCopy shapes

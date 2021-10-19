@@ -73,20 +73,20 @@ public:
      *
      *    **Debug level 1 and 2 should not be used in productions.**
      */
-    static std::unique_ptr<Handle> make(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<Handle> make(
             megcoreComputingHandle_t computing_handle, int debug_level = 0);
 
 #if MEGDNN_WITH_CUDA
-    static std::unique_ptr<Handle> make_cuda_handle(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<Handle> make_cuda_handle(
             megcoreComputingHandle_t computing_handle);
     template <typename opr>
-    std::unique_ptr<opr> create_cuda_operator();
+    MGE_WIN_DECLSPEC_FUC std::unique_ptr<opr> create_cuda_operator();
 #endif
 #if MEGDNN_WITH_ROCM
-    static std::unique_ptr<Handle> make_rocm_handle(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<Handle> make_rocm_handle(
             megcoreComputingHandle_t computing_handle);
     template <typename opr>
-    std::unique_ptr<opr> create_rocm_operator();
+    MGE_WIN_DECLSPEC_FUC std::unique_ptr<opr> create_rocm_operator();
 #endif
 
     virtual ~Handle();
@@ -105,7 +105,7 @@ public:
      *
      * This function can be called at most once.
      */
-    void set_destructor(const thin_function<void()>& d);
+    MGE_WIN_DECLSPEC_FUC void set_destructor(const thin_function<void()>& d);
 
     /*!
      * \brief set a callback to be invoked when an operator is destructed
@@ -116,13 +116,13 @@ public:
         cb.swap(m_on_opr_destructed);
     }
 
-    void on_opr_destructed(OperatorBase* opr);
+    MGE_WIN_DECLSPEC_FUC void on_opr_destructed(OperatorBase* opr);
 
     /**
      * \brief Create operator of Opr type.
      */
     template <typename Opr>
-    std::unique_ptr<Opr> create_operator();
+    MGE_WIN_DECLSPEC_FUC std::unique_ptr<Opr> create_operator();
 
     /*
      * =============================================================
@@ -134,13 +134,13 @@ public:
      * \brief The internal data pointer of TensorND should be aligned to
      *        alignment_requirement() in bytes.
      */
-    virtual size_t alignment_requirement() const;
+    MGE_WIN_DECLSPEC_FUC virtual size_t alignment_requirement() const;
 
     //! get alignment in bytes for rows of image 2D tensor format
-    virtual size_t image2d_pitch_alignment() const;
+    MGE_WIN_DECLSPEC_FUC virtual size_t image2d_pitch_alignment() const;
 
     //! get vendor type
-    virtual HandleVendorType vendor_type() const;
+    MGE_WIN_DECLSPEC_FUC virtual HandleVendorType vendor_type() const;
 
     HandleType type() const { return m_handle_type; }
 
@@ -149,7 +149,8 @@ public:
      *        1. The handle of the src and the dst is the same kind
      *        2. The dst is continguous.
      */
-    virtual bool check_cross_dev_copy_constraint(const TensorLayout& src);
+    MGE_WIN_DECLSPEC_FUC virtual bool check_cross_dev_copy_constraint(
+            const TensorLayout& src);
 
 private:
     static constexpr uint32_t ALIVE_MAGIC = 0x8595e9d2u;

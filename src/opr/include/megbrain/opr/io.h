@@ -154,7 +154,7 @@ private:
  *        triggered.
  * 2. If host data is not contiguous, it would be relayouted on host.
  */
-MGB_DEFINE_OPR_CLASS(Host2DeviceCopy, intl::HostIONodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Host2DeviceCopy, intl::HostIONodeBase) // {
     class HostValueExecDep;
 
 public:
@@ -203,7 +203,7 @@ public:
         return make(graph, host_data, p, config);
     }
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const std::shared_ptr<HostTensorND>& host_data,
             const Param& param, const OperatorNodeConfig& config);
 
@@ -246,13 +246,14 @@ private:
  *
  * \see intl::SharedDeviceTensorBase and VolatileSharedDeviceTensor
  */
-MGB_DEFINE_OPR_CLASS(SharedDeviceTensor, intl::SharedDeviceTensorBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        SharedDeviceTensor, intl::SharedDeviceTensorBase) // {
     cg::static_infer::SourceType static_infer_src_type() const override;
 
 public:
     using Super::Super;
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
             bool const_value, const OperatorNodeConfig& config);
 
@@ -273,7 +274,7 @@ public:
      *
      * See SharedDeviceTensorBase::SharedDeviceTensorBase for const_value.
      */
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const HostTensorND& value, bool const_value,
             const OperatorNodeConfig& config);
 
@@ -295,7 +296,8 @@ public:
  *
  * This opr is usually used in serialized models.
  */
-MGB_DEFINE_OPR_CLASS(SharedDeviceTensorWithFormat, intl::SharedDeviceTensorBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        SharedDeviceTensorWithFormat, intl::SharedDeviceTensorBase) // {
     cg::static_infer::SourceType static_infer_src_type() const override;
 
 public:
@@ -303,7 +305,7 @@ public:
 
     void init_output_format() override;
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
             bool const_value, const OperatorNodeConfig& config);
 
@@ -328,13 +330,14 @@ public:
  *
  * \see intl::SharedDeviceTensorBase and SharedDeviceTensor
  */
-MGB_DEFINE_OPR_CLASS(VolatileSharedDeviceTensor, intl::SharedDeviceTensorBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        VolatileSharedDeviceTensor, intl::SharedDeviceTensorBase) // {
     NodeProp* do_make_node_prop() const override;
 
 public:
     using Super::Super;
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const std::shared_ptr<DeviceTensorND>& dev_data,
             const OperatorNodeConfig& config = {});
 
@@ -350,7 +353,7 @@ public:
 /*!
  * \brief tensor with immutable value
  */
-MGB_DEFINE_OPR_CLASS(ImmutableTensor, intl::DeviceTensorHolder) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(ImmutableTensor, intl::DeviceTensorHolder) // {
 public:
     class Value;
     class DevValueCache;
@@ -360,19 +363,19 @@ public:
             const OperatorNodeConfig& config);
     ~ImmutableTensor() noexcept;
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const HostTensorND& val,
             const OperatorNodeConfig& config = {});
 
     //! make from DTypeScalar; comp node must be provided in config
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             ComputingGraph& graph, const DTypeScalar& val,
             const OperatorNodeConfig& config);
 
     //! get underlying value on device
-    const DeviceTensorND& value() const;
+    MGE_WIN_DECLSPEC_FUC const DeviceTensorND& value() const;
 
-    const DeviceTensorND& host_value();
+    MGE_WIN_DECLSPEC_FUC const DeviceTensorND& host_value();
 
     SymbolVar shallow_copy(
             ComputingGraph& graph, const OperatorNodeConfig& config) const {
@@ -404,7 +407,7 @@ private:
  *
  * Output var would be placed on copy stream by default.
  */
-MGB_DEFINE_OPR_CLASS(Copy, cg::SingleCNIOSameShapeOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Copy, cg::SingleCNIOSameShapeOperatorNodeBase) // {
     bool m_mem_fwd_success = false;
 
     void scn_do_execute() override;
@@ -418,7 +421,8 @@ MGB_DEFINE_OPR_CLASS(Copy, cg::SingleCNIOSameShapeOperatorNodeBase) // {
 
 public:
     Copy(VarNode* inp, const OperatorNodeConfig& config);
-    static SymbolVar make(SymbolVar inp, const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar inp, const OperatorNodeConfig& config = {});
 
     // for serialization
     using Param = megdnn::param::Empty;
@@ -433,11 +437,11 @@ public:
  *
  * \see intl::MultipleDeviceTensorHolderBase
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MultipleDeviceTensorHolder, intl::MultipleDeviceTensorHolderBase) // {
 public:
     using Super::Super;
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             ComputingGraph& graph, ValueArray values,
             const OperatorNodeConfig& config = {});
 };
@@ -447,11 +451,11 @@ public:
  *
  * \see intl::MultipleDeviceTensorHolderBase
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MultipleDeviceTensorWithFormatHolder, intl::MultipleDeviceTensorHolderBase) // {
 public:
     using Super::Super;
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             ComputingGraph& graph, ValueArray values,
             const OperatorNodeConfig& config = {});
 

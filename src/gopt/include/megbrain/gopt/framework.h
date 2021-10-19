@@ -375,7 +375,7 @@ public:
     ~GraphOptimizer() noexcept;
 
     //! add an optimization pass
-    GraphOptimizer& add_pass(std::unique_ptr<Pass> pass);
+    MGE_WIN_DECLSPEC_FUC GraphOptimizer& add_pass(std::unique_ptr<Pass> pass);
 
     //! add a pass with given type
     template <class Pass, typename... Params>
@@ -415,14 +415,14 @@ public:
             const ComputingGraph::Options* comp_graph_opt = nullptr);
 
     //! transform given graph into a new optimized graph
-    SubGraph apply(const SubGraph& graph) const;
+    MGE_WIN_DECLSPEC_FUC SubGraph apply(const SubGraph& graph) const;
 
     /*!
      * \brief optimize graph defined by given endpoints and modify them
      *      inplace
      * \return *this
      */
-    const GraphOptimizer& apply_inplace(VarNodeArray& vars) const;
+    MGE_WIN_DECLSPEC_FUC const GraphOptimizer& apply_inplace(VarNodeArray& vars) const;
 
     /*!
      * \brief get var replace map associated with a computing graph
@@ -431,14 +431,14 @@ public:
      * Note that the map would be cleared when GraphOptimizer is applied
      * on the graph.
      */
-    static const ThinHashMap<VarNode*, VarNode*>& var_replace_map(
+    MGE_WIN_DECLSPEC_FUC static const ThinHashMap<VarNode*, VarNode*>& var_replace_map(
             ComputingGraph& graph);
 
     /*!
      * \brief get the final replaced var in
      *      var_replace_map(var->owner_graph()) corresponding to var
      */
-    static VarNode* var_replace_lookup(VarNode* var);
+    MGE_WIN_DECLSPEC_FUC static VarNode* var_replace_lookup(VarNode* var);
 
     /**
      * \brief add pass indicated by optimize options.
@@ -446,10 +446,10 @@ public:
      * \param options common options
      * \param reset if set true, it will reset options when add passes.
      */
-    const GraphOptimizer& add_passes_for_optimize_options(
+    MGE_WIN_DECLSPEC_FUC const GraphOptimizer& add_passes_for_optimize_options(
             cg::GraphCommonOptimizeOptions& options, bool reset = false);
 
-    const GraphOptimizer& add_passes_for_optimize_options(
+    MGE_WIN_DECLSPEC_FUC const GraphOptimizer& add_passes_for_optimize_options(
             const cg::GraphCommonOptimizeOptions& options);
 
     /**
@@ -457,7 +457,7 @@ public:
      *
      * \param options graph tuning options
      */
-    const GraphOptimizer& add_passes_for_graph_tuning_options(
+    MGE_WIN_DECLSPEC_FUC const GraphOptimizer& add_passes_for_graph_tuning_options(
             const GraphTuningOptions& options);
 };
 
@@ -491,7 +491,7 @@ public:
         bool all_const_inp;
     };
 
-    AddOprResult add_opr(OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC AddOprResult add_opr(OperatorNodeBase* opr);
 
     const AddOprResult& opr_rst(OperatorNodeBase* opr) const {
         return m_oprinfo.at(opr).result;

@@ -24,7 +24,7 @@ namespace mgb {
  * The implementation must be thread safe.
  */
 class PersistentCache {
-    static std::shared_ptr<PersistentCache> sm_impl;
+    static MGE_WIN_DECLSPEC_DATA std::shared_ptr<PersistentCache> sm_impl;
 
 public:
     virtual ~PersistentCache() = default;
@@ -42,7 +42,7 @@ public:
     virtual bool support_dump_cache() { return false; }
 
     //! set an implementation; return the original implementation
-    static std::shared_ptr<PersistentCache> set_impl(
+    MGE_WIN_DECLSPEC_FUC static std::shared_ptr<PersistentCache> set_impl(
             std::shared_ptr<PersistentCache> impl);
 
     //! get the instance; the default implementation just caches in

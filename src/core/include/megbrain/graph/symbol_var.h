@@ -53,15 +53,15 @@ public:
      * \brief set a new name; note that the underlying VarNode would be
      *      modified, not this SymbolVar itself
      */
-    SymbolVar rename(const std::string& name) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar rename(const std::string& name) const;
 
-    SymbolVar reshape(const TensorShape& tshape) const;
-    SymbolVar reshape(SymbolVar tshape) const;
-    SymbolVar broadcast(const TensorShape& tshape) const;
-    SymbolVar broadcast(SymbolVar tshape) const;
-    SymbolVar symshape() const;
-    SymbolVar flatten() const;
-    SymbolVar add_axis(size_t idx) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar reshape(const TensorShape& tshape) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar reshape(SymbolVar tshape) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar broadcast(const TensorShape& tshape) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar broadcast(SymbolVar tshape) const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar symshape() const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar flatten() const;
+    MGE_WIN_DECLSPEC_FUC SymbolVar add_axis(size_t idx) const;
 
     const TensorShape& shape() const { return m_node->shape(); }
 
@@ -105,7 +105,8 @@ public:
      * \brief make a const scalar value on given computing graph and
      *      computing node
      */
-    static SymbolVar make_scalar(DTypeScalar value, ComputingGraph& cg, CompNode cn);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make_scalar(
+            DTypeScalar value, ComputingGraph& cg, CompNode cn);
 
     /*!
      * \brief make a const scalar value using computing graph and comp node
@@ -131,7 +132,7 @@ public:
      * This essentially synchronizes the dispatch queue and then call
      * dev_tensor()
      */
-    const DeviceTensorND& eager_eval_get_value() const;
+    MGE_WIN_DECLSPEC_FUC const DeviceTensorND& eager_eval_get_value() const;
 
     bool allow_shape_change() const { return m_node->allow_shape_change(); }
 };

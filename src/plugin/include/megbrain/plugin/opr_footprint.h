@@ -36,7 +36,7 @@ class OprFootprint {
     void add_single_param_json();
 
     //! be invoked when OprFootprint initilizing.
-    void init_all_footprints();
+    MGE_WIN_DECLSPEC_FUC void init_all_footprints();
 
 public:
     struct Result {
@@ -74,15 +74,16 @@ public:
     OprFootprint() { init_all_footprints(); }
 
     //! return footprint rst for associated opr.
-    Result calc_footprint(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC Result calc_footprint(cg::OperatorNodeBase* opr);
     //! get computation of a given operator
-    uint64_t get_computation(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC uint64_t get_computation(cg::OperatorNodeBase* opr);
 #if MGB_ENABLE_JSON
-    std::shared_ptr<json::Value> get_param_json(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> get_param_json(
+            cg::OperatorNodeBase* opr);
     //! get opr foot print and graph exec info
     //! the function will recompile graph, AsyncExecutable compiled before will
     //! be invalid
-    static std::shared_ptr<json::Value> get_opr_fp_graph_exec(
+    MGE_WIN_DECLSPEC_FUC static std::shared_ptr<json::Value> get_opr_fp_graph_exec(
             cg::ComputingGraph& graph, const SymbolVarArray& outputs);
 #endif
 };

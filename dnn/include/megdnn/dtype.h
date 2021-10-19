@@ -386,10 +386,11 @@ using DTypeParam = DTypeParamImpl<typename DTypeTrait<DType>::ctype>;
  */
 class DType {
 private:
-    MEGDNN_NORETURN void on_request_lowbit_size() const;
+    MGE_WIN_DECLSPEC_FUC MEGDNN_NORETURN void on_request_lowbit_size() const;
     // HACK: This is required in ParameterizedDType::downcast_from
 public:
-    MEGDNN_NORETURN void on_assert_is_failed(const char* rname) const;
+    MGE_WIN_DECLSPEC_FUC MEGDNN_NORETURN void on_assert_is_failed(
+            const char* rname) const;
 
 protected:
     struct Trait {
@@ -493,7 +494,7 @@ public:
     bool operator!=(const DType& rhs) const { return m_trait != rhs.m_trait; }
 
     //! get dtype object from enum
-    static DType from_enum(DTypeEnum ev);
+    MGE_WIN_DECLSPEC_FUC static DType from_enum(DTypeEnum ev);
 
     //! get a handle of the dtype that could be used for equivalence check
     const void* handle() const { return m_trait; }
@@ -531,9 +532,10 @@ class ParameterizedDType MEGDNN_FINAL : public DType {
     };
 
     // static part of the trait
-    static DType::Trait sm_trait;
+    static MGE_WIN_DECLSPEC_DATA DType::Trait sm_trait;
 
-    static Trait* make_from_param(const DTypeParam<SelfType>& param);
+    MGE_WIN_DECLSPEC_FUC static Trait* make_from_param(
+            const DTypeParam<SelfType>& param);
     explicit ParameterizedDType(DType dtype) : DType(dtype) {}
 
 public:
@@ -569,12 +571,12 @@ public:
 //! dtype implementation classes
 namespace dtype {
 
-#define IMPL(_name)                           \
-    class _name MEGDNN_FINAL : public DType { \
-        static Trait sm_trait;                \
-                                              \
-    public:                                   \
-        _name() : DType(&sm_trait) {}         \
+#define IMPL(_name)                                  \
+    class _name MEGDNN_FINAL : public DType {        \
+        static MGE_WIN_DECLSPEC_DATA Trait sm_trait; \
+                                                     \
+    public:                                          \
+        _name() : DType(&sm_trait) {}                \
     };
 
 MEGDNN_FOREACH_DTYPE_NAME(IMPL)
@@ -764,7 +766,7 @@ struct DTypeParamImpl<dt_quint8> {
     uint8_t zero_point;
 
     DTypeParamImpl<dt_quint8>() = default;
-    DTypeParamImpl<dt_quint8>(float scale, uint8_t zero_point);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_quint8>(float scale, uint8_t zero_point);
 
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
@@ -788,7 +790,7 @@ struct DTypeParamImpl<dt_qint8> {
     float scale;
 
     DTypeParamImpl<dt_qint8>() = default;
-    DTypeParamImpl<dt_qint8>(float scale);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_qint8>(float scale);
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
 #endif
@@ -810,7 +812,7 @@ struct DTypeParamImpl<dt_qint16> {
     float scale;
 
     DTypeParamImpl<dt_qint16>() = default;
-    DTypeParamImpl<dt_qint16>(float scale);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_qint16>(float scale);
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
 #endif  // MEGDNN_CC_HOST
@@ -831,7 +833,7 @@ struct DTypeParamImpl<dt_qint32> {
     float scale;
 
     DTypeParamImpl<dt_qint32>() = default;
-    DTypeParamImpl<dt_qint32>(float scale);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_qint32>(float scale);
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
 #endif  // MEGDNN_CC_HOST
@@ -854,7 +856,7 @@ struct DTypeParamImpl<dt_quint4> {
     uint8_t zero_point;
 
     DTypeParamImpl<dt_quint4>() = default;
-    DTypeParamImpl<dt_quint4>(float scale, uint8_t zero_point);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_quint4>(float scale, uint8_t zero_point);
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
 #endif
@@ -879,7 +881,7 @@ struct DTypeParamImpl<dt_qint4> {
     float scale;
 
     DTypeParamImpl<dt_qint4>() = default;
-    DTypeParamImpl<dt_qint4>(float scale);
+    MGE_WIN_DECLSPEC_FUC DTypeParamImpl<dt_qint4>(float scale);
 #ifdef MEGDNN_CC_HOST
     std::size_t hash() const;
 #endif

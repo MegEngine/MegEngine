@@ -60,23 +60,25 @@ public:
         using FullRecord = std::vector<std::pair<VarNode*, InputValueRecord>>;
     };
 
-    InfkernFinder(cg::ComputingGraph* graph, bool record_input_value);
-    ~InfkernFinder() noexcept;
+    MGE_WIN_DECLSPEC_FUC InfkernFinder(
+            cg::ComputingGraph* graph, bool record_input_value);
+    MGE_WIN_DECLSPEC_FUC ~InfkernFinder() noexcept;
 
     //! this constructor should not be called by user
-    InfkernFinder(cg::ComputingGraph* graph, GlobalState* global_state);
+    MGE_WIN_DECLSPEC_FUC InfkernFinder(
+            cg::ComputingGraph* graph, GlobalState* global_state);
 
     /*!
      * \brief write execution status to file
      * \return the first operator whose output is not finished; or
      *      nullptr if all finished
      */
-    cg::OperatorNodeBase* write_to_file(const char* fpath);
+    MGE_WIN_DECLSPEC_FUC cg::OperatorNodeBase* write_to_file(const char* fpath);
 
     /*!
      * \brief get previous input values for dumped operators
      */
-    InputValueRecord::FullRecord get_input_values(size_t opr_id);
+    MGE_WIN_DECLSPEC_FUC InputValueRecord::FullRecord get_input_values(size_t opr_id);
 };
 
 }  // namespace mgb

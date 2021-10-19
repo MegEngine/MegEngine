@@ -84,26 +84,26 @@ MGB_DEFINE_OPR_CLASS(CustomOpNode, cg::OperatorNodeBase) // {
     bool update_priority() const override final;
 
 public:
-    CustomOpNode(
+    MGE_WIN_DECLSPEC_FUC CustomOpNode(
             const std::shared_ptr<const custom::CustomOp>& op, VarNodeArray inputs,
             const custom::Param& param, const OperatorNodeConfig& config);
-    static VarNodeArray make(
+    MGE_WIN_DECLSPEC_FUC static VarNodeArray make(
             const std::shared_ptr<const custom::CustomOp>& op, VarNodeArray inputs,
             const custom::Param& param, const OperatorNodeConfig& config);
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const std::shared_ptr<const custom::CustomOp>& op, SymbolVarArray inputs,
             const custom::Param& param, const OperatorNodeConfig& config);
 
-    custom::RunTimeId runtime_id(void) const;
-    uint32_t param_tag(void) const;
-    custom::Param& param(void);
-    custom::Param param(void) const;
-    std::string op_type(void) const;
-    std::string op_desc(void) const;
-    size_t input_num(void) const;
-    size_t output_num(void) const;
-    custom::ArgInfo input_info(size_t idx) const;
-    custom::ArgInfo output_info(size_t idx) const;
+    MGE_WIN_DECLSPEC_FUC custom::RunTimeId runtime_id(void) const;
+    MGE_WIN_DECLSPEC_FUC uint32_t param_tag(void) const;
+    MGE_WIN_DECLSPEC_FUC custom::Param& param(void);
+    MGE_WIN_DECLSPEC_FUC custom::Param param(void) const;
+    MGE_WIN_DECLSPEC_FUC std::string op_type(void) const;
+    MGE_WIN_DECLSPEC_FUC std::string op_desc(void) const;
+    MGE_WIN_DECLSPEC_FUC size_t input_num(void) const;
+    MGE_WIN_DECLSPEC_FUC size_t output_num(void) const;
+    MGE_WIN_DECLSPEC_FUC custom::ArgInfo input_info(size_t idx) const;
+    MGE_WIN_DECLSPEC_FUC custom::ArgInfo output_info(size_t idx) const;
 };
 
 }  // namespace opr

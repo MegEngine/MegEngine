@@ -33,7 +33,7 @@ MGB_DEFINE_OPR_CLASS(Alloc, intl::OutshapeBySymvarSCNOprBase) // {
 public:
     Alloc(VarNode* shape, DType dtype, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar shape, DType dtype, const OperatorNodeConfig& config = {});
 
     static SymbolVar make(
@@ -61,7 +61,7 @@ public:
             VarNode* start, VarNode* stop, VarNode* num, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar start, SymbolVar stop, SymbolVar num, const Param& param,
             const OperatorNodeConfig& config = {});
 
@@ -83,7 +83,7 @@ public:
     using Param = megdnn::Eye::Param;
     Eye(VarNode* shape, const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar shape, const Param& param, const OperatorNodeConfig& config = {});
 
     const Param& param() const { return m_param; }

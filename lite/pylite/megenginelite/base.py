@@ -56,6 +56,8 @@ if sys.platform == "win32":
                 err.strerror += ' Error loading "{}" or one of its dependencies.'.format(
                     dll
                 )
+                err.strerror += " \nplease install VC runtime from: "
+                err.strerror += " \nhttps://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-160"
                 raise err
             elif res is not None:
                 is_loaded = True
@@ -69,6 +71,8 @@ if sys.platform == "win32":
                 err.strerror += ' Error loading "{}" or one of its dependencies.'.format(
                     dll
                 )
+                err.strerror += " \nplease install VC runtime from: "
+                err.strerror += " \nhttps://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-160"
                 raise err
 
     kernel32.SetErrorMode(old_error_mode)

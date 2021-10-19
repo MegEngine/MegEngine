@@ -24,17 +24,21 @@
 namespace mgb {
 namespace opr {
 
-MGB_DEFINE_OPR_CLASS(Argmax, intl::MegDNNOprWrapperFwd<megdnn::Argmax>) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        Argmax, intl::MegDNNOprWrapperFwd<megdnn::Argmax>) // {
 public:
-    Argmax(VarNode* src, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC Argmax(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(Argmin, intl::MegDNNOprWrapperFwd<megdnn::Argmin>) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        Argmin, intl::MegDNNOprWrapperFwd<megdnn::Argmin>) // {
 public:
-    Argmin(VarNode* src, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC Argmin(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
 };
 
@@ -47,7 +51,7 @@ public:
  * \param[out] out_tensor the first output: \f$(m, n)\f$ sorted output tensor
  * \param[out] indices the second output: \f$(m, n)\f$ sorted indices
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ArgsortForward, intl::MegDNNOprWrapperFwd<megdnn::ArgsortForward>) // {
 protected:
     NodeProp* do_make_node_prop() const override;
@@ -57,23 +61,23 @@ protected:
             TensorShapeArray& out_shape) const override;
 
 public:
-    ArgsortForward(
+    MGE_WIN_DECLSPEC_FUC ArgsortForward(
             VarNode* in_tensor, const Param& param, const OperatorNodeConfig& config);
 
-    static std::array<SymbolVar, 2> make(
+    MGE_WIN_DECLSPEC_FUC static std::array<SymbolVar, 2> make(
             SymbolVar in_tensor, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
 using Argsort = ArgsortForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ArgsortBackward, intl::MegDNNOprWrapperBwd<megdnn::ArgsortBackward>) // {
 public:
-    ArgsortBackward(
+    MGE_WIN_DECLSPEC_FUC ArgsortBackward(
             VarNode* out_diff, VarNode* indices, VarNode* result_shape,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar out_diff, SymbolVar indices, SymbolVar result_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
     static SymbolVar make(
@@ -84,16 +88,17 @@ public:
 };
 
 //! cumulative sum along given axis
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Cumsum,
         cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolderImpl<megdnn::Cumsum>>) // {
     void add_input_layout_constraint() override;
 
 public:
-    Cumsum(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC Cumsum(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
     // for serialization
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar opr, const Param& param, const OperatorNodeConfig& config = {});
 
 protected:
@@ -102,13 +107,14 @@ protected:
 };
 
 #if MGB_CUDA
-MGB_DEFINE_OPR_CLASS(NvOf, cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(NvOf, cg::SingleCNOperatorNodeBase) // {
 public:
     using Param = megdnn::param::NvOf;
-    NvOf(VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC NvOf(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
     // for serialization
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar opr, const Param& param, const OperatorNodeConfig& config = {});
 
     static SymbolVar make(SymbolVar opr, const OperatorNodeConfig& config = {}) {
@@ -142,22 +148,22 @@ using TopKBase = cg::SingleCNOperatorNode<
  * \brief take values conditionally
  * outputs: values, indices
  */
-MGB_DEFINE_OPR_CLASS(CondTake, intl::CondTakeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(CondTake, intl::CondTakeBase) // {
     void init_output_static_infer_desc() override;
     void scn_do_execute() override;
     void add_input_layout_constraint() override;
     NodeProp* do_make_node_prop() const override;
 
 public:
-    CondTake(
+    MGE_WIN_DECLSPEC_FUC CondTake(
             VarNode* data, VarNode* mask, const Param& param,
             const OperatorNodeConfig& config);
-    static std::array<SymbolVar, 2> make(
+    MGE_WIN_DECLSPEC_FUC static std::array<SymbolVar, 2> make(
             SymbolVar data, SymbolVar mask, const Param& param,
             const OperatorNodeConfig& config = {});
 };
 
-MGB_DEFINE_OPR_CLASS(TopK, intl::TopKBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(TopK, intl::TopKBase) // {
     void init_output_dtype() override;
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
@@ -165,11 +171,12 @@ MGB_DEFINE_OPR_CLASS(TopK, intl::TopKBase) // {
     void record_execute_deps(ExecDependencyArray& deps) override;
 
 public:
-    TopK(VarNode* data, VarNode* k, const Param& param,
-         const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC TopK(
+            VarNode* data, VarNode* k, const Param& param,
+            const OperatorNodeConfig& config);
 
     //! note: for KTH_ONLY mode, the second output would be nullptr
-    static std::array<SymbolVar, 2> make(
+    MGE_WIN_DECLSPEC_FUC static std::array<SymbolVar, 2> make(
             SymbolVar data, SymbolVar k, const Param& param,
             const OperatorNodeConfig& config = {});
 };

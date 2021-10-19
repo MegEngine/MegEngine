@@ -62,13 +62,13 @@ public:
     //! serialization load/dump
     struct LoadDumpImpl;
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             std::shared_ptr<nvinfer1::ICudaEngine> engine,
             std::shared_ptr<GpuAllocator> gpu_allocator, const SymbolVarArray& src,
             const OperatorNodeConfig& config = {});
 
     //! create an operator from a serialized ICudaEngine
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const void* buf, size_t buf_size, const SymbolVarArray& src,
             const OperatorNodeConfig& config = {});
 

@@ -54,9 +54,9 @@ void impl_deleter(void* ptr) {
     std::unique_ptr<void, void_deleter> m_impl; \
                                                 \
 public:                                         \
-    Cls();                                      \
-    Cls(const Cls& rhs);                        \
-    Cls& operator=(const Cls& rhs)
+    MGE_WIN_DECLSPEC_FUC Cls();                 \
+    MGE_WIN_DECLSPEC_FUC Cls(const Cls& rhs);   \
+    MGE_WIN_DECLSPEC_FUC Cls& operator=(const Cls& rhs)
 
 #define CUSTOM_PIMPL_CLS_DEFINE(Cls)                                                 \
     Cls::Cls() : m_impl(new Cls##Impl(), impl_deleter<Cls##Impl>) {}                 \

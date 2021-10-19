@@ -12,6 +12,7 @@
 #pragma once
 
 #include <string>
+#include "megbrain_build_config.h"
 
 namespace mgb {
 
@@ -34,7 +35,7 @@ class Timer {
     TimeSpec m_start;
 
 public:
-    static TimeSpec get_time();
+    MGE_WIN_DECLSPEC_FUC static TimeSpec get_time();
 
     Timer() { reset(); }
 

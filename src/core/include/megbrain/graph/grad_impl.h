@@ -31,7 +31,7 @@ public:
 
     //! check that m_all.size() matches opr->input().size(), and return
     //! m_all
-    VarNodeArray& all(OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC VarNodeArray& all(OperatorNodeBase* opr);
 };
 
 /*!
@@ -69,12 +69,12 @@ using VarVirtualReceiverGrad = thin_function<VarNode*(
 /*!
  * \brief register grad func for an operator type
  */
-void register_grad_func(Typeinfo* opr_type, OprGradFunc grad);
+MGE_WIN_DECLSPEC_FUC void register_grad_func(Typeinfo* opr_type, OprGradFunc grad);
 
 /*!
  * \brief lookup grad func for an operator type
  */
-OprGradFunc* lookup_grad_func(Typeinfo* opr_type);
+MGE_WIN_DECLSPEC_FUC OprGradFunc* lookup_grad_func(Typeinfo* opr_type);
 
 /*!
  * \brief add a callback to be invoked when grad of given var is computed
@@ -85,7 +85,7 @@ OprGradFunc* lookup_grad_func(Typeinfo* opr_type);
  * Remember to call add_extra_dep_for_grad if the GradTransformer needs to
  * compute grad on other var.
  */
-void add_grad_transformer(VarNode* var, const GradTransformer& cb);
+MGE_WIN_DECLSPEC_FUC void add_grad_transformer(VarNode* var, const GradTransformer& cb);
 
 /*!
  * \brief set a callback to compute the gradient of *inputs*
@@ -96,7 +96,7 @@ void add_grad_transformer(VarNode* var, const GradTransformer& cb);
  * Note: graph transformation should be disabled until grad has been
  * computed if virtual receiver is needed
  */
-void add_var_virtual_receiver(
+MGE_WIN_DECLSPEC_FUC void add_var_virtual_receiver(
         const VarNodeArray& inputs, const VarNodeArray& outputs,
         const VarVirtualReceiverGrad& grad);
 
@@ -108,7 +108,7 @@ void add_var_virtual_receiver(
  *
  * \param add_volatile_out see call_opr_grad_on_given_io
  */
-void add_var_virtual_receiver_reuse_opr_grad(
+MGE_WIN_DECLSPEC_FUC void add_var_virtual_receiver_reuse_opr_grad(
         const VarNodeArray& inputs, const VarNodeArray& outputs, OperatorNodeBase* opr,
         bool add_volatile_out);
 
@@ -119,7 +119,7 @@ void add_var_virtual_receiver_reuse_opr_grad(
  * graph, so when computing gradients, \p inp would be considered to
  * contribute to target var if \p out contributes to target var.
  */
-void add_extra_dep_for_grad(VarNode* inp, VarNode* out);
+MGE_WIN_DECLSPEC_FUC void add_extra_dep_for_grad(VarNode* inp, VarNode* out);
 
 /*!
  * \brief call registered OprGradFunc on given input and output vars
@@ -130,7 +130,7 @@ void add_extra_dep_for_grad(VarNode* inp, VarNode* out);
  * \param add_volatile_out whether to add null vars in the place of volatile
  *      output vars to outputs
  */
-VarNode* call_opr_grad_on_given_io(
+MGE_WIN_DECLSPEC_FUC VarNode* call_opr_grad_on_given_io(
         OperatorNodeBase* opr, const VarNodeArray& inputs, const VarNodeArray& outputs,
         size_t idx, const VarNodeArray& out_grad, bool add_volatile_out);
 

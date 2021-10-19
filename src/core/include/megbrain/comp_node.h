@@ -129,18 +129,19 @@ public:
          * currently supported ID format: (gpu|cpu)<n>[:m] where n is the
          * device number, possibly with m as the stream id.
          */
-        static Locator parse(const std::string& id);
+        MGE_WIN_DECLSPEC_FUC static Locator parse(const std::string& id);
 
         /*!
          * \brief set mapping between device numbers of a device type
          */
-        static void set_device_map(DeviceType type, int from, int to);
+        MGE_WIN_DECLSPEC_FUC static void set_device_map(
+                DeviceType type, int from, int to);
 
         /*!
          * \brief set the actual device type to be used for
          *      DeviceType::UNSPEC
          */
-        static void set_unspec_device_type(DeviceType type);
+        MGE_WIN_DECLSPEC_FUC static void set_unspec_device_type(DeviceType type);
 
         /*!
          * \brief get corresponding physical Locator
@@ -148,13 +149,13 @@ public:
          * DeviceType::UNSPEC would be resolved, and device map would be
          * applied on device number
          */
-        Locator to_physical() const;
+        MGE_WIN_DECLSPEC_FUC Locator to_physical() const;
 
         /*!
          * \brief get string description of this locator that can be parsed
          *      again
          */
-        std::string to_string() const;
+        MGE_WIN_DECLSPEC_FUC std::string to_string() const;
 
         bool operator==(const Locator& rhs) const {
             return type == rhs.type && device == rhs.device && stream == rhs.stream;
@@ -186,7 +187,7 @@ public:
     /*!
      * \brief manually destroy all comp node resources
      */
-    static void finalize();
+    MGE_WIN_DECLSPEC_FUC static void finalize();
 
     /*!
      * \brief load a computing node from logical locator ID;
@@ -201,7 +202,7 @@ public:
         return load(locator.to_physical(), locator);
     }
 
-    static CompNode load(
+    MGE_WIN_DECLSPEC_FUC static CompNode load(
             const Locator& locator_physical, const Locator& locator_logical);
 
     /* =================== memory management ======================== */
@@ -216,10 +217,10 @@ public:
      *
      * Exception should be raised if allocation fails.
      */
-    void* alloc_device(size_t size) const;
+    MGE_WIN_DECLSPEC_FUC void* alloc_device(size_t size) const;
 
     //! deallocate device buffer; see alloc_device() for more details
-    void free_device(void* ptr) const;
+    MGE_WIN_DECLSPEC_FUC void free_device(void* ptr) const;
 
     /*!
      * \brief allocate memory on host that is associated with the device,
@@ -227,9 +228,9 @@ public:
      *
      * Both allocation and deallocation on host are synchronous.
      */
-    void* alloc_host(size_t size) const;
+    MGE_WIN_DECLSPEC_FUC void* alloc_host(size_t size) const;
 
-    void free_host(void* ptr) const;
+    MGE_WIN_DECLSPEC_FUC void free_host(void* ptr) const;
 
     //! copy from underlying device to host
     void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) const {
@@ -269,19 +270,20 @@ public:
      * \brief release consecutive free chunks on all devices to defragment;
      *      see DevMemAlloc::try_coalesce_free
      */
-    static void try_coalesce_all_free_memory();
+    MGE_WIN_DECLSPEC_FUC static void try_coalesce_all_free_memory();
 
     /*
      * \brief specifies how to pre-allocate from raw dev allocator
      *
      */
-    static void set_prealloc_config(
+    MGE_WIN_DECLSPEC_FUC static void set_prealloc_config(
             size_t alignment, size_t min_req, size_t max_overhead, double growth_factor,
             DeviceType device_type);
     /*!
      * \brief get compute capability of the specified device
      */
-    static size_t get_compute_capability(int dev, DeviceType device_type);
+    MGE_WIN_DECLSPEC_FUC static size_t get_compute_capability(
+            int dev, DeviceType device_type);
 
     /* =================== synchronization ======================== */
 
@@ -304,7 +306,7 @@ public:
     /*!
      * \brief synchronize all computing nodes
      */
-    static void sync_all();
+    MGE_WIN_DECLSPEC_FUC static void sync_all();
 
     /* =================== misc ======================== */
 
@@ -341,7 +343,7 @@ public:
 #endif
 
     //! change to another stream on the same memory node
-    CompNode change_stream(int dest_stream) const;
+    MGE_WIN_DECLSPEC_FUC CompNode change_stream(int dest_stream) const;
 
     //! get string representation
     std::string to_string() const {
@@ -371,10 +373,10 @@ public:
     Locator locator_logical() const { return m_impl->locator_logical(); }
 
     //! see CompNodeEnv::activate
-    void activate() const;
+    MGE_WIN_DECLSPEC_FUC void activate() const;
 
     //! get device type of this comp node
-    DeviceType device_type() const;
+    MGE_WIN_DECLSPEC_FUC DeviceType device_type() const;
 
     /*!
      * \brief check for error on the asynchronous computing stream
@@ -385,7 +387,7 @@ public:
      * directly throw exception; return nullptr if no error.
      */
     MGB_WARN_UNUSED_RESULT
-    std::unique_ptr<MegBrainError> check_async_error() const;
+    MGE_WIN_DECLSPEC_FUC std::unique_ptr<MegBrainError> check_async_error() const;
 
     /*!
      * \brief create a CompNodeSeqRecorder associated with this computing
@@ -461,7 +463,7 @@ public:
 
     bool contain_flag(Flag flag) { return contain_flag(device_type(), flag); }
 
-    static bool contain_flag(DeviceType device_type, Flag flag);
+    MGE_WIN_DECLSPEC_FUC static bool contain_flag(DeviceType device_type, Flag flag);
 
     using UnorderedSet = ThinHashSet<CompNode>;
 
@@ -469,16 +471,17 @@ public:
     using UnorderedMap = ThinHashMap<CompNode, T>;
 
     //! apply function to each initialized comp node
-    static void foreach (thin_function<void(CompNode)> callback);
+    MGE_WIN_DECLSPEC_FUC static void foreach (thin_function<void(CompNode)> callback);
 
     //! get total number of specific devices on this system
-    static size_t get_device_count(DeviceType type, bool warn = true);
+    MGE_WIN_DECLSPEC_FUC static size_t get_device_count(
+            DeviceType type, bool warn = true);
 
     /* =================== specialized ======================== */
 
     //! get default CPU comp node
     // implemented in comp_node/cpu/comp_node.cpp
-    static CompNode default_cpu();
+    MGE_WIN_DECLSPEC_FUC static CompNode default_cpu();
 
     /*!
      * \brief set whether to enable affinity setting for CPU comp nodes
@@ -491,7 +494,7 @@ public:
      *
      * \return original setting
      */
-    static bool enable_affinity_for_cpu(bool flag);
+    MGE_WIN_DECLSPEC_FUC static bool enable_affinity_for_cpu(bool flag);
 
 protected:
     //! ImplBase with env(); defined in CompNodeEnv
@@ -680,15 +683,15 @@ class CompNode::EventPool {
     size_t m_flags;
 
 public:
-    explicit EventPool(CompNode cn, size_t flags = 0);
-    ~EventPool();
+    MGE_WIN_DECLSPEC_FUC explicit EventPool(CompNode cn, size_t flags = 0);
+    MGE_WIN_DECLSPEC_FUC ~EventPool();
 
-    CompNode::Event* alloc();
+    MGE_WIN_DECLSPEC_FUC CompNode::Event* alloc();
 
-    void free(CompNode::Event* ev);
+    MGE_WIN_DECLSPEC_FUC void free(CompNode::Event* ev);
 
     //! assert that all allocated events have been freed
-    void assert_all_freed();
+    MGE_WIN_DECLSPEC_FUC void assert_all_freed();
 };
 
 void CompNode::device_wait_event(Event& event) const {
@@ -732,14 +735,14 @@ class DepedentObjList {
     }
 
 protected:
-    virtual std::shared_ptr<void> callback() = 0;
+    MGE_WIN_DECLSPEC_FUC virtual std::shared_ptr<void> callback() = 0;
     ~DepedentObjList() = default;
 
-    static void add(DepedentObjList* ptr);
-    static void remove(DepedentObjList* ptr);
+    MGE_WIN_DECLSPEC_FUC static void add(DepedentObjList* ptr);
+    MGE_WIN_DECLSPEC_FUC static void remove(DepedentObjList* ptr);
 
 public:
-    static void invoke_callback_and_clean();
+    MGE_WIN_DECLSPEC_FUC static void invoke_callback_and_clean();
 };
 
 }  // namespace comp_node_detail
@@ -764,7 +767,7 @@ public:
 class CompNodeDepedentObject : private comp_node_detail::DepedentObjList {
     //! 1: in on_comp_node_finalize(); 2: after on_comp_node_finalize()
     int m_state = 0;
-    std::shared_ptr<void> callback() override final;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<void> callback() override final;
 
 protected:
     CompNodeDepedentObject() { add(this); }

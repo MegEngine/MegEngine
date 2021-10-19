@@ -18,11 +18,11 @@ namespace opr {
 
 MGB_DEFINE_OPR_CLASS(LSQForward, intl::MegDNNOprWrapperFwd<megdnn::LSQForward>) // {
 public:
-    LSQForward(
+    MGE_WIN_DECLSPEC_FUC LSQForward(
             VarNode* src, VarNode* scale, VarNode* zero_point, VarNode* grad_scale,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar scale, SymbolVar zero_point, SymbolVar grad_scale,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 };
@@ -31,11 +31,11 @@ using LSQ = LSQForward;
 MGB_DEFINE_OPR_CLASS(
         LSQBackward, intl::MegDNNOprWrapperBwd<megdnn::LSQBackward>) // {
 public:
-    LSQBackward(
+    MGE_WIN_DECLSPEC_FUC LSQBackward(
             VarNode* y_grad, VarNode* x, VarNode* scale, VarNode* zero_point,
             VarNode* grad_scale, const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar y_grad, SymbolVar x, SymbolVar scale, SymbolVar zero_point,
             SymbolVar grad_scale, const Param& param = {},
             const OperatorNodeConfig& config = {});

@@ -22,10 +22,10 @@ MGB_DEFINE_OPR_CLASS(
         PoolingForward, intl::MegDNNOprWrapperFwd<megdnn::PoolingForward>,
         public mixin::AlgoChooserHelper)  //{
 public:
-PoolingForward(
+MGE_WIN_DECLSPEC_FUC PoolingForward(
         VarNode* src, const Param& param, const ExecutionPolicy& policy,
         const OperatorNodeConfig& config);
-static SymbolVar make(
+MGE_WIN_DECLSPEC_FUC static SymbolVar make(
         SymbolVar src, const Param& param, const OperatorNodeConfig& config = {},
         const ExecutionPolicy& policy = {});
 
@@ -41,15 +41,15 @@ MGB_DEFINE_OPR_CLASS(
         PoolingBackward, intl::MegDNNOprWrapperBwd<megdnn::PoolingBackward>,
         public mixin::AlgoChooserHelper)  //{
 public:
-PoolingBackward(
+MGE_WIN_DECLSPEC_FUC PoolingBackward(
         VarNode* src, VarNode* dst, VarNode* diff, const Param& param,
         const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-static SymbolVar make(
+MGE_WIN_DECLSPEC_FUC static SymbolVar make(
         SymbolVar src, SymbolVar dst, SymbolVar diff, const Param& param,
         const OperatorNodeConfig& config = {}, const ExecutionPolicy& policy = {});
 
-size_t get_workspace_size_bytes(
+MGE_WIN_DECLSPEC_FUC size_t get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const override final;
 };

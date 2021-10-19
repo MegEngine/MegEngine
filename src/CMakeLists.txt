@@ -204,35 +204,45 @@ endif()
 
 set (_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)
 
-# Windows does not support implicitly importing data members from DLL.
-# on Windows:
-# depends on megdnn/megbrain target, refs to sdk/load-and-run/CMakeLists.txt
-# depends on megengine lite_share or lite_static
-if(NOT WIN32)
-    message(VERBOSE "create a export SHARED lib for python use")
-    add_library(megengine_export SHARED)
-    target_link_libraries(megengine_export PUBLIC megbrain megdnn)
-    target_link_libraries(megengine_export PRIVATE ${MGE_CUDA_LIBS})
-    if (MGE_WITH_DISTRIBUTED)
-        message(VERBOSE "megengine_export configured to link megray")
-        target_link_libraries(megengine_export PUBLIC megray)
-    endif()
-
-    # Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
-    add_library(megengine)
-    target_link_libraries(megengine PRIVATE ${MGE_CUDA_LIBS})
-    target_link_libraries(megengine PUBLIC megbrain megdnn)
-    if (UNIX AND NOT APPLE)
-        target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
-        set_target_properties(megengine PROPERTIES LINK_DEPENDS ${_VER_FILE})
-    endif()
-    # Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
-    # for this.
-    install(TARGETS megengine
-        EXPORT ${MGE_EXPORT_TARGETS}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# Build as SHARED or STATIC depending on BUILD_SHARED_LIBS=ON/OFF
+add_library(megengine)
+# force define a SHARED target for whl, caused by when build for APPLE
+# we will force set BUILD_SHARED_LIBS=OFF for xcode needed
+add_library(megengine_shared SHARED)
+target_link_libraries(megengine PRIVATE ${MGE_CUDA_LIBS})
+target_link_libraries(megengine PUBLIC megbrain megdnn)
+target_link_libraries(megengine_shared PUBLIC megbrain megdnn)
+target_link_libraries(megengine_shared PRIVATE ${MGE_CUDA_LIBS})
+if (UNIX AND NOT APPLE)
+    target_link_options(megengine PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
+    set_target_properties(megengine PROPERTIES LINK_DEPENDS ${_VER_FILE})
+    target_link_options(megengine_shared PRIVATE -Wl,--no-undefined -Wl,--version-script=${_VER_FILE})
+    set_target_properties(megengine_shared PROPERTIES LINK_DEPENDS ${_VER_FILE})
 endif()
+if(WIN32 OR MSVC)
+    target_compile_definitions(megbrain PRIVATE MGE_DLL_EXPORT)
+    target_compile_definitions(megdnn PRIVATE MGE_DLL_EXPORT)
+    target_compile_definitions(megengine PRIVATE MGE_DLL_EXPORT)
+    target_compile_definitions(megengine_shared PRIVATE MGE_DLL_EXPORT)
+    target_compile_definitions(megbrain PRIVATE MGE_DLL_EXPORT_DATA)
+    target_compile_definitions(megdnn PRIVATE MGE_DLL_EXPORT_DATA)
+    target_compile_definitions(megengine PRIVATE MGE_DLL_EXPORT_DATA)
+    target_compile_definitions(megengine_shared PRIVATE MGE_DLL_EXPORT_DATA)
+    # please do not use WINDOWS_EXPORT_ALL_SYMBOLS, as symbols max than 65535 when build with CUDA
+    #set_target_properties(megengine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+    #set_target_properties(megengine_shared PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+endif()
+if (MGE_WITH_DISTRIBUTED)
+    message(VERBOSE "megengine configured to link megray")
+    target_link_libraries(megengine PUBLIC megray)
+    target_link_libraries(megengine_shared PUBLIC megray)
+endif()
+# Do not export targets if MGE_WITH_DISTRIBUTED is on. MegRay is not ready
+# for this.
+install(TARGETS megengine
+    EXPORT ${MGE_EXPORT_TARGETS}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 if (NOT MGE_WITH_DISTRIBUTED)
     install(TARGETS megbrain

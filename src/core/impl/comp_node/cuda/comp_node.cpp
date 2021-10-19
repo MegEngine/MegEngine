@@ -612,6 +612,19 @@ bool CudaCompNodeImpl::check_global_finalized() {
                 "recovery by OS!!");
         return true;
     }
+    //! FIXME: megengine dynamic with VCRT, atexit fuctions table have
+    //! some order issue, which will lead to cuda runtime uploading, this
+    //! always happened at python3 unload dll(means python3 will exit),
+    //! as a workround, recovery resource by OS temporarily, may need
+    //! remove this after upgrade cuda runtime
+    int dev = -1;
+    if (cudaErrorCudartUnloading == cudaGetDevice(&dev)) {
+        mgb_log_debug(
+                "windows cudaErrorCudartUnloading happened!!, resource "
+                "recovery by OS!!");
+        return true;
+    }
+
 #endif
     return false;
 }

@@ -60,7 +60,7 @@ class VarValueChecker final : public PluginBase {
 public:
     using Error = opr::AssertEqual::UnequalError;
 
-    VarValueChecker(
+    MGE_WIN_DECLSPEC_FUC VarValueChecker(
             ComputingGraph* graph, size_t var_switch_interval = 1,
             size_t init_var_idx = 0);
 };

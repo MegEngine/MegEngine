@@ -83,13 +83,13 @@ class GraphProfiler final : public PluginBase {
     void record_event(CompNodeEventPtr& dest, CompNode comp_node);
 
 public:
-    GraphProfiler(cg::ComputingGraph* graph);
-    ~GraphProfiler() noexcept;
+    MGE_WIN_DECLSPEC_FUC GraphProfiler(cg::ComputingGraph* graph);
+    MGE_WIN_DECLSPEC_FUC ~GraphProfiler() noexcept;
 
     /*!
      * \brief convert only profiling result to json
      */
-    std::shared_ptr<json::Object> to_json() const;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Object> to_json() const;
 
     /*!
      * \brief dump to visualizer format

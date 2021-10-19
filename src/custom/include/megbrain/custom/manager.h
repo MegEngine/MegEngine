@@ -24,23 +24,27 @@ class CustomOpManager {
 
 public:
     PREVENT_COPY_AND_ASSIGN(CustomOpManager);
-    static CustomOpManager* inst(void);
-    ~CustomOpManager();
+    MGE_WIN_DECLSPEC_FUC static CustomOpManager* inst(void);
+    MGE_WIN_DECLSPEC_FUC ~CustomOpManager();
 
-    std::shared_ptr<CustomOp> insert(const std::string& name, uint32_t version);
-    bool erase(const std::string& name);
-    bool erase(const RunTimeId& id);
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<CustomOp> insert(
+            const std::string& name, uint32_t version);
+    MGE_WIN_DECLSPEC_FUC bool erase(const std::string& name);
+    MGE_WIN_DECLSPEC_FUC bool erase(const RunTimeId& id);
 
-    std::shared_ptr<CustomOp> find_or_reg(const std::string& name, uint32_t version);
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<CustomOp> find_or_reg(
+            const std::string& name, uint32_t version);
 
-    RunTimeId to_id(const std::string& name) const;
-    std::string to_name(const RunTimeId& id) const;
+    MGE_WIN_DECLSPEC_FUC RunTimeId to_id(const std::string& name) const;
+    MGE_WIN_DECLSPEC_FUC std::string to_name(const RunTimeId& id) const;
 
-    std::shared_ptr<const CustomOp> find(const std::string& name) const;
-    std::shared_ptr<const CustomOp> find(const RunTimeId& id) const;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<const CustomOp> find(
+            const std::string& name) const;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<const CustomOp> find(
+            const RunTimeId& id) const;
 
-    std::vector<std::string> op_name_list(void);
-    std::vector<RunTimeId> op_id_list(void);
+    MGE_WIN_DECLSPEC_FUC std::vector<std::string> op_name_list(void);
+    MGE_WIN_DECLSPEC_FUC std::vector<RunTimeId> op_id_list(void);
 };
 
 class CustomLib {
@@ -67,10 +71,10 @@ class LibManager {
 public:
     PREVENT_COPY_AND_ASSIGN(LibManager);
 
-    static LibManager* inst(void);
-    const std::vector<std::string>& install(
+    MGE_WIN_DECLSPEC_FUC static LibManager* inst(void);
+    MGE_WIN_DECLSPEC_FUC const std::vector<std::string>& install(
             const std::string& name, const std::string& path);
-    bool uninstall(const std::string& name);
+    MGE_WIN_DECLSPEC_FUC bool uninstall(const std::string& name);
     friend class CustomOpManager;
 };
 

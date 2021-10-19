@@ -63,7 +63,7 @@ struct OprRegistry {
     OprShallowCopy shallow_copy;  //!< set to empty to use default impl
     uint64_t unversioned_type_id;
 
-    static void add(const OprRegistry& record);
+    MGE_WIN_DECLSPEC_FUC static void add(const OprRegistry& record);
 
     /*!
      * \brief register an operator to use dynamic loader
@@ -75,25 +75,28 @@ struct OprRegistry {
      *
      * See TestSerializer.DynamicLoader for an example
      */
-    static void add_using_dynamic_loader(
+    MGE_WIN_DECLSPEC_FUC static void add_using_dynamic_loader(
             Typeinfo* type, const std::string& name, const OprDumper& dumper);
 
     //! find registry by opr type name; return nullptr if not found
-    static const OprRegistry* find_by_name(const std::string& name);
+    MGE_WIN_DECLSPEC_FUC static const OprRegistry* find_by_name(
+            const std::string& name);
 
     //! find registry by persist_type_id; return nullptr if not found
-    static const OprRegistry* find_by_id(size_t id);
+    MGE_WIN_DECLSPEC_FUC static const OprRegistry* find_by_id(size_t id);
 
     //! find registry by type; return nullptr if not found
-    static const OprRegistry* find_by_type(Typeinfo* type);
+    MGE_WIN_DECLSPEC_FUC static const OprRegistry* find_by_type(Typeinfo* type);
 
     // TODO: This is hack. Refactor this out.
     //! Find registry by unversioned id; return nullptr if not found
-    static const OprRegistry* find_by_unversioned_id(size_t unversioned_id);
+    MGE_WIN_DECLSPEC_FUC static const OprRegistry* find_by_unversioned_id(
+            size_t unversioned_id);
 
 #if MGB_ENABLE_DEBUG_UTIL
     //! dump registered oprs
-    static std::vector<std::pair<size_t, std::string>> dump_registries();
+    MGE_WIN_DECLSPEC_FUC static std::vector<std::pair<size_t, std::string>>
+    dump_registries();
 #endif
 };
 

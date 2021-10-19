@@ -25,27 +25,27 @@ namespace mgb {
 namespace sys {
 
 //! set name of caller thread
-void set_thread_name(const std::string& name);
+MGE_WIN_DECLSPEC_FUC void set_thread_name(const std::string& name);
 
 #if !__DEPLOY_ON_XP_SP2__
 /*!
  * \brief get name of of given thread
  * \param tid thread id, or None to for the caller thread
  */
-std::string get_thread_name(Maybe<std::thread::id> tid = None);
+MGE_WIN_DECLSPEC_FUC std::string get_thread_name(Maybe<std::thread::id> tid = None);
 #endif
 
 //! get number of CPU cores on this system
-int get_cpu_count();
+MGE_WIN_DECLSPEC_FUC int get_cpu_count();
 
 //! set cpu affinity for caller thread
-void set_cpu_affinity(const std::vector<int>& cpuset);
+MGE_WIN_DECLSPEC_FUC void set_cpu_affinity(const std::vector<int>& cpuset);
 
 //! whether stderr supports ansi color code
-bool stderr_ansi_color();
+MGE_WIN_DECLSPEC_FUC bool stderr_ansi_color();
 
 //! get total ram and free ram in bytes
-std::pair<size_t, size_t> get_ram_status_bytes();
+MGE_WIN_DECLSPEC_FUC std::pair<size_t, size_t> get_ram_status_bytes();
 
 /*!
  * \brief invoke a function with time limit
@@ -207,7 +207,7 @@ public:
     virtual void kill_worker() = 0;
 
     //! global unique instance
-    static TimedFuncInvoker& ins();
+    MGE_WIN_DECLSPEC_FUC static TimedFuncInvoker& ins();
 };
 
 }  // namespace sys

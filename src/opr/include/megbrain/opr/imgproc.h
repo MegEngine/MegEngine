@@ -43,7 +43,7 @@ public:
             VarNode* in_tensor, VarNode* mat, VarNode* mat_idx, VarNode* out_shape,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar in_tensor, SymbolVar mat, SymbolVar mat_idx, SymbolVar out_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 
@@ -89,11 +89,11 @@ public:
             VarNode* mat, VarNode* mat_idx, VarNode* out_diff, VarNode* in_for_shape,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar mat, SymbolVar out_diff, SymbolVar in_for_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar mat, SymbolVar mat_idx, SymbolVar out_diff,
             SymbolVar in_for_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
@@ -115,7 +115,7 @@ public:
         return make(src, mat, {}, out_diff, param, config);
     }
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar mat, SymbolVar mat_idx, SymbolVar out_diff,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 
@@ -141,7 +141,7 @@ public:
             VarNode * in_tensor, VarNode * out_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar in_tensor, SymbolVar out_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -175,7 +175,7 @@ public:
             VarNode* out_diff, VarNode* in_for_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar out_diff, SymbolVar in_for_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -187,7 +187,7 @@ public:
             VarNode* in_tensor, VarNode* map, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar in_tensor, SymbolVar map, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -203,7 +203,7 @@ public:
             VarNode* map, VarNode* out_diff, VarNode* in_for_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar map, SymbolVar out_diff, SymbolVar in_for_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 };
@@ -215,7 +215,7 @@ public:
             VarNode* src, VarNode* map, VarNode* out_diff, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar map, SymbolVar out_diff, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -240,7 +240,7 @@ public:
             VarNode* in_tensor, VarNode* mat, VarNode* out_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar in_tensor, SymbolVar mat, SymbolVar out_shape,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 
@@ -278,25 +278,25 @@ public:
             VarNode* src, VarNode* mask_offset, VarNode* mask_val, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar mask_offset, SymbolVar mask_val,
             const Param& param, const OperatorNodeConfig& config = {});
 
-    DctChannelSelectForward(
+    MGE_WIN_DECLSPEC_FUC DctChannelSelectForward(
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
-    void get_output_var_shape(
+    MGE_WIN_DECLSPEC_FUC void get_output_var_shape(
             const TensorShapeArray& inp_shape,
             TensorShapeArray& out_shape) const override;
 
-    size_t get_workspace_size_bytes(
+    MGE_WIN_DECLSPEC_FUC size_t get_workspace_size_bytes(
             const TensorShapeArray& input_shapes,
             const TensorShapeArray& output_shapes) const override;
     void scn_do_execute() override;
 
-    void valid_mask(
+    MGE_WIN_DECLSPEC_FUC void valid_mask(
             const int* mask_offset, int mask_len, const int* mask_val, int mask_val_len,
             const Param& param);
 };

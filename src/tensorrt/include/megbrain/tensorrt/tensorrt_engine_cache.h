@@ -30,7 +30,7 @@ namespace mgb {
  * opr in the same computing graph are different.
  */
 class TensorRTEngineCache : public NonCopyableObj {
-    static std::shared_ptr<TensorRTEngineCache> sm_impl;
+    static MGE_WIN_DECLSPEC_DATA std::shared_ptr<TensorRTEngineCache> sm_impl;
     static bool sm_enable_engine_cache;
 
 public:
@@ -46,15 +46,17 @@ public:
     virtual void dump_cache() = 0;
 
     //! get the key of the TensorRTOpr
-    static std::string make_key_from_trt_opr(const opr::TensorRTOpr* opr);
+    MGE_WIN_DECLSPEC_FUC static std::string make_key_from_trt_opr(
+            const opr::TensorRTOpr* opr);
 
     //! enable the tensorrt engine cache, or query whether the cache is used
-    static bool enable_engine_cache(bool enable_engine_cache = false);
+    MGE_WIN_DECLSPEC_FUC static bool enable_engine_cache(
+            bool enable_engine_cache = false);
     //! disable the tensorrt engine cache
-    static void disable_engine_cache();
+    MGE_WIN_DECLSPEC_FUC static void disable_engine_cache();
 
     //! set an implementation; return the original implementation
-    static std::shared_ptr<TensorRTEngineCache> set_impl(
+    MGE_WIN_DECLSPEC_FUC static std::shared_ptr<TensorRTEngineCache> set_impl(
             std::shared_ptr<TensorRTEngineCache> impl);
 
     //! get the instance; the default implementation is an InMemoryCache
@@ -151,14 +153,14 @@ class TensorRTEngineCacheIO final : public TensorRTEngineCache {
     std::mutex m_mtx;
 
 public:
-    TensorRTEngineCacheIO(std::string filename);
-    ~TensorRTEngineCacheIO() = default;
+    MGE_WIN_DECLSPEC_FUC TensorRTEngineCacheIO(std::string filename);
+    MGE_WIN_DECLSPEC_FUC ~TensorRTEngineCacheIO() = default;
 
-    void dump_cache() override;
+    MGE_WIN_DECLSPEC_FUC void dump_cache() override;
 
-    Maybe<Engine> get(const std::string& key) override;
+    MGE_WIN_DECLSPEC_FUC Maybe<Engine> get(const std::string& key) override;
 
-    void put(const std::string& key, const Engine& value) override;
+    MGE_WIN_DECLSPEC_FUC void put(const std::string& key, const Engine& value) override;
 };
 }  // namespace mgb
 #endif

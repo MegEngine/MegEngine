@@ -58,18 +58,18 @@ public:
     /*!
      * \brief get a tag handler for shape inference
      */
-    TagHandler* get_tag_handler_for_shape(Tag tag);
+    MGE_WIN_DECLSPEC_FUC TagHandler* get_tag_handler_for_shape(Tag tag);
 
     /*!
      * \brief get a tag handler for value inference
      */
-    TagHandler* get_tag_handler_for_value(Tag tag);
+    MGE_WIN_DECLSPEC_FUC TagHandler* get_tag_handler_for_value(Tag tag);
 
     /*!
      * \brief clear registered handler for a tag; this is only used in error
      *      handling in opr creation
      */
-    void clear_tag_handler(Tag tag);
+    MGE_WIN_DECLSPEC_FUC void clear_tag_handler(Tag tag);
 
     /*!
      * \brief set the operator that is allowd to call register_*_infer
@@ -87,13 +87,13 @@ public:
      *      tag
      * \return set of missing inputs; the pointer is always available
      */
-    const TagHandlerSet& get_missing_inp(TagHandler* dest);
+    MGE_WIN_DECLSPEC_FUC const TagHandlerSet& get_missing_inp(TagHandler* dest);
 
     /*!
      * \brief update mutable src tag's shape explictly which only used by
             eager eval
      */
-    void update_mutable_src_shape(Tag tag);
+    MGE_WIN_DECLSPEC_FUC void update_mutable_src_shape(Tag tag);
 
     /*!
      * \brief get original deps given in the InferDesc which is registered
@@ -103,7 +103,7 @@ public:
      * deps since the StaticInferManagerImpl folds the infererence chain of
      * the const var shape
      */
-    DepVal get_deps(const DepElement& elem);
+    MGE_WIN_DECLSPEC_FUC DepVal get_deps(const DepElement& elem);
 
 private:
     friend class CompSeqManager;

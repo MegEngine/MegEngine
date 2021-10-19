@@ -20,10 +20,10 @@ MGB_DEFINE_OPR_CLASS(
         SlidingWindowTransposeForward,
         intl::MegDNNOprWrapperFwd<megdnn::SlidingWindowTransposeForward>) // {
 public:
-    SlidingWindowTransposeForward(
+    MGE_WIN_DECLSPEC_FUC SlidingWindowTransposeForward(
             VarNode* src, const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -33,11 +33,11 @@ MGB_DEFINE_OPR_CLASS(
         SlidingWindowTransposeBackward,
         intl::MegDNNOprWrapperBwd<megdnn::SlidingWindowTransposeBackward>) // {
 public:
-    SlidingWindowTransposeBackward(
+    MGE_WIN_DECLSPEC_FUC SlidingWindowTransposeBackward(
             VarNode* diff, VarNode* src_for_shape, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar diff, SymbolVar src_for_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };

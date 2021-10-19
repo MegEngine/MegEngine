@@ -18,11 +18,11 @@ namespace opr {
 
 MGB_DEFINE_OPR_CLASS(TQTForward, intl::MegDNNOprWrapperFwd<megdnn::TQTForward>) // {
 public:
-    TQTForward(
+    MGE_WIN_DECLSPEC_FUC TQTForward(
             VarNode* src, VarNode* scale, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar scale, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -31,11 +31,11 @@ using TQT = TQTForward;
 MGB_DEFINE_OPR_CLASS(
         TQTBackward, intl::MegDNNOprWrapperBwd<megdnn::TQTBackward>) // {
 public:
-    TQTBackward(
+    MGE_WIN_DECLSPEC_FUC TQTBackward(
             VarNode* y_grad, VarNode* x, VarNode* scale, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar y_grad, SymbolVar x, SymbolVar scale, const Param& param = {},
             const OperatorNodeConfig& config = {});
 

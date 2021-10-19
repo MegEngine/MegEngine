@@ -50,7 +50,8 @@ class SmallVectorBase {
 protected:
     void *m_begin_ptr, *m_end_ptr, *m_capacity_ptr;
 
-    MEGDNN_NORETURN static void on_invalid_at(size_t idx, size_t size);
+    MGE_WIN_DECLSPEC_FUC MEGDNN_NORETURN static void on_invalid_at(
+            size_t idx, size_t size);
 
 protected:
     SmallVectorBase(void* first_elm, size_t size)
@@ -58,7 +59,8 @@ protected:
               m_end_ptr(first_elm),
               m_capacity_ptr(static_cast<char*>(first_elm) + size) {}
 
-    void grow_pod(void* first_elm_ptr, size_t min_sz_in_bytes, size_t type_size);
+    MGE_WIN_DECLSPEC_FUC void grow_pod(
+            void* first_elm_ptr, size_t min_sz_in_bytes, size_t type_size);
 
 public:
     size_t size_in_bytes() const {

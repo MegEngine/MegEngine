@@ -39,26 +39,26 @@ namespace opr {
  * Output reserve is used for cudnnBatchNormalizationForwardTrainingEx, and should
  * be preserved for backward.
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         BatchNormForward,
         cg::OutshapePureByInshapeOpr<
                 intl::WorkspaceSizeInfer<cg::SingleCNOperatorNodeBaseT<
                         mixin::MegDNNOprHolderImpl<megdnn::BN>>>>) // {
 public:
-    BatchNormForward(
+    MGE_WIN_DECLSPEC_FUC BatchNormForward(
             VarNode* x, VarNode* scale, VarNode* bias, VarNode* mean, VarNode* variance,
             const Param& param, const OperatorNodeConfig& config);
 
-    BatchNormForward(
+    MGE_WIN_DECLSPEC_FUC BatchNormForward(
             VarNode* x, VarNode* scale, VarNode* bias, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar x, SymbolVar scale, SymbolVar bias, SymbolVar mean,
             SymbolVar variance, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar x, SymbolVar scale, SymbolVar bias, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -93,14 +93,14 @@ using BatchNorm = BatchNormForward;
  *   scale_grad, bias_grad, x_grad
  */
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         BatchNormBackward, intl::MegDNNOprWrapperBwd<megdnn::BNBackward>) // {
 public:
-    BatchNormBackward(
+    MGE_WIN_DECLSPEC_FUC BatchNormBackward(
             VarNode* x, VarNode* y_grad, VarNode* save_mean, VarNode* save_variance,
             VarNode* scale, VarNode* reserve, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar x, SymbolVar y_grad, SymbolVar save_mean, SymbolVar save_variance,
             SymbolVar scale, SymbolVar reserve, const Param& param = {},
             const OperatorNodeConfig& config = {});

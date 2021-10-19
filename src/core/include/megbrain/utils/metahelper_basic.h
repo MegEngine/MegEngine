@@ -22,7 +22,7 @@
 namespace mgb {
 
 namespace metahelper_detail {
-[[noreturn]] void on_maybe_invalid_val_access();
+[[noreturn]] MGE_WIN_DECLSPEC_FUC void on_maybe_invalid_val_access();
 
 template <class T, class Tuple, size_t... I>
 constexpr T make_from_tuple_impl(Tuple&& t, std::index_sequence<I...>) {
@@ -140,7 +140,7 @@ constexpr bool is_complete_v =
 
 //! a None type to represent invalid Maybe
 class None {};
-extern class None None;
+MGE_WIN_DECLSPEC_DATA extern class None None;
 
 //! an optional storage for arbitrary object
 template <typename T>

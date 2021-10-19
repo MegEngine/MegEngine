@@ -20,11 +20,11 @@ namespace opr {
 MGB_DEFINE_OPR_CLASS(
         ROIAlignForward, intl::MegDNNOprWrapperFwd<megdnn::ROIAlignForward>) // {
 public:
-    ROIAlignForward(
+    MGE_WIN_DECLSPEC_FUC ROIAlignForward(
             VarNode* src, VarNode* rois, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar rois, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -33,11 +33,11 @@ using ROIAlign = ROIAlignForward;
 MGB_DEFINE_OPR_CLASS(
         ROIAlignBackward, intl::MegDNNOprWrapperBwd<megdnn::ROIAlignBackward>) // {
 public:
-    ROIAlignBackward(
+    MGE_WIN_DECLSPEC_FUC ROIAlignBackward(
             VarNode* diff, VarNode* src, VarNode* rois, VarNode* index,
             const Param& param, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar diff, SymbolVar src, SymbolVar rois, SymbolVar index,
             const Param& param = {}, const OperatorNodeConfig& config = {});
 

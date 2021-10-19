@@ -31,13 +31,13 @@ class ExecutionMask;
  * \brief configuration for operator nodes
  */
 class OperatorNodeConfig final : public Hashable {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
 public:
     using CompNodeArray = SmallVector<CompNode, 1>;
 
     OperatorNodeConfig() = default;
-    ~OperatorNodeConfig();
+    MGE_WIN_DECLSPEC_FUC ~OperatorNodeConfig();
 
     OperatorNodeConfig(std::string name) : m_name{std::move(name)} {}
 
@@ -101,18 +101,18 @@ public:
     /*!
      * \brief set preferred single comp node
      */
-    OperatorNodeConfig& comp_node(const CompNode& node);
+    MGE_WIN_DECLSPEC_FUC OperatorNodeConfig& comp_node(const CompNode& node);
 
     /*!
      * \brief directly set all the CompNodes
      */
-    OperatorNodeConfig& comp_node_arr(const CompNodeArray& arr);
+    MGE_WIN_DECLSPEC_FUC OperatorNodeConfig& comp_node_arr(const CompNodeArray& arr);
 
     /*!
      * \brief get single comp node if the user has set it, or an invalid
      *      comp node if the config is empty
      */
-    CompNode get_single_comp_node() const;
+    MGE_WIN_DECLSPEC_FUC CompNode get_single_comp_node() const;
 
     /*!
      * \brief follow the computing node of dest
@@ -121,7 +121,7 @@ public:
         return comp_node(dest.node()->comp_node());
     }
 
-    OperatorNodeConfig& output_dtype(DType dtype);
+    MGE_WIN_DECLSPEC_FUC OperatorNodeConfig& output_dtype(DType dtype);
 
     DType output_dtype() const { return m_output_dtype; }
 
@@ -132,9 +132,9 @@ public:
 
     const CompNodeArray& comp_node() const { return m_comp_node; }
 
-    size_t hash() const override;
+    MGE_WIN_DECLSPEC_FUC size_t hash() const override;
 
-    bool is_same_st(const Hashable& rhs) const override;
+    MGE_WIN_DECLSPEC_FUC bool is_same_st(const Hashable& rhs) const override;
 
 private:
     static constexpr size_t sm_initial_instance_id = 1333331;
@@ -163,7 +163,7 @@ public:
      *
      * The default implementation does nothing
      */
-    virtual void record_execute_deps(ExecDependencyArray& record);
+    MGE_WIN_DECLSPEC_FUC virtual void record_execute_deps(ExecDependencyArray& record);
 
 protected:
     ~GraphExecutable() = default;
@@ -408,7 +408,7 @@ public:
      * \brief reset dep type; the vars could contain duplicated var nodes,
      *      in which case the corresponding dep type would be ORed together
      */
-    void reset_dep_type(
+    MGE_WIN_DECLSPEC_FUC void reset_dep_type(
             const VarNodeArray& vars, const SmallVector<DepType>& dep_types);
 
     /*!
@@ -488,11 +488,11 @@ public:
         const VarNodeArrayView& input_var_naming;
     };
 
-    virtual ~OperatorNodeBase() noexcept;
+    MGE_WIN_DECLSPEC_FUC virtual ~OperatorNodeBase() noexcept;
 
 #if MGB_ENABLE_JSON
     /* ===================== json io ===================== */
-    std::shared_ptr<json::Value> to_json() const override;
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> to_json() const override;
 
     //! extra value to be added to json
     std::shared_ptr<json::Object> to_json_extra_json = json::Object::make();
@@ -511,7 +511,7 @@ public:
     const VarNodeArray& output() const { return m_output; }
 
     // non-volatile outputs
-    const VarNodeArray usable_output() const;
+    MGE_WIN_DECLSPEC_FUC const VarNodeArray usable_output() const;
 
     VarNode* input(size_t idx) const { return m_input.at(idx); }
 
@@ -519,7 +519,7 @@ public:
 
     //! hash that combines all inputs, m_config.comp_node() and all
     //! add_equivalence_component calls
-    size_t hash() const override final;
+    MGE_WIN_DECLSPEC_FUC size_t hash() const override final;
 
     /*!
      * \brief get node prop, which is available and constant after node
@@ -527,7 +527,7 @@ public:
      *
      * Note that this function calls do_make_node_prop() on first call
      */
-    const NodeProp& node_prop() const;
+    MGE_WIN_DECLSPEC_FUC const NodeProp& node_prop() const;
 
     /*!
      * \brief called by ComputingGraph to mark that this node has been
@@ -549,7 +549,7 @@ public:
      * 3. call do_execute
      * 4. set_ready on output
      */
-    void execute(ExecEnv& env) override final;
+    MGE_WIN_DECLSPEC_FUC void execute(ExecEnv& env) override final;
 
     /*!
      * \brief specifies waiting strategy on one comp node for input vars
@@ -617,7 +617,7 @@ public:
      * \brief get callbacks to be invoked on events related to this
      *      operator; default implementation returns empty event
      */
-    virtual OprEventCallback get_opr_event_callback();
+    MGE_WIN_DECLSPEC_FUC virtual OprEventCallback get_opr_event_callback();
 
     /*!
      * \brief called when stream of comp node of output vars is changed for
@@ -635,7 +635,7 @@ public:
      *
      * This function is called once during operator insertion.
      */
-    virtual void init_output_dtype();
+    MGE_WIN_DECLSPEC_FUC virtual void init_output_dtype();
 
     /*!
      * \brief initialize output format by calling VarNode::format
@@ -645,7 +645,7 @@ public:
      *
      * This function is called once during operator insertion
      */
-    virtual void init_output_format();
+    MGE_WIN_DECLSPEC_FUC virtual void init_output_format();
 
     /*!
      * \brief inititialize output comp_node by calling VarNode::comp_node
@@ -687,7 +687,7 @@ public:
      * \param dynamic if true, initialize mem plans for vars that could not
      *      be statically inferred; otherwise for statically inferable vars
      */
-    virtual void init_output_mem_plan(bool dynamic);
+    MGE_WIN_DECLSPEC_FUC virtual void init_output_mem_plan(bool dynamic);
 
     /*
      * =============================================================
@@ -703,7 +703,7 @@ public:
     };
 
     //! add input var to this operator
-    void add_input(
+    MGE_WIN_DECLSPEC_FUC void add_input(
             std::initializer_list<VarNode*> list,
             AddInputSortType sort_type = AddInputSortType::NONE);
 
@@ -711,7 +711,7 @@ public:
      * \brief allocate a new output VarNode; the name would be appended to
      *      this->name to form the final name
      */
-    VarNode* add_output(const Maybe<std::string>& name);
+    MGE_WIN_DECLSPEC_FUC VarNode* add_output(const Maybe<std::string>& name);
 
     /*!
      * \brief add extra component for equivalence check
@@ -734,7 +734,7 @@ public:
      * \brief allocate a new node prop and initialize dep entry as all
      *      inputs
      */
-    virtual NodeProp* do_make_node_prop() const;
+    MGE_WIN_DECLSPEC_FUC virtual NodeProp* do_make_node_prop() const;
 
     /*!
      * \brief Update operator priority.
@@ -744,13 +744,13 @@ public:
      * priority.
      * \return whether the priority would be changed.
      */
-    virtual bool update_priority() const;
+    MGE_WIN_DECLSPEC_FUC virtual bool update_priority() const;
 
 protected:
     /*!
      * \param input_var_naming used for generating default node name
      */
-    OperatorNodeBase(
+    MGE_WIN_DECLSPEC_FUC OperatorNodeBase(
             ComputingGraph* owner, const OperatorNodeConfig& config,
             const std::string& default_name, const VarNodeArrayView& input_var_naming);
 
@@ -781,9 +781,10 @@ private:
     mutable Maybe<NodeProp> m_node_prop;
     Maybe<InputWaitingSpec> m_input_waiting_spec;
 
-    void do_add_equivalence_component(HashableContainer&& hashable);
+    MGE_WIN_DECLSPEC_FUC void do_add_equivalence_component(
+            HashableContainer&& hashable);
 
-    bool is_same_st(const Hashable& rhs) const override final;
+    MGE_WIN_DECLSPEC_FUC bool is_same_st(const Hashable& rhs) const override final;
 };
 
 /*!
@@ -856,7 +857,7 @@ protected:
      * mixin_on_output_comp_node_stream_changed(), which is called from
      * opr.on_output_comp_node_stream_changed() invoked by this function.
      */
-    static void mixin_init_output_comp_node(OperatorNodeBase& opr);
+    MGE_WIN_DECLSPEC_FUC static void mixin_init_output_comp_node(OperatorNodeBase& opr);
 
     /*!
      * \brief only infer output comp node, without modifying anything
@@ -865,7 +866,7 @@ protected:
      * least one input exists and they are all placed on the same comp node.
      * It also checks the comp node set in config.
      */
-    static CompNode mixin_infer_output_comp_node(
+    MGE_WIN_DECLSPEC_FUC static CompNode mixin_infer_output_comp_node(
             const OperatorNodeBase& opr, bool cross_mem);
 
     CompNode mixin_comp_node() const { return m_comp_node; }
@@ -874,22 +875,25 @@ protected:
      * \brief initialize NodeProp with SINGLE_COMP_NODE, and setup
      *      dependency on input
      */
-    NodeProp* mixin_do_make_node_prop(const OperatorNodeBase& opr) const;
+    MGE_WIN_DECLSPEC_FUC NodeProp* mixin_do_make_node_prop(
+            const OperatorNodeBase& opr) const;
 
-    void mixin_do_execute(OperatorNodeBase& opr, OperatorNodeBase::ExecEnv& env);
+    MGE_WIN_DECLSPEC_FUC void mixin_do_execute(
+            OperatorNodeBase& opr, OperatorNodeBase::ExecEnv& env);
 
-    void mixin_on_output_comp_node_stream_changed(OperatorNodeBase& opr);
+    MGE_WIN_DECLSPEC_FUC void mixin_on_output_comp_node_stream_changed(
+            OperatorNodeBase& opr);
 
     /*!
      * \brief set comp node during initializing
      */
-    void mixin_comp_node(OperatorNodeBase& opr, CompNode node);
+    MGE_WIN_DECLSPEC_FUC void mixin_comp_node(OperatorNodeBase& opr, CompNode node);
 
     /*!
      * \brief override by subclass to perform raw computing; this function
      *      is already dispatched on corresponding stream in ExecEnv
      */
-    virtual void scn_do_execute() = 0;
+    MGE_WIN_DECLSPEC_FUC virtual void scn_do_execute() = 0;
 
     ~SingleCNOperatorNode() = default;
 };
@@ -903,7 +907,8 @@ class OutshapePureByInshapeOpr : public OperatorNodeMixinBase {
     size_t m_inp_run_id = -1;
     TensorShapeArray m_out_shp;
 
-    bool infer_desc(size_t out_idx, TensorShape& dest, const StaticInferInpVal& inp);
+    MGE_WIN_DECLSPEC_FUC bool infer_desc(
+            size_t out_idx, TensorShape& dest, const StaticInferInpVal& inp);
 
 protected:
     /*!
@@ -912,9 +917,11 @@ protected:
      * of output vars that should be managed by this helper (they would be
      * the first vars of all output vars).
      */
-    void mixin_set_nr_managed_outputs(OperatorNodeBase& opr, size_t nr);
+    MGE_WIN_DECLSPEC_FUC void mixin_set_nr_managed_outputs(
+            OperatorNodeBase& opr, size_t nr);
 
-    void mixin_init_output_static_infer_desc(OperatorNodeBase& opr);
+    MGE_WIN_DECLSPEC_FUC void mixin_init_output_static_infer_desc(
+            OperatorNodeBase& opr);
 
     /*!
      * \brief get output shapes from input shapes
@@ -926,7 +933,7 @@ protected:
     virtual void get_output_var_shape(
             const TensorShapeArray& inp_shape, TensorShapeArray& out_shape) const = 0;
 
-    ~OutshapePureByInshapeOpr();
+    MGE_WIN_DECLSPEC_FUC ~OutshapePureByInshapeOpr();
 };
 
 /*!
@@ -1010,6 +1017,9 @@ using OprNodeArray = SmallVector<OperatorNodeBase*>;
     MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__) \
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
+#define MGB_DEFINE_OPR_CLASS_WITH_EXPORT(_name, _base, ...)      \
+    MGB_DEFINE_CLS_WITH_SUPER(_name final, _base, ##__VA_ARGS__) \
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 }  // namespace cg
 }  // namespace mgb
 

@@ -31,7 +31,7 @@ public:
     using LoadConfig = GraphLoadConfig;
     struct LoadResult {
         //! expliit dtor decl to reduce binary size
-        ~LoadResult() noexcept;
+        MGE_WIN_DECLSPEC_FUC ~LoadResult() noexcept;
 
         //! metadata
         Metadata metadata;
@@ -61,7 +61,7 @@ public:
          * graph would be destructed if comp_node_seq_record_level == 2;
          * this method should be called in favor of graph->compile().
          */
-        std::unique_ptr<cg::AsyncExecutable> graph_compile(
+        MGE_WIN_DECLSPEC_FUC std::unique_ptr<cg::AsyncExecutable> graph_compile(
                 const ComputingGraph::OutputSpec& outspec);
     };
 
@@ -97,10 +97,11 @@ public:
     using SharedTensorNameMap =
             std::unordered_map<std::string, const SharedTensorMapEntry*>;
 
-    static std::unique_ptr<GraphLoader> make(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<GraphLoader> make(
             std::unique_ptr<InputFile> file, GraphDumpFormat format = {});
 
-    static Maybe<GraphDumpFormat> identify_graph_dump_format(InputFile& file);
+    MGE_WIN_DECLSPEC_FUC static Maybe<GraphDumpFormat> identify_graph_dump_format(
+            InputFile& file);
 
     virtual ~GraphLoader() = default;
 
@@ -161,7 +162,7 @@ public:
                 params;                   //!< dumped param names
     };
 
-    static std::unique_ptr<GraphDumper> make(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<GraphDumper> make(
             std::unique_ptr<OutputFile> file, GraphDumpFormat format = {});
 
     virtual ~GraphDumper() = default;
@@ -170,7 +171,7 @@ public:
      * \brief whether an operator should be removed in graph
      *      serialization file
      */
-    static bool should_remove_in_dump(cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC static bool should_remove_in_dump(cg::OperatorNodeBase* opr);
 
     virtual DumpResult dump(
             const SymbolVarArray& output_vars, const DumpConfig& config = {},

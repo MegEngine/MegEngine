@@ -33,7 +33,7 @@ public:
     }
 
     //! get owner graph and check that it matches opr and inputs
-    ComputingGraph* owner_graph(
+    MGE_WIN_DECLSPEC_FUC ComputingGraph* owner_graph(
             const cg::OperatorNodeBase& opr, const VarNodeArray& inputs) const;
 };
 

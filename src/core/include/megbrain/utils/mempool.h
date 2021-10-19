@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "megbrain_build_config.h"
 
 namespace mgb {
 
@@ -25,24 +26,24 @@ class MemPoolStorage {
     std::vector<void*> m_free;
 
 public:
-    MemPoolStorage() noexcept;
-    MemPoolStorage(MemPoolStorage&& rhs) noexcept;
-    ~MemPoolStorage() noexcept;
-    MemPoolStorage& operator=(MemPoolStorage&& rhs) noexcept;
+    MGE_WIN_DECLSPEC_FUC MemPoolStorage() noexcept;
+    MGE_WIN_DECLSPEC_FUC MemPoolStorage(MemPoolStorage&& rhs) noexcept;
+    MGE_WIN_DECLSPEC_FUC ~MemPoolStorage() noexcept;
+    MGE_WIN_DECLSPEC_FUC MemPoolStorage& operator=(MemPoolStorage&& rhs) noexcept;
 
-    void swap(MemPoolStorage& other);
+    MGE_WIN_DECLSPEC_FUC void swap(MemPoolStorage& other);
 
     /*!
      * \brief allocate sotrage for an object of specified size
      * \param elem_size size of the object; it must remain unchanged
      *      during lifespan of this MemPoolStorage
      */
-    void* alloc(size_t elem_size);
-    void free(void* ptr);
-    void reorder_free();
+    MGE_WIN_DECLSPEC_FUC void* alloc(size_t elem_size);
+    MGE_WIN_DECLSPEC_FUC void free(void* ptr);
+    MGE_WIN_DECLSPEC_FUC void reorder_free();
 
     //! clear all allocated storage
-    void clear();
+    MGE_WIN_DECLSPEC_FUC void clear();
 
     void disable_freelist() { m_disable_freelist = true; }
 };

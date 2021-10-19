@@ -53,12 +53,12 @@ struct AxisIndexer {
     SymbolVar idx;
 
     //! index an axis on an interval
-    static AxisIndexer make_interval(
+    MGE_WIN_DECLSPEC_FUC static AxisIndexer make_interval(
             AxisNum axis, Maybe<SymbolVar> begin, Maybe<SymbolVar> end,
             Maybe<SymbolVar> step);
 
     //! index an axis with scalar or vector indexer
-    static AxisIndexer make_index(AxisNum axis, SymbolVar idx);
+    MGE_WIN_DECLSPEC_FUC static AxisIndexer make_index(AxisNum axis, SymbolVar idx);
 
     /*!
      * \brief return true if axis of *lhs* is larger than (i.e. with smaller
@@ -191,7 +191,7 @@ private:
 
 #define MGB_DECL_FANCY_INDEXING_OPR_GET(_opr)                                    \
     _opr(VarNode* inp, const IndexDesc& desc, const OperatorNodeConfig& config); \
-    static SymbolVar make(                                                       \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                  \
             SymbolVar inp, const IndexDesc& desc,                                \
             const OperatorNodeConfig& config = {})
 
@@ -212,7 +212,7 @@ private:
     _opr(VarNode* inp, VarNode* value, const IndexDesc& desc,      \
          const OperatorNodeConfig& config,                         \
          const InputTensorReplacer& input_tensor_replacer);        \
-    static SymbolVar make(                                         \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                    \
             SymbolVar inp, SymbolVar value, const IndexDesc& desc, \
             const OperatorNodeConfig& config = {},                 \
             const InputTensorReplacer& input_tensor_replacer = {})

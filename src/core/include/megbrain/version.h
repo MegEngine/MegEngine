@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "megbrain_build_config.h"
+
 #define MGB_MAJOR 8
 #define MGB_MINOR 9999
 #define MGB_PATCH 0
@@ -24,7 +26,7 @@ struct Version {
     int major, minor, patch, is_dev;
 };
 
-Version get_version();
+MGE_WIN_DECLSPEC_FUC Version get_version();
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -104,22 +104,22 @@ struct TensorShape {
 #if MEGDNN_CC_HOST
     TensorShape() = default;
     TensorShape(const TensorShape& rhs) = default;
-    TensorShape(const SmallVector<size_t>& init_shape);
-    TensorShape(std::initializer_list<size_t> init_shape);
-    std::string to_string() const;
+    MGE_WIN_DECLSPEC_FUC TensorShape(const SmallVector<size_t>& init_shape);
+    MGE_WIN_DECLSPEC_FUC TensorShape(std::initializer_list<size_t> init_shape);
+    MGE_WIN_DECLSPEC_FUC std::string to_string() const;
 #endif
 
     //! total number of elements
-    size_t total_nr_elems() const;
+    MGE_WIN_DECLSPEC_FUC size_t total_nr_elems() const;
 
     //! check whether two shapes are equal
-    bool eq_shape(const TensorShape& rhs) const;
+    MGE_WIN_DECLSPEC_FUC bool eq_shape(const TensorShape& rhs) const;
 
     //! check whether the shape can be treated as a scalar
     bool is_scalar() const { return ndim == 1 && shape[0] == 1; }
 
     //! check whether ndim != 0 and at least one shape is 0
-    bool is_empty() const;
+    MGE_WIN_DECLSPEC_FUC bool is_empty() const;
 
     //! access single element, without boundary check
     size_t& operator[](size_t i) { return shape[i]; }
@@ -168,8 +168,8 @@ struct TensorLayout : public TensorShape {
         class ImplBase;
 
 #if MEGDNN_CC_HOST
-        Format();
-        Format(DType dtype);
+        MGE_WIN_DECLSPEC_FUC Format();
+        MGE_WIN_DECLSPEC_FUC Format(DType dtype);
 
         const ImplBase* impl() const { return m_impl; }
 
@@ -190,16 +190,17 @@ struct TensorLayout : public TensorShape {
         }
 
         //! get human-readable string description of this format
-        std::string to_string() const;
+        MGE_WIN_DECLSPEC_FUC std::string to_string() const;
 
-        std::string serialize() const;
-        static Format deserialize(const std::string& bin, const Handle* handle);
+        MGE_WIN_DECLSPEC_FUC std::string serialize() const;
+        MGE_WIN_DECLSPEC_FUC static Format deserialize(
+                const std::string& bin, const Handle* handle);
 
         //! whether this is the default tensor format
-        bool is_default() const;
+        MGE_WIN_DECLSPEC_FUC bool is_default() const;
 
         //! whether this is the lowbit aligned to bytes tensor format
-        bool is_lowbit_aligned() const;
+        MGE_WIN_DECLSPEC_FUC bool is_lowbit_aligned() const;
 
         bool operator==(Format rhs) const { return m_impl == rhs.m_impl; }
         bool operator!=(Format rhs) const { return m_impl != rhs.m_impl; }
@@ -218,27 +219,28 @@ struct TensorLayout : public TensorShape {
     DType dtype;
     Format format;
 
-    TensorLayout();
+    MGE_WIN_DECLSPEC_FUC TensorLayout();
 
 #if MEGDNN_CC_HOST
     TensorLayout(const TensorLayout& layout) = default;
 
     //! create empty layout with given dtype
-    explicit TensorLayout(DType dtype_);
+    MGE_WIN_DECLSPEC_FUC explicit TensorLayout(DType dtype_);
 
-    TensorLayout(DType dtype_, Format format);
+    MGE_WIN_DECLSPEC_FUC TensorLayout(DType dtype_, Format format);
 
     //! create layout with given shape and contiguous stride.
-    TensorLayout(const TensorShape& shape, DType dtype);
+    MGE_WIN_DECLSPEC_FUC TensorLayout(const TensorShape& shape, DType dtype);
 
-    TensorLayout(const TensorShape& shape, DType dtype, Format format);
+    MGE_WIN_DECLSPEC_FUC TensorLayout(
+            const TensorShape& shape, DType dtype, Format format);
 
     //! creating layout with user-specified shape and stride.
-    TensorLayout(
+    MGE_WIN_DECLSPEC_FUC TensorLayout(
             const TensorShape& shape, const std::vector<ptrdiff_t>& stride,
             DType dtype);
 
-    TensorLayout(
+    MGE_WIN_DECLSPEC_FUC TensorLayout(
             const TensorShape& shape, const std::vector<ptrdiff_t>& stride, DType dtype,
             Format format);
 
@@ -251,28 +253,30 @@ struct TensorLayout : public TensorShape {
      *
      * \return total number of elements
      */
-    size_t init_contiguous_stride();
+    MGE_WIN_DECLSPEC_FUC size_t init_contiguous_stride();
 
     /*!
      * \brief init stride to be contiguous by first assigning shape
      *
      * Use current format.
      */
-    size_t init_contiguous_stride(const TensorShape& shape);
+    MGE_WIN_DECLSPEC_FUC size_t init_contiguous_stride(const TensorShape& shape);
 
-    size_t init_contiguous_stride(const TensorShape& shape, Format format);
+    MGE_WIN_DECLSPEC_FUC size_t
+    init_contiguous_stride(const TensorShape& shape, Format format);
 
     /*!
      * \brief inplace version of remove_axis
      */
-    void remove_axis_inplace(size_t idx);
+    MGE_WIN_DECLSPEC_FUC void remove_axis_inplace(size_t idx);
 
     /*!
      * \brief add an axis before given *axis* with given shape and stride
      *
      * Other shapes and strides would not be changed.
      */
-    void add_axis_inplace(size_t axis, size_t shape, ptrdiff_t stride);
+    MGE_WIN_DECLSPEC_FUC void add_axis_inplace(
+            size_t axis, size_t shape, ptrdiff_t stride);
 
     /*!
      * \brief add an axis before given *axis*, with shape 1 and contiguous
@@ -287,7 +291,7 @@ struct TensorLayout : public TensorShape {
      *
      * By the way this API will modify the format according to the data type
      */
-    void modify_dtype_inplace(DType dtype);
+    MGE_WIN_DECLSPEC_FUC void modify_dtype_inplace(DType dtype);
 
     /* =================== generate new layout =================== */
 
@@ -297,21 +301,23 @@ struct TensorLayout : public TensorShape {
      * example:
      *  (2, 0, 1) -> AxBxC to CxAxB
      */
-    TensorLayout dimshuffle(const std::vector<size_t>& dims) const
-            MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    dimshuffle(const std::vector<size_t>& dims) const MEGDNN_WARN_UNUSED_RESULT;
 
     /**
      * \brief Remove an axis from the layout by moving later shape/stride
      *      elements earlier. No extra check is performed.
      */
-    TensorLayout remove_axis(size_t idx) const MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    remove_axis(size_t idx) const MEGDNN_WARN_UNUSED_RESULT;
 
     /**
      * \brief Returns a different view.
      *
      * \throw TensorReshapeError if no stride exists for target shape.
      */
-    TensorLayout reshape(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    reshape(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief try to reshape to another view; return whether these two shapes
@@ -319,14 +325,16 @@ struct TensorLayout : public TensorShape {
      * \return true iff there exists target stride so this layout can be
      *      converted to target shape and the elements can match.
      */
-    bool try_reshape(TensorLayout& output, const TensorShape& shape) const
-            MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC bool try_reshape(
+            TensorLayout& output,
+            const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief Broadcast on dims with shape == 1 to match target *shape*.
      * \throw TensorReshapeError if could not be satisfied
      */
-    TensorLayout broadcast(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    broadcast(const TensorShape& shape) const MEGDNN_WARN_UNUSED_RESULT;
 
     /*!
      * \brief Collapse consecutive axes with contiguous layout together
@@ -335,13 +343,14 @@ struct TensorLayout : public TensorShape {
      * scalar, the result would always be a one-dimensional empty or scalar,
      * with stride being 1.
      */
-    TensorLayout collapse_contiguous() const MEGDNN_WARN_UNUSED_RESULT;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    collapse_contiguous() const MEGDNN_WARN_UNUSED_RESULT;
 
     /* =================== properties =================== */
 
-    std::string to_string() const;
+    MGE_WIN_DECLSPEC_FUC std::string to_string() const;
 
-    std::string serialize() const;
+    MGE_WIN_DECLSPEC_FUC std::string serialize() const;
 #endif  // MEGDNN_CC_HOST
 
     /*!
@@ -353,17 +362,17 @@ struct TensorLayout : public TensorShape {
      * Note that empty tensors (i.e. with 0 shapes) are not considered as
      * contiguous.
      */
-    bool is_contiguous() const;
+    MGE_WIN_DECLSPEC_FUC bool is_contiguous() const;
 
     //! check whether it is physically contiguous disregarding format
-    bool is_physical_contiguous() const;
+    MGE_WIN_DECLSPEC_FUC bool is_physical_contiguous() const;
 
     /*!
      * \brief check whether the layout is monotonous
      *
      * A tensor is monotonous if abs(stride[i]) >= abs(stride[i+1])*shape[i+1]
      */
-    bool is_abs_monotonous_allow_brdcst() const;
+    MGE_WIN_DECLSPEC_FUC bool is_abs_monotonous_allow_brdcst() const;
 
     /*!
      * \brief check whether the layout is contiguous, allowing broadcasting
@@ -371,7 +380,7 @@ struct TensorLayout : public TensorShape {
      * This checks whether the underlying storage is contiguous, where
      * broadcasting is also considered to be so.
      */
-    bool is_contiguous_allow_brdcst() const;
+    MGE_WIN_DECLSPEC_FUC bool is_contiguous_allow_brdcst() const;
 
     /*!
      * \brief if this function returns true, then no two elements can occupy the
@@ -382,15 +391,15 @@ struct TensorLayout : public TensorShape {
      * still possible that actually no two elements share the same memory
      * location.
      */
-    bool is_non_overlapping_strong() const;
+    MGE_WIN_DECLSPEC_FUC bool is_non_overlapping_strong() const;
 
-    bool eq_layout(const TensorLayout& rhs) const;
+    MGE_WIN_DECLSPEC_FUC bool eq_layout(const TensorLayout& rhs) const;
 
     //! get lowest and highest offset reachable from this layout
-    Span span() const;
+    MGE_WIN_DECLSPEC_FUC Span span() const;
 
     //! total number of access bytes
-    size_t access_bytes() const;
+    MGE_WIN_DECLSPEC_FUC size_t access_bytes() const;
 };
 
 /**

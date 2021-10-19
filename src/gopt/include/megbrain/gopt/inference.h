@@ -384,7 +384,7 @@ struct GraphTuningOptions {
  * This function applies a set of predefined optimizer passes to optimize
  * for inference. It assumes all params are constant.
  */
-SymbolVarArray optimize_for_inference(
+MGE_WIN_DECLSPEC_FUC SymbolVarArray optimize_for_inference(
         const SymbolVarArray& dest_vars, const OptimizeForInferenceOptions& opt = {});
 
 /*!
@@ -393,7 +393,7 @@ SymbolVarArray optimize_for_inference(
  * The layout selection optimizers are target-dependent. And this function
  * applies a set of predefined optimizer passes designed for specific
  * device.      */
-SymbolVarArray layout_transform(
+MGE_WIN_DECLSPEC_FUC SymbolVarArray layout_transform(
         const SymbolVarArray& dest_vars,
         GraphTuningOptions::Target target = GraphTuningOptions::Target::UNSPEC);
 
@@ -404,7 +404,7 @@ SymbolVarArray layout_transform(
  * This would modify the operators inplace. It can be used for implement
  * the fast-run mode.
  */
-void modify_opr_algo_strategy_inplace(
+MGE_WIN_DECLSPEC_FUC void modify_opr_algo_strategy_inplace(
         const VarNodeArrayView& dest_vars,
         opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy strategy);
 
@@ -418,7 +418,8 @@ void modify_opr_algo_strategy_inplace(
  * You may want to implement TimedFuncInvoker::ForkExecImpl and/or
  * PersistentCache for better performance in an SDK.
  */
-void enable_opr_algo_profiling_inplace(const VarNodeArrayView& dest_vars);
+MGE_WIN_DECLSPEC_FUC void enable_opr_algo_profiling_inplace(
+        const VarNodeArrayView& dest_vars);
 
 /*!
  * \brief enable opr try profiling cache first, if failed, fallback to
@@ -430,7 +431,8 @@ void enable_opr_algo_profiling_inplace(const VarNodeArrayView& dest_vars);
  * You may want to implement TimedFuncInvoker::ForkExecImpl and/or
  * PersistentCache for better performance in an SDK.
  */
-void enable_opr_use_profiling_cache_inplace(const VarNodeArrayView& dest_vars);
+MGE_WIN_DECLSPEC_FUC void enable_opr_use_profiling_cache_inplace(
+        const VarNodeArrayView& dest_vars);
 
 /*!
  * \brief set workspace_limit for execution strategy for oprs with multiple
@@ -442,7 +444,7 @@ void enable_opr_use_profiling_cache_inplace(const VarNodeArrayView& dest_vars);
  * \warning It will influence the default algo choosed, and maybe slower but
  * save memory.
  */
-void set_opr_algo_workspace_limit_inplace(
+MGE_WIN_DECLSPEC_FUC void set_opr_algo_workspace_limit_inplace(
         const VarNodeArrayView& dest_vars, size_t workspace_limit);
 
 /*!

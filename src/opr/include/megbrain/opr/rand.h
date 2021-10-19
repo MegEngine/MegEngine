@@ -41,12 +41,12 @@ protected:
 
 /* ================= RNG with shape =================  */
 #define _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(RNG)                                       \
-    MGB_DEFINE_OPR_CLASS(RNG, RNGOprBase<megdnn::RNG>)                              \
+    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                  \
     cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;             \
                                                                                     \
 public:                                                                             \
     RNG(VarNode* shape, const Param& param, const OperatorNodeConfig& config);      \
-    static SymbolVar make(                                                          \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                     \
             SymbolVar shape, const Param& param = {},                               \
             const OperatorNodeConfig& config = {});                                 \
     static SymbolVar make(                                                          \
@@ -67,13 +67,13 @@ _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(PermutationRNG)
 
 /* ================= RNG with input =================  */
 #define _DEFINE_RNG_OPR_WITH_INPUT_CLASS(RNG)                                     \
-    MGB_DEFINE_OPR_CLASS(RNG, RNGOprBase<megdnn::RNG>)                            \
+    MGB_DEFINE_OPR_CLASS_WITH_EXPORT(RNG, RNGOprBase<megdnn::RNG>)                \
     void add_input_layout_constraint() override;                                  \
     cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;           \
                                                                                   \
 public:                                                                           \
     RNG(_INPUTS(VarNode*), const Param& param, const OperatorNodeConfig& config); \
-    static _OUTPUTS make(                                                         \
+    MGE_WIN_DECLSPEC_FUC static _OUTPUTS make(                                    \
             _INPUTS(SymbolVar), const Param& param = {},                          \
             const OperatorNodeConfig& config = {});                               \
     void init_output_static_infer_desc() override;                                \
@@ -110,7 +110,7 @@ using PoissonRNG = intl::PoissonRNG;
 using BetaRNG = intl::BetaRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
 
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         ShuffleRNGBackward,
         intl::MegDNNOprWrapperBwd<megdnn::ShuffleRNGBackward>)  //{
 public:
@@ -118,7 +118,7 @@ ShuffleRNGBackward(
         VarNode* out_diff, VarNode* indices, VarNode* result_shape, const Param& param,
         const OperatorNodeConfig& config);
 
-static SymbolVar make(
+MGE_WIN_DECLSPEC_FUC static SymbolVar make(
         SymbolVar out_diff, SymbolVar indices, SymbolVar result_shape,
         const Param& param = {}, const OperatorNodeConfig& config = {});
 };

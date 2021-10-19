@@ -33,10 +33,10 @@ class CPUDispatchChecker final : public PluginBase {
     void check(CompNode cn, cg::OperatorNodeBase* opr);
 
 public:
-    CPUDispatchChecker(cg::ComputingGraph* graph);
+    MGE_WIN_DECLSPEC_FUC CPUDispatchChecker(cg::ComputingGraph* graph);
 
     //! get oprs that did not call cpu dispatch
-    auto&& failed_oprs() const { return *m_failed_oprs; }
+    MGE_WIN_DECLSPEC_FUC auto&& failed_oprs() const { return *m_failed_oprs; }
 };
 }  // namespace mgb
 

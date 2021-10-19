@@ -31,11 +31,11 @@ MGB_DEFINE_OPR_CLASS(
         public mixin::AlgoChooserHelper) // {
 public:
     using AlgorithmInfo = megdnn::detail::Algorithm::Info;
-    MatrixMul(
+    MGE_WIN_DECLSPEC_FUC MatrixMul(
             VarNode* opr0, VarNode* opr1, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar opr0, SymbolVar opr1, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
@@ -62,11 +62,11 @@ MGB_DEFINE_OPR_CLASS(
         public mixin::AlgoChooserHelper) // {
 public:
     using AlgorithmInfo = megdnn::detail::Algorithm::Info;
-    BatchedMatrixMul(
+    MGE_WIN_DECLSPEC_FUC BatchedMatrixMul(
             VarNode* opr0, VarNode* opr1, const Param& param,
             const ExecutionPolicy& policy, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar opr0, SymbolVar opr1, const Param& param = {},
             const ExecutionPolicy& policy = {}, const OperatorNodeConfig& config = {});
 
@@ -91,9 +91,10 @@ private:
 MGB_DEFINE_OPR_CLASS(
         Dot, cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolderImpl<megdnn::Dot>>) // {
 public:
-    Dot(VarNode* opr0, VarNode* opr1, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC Dot(
+            VarNode* opr0, VarNode* opr1, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar opr0, SymbolVar opr1, const OperatorNodeConfig& config = {});
 
     // for serialization
@@ -115,8 +116,9 @@ MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(MatrixInverse);
 
 MGB_DEFINE_OPR_CLASS(SVD, intl::MegDNNOprWrapperFwd<megdnn::SVD>) // {
 public:
-    SVD(VarNode * src, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC SVD(
+            VarNode * src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const SymbolVar& src, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };

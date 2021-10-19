@@ -68,28 +68,28 @@ class SCQueueSynchronizer {
     std::thread m_worker_thread;
 
 public:
-    SCQueueSynchronizer(size_t max_spin);
+    MGE_WIN_DECLSPEC_FUC SCQueueSynchronizer(size_t max_spin);
 
-    ~SCQueueSynchronizer() noexcept;
+    MGE_WIN_DECLSPEC_FUC ~SCQueueSynchronizer() noexcept;
 
     bool worker_started() const { return m_worker_started; }
 
 #ifdef WIN32
-    static bool is_into_atexit;
+    static MGE_WIN_DECLSPEC_DATA bool is_into_atexit;
     void set_finish_called(bool status) { m_wait_finish_called = status; }
 #endif
 
     //! get global default max spin from env
-    static size_t get_default_max_spin();
+    MGE_WIN_DECLSPEC_FUC static size_t get_default_max_spin();
 
-    void start_worker(std::thread thread);
+    MGE_WIN_DECLSPEC_FUC void start_worker(std::thread thread);
 
     //! add a new task in producer thread; require worker to have
     //! started
-    void producer_add();
+    MGE_WIN_DECLSPEC_FUC void producer_add();
 
     //! wait for currently added tasks to finish
-    void producer_wait();
+    MGE_WIN_DECLSPEC_FUC void producer_wait();
 
     bool check_finished() const {
         return m_finished_task.load(std::memory_order_acquire) ==
@@ -102,13 +102,13 @@ public:
      * \param min minimal number of tasks to be fetched
      * \return number of tasks fetched; return 0 if worker should exit
      */
-    size_t consumer_fetch(size_t max, size_t min = 1);
+    MGE_WIN_DECLSPEC_FUC size_t consumer_fetch(size_t max, size_t min = 1);
 
     /*!
      * \brief ack that tasks have been processed in consumer
      * \param nr numnber of tasks to be committed
      */
-    void consumer_commit(size_t nr);
+    MGE_WIN_DECLSPEC_FUC void consumer_commit(size_t nr);
 };
 
 /*!

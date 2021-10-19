@@ -333,7 +333,7 @@ namespace mgb {
 // host to host
 template <>
 template <>
-void TensorStorage<HostTensorStorageTrait>::copy_from(
+MGE_WIN_DECLSPEC_FUC void TensorStorage<HostTensorStorageTrait>::copy_from(
         const TensorStorage<HostTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     memcpy(ptr(), src.ptr(), size);
@@ -342,7 +342,7 @@ void TensorStorage<HostTensorStorageTrait>::copy_from(
 // device to host
 template <>
 template <>
-void TensorStorage<HostTensorStorageTrait>::copy_from(
+MGE_WIN_DECLSPEC_FUC void TensorStorage<HostTensorStorageTrait>::copy_from(
         const TensorStorage<DeviceTensorStorageTrait>& src, size_t size) const {
     bool need_sync = false;
     mgb_assert(size <= this->size() && size <= src.size());
@@ -370,7 +370,7 @@ void TensorStorage<HostTensorStorageTrait>::copy_from(
 // host to device
 template <>
 template <>
-void TensorStorage<DeviceTensorStorageTrait>::copy_from(
+MGE_WIN_DECLSPEC_FUC void TensorStorage<DeviceTensorStorageTrait>::copy_from(
         const TensorStorage<HostTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     m_comp_node.copy_to_device(ptr(), src.ptr(), size);
@@ -379,7 +379,7 @@ void TensorStorage<DeviceTensorStorageTrait>::copy_from(
 // device to device
 template <>
 template <>
-void TensorStorage<DeviceTensorStorageTrait>::copy_from(
+MGE_WIN_DECLSPEC_FUC void TensorStorage<DeviceTensorStorageTrait>::copy_from(
         const TensorStorage<DeviceTensorStorageTrait>& src, size_t size) const {
     mgb_assert(size <= this->size() && size <= src.size());
     if (src.comp_node().device_type() == CompNode::DeviceType::CPU &&

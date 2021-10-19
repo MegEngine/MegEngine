@@ -89,7 +89,7 @@ function config_python_env() {
     fi
 }
 
-MEGENGINE_LIB="${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/src/libmegengine_export.dylib"
+MEGENGINE_LIB="${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/src/libmegengine_shared.dylib"
 function depend_real_copy() {
     REAL_DST=$1
     echo "real copy lib to $1"
@@ -192,7 +192,7 @@ function do_build() {
         fi
 
         #handle dlopen path
-        install_name_tool -change @rpath/libmegengine_export.dylib @loader_path/lib/libmegengine_export.dylib _imperative_rt.so
+        install_name_tool -change @rpath/libmegengine_shared.dylib @loader_path/lib/libmegengine_shared.dylib _imperative_rt.so
 
         #copy megbrain_export lib
         DEPEND_LIB=${BUILD_DIR}/staging/megengine/core/lib/
@@ -209,7 +209,7 @@ function do_build() {
         cp ${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/lite/liblite_shared_whl.dylib ${LITE_LIB}
         llvm-strip -s ${LITE_LIB}
         #handle dlopen path
-        install_name_tool -change @rpath/libmegengine_export.dylib @loader_path/../../megengine/core/lib/libmegengine_export.dylib ${LITE_LIB}
+        install_name_tool -change @rpath/libmegengine_shared.dylib @loader_path/../../megengine/core/lib/libmegengine_shared.dylib ${LITE_LIB}
 
         cd ${BUILD_DIR}/staging
         ${PYTHON_DIR}/bin/python3 setup.py bdist_wheel

@@ -48,7 +48,7 @@ public:
      * \param[out] dest output tensor storage; its comp node has been
      *      initialized to target comp node
      */
-    virtual void alloc_static(
+    MGE_WIN_DECLSPEC_FUC virtual void alloc_static(
             ComputingGraph* graph, DeviceTensorStorage& dest, size_t size);
 
     /*!
@@ -59,7 +59,8 @@ public:
      * Note: if allocation fails, MemAllocError should be raised so
      * VarDevMemDefragmenter can catch the error and do defragmentation.
      */
-    virtual void alloc_dynamic(VarNode* var, DeviceTensorStorage& dest, size_t size);
+    MGE_WIN_DECLSPEC_FUC virtual void alloc_dynamic(
+            VarNode* var, DeviceTensorStorage& dest, size_t size);
 
     /*!
      * \brief Ensure a contiguous storage for memory defragmenter
@@ -68,7 +69,7 @@ public:
      * allocation requests can be placed in a contiguous storage. This function
      * would be called before calling alloc_dynamic() on the individual vars.
      */
-    virtual void defrag_prealloc_contig(
+    MGE_WIN_DECLSPEC_FUC virtual void defrag_prealloc_contig(
             ComputingGraph* graph, CompNode comp_node, size_t size);
 
     /*!
@@ -77,7 +78,8 @@ public:
      * If version changes before graph exec, static memory would be reallocated.
      * This function would be only called once in each graph execution.
      */
-    virtual size_t static_alloc_version(ComputingGraph* graph) const;
+    MGE_WIN_DECLSPEC_FUC virtual size_t static_alloc_version(
+            ComputingGraph* graph) const;
 };
 
 /**
@@ -168,7 +170,7 @@ struct GraphCommonOptimizeOptions {
 class ComputingGraph : public std::enable_shared_from_this<ComputingGraph>,
                        public CompNodeDepedentObject {
 public:
-    ComputingGraph();
+    MGE_WIN_DECLSPEC_FUC ComputingGraph();
     virtual ~ComputingGraph() = default;
 
     /*!
@@ -181,10 +183,11 @@ public:
 
     virtual size_t next_node_id() = 0;
 
-    static std::shared_ptr<ComputingGraph> make();
+    MGE_WIN_DECLSPEC_FUC static std::shared_ptr<ComputingGraph> make();
 
     //! assert that refcnt for ptr is one and destories the ptr
-    static void assert_destroy(std::shared_ptr<ComputingGraph>& ptr);
+    MGE_WIN_DECLSPEC_FUC static void assert_destroy(
+            std::shared_ptr<ComputingGraph>& ptr);
 
     /*!
      * \brief callback to be invoked when some output is ready

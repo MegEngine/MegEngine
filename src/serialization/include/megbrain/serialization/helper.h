@@ -19,7 +19,7 @@
 namespace mgb {
 namespace serialization {
 
-void serialize_dtype(
+MGE_WIN_DECLSPEC_FUC void serialize_dtype(
         DType dtype, megdnn::thin_function<void(const void*, size_t)> write_fn);
 DType deserialize_dtype(megdnn::thin_function<void(void*, size_t)> read_fn);
 

@@ -1,8 +1,9 @@
+#include "megbrain_build_config.h"
+
 #pragma GCC visibility push(default)
 
 #include <cstdio>
 #define LOGE(fmt, v...) fprintf(stderr, "err: " fmt "\n", ##v)
-
 
 extern "C" {
 #include "cuda.h"
@@ -28,8 +29,29 @@ CUresult on_init_failed(int func_idx) {
 
 #if CUDA_VERSION == 10010
 #include "./libcuda-wrap_10.1.h"
+
+//! as some symbols link from cuda lib, but used at other module, export here
+#ifdef WIN32
+#pragma comment(linker, "/export:cudaSetDevice")
+#pragma comment(linker, "/export:cuCtxGetCurrent")
+#pragma comment(linker, "/export:cudaGetDeviceCount")
+#pragma comment(linker, "/export:cudaGetDeviceProperties")
+#pragma comment(linker, "/export:cudaRuntimeGetVersion")
+#pragma comment(linker, "/export:cudaGetDevice")
+#pragma comment(linker, "/export:cudaDeviceSynchronize")
+#endif
 #elif CUDA_VERSION == 10020
 #include "./libcuda-wrap_10.2.h"
+//! as some symbols link from cuda lib, but used at other module, export here
+#ifdef WIN32
+#pragma comment(linker, "/export:cudaSetDevice")
+#pragma comment(linker, "/export:cuCtxGetCurrent")
+#pragma comment(linker, "/export:cudaGetDeviceCount")
+#pragma comment(linker, "/export:cudaGetDeviceProperties")
+#pragma comment(linker, "/export:cudaRuntimeGetVersion")
+#pragma comment(linker, "/export:cudaGetDevice")
+#pragma comment(linker, "/export:cudaDeviceSynchronize")
+#endif
 #elif CUDA_VERSION == 11010
 #include "./libcuda-wrap_11.1.h"
 #elif CUDA_VERSION == 11020

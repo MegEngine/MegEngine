@@ -10,7 +10,8 @@ namespace standalone {
  *
  * See the docs in the python operator
  */
-MGB_DEFINE_OPR_CLASS(NMSKeep, cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        NMSKeep, cg::SingleCNOutshapePureByInshapeOprBase) // {
 public:
     struct Param {
         //! TAG is used by the serializer to check Param type; here we
@@ -22,11 +23,12 @@ public:
         uint32_t max_output;  //!< max number of output boxes per batch
     };
 
-    NMSKeep(VarNode* boxes, const Param& param, const OperatorNodeConfig& config);
-    ~NMSKeep() noexcept;
+    MGE_WIN_DECLSPEC_FUC NMSKeep(
+            VarNode* boxes, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC ~NMSKeep() noexcept;
 
     //! factory method to insert the operator into a graph
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar boxes, const Param& param, const OperatorNodeConfig& config = {});
 
     const Param& param() const { return m_param; }

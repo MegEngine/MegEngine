@@ -110,7 +110,7 @@ public:
 
 private:
     std::shared_ptr<ExtraInfo> m_extra_info;
-    void init();
+    MGE_WIN_DECLSPEC_FUC void init();
 };
 
 //! base class for system error: error caused by uncontrollable environment

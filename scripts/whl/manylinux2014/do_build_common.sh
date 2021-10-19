@@ -50,10 +50,10 @@ function patch_elf_depend_lib_mgb_mge() {
     patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
     handle_strip ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
 
-    cp ${BUILD_DIR}/src/libmegengine_export.so ${LIBS_DIR}
-    patchelf --remove-rpath ${LIBS_DIR}/libmegengine_export.so
-    patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_export.so
-    handle_strip ${LIBS_DIR}/libmegengine_export.so
+    cp ${BUILD_DIR}/src/libmegengine_shared.so ${LIBS_DIR}
+    patchelf --remove-rpath ${LIBS_DIR}/libmegengine_shared.so
+    patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
+    handle_strip ${LIBS_DIR}/libmegengine_shared.so
 
     # as some version of cudnn/trt libs have dlopen libs, so we can not use auditwheel
     # TODO: PR for auditwheel to support args for dlopen libs

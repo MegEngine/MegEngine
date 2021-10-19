@@ -24,7 +24,8 @@ class VarNode;
  * \brief get the involved comp nodes of an operator; the operator must have
  *      been compiled
  */
-CompNode::UnorderedSet get_opr_comp_node_set(OperatorNodeBase* opr);
+MGE_WIN_DECLSPEC_FUC CompNode::UnorderedSet get_opr_comp_node_set(
+        OperatorNodeBase* opr);
 
 /*!
  * \brief whether var shape could be statically inferred
@@ -102,22 +103,24 @@ static inline bool need_device_computing_on_var(
 /*!
  * \brief whether all input vars of an operator has static storage
  */
-bool is_all_input_static_storage(OperatorNodeBase* opr);
+MGE_WIN_DECLSPEC_FUC bool is_all_input_static_storage(OperatorNodeBase* opr);
 
 /*!
  * \brief transform a SymbolVarArray to a VarNodeArray
  */
-VarNodeArray to_var_node_array(const SymbolVarArray& symbol_var_array);
+MGE_WIN_DECLSPEC_FUC VarNodeArray
+to_var_node_array(const SymbolVarArray& symbol_var_array);
 
 /*!
  * \brief transform a VarNodeArray to a SymbolVarArray
  */
-SymbolVarArray to_symbol_var_array(const VarNodeArray& var_node_array);
+MGE_WIN_DECLSPEC_FUC SymbolVarArray
+to_symbol_var_array(const VarNodeArray& var_node_array);
 
 /*!
  * \brief return a string to describe the list of variables
  */
-std::string dump_var_info(const VarNodeArrayView& vars);
+MGE_WIN_DECLSPEC_FUC std::string dump_var_info(const VarNodeArrayView& vars);
 
 /*!
  * \brief compute grad of target w.r.t. wrt (i.e. d(target)/d(wrt))
@@ -127,24 +130,24 @@ std::string dump_var_info(const VarNodeArrayView& vars);
  * \return the var representing grad, or nullptr if target does not depend on
  *      wrt
  */
-SymbolVar grad(
-        SymbolVar target, SymbolVar wrt, bool warn_mid_wrt = true,
-        bool return_zero_for_nodep = true);
+MGE_WIN_DECLSPEC_FUC SymbolVar
+grad(SymbolVar target, SymbolVar wrt, bool warn_mid_wrt = true,
+     bool return_zero_for_nodep = true);
 
 /*!
  * \brief equivalant to calling grad(grad, wrt) one by one if symbolic;
  * since cache in grad manager would be cleared each time, this method is more
  * efficient if eager.
  */
-SymbolVarArray grad(
-        SymbolVar target, SymbolVarArray wrts, bool warn_mid_wrt = true,
-        bool return_zero_for_nodep = true);
+MGE_WIN_DECLSPEC_FUC SymbolVarArray
+grad(SymbolVar target, SymbolVarArray wrts, bool warn_mid_wrt = true,
+     bool return_zero_for_nodep = true);
 
 /*!
  * \brief get current grad target, which must be called inside
  *      OperatorNodeBase::grad() implementations
  */
-SymbolVar current_grad_target(ComputingGraph& graph);
+MGE_WIN_DECLSPEC_FUC SymbolVar current_grad_target(ComputingGraph& graph);
 
 struct SpecialOprStat {
     bool has_virtual_grad = false;
@@ -158,7 +161,7 @@ struct SpecialOprStat {
  * \return a list of vars correpsonding to \p dest whose dependencies have been
  *         replaced according to \p varmap
  */
-SymbolVarArray replace_vars(
+MGE_WIN_DECLSPEC_FUC SymbolVarArray replace_vars(
         const SymbolVarArray& dest, const ThinHashMap<SymbolVar, SymbolVar>& varmap);
 
 /*!
@@ -169,7 +172,7 @@ SymbolVarArray replace_vars(
  * \return a list of vars correpsonding to \p dest whose dependencies have been
  *         replaced according to \p oprmap
  */
-SymbolVarArray replace_oprs(
+MGE_WIN_DECLSPEC_FUC SymbolVarArray replace_oprs(
         const SymbolVarArray& dest,
         const ThinHashMap<OperatorNodeBase*, OperatorNodeBase*>& oprmap);
 
@@ -180,10 +183,10 @@ SymbolVarArray replace_oprs(
  * \return a list of vars correpsonding to \p dest whose owner_graph have been
  *         replaced with \p new_graph
  */
-SymbolVarArray replace_vars_comp_graph(
-        const SymbolVarArray& dest, ComputingGraph* new_graph);
+MGE_WIN_DECLSPEC_FUC SymbolVarArray
+replace_vars_comp_graph(const SymbolVarArray& dest, ComputingGraph* new_graph);
 
-SymbolVarArray find_h2d(const SymbolVarArray& dest);
+MGE_WIN_DECLSPEC_FUC SymbolVarArray find_h2d(const SymbolVarArray& dest);
 
 /*!
  * \brief go through OperatorNodeBase::NodeProp::Attribute::src_opr until it
@@ -191,7 +194,7 @@ SymbolVarArray find_h2d(const SymbolVarArray& dest);
  *
  * This function also performs path compression
  */
-OperatorNodeBase* get_opr_root_source_opr(OperatorNodeBase* opr);
+MGE_WIN_DECLSPEC_FUC OperatorNodeBase* get_opr_root_source_opr(OperatorNodeBase* opr);
 
 //! describes how two mem plans intersect
 enum class MemPlanIntersectionType {
@@ -199,13 +202,14 @@ enum class MemPlanIntersectionType {
     IDENTICAL,  //!< completely same
     OVERLAP     //!< intersects but not identical
 };
-MemPlanIntersectionType get_mem_plan_intersection_type(VarNode* a, VarNode* b);
+MGE_WIN_DECLSPEC_FUC MemPlanIntersectionType
+get_mem_plan_intersection_type(VarNode* a, VarNode* b);
 
 /*!
  * \brief request output var to writable forward input var if no mem plan of
  *      other input vars intersects with this input var
  */
-void request_fwd_in2out_writable_if_no_mem_ovelap(
+MGE_WIN_DECLSPEC_FUC void request_fwd_in2out_writable_if_no_mem_ovelap(
         OperatorNodeBase* opr, size_t inp, size_t out);
 
 /*!
@@ -217,7 +221,7 @@ void request_fwd_in2out_writable_if_no_mem_ovelap(
  *
  * Note: implemented in cg_impl.cpp, since it is used during graph init
  */
-void update_output_var_shapes(OperatorNodeBase* opr);
+MGE_WIN_DECLSPEC_FUC void update_output_var_shapes(OperatorNodeBase* opr);
 
 /*!
  * \brief add an output to be used as the workspace for an operator
@@ -227,17 +231,19 @@ void update_output_var_shapes(OperatorNodeBase* opr);
  * This helper is usually called from an opr constructor and used for adding the
  * last output.
  */
-void add_workspace_output(OperatorNodeBase* opr);
+MGE_WIN_DECLSPEC_FUC void add_workspace_output(OperatorNodeBase* opr);
 
 /*!
  * \brief copy a raw tensor shape into a host tensor
  */
-void copy_shape_to_tensor_value(DeviceTensorND& dest, const TensorShape& shp);
+MGE_WIN_DECLSPEC_FUC void copy_shape_to_tensor_value(
+        DeviceTensorND& dest, const TensorShape& shp);
 
 /*!
  * \brief copy value of a host tensor into a raw tensor shape
  */
-void copy_tensor_value_to_shape(TensorShape& dest, const DeviceTensorND& val);
+MGE_WIN_DECLSPEC_FUC void copy_tensor_value_to_shape(
+        TensorShape& dest, const DeviceTensorND& val);
 
 /*!
  * \brief get a symbolvar whose value is tensor shape, used for other
@@ -246,7 +252,7 @@ void copy_tensor_value_to_shape(TensorShape& dest, const DeviceTensorND& val);
  * \param opr_name operator that invokes this function; used in error
  *      function if *config* is invalid
  */
-SymbolVar var_from_tensor_shape(
+MGE_WIN_DECLSPEC_FUC SymbolVar var_from_tensor_shape(
         ComputingGraph& graph, const OperatorNodeConfig& config, const char* opr_name,
         const TensorShape& shape);
 
@@ -275,7 +281,7 @@ public:
             : m_cb{std::move(cb)}, m_extra_dep(std::move(extra_dep)) {}
 
     //! add an operator whose deps should be discovered
-    void add(OperatorNodeBase* dest);
+    MGE_WIN_DECLSPEC_FUC void add(OperatorNodeBase* dest);
 
     void add(SymbolVar var) { add(var.node()->owner_opr()); }
 
@@ -334,7 +340,7 @@ public:
      *
      * This function should be called only once on a graph
      */
-    static void register_to(
+    MGE_WIN_DECLSPEC_FUC static void register_to(
             ComputingGraph* dest, const ComputingGraph* src, const TransFunc& trans);
 
     /*!
@@ -342,12 +348,13 @@ public:
      * \return previously registered transformer on given graph or nullptr
      *      if none registered
      */
-    static const InterGraphVarTransformer* get(const ComputingGraph& graph);
+    MGE_WIN_DECLSPEC_FUC static const InterGraphVarTransformer* get(
+            const ComputingGraph& graph);
 
     /*!
      * \brief transform a var into this graph
      */
-    VarNode* trans(VarNode* src) const;
+    MGE_WIN_DECLSPEC_FUC VarNode* trans(VarNode* src) const;
 
 private:
     ComputingGraph* m_graph_dest;

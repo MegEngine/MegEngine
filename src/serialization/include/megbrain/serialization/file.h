@@ -72,11 +72,12 @@ public:
     virtual SharedBuffer read_shared(size_t size);
 
     //! create an InputFile correspoding to a file on local file system
-    static std::unique_ptr<InputFile> make_fs(const char* path);
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<InputFile> make_fs(const char* path);
 
     //! create an InputFile correspoding to a memory region; the memory
     //! region must be alive throughout lifespan of this InputFile
-    static std::unique_ptr<InputFile> make_mem_proxy(const void* ptr, size_t size);
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<InputFile> make_mem_proxy(
+            const void* ptr, size_t size);
 
     /*!
      * \brief create an InputFile that would directly reuse the memory
@@ -86,7 +87,7 @@ public:
      *      If this is set to true, tensor storage can be aggressively
      *      shared by reusing the buffer for alignment.
      */
-    static std::unique_ptr<InputFile> make_mem_proxy(
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<InputFile> make_mem_proxy(
             std::shared_ptr<void> ptr, size_t size, bool writable = true);
 };
 
@@ -108,7 +109,8 @@ public:
     virtual size_t tell() = 0;
 
     //! create an OutputFile correspoding to a file on local file system
-    static std::unique_ptr<OutputFile> make_fs(const char* path, char mode = 'w');
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<OutputFile> make_fs(
+            const char* path, char mode = 'w');
 
     /*!
      * \brief create an OutputFile to write to a std::vector
@@ -116,7 +118,8 @@ public:
      * Note that the vector must be alive throughout lifespan of this
      * OutputFile. Current content in *buf* would not be cleared.
      */
-    static std::unique_ptr<OutputFile> make_vector_proxy(std::vector<uint8_t>* buf);
+    MGE_WIN_DECLSPEC_FUC static std::unique_ptr<OutputFile> make_vector_proxy(
+            std::vector<uint8_t>* buf);
 };
 
 }  // namespace serialization

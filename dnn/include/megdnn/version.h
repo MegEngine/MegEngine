@@ -14,6 +14,7 @@
 #define MEGDNN_MINOR 3
 #define MEGDNN_PATCH 0
 
+#include "megbrain_build_config.h"
 #include "megdnn/internal/visibility_prologue.h"
 
 namespace megdnn {
@@ -22,7 +23,7 @@ struct Version {
 };
 
 //! get megdnn version of the binary
-Version get_version();
+MGE_WIN_DECLSPEC_FUC Version get_version();
 }  // namespace megdnn
 
 #include "megdnn/internal/visibility_epilogue.h"

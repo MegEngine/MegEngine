@@ -82,6 +82,16 @@ option(MGE_WITH_LARGE_ARCHIVE "Enable big archive link support" OFF)
 option(MGE_BUILD_WITH_ASAN "Enable build with ASAN, need compiler support" OFF)
 option(MGE_WITH_CUSTOM_OP "Build with Custom op" OFF)
 if(MSVC OR WIN32)
+    # FIXME: static link Windows vc runtime with some version from Visual Studio have
+    # some runtime issue at some call PATH, for example: _imperative_rt.pyd --> megengine_shared.dll
+    # for example c api flush can not find the fd args, I have no idea about this issue
+    # as a Workround, dynamic link vc runtime,  but at some case, we will static link vcrt
+    # when MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP/MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2, so please
+    # use lite_static_all_in_one(lite/CMakeLists.txt) in Windows XP env as possible
+    # How to install VC runtime if you env do not install, refer to:
+    # https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-160
+    option(MGE_STATIC_LINK_WITH_VC_RUNTIME "Enable mge static link with Windows vc runtime" OFF)
+
     option(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP "Enable deploy inference on Windows xp" OFF)
     # special MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2 for Windows XP sp2(32bit)
     # internal behavior:
@@ -103,6 +113,9 @@ if(MSVC OR WIN32)
     # which always locate in Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/bin/*/*/link.exe
     set(CMAKE_LINKER "link.exe")
     if(MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP OR MGE_DEPLOY_INFERENCE_ON_WINDOWS_XP_SP2)
+        set(MGE_STATIC_LINK_WITH_VC_RUNTIME ON)
+        message(STATUS "Force set MGE_STATIC_LINK_WITH_VC_RUNTIME ON when build for Windows XP")
+
         if(NOT ${MGE_ARCH} STREQUAL "i386")
             message(FATAL_ERROR "only support 32bit when build for Windows xp")
         endif()
@@ -273,10 +286,22 @@ if(MSVC OR WIN32)
     # for cmake after 3.15.2
     cmake_policy(SET CMP0091 NEW)
     set(CMAKE_OBJECT_PATH_MAX 300)
-    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+    if(MGE_BUILD_WITH_ASAN)
+        set(MGE_STATIC_LINK_WITH_VC_RUNTIME ON)
+        message(STATUS "Force set MGE_STATIC_LINK_WITH_VC_RUNTIME ON when build for Windows MGE_BUILD_WITH_ASAN")
+    endif()
+    if(MGE_STATIC_LINK_WITH_VC_RUNTIME)
+        if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+        else()
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+        endif()
     else()
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+        if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+        else()
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+        endif()
     endif()
 
     add_compile_definitions(NOMINMAX=1 _USE_MATH_DEFINES=1 WIN32=1)
@@ -1181,25 +1206,6 @@ if (NOT MGE_WITH_DISTRIBUTED)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfig.cmake
                 ${CMAKE_CURRENT_BINARY_DIR}/MegEngineConfigVersion.cmake
             DESTINATION ${MGE_INSTALL_CMAKEDIR})
-endif()
-
-if(MSVC OR WIN32)
-    add_compile_options(
-        $<$<CONFIG:>:/MT>
-        $<$<CONFIG:Debug>:/MTd>
-        $<$<CONFIG:Release>:/MT>
-        )
-    foreach (CompilerFlag
-            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-        if(${CompilerFlag} MATCHES "/MD")
-            string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-            set(${CompilerFlag} "${${CompilerFlag}}" CACHE STRING "msvc compiler flags" FORCE)
-            message(VERBOSE "MSVC flags: ${CompilerFlag}:${${CompilerFlag}}")
-        endif()
-    endforeach()
 endif()
 
 if(MGE_WITH_JIT_MLIR)

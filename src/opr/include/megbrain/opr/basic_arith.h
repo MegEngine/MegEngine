@@ -58,22 +58,22 @@ public:
  * The operands are broadcasted automatically on dimensions of shape one to
  * match shapes of each other; it works like broadcasting in numpy.
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Elemwise, intl::ElemwiseBase, mixin::FwdIn2OutWritableHelper) // {
     using ModeTrait = megdnn::Elemwise::ModeTrait;
 
 public:
     using Mode = Param::Mode;
 
-    Elemwise(
+    MGE_WIN_DECLSPEC_FUC Elemwise(
             const ModeTrait& mode_trait, const VarNodeArrayView& inputs, Param param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const VarNodeArrayView& inputs, Param param,
             const OperatorNodeConfig& config = {});
 
-    static TensorShape get_output_var_shape(
+    MGE_WIN_DECLSPEC_FUC static TensorShape get_output_var_shape(
             Mode mode, const TensorShapeArray& input_shapes);
 
     /*!
@@ -84,7 +84,7 @@ public:
      * \param opr the megdnn operator to be used; a new operator would be
      *      created if it is null
      */
-    static void perform(
+    MGE_WIN_DECLSPEC_FUC static void perform(
             Mode mode, DeviceTensorND& dest, const SmallVector<DeviceTensorND>& inputs,
             intl::UniqPtrWithCN<megdnn::Elemwise>& opr);
 
@@ -98,10 +98,12 @@ public:
      * \param layouts the layouts to be collectively collapsed
      *
      */
-    static TensorLayoutArray collective_collapse(const TensorLayoutArray& layouts);
+    MGE_WIN_DECLSPEC_FUC static TensorLayoutArray collective_collapse(
+            const TensorLayoutArray& layouts);
 
     //! like collective_collapse(), but modify the layouts inplace
-    static void collective_collapse_inplace(const TensorLayoutPtrArray& layouts);
+    MGE_WIN_DECLSPEC_FUC static void collective_collapse_inplace(
+            const TensorLayoutPtrArray& layouts);
 
     /*!
      * \brief wapper for broadcast and collective collapse
@@ -111,7 +113,7 @@ public:
      * \param[in,out] target_layout broadcasted target layout; it would be
      *      collapsed together with inputs
      */
-    static void broadcast_collective_collapse(
+    MGE_WIN_DECLSPEC_FUC static void broadcast_collective_collapse(
             const TensorLayoutPtrArray& inp_layouts, TensorLayout* target_layout);
 
     /*!
@@ -128,7 +130,8 @@ public:
      * \param[in,out] grads vars to be summed; it is also an output param,
      *      which would contain all the intermediate results for summing
      */
-    static VarNode* sum_grad_list(VarNode* wrt, VarNodeArray& grads);
+    MGE_WIN_DECLSPEC_FUC static VarNode* sum_grad_list(
+            VarNode* wrt, VarNodeArray& grads);
 
     //! whether input layouts mismatch ever happened for fused oprs; this
     //! method is public for debug purpose
@@ -163,11 +166,11 @@ using TypeCvtBase = cg::OutshapePureByInshapeOpr<
         cg::mixin::IOSameShapeOperatorNode>;
 }
 
-MGB_DEFINE_OPR_CLASS(TypeCvt, intl::TypeCvtBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(TypeCvt, intl::TypeCvtBase) // {
 public:
     TypeCvt(VarNode* inp, DType dest_type, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar input, DType dest_type, const OperatorNodeConfig& config = {});
 
     static void perform(
@@ -200,7 +203,7 @@ private:
  * Attention: AddUpdate will not be executed if disable flag is set to 1,
  * this is used for dynamic param-updating.
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         AddUpdate, cg::SingleCNOperatorNodeBaseT<mixin::MegDNNOprHolder>) // {
 public:
     using SharedScalar = std::shared_ptr<DTypeScalar>;
@@ -235,7 +238,7 @@ public:
             VarNode* dest, VarNode* delta, const Param& param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar dest, SymbolVar delta, const Param& param = {},
             const OperatorNodeConfig& config = {});
 
@@ -256,7 +259,7 @@ private:
  * Mode specifies the actual arithmetic; and exactly one of *axis* and
  * *target_shape* must be provided, to specify output shape.
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Reduce, intl::DynamicOutputIfInputDynamic<
                         intl::OutshapeBySymvarSCNOpr<mixin::MegDNNOprHolder>>) // {
 public:
@@ -269,7 +272,7 @@ public:
 
     const Param& param() const { return m_param; }
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, Param param, SymbolVar target_shape = {},
             const OperatorNodeConfig& config = {});
 
@@ -317,10 +320,10 @@ private:
  * graph with only Elemwise::Mode::POW, and this opr should only be inserted by
  * the optimizer.
  */
-MGB_DEFINE_OPR_CLASS(PowC, intl::MegDNNOprWrapperFwd<megdnn::PowC>) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(PowC, intl::MegDNNOprWrapperFwd<megdnn::PowC>) // {
 public:
     PowC(VarNode* inp, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, const Param& param = {},
             const OperatorNodeConfig& config = {});
 

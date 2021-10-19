@@ -144,7 +144,7 @@ public:
  */
 template <typename T>
 class ScalarHash final : public HashableVD {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     union U {
         T t;
@@ -181,7 +181,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(ScalarHash<T>);
  */
 template <typename T>
 class PODHash final : public HashableVD {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     static_assert(is_location_invariant<T>::value, "key must be location invariant");
 
@@ -219,7 +219,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(PODHash<T>);
  * \brief wraps around a raw pointer to Hashable object
  */
 class HashableObjPtrWrapper final : public HashableVD {
-    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+    MGB_DYN_TYPE_OBJ_FINAL_DECL_WITH_EXPORT;
 
     const Hashable* m_ptr;
 

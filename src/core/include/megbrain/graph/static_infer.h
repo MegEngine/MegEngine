@@ -117,13 +117,13 @@ struct ShapeInferDesc {
      * \brief make a ShapeInferDesc that copies shape of another var into
      *      dest var
      */
-    static ShapeInferDesc make_identity(VarNode* src);
+    MGE_WIN_DECLSPEC_FUC static ShapeInferDesc make_identity(VarNode* src);
 
     /*!
      * \brief make a constant ShapeInferDesc that always produces given
      *      value
      */
-    static ShapeInferDesc make_const(const TensorShape& shp);
+    MGE_WIN_DECLSPEC_FUC static ShapeInferDesc make_const(const TensorShape& shp);
 };
 
 /*!
@@ -154,7 +154,7 @@ struct ValueInferDesc {
      * \brief make a ValueInferDesc that copies shape of another var into
      *      dest var
      */
-    static ValueInferDesc make_identity(VarNode* src);
+    MGE_WIN_DECLSPEC_FUC static ValueInferDesc make_identity(VarNode* src);
 };
 
 struct InferType {

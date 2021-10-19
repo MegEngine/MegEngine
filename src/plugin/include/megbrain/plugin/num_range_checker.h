@@ -54,7 +54,7 @@ class NumRangeChecker final : public PluginBase {
 
 public:
     using Error = NumRangeCheckerError;
-    NumRangeChecker(cg::ComputingGraph* graph, float range);
+    MGE_WIN_DECLSPEC_FUC NumRangeChecker(cg::ComputingGraph* graph, float range);
 };
 }  // namespace mgb
 

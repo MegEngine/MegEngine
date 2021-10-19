@@ -31,7 +31,7 @@ namespace opr {
  *
  * \param axis output shape of a single axis
  */
-MGB_DEFINE_OPR_CLASS(GetVarShape, cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(GetVarShape, cg::SingleCNOperatorNodeBase) // {
     class ShapeDevValueExecDep;
 
 public:
@@ -46,7 +46,7 @@ public:
     }
 
     //! get broadcasted shape
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const VarNodeArrayView& inp, Param axis = {},
             const OperatorNodeConfig& config = {});
 
@@ -62,15 +62,16 @@ private:
     DeviceTensorND m_cached_shape_cpu_v{CompNode::default_cpu()}, m_cached_shape_dev_v;
 
     //! update m_cached_shape from m_src_shapes
-    void update_cached_shape();
+    MGE_WIN_DECLSPEC_FUC void update_cached_shape();
 
     //! update m_cached_shape for static infer
-    void update_for_static_infer(const cg::static_infer::InpVal& inp);
+    MGE_WIN_DECLSPEC_FUC void update_for_static_infer(
+            const cg::static_infer::InpVal& inp);
 
-    NodeProp* do_make_node_prop() const override;
-    void scn_do_execute() override;
-    void init_output_static_infer_desc() override;
-    void record_execute_deps(ExecDependencyArray& deps) override;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC void record_execute_deps(ExecDependencyArray& deps) override;
 };
 
 namespace intl {
@@ -82,13 +83,13 @@ MGB_DEFINE_CLS_WITH_SUPER(
         ReshapeBrdcastHelper, ReadonlyFwdHelper<OutshapeBySymvarSCNOprBase>) // {
     bool m_incompatible_inp_layout = false;
 
-    void mem_plan_fwd_in2out_readonly() override final;
-    void outshape_by_symvar_do_get_output_shape(
+    MGE_WIN_DECLSPEC_FUC void mem_plan_fwd_in2out_readonly() override final;
+    MGE_WIN_DECLSPEC_FUC void outshape_by_symvar_do_get_output_shape(
             TensorShape& dest, const ShapeInferInfo& shpinfo) override final;
-    void scn_do_execute() override final;
-    void add_input_layout_constraint() override final;
-    void init_output_static_infer_desc() override;
-    NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override final;
+    MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint() override final;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
 
 protected:
     using Super::Super;
@@ -118,14 +119,15 @@ protected:
  * \param unspec_axis the axis that shape is not specified in input, but should
  *      be calculated from total number of elements and other dims in dest shape
  */
-MGB_DEFINE_OPR_CLASS(Reshape, intl::ReshapeBrdcastHelper) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Reshape, intl::ReshapeBrdcastHelper) // {
 public:
     using Param = megdnn::param::OptionalAxisV1;
 
-    Reshape(VarNode* inp, VarNode* tshp, Param unspec_axis,
+    MGE_WIN_DECLSPEC_FUC Reshape(
+            VarNode* inp, VarNode* tshp, Param unspec_axis,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, SymbolVar tshp, Param unspec_axis = {},
             const OperatorNodeConfig& config = {});
 
@@ -150,16 +152,17 @@ private:
 /*!
  * \brief broadcast tensor value along axes whose shape is 1
  */
-MGB_DEFINE_OPR_CLASS(Broadcast, intl::ReshapeBrdcastHelper) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Broadcast, intl::ReshapeBrdcastHelper) // {
     Maybe<TensorLayout> reshapebrdcast_get_dest_layout(
             const TensorLayout& src, const TensorShape& tshape) const override;
 
     bool reshapebrdcast_output_shape_need_input_shape() const override;
 
 public:
-    Broadcast(VarNode* inp, VarNode* tshp, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC Broadcast(
+            VarNode* inp, VarNode* tshp, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, SymbolVar tshp, const OperatorNodeConfig& config = {});
 
     static SymbolVar make(
@@ -188,10 +191,10 @@ namespace intl {
  */
 MGB_DEFINE_CLS_WITH_SUPER(
         AxisManipOprBase, ReadonlyFwdHelper<cg::SingleCNOperatorNodeBase>) // {
-    void mem_plan_fwd_in2out_readonly() override final;
-    void scn_do_execute() override final;
-    void init_output_static_infer_desc() override final;
-    NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC void mem_plan_fwd_in2out_readonly() override final;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override final;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override final;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
 
 protected:
     using Super::Super;
@@ -211,7 +214,7 @@ protected:
  *
  * Note that dimensions with shape-1 could be dropped
  */
-MGB_DEFINE_OPR_CLASS(Dimshuffle, intl::AxisManipOprBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Dimshuffle, intl::AxisManipOprBase) // {
     std::vector<int> m_pattern;
     size_t m_inp_ndim;
 
@@ -219,15 +222,16 @@ MGB_DEFINE_OPR_CLASS(Dimshuffle, intl::AxisManipOprBase) // {
             const TensorLayout& inp_layout) const override;
 
 public:
-    Dimshuffle(
+    MGE_WIN_DECLSPEC_FUC Dimshuffle(
             VarNode* inp, const std::vector<int>& pattern, size_t ndim,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, const std::vector<int>& pattern, size_t ndim = 0,
             const OperatorNodeConfig& config = {});
 
-    VarNode* grad(size_t wrt_idx, const VarNodeArray& out_grad) const;
+    MGE_WIN_DECLSPEC_FUC VarNode* grad(
+            size_t wrt_idx, const VarNodeArray& out_grad) const;
 
     // used for serialization
     struct Param {
@@ -256,7 +260,7 @@ public:
  *
  * All the axis descs would be processed in order
  */
-MGB_DEFINE_OPR_CLASS(AxisAddRemove, intl::AxisManipOprBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(AxisAddRemove, intl::AxisManipOprBase) // {
 public:
     struct AxisDesc {
         enum class Method {
@@ -283,11 +287,11 @@ public:
         }
     };
 
-    AxisAddRemove(
+    MGE_WIN_DECLSPEC_FUC AxisAddRemove(
             VarNode* inp, const std::vector<AxisDesc>& desc,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, const std::vector<AxisDesc>& desc,
             const OperatorNodeConfig& config = {});
 
@@ -313,15 +317,15 @@ public:
 private:
     std::vector<AxisDesc> m_desc;
 
-    TensorLayout axis_manip_get_output_layout(
-            const TensorLayout& inp_layout) const override;
+    MGE_WIN_DECLSPEC_FUC TensorLayout
+    axis_manip_get_output_layout(const TensorLayout& inp_layout) const override;
 };
 
 namespace intl {
 
 MGB_DEFINE_CLS_WITH_SUPER(ModifySubtensorImplHelper, FancyIndexingHelper) // {
-    void init_output_static_infer_desc() override final;
-    void scn_do_execute() override final;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override final;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override final;
 
     /*!
      * \brief implement the actual modifycation
@@ -341,18 +345,19 @@ protected:
 /*!
  * \brief get subtensor in a python-like way
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         Subtensor, intl::ReadonlyFwdHelper<intl::FancyIndexingHelper>) // {
-    void init_output_static_infer_desc() override;
-    void scn_do_execute() override;
-    void mem_plan_fwd_in2out_readonly() override;
-    void init_rt_force_dynamic_mem_alloc_imply_chain() override;
-    NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void mem_plan_fwd_in2out_readonly() override;
+    MGE_WIN_DECLSPEC_FUC void init_rt_force_dynamic_mem_alloc_imply_chain() override;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
 
 public:
-    Subtensor(VarNode* inp, const IndexDesc& desc, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC Subtensor(
+            VarNode* inp, const IndexDesc& desc, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, const IndexDesc& desc,
             const OperatorNodeConfig& config = {});
 };
@@ -360,7 +365,7 @@ public:
 /*!
  * \brief replace the value of subtensor by another tensor
  */
-MGB_DEFINE_OPR_CLASS(SetSubtensor, intl::ModifySubtensorImplHelper) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(SetSubtensor, intl::ModifySubtensorImplHelper) // {
     void modify(DeviceTensorND& sub, const DeviceTensorND& val) override;
     NodeProp* do_make_node_prop() const override;
 
@@ -371,7 +376,7 @@ public:
 /*!
  * \brief increase the value of subtensor by another tensor
  */
-MGB_DEFINE_OPR_CLASS(IncrSubtensor, intl::ModifySubtensorImplHelper) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(IncrSubtensor, intl::ModifySubtensorImplHelper) // {
     void modify(DeviceTensorND& sub, const DeviceTensorND& val) override;
 
 public:
@@ -384,7 +389,7 @@ public:
      * \brief helper for Subtensor with only index
      * \param index list of pairs of (axis, index)
      */
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar inp, const std::vector<std::pair<size_t, SymbolVar>>& index,
             const OperatorNodeConfig& config = {});
 };
@@ -399,7 +404,7 @@ public:
  *      on this comp_node
  * 3. Specify comp_node for each output in OperatorNodeConfig
  */
-MGB_DEFINE_OPR_CLASS(Split, intl::OutshapeBySymvarOprBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(Split, intl::OutshapeBySymvarOprBase) // {
 public:
     struct Options {
         enum class Method {
@@ -428,7 +433,7 @@ public:
 
     Split(VarNode* inp, const Options& opt, const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar inp, Options opt, const OperatorNodeConfig& config = {});
 
     const Options& options() const { return m_opt; }
@@ -444,30 +449,30 @@ private:
     Options m_opt;
     size_t m_output_shape_version = 0;
 
-    void init_output_comp_node() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_comp_node() override;
 
-    NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
 
-    void do_execute(ExecEnv& env) override;
+    MGE_WIN_DECLSPEC_FUC void do_execute(ExecEnv& env) override;
 
-    void init_output_static_infer_desc() override;
-    void outshape_by_symvar_do_get_output_shape(
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC void outshape_by_symvar_do_get_output_shape(
             TensorShape& dest, const ShapeInferInfo& shpinfo) override;
 
-    void mem_plan_fwd_in2out_readonly() override;
+    MGE_WIN_DECLSPEC_FUC void mem_plan_fwd_in2out_readonly() override;
 
-    void add_input_layout_constraint() override;
+    MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint() override;
 
-    bool infer_shape(
+    MGE_WIN_DECLSPEC_FUC bool infer_shape(
             size_t out_idx, TensorShape& dest, const cg::static_infer::InpVal& inp);
 
-    void on_mem_status_changed();
-    OprEventCallback get_opr_event_callback() override final;
+    MGE_WIN_DECLSPEC_FUC void on_mem_status_changed();
+    MGE_WIN_DECLSPEC_FUC OprEventCallback get_opr_event_callback() override final;
 
-    void init_subspec(bool memfwd);
+    MGE_WIN_DECLSPEC_FUC void init_subspec(bool memfwd);
 
-    void on_output_comp_node_stream_changed() override;
-    void init_rt_force_dynamic_mem_alloc_imply_chain() override;
+    MGE_WIN_DECLSPEC_FUC void on_output_comp_node_stream_changed() override;
+    MGE_WIN_DECLSPEC_FUC void init_rt_force_dynamic_mem_alloc_imply_chain() override;
 };
 
 /*!
@@ -476,12 +481,13 @@ private:
  * To concat to a different computing node, specify the destination in
  * OperatorNodeConfig
  */
-MGB_DEFINE_OPR_CLASS(Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        Concat, cg::SingleCNOutshapePureByInshapeOprBase) // {
 public:
     using Param = megdnn::param::Axis;
     Concat(const VarNodeArrayView& inp, int axis, const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const VarNodeArrayView& inp, int axis,
             const OperatorNodeConfig& config = {});
 
@@ -500,15 +506,15 @@ public:
 private:
     int m_axis;
 
-    void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
 
-    NodeProp* do_make_node_prop() const override;
+    MGE_WIN_DECLSPEC_FUC NodeProp* do_make_node_prop() const override;
 
-    void init_output_static_infer_desc() override;
-    void add_input_layout_constraint() override;
-    void init_output_comp_node() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_comp_node() override;
 
-    void get_output_var_shape(
+    MGE_WIN_DECLSPEC_FUC void get_output_var_shape(
             const TensorShapeArray& inp_shape,
             TensorShapeArray& out_shape) const override;
 };
@@ -521,27 +527,27 @@ private:
  *      the begin and the end of inputs[i]'s offsets in output
  * \param offsets_val: offsets value on cpu
  */
-MGB_DEFINE_OPR_CLASS(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(ParamPackConcat, cg::SingleCNOperatorNodeBase) // {
     //! input pointer buffer
     SmallVector<void*> m_inp_ptr;
     std::vector<dt_int32> m_offsets;
     intl::UniqPtrWithCN<megdnn::ParamPackConcat> m_opr;
 
-    void add_input_layout_constraint() override;
-    void scn_do_execute() override;
-    void init_output_static_infer_desc() override;
-    void init_output_dtype() override;
-    void on_output_comp_node_stream_changed() override;
+    MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint() override;
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_dtype() override;
+    MGE_WIN_DECLSPEC_FUC void on_output_comp_node_stream_changed() override;
 
 public:
     using Param = megdnn::param::Empty;
 
     Param param() const { return {}; }
 
-    ParamPackConcat(
+    MGE_WIN_DECLSPEC_FUC ParamPackConcat(
             VarNodeArray& inp, VarNode* offsets,
             const std::vector<dt_int32> offsets_val, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const SmallVector<SymbolVar>& inp, const SymbolVar& offsets,
             const std::vector<dt_int32> offsets_val,
             const OperatorNodeConfig& config = {});
@@ -564,24 +570,24 @@ public:
  * \param offsets_val: offsets value on cpu
  * \param shapes: shape of each output
  */
-MGB_DEFINE_OPR_CLASS(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(ParamPackSplit, cg::SingleCNOperatorNodeBase) // {
     TensorShapeArray m_shapes;
     std::vector<dt_int32> m_offsets;
 
-    void scn_do_execute() override;
-    void init_output_static_infer_desc() override;
-    bool infer_shape(
+    MGE_WIN_DECLSPEC_FUC void scn_do_execute() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_static_infer_desc() override;
+    MGE_WIN_DECLSPEC_FUC bool infer_shape(
             size_t index, TensorShape& dest, const cg::static_infer::InpVal& inp);
-    void init_output_dtype() override;
-    void mem_plan_fwd_in2out_readonly() override;
-    void add_input_layout_constraint() override;
+    MGE_WIN_DECLSPEC_FUC void init_output_dtype() override;
+    MGE_WIN_DECLSPEC_FUC void mem_plan_fwd_in2out_readonly() override;
+    MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint() override;
 
 public:
-    ParamPackSplit(
+    MGE_WIN_DECLSPEC_FUC ParamPackSplit(
             VarNode* src, const std::vector<dt_int32> offsets, TensorShapeArray& shapes,
             const OperatorNodeConfig& config);
 
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             const SymbolVar& src, const std::vector<dt_int32> offsets,
             TensorShapeArray shapes, const OperatorNodeConfig& config = {});
 
@@ -589,7 +595,7 @@ public:
 
     const TensorShapeArray& get_output_shapes() const { return m_shapes; }
 
-    void init_rt_force_dynamic_mem_alloc_imply_chain() override;
+    MGE_WIN_DECLSPEC_FUC void init_rt_force_dynamic_mem_alloc_imply_chain() override;
 };
 
 /*!
@@ -597,23 +603,25 @@ public:
  *
  * See docs of megdnn params for more details
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         RelayoutFormat, intl::MegDNNOprWrapperFwd<megdnn::RelayoutFormat>) // {
 public:
-    RelayoutFormat(VarNode* src, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC RelayoutFormat(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param, const OperatorNodeConfig& config = {});
-    void init_output_format() override final;
+    MGE_WIN_DECLSPEC_FUC void init_output_format() override final;
 };
 
 /*!
  * \brief padding the src tensor to dst tensor
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         PaddingForward, intl::MegDNNOprWrapperFwd<megdnn::PaddingForward>) // {
 public:
-    PaddingForward(VarNode* src, const Param& param, const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC PaddingForward(
+            VarNode* src, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };
@@ -622,13 +630,13 @@ using Padding = PaddingForward;
 /*!
  * \brief padding backward
  */
-MGB_DEFINE_OPR_CLASS(
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         PaddingBackward, intl::MegDNNOprWrapperBwd<megdnn::PaddingBackward>) // {
 public:
-    PaddingBackward(
+    MGE_WIN_DECLSPEC_FUC PaddingBackward(
             VarNode* src, VarNode* in_for_shape, const Param& param,
             const OperatorNodeConfig& config);
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar src, SymbolVar in_for_shape, const Param& param = {},
             const OperatorNodeConfig& config = {});
 };

@@ -16,7 +16,11 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef MGE_DLL_EXPORT
+#define MGB_PUBLIC __declspec(dllexport)
+#else
 #define MGB_PUBLIC __attribute__((visibility("default")))
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -29,11 +29,11 @@ MGB_DEFINE_OPR_CLASS(ElemwiseMultiType, intl::ElemwiseMultiTypeBase) // {
 public:
     using Mode = Param::Mode;
 
-    ElemwiseMultiType(
+    MGE_WIN_DECLSPEC_FUC ElemwiseMultiType(
             const VarNodeArrayView& inputs, Param param,
             const OperatorNodeConfig& config);
 
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             const VarNodeArrayView& inputs, Param param,
             const OperatorNodeConfig& config = {});
 
@@ -57,7 +57,7 @@ class AffineInt final : public DynTypeObj {
 
 public:
     using Param = megdnn::param::Empty;
-    static SymbolVar make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
             SymbolVar x, SymbolVar k, SymbolVar b, const Param& param = {},
             const OperatorNodeConfig& config = {}) {
         return ElemwiseMultiType::make(

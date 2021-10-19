@@ -175,15 +175,15 @@ class ParamVal {
 
 public:
     template <typename T>
-    ParamVal(const T& val);
+    MGE_WIN_DECLSPEC_FUC ParamVal(const T& val);
     template <typename T>
-    ParamVal(const std::initializer_list<T>& val);
+    MGE_WIN_DECLSPEC_FUC ParamVal(const std::initializer_list<T>& val);
 
-    ParamVal();
-    ParamVal(const char* str);
-    ParamVal(const std::initializer_list<const char*>& strs);
-    ParamVal(const std::vector<const char*>& strs);
-    ParamVal(const ParamVal& rhs);
+    MGE_WIN_DECLSPEC_FUC ParamVal();
+    MGE_WIN_DECLSPEC_FUC ParamVal(const char* str);
+    MGE_WIN_DECLSPEC_FUC ParamVal(const std::initializer_list<const char*>& strs);
+    MGE_WIN_DECLSPEC_FUC ParamVal(const std::vector<const char*>& strs);
+    MGE_WIN_DECLSPEC_FUC ParamVal(const ParamVal& rhs);
 
     template <typename T>
     ParamVal& operator=(const T& rhs);
@@ -196,18 +196,19 @@ public:
     ParamVal& operator=(const ParamVal& rhs);
 
     template <typename T>
-    const T& as(void) const;
+    MGE_WIN_DECLSPEC_FUC const T& as(void) const;
     template <typename T>
-    T& as(void);
+    MGE_WIN_DECLSPEC_FUC T& as(void);
 
-    const void* raw_ptr(void) const;
-    void* raw_ptr(void);
-    ParamDynType type(void) const;
-    std::string str(void) const;
-    size_t size(void) const;
+    MGE_WIN_DECLSPEC_FUC const void* raw_ptr(void) const;
+    MGE_WIN_DECLSPEC_FUC void* raw_ptr(void);
+    MGE_WIN_DECLSPEC_FUC ParamDynType type(void) const;
+    MGE_WIN_DECLSPEC_FUC std::string str(void) const;
+    MGE_WIN_DECLSPEC_FUC size_t size(void) const;
 
-    static std::string to_bytes(const ParamVal& value);
-    static ParamVal from_bytes(const std::string& bytes, size_t& offset);
+    MGE_WIN_DECLSPEC_FUC static std::string to_bytes(const ParamVal& value);
+    MGE_WIN_DECLSPEC_FUC static ParamVal from_bytes(
+            const std::string& bytes, size_t& offset);
 
     friend ParamVal operator+(const ParamVal& lhs, const ParamVal& rhs);
     friend ParamVal operator-(const ParamVal& lhs, const ParamVal& rhs);

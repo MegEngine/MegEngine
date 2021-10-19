@@ -128,7 +128,7 @@ public:
      *      which must have no side-effect so a desc could be made for grad
      *      opr
      */
-    static SymbolVarArray make(
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             DescMaker desc_maker, const Param& param = {},
             const OperatorNodeConfig& config = {});
 

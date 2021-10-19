@@ -60,19 +60,22 @@ class InFilePersistentCache final : public PersistentCache {
     void read_cache(Input& inp);
 
 public:
-    InFilePersistentCache() = default;
-    InFilePersistentCache(const char* path, bool always_open = false);
-    InFilePersistentCache(const uint8_t* bin, size_t size);
+    MGE_WIN_DECLSPEC_FUC InFilePersistentCache() = default;
+    MGE_WIN_DECLSPEC_FUC InFilePersistentCache(
+            const char* path, bool always_open = false);
+    MGE_WIN_DECLSPEC_FUC InFilePersistentCache(const uint8_t* bin, size_t size);
 
     /**
      * \warning You should invoke \c dump_cache mannually to save the cache
      * file.
      */
-    void dump_cache(const char* path);
-    void dump_cache(OutputFile* out_file);
+    MGE_WIN_DECLSPEC_FUC void dump_cache(const char* path);
+    MGE_WIN_DECLSPEC_FUC void dump_cache(OutputFile* out_file);
 
-    Maybe<Blob> get(const std::string& category, const Blob& key) override;
-    void put(const std::string& category, const Blob& key, const Blob& value) override;
+    MGE_WIN_DECLSPEC_FUC Maybe<Blob> get(
+            const std::string& category, const Blob& key) override;
+    MGE_WIN_DECLSPEC_FUC void put(
+            const std::string& category, const Blob& key, const Blob& value) override;
     bool support_dump_cache() override { return true; }
 };
 }  // namespace mgb

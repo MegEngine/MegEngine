@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "megbrain/utils/thin/function.h"
+#include "megbrain_build_config.h"
 
 namespace mgb {
 
@@ -57,14 +58,14 @@ class XXHash {
     long long m_state[11];
 
 public:
-    XXHash();
-    void reset();
+    MGE_WIN_DECLSPEC_FUC XXHash();
+    MGE_WIN_DECLSPEC_FUC void reset();
 
     //! update internal state, and return *this
-    XXHash& update(const void* data, size_t len);
+    MGE_WIN_DECLSPEC_FUC XXHash& update(const void* data, size_t len);
 
     //! get hash value, guaranteed to be non-zero
-    uint64_t digest() const;
+    MGE_WIN_DECLSPEC_FUC uint64_t digest() const;
 };
 
 /*!

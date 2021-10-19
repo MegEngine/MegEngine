@@ -219,8 +219,8 @@ void TensorRTEngineCacheIO::put(const std::string& key, const Engine& value) {
     m_cache[key].init_from_buf(value.ptr, value.size);
 }
 
-std::shared_ptr<TensorRTEngineCache> TensorRTEngineCache::sm_impl =
-        std::make_shared<TensorRTEngineCacheMemory>();
+MGE_WIN_DECLSPEC_DATA std::shared_ptr<TensorRTEngineCache>
+        TensorRTEngineCache::sm_impl = std::make_shared<TensorRTEngineCacheMemory>();
 #endif
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

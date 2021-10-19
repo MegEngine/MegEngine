@@ -191,10 +191,10 @@ namespace mgb {
 #endif
 
 #if MGB_CUDA
-[[noreturn]] void _on_cuda_error(
+[[noreturn]] MGE_WIN_DECLSPEC_FUC void _on_cuda_error(
         const char* expr, cudaError_t err, const char* file, const char* func,
         int line);
-[[noreturn]] void _on_cuda_cu_error(
+[[noreturn]] MGE_WIN_DECLSPEC_FUC void _on_cuda_cu_error(
         const char* expr, CUresult err, const char* file, const char* func, int line);
 #endif
 
@@ -509,13 +509,14 @@ public:
         bool* do_task_inplace = nullptr;
 #endif
 
-        void enable_dispatch();
+        MGE_WIN_DECLSPEC_FUC void enable_dispatch();
 
-        void disable_dispatch(bool* flag);
+        MGE_WIN_DECLSPEC_FUC void disable_dispatch(bool* flag);
 
-        void dispatch(Task&& task) const;
+        MGE_WIN_DECLSPEC_FUC void dispatch(Task&& task) const;
 
-        void dispatch(MultiThreadingTask&& task, size_t parallelism) const;
+        MGE_WIN_DECLSPEC_FUC void dispatch(
+                MultiThreadingTask&& task, size_t parallelism) const;
 
         void set_affinity(AffinityCallBack&& cb) const {
             dispatcher->set_affinity(std::move(cb));
@@ -560,7 +561,8 @@ private:
     std::unique_ptr<UserDataContainer> m_user_data_container;
     mutable RecursiveSpinlock m_user_data_container_mtx;
 
-    [[noreturn]] void on_bad_device_type(DeviceType expected) const;
+    [[noreturn]] MGE_WIN_DECLSPEC_FUC void on_bad_device_type(
+            DeviceType expected) const;
 
 #if MGB_ENABLE_COMP_NODE_ASYNC_INIT
     //! whether async init is in future; set by init*_async methods
@@ -575,7 +577,7 @@ private:
         }
     }
 
-    void wait_async_init();
+    MGE_WIN_DECLSPEC_FUC void wait_async_init();
 #else
     void ensure_async_init_finished() const {}
 #endif
@@ -597,10 +599,10 @@ class MegDNNHandle final : public UserDataContainer::UserData,
 #endif
 
 public:
-    MegDNNHandle(const CompNodeEnv& env);
+    MGE_WIN_DECLSPEC_FUC MegDNNHandle(const CompNodeEnv& env);
     ~MegDNNHandle() noexcept;
 
-    static MegDNNHandle& get(const CompNodeEnv& env);
+    MGE_WIN_DECLSPEC_FUC static MegDNNHandle& get(const CompNodeEnv& env);
 
     megdnn::Handle* operator->() const { return handle(); }
 

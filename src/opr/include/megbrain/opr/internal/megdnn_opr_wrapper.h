@@ -21,8 +21,9 @@ namespace opr {
 
 namespace intl {
 //! get megdnn handle from comp node
-megdnn::Handle* get_megdnn_handle(CompNode comp_node);
-std::shared_ptr<megdnn::Handle> get_megdnn_handle_shared(CompNode comp_node);
+MGE_WIN_DECLSPEC_FUC megdnn::Handle* get_megdnn_handle(CompNode comp_node);
+MGE_WIN_DECLSPEC_FUC std::shared_ptr<megdnn::Handle> get_megdnn_handle_shared(
+        CompNode comp_node);
 
 /*!
  * \brief get global megdnn operator asscoated with a computing node
@@ -32,7 +33,7 @@ std::shared_ptr<megdnn::Handle> get_megdnn_handle_shared(CompNode comp_node);
  *      * Checksum
  */
 template <typename Opr>
-Opr* get_megdnn_global_opr(CompNode comp_node);
+MGE_WIN_DECLSPEC_FUC Opr* get_megdnn_global_opr(CompNode comp_node);
 
 template <class Obj>
 class UniqPtrWithCN : public std::unique_ptr<Obj> {
@@ -63,7 +64,8 @@ UniqPtrWithCN<Opr> create_megdnn_opr(CompNode comp_node) {
  * temp storage differs from workspace because the temp storage might
  * depends on runtime layout / pointer address
  */
-DeviceTensorStorage& get_temp_storage(ComputingGraph& graph, CompNode comp_node);
+MGE_WIN_DECLSPEC_FUC DeviceTensorStorage& get_temp_storage(
+        ComputingGraph& graph, CompNode comp_node);
 
 /*!
  * \brief like get_temp_storage() but returns a DeviceTensorND instead
@@ -79,10 +81,11 @@ namespace mixin {
 namespace megdnn_utils {
 
 //! add input layout constraint to require all inputs to be contiguous
-void add_input_layout_constraint_contig(OperatorNodeBase& opr);
+MGE_WIN_DECLSPEC_FUC void add_input_layout_constraint_contig(OperatorNodeBase& opr);
 
 //! called in constructor to add output vars
-void add_output_vars(OperatorNodeBase& opr, size_t nr_output, bool add_workspace);
+MGE_WIN_DECLSPEC_FUC void add_output_vars(
+        OperatorNodeBase& opr, size_t nr_output, bool add_workspace);
 }
 
 /*!
@@ -110,27 +113,29 @@ protected:
 class MegDNNOprHolder : public cg::mixin::SingleCNOperatorNode {
 public:
     //! call create_opr() internally.
-    void mixin_init_output_comp_node(OperatorNodeBase& self);
+    MGE_WIN_DECLSPEC_FUC void mixin_init_output_comp_node(OperatorNodeBase& self);
 
     //! recreate operator when stream changes
-    void mixin_on_output_comp_node_stream_changed(OperatorNodeBase& self);
+    MGE_WIN_DECLSPEC_FUC void mixin_on_output_comp_node_stream_changed(
+            OperatorNodeBase& self);
 
-    static void record_megdnn_opr(
+    MGE_WIN_DECLSPEC_FUC static void record_megdnn_opr(
             std::unique_ptr<megdnn::OperatorBase> opr,
             cg::GraphExecutable::ExecDependencyArray& deps);
 
 protected:
-    ~MegDNNOprHolder() noexcept;
+    MGE_WIN_DECLSPEC_FUC ~MegDNNOprHolder() noexcept;
 
     //! create actual megdnnn operator
     virtual void create_megdnn_opr() = 0;
 
     megdnn::OperatorBase* megdnn_opr() const { return m_dnn_opr.get(); }
 
-    void set_megdnn_opr(std::unique_ptr<megdnn::OperatorBase> opr);
+    MGE_WIN_DECLSPEC_FUC void set_megdnn_opr(std::unique_ptr<megdnn::OperatorBase> opr);
 
     //! record the megdnn opr owned by this opr to ExecDependencyArray
-    void record_megdnn_opr(cg::GraphExecutable::ExecDependencyArray& deps);
+    MGE_WIN_DECLSPEC_FUC void record_megdnn_opr(
+            cg::GraphExecutable::ExecDependencyArray& deps);
 
 private:
     std::unique_ptr<megdnn::OperatorBase> m_dnn_opr;
@@ -323,8 +328,10 @@ public:
     using GetWorkspaceLimitImpl = thin_function<size_t(CompNode, size_t)>;
     WorkspaceLimitHook() = default;
     ~WorkspaceLimitHook() = default;
-    static void set_impl(ComputingGraph* graph, GetWorkspaceLimitImpl impl);
-    static const GetWorkspaceLimitImpl& get_impl(ComputingGraph* graph);
+    MGE_WIN_DECLSPEC_FUC static void set_impl(
+            ComputingGraph* graph, GetWorkspaceLimitImpl impl);
+    MGE_WIN_DECLSPEC_FUC static const GetWorkspaceLimitImpl& get_impl(
+            ComputingGraph* graph);
 
 private:
     void set_impl(GetWorkspaceLimitImpl impl);
@@ -341,7 +348,7 @@ private:
     MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperFwd<megdnn::_name>)     \
 public:                                                                       \
     _name(VarNode* p0, const Param& param, const OperatorNodeConfig& config); \
-    static SymbolVar make(                                                    \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                               \
             SymbolVar p0, const Param& param = {},                            \
             const OperatorNodeConfig& config = {});                           \
     }
@@ -352,7 +359,7 @@ public:                                                                       \
 public:                                                                   \
     _name(VarNode* p0, VarNode* p1, const Param& param,                   \
           const OperatorNodeConfig& config);                              \
-    static SymbolVar make(                                                \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                           \
             SymbolVar p0, SymbolVar p1, const Param& param = {},          \
             const OperatorNodeConfig& config = {});                       \
     }
@@ -362,7 +369,7 @@ public:                                                                   \
     MGB_DEFINE_OPR_CLASS(_name, intl::MegDNNOprWrapperBwd<megdnn::_name>)            \
     _extra public : _name(VarNode* p0, VarNode* p1, VarNode* p2, const Param& param, \
                           const OperatorNodeConfig& config);                         \
-    static SymbolVar make(                                                           \
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(                                      \
             SymbolVar p0, SymbolVar p1, SymbolVar p2, const Param& param = {},       \
             const OperatorNodeConfig& config = {});                                  \
     }

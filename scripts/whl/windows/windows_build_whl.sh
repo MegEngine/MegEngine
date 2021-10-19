@@ -18,8 +18,6 @@ function append_path_env_and_check() {
     export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
     echo  "export LLVM install path"
     export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1
-    # for llvm-strip
-    export PATH=${LLVM_PATH}/bin/:$PATH
 }
 
 append_path_env_and_check
@@ -78,16 +76,23 @@ CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas6
 CURAND_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/curand64_10.dll"
 CUBLASLT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublasLt64_10.dll"
 CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
+MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
+
 function depend_real_copy() {
     REAL_DST=$1
     echo "real copy lib to $1"
-    cp "${TRT_LIB}" ${REAL_DST}
-    cp "${CUDNN_LIB}" ${REAL_DST}
-    cp "${CUSOLVER_LIB}" ${REAL_DST}
-    cp "${CUBLAS_LIB}" ${REAL_DST}
-    cp "${CURAND_LIB}" ${REAL_DST}
-    cp "${CUBLASLT_LIB}" ${REAL_DST}
-    cp "${CUDART_LIB}" ${REAL_DST}
+    cp "${MGE_EXPORT_LIB}" ${REAL_DST}
+
+    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+        echo "copy nvidia lib...."
+        cp "${TRT_LIB}" ${REAL_DST}
+        cp "${CUDNN_LIB}" ${REAL_DST}
+        cp "${CUSOLVER_LIB}" ${REAL_DST}
+        cp "${CUBLAS_LIB}" ${REAL_DST}
+        cp "${CURAND_LIB}" ${REAL_DST}
+        cp "${CUBLASLT_LIB}" ${REAL_DST}
+        cp "${CUDART_LIB}" ${REAL_DST}
+    fi
 }
 
 function copy_more_dll() {
@@ -97,23 +102,15 @@ function copy_more_dll() {
     rm -rf ${CP_WHL_DST_IMP}
     mkdir ${CP_WHL_DST_IMP}
 
-    # workround for cpu-only version import failed, use a
-    # empty.file to triger setup.py to create a null empty
-    echo "empty" > ${CP_WHL_DST_IMP}/empty.file
-
-    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
-        echo "copy nvidia lib to whl use...."
-        depend_real_copy ${CP_WHL_DST_IMP}
-    fi
+    depend_real_copy ${CP_WHL_DST_IMP}
 }
 
 function lite_copy_more_dll() {
-    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
-        if [ ${IN_CI} = "true" ]; then
-            echo "copy lib for lite for ci test"
-            IMP_TEST_DST=${SRC_DIR}/build_dir/host/build/lite/test/
-            depend_real_copy ${IMP_TEST_DST}
-        fi
+    if [ ${IN_CI} = "true" ]; then
+        echo "copy lib for lite for ci test"
+        IMP_TEST_DST=${SRC_DIR}/build_dir/host/build/lite/test/
+        depend_real_copy ${IMP_TEST_DST}
+        rm "${IMP_TEST_DST}/megengine_shared.dll"
     fi
 }
 
@@ -199,7 +196,6 @@ function do_build() {
             echo "ERR: can not find valid rt file"
             exit -1
         fi
-        llvm-strip -s ${rt_file}
         mv ${rt_file} _imperative_rt.pyd
 
         copy_more_dll
@@ -212,7 +208,6 @@ function do_build() {
         mkdir -p ${LITE_CORE_LIB_DIR}
         cd ${LITE_CORE_LIB_DIR}
         cp ${BUILD_DIR}/lite/lite_shared_whl.dll liblite_shared_whl.pyd
-        llvm-strip -s liblite_shared_whl.pyd
         lite_copy_more_dll
 
         cd ${BUILD_DIR}/staging
