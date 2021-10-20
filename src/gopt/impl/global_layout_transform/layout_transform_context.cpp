@@ -94,8 +94,8 @@ std::unique_ptr<LayoutTransformContext> make_arm_ctx(
             opr::TypeCvt::typeinfo(),
             opr::PoolingForward::typeinfo(),
             opr::Resize::typeinfo(),
-            opr::PowC::typeinfo(), 
-            opr::Concat::typeinfo(), 
+            opr::PowC::typeinfo(),
+            opr::Concat::typeinfo(),
     };
 
     SmallVector<TensorFormats> available_tensor_formats = {
@@ -103,22 +103,23 @@ std::unique_ptr<LayoutTransformContext> make_arm_ctx(
             DNN_INC_FLOAT16(TensorFormats::NCHWc8)};
     Attribute attribute = {base_opr_format, base_tensor_format, Target::ARM};
     auto ctx = std::make_unique<LayoutTransformContext>(
-            std::move(opr_list), std::move(available_tensor_formats),
-            attribute);
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
-               {OprFormat::NCHW, OprFormat::NCHW44,
-                DNN_INC_FLOAT16(OprFormat::NCHW88), OprFormat::NCHW44_DOT})
+               {OprFormat::NCHW, OprFormat::NCHW44, DNN_INC_FLOAT16(OprFormat::NCHW88),
+                OprFormat::NCHW44_DOT})
             .add_opr_config(
                     opr::ConvolutionForward::typeinfo(),
                     {OprFormat::NCHW, OprFormat::NCHW44,
                      DNN_INC_FLOAT16(OprFormat::NCHW88), OprFormat::NCHW44_DOT})
-            .add_opr_config(opr::PoolingForward::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW44,
-                             DNN_INC_FLOAT16(OprFormat::NCHW88)})
-            .add_opr_config(opr::ResizeForward::typeinfo(),
-                            {OprFormat::NCHW, OprFormat::NCHW44,
-                             DNN_INC_FLOAT16(OprFormat::NCHW88)});
+            .add_opr_config(
+                    opr::PoolingForward::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW44,
+                     DNN_INC_FLOAT16(OprFormat::NCHW88)})
+            .add_opr_config(
+                    opr::ResizeForward::typeinfo(),
+                    {OprFormat::NCHW, OprFormat::NCHW44,
+                     DNN_INC_FLOAT16(OprFormat::NCHW88)});
     return ctx;
 }
 }  // namespace

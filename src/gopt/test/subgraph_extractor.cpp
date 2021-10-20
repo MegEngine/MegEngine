@@ -264,4 +264,42 @@ TEST(TestSubGraphExtractor, Complicated) {
             output_file(ssprintf("%s.json", prefix).c_str()));
 }
 
+TEST(TestSubGraphExtractor, SubGraphWithMultipleOutputs) {
+    HostTensorGenerator<> gen;
+    auto graph = ComputingGraph::make();
+
+    auto mkvar = [&](const char* name, const TensorShape& shp) {
+        return opr::Host2DeviceCopy::make(*graph, gen(shp)).rename(name);
+    };
+
+    auto mkcvar = [&](const char* name, const TensorShape& shp) {
+        return opr::SharedDeviceTensor::make(*graph, *gen(shp)).rename(name);
+    };
+
+    graph->options().graph_opt_level = 0;
+    auto x = mkvar("x", {8, 8, 8, 8}), w = mkcvar("w", {4, 8, 3, 3});
+
+    opr::Convolution::Param param;
+    param.pad_h = param.pad_w = 1;
+    auto c = opr::Convolution::make(x, w, param);
+    auto neg_c = -c;
+    auto z = opr::Concat::make({c, neg_c}, 1);
+
+    using OprList = SubGraphExtractor::OprList;
+    static const OprList opr_list = {
+            opr::ConvolutionForward::typeinfo(),
+            opr::Elemwise::typeinfo(),
+    };
+    SubGraphExtractor extractor(opr_list);
+    auto partitions = extractor.extract({z});
+    ASSERT_EQ(partitions.size(), 1u);
+    ASSERT_EQ(partitions[0].output().size(), 2u);
+    ASSERT_TRUE(partitions[0].output().count(c.node()) > 0);
+    ASSERT_TRUE(partitions[0].output().count(neg_c.node()) > 0);
+    ASSERT_EQ(partitions[0].input().size(), 2u);
+    ASSERT_TRUE(partitions[0].input().count(x.node()) > 0);
+    partitions[0].to_json()->writeto_fpath(
+            output_file("TestSubGraphExtractor.SubGraphMultipleOuputs.json"));
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
