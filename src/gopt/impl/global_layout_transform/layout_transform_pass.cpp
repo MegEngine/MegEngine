@@ -18,6 +18,7 @@
 #include "megbrain/gopt/solver.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/serialization/sereg.h"
 
 #include "megbrain/utils/hash_ct.h"
@@ -64,11 +65,6 @@ void LayoutTransformPass::apply(OptState& opt) const {
     auto&& base_cfg_id = m_ctx->attribute().base_config_id;
     auto&& reformat_attribute = m_ctx->attribute().reformat_attribute;
     ThinHashMap<VarNode*, TensorFormats> var2fmts;
-    static ThinHashSet<Typeinfo*> format_aware_oprs = {
-#define cb(_Opr) opr::_Opr::typeinfo(),
-            FOREACH_FORMAT_AWARE_OPR(cb)
-#undef cb
-    };
     auto rewriter = opt.graph().make_rewriter();
     auto on_opr = [&opr_configs, &base_fmt, &base_cfg_id, &reformat_attribute,
                    &rewriter, &solution, &var2fmts,
@@ -141,8 +137,12 @@ void LayoutTransformPass::apply(OptState& opt) const {
                 new_inp[i] = new_var;
             }
             VarNode* new_out;
-            if (format_aware_oprs.count(opr->dyn_typeinfo()) > 0) {
-                new_out = intl::modify_opr_format(opr_fmt.val(), new_inp, opr);
+            if (intl::has_opr_format_modifier(opr)) {
+                intl::OprFormatInfo opr_format_info;
+                opr_format_info.opr_format = opr_fmt.val();
+                opr_format_info.tensor_formats = {
+                        base_fmt, opr_format_to_tensor_formats(opr_fmt.val())};
+                new_out = intl::modify_opr_format(opr_format_info, new_inp, opr);
             } else {
                 new_out = serialization::copy_opr_shallow(*opr, new_inp, opr->config())
                                   ->output(0);

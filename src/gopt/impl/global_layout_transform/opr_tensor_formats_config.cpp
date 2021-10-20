@@ -625,7 +625,13 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NCHW44_HYBRID> {
             TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
-        available &= check_dtype(opr->output(0)->dtype(), false);
+        // FIXME: hack for nchw nchw44 hybrid mode
+        static_assert(
+                std::is_same<Opr, opr::ConvolutionForward>::value ||
+                        std::is_same<Opr, opr::ConvBiasForward>::value,
+                "nchw44 hybrid only support conv or conv_bias opr");
+        size_t in_channel = opr->input(0)->shape()[1];
+        available &= in_channel <= 4_z && check_dtype(opr->output(0)->dtype(), false);
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         config.input_tensor_formats = {
@@ -696,7 +702,14 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NCHW88_HYBRID> {
             TensorType tensor_type = i == 1 ? TensorType::WEIGHT : TensorType::FEATURE;
             config.input_tensor_types.emplace_back(tensor_type);
         }
-        available &= opr->output(0)->dtype().enumv() == DTypeEnum::Float32;
+        // FIXME: hack for nchw nchw88 hybrid mode
+        static_assert(
+                std::is_same<Opr, opr::ConvolutionForward>::value ||
+                        std::is_same<Opr, opr::ConvBiasForward>::value,
+                "nchw nchw88 hybrid mode only support conv or conv_bias opr");
+        size_t in_channel = opr->input(0)->shape()[1];
+        available &= in_channel <= 8_z &&
+                     opr->output(0)->dtype().enumv() == DTypeEnum::Float32;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
         // setup tensor formats
@@ -783,6 +796,13 @@ struct ConvTensorFormatsDispatcherImpl<Opr, OprFormatConfigID::NCHW44_DOT_HYBRID
                      opr->output(0)->dtype().enumv() == DTypeEnum::Quantized8Asymm;
         config.output_dtypes.emplace_back(opr->output(0)->dtype().enumv());
         available &= conv.param().sparse == Opr::Param::Sparse::DENSE;
+        // FIXME: hack for nchw nchw44 dot hybrid mode
+        static_assert(
+                std::is_same<Opr, opr::ConvolutionForward>::value ||
+                        std::is_same<Opr, opr::ConvBiasForward>::value,
+                "nchw44 dot hybrid only support conv or conv_bias opr");
+        size_t in_channel = opr->input(0)->shape()[1];
+        available &= in_channel <= 4_z;
         // setup tensor formats
         config.input_tensor_formats = {
                 TensorFormats::NCHW, TensorFormats::KRSCk4, TensorFormats::NCHWc4,
@@ -940,6 +960,8 @@ StaticData::StaticData() {
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW4);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, CHWN4);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW32);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW32_NCHW4);
+    OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW4_NCHW32);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW64);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW44);
     OPR_TENSOR_FORMATS_CONFIG_REG(ConvBias, NCHW88);

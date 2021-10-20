@@ -11,10 +11,12 @@
  */
 
 #include "./opr_format_modifier.h"
+#include "./utils.h"
 #include "megbrain/opr/dnn/convolution.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/io.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/serialization/sereg.h"
 
 #include "midout.h"
@@ -201,6 +203,37 @@ INST(ConvolutionBackwardData)
 INST(PoolingForward)
 #undef APPLY
 #undef INST
+
+VarNode* modify_concat_opr_format(
+        gopt::intl::OprFormatInfo::TensorFormatsInfo tensor_formats,
+        const VarNodeArray& i, const cg::OperatorNodeBase* opr) {
+    auto base_format = tensor_formats.from;
+    auto tensor_format = tensor_formats.to;
+    int axis = opr->cast_final_safe<Concat>().axis();
+    /// modify axis
+    using Dimension = megdnn::Dimension;
+    static constexpr uint32_t UNDETERMINED_EXTENT = Dimension::UNDETERMINED_EXTENT;
+    auto orig_shape = tensor_formats_to_named_tensor_shape(base_format);
+    auto target_shape = tensor_formats_to_named_tensor_shape(tensor_format);
+    mgb_assert(
+            static_cast<size_t>(axis) < orig_shape.ndim,
+            "invalid axis of concat opr(axis:%d,shp:%s)", axis,
+            orig_shape.to_string().c_str());
+    if (orig_shape[axis].extent() != UNDETERMINED_EXTENT)
+        return nullptr;
+    auto axis_name = orig_shape[axis].name();
+    int new_axis = target_shape.ndim;
+    for (size_t i = 0; i < target_shape.ndim; ++i) {
+        if (target_shape[i].name() == axis_name &&
+            target_shape[i].extent() == UNDETERMINED_EXTENT) {
+            new_axis = i;
+            break;
+        }
+    }
+    if (static_cast<size_t>(new_axis) >= target_shape.ndim)
+        return nullptr;
+    return opr::Concat::make(i, new_axis, opr->config()).node();
+}
 }  // namespace
 
 namespace mgb {
@@ -275,13 +308,16 @@ INST(Resize, 2);
 #undef INST
 
 VarNode* modify_opr_format(
-        opr::ConvBias::Param::Format opr_format, const VarNodeArray& i,
+        OprFormatInfo opr_format_info, const VarNodeArray& i,
         const cg::OperatorNodeBase* opr) {
-#define cb(_Opr)                                                  \
-    if (opr->dyn_typeinfo() == _Opr::typeinfo()) {                \
-        return OprFormatModifier<_Opr>::make(opr_format, i, opr); \
+#define cb(_Opr)                                                                  \
+    if (opr->dyn_typeinfo() == _Opr::typeinfo()) {                                \
+        return OprFormatModifier<_Opr>::make(opr_format_info.opr_format, i, opr); \
     } else
-    FOREACH_FORMAT_AWARE_OPR(cb) {
+    FOREACH_FORMAT_AWARE_OPR(cb)
+    if (opr->dyn_typeinfo() == opr::Concat::typeinfo()) {
+        return modify_concat_opr_format(opr_format_info.tensor_formats, i, opr);
+    } else {
         mgb_throw(
                 InternalError, "invalid format aware operator(got:%s)",
                 opr->dyn_typeinfo()->name);
@@ -302,6 +338,28 @@ bool has_available_algo(const VarNodeArray& i, const cg::OperatorNodeBase* opr) 
                 InternalError, "invalid multi-algo operator(got:%s)",
                 opr->dyn_typeinfo()->name);
     }
+#undef cb
+}
+
+bool has_opr_format(const cg::OperatorNodeBase* opr) {
+    bool ret = false;
+#define cb(_Opr) ret |= opr->dyn_typeinfo() == _Opr::typeinfo();
+    FOREACH_FORMAT_AWARE_OPR(cb)
+#undef cb
+    return ret;
+}
+
+bool has_opr_format_modifier(const cg::OperatorNodeBase* opr) {
+    bool ret = false;
+#define cb(_Opr) ret |= opr->dyn_typeinfo() == _Opr::typeinfo();
+    FOREACH_MODIFY_OPR_FORMAT_OPR(cb)
+#undef cb
+    return ret;
+}
+
+bool allow_aligned_layout(const cg::OperatorNodeBase* opr) {
+    return opr->dyn_typeinfo() != opr::Concat::typeinfo() &&
+           opr->dyn_typeinfo() != opr::Reduce::typeinfo();
 }
 
 }  // namespace intl

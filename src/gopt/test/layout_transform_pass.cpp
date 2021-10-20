@@ -812,7 +812,9 @@ TEST(TestLayoutTransform, Resnet18_F16) {
                     .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
                     .add_pass<ShuffleShuffleRemovePass>()
                     .add_pass(FuseNCHW4Int8Preprocess::make())
+#if CUDA_VERSION >= 10020
                     .add_pass<FoldingConvBiasDimshufflePass>()
+#endif
                     .add_pass<ParamFusePass>()
                     .add_pass<ParamMergePass>()
                     .apply({{output}})
@@ -1205,4 +1207,112 @@ TEST(TestLayoutTransform, MobileNetV2_NCHW44_DOT) {
     MGB_ASSERT_TENSOR_EQ(t1, t2);
 }
 
+#if MGB_CUDA
+TEST(TestLayoutTransform, Concat) {
+    REQUIRE_GPU(1);
+    auto cn = CompNode::load("gpu0");
+    cn.activate();
+    REQUIRE_CUDA_COMPUTE_CAPABILITY(6, 1);
+
+    constexpr size_t N = 16, C = 3, H = 736, W = 1280;
+    HostTensorGenerator<dtype::Uint8> gen;
+
+    auto graph = ComputingGraph::make();
+    auto h2d = opr::Host2DeviceCopy::make(*graph, gen({N, C, H, W}, cn));
+    auto data = opr::TypeCvt::make(h2d, dtype::Float32());
+    auto sub_128 = data + (-128);
+    auto x = opr::TypeCvt::make(sub_128, dtype::QuantizedS8(1.f));
+    auto mkcvar = [&](const char* name, const TensorShape& shp, const DType& dtype) {
+        return opr::TypeCvt::make(
+                opr::SharedDeviceTensor::make(*graph, *gen(shp, cn)).rename(name),
+                dtype);
+    };
+    auto w = mkcvar("w", {2, 3, 3, 3}, dtype::QuantizedS8(1.f));
+    auto b = mkcvar("b", {1, 2, 1, 1}, dtype::QuantizedS32(1.f));
+    opr::ConvBias::Param param;
+    param.format = opr::ConvBias::Param::Format::NCHW;
+    param.nonlineMode = opr::ConvBias::Param::NonlineMode::RELU;
+    param.stride_h = param.stride_w = 2;
+    param.pad_h = param.pad_w = 1;
+    auto conv_1 = opr::ConvBias::make(
+            x, w, b, param, {}, OperatorNodeConfig(dtype::QuantizedS8(1.f)));
+    auto conv_1_cat = opr::Concat::make({conv_1, -conv_1}, 1);
+
+    auto w2 = mkcvar("w", {4, 4, 3, 3}, dtype::QuantizedS8(1.f));
+    auto b2 = mkcvar("b", {1, 4, 1, 1}, dtype::QuantizedS32(1.f));
+    auto conv_2 = opr::ConvBias::make(
+            conv_1_cat, w2, b2, param, {}, OperatorNodeConfig(dtype::QuantizedS8(1.f)));
+    auto conv_2_cat = opr::Concat::make({conv_2, -conv_2}, 1);
+    auto w3 = mkcvar("w", {16, 8, 3, 3}, dtype::QuantizedS8(1.f));
+    auto b3 = mkcvar("b", {1, 16, 1, 1}, dtype::QuantizedS32(1.f));
+    auto y = opr::ConvBias::make(
+            conv_2_cat, w3, b3, param, {}, OperatorNodeConfig(dtype::QuantizedS8(1.f)));
+
+    using S = opr::mixin::AlgoChooserHelper::ExecutionPolicy::Strategy;
+    S strategy = S::PROFILE;
+    gopt::modify_opr_algo_strategy_inplace({y}, strategy);
+
+    using OprFormatConfigID = LayoutTransformContext::OprFormatConfigID;
+    using OprList = LayoutTransformContext::OprList;
+    using Attribute = LayoutTransformContext::Attribute;
+    using Target = LayoutTransformContext::Target;
+    OprList opr_list = {
+            opr::ConvBiasForward::typeinfo(), opr::ElemwiseMultiType::typeinfo(),
+            opr::Elemwise::typeinfo(),        opr::TypeCvt::typeinfo(),
+            opr::Concat::typeinfo(),
+    };
+    SmallVector<TensorFormats> available_tensor_formats = {
+            TensorFormats::NCHW, TensorFormats::NCHWc4};
+    Attribute attribute = {
+            OprFormatConfigID::NCHW, TensorFormats::NCHW, Target::UNSPEC};
+    auto ctx = std::make_unique<LayoutTransformContext>(
+            std::move(opr_list), std::move(available_tensor_formats), attribute);
+    ctx->add_opr_config(
+            opr::ConvBiasForward::typeinfo(),
+            {OprFormatConfigID::NCHW, OprFormatConfigID::NCHW4});
+#if MGB_WITH_CACHED_TEST
+    auto profiler = std::make_unique<ProfilerMock>(
+            static_cast<const uint8_t*>(TestLayoutTransform_Concat.data()),
+            TestLayoutTransform_Concat.size());
+#else
+    auto profiler =
+            ProfilerBase::make_cached_profiler("TestLayoutTransform.Concat.cache");
+#endif
+    std::unique_ptr<SolverBase> solver{
+            new DynamicProgrammingSolver(std::move(profiler))};
+    auto new_out_vars =
+            gopt::GraphOptimizer{}
+                    .add_pass<LayoutTransformPass>(std::move(ctx), std::move(solver))
+                    .add_pass<ShuffleShuffleRemovePass>()
+                    .add_pass(FuseNCHW4Int8Preprocess::make())
+#if CUDA_VERSION >= 10020
+                    .add_pass<FoldingConvBiasDimshufflePass>()
+                    .add_pass<FoldingConvBiasTypecvtPass>()
+#endif
+                    .add_pass<ParamFusePass>()
+                    .add_pass<ParamMergePass>()
+                    .apply(SymbolVarArray{y})
+                    .endpoint_vars();
+    const auto& v = new_out_vars[0];
+    using OutputSpecItem = cg::ComputingGraph::OutputSpecItem;
+    std::vector<OutputSpecItem> outs;
+    for (auto&& i : new_out_vars) {
+        outs.emplace_back(OutputSpecItem{i, {}});
+    }
+    GraphProfiler gprof{graph.get()};
+    auto func = graph->compile(outs);
+    func->execute();
+    gprof.to_json_full(func.get())->writeto_fpath(output_file("conv_cat.json"));
+    SmallVector<cg::OperatorNodeBase*> oprs;
+    auto cb = [&oprs](cg::OperatorNodeBase* opr) {
+        if (opr->same_type<opr::Concat>()) {
+            oprs.push_back(opr);
+        }
+    };
+    cg::DepOprIter{cb}.add(v.node()->owner_opr());
+    ASSERT_EQ(oprs.size(), 4);
+    ASSERT_EQ(oprs[0]->output(0)->shape().ndim, 4);
+    ASSERT_EQ(oprs[2]->output(0)->shape().ndim, 5);
+}
+#endif
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

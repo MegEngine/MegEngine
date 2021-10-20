@@ -93,6 +93,8 @@ static inline TensorFormats opr_format_to_tensor_formats(
             return TensorFormats::NCHWc4;
         case OprFormat::NCHW8:
             return TensorFormats::NCHWc8;
+        case OprFormat::NCHW44_DOT:
+            return TensorFormats::NCHWc4;
         default:
             mgb_throw(
                     AssertionError, "format(%s) is not supported",
@@ -171,7 +173,6 @@ static inline megdnn::NamedTensorShape tensor_formats_to_named_tensor_shape(
                     static_cast<uint32_t>(format));
     }
 }
-
 }  // namespace gopt
 }  // namespace mgb
 

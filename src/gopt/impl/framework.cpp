@@ -840,7 +840,9 @@ const GraphOptimizer& GraphOptimizer::add_passes_for_graph_tuning_options(
 
     if (need_param_fuse) {
         add_pass<ParamFusePass>();
+        add_pass<ParamMergePass>();
     }
+
     return *this;
 }
 

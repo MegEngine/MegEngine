@@ -135,6 +135,13 @@ public:
             const VarNode* orig_var, const ReformatKey& key,
             const AlignmentDesc& extra_alignment = {}) const;
 
+    /// return empty shape, if shape of origin varnode does not satisfy the alignment
+    /// requirement of the target tensor formats
+    static TensorShape try_make_tensor_shape(
+            const VarNode* var, TensorFormats orig_formats,
+            TensorFormats target_formats,
+            ReformatKey::Attribute extra_attribute = ReformatKey::Attribute::DEFAULT,
+            bool allow_aligned = true);
     static TensorShape make_aligned_tensor_shape(
             const VarNode* var, TensorFormats orig_formats,
             TensorFormats target_formats,

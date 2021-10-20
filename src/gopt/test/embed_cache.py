@@ -20,7 +20,7 @@
 # 2. 编译megbrain_test，并运行所有全局图优化相关测试：
 #    ./megbrain_test --gtest_filter="*LayoutTransform*"
 # 3. 用这个脚本把所有的cache文件打包在一起
-#    python3 embed_cache.py -o cache_data.h -r $(ls /path/to/cache/*.cache)
+#    python3 embed_cache.py -o cache_data.h -r -a $(ls /path/to/cache/*.cache)
 # 4. 将步骤1中的 define 语句改回原样，这样 profile 过程就会使用 cache 下来的数据。
 # 5. 最后可以重新构建一下 megbrain_test ，确保测试结果正确。
 import os.path
@@ -44,9 +44,10 @@ def _u32(data):
 class CacheDataGenerator:
     _cache_files = None
 
-    def __init__(self, cache_files, remove_plat_info = True):
+    def __init__(self, cache_files, remove_plat_info=True, append_cache=True):
         self._cache_files = cache_files
         self._remove_plat_info = remove_plat_info
+        self._append_cache = append_cache
 
     def _get_hash(self):
         return _u32(self._hash.digest()[:4])
@@ -71,9 +72,10 @@ class CacheDataGenerator:
         return ','.join(ret)
 
     def gen_cache_data_header(self, fout, src_map):
-        fout.write('// generated embed_cache.py\n')
-        fout.write('#include <vector>\n')
-        fout.write('#include <stdint.h>\n')
+        if not self._append_cache:
+            fout.write('// generated embed_cache.py\n')
+            fout.write('#include <vector>\n')
+            fout.write('#include <stdint.h>\n')
         for k, v in sorted(src_map.items()):
             fout.write("""
 static const std::vector<uint8_t> {} = {{
@@ -89,7 +91,11 @@ static const std::vector<uint8_t> {} = {{
             assert ext == ".cache", "ext: {}, fname {}".format(ext, fname)
             assert base not in fname2cache_data, "duplicated kernel: " + base
             fname2cache_data[base] = self.gen_cache_data(fname)
-        with open(output, 'w') as fout:
+        if self._append_cache:
+            mode = 'a'
+        else:
+            mode = 'w'
+        with open(output, mode) as fout:
             self.gen_cache_data_header(fout, fname2cache_data)
         logger.info('done')
 
@@ -107,7 +113,15 @@ if __name__ == '__main__':
         default=True,
         help="whether remove platform infomation in the cache (default: True)"
     )
+    parser.add_argument(
+        "-a",
+        "--append-cache",
+        action='store_true',
+        default=True,
+        help="whether append the cache (default: True)"
+    )
     parser.add_argument('cache', help='cache files to be embedded', nargs='+')
     args = parser.parse_args()
-    cache_generator = CacheDataGenerator(args.cache, args.remove_plat_info)
+    cache_generator = CacheDataGenerator(args.cache, args.remove_plat_info, 
+                                         args.append_cache)
     cache_generator.invoke(args.output)

@@ -831,7 +831,7 @@ typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Paramet
         dst[4] = 32;
     } else if (param().format == Param::Format::NCHW88) {
         megdnn_assert(
-                src.ndim == 5 || src.ndim == 4,
+                src.ndim == 5 || (src.ndim == 4 && src[1] <= 8),
                 "invalid src ndim for NCHW88, expected=5 or 4, got=%zu", src.ndim);
         dst.ndim = 5;
         dst[0] = src[0];
@@ -854,7 +854,7 @@ typename ConvolutionBase<Parameter>::CanonizedFilterMeta ConvolutionBase<Paramet
             param().format == Param::Format::NCHW44 ||
             param().format == Param::Format::NCHW44_DOT) {
         megdnn_assert(
-                src.ndim == 5 || src.ndim == 4,
+                src.ndim == 5 || (src.ndim == 4 && src[1] <= 4),
                 "invalid src ndim for NCHW44, expected=5 or 4, got=%zu", src.ndim);
         dst.ndim = 5;
         dst[0] = src[0];

@@ -66,7 +66,6 @@ std::unique_ptr<LayoutTransformContext> make_cuda_ctx(
     ctx->add_opr_config(
                opr::ConvBiasForward::typeinfo(),
                {OprFormatConfigID::NCHW, OprFormatConfigID::NHWC,
-                OprFormatConfigID::NCHW4_NCHW32, OprFormatConfigID::NCHW32_NCHW4,
                 OprFormatConfigID::NCHW4, OprFormatConfigID::NCHW32,
                 OprFormatConfigID::NCHW64, OprFormatConfigID::CHWN4})
             .add_opr_config(

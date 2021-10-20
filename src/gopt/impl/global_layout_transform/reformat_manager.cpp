@@ -587,9 +587,9 @@ const ReformatManager& ReformatManager::instance() {
     return inst;
 }
 
-TensorShape ReformatManager::make_aligned_tensor_shape(
+TensorShape ReformatManager::try_make_tensor_shape(
         const VarNode* var, TensorFormats orig_formats, TensorFormats target_formats,
-        ReformatKey::Attribute extra_attribute) {
+        ReformatKey::Attribute extra_attribute, bool allow_aligned) {
     using Dimension = megdnn::Dimension;
     static constexpr uint32_t UNDETERMINED_EXTENT = Dimension::UNDETERMINED_EXTENT;
     auto orig_shape = tensor_formats_to_named_tensor_shape(orig_formats);
@@ -623,8 +623,17 @@ TensorShape ReformatManager::make_aligned_tensor_shape(
                                 : (orig_shape[idx] / target_shape[i]).extent();
             if (mul)
                 tshp[i] = oshp[idx] * factor;
-            else
-                tshp[i] = divup(oshp[idx], factor);
+            else {
+                if (allow_aligned)
+                    tshp[i] = divup(oshp[idx], factor);
+                else if (!(oshp[idx] % factor)) {
+                    tshp[i] = oshp[idx] / factor;
+                } else {
+                    return TensorShape{};
+                }
+            }
+
+            /// hack for nhwc auto padding
             if (name == Dimension::Name::C) {
                 size_t channel_alignment = target_shape[i].stride();
                 size_t channels = tshp[i] * channel_alignment;
@@ -638,6 +647,15 @@ TensorShape ReformatManager::make_aligned_tensor_shape(
             tshp[i] = target_shape[i].extent();
         }
     }
+    return tshp;
+}
+
+TensorShape ReformatManager::make_aligned_tensor_shape(
+        const VarNode* var, TensorFormats orig_formats, TensorFormats target_formats,
+        ReformatKey::Attribute extra_attribute) {
+    auto tshp = ReformatManager::try_make_tensor_shape(
+            var, orig_formats, target_formats, extra_attribute);
+    mgb_assert(tshp.ndim);
     return tshp;
 }
 

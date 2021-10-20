@@ -19,6 +19,7 @@
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/nn_int.h"
+#include "megbrain/opr/tensor_manip.h"
 #include "megbrain/plugin/base.h"
 #include "megbrain/serialization/sereg.h"
 
@@ -202,20 +203,43 @@ float ProfilerImpl::profile_operator(
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
     graph->options().var_sanity_check_first_run = false;
+    OperatorNodeBase* new_opr;
+    /// \note: Concat operators are specially treated. The reasons are as
+    /// follows:
+    /// 1. Padding the input varnodes of the
+    /// Concat opr is not allowed. If we pad the input varnodes of Concat opr, the
+    /// padding information of output varnode should be propagated in the layout
+    /// selection algorithm. But this feature has not been implemented now.
+    /// 2. The axis of concat operator should be modified, because the layouts of the
+    /// input varnodes has been modified. So we handle the new axis in the OprMaker
+    /// function.
+    bool allow_aligned = intl::allow_aligned_layout(opr);
     VarNodeArray new_inps(opr->input().size());
     for (size_t i = 0; i < opr->input().size(); ++i) {
         auto&& var = opr->input(i);
         auto&& cn = var->comp_node();
         auto&& dtype = var->dtype();
         auto dval = std::make_shared<DeviceTensorND>(cn, dtype);
-        auto aligned_tensor_shape = ReformatManager::make_aligned_tensor_shape(
-                var, base_format, tensor_format, extra_attribute);
-        dval->resize(aligned_tensor_shape);
-        auto aligned_var = opr::VolatileSharedDeviceTensor::make(*graph, dval);
-        new_inps[i] = aligned_var.node();
+        auto new_shape = ReformatManager::try_make_tensor_shape(
+                var, base_format, tensor_format, extra_attribute, allow_aligned);
+        if (new_shape.ndim == 0)
+            return PROFILE_TIME_OUT;
+        dval->resize(new_shape);
+        auto new_var = opr::VolatileSharedDeviceTensor::make(*graph, dval);
+        new_inps[i] = new_var.node();
     }
-    auto new_opr = serialization::copy_opr_shallow(
-            *opr, new_inps, opr->config(), {graph.get()});
+    if (intl::has_opr_format_modifier(opr)) {
+        intl::OprFormatInfo opr_format_info;
+        opr_format_info.tensor_formats = {base_format, tensor_format};
+        auto new_var = intl::modify_opr_format(opr_format_info, new_inps, opr);
+        if (new_var)
+            new_opr = new_var->owner_opr();
+        else
+            return PROFILE_TIME_OUT;
+    } else {
+        new_opr = serialization::copy_opr_shallow(
+                *opr, new_inps, opr->config(), {graph.get()});
+    }
     if (!m_opr_filter(opr, new_opr))
         return PROFILE_TIME_OUT;
     auto y = new_opr->output(0);
@@ -248,6 +272,8 @@ float ProfilerImpl::profile_operator(
         ReformatAttribute extra_attribute) const {
     auto graph = ComputingGraph::make();
     graph->options().graph_opt_level = 0;
+    graph->options().graph_opt.weight_preprocess =
+            opr->owner_graph()->options().graph_opt.weight_preprocess;
     graph->options().var_sanity_check_first_run = false;
     VarNodeArray new_inps(opr->input().size());
     size_t i = 0;
@@ -274,8 +300,11 @@ float ProfilerImpl::profile_operator(
                     config.input_tensor_formats[i], extra_attribute);
         }
         dval->resize(aligned_shape);
-        auto aligned_var = opr::VolatileSharedDeviceTensor::make(*graph, dval);
-        new_inps[i] = aligned_var.node();
+        if (config.input_tensor_types[i] == TensorType::WEIGHT) {
+            new_inps[i] = opr::SharedDeviceTensor::make_const(*graph, dval).node();
+        } else {
+            new_inps[i] = opr::VolatileSharedDeviceTensor::make(*graph, dval).node();
+        }
     }
     for (; i < opr->input().size(); ++i) {
         auto&& var = opr->input(i);
@@ -291,7 +320,9 @@ float ProfilerImpl::profile_operator(
         auto imm = opr::ImmutableTensor::make(*graph, *hval);
         new_inps[i] = imm.node();
     }
-    VarNode* y = mgb::gopt::intl::modify_opr_format(config.opr_format, new_inps, opr);
+    intl::OprFormatInfo opr_format_info;
+    opr_format_info.opr_format = config.opr_format;
+    VarNode* y = mgb::gopt::intl::modify_opr_format(opr_format_info, new_inps, opr);
     static const ThinHashSet<Typeinfo*> multi_algo_oprs = {
             opr::Convolution::typeinfo(),
             opr::ConvBiasForward::typeinfo(),
