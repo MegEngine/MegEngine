@@ -112,6 +112,9 @@ public:
         auto ret = fwrite(buf, size, 1, m_fp);
         mgb_assert(ret == 1);
     }
+    void flush() { fflush(m_fp); }
+
+    void set_head() { fseek(m_fp, 0, SEEK_SET); }
 };
 
 //////////////////////// InFilePersistentCache::BlobStorage ///////////////
@@ -172,11 +175,14 @@ void InFilePersistentCache::read_cache(Input& inp) {
     }
 }
 
-InFilePersistentCache::InFilePersistentCache(const char* path) {
+InFilePersistentCache::InFilePersistentCache(const char* path, bool always_open) {
     if (!access(path, F_OK)) {
         mgb_log_debug("use fastrun cache: %s", path);
         InputFile inp(path);
         read_cache<InputFile>(inp);
+    }
+    if (always_open) {
+        m_always_open_file = std::make_shared<OutputFile>(path);
     }
 }
 
@@ -188,25 +194,28 @@ InFilePersistentCache::InFilePersistentCache(const uint8_t* bin, size_t size) {
 
 void InFilePersistentCache::dump_cache(const char* path) {
     OutputFile out_file(path);
+    dump_cache(&out_file);
+}
+
+void InFilePersistentCache::dump_cache(OutputFile* out_file) {
     uint32_t nr_category = m_cache.size();
-    out_file.write(nr_category);
+    out_file->write(nr_category);
 
     for (const auto& cached_category : m_cache) {
         uint32_t category_size = cached_category.first.size();
-        out_file.write(category_size);
-        out_file.write(cached_category.first.data(), category_size);
+        out_file->write(category_size);
+        out_file->write(cached_category.first.data(), category_size);
         mgb_log_debug("write new category: %s", cached_category.first.c_str());
 
         uint32_t nr_bobs = cached_category.second.size();
-        out_file.write(nr_bobs);
+        out_file->write(nr_bobs);
         for (const auto& item : cached_category.second) {
             mgb_log_debug("dump key: %zu", item.first.hash);
-            item.first.write_to_file(out_file);
-            item.second.write_to_file(out_file);
+            item.first.write_to_file(*out_file);
+            item.second.write_to_file(*out_file);
         }
     }
 }
-
 Maybe<InFilePersistentCache::Blob> InFilePersistentCache::get(
         const std::string& category, const Blob& key) {
     decltype(m_cache.begin()) iter0;
@@ -239,6 +248,11 @@ void InFilePersistentCache::put(
     m_cache[category][std::move(key_storage)].init_data_ref(value);
     if (m_cache.size() > size0) {
         mgb_log_debug("new cache category: %s", category.c_str());
+    }
+    if (m_always_open_file) {
+        m_always_open_file->set_head();
+        dump_cache(m_always_open_file.get());
+        m_always_open_file->flush();
     }
 }
 

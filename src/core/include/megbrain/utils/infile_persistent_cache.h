@@ -54,13 +54,14 @@ class InFilePersistentCache final : public PersistentCache {
             std::unordered_map<BlobStorage, BlobStorage, BlobStorage::Hash>>
             m_cache;
     MGB_MUTEX m_mtx;
+    std::shared_ptr<OutputFile> m_always_open_file;
 
     template <typename Input>
     void read_cache(Input& inp);
 
 public:
     InFilePersistentCache() = default;
-    InFilePersistentCache(const char* path);
+    InFilePersistentCache(const char* path, bool always_open = false);
     InFilePersistentCache(const uint8_t* bin, size_t size);
 
     /**
@@ -68,6 +69,7 @@ public:
      * file.
      */
     void dump_cache(const char* path);
+    void dump_cache(OutputFile* out_file);
 
     Maybe<Blob> get(const std::string& category, const Blob& key) override;
     void put(const std::string& category, const Blob& key, const Blob& value) override;

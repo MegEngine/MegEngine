@@ -24,7 +24,7 @@
 #include "megbrain/comp_node.h"
 #include "megbrain/serialization/extern_c_opr.h"
 #include "megbrain/version.h"
-#include "mge/algo_cache/file_cache.h"
+#include "megbrain/utils/infile_persistent_cache.h"
 #include "mge/common.h"
 #if MGB_ENABLE_TENSOR_RT
 #include "megbrain/tensorrt/tensorrt_engine_cache.h"
@@ -170,8 +170,8 @@ void lite::set_persistent_cache(const std::string& cache_path, bool always_sync)
                 "it now may cause unknow error!!");
     }
     cache_control.config_algo_times++;
-    mgb::PersistentCache::set_impl(
-            std::make_shared<InFilePersistentCache>(cache_path.c_str(), always_sync));
+    mgb::PersistentCache::set_impl(std::make_shared<mgb::InFilePersistentCache>(
+            cache_path.c_str(), always_sync));
 }
 
 void lite::dump_persistent_cache(const std::string& cache_path) {
@@ -179,7 +179,7 @@ void lite::dump_persistent_cache(const std::string& cache_path) {
     LITE_ASSERT(
             cache_control.cache_type == "file",
             "now cache type not correct, it can't be dumped.");
-    static_cast<InFilePersistentCache&>(mgb::PersistentCache::inst())
+    static_cast<mgb::InFilePersistentCache&>(mgb::PersistentCache::inst())
             .dump_cache(cache_path.c_str());
 }
 
